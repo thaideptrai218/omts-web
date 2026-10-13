@@ -1,0 +1,21 @@
+name: Technical task
+description: Code-level task linked to a Jira story (features are planned in Jira)
+labels: ["type:feature"]
+body:
+  - type: input
+    id: jira
+    attributes:
+      label: Jira issue
+      placeholder: OMTS-123
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What needs to be done
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria

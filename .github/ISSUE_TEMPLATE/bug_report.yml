@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a defect (log it in Jira first; use this only for code-level follow-up)
+labels: ["type:bug"]
+body:
+  - type: input
+    id: jira
+    attributes:
+      label: Jira issue
+      placeholder: OMTS-123
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options: [Critical, High/Major, Medium, Low]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Affected version / branch
+      placeholder: v1.0.0 or develop@abc1234
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual result
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence (logs, screenshots)
