@@ -20,3 +20,4 @@ Do not record a Jira item as complete until its done criteria and quality checks
 | --- | --- | --- |
 | [01](01-official-web-foundation.md) | Official repository topology, Next.js foundation, routing, and quality gates | In progress |
 | [02](02-route-groups.md) | Route group `(public)` và cách App Router tạo URL | In progress |
+| [03](03-auth-layout.md) | Nested layout, Server Component và route `/login` | In progress |

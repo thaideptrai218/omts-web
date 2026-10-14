@@ -48,5 +48,6 @@ Session storage, refresh-token handling, SSR/CSR boundaries, route protection, p
 ## Git workflow
 
 - Branch from `develop`; use Jira-linked `feature/OMTS-<n>-<slug>` or `fix/OMTS-<n>-<slug>` branches for implementation work.
+- Keep related micro-tasks for one Jira work item or functional module on the same branch and PR. Micro-tasks are teaching/testing boundaries, not branch boundaries.
 - Use `chore/<slug>` or `docs/<slug>` only when no Jira implementation issue applies.
 - Push a branch and open a PR into `develop`; do not push directly to protected `develop` or `main`.

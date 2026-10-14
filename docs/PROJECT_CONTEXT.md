@@ -57,5 +57,7 @@ These repositories release independently. Shared contracts cannot be assumed to 
 - `/me/permissions` payload, including zone scope and all-zone access.
 - Canonical Vietnamese/English message catalog.
 - How contracts and semantic tokens are synchronized across separate Web and Mobile repositories.
+- `WEB-AUTH-01` đã chốt: chỉ username, verified phone hoặc verified email được dùng làm login identifier; Staff first login dùng username trước khi phone verification gate.
+- `WEB-AUTH-02` được hoãn tới trước bước tích hợp API thật: cách login response biểu diễn temporary-password change hoặc phone-verification next action.
 
 Do not silently decide these items inside UI code because they affect security, backend integration, or business behavior.
