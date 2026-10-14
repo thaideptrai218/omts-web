@@ -1,7 +1,9 @@
 # OMTS Web — kế hoạch triển khai theo từng màn hình
 
-> Cập nhật: 14/10/2026 (Asia/Saigon)  
-> Phạm vi: các hạng mục Web đang giao cho D DT trên Jira  
+> Cập nhật: 14/10/2026 (Asia/Saigon)
+>
+> Phạm vi: các hạng mục Web đang giao cho D DT trên Jira
+>
 > Trạng thái: kế hoạch triển khai; chưa dùng tài liệu này làm bằng chứng rằng ticket đã hoàn thành
 
 ## 1. Mục tiêu của cách làm mới
