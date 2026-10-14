@@ -84,6 +84,19 @@ Trong lúc code, người học không bị yêu cầu trả lời kiến thức
 - Không commit sau từng thay đổi rất nhỏ. Commit khi một lát code có ý nghĩa và đã kiểm tra được.
 - Chỉ chuyển ticket Jira khi checklist Jira ready của ticket đã đạt; không tick theo cảm giác hoặc theo việc page đã render.
 
+### 3.5 Giới hạn phạm vi mỗi lượt làm việc
+
+Kế hoạch này là bản đồ của toàn bộ phần Web, không phải phạm vi của một lần code.
+
+- Mỗi lượt chỉ thực hiện **một micro-task đang active**.
+- Không tự động chuyển sang micro-task tiếp theo trong cùng lượt sau khi vừa sửa một phần có rủi ro.
+- Micro-task hiện tại phải được đọc lại code, chạy kiểm tra phù hợp và ghi phần kiến thức liên quan trước khi chuyển bước.
+- Nếu phát hiện lỗi, ưu tiên hiểu nguyên nhân và sửa trong đúng phạm vi đang làm; không vừa sửa lỗi vừa mở thêm màn hình khác.
+- Một màn hình được chia thành layout, component, state, mock interaction, accessibility và API integration. Các phần này được làm lần lượt khi màn đủ phức tạp.
+- Commit có thể gom vài micro-task đã ổn định, nhưng việc gom commit không có nghĩa các micro-task được code cùng một lúc.
+
+Micro-task kế tiếp luôn được đánh dấu trong plan. Sau khi hoàn thành, chỉ mục đó được tick và mục kế tiếp mới trở thành active.
+
 ## 4. Thứ tự triển khai đã chốt
 
 Thứ tự dưới đây ưu tiên dependency kỹ thuật và tạo sớm một luồng đăng nhập hoàn chỉnh.
@@ -102,16 +115,15 @@ Thứ tự dưới đây ưu tiên dependency kỹ thuật và tạo sớm một
 
 Còn phải làm:
 
-- [ ] route group `(app)` và application shell tối thiểu;
-- [ ] component nền cho field, button, dialog, toast và form feedback;
-- [ ] message catalog có formatter `{code, params}`;
-- [ ] service/repository contract và mock adapter, không gọi storage trong component;
-- [ ] auth state ở mức frontend và trang mẫu được bảo vệ;
-- [ ] menu mẫu ẩn/hiện theo effective permission và scope;
-- [ ] API client boundary, xử lý 401 cuối cùng thành MSG19;
-- [ ] form stack React Hook Form + Zod;
-- [ ] kiểm tra bàn phím, focus, 360 px và 1024 px;
-- [ ] lint, typecheck, build và test liên quan đều xanh.
+- [ ] **A1.1 — active:** tạo message catalog tối thiểu và formatter `{code, params}`; chưa làm auth state hoặc app shell.
+- [ ] **A1.2:** thêm React Hook Form + Zod và component form field tối thiểu dùng cho auth.
+- [ ] **A1.3:** tạo service/repository contract cùng mock adapter; component không gọi storage trực tiếp.
+- [ ] **A1.4:** tạo route group `(app)`, application shell và trang mẫu được bảo vệ.
+- [ ] **A1.5:** thêm auth state phía frontend cho trang mẫu.
+- [ ] **A1.6:** menu mẫu ẩn/hiện theo effective permission và scope.
+- [ ] **A1.7:** API client boundary và xử lý 401 cuối cùng thành MSG19.
+- [ ] **A1.8:** dialog, toast và confirm nền theo nhu cầu đã xuất hiện trong các bước trước.
+- [ ] **A1.9:** kiểm tra bàn phím, focus, 360 px, 1024 px, lint, typecheck, build và test liên quan.
 
 Phần refresh token, cookie, `/me/permissions` và session bootstrap sẽ đi qua interface trước. HTTP adapter chỉ được chốt sau khi backend cung cấp contract. Đây là điểm còn hoãn, không cản việc dựng UI bằng mock nhưng có thể cản mốc Jira ready.
 
