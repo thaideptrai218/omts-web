@@ -41,7 +41,8 @@ Session storage, refresh-token handling, SSR/CSR boundaries, route protection, p
 
 - Work in small reviewable tasks. Before code, explain: what it is, why it is needed, how data/control flows, and likely defense questions.
 - Explain new concepts from the underlying problem to the concrete OMTS code. Avoid definition-only summaries.
-- When an error occurs, record the command, important output, root cause, cascading errors, diagnosis, fix, and evidence after the fix in `docs/learning/`.
+- Keep learning and defense notes locally in the ignored `docs/learning/` directory. Do not add those files to Git.
+- When an error occurs, record the command, important output, root cause, cascading errors, diagnosis, fix, and evidence after the fix in the local learning notes.
 - Do not ask the learner to answer a concept that has not been explained first.
 - Run `npm run lint`, `npm run typecheck`, and `npm run build` before declaring a Web task complete.
 

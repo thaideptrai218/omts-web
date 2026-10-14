@@ -32,4 +32,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) — branches, Jira keys, commit/PR rules,
 
 - [Current project context](docs/PROJECT_CONTEXT.md)
 - [Web implementation plan](docs/WEB_IMPLEMENTATION_PLAN.md)
-- [Learning and defense notes](docs/learning/README.md)
+- [Detailed UI page blueprints](docs/UI_PAGE_BLUEPRINTS.md)

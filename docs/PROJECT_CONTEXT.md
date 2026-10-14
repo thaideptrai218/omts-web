@@ -28,6 +28,8 @@ These repositories release independently. Shared contracts cannot be assumed to 
 4. OMTS Figma: visual structure and screen flow; it does not override business rules.
 5. Historical reports/tracking: background only when they conflict with current sources.
 
+The current Figma file is a low-fidelity wireframe and a reference for information order and flow, not a mandatory final visual design. The Web UI may improve layout, hierarchy, color, typography and interaction as long as it preserves confirmed behavior.
+
 ## Confirmed Web foundation
 
 - Next.js 16 App Router, React, TypeScript, Tailwind CSS, and ESLint.

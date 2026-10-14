@@ -24,7 +24,7 @@ Thứ tự ưu tiên khi có chênh lệch:
 1. Jira hiện tại: phạm vi, dependency và `Done when`.
 2. `Report3Finnal.md` và bản SRS DOCX: actor, use case, business rule, message và trường dữ liệu.
 3. `Report2Finnal.md`: nền tảng kỹ thuật Next.js.
-4. Figma OMTS: bố cục, component và luồng nhìn thấy; Figma không thay đổi nghiệp vụ trong SRS.
+4. Figma OMTS: wireframe tham khảo bố cục và luồng; không phải visual design bắt buộc và không thay đổi nghiệp vụ trong SRS.
 5. Code hiện tại: bằng chứng những gì đã triển khai, không phải nguồn để tự tạo nghiệp vụ mới.
 
 Snapshot Jira ngày 14/10/2026 cho thấy D DT có 14 hạng mục Web: `OMTS-132` đang In Progress và 13 hạng mục còn lại đang To Do. Các mô tả ticket được đọc trực tiếp từ Jira trước khi lập kế hoạch này.
@@ -64,7 +64,7 @@ Skeleton chỉ dùng cho tải dữ liệu ban đầu. Khi lưu form, nút lưu 
 
 ### 3.3 Cách lưu bài học để đọc sau
 
-Mỗi màn hình có một bài trong `docs/learning/`. Bài học được viết theo code thật vừa hoàn thành, gồm:
+Mỗi màn hình có một bài local trong `docs/learning/`. Thư mục này được `.gitignore`, không xuất hiện trong pull request của nhóm. Bài học được viết theo code thật vừa hoàn thành, gồm:
 
 1. vấn đề màn hình giải quyết;
 2. khái niệm nền từ đầu;
@@ -75,6 +75,8 @@ Mỗi màn hình có một bài trong `docs/learning/`. Bài học được vi�
 7. câu hỏi hội đồng và câu trả lời ngắn.
 
 Trong lúc code, người học không bị yêu cầu trả lời kiến thức chưa được giải thích. Các câu hỏi bảo vệ được gom trong bài để đọc lại sau.
+
+Chi tiết bố cục, responsive behavior, component breakdown và micro-step của từng trang nằm trong `docs/UI_PAGE_BLUEPRINTS.md`.
 
 ### 3.4 Git và Jira
 
@@ -115,19 +117,19 @@ Thứ tự dưới đây ưu tiên dependency kỹ thuật và tạo sớm một
 
 Còn phải làm:
 
-- [ ] **A1.1 — active:** tạo message catalog tối thiểu và formatter `{code, params}`; chưa làm auth state hoặc app shell.
-- [ ] **A1.2:** thêm React Hook Form + Zod và component form field tối thiểu dùng cho auth.
-- [ ] **A1.3:** tạo service/repository contract cùng mock adapter; component không gọi storage trực tiếp.
-- [ ] **A1.4:** tạo route group `(app)`, application shell và trang mẫu được bảo vệ.
-- [ ] **A1.5:** thêm auth state phía frontend cho trang mẫu.
-- [ ] **A1.6:** menu mẫu ẩn/hiện theo effective permission và scope.
-- [ ] **A1.7:** API client boundary và xử lý 401 cuối cùng thành MSG19.
-- [ ] **A1.8:** dialog, toast và confirm nền theo nhu cầu đã xuất hiện trong các bước trước.
-- [ ] **A1.9:** kiểm tra bàn phím, focus, 360 px, 1024 px, lint, typecheck, build và test liên quan.
+- [ ] **A1.1 — active:** tạo semantic design tokens, typography, focus ring và nền trang; chưa làm form hoặc auth logic.
+- [ ] **A1.2:** tạo responsive AuthShell theo blueprint; chỉ layout và branding.
+- [ ] **A1.3:** thêm React Hook Form + Zod và component button/form field tối thiểu dùng cho auth.
+- [ ] **A1.4:** tạo message catalog tối thiểu và formatter `{code, params}`.
+- [ ] **A1.5:** tạo service/repository contract cùng mock adapter; component không gọi storage trực tiếp.
+- [ ] **A1.6:** tạo route group `(app)`, application shell và trang mẫu được bảo vệ.
+- [ ] **A1.7:** thêm auth state phía frontend cho trang mẫu.
+- [ ] **A1.8:** menu mẫu ẩn/hiện theo effective permission và scope.
+- [ ] **A1.9:** API client boundary và xử lý 401 cuối cùng thành MSG19.
+- [ ] **A1.10:** dialog, toast và confirm nền theo nhu cầu đã xuất hiện trong các bước trước.
+- [ ] **A1.11:** kiểm tra bàn phím, focus, 360 px, 1024 px, lint, typecheck, build và test liên quan.
 
 Phần refresh token, cookie, `/me/permissions` và session bootstrap sẽ đi qua interface trước. HTTP adapter chỉ được chốt sau khi backend cung cấp contract. Đây là điểm còn hoãn, không cản việc dựng UI bằng mock nhưng có thể cản mốc Jira ready.
-
-Bài học dự kiến: mở rộng `01-official-web-foundation.md`, sau đó thêm bài về data boundary, message catalog và permission scope.
 
 ### Chặng B — luồng xác thực cốt lõi
 
@@ -144,8 +146,6 @@ Bài học dự kiến: mở rộng `01-official-web-foundation.md`, sau đó th
 - [ ] mock các trường hợp đúng, sai, hết hạn, quá số lần và lỗi dịch vụ;
 - [ ] kiểm chứng component được tái sử dụng được trong UC01, UC02, UC03 và UC05;
 - [ ] tích hợp QA API trước khi chuyển Jira Done.
-
-Bài học dự kiến: `04-shared-verification-flow.md` — controlled input, countdown, state machine nhỏ và chống submit lặp.
 
 #### B2. OMTS-159 — SCR-03, đăng nhập và post-login gate
 
@@ -164,8 +164,6 @@ Quyết định `WEB-AUTH-01` đã chốt phương án B: identifier là usernam
 
 Tên field response, thời điểm phát token và route đích thuộc `WEB-AUTH-02`, vẫn chờ backend. Frontend sẽ biểu diễn kết quả bằng kiểu domain trung lập, không coi tên field mock là API chính thức.
 
-Bài học dự kiến: `05-login-and-post-login-gates.md` — authentication khác authorization, gate theo trạng thái tài khoản và generic login error.
-
 #### B3. OMTS-167 — SCR-05 Security, đổi mật khẩu
 
 - [ ] security tab trong khu vực tài khoản;
@@ -175,8 +173,6 @@ Bài học dự kiến: `05-login-and-post-login-gates.md` — authentication kh
 - [ ] MSG01, MSG16, MSG17, MSG18, MSG19;
 - [ ] sau đổi/reset mật khẩu, xử lý session theo contract đã xác nhận;
 - [ ] QA API gồm cả forced mode trước khi Jira Done.
-
-Bài học dự kiến: `06-password-change-and-forced-mode.md` — form mode, route boundary và lý do frontend không tự quyết session revocation.
 
 #### B4. OMTS-179 — UC07, logout và dọn dữ liệu bảo vệ
 
@@ -189,8 +185,6 @@ Bài học dự kiến: `06-password-change-and-forced-mode.md` — form mode, r
 - [ ] nhấn Back sau logout không hiển thị protected data;
 - [ ] kiểm tra lỗi mạng theo contract UC07 trước khi Jira Done.
 
-Bài học dự kiến: `07-logout-and-protected-cache.md` — browser history khác application state, cache invalidation và server session.
-
 ### Chặng C — hoàn thiện các màn tài khoản
 
 #### C1. OMTS-154 — SCR-01, đăng ký Trader
@@ -202,8 +196,6 @@ Bài học dự kiến: `07-logout-and-protected-cache.md` — browser history k
 - [ ] xác minh thành công quay về SCR-03;
 - [ ] QA API trước khi Jira Done.
 
-Bài học dự kiến: `08-trader-registration.md` — progressive form, validation phía client và uniqueness do server chịu trách nhiệm.
-
 #### C2. OMTS-163 — SCR-04, khôi phục tài khoản
 
 - [ ] nhập identifier;
@@ -212,8 +204,6 @@ Bài học dự kiến: `08-trader-registration.md` — progressive form, valida
 - [ ] đổi phương thức nhận mã khi đủ điều kiện;
 - [ ] hoàn tất quay về login;
 - [ ] QA API trước khi Jira Done.
-
-Bài học dự kiến: `09-account-recovery.md` — account enumeration, generic response và multi-step flow.
 
 #### C3. OMTS-171 — SCR-05 Profile
 
@@ -224,8 +214,6 @@ Bài học dự kiến: `09-account-recovery.md` — account enumeration, generi
 - [ ] mock tình huống record version cũ;
 - [ ] QA API trước khi Jira Done.
 
-Bài học dự kiến: `10-profile-and-optimistic-concurrency.md` — editable/read-only fields, staged contact change và row-version conflict.
-
 #### C4. OMTS-175 — SCR-06, tùy chọn thông báo
 
 - [ ] ma trận notification type × channel;
@@ -234,8 +222,6 @@ Bài học dự kiến: `10-profile-and-optimistic-concurrency.md` — editable/
 - [ ] MSG21 và MSG23;
 - [ ] focus/label cho từng checkbox trong ma trận;
 - [ ] QA API trước khi Jira Done.
-
-Bài học dự kiến: `11-notification-preference-matrix.md` — accessible table/form matrix và derived disabled state.
 
 ### Chặng D — màn hình quản trị và Cooperative
 
@@ -250,8 +236,6 @@ Thứ tự màn quản trị bám luồng AC-01: khởi tạo HTX → hoàn thi�
 - [ ] actor boundary: SysAdmin chỉ khởi tạo Owner, không sửa dữ liệu nghiệp vụ HTX;
 - [ ] QA API trước khi Jira Done.
 
-Bài học dự kiến: `12-cooperative-initialization.md` — one-time secret display, file upload và actor boundary.
-
 #### D2. OMTS-183 — SCR-07, hồ sơ HTX và QR preview
 
 - [ ] form theo SCR-07;
@@ -261,8 +245,6 @@ Bài học dự kiến: `12-cooperative-initialization.md` — one-time secret d
 - [ ] MSG01, MSG02 và MSG10;
 - [ ] không để preview lộ tài chính, Trader hoặc dữ liệu ngoài SCR-24;
 - [ ] QA API trước khi Jira Done.
-
-Bài học dự kiến: `13-cooperative-profile-and-public-preview.md` — dynamic rows, public/private projection và form composition.
 
 #### D3. OMTS-193 — SCR-10, role và permission matrix
 
@@ -274,8 +256,6 @@ Bài học dự kiến: `13-cooperative-profile-and-public-preview.md` — dynam
 - [ ] xác nhận MSG09 khi sửa role đang được dùng;
 - [ ] MSG01, MSG03, MSG09 và MSG11;
 - [ ] QA API trước khi Jira Done.
-
-Bài học dự kiến: `14-role-permission-matrix.md` — permission implication, matrix accessibility và tác động của role dùng chung.
 
 #### D4. OMTS-190 — SCR-09, account và AccessGrant
 
@@ -291,8 +271,6 @@ Bài học dự kiến: `14-role-permission-matrix.md` — permission implicatio
 
 Màn này phụ thuộc dữ liệu vùng nuôi và role. Khi UC15 chưa nằm trong phần việc Web hiện tại, mock chỉ cung cấp lựa chọn vùng đọc-only theo entity SRS; không tự xây thêm nghiệp vụ quản lý vùng.
 
-Bài học dự kiến: `15-accounts-and-zone-role-grants.md` — RBAC có scope, effective permission và thao tác nhạy cảm có confirmation.
-
 #### D5. OMTS-186 — SCR-08, hồ sơ nhân viên
 
 - [ ] danh sách và tìm theo tên/số điện thoại;
@@ -303,8 +281,6 @@ Bài học dự kiến: `15-accounts-and-zone-role-grants.md` — RBAC có scope
 - [ ] lock prompt khi chuyển trạng thái cần xử lý account;
 - [ ] MSG01, MSG02, MSG03, MSG10 và MSG24;
 - [ ] QA API trước khi Jira Done.
-
-Bài học dự kiến: `16-employee-profile-and-account-link.md` — entity separation, picker eligibility và consistency khi liên kết một-một.
 
 ### Chặng E — Mobile sau Web
 
