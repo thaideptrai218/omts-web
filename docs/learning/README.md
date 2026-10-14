@@ -14,6 +14,11 @@ This directory records concepts learned while building the real OMTS Web reposit
 
 Do not record a Jira item as complete until its done criteria and quality checks are satisfied.
 
+The planned lesson sequence for each screen is maintained in
+[`docs/WEB_IMPLEMENTATION_PLAN.md`](../WEB_IMPLEMENTATION_PLAN.md). Lessons may be read
+after a coding batch, but they must describe the real implementation and real errors rather
+than generic definitions written in advance.
+
 ## Lessons
 
 | Lesson | Topic | Status |

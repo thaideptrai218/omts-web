@@ -39,9 +39,10 @@ These repositories release independently. Shared contracts cannot be assumed to 
 
 ## Current code status
 
-- The repository is a clean Next.js scaffold with only the root page and root layout.
+- The repository has a Next.js scaffold, the `(public)` route group, the `(auth)` layout, and a placeholder `/login` page.
 - No authentication, session bootstrap, API client, refresh flow, permission gate, message catalog, or feature UI is implemented yet.
 - The foundation must not be reported as complete solely because the framework scaffold builds.
+- The screen-by-screen execution order and Jira completion gates are recorded in `docs/WEB_IMPLEMENTATION_PLAN.md`.
 
 ## Current Web critical path
 
@@ -59,5 +60,6 @@ These repositories release independently. Shared contracts cannot be assumed to 
 - How contracts and semantic tokens are synchronized across separate Web and Mobile repositories.
 - `WEB-AUTH-01` đã chốt: chỉ username, verified phone hoặc verified email được dùng làm login identifier; Staff first login dùng username trước khi phone verification gate.
 - `WEB-AUTH-02` được hoãn tới trước bước tích hợp API thật: cách login response biểu diễn temporary-password change hoặc phone-verification next action.
+- UI có thể được review bằng mock adapter trước khi backend contract hoàn tất. Ticket chỉ được chuyển sang Done khi đạt đúng `Done when`, bao gồm QA API nếu ticket yêu cầu.
 
 Do not silently decide these items inside UI code because they affect security, backend integration, or business behavior.
