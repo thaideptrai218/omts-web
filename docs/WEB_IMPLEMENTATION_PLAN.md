@@ -1,6 +1,6 @@
 # OMTS Web — kế hoạch triển khai theo từng màn hình
 
-> Cập nhật: 14/10/2026 (Asia/Saigon)
+> Cập nhật: 15/10/2026 (Asia/Saigon)
 >
 > Phạm vi: các hạng mục Web đang giao cho D DT trên Jira
 >
@@ -24,7 +24,7 @@ Thứ tự ưu tiên khi có chênh lệch:
 1. Jira hiện tại: phạm vi, dependency và `Done when`.
 2. `Report3Finnal.md` và bản SRS DOCX: actor, use case, business rule, message và trường dữ liệu.
 3. `Report2Finnal.md`: nền tảng kỹ thuật Next.js.
-4. Figma OMTS: wireframe tham khảo bố cục và luồng; không phải visual design bắt buộc và không thay đổi nghiệp vụ trong SRS.
+4. Figma OMTS: tư liệu wireframe tùy chọn để đối chiếu inventory/luồng khi cần; không phải template hình thức, không phải điều kiện bắt buộc trước khi code và không thay đổi nghiệp vụ trong SRS.
 5. Code hiện tại: bằng chứng những gì đã triển khai, không phải nguồn để tự tạo nghiệp vụ mới.
 
 Snapshot Jira ngày 14/10/2026 cho thấy D DT có 14 hạng mục Web: `OMTS-132` đang In Progress và 13 hạng mục còn lại đang To Do. Các mô tả ticket được đọc trực tiếp từ Jira trước khi lập kế hoạch này.
@@ -117,17 +117,30 @@ Thứ tự dưới đây ưu tiên dependency kỹ thuật và tạo sớm một
 
 Còn phải làm:
 
-- [ ] **A1.1 — active:** tạo semantic design tokens, typography, focus ring và nền trang; chưa làm form hoặc auth logic.
-- [ ] **A1.2:** tạo responsive AuthShell theo blueprint; chỉ layout và branding.
-- [ ] **A1.3:** thêm React Hook Form + Zod và component button/form field tối thiểu dùng cho auth.
-- [ ] **A1.4:** tạo message catalog tối thiểu và formatter `{code, params}`.
-- [ ] **A1.5:** tạo service/repository contract cùng mock adapter; component không gọi storage trực tiếp.
-- [ ] **A1.6:** tạo route group `(app)`, application shell và trang mẫu được bảo vệ.
-- [ ] **A1.7:** thêm auth state phía frontend cho trang mẫu.
-- [ ] **A1.8:** menu mẫu ẩn/hiện theo effective permission và scope.
-- [ ] **A1.9:** API client boundary và xử lý 401 cuối cùng thành MSG19.
-- [ ] **A1.10:** dialog, toast và confirm nền theo nhu cầu đã xuất hiện trong các bước trước.
-- [ ] **A1.11:** kiểm tra bàn phím, focus, 360 px, 1024 px, lint, typecheck, build và test liên quan.
+- [x] **A1.1:** tạo semantic design tokens, typography, focus ring và nền trang; chưa làm form hoặc auth logic.
+- [x] **A1.2:** tạo responsive AuthShell theo blueprint; chỉ layout và branding.
+- [x] **A1.3:** thêm React Hook Form + Zod và component button/form field tối thiểu dùng cho auth.
+- [x] **A1.4:** tạo message catalog tối thiểu và formatter `{code, params}`.
+- [x] **A1.5:** tạo service/repository contract cùng mock adapter; component không gọi storage trực tiếp.
+- [x] **A1.6:** tạo route group `(app)`, application shell và trang mẫu được bảo vệ.
+- [x] **A1.7:** thêm auth state phía frontend cho trang mẫu.
+- [x] **A1.8:** menu mẫu ẩn/hiện theo effective permission và scope.
+- [x] **A1.9:** API client boundary và xử lý 401 cuối cùng thành MSG19.
+- [x] **A1.10:** dialog, toast và confirm nền theo nhu cầu đã xuất hiện trong các bước trước.
+- [x] **A1.11:** kiểm tra bàn phím, focus, 360 px, 1024 px, lint, typecheck, build và test liên quan.
+
+**Kết quả Chặng A:** foundation đã đạt mốc UI ready bằng mock. `OMTS-132` chưa được coi là Jira ready vì QA API, session/refresh contract và payload `/me/permissions` vẫn chưa được backend xác nhận.
+
+**Code review ngày 15/10/2026:** các lệnh kiểm tra vẫn xanh nhưng chưa nên merge cho đến khi xử lý các finding trong `docs/learning/16-phase-a-code-review.md`.
+
+- [x] **A-R1:** bảo toàn mọi dạng `HeadersInit`; chuẩn hóa lỗi mạng/JSON tại API boundary; giữ nguyên `AbortError`; bổ sung test hồi quy.
+- [x] **A-R2:** xử lý lỗi login tại UI và ngăn session bootstrap cũ ghi đè thao tác auth mới hơn.
+- [x] **A-R3:** sửa animation/token CSS và accessibility của form/toast.
+- [ ] **A-R4 (chờ xác nhận):** chốt composition boundary để mock auth không thể được dùng âm thầm ở QA/production.
+
+Finding mock auth hard-wire vẫn là release blocker. A-R4 cần xác nhận cơ chế môi trường và HTTP adapter trước khi áp dụng vì liên quan auth/deployment contract.
+
+Verification tổng hợp sau A-R1–A-R3: 4 test files với 19/19 test đạt; lint, typecheck, production build, `git diff --check` và production dependency audit đều đạt.
 
 Phần refresh token, cookie, `/me/permissions` và session bootstrap sẽ đi qua interface trước. HTTP adapter chỉ được chốt sau khi backend cung cấp contract. Đây là điểm còn hoãn, không cản việc dựng UI bằng mock nhưng có thể cản mốc Jira ready.
 
@@ -137,21 +150,26 @@ Phần refresh token, cookie, `/me/permissions` và session bootstrap sẽ đi q
 
 Đây là component dùng lại trong đăng ký, đăng nhập lần đầu, khôi phục và đổi thông tin liên hệ. Nó không được nhân bản thành bốn form OTP khác nhau.
 
-- [ ] đọc lại frame Figma `2:29`, `2:83`, `2:164`, `2:180` trước khi code;
-- [ ] hiển thị người nhận đã mask, không lộ toàn bộ email/số điện thoại;
-- [ ] ô nhập đúng 6 chữ số, hỗ trợ paste và bàn phím;
-- [ ] countdown gửi lại 60 giây và số lượt gửi còn lại;
-- [ ] props tối thiểu: `purpose`, `recipient`, `onVerified(token)`;
-- [ ] trạng thái MSG01, MSG04 và MSG16;
-- [ ] mock các trường hợp đúng, sai, hết hạn, quá số lần và lỗi dịch vụ;
-- [ ] kiểm chứng component được tái sử dụng được trong UC01, UC02, UC03 và UC05;
-- [ ] tích hợp QA API trước khi chuyển Jira Done.
+- [x] **B1.1:** đối chiếu Jira/SRS; tạo domain model trung lập cho sáu purpose, email/SMS, người nhận đã mask, challenge, token và policy UC08.
+- [x] **B1.2:** dựng dialog/sheet shell và chỉ hiển thị người nhận đã mask; chưa thêm logic gửi hoặc xác minh.
+- [x] **B1.3:** tạo ô nhập đúng 6 chữ số, hỗ trợ paste, bàn phím và vùng thông báo lỗi dùng cho MSG01.
+- [x] **B1.4:** countdown gửi lại 60 giây, hạn 5 phút và số lượt gửi còn lại; thời gian được suy ra từ timestamp thay vì đếm trừ cục bộ.
+- [x] **B1.5a:** tạo domain result, repository và service contract cho `start/resend/verify`.
+- [x] **B1.5b:** tạo mock adapter có thời gian điều khiển được; mã mới hủy mã cũ, lỗi gửi không làm mất challenge hiện tại.
+- [x] **B1.6:** nối state đúng/sai/hết hạn/quá số lần/lỗi dịch vụ với MSG04, MSG16 và `onVerified(token)`; caller sở hữu challenge và initial-send policy.
+- [x] **B1.7:** thêm showcase chỉ ở development để kiểm chứng cùng component được cấu hình lại cho UC01, UC02, UC03 và UC05, không nhân bản form OTP.
+- [x] **B1.8:** kiểm tra keyboard, focus, reduced motion, 360 px, 1024 px, test/lint/typecheck/build.
+- [ ] **B1.9 (deferred — chờ backend):** nối `start/resend/verify` với QA API sau khi backend contract sẵn sàng; chỉ khi đó mới xét Jira Done.
+
+Figma OTP chỉ được mở khi cần làm rõ inventory/luồng; visual được thiết kế lại theo usability. B1.1 dùng purpose từ `OMTS-149`, nhưng HTTP adapter sau này vẫn phải map theo OpenAPI thật thay vì coi chuỗi domain là tên field API.
+
+**Kết quả B1:** SCR-02 đã đạt UI ready bằng mock. B1.8 xác nhận 35/35 test, lint, typecheck, production build và `git diff --check` đều đạt; kiểm thử trình duyệt đạt ở 360 px và 1024 px, focus được giữ trong dialog và route showcase trả 404 ở production. B1.9 được hoãn vì `OMTS-149`/QA API chưa sẵn sàng, nên `OMTS-150` chưa được coi là Jira ready.
 
 #### B2. OMTS-159 — SCR-03, đăng nhập và post-login gate
 
 Quyết định `WEB-AUTH-01` đã chốt phương án B: identifier là username, số điện thoại đã xác minh hoặc email đã xác minh. Staff đăng nhập lần đầu bằng username và temporary password.
 
-- [ ] lấy lại design context và screenshot Figma node `2:43` trước khi triển khai thật;
+- [ ] **B2.1 (next):** dùng Jira, SRS và quyết định WEB-AUTH-01 làm nguồn thiết kế; Figma node `2:43` chỉ là tham khảo tùy chọn;
 - [ ] form identifier + password, hiện/ẩn password dùng được bằng bàn phím;
 - [ ] helper text nói rõ phone/email phải được xác minh;
 - [ ] trạng thái MSG01, MSG12, MSG13, MSG68 và MSG69;
@@ -292,7 +310,7 @@ Khi tới Mobile, logic nghiệp vụ được đối chiếu lại nhưng UI đ
 
 Mỗi màn được làm theo đúng một chu trình để vừa nhanh vừa có tài liệu học:
 
-1. **Context:** đọc Jira item, UC/SCR/BR/MSG liên quan và Figma frame.
+1. **Context:** đọc Jira item và UC/SCR/BR/MSG liên quan; chỉ mở Figma khi cần đối chiếu inventory hoặc luồng.
 2. **Design:** chốt component breakdown, data contract và state model trong phạm vi đã xác nhận.
 3. **Static UI:** dựng layout, responsive, keyboard và accessibility.
 4. **Living UI:** nối mock adapter, loading, validation, success và error cases.
@@ -305,7 +323,7 @@ Mỗi màn được làm theo đúng một chu trình để vừa nhanh vừa c�
 
 - [ ] đúng scope và `Done when` của Jira hiện tại;
 - [ ] đúng actor, field, message và business rule trong SRS;
-- [ ] Figma đã được dùng để tham khảo frame thật;
+- [ ] visual được tự review theo usability, accessibility và responsive; không phụ thuộc việc đã mở Figma;
 - [ ] không tự thêm/bớt bước nghiệp vụ;
 - [ ] mock và HTTP adapter dùng cùng frontend contract;
 - [ ] không lưu password, temporary password, OTP hoặc token trong `localStorage`;

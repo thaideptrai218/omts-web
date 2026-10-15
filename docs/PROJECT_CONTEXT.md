@@ -1,5 +1,7 @@
 # OMTS Web — current project context
 
+> Cập nhật: 15/10/2026 (Asia/Saigon)
+>
 > Update this summary when Jira, the current SRS, or an approved team decision changes. Planned work is not evidence that a feature has already been implemented.
 
 ## Product boundary
@@ -41,9 +43,14 @@ The current Figma file is a low-fidelity wireframe and a reference for informati
 
 ## Current code status
 
-- The repository has a Next.js scaffold, the `(public)` route group, the `(auth)` layout, and a placeholder `/login` page.
-- No authentication, session bootstrap, API client, refresh flow, permission gate, message catalog, or feature UI is implemented yet.
-- The foundation must not be reported as complete solely because the framework scaffold builds.
+- Phase A foundation UI is implemented on `feature/OMTS-132-web-foundation`: semantic tokens, responsive auth/application shells, login form, message catalog, mock auth repository, frontend auth state, permission-aware navigation boundary, generic API client, dialog/confirm/toast primitives, and a protected dashboard sample.
+- Effective access is represented by a frontend domain abstraction and tested with all-zone/selected-zone cases. It is not the confirmed `/me/permissions` JSON contract.
+- The API client maps a final 401 to MSG19 but does not choose token storage, credentials mode, refresh behavior, or backend response fields.
+- Vitest covers permission scope and API response/error mapping. Browser checks cover login validation, success toast, protected-content gating, mobile-menu focus, and responsive behavior at 360 px and 1024 px.
+- Phase A is UI ready with mock data. It is not Jira ready and must not be reported as complete against QA API until the open backend contracts are confirmed and integrated.
+- SCR-02 shared verification UI for `OMTS-150` is implemented with a domain/service/repository boundary, controllable mock adapter, six-digit input, expiry/resend countdown, masked recipient, purpose-aware copy and UC03-specific MSG15 mapping. It is UI ready, not Jira ready, because the `OMTS-149`/QA API contract is still unavailable.
+- The current production build still composes `AuthProvider` with `mockAuthRepository`; an unauthenticated HTTP request to `/dashboard` returns 200 and protection only occurs in client state. This is an explicit release blocker, not a completed security boundary.
+- The current verification baseline is 7 Vitest files with 35/35 tests passing. Lint, typecheck, production build, production dependency audit and `git diff --check` pass as of 15/10/2026.
 - The screen-by-screen execution order and Jira completion gates are recorded in `docs/WEB_IMPLEMENTATION_PLAN.md`.
 
 ## Current Web critical path
