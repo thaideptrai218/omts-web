@@ -1,6 +1,6 @@
 # OMTS Web — current project context
 
-> Cập nhật: 15/10/2026 (Asia/Saigon)
+> Cập nhật: 16/10/2026 (Asia/Saigon)
 >
 > Update this summary when Jira, the current SRS, or an approved team decision changes. Planned work is not evidence that a feature has already been implemented.
 
@@ -49,8 +49,9 @@ The current Figma file is a low-fidelity wireframe and a reference for informati
 - Vitest covers permission scope and API response/error mapping. Browser checks cover login validation, success toast, protected-content gating, mobile-menu focus, and responsive behavior at 360 px and 1024 px.
 - Phase A is UI ready with mock data. It is not Jira ready and must not be reported as complete against QA API until the open backend contracts are confirmed and integrated.
 - SCR-02 shared verification UI for `OMTS-150` is implemented with a domain/service/repository boundary, controllable mock adapter, six-digit input, expiry/resend countdown, masked recipient, purpose-aware copy and UC03-specific MSG15 mapping. It is UI ready, not Jira ready, because the `OMTS-149`/QA API contract is still unavailable.
+- `OMTS-159` B2.1 source review is complete. The confirmed frontend flow has four domain outcomes: rejected, forced temporary-password change, required phone verification, and permission to enter the application. When both gates apply, UC02 requires password change before phone verification. API field names, token timing and destination routes remain deferred under `WEB-AUTH-02`.
 - The current production build still composes `AuthProvider` with `mockAuthRepository`; an unauthenticated HTTP request to `/dashboard` returns 200 and protection only occurs in client state. This is an explicit release blocker, not a completed security boundary.
-- The current verification baseline is 7 Vitest files with 35/35 tests passing. Lint, typecheck, production build, production dependency audit and `git diff --check` pass as of 15/10/2026.
+- The current verification baseline is 7 Vitest files with 35/35 tests passing. Lint, typecheck, production build and `git diff --check` pass as of 16/10/2026; the latest production dependency audit remains the successful check from 15/10/2026.
 - The screen-by-screen execution order and Jira completion gates are recorded in `docs/WEB_IMPLEMENTATION_PLAN.md`.
 
 ## Current Web critical path

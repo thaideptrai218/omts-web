@@ -169,18 +169,18 @@ Figma OTP chỉ được mở khi cần làm rõ inventory/luồng; visual đư�
 
 Quyết định `WEB-AUTH-01` đã chốt phương án B: identifier là username, số điện thoại đã xác minh hoặc email đã xác minh. Staff đăng nhập lần đầu bằng username và temporary password.
 
-- [ ] **B2.1 (next):** dùng Jira, SRS và quyết định WEB-AUTH-01 làm nguồn thiết kế; Figma node `2:43` chỉ là tham khảo tùy chọn;
-- [ ] form identifier + password, hiện/ẩn password dùng được bằng bàn phím;
-- [ ] helper text nói rõ phone/email phải được xác minh;
-- [ ] trạng thái MSG01, MSG12, MSG13, MSG68 và MSG69;
-- [ ] link tới UC03 khôi phục tài khoản;
-- [ ] sau credentials hợp lệ: đổi temporary password trước nếu bị bắt buộc;
-- [ ] sau đổi password: đi qua phone verification gate nếu BR-34 yêu cầu;
-- [ ] chỉ sau các gate mới mở application shell và menu theo quyền;
-- [ ] mock account cho từng nhánh để nhóm review UI;
-- [ ] kiểm tra các gate bằng QA test account trước khi chuyển Jira Done.
+- [x] **B2.1:** đối chiếu Jira `OMTS-159`, SRS UC02/SCR-03 và quyết định `WEB-AUTH-01`; Figma node `2:43` chỉ là tham khảo tùy chọn.
+- [ ] **B2.2 (next):** bổ sung message catalog và mô hình kết quả đăng nhập trung lập cho bốn kết quả: từ chối, buộc đổi mật khẩu tạm, buộc xác minh điện thoại, hoặc được vào ứng dụng; chưa gắn tên field/route/token của backend.
+- [ ] **B2.3:** hoàn thiện form identifier + password, helper text, hiện/ẩn password dùng được bằng bàn phím, link UC03 và lối truy xuất QR công khai.
+- [ ] **B2.4:** thêm mock account cho MSG12, MSG13, MSG68, MSG69 và từng nhánh post-login để nhóm review UI.
+- [ ] **B2.5:** điều phối gate đúng thứ tự: đổi temporary password trước, sau đó xác minh phone nếu BR-34 yêu cầu; không mở application shell trong khi còn gate.
+- [ ] **B2.6:** sau khi qua mọi gate, mở home và menu theo effective permission; không suy diễn quyền từ tên role.
+- [ ] **B2.7:** kiểm thử domain, component, keyboard/focus và responsive ở 360 px/1024 px; chạy lint, typecheck và build.
+- [ ] **B2.8 (deferred — chờ backend):** map HTTP DTO và kiểm tra các gate bằng QA test account trước khi chuyển Jira Done.
 
 Tên field response, thời điểm phát token và route đích thuộc `WEB-AUTH-02`, vẫn chờ backend. Frontend sẽ biểu diễn kết quả bằng kiểu domain trung lập, không coi tên field mock là API chính thức.
+
+**Kết quả B2.1:** Jira và SCR-03 cùng yêu cầu identifier là username, verified phone hoặc verified email; quyết định `WEB-AUTH-01` giữ cách hiểu chặt này dù câu chữ ở UC02 Normal Flow còn thiếu từ “verified” trước phone. UC02 xác nhận thứ tự gate là temporary-password change (nhánh 2c) rồi mới phone verification (nhánh 3a). Tài khoản bị khóa/không còn zone–role hợp lệ, temporary password quá 24 giờ và khóa tạm 15 phút đều không được tạo/open session nghiệp vụ. Contract `WEB-AUTH-02` vẫn hoãn, nên B2.2 chỉ tạo mô hình domain của frontend, không tự quyết DTO, token timing hoặc URL đích.
 
 #### B3. OMTS-167 — SCR-05 Security, đổi mật khẩu
 
