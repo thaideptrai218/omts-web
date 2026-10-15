@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# local learning and defense notes (kept on each developer's machine)
+/docs/learning/
+
 # next.js
 /.next/
 /out/

@@ -27,3 +27,9 @@ npm run dev                  # http://localhost:3000
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) — branches, Jira keys, commit/PR rules, releases.
+
+## Project guidance
+
+- [Current project context](docs/PROJECT_CONTEXT.md)
+- [Web implementation plan](docs/WEB_IMPLEMENTATION_PLAN.md)
+- [Detailed UI page blueprints](docs/UI_PAGE_BLUEPRINTS.md)
