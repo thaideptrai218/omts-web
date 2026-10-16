@@ -240,21 +240,58 @@ Tên field response, thời điểm phát token và route đích thuộc `WEB-AU
 
 #### C1. OMTS-154 — SCR-01, đăng ký Trader
 
-- [ ] chọn đăng ký bằng email hoặc số điện thoại;
-- [ ] password + confirmation + rule hint;
-- [ ] MSG01 và MSG14 với link đăng nhập/khôi phục;
-- [ ] tiếp tục dùng component SCR-02;
-- [ ] xác minh thành công quay về SCR-03;
-- [ ] QA API trước khi Jira Done.
+- [x] **C1.1:** đọc Jira/SRS và mô hình hai phương thức `email | phone`; ánh xạ tường minh sang kênh UC08 `email | sms`, không đoán kênh từ chuỗi identifier;
+- [ ] **C1.2:** tạo schema theo hai lát để không tự chốt phone contract:
+  - [x] **C1.2a:** chuyển password policy thành rule dùng chung; schema kiểm tra email/password/confirmation và bắt buộc nhận phone validator từ bên ngoài;
+  - [ ] **C1.2b (deferred — chờ phone contract):** nối validator production sau khi nhóm chốt số nội địa, E.164 hoặc cả hai và quy tắc normalize;
+- [ ] **C1.3:** dựng route và lựa chọn phương thức theo hai lát:
+  - [x] **C1.3a:** tạo native radio group dạng segmented cards cho email/phone, hỗ trợ focus, disabled và layout 1→2 cột;
+  - [ ] **C1.3b (deferred cùng C1.2b):** compose form và route `/register` sau khi có phone validator production; không đưa họ tên/ngày sinh/giới tính từ wireframe cũ vào baseline;
+- [ ] **C1.4:** xây data boundary theo các lát:
+  - [x] **C1.4a:** typed start/complete contract và service/repository boundary; start chỉ trả challenge hoặc MSG14/MSG04, complete bắt buộc nhận verification token;
+  - [x] **C1.4b:** mock adapter phối hợp với shared verification service, bao phủ accepted, duplicate race, delivery failure và invalid token mà không lưu/log password;
+- [ ] **C1.5:** tái sử dụng SCR-02 với purpose `registration`, recipient đã mask và channel từ C1.1;
+- [ ] **C1.6:** dùng verification token để hoàn tất đăng ký, hiển thị success rồi quay về SCR-03; không tự đoán HTTP DTO hoặc token lifetime;
+- [ ] **C1.7:** thêm link login/recovery trong MSG14 và link đăng ký từ login khi mọi destination đã tồn tại;
+- [ ] **C1.8:** kiểm tra keyboard/focus, 360 px, 1024 px, test/lint/typecheck/build;
+- [ ] **C1.9 (deferred — chờ backend):** map QA API và chỉ xét Jira Done khi normal/error flow đạt với API thật.
+
+**Kết quả C1.1:** Jira `OMTS-154` và story `OMTS-137` xác nhận Trader chọn một trong hai phương thức email/phone; account chỉ được tạo sau UC08 và không nhận internal permission. Domain dùng union đóng `email | phone` và ánh xạ `phone` sang channel kỹ thuật `sms`; component sau này không tự suy đoán kênh từ nội dung người dùng nhập. SRS chưa xác định số điện thoại dùng định dạng nội địa hay E.164 nên C1.2 không được tự chốt regex.
+
+**Kết quả C1.2a:** password policy được chuyển về `shared/security` để đăng ký và đổi mật khẩu cùng dùng một nguồn. Registration schema kiểm tra email bằng parser chuẩn, password theo SRS và confirmation tại đúng field. Nhánh phone không có regex mặc định: schema factory bắt buộc caller truyền `isValidPhoneNumber`, nên composition production không thể âm thầm bỏ qua quyết định C1.2b.
+
+**Kết quả C1.3a:** lựa chọn email/phone dùng hai native radio cùng `name`, đặt trong `fieldset/legend`; giao diện card chỉ là lớp trình bày. Component controlled không tự chọn mặc định, không đoán channel và có thể khóa cả nhóm trong mutation pending. Chưa mount route hoặc tạo submit giả khi C1.2b còn mở.
+
+**Kết quả C1.4a:** registration boundary tách hai operation `start` và `complete`. `start` không thể trả account/session, chỉ trả verification challenge hoặc typed MSG14/MSG04. `complete` bắt buộc có short-lived verification token cùng draft và mới có thể trả `registered`; MSG14 vẫn được giữ ở complete để xử lý race khi identifier vừa được đăng ký ở phiên khác. HTTP endpoint, reload behavior và token lifetime vẫn là decision pending, không được mã hóa vào contract frontend.
+
+**Kết quả C1.4b:** mock registration và shared mock verification được compose qua một environment dùng chung. Proof chỉ được ghi nhận sau khi OTP đúng, bị ràng buộc với purpose/channel/identifier và bị tiêu thụ đúng một lần; UI không parse chuỗi token mock. Adapter bao phủ đăng ký thành công, identifier đã tồn tại từ đầu, duplicate race tại complete, lỗi gửi mã, proof giả và proof không khớp. Password chỉ đi qua input trong memory, không nằm trong challenge, token registry, identifier set hoặc callback mô phỏng conflict. Mock chưa áp TTL riêng cho proof, chưa normalize identifier và chưa định nghĩa HTTP endpoint vì đây vẫn là contract chờ backend/nhóm xác nhận.
 
 #### C2. OMTS-163 — SCR-04, khôi phục tài khoản
 
-- [ ] nhập identifier;
-- [ ] luôn dùng phản hồi chung MSG15 để không làm lộ tài khoản tồn tại;
-- [ ] dùng SCR-02 rồi nhập mật khẩu mới + confirmation;
-- [ ] đổi phương thức nhận mã khi đủ điều kiện;
-- [ ] hoàn tất quay về login;
-- [ ] QA API trước khi Jira Done.
+- [x] **C2.1:** đọc `OMTS-163`, story `OMTS-139`, backend sibling `OMTS-162`, QA sibling `OMTS-165`, shared verification `OMTS-150` và SRS UC03/SCR-04/BR-31; khóa invariant chống account enumeration;
+- [x] **C2.2:** tạo schema theo hai lát:
+  - [x] **C2.2a:** identifier bắt buộc, email dùng parser chuẩn; phone không áp regex/normalization chưa được SRS xác nhận và sẽ do API kiểm tra khi tích hợp;
+  - [x] **C2.2b:** new password + confirmation dùng shared password policy, không yêu cầu current password;
+- [x] **C2.3:** định nghĩa recovery start/reset contract; start luôn có public outcome MSG15 không tiết lộ existing/unverified/locked/delivery-failed, reset cần recovery proof;
+- [x] **C2.4:** dựng route `/recover` và step shell “Thông tin → Xác minh → Mật khẩu mới”; mỗi thời điểm chỉ có một nhiệm vụ chính;
+- [x] **C2.5:** nhập identifier và luôn hiển thị MSG15; UI không suy ra eligibility từ response, timing hoặc trạng thái nút;
+- [x] **C2.6:** tái sử dụng SCR-02 purpose `recovery`; chỉ mở bước mật khẩu khi có proof thành công;
+- [x] **C2.7:** “Đổi cách nhận mã” quay lại nhập verified identifier khác và yêu cầu hủy request cũ; không liệt kê hoặc gợi ý liên hệ của account;
+- [x] **C2.8:** đặt new password + confirmation; MSG01 giữ recovery proof khi proof còn hiệu lực, reset thành công quay về login;
+- [x] **C2.9:** nối link “Quên mật khẩu” từ login sau khi `/recover` tồn tại; kiểm tra keyboard/focus, 360 px, 1024 px, test/lint/typecheck/build;
+- [ ] **C2.10 (deferred — chờ backend):** map QA API và chỉ xét Jira Done khi response/timing không phân biệt existing, non-existing, unverified, locked và delivery failure.
+
+**Kết quả C2.1:** Jira và SRS xác nhận UC03 dành cho Trader, Cooperative Owner và Staff đang anonymous; mã chỉ gửi tới đúng verified identifier người dùng nhập. MSG15 phải giống nhau cả khi account không tồn tại, identifier chưa verified, account bị khóa hoặc delivery lỗi. “Đổi cách nhận mã” nghĩa là người dùng tự nhập identifier khác và request cũ bị hủy, không phải backend trả danh sách contact để chọn. Contract còn thiếu cách backend trả public recovery handle/challenge mà vẫn cho UI hiển thị cùng bước/cooldown không làm lộ eligibility; frontend chưa tự đặt DTO, timing hoặc success copy. Phone syntax vẫn dùng quyết định chung đang deferred ở C1.2b.
+
+**Kết quả C2.2b:** validation `newPassword + confirmPassword` được tách thành primitive dùng chung tại `shared/security`, còn recovery có schema mang tên theo use case và không chứa `currentPassword`. Account-security tiếp tục dùng cùng primitive nên rule 8 Unicode code points + letter + ASCII digit và field error không bị nhân bản. Password không trim/transform; confirmation chỉ tồn tại ở form validation, chưa đi vào recovery service contract.
+
+**Kết quả C2.3:** account-recovery boundary có hai operation `start` và `resetPassword`. `start` chỉ có một public outcome `verification-pending` chứa MSG15 và challenge bị khóa purpose `recovery`; type không có accountExists/verified/locked/delivery status. `resetPassword` chỉ nhận opaque verification token và new password, phân biệt typed MSG16 invalid proof với MSG01 invalid password; confirmation không qua service boundary. Đây là frontend domain contract, không phải giả định URL/HTTP DTO. API adapter chỉ được tích hợp khi backend cung cấp public challenge/handle không làm lộ eligibility và timing.
+
+**Kết quả C2.4–C2.5:** `/recover` dùng stepper tuyến tính có semantic `nav/ol` và `aria-current="step"`; các bước không clickable nên không thể bỏ qua OTP. Form cho phép người dùng chủ động chọn email hoặc SMS, chỉ hiển thị contact đã mask từ chính định danh vừa nhập và luôn chuyển sang cùng MSG15. Email được kiểm tra cú pháp; phone chỉ bắt buộc có giá trị vì SRS chưa chốt dạng nội địa/E.164.
+
+**Kết quả C2.6–C2.7:** logic OTP được tách thành `VerificationForm` và dùng lại ở dialog SCR-02 lẫn recovery page. Boundary xác minh có operation `cancel`; mock xóa request cũ trước khi flow quay lại bước nhập định danh. Nút đổi phương thức có pending state để chống thao tác lặp, không hiển thị danh sách contact của account.
+
+**Kết quả C2.8–C2.9:** proof chỉ tồn tại trong React memory, không vào URL/localStorage. Password confirmation dừng ở form; service chỉ nhận proof + new password. Mock kiểm tra password trước khi consume proof, vì vậy MSG01 cho phép sửa lại mật khẩu mà không nhập OTP lần nữa; proof bị consume một lần khi reset thành công. `/login` đã có link khôi phục và success quay về login bằng `replace`. UI được kiểm tra tại 360/1024 px, keyboard semantics, focus, 128/128 tests, lint, typecheck và build. C2 đạt UI-ready bằng mock; C2.10/Jira Done vẫn chờ QA API và phone contract chính thức.
 
 #### C3. OMTS-171 — SCR-05 Profile
 

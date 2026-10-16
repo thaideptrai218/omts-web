@@ -150,14 +150,16 @@ focus-ring    cyan-500
 **Pattern:** stepper ba bước nhưng mỗi lúc chỉ hiện một nhiệm vụ:
 
 1. Nhập verified email/phone.
-2. Chọn phương thức nếu có nhiều lựa chọn và xác minh mã.
+2. Xác minh mã được gửi tới identifier vừa nhập.
 3. Đặt mật khẩu mới.
 
 Stepper dùng nhãn “Thông tin → Xác minh → Mật khẩu mới”, không chỉ dùng số. MSG15 nằm trong info alert, luôn giống nhau để tránh lộ account tồn tại.
 
+“Đổi cách nhận mã” không hiển thị danh sách email/số điện thoại gắn với account. Theo UC03 nhánh 3a, người dùng quay lại nhập một verified identifier khác; request cũ phải được backend hủy. Cách này không tiết lộ account có bao nhiêu phương thức liên hệ hoặc các giá trị đã che.
+
 **Mobile:** mỗi bước là một page state, không nhồi tất cả trường. **Desktop:** vẫn dùng một card; progress nằm phía trên.
 
-**Micro-step:** F1 identifier + MSG15; F2 delivery choice; F3 dùng SCR-02; F4 password reset; F5 back/refresh behavior; F6 QA API.
+**Micro-step:** F1 source/anti-enumeration contract; F2 identifier schema + MSG15; F3 dùng SCR-02; F4 đổi identifier và hủy request cũ; F5 password reset; F6 back/refresh behavior; F7 QA API.
 
 ## 4. Tài khoản cá nhân
 

@@ -94,6 +94,10 @@ export type VerifyCodeResult =
       status: "rejected";
     }>;
 
+export type CancelVerificationResult = Readonly<{
+  status: "cancelled" | "unavailable";
+}>;
+
 export function normalizeVerificationCode(value: string): string {
   return value.replace(/\D/g, "").slice(0, verificationPolicy.codeLength);
 }

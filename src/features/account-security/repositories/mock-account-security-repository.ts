@@ -2,8 +2,8 @@ import type {
   CurrentPasswordChangeInput,
   CurrentPasswordChangeResult,
 } from "@/features/account-security/domain/change-password";
-import { getPasswordRuleState } from "@/features/account-security/domain/password-policy";
 import type { AccountSecurityRepository } from "@/features/account-security/repositories/account-security-repository";
+import { satisfiesPasswordPolicy } from "@/shared/security/password-policy";
 
 type MockSessionState = "active" | "expired";
 
@@ -17,10 +17,6 @@ const defaultPassword = "temporary1";
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function satisfiesPasswordPolicy(password: string): boolean {
-  return Object.values(getPasswordRuleState(password)).every(Boolean);
 }
 
 export function createMockAccountSecurityRepository({

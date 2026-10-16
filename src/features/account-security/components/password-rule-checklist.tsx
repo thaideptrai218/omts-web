@@ -1,7 +1,7 @@
 import {
   getPasswordRuleState,
   passwordPolicy,
-} from "@/features/account-security/domain/password-policy";
+} from "@/shared/security/password-policy";
 
 type PasswordRuleChecklistProps = Readonly<{
   id: string;

@@ -3,6 +3,7 @@ import type {
   StartVerificationInput,
   StartVerificationResult,
   VerificationChallenge,
+  VerificationToken,
   VerifyCodeInput,
   VerifyCodeResult,
 } from "@/features/verification/domain/verification-types";
@@ -12,10 +13,18 @@ import type { VerificationRepository } from "@/features/verification/repositorie
 
 type DeliveryOperation = "resend" | "start";
 
-type MockVerificationOptions = Readonly<{
+export type MockVerifiedProof = Readonly<{
+  channel: StartVerificationInput["recipient"]["channel"];
+  purpose: StartVerificationInput["purpose"];
+  recipientValue: string;
+  token: VerificationToken;
+}>;
+
+export type MockVerificationOptions = Readonly<{
   codes?: readonly [string, string, string];
   latencyMs?: number;
   now?: () => number;
+  onVerified?: (proof: MockVerifiedProof) => void;
   shouldFailDelivery?: (operation: DeliveryOperation) => boolean;
 }>;
 
@@ -23,10 +32,17 @@ type StoredRequest = {
   challenge: VerificationChallenge;
   currentCode: string;
   incorrectAttempts: number;
+  input: StartVerificationInput;
+  publishedToken?: VerificationToken;
   sendCount: number;
 };
 
 const defaultCodes = ["123456", "654321", "112233"] as const;
+let nextMockRequestNumber = 1;
+
+export function createMockVerificationRequestId(): string {
+  return `mock-verification-${nextMockRequestNumber++}`;
+}
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -36,10 +52,10 @@ export function createMockVerificationRepository({
   codes = defaultCodes,
   latencyMs = 350,
   now = Date.now,
+  onVerified = () => undefined,
   shouldFailDelivery = () => false,
 }: MockVerificationOptions = {}): VerificationRepository {
   const requests = new Map<string, StoredRequest>();
-  let nextRequestNumber = 1;
 
   async function simulateLatency() {
     if (latencyMs > 0) await wait(latencyMs);
@@ -66,18 +82,26 @@ export function createMockVerificationRepository({
   }
 
   return {
+    async cancel(requestId) {
+      await simulateLatency();
+      return {
+        status: requests.delete(requestId) ? "cancelled" : "unavailable",
+      };
+    },
+
     async start(input): Promise<StartVerificationResult> {
       await simulateLatency();
       if (shouldFailDelivery("start")) {
         return { reason: "delivery-failed", status: "rejected" };
       }
 
-      const requestId = `mock-verification-${nextRequestNumber++}`;
+      const requestId = createMockVerificationRequestId();
       const challenge = createChallenge(input, requestId);
       requests.set(requestId, {
         challenge,
         currentCode: codes[0],
         incorrectAttempts: 0,
+        input,
         sendCount: 1,
       });
 
@@ -155,10 +179,18 @@ export function createMockVerificationRepository({
         };
       }
 
-      return {
-        status: "verified",
-        token: `mock-proof-${input.requestId}`,
-      };
+      const token = request.publishedToken ?? `mock-proof-${input.requestId}`;
+      if (!request.publishedToken) {
+        request.publishedToken = token;
+        onVerified({
+          channel: request.input.recipient.channel,
+          purpose: request.input.purpose,
+          recipientValue: request.input.recipient.value,
+          token,
+        });
+      }
+
+      return { status: "verified", token };
     },
   };
 }

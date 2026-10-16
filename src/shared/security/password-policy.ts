@@ -1,7 +1,3 @@
-export const passwordChangeModes = ["standard", "forced"] as const;
-
-export type PasswordChangeMode = (typeof passwordChangeModes)[number];
-
 export const passwordPolicy = Object.freeze({
   minimumLength: 8,
   requiresDigit: true,

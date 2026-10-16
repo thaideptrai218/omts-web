@@ -1,19 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   getPasswordRuleState,
-  passwordChangeModes,
   passwordPolicy,
   satisfiesPasswordPolicy,
-} from "@/features/account-security/domain/password-policy";
+} from "@/shared/security/password-policy";
 
 describe("password policy", () => {
-  it("keeps the confirmed policy and change modes explicit", () => {
+  it("keeps the confirmed SRS rules explicit", () => {
     expect(passwordPolicy).toEqual({
       minimumLength: 8,
       requiresDigit: true,
       requiresLetter: true,
     });
-    expect(passwordChangeModes).toEqual(["standard", "forced"]);
   });
 
   it("accepts Vietnamese letters as letters", () => {

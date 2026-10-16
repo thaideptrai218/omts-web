@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { LoginForm } from "@/features/auth/components/login-form";
@@ -66,5 +67,14 @@ export function LoginExperience() {
     );
   }
 
-  return <LoginForm formError={formError} onSubmit={handleSubmit} />;
+  return (
+    <>
+      <LoginForm formError={formError} onSubmit={handleSubmit} />
+      <p className="mt-5 text-center text-sm text-text-muted">
+        <Link className="font-semibold text-primary hover:underline" href="/recover">
+          Quên mật khẩu?
+        </Link>
+      </p>
+    </>
+  );
 }

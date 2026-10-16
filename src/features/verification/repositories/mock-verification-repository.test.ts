@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { StartVerificationInput } from "@/features/verification/domain/verification-types";
 import { createMockVerificationRepository } from "@/features/verification/repositories/mock-verification-repository";
@@ -21,6 +21,45 @@ async function startRequest(
 }
 
 describe("mock verification repository", () => {
+  it("invalidates a request after it is cancelled", async () => {
+    const repository = createMockVerificationRepository({ latencyMs: 0 });
+    const challenge = await startRequest(repository);
+
+    await expect(repository.cancel(challenge.requestId)).resolves.toEqual({
+      status: "cancelled",
+    });
+    await expect(
+      repository.verify({ code: "123456", requestId: challenge.requestId }),
+    ).resolves.toEqual({ reason: "request-not-found", status: "rejected" });
+  });
+
+  it("publishes proof metadata only after successful verification", async () => {
+    const onVerified = vi.fn();
+    const repository = createMockVerificationRepository({
+      latencyMs: 0,
+      onVerified,
+    });
+    const challenge = await startRequest(repository);
+
+    await repository.verify({ code: "000000", requestId: challenge.requestId });
+    expect(onVerified).not.toHaveBeenCalled();
+
+    const result = await repository.verify({
+      code: "123456",
+      requestId: challenge.requestId,
+    });
+    expect(result).toMatchObject({ status: "verified" });
+    expect(onVerified).toHaveBeenCalledWith({
+      channel: "email",
+      purpose: "registration",
+      recipientValue: "duythai@example.com",
+      token: `mock-proof-${challenge.requestId}`,
+    });
+
+    await repository.verify({ code: "123456", requestId: challenge.requestId });
+    expect(onVerified).toHaveBeenCalledTimes(1);
+  });
+
   it("returns only the masked recipient in a challenge", async () => {
     const repository = createMockVerificationRepository({ latencyMs: 0, now: () => 0 });
     const challenge = await startRequest(repository);

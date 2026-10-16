@@ -4,6 +4,8 @@ export const messageCatalog = {
   MSG12: "Thông tin đăng nhập không đúng.",
   MSG13:
     "Tài khoản này hiện không thể sử dụng. Vui lòng liên hệ kênh hỗ trợ.",
+  MSG14:
+    "Không thể đăng ký bằng email hoặc số điện thoại này. Bạn có thể đăng nhập hoặc khôi phục tài khoản.",
   MSG15:
     "Nếu thông tin hợp lệ, mã xác minh sẽ được gửi tới email hoặc số điện thoại bạn vừa nhập.",
   MSG16: "Mã xác minh không đúng hoặc đã hết hạn. Bạn có thể nhập lại hoặc yêu cầu mã mới.",

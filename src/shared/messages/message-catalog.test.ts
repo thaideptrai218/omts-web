@@ -28,6 +28,13 @@ const passwordChangeMessages = [
   ["MSG18", "Mật khẩu của bạn đã được thay đổi."],
 ] as const satisfies readonly (readonly [MessageCode, string])[];
 
+const registrationMessages = [
+  [
+    "MSG14",
+    "Không thể đăng ký bằng email hoặc số điện thoại này. Bạn có thể đăng nhập hoặc khôi phục tài khoản.",
+  ],
+] as const satisfies readonly (readonly [MessageCode, string])[];
+
 describe("login message catalog", () => {
   it.each(loginMessages)("formats %s", (code, expectedMessage) => {
     expect(formatMessage({ code })).toBe(expectedMessage);
@@ -36,6 +43,12 @@ describe("login message catalog", () => {
 
 describe("password change message catalog", () => {
   it.each(passwordChangeMessages)("formats %s", (code, expectedMessage) => {
+    expect(formatMessage({ code })).toBe(expectedMessage);
+  });
+});
+
+describe("registration message catalog", () => {
+  it.each(registrationMessages)("formats %s", (code, expectedMessage) => {
     expect(formatMessage({ code })).toBe(expectedMessage);
   });
 });

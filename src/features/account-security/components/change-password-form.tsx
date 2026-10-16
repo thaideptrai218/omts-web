@@ -10,7 +10,7 @@ import type {
   CurrentPasswordChangeInput,
   CurrentPasswordChangeResult,
 } from "@/features/account-security/domain/change-password";
-import type { PasswordChangeMode } from "@/features/account-security/domain/password-policy";
+import type { PasswordChangeMode } from "@/features/account-security/domain/password-change-mode";
 import {
   currentPasswordChangeSchema,
   type CurrentPasswordChangeFormValues,
