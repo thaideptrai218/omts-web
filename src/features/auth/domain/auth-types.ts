@@ -43,8 +43,11 @@ export type PhoneVerificationRequired = Readonly<{
   status: "phone-verification-required";
 }>;
 
+export type PostLoginGate =
+  | PasswordChangeRequired
+  | PhoneVerificationRequired;
+
 export type LoginResult =
   | ApplicationAccessGranted
   | LoginRejected
-  | PasswordChangeRequired
-  | PhoneVerificationRequired;
+  | PostLoginGate;

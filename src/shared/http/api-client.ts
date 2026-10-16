@@ -1,5 +1,6 @@
 import { ApiError } from "@/shared/http/api-error";
 import type { AppMessage } from "@/shared/messages/message-catalog";
+import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
 type FetchImplementation = typeof fetch;
 
@@ -74,6 +75,7 @@ export function createApiClient({
 
       if (response.status === 401) {
         const message = { code: "MSG19" } as const;
+        sessionExpiryChannel.publish(message);
         onUnauthorized?.(message);
         throw new ApiError(response.status, message);
       }

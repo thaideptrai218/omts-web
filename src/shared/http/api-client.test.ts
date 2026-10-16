@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createApiClient } from "@/shared/http/api-client";
 import { ApiError } from "@/shared/http/api-error";
+import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
 describe("createApiClient", () => {
   it("returns a parsed JSON response", async () => {
@@ -67,17 +68,24 @@ describe("createApiClient", () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(null, { status: 401 }));
     const onUnauthorized = vi.fn();
+    const sessionExpiryListener = vi.fn();
+    const unsubscribe = sessionExpiryChannel.subscribe(sessionExpiryListener);
     const client = createApiClient({
       baseUrl: "https://qa.example.test/api",
       fetchImplementation,
       onUnauthorized,
     });
 
-    await expect(client.request("protected")).rejects.toMatchObject({
-      appMessage: { code: "MSG19" },
-      status: 401,
-    });
-    expect(onUnauthorized).toHaveBeenCalledWith({ code: "MSG19" });
+    try {
+      await expect(client.request("protected")).rejects.toMatchObject({
+        appMessage: { code: "MSG19" },
+        status: 401,
+      });
+      expect(onUnauthorized).toHaveBeenCalledWith({ code: "MSG19" });
+      expect(sessionExpiryListener).toHaveBeenCalledWith({ code: "MSG19" });
+    } finally {
+      unsubscribe();
+    }
   });
 
   it("maps other unsuccessful responses to the generic service message", async () => {

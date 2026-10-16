@@ -20,8 +20,22 @@ const loginMessages = [
   ],
 ] as const satisfies readonly (readonly [MessageCode, string])[];
 
+const passwordChangeMessages = [
+  [
+    "MSG17",
+    "Mật khẩu hiện tại không đúng. Mật khẩu của bạn chưa được thay đổi.",
+  ],
+  ["MSG18", "Mật khẩu của bạn đã được thay đổi."],
+] as const satisfies readonly (readonly [MessageCode, string])[];
+
 describe("login message catalog", () => {
   it.each(loginMessages)("formats %s", (code, expectedMessage) => {
+    expect(formatMessage({ code })).toBe(expectedMessage);
+  });
+});
+
+describe("password change message catalog", () => {
+  it.each(passwordChangeMessages)("formats %s", (code, expectedMessage) => {
     expect(formatMessage({ code })).toBe(expectedMessage);
   });
 });

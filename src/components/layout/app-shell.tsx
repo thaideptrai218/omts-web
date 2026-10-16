@@ -15,6 +15,8 @@ type AppShellProps = {
   accountInitials?: string;
   accountLabel?: string;
   children: ReactNode;
+  isLoggingOut?: boolean;
+  onLogout: () => void;
 };
 
 const navigationItems = [
@@ -52,6 +54,54 @@ function DashboardIcon() {
         strokeWidth="1.6"
       />
     </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
+      <path
+        d="M8 4H4.75A1.75 1.75 0 0 0 3 5.75v8.5C3 15.22 3.78 16 4.75 16H8m3-3.25L13.75 10 11 7.25M6.5 10h7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+function LogoutButton({
+  collapsed = false,
+  isPending = false,
+  onClick,
+}: {
+  collapsed?: boolean;
+  isPending?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-busy={isPending || undefined}
+      aria-label={collapsed ? "Đăng xuất" : undefined}
+      className="flex min-h-11 w-full items-center justify-center gap-3 rounded-control border border-border px-3 py-2.5 text-sm font-semibold text-text-muted transition duration-200 hover:border-danger/40 hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={isPending}
+      onClick={onClick}
+      title={collapsed ? "Đăng xuất" : undefined}
+      type="button"
+    >
+      {isPending ? (
+        <span
+          aria-hidden="true"
+          className="size-5 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
+        />
+      ) : (
+        <LogoutIcon />
+      )}
+      <span className={collapsed ? "sr-only" : undefined}>
+        {isPending ? "Đang đăng xuất..." : "Đăng xuất"}
+      </span>
+    </button>
   );
 }
 
@@ -111,6 +161,8 @@ export function AppShell({
   accountInitials = "HT",
   accountLabel = "Tài khoản",
   children,
+  isLoggingOut = false,
+  onLogout,
 }: AppShellProps) {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -165,6 +217,14 @@ export function AppShell({
 
         <div className="flex-1 px-3 py-5">
           <NavigationList access={access} collapsed={isDesktopCollapsed} />
+        </div>
+
+        <div className="border-t border-border p-3">
+          <LogoutButton
+            collapsed={isDesktopCollapsed}
+            isPending={isLoggingOut}
+            onClick={onLogout}
+          />
         </div>
 
         {isDesktopCollapsed && (
@@ -243,6 +303,27 @@ export function AppShell({
             <NavigationList
               access={access}
               onNavigate={() => setIsMobileMenuOpen(false)}
+            />
+          </div>
+
+          <div className="space-y-3 border-t border-border pt-4">
+            <div className="flex min-w-0 items-center gap-3 px-2">
+              <span
+                aria-hidden="true"
+                className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary-hover"
+              >
+                {accountInitials}
+              </span>
+              <span className="truncate text-sm font-semibold text-text">
+                {accountLabel}
+              </span>
+            </div>
+            <LogoutButton
+              isPending={isLoggingOut}
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                onLogout();
+              }}
             />
           </div>
         </aside>

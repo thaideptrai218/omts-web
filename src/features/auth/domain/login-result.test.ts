@@ -3,7 +3,10 @@ import type {
   AuthenticatedSession,
   LoginResult,
 } from "@/features/auth/domain/auth-types";
-import { grantsApplicationAccess } from "@/features/auth/domain/login-result";
+import {
+  grantsApplicationAccess,
+  requiresPostLoginGate,
+} from "@/features/auth/domain/login-result";
 
 const authenticatedSession: AuthenticatedSession = {
   account: {
@@ -18,6 +21,7 @@ const authenticatedSession: AuthenticatedSession = {
 const outcomes = [
   {
     grantsAccess: false,
+    requiresGate: false,
     label: "rejected credentials",
     result: {
       message: { code: "MSG12" },
@@ -26,11 +30,13 @@ const outcomes = [
   },
   {
     grantsAccess: false,
+    requiresGate: true,
     label: "required password change",
     result: { status: "password-change-required" },
   },
   {
     grantsAccess: false,
+    requiresGate: true,
     label: "required phone verification",
     result: {
       message: { code: "MSG67" },
@@ -39,6 +45,7 @@ const outcomes = [
   },
   {
     grantsAccess: true,
+    requiresGate: false,
     label: "completed login gates",
     result: {
       session: authenticatedSession,
@@ -48,11 +55,18 @@ const outcomes = [
 ] as const satisfies readonly {
   grantsAccess: boolean;
   label: string;
+  requiresGate: boolean;
   result: LoginResult;
 }[];
 
 describe("grantsApplicationAccess", () => {
   it.each(outcomes)("returns $grantsAccess for $label", ({ grantsAccess, result }) => {
     expect(grantsApplicationAccess(result)).toBe(grantsAccess);
+  });
+});
+
+describe("requiresPostLoginGate", () => {
+  it.each(outcomes)("returns $requiresGate for $label", ({ requiresGate, result }) => {
+    expect(requiresPostLoginGate(result)).toBe(requiresGate);
   });
 });

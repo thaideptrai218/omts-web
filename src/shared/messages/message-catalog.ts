@@ -7,6 +7,8 @@ export const messageCatalog = {
   MSG15:
     "Nếu thông tin hợp lệ, mã xác minh sẽ được gửi tới email hoặc số điện thoại bạn vừa nhập.",
   MSG16: "Mã xác minh không đúng hoặc đã hết hạn. Bạn có thể nhập lại hoặc yêu cầu mã mới.",
+  MSG17: "Mật khẩu hiện tại không đúng. Mật khẩu của bạn chưa được thay đổi.",
+  MSG18: "Mật khẩu của bạn đã được thay đổi.",
   MSG19: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   MSG67:
     "Tài khoản của bạn cần xác minh số điện thoại để tiếp tục sử dụng OMTS. Vui lòng nhập hoặc xác nhận số điện thoại và nhập mã xác minh được gửi qua SMS.",

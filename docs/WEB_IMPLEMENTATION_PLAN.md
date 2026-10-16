@@ -157,13 +157,13 @@ Phần refresh token, cookie, `/me/permissions` và session bootstrap sẽ đi q
 - [x] **B1.5a:** tạo domain result, repository và service contract cho `start/resend/verify`.
 - [x] **B1.5b:** tạo mock adapter có thời gian điều khiển được; mã mới hủy mã cũ, lỗi gửi không làm mất challenge hiện tại.
 - [x] **B1.6:** nối state đúng/sai/hết hạn/quá số lần/lỗi dịch vụ với MSG04, MSG16 và `onVerified(token)`; caller sở hữu challenge và initial-send policy.
-- [x] **B1.7:** thêm showcase chỉ ở development để kiểm chứng cùng component được cấu hình lại cho UC01, UC02, UC03 và UC05, không nhân bản form OTP.
+- [x] **B1.7:** dùng harness tạm để kiểm chứng cùng component được cấu hình lại cho UC01, UC02, UC03 và UC05, không nhân bản form OTP; harness đã bị xóa khỏi product source sau QA.
 - [x] **B1.8:** kiểm tra keyboard, focus, reduced motion, 360 px, 1024 px, test/lint/typecheck/build.
 - [ ] **B1.9 (deferred — chờ backend):** nối `start/resend/verify` với QA API sau khi backend contract sẵn sàng; chỉ khi đó mới xét Jira Done.
 
 Figma OTP chỉ được mở khi cần làm rõ inventory/luồng; visual được thiết kế lại theo usability. B1.1 dùng purpose từ `OMTS-149`, nhưng HTTP adapter sau này vẫn phải map theo OpenAPI thật thay vì coi chuỗi domain là tên field API.
 
-**Kết quả B1:** SCR-02 đã đạt UI ready bằng mock. B1.8 xác nhận 35/35 test, lint, typecheck, production build và `git diff --check` đều đạt; kiểm thử trình duyệt đạt ở 360 px và 1024 px, focus được giữ trong dialog và route showcase trả 404 ở production. B1.9 được hoãn vì `OMTS-149`/QA API chưa sẵn sàng, nên `OMTS-150` chưa được coi là Jira ready.
+**Kết quả B1:** SCR-02 đã đạt UI ready bằng mock. B1.8 xác nhận 35/35 test, lint, typecheck, production build và `git diff --check` đều đạt; harness tạm từng xác nhận 360 px/1024 px và focus trap rồi đã được xóa khỏi product source. B1.9 được hoãn vì `OMTS-149`/QA API chưa sẵn sàng, nên `OMTS-150` chưa được coi là Jira ready.
 
 #### B2. OMTS-159 — SCR-03, đăng nhập và post-login gate
 
@@ -174,12 +174,15 @@ Quyết định `WEB-AUTH-01` đã chốt phương án B: identifier là usernam
 - [ ] **B2.3:** hoàn thiện form đăng nhập theo hai lát nhỏ:
   - [x] **B2.3a:** helper identifier và hiện/ẩn password dùng được bằng bàn phím, không lưu password;
   - [ ] **B2.3b (deferred — chờ destination):** thêm link UC03 khi route `/recover` có page đích và lối truy xuất QR khi route UC40/SCR-24 được xác nhận; không tạo link dẫn tới 404 hoặc tự đặt URL.
-- [ ] **B2.4:** mock account được chia để không bật một demo gate chưa có UI:
+- [x] **B2.4:** mock account được chia để không bật một demo gate chưa có UI:
   - [x] **B2.4a:** repository factory trả đủ MSG12/13/68/69, password gate, phone gate và access granted; mỗi scenario có test và gate không tạo session;
-  - [ ] **B2.4b:** sau B2.5, hiển thị hướng dẫn account mock để nhóm review từng nhánh trên UI.
-- [ ] **B2.5 (next):** điều phối gate đúng thứ tự: đổi temporary password trước, sau đó xác minh phone nếu BR-34 yêu cầu; không mở application shell trong khi còn gate.
-- [ ] **B2.6:** sau khi qua mọi gate, mở home và menu theo effective permission; không suy diễn quyền từ tên role.
-- [ ] **B2.7:** kiểm thử domain, component, keyboard/focus và responsive ở 360 px/1024 px; chạy lint, typecheck và build.
+  - [x] **B2.4b (superseded):** không hiển thị credential/hướng dẫn mock trong product UI theo quy tắc giao diện chính thức; scenario chỉ được giữ trong mock/test và tài liệu local khi cần review.
+- [ ] **B2.5:** điều phối gate đúng thứ tự mà không tự quyết auth/backend contract:
+  - [x] **B2.5a:** thay trạng thái im lặng bằng gate landing panel; password/phone gate giữ anonymous state, không mở application shell, chuyển focus vào tiêu đề và cho phép quay lại đăng nhập;
+  - [ ] **B2.5b (deferred — dependency):** nối forced password UI của `OMTS-167`; sau khi đổi thành công, backend quyết định còn phone gate hay được vào ứng dụng;
+  - [ ] **B2.5c (deferred — dependency):** nhập/xác nhận số điện thoại, kiểm tra unique và dùng SCR-02 cho OTP theo `OMTS-158`/`OMTS-149`; không hard-code recipient/challenge vào login DTO.
+- [x] **B2.6:** sau khi qua mọi gate, mở home và menu theo effective permission; không suy diễn quyền từ tên role.
+- [x] **B2.7:** kiểm thử domain, component, keyboard/focus và responsive ở 360 px/1024 px; chạy lint, typecheck và build.
 - [ ] **B2.8 (deferred — chờ backend):** map HTTP DTO và kiểm tra các gate bằng QA test account trước khi chuyển Jira Done.
 
 Tên field response, thời điểm phát token và route đích thuộc `WEB-AUTH-02`, vẫn chờ backend. Frontend sẽ biểu diễn kết quả bằng kiểu domain trung lập, không coi tên field mock là API chính thức.
@@ -190,26 +193,48 @@ Tên field response, thời điểm phát token và route đích thuộc `WEB-AU
 
 **Kết quả B2.4a:** mock auth được chuyển thành repository factory có state cô lập và latency cấu hình được. Ba identifier đã xác minh (username/phone/email) đi tới `access-granted`; các scenario riêng trả MSG13/68/69, password gate và phone gate; identifier hoặc password sai luôn trả MSG12 chung. Gate/rejection không tạo session. Có 11 test mới; hướng dẫn credential chưa render trên UI cho tới khi B2.5 có màn đích.
 
+**Kết quả B2.5a:** hai gate không còn làm form đứng im sau submit. UI chuyển sang panel bảo mật tương ứng, giữ URL `/login`, không mở dashboard và tự focus heading mới; người dùng có thể quay lại để dùng tài khoản khác. Bước này cố ý chưa có nút vượt gate: SRS yêu cầu UC02 nhập/xác nhận phone trước khi gọi UC08, còn Jira/backend chưa cung cấp recipient/challenge hay contract hoàn tất đổi mật khẩu. Baseline là 58/58 tests; lint, typecheck và production build đạt ngày 16/10/2026.
+
+**Kết quả B2.6–B2.7:** nhánh `access-granted` mở `/dashboard`; application shell chỉ render navigation item khi effective permission cho phép. Product UI không còn khối hướng dẫn credential mock. Browser QA xác nhận login → dashboard → logout; full regression đạt 17 files, 91/91 tests cùng lint, typecheck, build và `git diff --check`. Dashboard foundation copy dành cho developer được thay bằng welcome state cho người dùng, không bịa dữ liệu tổng hợp khi chưa có contract.
+
 #### B3. OMTS-167 — SCR-05 Security, đổi mật khẩu
 
-- [ ] security tab trong khu vực tài khoản;
-- [ ] hai cách chứng minh: current password hoặc mã gửi email theo SRS;
-- [ ] new password + confirmation và rule hint;
-- [ ] forced-change mode không hiển thị navigation sang nghiệp vụ khác;
-- [ ] MSG01, MSG16, MSG17, MSG18, MSG19;
-- [ ] sau đổi/reset mật khẩu, xử lý session theo contract đã xác nhận;
-- [ ] QA API gồm cả forced mode trước khi Jira Done.
+- [x] **B3.1:** mô hình password policy, schema new password + confirmation và mode thường/forced; chưa quyết định API/session.
+- [ ] **B3.2:** dựng form đổi mật khẩu theo các lát kiểm tra được:
+  - [x] **B3.2a:** current-password form dùng chung cho standard/forced context, live rule checklist, field error/focus và pending state; không giữ showcase/panel chú thích trong product source;
+  - [ ] **B3.2b (deferred — WEB-AUTH-02):** gắn forced form vào post-login gate và kiểm tra 360 px/1024 px trong hành trình thật sau khi contract session/next gate được xác nhận; không tạo submit thành công giả.
+- [ ] **B3.3 (deferred — chờ recipient/challenge contract):** thêm lựa chọn chứng minh bằng email code và tái sử dụng SCR-02; không tạo luồng gửi mã nếu chưa biết email đã xác minh của account được cung cấp thế nào.
+- [ ] **B3.4:** nối message và mock outcomes theo các lát nhỏ:
+  - [x] **B3.4a:** thêm MSG17/MSG18, domain result, repository/service contract và mock đổi mật khẩu bằng mật khẩu hiện tại; mock kiểm tra session, password policy và chỉ giữ password trong memory;
+  - [x] **B3.4b1:** nối typed result vào form; lỗi evidence/policy được đặt đúng field, còn success/session-expired đi qua callback cấp luồng và password được xóa khỏi form memory;
+  - [ ] **B3.4b2 (deferred — WEB-AUTH-02, kết hợp B3.2b):** compose service với forced form trong post-login gate thật và xử lý bước tiếp theo sau success theo contract session/gate đã xác nhận.
+- [ ] **B3.5 (deferred — chờ backend):** xử lý session sau đổi/reset theo contract đã xác nhận và kiểm tra QA API gồm forced mode trước Jira Done.
+
+**Kết quả B3.1:** policy dùng chung giữ đúng SRS: ít nhất 8 ký tự, có chữ cái và chữ số; không tự thêm uppercase hoặc ký tự đặc biệt. Phép đếm dùng Unicode code point để emoji không bị tính thành hai ký tự; chữ tiếng Việt được nhận bằng Unicode letter. Schema không trim password, đặt mismatch vào `confirmPassword` và không tạo nhiều lỗi rule gây nhiễu khi field rỗng. Hai mode `standard`/`forced` mới là domain context, chưa quyết định cách chứng minh hoặc session. Baseline tăng lên 12 test files, 71/71 tests; lint, typecheck và production build đạt ngày 16/10/2026.
+
+**Kết quả B3.2a:** form current-password dùng cùng component cho forced/standard mode, nhưng đổi label và hướng dẫn theo context. Ba password field có hiện/ẩn, autocomplete phù hợp, error focus và rule checklist đọc từ B3.1. Một harness tạm từng được dùng để xác nhận empty/mismatch focus, checklist live, pending button, reset theo context và AX redaction; sau review, harness cùng panel chú thích đã bị xóa khỏi source. Component chỉ được mount trong luồng production thật ở B3.2b. Baseline là 73/73 tests; lint, typecheck và production build đạt ngày 16/10/2026.
+
+**Kết quả B3.4a:** tầng đổi mật khẩu bằng current password đã có domain result, repository interface, service và mock adapter độc lập với component. `confirmPassword` dừng ở UI; repository chỉ nhận current/new password. Mock ưu tiên kiểm tra session, ánh xạ MSG17/MSG18/MSG19, kiểm tra lại policy ở data boundary, cập nhật password trong memory sau success và không trả password trong result. Nhánh email-code vẫn hoãn vì chưa có account recipient/challenge contract; không có route hoặc màn showcase mới.
+
+**Kết quả B3.4b1:** `ChangePasswordForm` gọi một function theo service contract, không biết mock/HTTP. Presenter thuần ánh xạ từng typed result: MSG17 vào `currentPassword`, MSG01 vào `newPassword`, MSG19 sang `onSessionExpired` và MSG18 sang `onChanged`. Domain union liên kết từng rejection reason với đúng message code để TypeScript bắt adapter trả sai cặp. Form reset password trước flow-level callback. Việc mount forced flow vẫn hoãn vì hành vi session/gate sau success thuộc `WEB-AUTH-02`.
 
 #### B4. OMTS-179 — UC07, logout và dọn dữ liệu bảo vệ
 
 Đây là hành vi xuyên ứng dụng, không phải một page độc lập.
 
-- [ ] gọi logout qua service;
-- [ ] xóa auth state và protected query/cache;
-- [ ] về SCR-03;
-- [ ] MSG19 khi session hết hạn;
-- [ ] nhấn Back sau logout không hiển thị protected data;
-- [ ] kiểm tra lỗi mạng theo contract UC07 trước khi Jira Done.
+- [x] **B4.1:** thêm logout action vào desktop sidebar/mobile drawer; xóa auth state local trước remote logout, chặn protected children khi loading/anonymous, về SCR-03 và xác nhận Back/direct `/dashboard` không hiển thị protected data;
+- [x] **B4.2:** tạo protected-cache cleanup registry và gọi cùng local auth cleanup; hiện repo chưa có query cache nên không hard-code một thư viện cache giả;
+- [x] **B4.3:** nối final 401/MSG19 vào cùng cleanup + redirect flow;
+- [ ] **B4.4 (deferred — chờ contract):** khi logout mất mạng, lưu yêu cầu server-session invalidation để retry khi online theo UC07/MSG07;
+- [ ] **B4.5 (deferred — chờ backend):** nối QA API và kiểm tra token/cookie/server session trước Jira Done.
+
+**Kết quả B4.1:** logout đi qua `AuthProvider → AuthService → AuthRepository`. Provider dùng local-first cleanup: protected state bị chuyển anonymous trước khi chờ remote invalidation. `AppSessionShell` không render children khi loading/anonymous; trong lúc request logout còn chạy chỉ hiện trạng thái chuyển trang, sau đó `replace('/login')`. Browser QA xác nhận desktop, mobile drawer 360 px, Back và truy cập trực tiếp `/dashboard` sau logout không hiển thị dashboard. Next.js dev báo Instant Navigation Insight vì client auth guard cố ý không render page segment khi session chưa được xác định; production build vẫn đạt. Không tắt insight bằng `instant = false`, vì server-side protection vẫn là release blocker thật cần xử lý khi session contract được chốt.
+
+**Kết quả B4.2:** registry dọn protected cache nhận cleanup theo key, chặn đăng ký trùng, hỗ trợ unregister và chạy best-effort toàn bộ cleanup thay vì dừng ở lỗi đầu tiên. Logout gọi registry sau khi auth state thành anonymous và trước remote invalidation. Chưa đăng ký cache giả hoặc phụ thuộc query library khi repo chưa có cache nghiệp vụ thật.
+
+**Kết quả B4.3:** API client phát sự kiện MSG19 khi nhận final 401 nhưng vẫn reject `ApiError`. `AuthProvider` chỉ xử lý sự kiện khi trạng thái hiện tại là authenticated, vô hiệu hóa operation đang chạy, chuyển anonymous, gọi cùng protected-cache registry và hiển thị toast MSG19. `AppSessionShell` quan sát anonymous state để dừng render protected children và replace về `/login`. Nhiều 401 đồng thời không xử lý lặp vì status ref được đổi đồng bộ ở lần đầu.
+
+**Trạng thái đóng phạm vi khả thi của Chặng B:** các micro-task không phụ thuộc contract backend đã hoàn thành và được kiểm tra. Các mục còn mở đều ghi rõ `deferred` vì cần destination route, `WEB-AUTH-02`, phone/email challenge, offline invalidation hoặc QA session contract. Không mục deferred nào được tự suy đoán hoặc đánh dấu hoàn thành; các Jira item liên quan chưa đủ điều kiện Done.
 
 ### Chặng C — hoàn thiện các màn tài khoản
 

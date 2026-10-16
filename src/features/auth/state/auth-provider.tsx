@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useToast } from "@/components/ui/toast-provider";
 import type {
   AuthSession,
   LoginInput,
@@ -18,6 +19,10 @@ import type {
 import { grantsApplicationAccess } from "@/features/auth/domain/login-result";
 import { authService } from "@/features/auth/services/auth-service.instance";
 import { createLatestOperationTracker } from "@/features/auth/state/latest-operation";
+import { performLocalFirstLogout } from "@/features/auth/state/local-first-logout";
+import { protectedCacheRegistry } from "@/features/auth/state/protected-cache-registry";
+import { formatMessage } from "@/shared/messages/message-catalog";
+import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
 type LoadingSession = Readonly<{ status: "loading" }>;
 
@@ -33,7 +38,14 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: "loading" });
+  const sessionStatus = useRef<AuthState["status"]>("loading");
   const operationTracker = useRef(createLatestOperationTracker());
+  const { notify } = useToast();
+
+  const replaceState = useCallback((nextState: AuthState) => {
+    sessionStatus.current = nextState.status;
+    setState(nextState);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -42,18 +54,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService
       .getSession()
       .then((session) => {
-        if (isActive) operation.commit(() => setState(session));
+        if (isActive) operation.commit(() => replaceState(session));
       })
       .catch(() => {
         if (isActive) {
-          operation.commit(() => setState({ status: "anonymous" }));
+          operation.commit(() => replaceState({ status: "anonymous" }));
         }
       });
 
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [replaceState]);
+
+  useEffect(
+    () =>
+      sessionExpiryChannel.subscribe((message) => {
+        if (sessionStatus.current !== "authenticated") return;
+
+        const operation = operationTracker.current.start();
+        operation.commit(() => replaceState({ status: "anonymous" }));
+        protectedCacheRegistry.clearAll();
+        notify({
+          title: formatMessage(message),
+          tone: "danger",
+        });
+      }),
+    [notify, replaceState],
+  );
 
   const login = useCallback(async (input: LoginInput) => {
     const operation = operationTracker.current.start();
@@ -63,36 +91,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       operation.commit(() => {
         if (grantsApplicationAccess(result)) {
-          setState(result.session);
+          replaceState(result.session);
           return;
         }
 
-        setState((currentState) =>
-          currentState.status === "loading"
-            ? { status: "anonymous" }
-            : currentState,
-        );
+        if (sessionStatus.current === "loading") {
+          replaceState({ status: "anonymous" });
+        }
       });
 
       return result;
     } catch (error) {
       operation.commit(() => {
-        setState((currentState) =>
-          currentState.status === "loading"
-            ? { status: "anonymous" }
-            : currentState,
-        );
+        if (sessionStatus.current === "loading") {
+          replaceState({ status: "anonymous" });
+        }
       });
       throw error;
     }
-  }, []);
+  }, [replaceState]);
 
   const logout = useCallback(async () => {
     const operation = operationTracker.current.start();
 
-    await authService.logout();
-    operation.commit(() => setState({ status: "anonymous" }));
-  }, []);
+    await performLocalFirstLogout(
+      () => {
+        operation.commit(() => replaceState({ status: "anonymous" }));
+      },
+      () => {
+        protectedCacheRegistry.clearAll();
+      },
+      () => authService.logout(),
+    );
+  }, [replaceState]);
 
   const value = useMemo(
     () => ({ login, logout, state }),

@@ -4,21 +4,6 @@ import Link from "next/link";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
 import { useAuth } from "@/features/auth/state/auth-provider";
 
-const foundationItems = [
-  {
-    description: "Bố cục tự chuyển giữa drawer mobile và sidebar desktop.",
-    title: "Điều hướng responsive",
-  },
-  {
-    description: "UI chỉ gọi service contract, chưa phụ thuộc API hoặc mock storage.",
-    title: "Ranh giới dữ liệu",
-  },
-  {
-    description: "Quyền theo vùng sẽ được bổ sung sau khi payload backend được xác nhận.",
-    title: "Permission-ready",
-  },
-] as const;
-
 function DashboardSkeleton() {
   return (
     <div className="w-full max-w-2xl motion-safe:animate-pulse" role="status">
@@ -55,33 +40,43 @@ function LoginRequired() {
   );
 }
 
-function DashboardContent() {
+function DashboardContent({ displayName }: { displayName: string }) {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-semibold text-primary">OMTS Web</p>
+        <p className="text-sm font-semibold text-primary">Không gian làm việc</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text sm:text-4xl">
           Tổng quan
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-text-muted">
-          Đây là trang mẫu để kiểm tra application shell trước khi các module nghiệp vụ được triển khai.
+          Truy cập nhanh các chức năng phù hợp với quyền và phạm vi làm việc của bạn.
         </p>
       </header>
 
-      <section aria-labelledby="foundation-title">
-        <h2 className="text-lg font-semibold text-text" id="foundation-title">
-          Nền tảng hiện có
-        </h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {foundationItems.map((item) => (
-            <article
-              className="rounded-card border border-border bg-surface p-5 shadow-sm"
-              key={item.title}
-            >
-              <h3 className="font-semibold text-text">{item.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-text-muted">{item.description}</p>
-            </article>
-          ))}
+      <section
+        aria-labelledby="welcome-title"
+        className="relative overflow-hidden rounded-card border border-primary/15 bg-gradient-to-br from-primary to-primary-hover p-6 text-white shadow-card sm:p-8"
+      >
+        <div
+          aria-hidden="true"
+          className="absolute -right-12 -top-16 size-48 rounded-full border border-white/15"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute -bottom-20 right-16 size-40 rounded-full bg-white/5"
+        />
+        <div className="relative max-w-2xl">
+          <p className="text-sm font-semibold text-white/80">Chào mừng trở lại</p>
+          <h2
+            className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
+            id="welcome-title"
+          >
+            {displayName}
+          </h2>
+          <p className="mt-3 max-w-xl leading-7 text-white/85">
+            Chọn một mục trong thanh điều hướng để bắt đầu công việc. OMTS chỉ hiển thị
+            những chức năng tài khoản của bạn được phép sử dụng.
+          </p>
         </div>
       </section>
     </div>
@@ -116,5 +111,5 @@ export function DashboardExperience() {
     return <PermissionDenied />;
   }
 
-  return <DashboardContent />;
+  return <DashboardContent displayName={state.account.displayName} />;
 }

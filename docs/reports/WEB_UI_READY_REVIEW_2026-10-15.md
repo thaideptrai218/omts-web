@@ -1,5 +1,7 @@
 # Báo cáo kiểm tra OMTS Web — Foundation và SCR-02
 
+> Cập nhật 16/10/2026: các route/component development showcase đã bị xóa khỏi product source theo định hướng chỉ giữ màn hình production. Những mục showcase bên dưới mô tả trạng thái tại thời điểm review 15/10/2026, không phải source hiện tại.
+
 > Ngày kiểm tra: 15/10/2026 (Asia/Saigon)
 >
 > Branch: `feature/OMTS-132-web-foundation`

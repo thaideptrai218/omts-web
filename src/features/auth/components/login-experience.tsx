@@ -4,7 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { LoginForm } from "@/features/auth/components/login-form";
-import { grantsApplicationAccess } from "@/features/auth/domain/login-result";
+import { PostLoginGatePanel } from "@/features/auth/components/post-login-gate-panel";
+import type { PostLoginGate } from "@/features/auth/domain/auth-types";
+import {
+  grantsApplicationAccess,
+  requiresPostLoginGate,
+} from "@/features/auth/domain/login-result";
 import type { LoginFormValues } from "@/features/auth/schemas/login-schema";
 import { useAuth } from "@/features/auth/state/auth-provider";
 import { ApiError } from "@/shared/http/api-error";
@@ -22,6 +27,7 @@ export function LoginExperience() {
   const router = useRouter();
   const { notify } = useToast();
   const [formError, setFormError] = useState<string>();
+  const [postLoginGate, setPostLoginGate] = useState<PostLoginGate>();
 
   async function handleSubmit(values: LoginFormValues) {
     setFormError(undefined);
@@ -34,6 +40,11 @@ export function LoginExperience() {
         return;
       }
 
+      if (requiresPostLoginGate(result)) {
+        setPostLoginGate(result);
+        return;
+      }
+
       if (!grantsApplicationAccess(result)) return;
 
       notify({ title: "Đăng nhập thành công.", tone: "success" });
@@ -43,18 +54,17 @@ export function LoginExperience() {
     }
   }
 
-  return (
-    <>
-      <LoginForm formError={formError} onSubmit={handleSubmit} />
+  if (postLoginGate) {
+    return (
+      <PostLoginGatePanel
+        gate={postLoginGate}
+        onUseAnotherAccount={() => {
+          setPostLoginGate(undefined);
+          setFormError(undefined);
+        }}
+      />
+    );
+  }
 
-      <details className="mt-5 rounded-control border border-border bg-surface-subtle px-4 py-3 text-sm text-text-muted">
-        <summary className="cursor-pointer font-semibold text-text">
-          Thông tin đăng nhập bản mock
-        </summary>
-        <p className="mt-2 leading-6">
-          Tên đăng nhập <strong>owner</strong>, mật khẩu <strong>demo123</strong>.
-        </p>
-      </details>
-    </>
-  );
+  return <LoginForm formError={formError} onSubmit={handleSubmit} />;
 }
