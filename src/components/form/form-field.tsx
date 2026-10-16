@@ -1,6 +1,11 @@
-import { forwardRef, type InputHTMLAttributes } from "react";
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from "react";
 
-type FormFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
+export type FormFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
+  endAdornment?: ReactNode;
   error?: string;
   hint?: string;
   id: string;
@@ -9,7 +14,15 @@ type FormFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
 
 export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
   function FormField(
-    { "aria-describedby": ariaDescribedBy, error, hint, id, label, ...inputProps },
+    {
+      "aria-describedby": ariaDescribedBy,
+      endAdornment,
+      error,
+      hint,
+      id,
+      label,
+      ...inputProps
+    },
     ref,
   ) {
     const hintId = hint ? `${id}-hint` : undefined;
@@ -33,18 +46,28 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
           </p>
         )}
 
-        <input
-          {...inputProps}
-          aria-describedby={describedBy || undefined}
-          aria-invalid={error ? true : undefined}
-          className={`mt-2 min-h-12 w-full rounded-control border bg-surface px-3.5 py-2.5 text-base text-text shadow-sm outline-none transition duration-200 placeholder:text-slate-400 ${
-            error
-              ? "border-danger focus-visible:border-danger"
-              : "border-border-strong hover:border-slate-500 focus-visible:border-primary"
-          }`}
-          id={id}
-          ref={ref}
-        />
+        <div className="relative mt-2">
+          <input
+            {...inputProps}
+            aria-describedby={describedBy || undefined}
+            aria-invalid={error ? true : undefined}
+            className={`min-h-12 w-full rounded-control border bg-surface px-3.5 py-2.5 text-base text-text shadow-sm outline-none transition duration-200 placeholder:text-slate-400 ${
+              endAdornment ? "pr-20" : ""
+            } ${
+              error
+                ? "border-danger focus-visible:border-danger"
+                : "border-border-strong hover:border-slate-500 focus-visible:border-primary"
+            }`}
+            id={id}
+            ref={ref}
+          />
+
+          {endAdornment && (
+            <div className="absolute inset-y-0 right-1.5 flex items-center">
+              {endAdornment}
+            </div>
+          )}
+        </div>
 
         {error && (
           <p className="mt-1.5 text-sm font-medium text-danger" id={errorId} role="alert">

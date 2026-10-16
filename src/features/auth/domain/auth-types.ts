@@ -24,12 +24,27 @@ export type LoginInput = Readonly<{
   password: string;
 }>;
 
+export type ApplicationAccessGranted = Readonly<{
+  session: AuthenticatedSession;
+  status: "access-granted";
+}>;
+
+export type LoginRejected = Readonly<{
+  message: AppMessage;
+  status: "rejected";
+}>;
+
+export type PasswordChangeRequired = Readonly<{
+  status: "password-change-required";
+}>;
+
+export type PhoneVerificationRequired = Readonly<{
+  message: Readonly<{ code: "MSG67" }>;
+  status: "phone-verification-required";
+}>;
+
 export type LoginResult =
-  | Readonly<{
-      session: AuthenticatedSession;
-      status: "authenticated";
-    }>
-  | Readonly<{
-      message: AppMessage;
-      status: "rejected";
-    }>;
+  | ApplicationAccessGranted
+  | LoginRejected
+  | PasswordChangeRequired
+  | PhoneVerificationRequired;

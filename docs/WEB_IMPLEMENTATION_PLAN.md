@@ -170,10 +170,14 @@ Figma OTP chỉ được mở khi cần làm rõ inventory/luồng; visual đư�
 Quyết định `WEB-AUTH-01` đã chốt phương án B: identifier là username, số điện thoại đã xác minh hoặc email đã xác minh. Staff đăng nhập lần đầu bằng username và temporary password.
 
 - [x] **B2.1:** đối chiếu Jira `OMTS-159`, SRS UC02/SCR-03 và quyết định `WEB-AUTH-01`; Figma node `2:43` chỉ là tham khảo tùy chọn.
-- [ ] **B2.2 (next):** bổ sung message catalog và mô hình kết quả đăng nhập trung lập cho bốn kết quả: từ chối, buộc đổi mật khẩu tạm, buộc xác minh điện thoại, hoặc được vào ứng dụng; chưa gắn tên field/route/token của backend.
-- [ ] **B2.3:** hoàn thiện form identifier + password, helper text, hiện/ẩn password dùng được bằng bàn phím, link UC03 và lối truy xuất QR công khai.
-- [ ] **B2.4:** thêm mock account cho MSG12, MSG13, MSG68, MSG69 và từng nhánh post-login để nhóm review UI.
-- [ ] **B2.5:** điều phối gate đúng thứ tự: đổi temporary password trước, sau đó xác minh phone nếu BR-34 yêu cầu; không mở application shell trong khi còn gate.
+- [x] **B2.2:** bổ sung message catalog và mô hình kết quả đăng nhập trung lập cho bốn kết quả: từ chối, buộc đổi mật khẩu tạm, buộc xác minh điện thoại, hoặc được vào ứng dụng; chưa gắn tên field/route/token của backend.
+- [ ] **B2.3:** hoàn thiện form đăng nhập theo hai lát nhỏ:
+  - [x] **B2.3a:** helper identifier và hiện/ẩn password dùng được bằng bàn phím, không lưu password;
+  - [ ] **B2.3b (deferred — chờ destination):** thêm link UC03 khi route `/recover` có page đích và lối truy xuất QR khi route UC40/SCR-24 được xác nhận; không tạo link dẫn tới 404 hoặc tự đặt URL.
+- [ ] **B2.4:** mock account được chia để không bật một demo gate chưa có UI:
+  - [x] **B2.4a:** repository factory trả đủ MSG12/13/68/69, password gate, phone gate và access granted; mỗi scenario có test và gate không tạo session;
+  - [ ] **B2.4b:** sau B2.5, hiển thị hướng dẫn account mock để nhóm review từng nhánh trên UI.
+- [ ] **B2.5 (next):** điều phối gate đúng thứ tự: đổi temporary password trước, sau đó xác minh phone nếu BR-34 yêu cầu; không mở application shell trong khi còn gate.
 - [ ] **B2.6:** sau khi qua mọi gate, mở home và menu theo effective permission; không suy diễn quyền từ tên role.
 - [ ] **B2.7:** kiểm thử domain, component, keyboard/focus và responsive ở 360 px/1024 px; chạy lint, typecheck và build.
 - [ ] **B2.8 (deferred — chờ backend):** map HTTP DTO và kiểm tra các gate bằng QA test account trước khi chuyển Jira Done.
@@ -181,6 +185,10 @@ Quyết định `WEB-AUTH-01` đã chốt phương án B: identifier là usernam
 Tên field response, thời điểm phát token và route đích thuộc `WEB-AUTH-02`, vẫn chờ backend. Frontend sẽ biểu diễn kết quả bằng kiểu domain trung lập, không coi tên field mock là API chính thức.
 
 **Kết quả B2.1:** Jira và SCR-03 cùng yêu cầu identifier là username, verified phone hoặc verified email; quyết định `WEB-AUTH-01` giữ cách hiểu chặt này dù câu chữ ở UC02 Normal Flow còn thiếu từ “verified” trước phone. UC02 xác nhận thứ tự gate là temporary-password change (nhánh 2c) rồi mới phone verification (nhánh 3a). Tài khoản bị khóa/không còn zone–role hợp lệ, temporary password quá 24 giờ và khóa tạm 15 phút đều không được tạo/open session nghiệp vụ. Contract `WEB-AUTH-02` vẫn hoãn, nên B2.2 chỉ tạo mô hình domain của frontend, không tự quyết DTO, token timing hoặc URL đích.
+
+**Kết quả B2.2:** `LoginResult` là discriminated union với `rejected`, `password-change-required`, `phone-verification-required` và `access-granted`. Chỉ `access-granted` mang authenticated session và được phép ghi vào auth state; hai gate không chứa session/token vì `WEB-AUTH-02` chưa chốt thời điểm phát thông tin này. Catalog đã có MSG13/67/68/69 và test khóa ý nghĩa copy hiện tại. Baseline tăng lên 9 test files, 43/43 tests; lint, typecheck, production build và `git diff --check` đạt ngày 16/10/2026. UI hiển thị gate vẫn thuộc B2.5; trước đó mock B2.4 không được bật gate cho luồng review chính.
+
+**Kết quả B2.4a:** mock auth được chuyển thành repository factory có state cô lập và latency cấu hình được. Ba identifier đã xác minh (username/phone/email) đi tới `access-granted`; các scenario riêng trả MSG13/68/69, password gate và phone gate; identifier hoặc password sai luôn trả MSG12 chung. Gate/rejection không tạo session. Có 11 test mới; hướng dẫn credential chưa render trên UI cho tới khi B2.5 có màn đích.
 
 #### B3. OMTS-167 — SCR-05 Security, đổi mật khẩu
 

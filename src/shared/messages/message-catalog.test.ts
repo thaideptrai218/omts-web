@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import {
+  formatMessage,
+  type MessageCode,
+} from "@/shared/messages/message-catalog";
+
+const loginMessages = [
+  ["MSG13", "Tài khoản này hiện không thể sử dụng. Vui lòng liên hệ kênh hỗ trợ."],
+  [
+    "MSG67",
+    "Tài khoản của bạn cần xác minh số điện thoại để tiếp tục sử dụng OMTS. Vui lòng nhập hoặc xác nhận số điện thoại và nhập mã xác minh được gửi qua SMS.",
+  ],
+  [
+    "MSG68",
+    "Mật khẩu tạm thời đã hết hạn. Nhân viên vui lòng liên hệ Chủ hợp tác xã; Chủ hợp tác xã và thương nhân vui lòng liên hệ Quản trị viên hệ thống để được đặt lại.",
+  ],
+  [
+    "MSG69",
+    "Bạn đã vượt quá số lần thử cho phép. Vui lòng thử đăng nhập lại sau 15 phút.",
+  ],
+] as const satisfies readonly (readonly [MessageCode, string])[];
+
+describe("login message catalog", () => {
+  it.each(loginMessages)("formats %s", (code, expectedMessage) => {
+    expect(formatMessage({ code })).toBe(expectedMessage);
+  });
+});

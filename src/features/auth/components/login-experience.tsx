@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { LoginForm } from "@/features/auth/components/login-form";
+import { grantsApplicationAccess } from "@/features/auth/domain/login-result";
 import type { LoginFormValues } from "@/features/auth/schemas/login-schema";
 import { useAuth } from "@/features/auth/state/auth-provider";
 import { ApiError } from "@/shared/http/api-error";
@@ -32,6 +33,8 @@ export function LoginExperience() {
         setFormError(formatMessage(result.message));
         return;
       }
+
+      if (!grantsApplicationAccess(result)) return;
 
       notify({ title: "Đăng nhập thành công.", tone: "success" });
       router.replace("/dashboard");

@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { FormField } from "@/components/form/form-field";
+import { PasswordField } from "@/components/form/password-field";
 import { Button } from "@/components/ui/button";
 import {
   loginSchema,
@@ -31,21 +32,22 @@ export function LoginForm({ formError, onSubmit }: LoginFormProps) {
     <form className="mt-7 space-y-5" noValidate onSubmit={handleSubmit(onSubmit)}>
       <FormField
         autoComplete="username"
+        autoCapitalize="none"
         error={errors.identifier?.message}
         hint="Số điện thoại hoặc email cần được xác minh. Nhân viên lần đầu dùng tên đăng nhập."
         id="identifier"
         label="Tên đăng nhập, số điện thoại hoặc email"
         required
+        spellCheck={false}
         {...register("identifier")}
       />
 
-      <FormField
+      <PasswordField
         autoComplete="current-password"
         error={errors.password?.message}
         id="password"
         label="Mật khẩu"
         required
-        type="password"
         {...register("password")}
       />
 

@@ -15,6 +15,7 @@ import type {
   LoginInput,
   LoginResult,
 } from "@/features/auth/domain/auth-types";
+import { grantsApplicationAccess } from "@/features/auth/domain/login-result";
 import { authService } from "@/features/auth/services/auth-service.instance";
 import { createLatestOperationTracker } from "@/features/auth/state/latest-operation";
 
@@ -61,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authService.login(input);
 
       operation.commit(() => {
-        if (result.status === "authenticated") {
+        if (grantsApplicationAccess(result)) {
           setState(result.session);
           return;
         }
