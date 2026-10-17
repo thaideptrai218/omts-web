@@ -295,21 +295,38 @@ Tên field response, thời điểm phát token và route đích thuộc `WEB-AU
 
 #### C3. OMTS-171 — SCR-05 Profile
 
-- [ ] display name, email và phone có thể chỉnh sửa;
-- [ ] username và roles chỉ đọc;
-- [ ] email/phone mới chỉ thay thế giá trị cũ sau khi SCR-02 thành công;
-- [ ] MSG62 cho email, MSG06 cho conflict và MSG10 khi lưu;
-- [ ] mock tình huống record version cũ;
-- [ ] QA API trước khi Jira Done.
+- [x] **C3.1:** đọc `OMTS-171`, story `OMTS-141`, backend `OMTS-170`, mobile `OMTS-172`, QA `OMTS-173` và SRS UC05/UC08/SCR-05/BR-31–34; khóa state model và ranh giới proof/version;
+- [x] **C3.2:** định nghĩa profile domain, schema và typed load/start-verification/save outcomes; bổ sung message catalog cần thiết;
+- [x] **C3.3:** dựng mock profile environment dùng chung proof registry với SCR-02; bao phủ success, duplicate/current identifier, delivery failure, stale record version, session expired và MSG57;
+- [x] **C3.4:** tạo route `/account`, loading skeleton, read-only username/role-scope và editable display name/email/phone;
+- [x] **C3.5:** nối email/phone candidate với shared SCR-02; giá trị cũ còn hiệu lực cho đến khi proof và save đều thành công;
+- [ ] **C3.6:** nối save, MSG10, conflict/reload và session expiry; kiểm tra keyboard/focus, 360 px, 1024 px, test/lint/typecheck/build;
+- [ ] **C3.7 (deferred — chờ backend):** map QA API và chỉ xét Jira Done khi contract/version/proof cùng toàn bộ acceptance criteria chạy qua QA.
+
+**Kết quả C3.1:** profile là màn authenticated dùng cho System Administrator, Cooperative Owner, Staff và Trader. Display name đi thẳng vào draft; email/phone mới là candidate cần proof UC08 gắn đúng purpose/channel/value và chỉ thay giá trị cũ sau save. Username cùng role/scope là read-only presentation; role text không thay effective-permission boundary. Save mang record version để phát hiện concurrent edit. Phone syntax, HTTP DTO và việc proof có được tái sử dụng sau conflict reload vẫn chưa được SRS/backend xác nhận nên chưa được tự mã hóa.
+
+**Kết quả C3.2:** frontend domain contract biểu diễn current contact, verification state, record version và role/scope summary. Save input không chứa username/roles và chỉ chấp nhận email/phone change dưới dạng `{ value, token }`. Candidate schema kiểm tra required/different/current/email syntax; phone syntax được inject để chờ contract chính thức. Load/start/save dùng discriminated unions cho MSG01/04/06/10/16/19/57/62. Repository/service chưa phụ thuộc HTTP DTO. Targeted tests, typecheck và lint đều xanh sau khi sửa một lỗi TypeScript inference trong message test.
+
+**Kết quả C3.3:** mock environment compose profile và shared verification qua proof registry dùng chung. Proof phải khớp purpose/channel/value, chỉ bị consume sau khi toàn bộ precondition của save đã qua và không thể dùng lại sau save thành công. Mock bao phủ duplicate/current identifier, delivery failure, invalid proof, atomic multi-change validation, stale version/MSG06, session expiry/MSG19 và optional MSG57. Recipient masking được tách thành shared verification utility để registration, recovery và profile nhất quán. Sáu test files với 21 tests, typecheck và lint đều xanh.
+
+**Kết quả C3.4–C3.5:** route `/account` nằm trong authenticated app layout, có navigation/header entry, route-level loading fallback, service skeleton và retry. Username cùng role/scope là read-only; display name là validated form field; email/phone dùng candidate dialog rồi shared SCR-02. OTP success chỉ tạo `{value, token}` trong memory và current contact vẫn hiển thị cho đến khi save thành công. Save cập nhật profile/version, consume proof, phát MSG10 và đồng bộ display name lên header. Browser review đã đi qua email happy path, sửa focus candidate dialog, xác nhận 360/1024 px không overflow. C3.6 chưa hoàn thành vì behavior giữ/hủy proof sau MSG06 + reload cần Duy Thái xác nhận.
 
 #### C4. OMTS-175 — SCR-06, tùy chọn thông báo
 
-- [ ] ma trận notification type × channel;
-- [ ] mục bắt buộc hiển thị locked;
-- [ ] channel chưa cấu hình/không đủ điều kiện hiển thị disabled kèm lý do;
-- [ ] MSG21 và MSG23;
-- [ ] focus/label cho từng checkbox trong ma trận;
-- [ ] QA API trước khi Jira Done.
+- [x] **C4.1:** đọc `OMTS-175`, story `OMTS-142`, backend sibling `OMTS-174`, mobile sibling `OMTS-176`, BA dependency `OMTS-124` và SRS UC06/SCR-06/MSG21–23; khóa phần đã xác nhận và catalog blocker;
+- [x] **C4.2:** định nghĩa data-driven domain/repository/service contract cho notification type × channel; bổ sung MSG21/22/23 và không hard-code catalog trong component;
+- [x] **C4.3:** tạo mock repository factory nhận catalog fixture từ ngoài; bao phủ editable save, mandatory lock, ineligible channel, push-denied partial save và session expiry;
+- [ ] **C4.4 (blocked — chờ quyết định catalog):** chốt catalog type × eligible channel từ `OMTS-124`, bao gồm xung đột SMS trong BA task với bốn channel của SCR-06;
+- [ ] **C4.5:** dựng route `/account/notifications`, loading/error/empty state và matrix responsive: table ở desktop, card theo notification type ở màn hẹp;
+- [ ] **C4.6:** hiển thị mandatory item locked, channel không đủ điều kiện disabled kèm lý do nhìn thấy; nối save, MSG10/21/22/23 và MSG19;
+- [ ] **C4.7:** kiểm tra label/focus cho từng checkbox, keyboard, 360 px, 1024 px, test/lint/typecheck/build;
+- [ ] **C4.8 (deferred — chờ backend):** map QA API và chỉ xét Jira Done khi catalog/eligibility cùng normal/error flow chạy qua API thật.
+
+**Kết quả C4.1:** UC06 áp dụng cho System Administrator, Cooperative Owner, Staff và Trader; việc lưu preference không tạo notification mới và không thay đổi permission. Ba notification bắt buộc đã được xác nhận là water alert, new order và QR sent. Eligibility do hệ thống cung cấp: email cần contact phù hợp, Zalo cần cấu hình/đủ điều kiện, push cần device permission; push bị từ chối vẫn phải lưu các channel hợp lệ khác. Catalog đầy đủ chưa phải nguồn đã duyệt vì `OMTS-124` còn To Do. BA task liệt kê thêm SMS trong eligible channels trong khi SCR-06 chỉ nêu in-app/push/email/Zalo, nên Web không tự thêm hoặc loại SMS.
+
+**Kết quả C4.2:** contract không đóng enum notification type/channel theo dữ liệu chưa chốt. Load trả channel presentation và từng cell với trạng thái enabled/editable; cell locked bắt buộc mang MSG21, MSG22 hoặc MSG23 làm lý do. Save chỉ gửi các selection và nhận typed saved/invalid/session-expired outcome. UI tương lai render dữ liệu từ service thay vì suy đoán eligibility. MSG21/22/23 đã có frontend copy và test.
+
+**Kết quả C4.3:** mock repository không chứa production catalog mặc định; caller phải truyền fixture, do đó test data không bị hiểu nhầm là quyết định BA. Mock preflight toàn bộ selection trước mutation, giữ mandatory cell bật, chặn MSG21/MSG23, bỏ qua push denied nhưng vẫn áp dụng cell hợp lệ và trả warning MSG22. Duplicate/unknown cell được coi là lỗi contract của caller thay vì chuyển thành message nghiệp vụ không có trong SRS. Targeted tests, typecheck, lint và diff check đều xanh sau khi tách MSG22/MSG23 thành hai discriminated-union member riêng.
 
 ### Chặng D — màn hình quản trị và Cooperative
 
@@ -317,58 +334,117 @@ Thứ tự màn quản trị bám luồng AC-01: khởi tạo HTX → hoàn thi�
 
 #### D1. OMTS-196 — SCR-56, SysAdmin khởi tạo HTX
 
-- [ ] form cooperative name, Owner contact và evidence image;
-- [ ] preview ảnh và validation loại/kích thước theo contract;
-- [ ] one-time temporary password dialog, không lưu lại password;
-- [ ] MSG03 và MSG55;
-- [ ] actor boundary: SysAdmin chỉ khởi tạo Owner, không sửa dữ liệu nghiệp vụ HTX;
-- [ ] QA API trước khi Jira Done.
+- [x] **D1.1:** đọc `OMTS-196`, story `OMTS-148`, backend `OMTS-195`, QA `OMTS-197` và SRS UC72/SCR-56/BR-33/MSG03/MSG55; khóa actor boundary, postcondition và các field còn mâu thuẫn;
+- [x] **D1.2:** bổ sung MSG03/MSG55 và component one-time Owner credential; secret chỉ ở React memory, có copy/fallback, không thể đóng vô ý và bị hủy sau acknowledge;
+- [x] **D1.3:** tạo evidence image picker có drag/drop, preview, remove, duplicate guard và validation được inject; không tự đặt file type/size contract;
+- [x] **D1.4:** giữ nguyên ba nhóm input của SCR-56: tên HTX + mã sơ bộ bắt buộc, identity/contact Owner là một text field bắt buộc và ít nhất một ảnh xác minh; không tự chia Owner thành các field chưa được chốt;
+- [x] **D1.5:** tạo form schema + repository/service/mock với typed outcomes; frontend chỉ xác nhận MIME `image/*`, chưa đặt size/count hay HTTP upload DTO trước backend contract;
+- [x] **D1.6:** dựng route `/system/cooperatives/new`, review/confirm flow, loading/error/success và chỉ hiện cho effective permission khởi tạo HTX;
+- [x] **D1.7:** nối one-time credential response, MSG01/03/55/session expiry; kiểm tra keyboard/focus, 360 px, 1024 px, test/lint/typecheck/build;
+- [ ] **D1.8 (deferred — chờ backend):** map QA API và chỉ xét Jira Done sau khi provisioning/audit boundary chạy với API thật.
+
+**Kết quả D1.1:** UC72 là one-time platform-administration flow chỉ dành cho System Administrator. Thành công tạo Cooperative ở Preliminary và first Cooperative Owner account ở Active, phát mật khẩu tạm 10 ký tự hiển thị một lần/hiệu lực 24 giờ, ghi audit và không tự tạo zone, customer, order hoặc employee permission. BR-33 không cho SysAdmin dùng màn này để sửa profile hay business data của HTX. SRS ghi `preliminary code` và identity/contact là dữ liệu bắt buộc; D1.4 vì vậy giữ `preliminaryCode` cùng một trường text `ownerIdentityContact` trong form, nhưng không tự tách identity/contact thành họ tên, giấy tờ, điện thoại hoặc email. Tên field QA DTO và cấu trúc chi tiết vẫn để mở đến bước tích hợp backend.
+
+**Kết quả D1.2:** MSG03/MSG55 đã có frontend copy và test. `OneTimeOwnerCredentialDialog` nhận account identifier cùng temporary password từ parent, không sinh credential ở browser, không ghi storage/log và chỉ đóng qua hành động acknowledge rõ ràng. Clipboard failure có hướng dẫn copy thủ công; nút copy nhận initial focus. Lỗi TS2322 do shared Button chưa expose ref được sửa bằng focus marker đã có sẵn của Dialog thay vì mở rộng shared API ngoài phạm vi.
+
+**Kết quả D1.3:** evidence picker là controlled component nhận `File[]`, validator và callback. Nó hỗ trợ file chooser/drag-drop, preview, remove, chống chọn trùng và hiển thị lỗi theo file. Preview dùng object URL và revoke khi component unmount; `next/image` chạy `unoptimized` cho blob local để không gửi giấy tờ qua image optimizer. MIME/size/count không được hard-code vì Jira/backend chưa có contract.
+
+**Kết quả D1.4:** form dùng đúng mức chi tiết của SCR-56. `cooperativeName` và `preliminaryCode` là hai text field bắt buộc; `ownerIdentityContact` giữ nguyên là một vùng text thay vì tự sáng tác họ tên/CCCD/điện thoại/email thành các trường có validation riêng. Ít nhất một ảnh là bắt buộc vì UC72 xác nhận căn cứ bằng ảnh tài liệu. Scope Jira được hiểu là bản tóm tắt; API integration vẫn phải xác nhận backend có nhận `preliminaryCode`.
+
+**Kết quả D1.5:** domain kết quả là discriminated union gồm `provisioned`, `duplicate-owner`, `verification-failed`, `invalid-input` và `session-expired`. Service chuẩn hóa khoảng trắng nhưng giữ nguyên `File` object; repository mock revalidate input, mô phỏng one-time provisioning và không ghi secret ra storage/log. Policy hiện chỉ chấp nhận MIME ảnh; giới hạn dung lượng, số ảnh và multipart DTO được chuyển sang D1.8 vì backend chưa công bố contract.
+
+**Kết quả D1.6:** route production `/system/cooperatives/new` có hai bước nhập → xác nhận, layout responsive, hướng dẫn bàn giao ngắn và không có development showcase. Menu chỉ hiện cho `platform.cooperative.provision`; mock `sysadmin` có global scope, còn Owner không có capability này. Route vẫn nằm sau app shell; server-side route protection tiếp tục là release blocker chung của foundation cho tới khi session contract được chốt.
+
+**Kết quả D1.7:** submit thành công mở credential dialog không dismiss vô ý; acknowledge xóa credential khỏi React tree, reset form và thông báo kết quả. Browser review xác nhận validation ảnh, focus vào heading khi sang review, focus vào nút copy khi dialog mở, secret biến mất sau acknowledge và không overflow ở CSS viewport 360/1024 px. React Strict Mode từng làm timer focus bị cleanup; Dialog đã được sửa để luôn schedule focus khi `open=true`. Full test hiện 37 files/167 tests; lint, typecheck và production build đạt.
 
 #### D2. OMTS-183 — SCR-07, hồ sơ HTX và QR preview
 
-- [ ] form theo SCR-07;
-- [ ] business activities dạng bảng nhiều dòng;
-- [ ] ngân hàng chọn từ danh sách;
-- [ ] preview chỉ tên và địa chỉ sẽ xuất hiện ở trang truy xuất công khai;
-- [ ] MSG01, MSG02 và MSG10;
-- [ ] không để preview lộ tài chính, Trader hoặc dữ liệu ngoài SCR-24;
-- [ ] QA API trước khi Jira Done.
+- [x] **D2.1:** đọc `OMTS-183`, story `OMTS-144`, backend `OMTS-182`, QA `OMTS-184` và SRS UC09/SCR-07; khóa actor, field, public projection và các điểm xung đột;
+- [x] **D2.2:** định nghĩa domain/schema cho hồ sơ, ngành nghề nhiều dòng, receiving bank account, trạng thái Preliminary/Completed và record version;
+- [x] **D2.3:** tạo repository/service/mock typed outcomes; bao phủ MSG01/02/03/06/10, bank catalog, duplicate tax ID, conflict và public projection privacy;
+- [x] **D2.4:** dựng route `/cooperative/profile`, loading/error/forbidden state và permission-aware navigation;
+- [x] **D2.5:** dựng form SCR-07 theo nhóm pháp lý, liên hệ, ngành nghề và tài khoản nhận chuyển khoản; hỗ trợ add/remove activity row;
+- [x] **D2.6:** dựng bước preview/confirm chỉ chứa tên + địa chỉ, nối save/cancel/conflict/reload và Preliminary → Completed;
+- [x] **D2.7:** kiểm tra keyboard/focus, 360 px, 1024 px, test/lint/typecheck/build và privacy scan;
+- [ ] **D2.8 (deferred — chờ backend):** map QA API, xác nhận phone/tax/bank DTO và chỉ xét Jira Done khi audit/status transition chạy qua API thật.
+
+**Kết quả D2.1:** Jira và SRS chính thống nhất UC09 chỉ cho Cooperative Owner sửa hồ sơ; form bắt buộc tên, mã số thuế duy nhất, địa chỉ văn phòng, điện thoại, người đại diện, ít nhất một ngành nghề và tài khoản nhận chuyển khoản; email/website là tùy chọn nhưng phải đúng định dạng khi có. Preview và public projection chỉ gồm tên + địa chỉ; thay đổi không sửa snapshot QR đã công bố. Tài liệu chức năng dẫn xuất `docs_v2` gợi ý Staff có `COOPERATIVE.Read` được xem chỉ đọc nhưng đồng thời tự ghi đây là xung đột với Permission Matrix/SRS. Web chưa cấp Staff access cho đến khi nhóm xác nhận.
+
+**Kết quả D2.2:** frontend contract tách `CooperativeProfile`, `ReceivingBankAccount`, `BankOption` và `PublicCooperativeProjection`; kiểu public projection không có trường thuế, liên hệ hay ngân hàng nên giảm nguy cơ lộ dữ liệu ngay từ compile time. Schema kiểm tra required fields, email, HTTP(S) website, tax ID 10 chữ số hoặc `10 chữ số-3 chữ số` và tối thiểu một activity tối đa 255 ký tự theo tài liệu chức năng hiện hành. Phone mới kiểm tra required vì canonical Jira/SRS chưa chốt regex cho số liên hệ HTX.
+
+**Kết quả D2.3:** service chuẩn hóa text trước repository boundary. Mock nhận bank catalog qua dependency thay vì đóng danh sách production trong component, revalidate bank ID và form, giữ `recordVersion`, chỉ chuyển Preliminary → Completed sau save hợp lệ, không mutate state khi lỗi và trả typed MSG01/02/03/06/10. Test xác nhận public projection đúng hai field và không có bank/tax data. D2.1–D2.3 đạt 32 targeted tests, typecheck, lint và diff check.
+
+**Kết quả D2.4:** route production `/cooperative/profile` nằm trong authenticated app layout, có route-level skeleton và client loading/error/retry/forbidden states. Menu `Hồ sơ HTX` chỉ hiện cho capability tạm `cooperative.profile.manage`; mock Owner có capability còn SysAdmin không có. Đây là presentation guard; backend `OMTS-182` vẫn phải thực thi Owner-only.
+
+**Kết quả D2.5:** form được chia thành bốn nhóm dễ quét: pháp lý, địa chỉ/liên hệ, hoạt động kinh doanh và tài khoản nhận chuyển khoản. Activity rows có key ổn định, add/remove bằng bàn phím, focus vào dòng vừa thêm và không cho xóa dòng cuối cùng. Bank là select do service cấp; component không chứa production catalog. Validation chỉ ra đúng field và Hủy đưa form về snapshot đã lưu.
+
+**Kết quả D2.6:** flow có hai bước không thể nhảy cóc: nhập hồ sơ → xem trước công khai. Preview nhận object riêng chỉ có tên + địa chỉ; browser DOM check xác nhận không chứa tax ID/số tài khoản. Confirm save xử lý MSG01/02/03/06/10/session expiry, chuyển Preliminary → Completed và dùng pending state tại nút. Server field error quay về form và focus đúng control; conflict có hành động tải bản mới nhất.
+
+**Kết quả D2.7:** browser review đi qua validation, activity add/remove, preview focus, happy-path save, duplicate-tax MSG03 và error focus. Lỗi tràn ngang ở 360 px do grid min-content và mặc định `fieldset min-width` đã được sửa bằng `min-w-0`; form/preview sau sửa không overflow tại CSS viewport 360 px và form đạt ở 1024 px. Full regression đạt 40 test files/184 tests; lint, typecheck, production build và diff check xanh. Scan không có `localStorage`, `sessionStorage` hay console logging trong feature. Next 16 dev-only instant-navigation validator vẫn cảnh báo cho protected routes do client auth shell; không tự đổi cache/navigation contract trong D2.
 
 #### D3. OMTS-193 — SCR-10, role và permission matrix
 
-- [ ] danh sách role và trạng thái sử dụng;
-- [ ] matrix function × Create/View/Edit/Delete/other;
-- [ ] khi chọn quyền thay đổi dữ liệu, View tự được chọn và khóa theo BR-19;
-- [ ] copy từ role khác;
-- [ ] data scope theo catalog/backend contract;
-- [ ] xác nhận MSG09 khi sửa role đang được dùng;
-- [ ] MSG01, MSG03, MSG09 và MSG11;
-- [ ] QA API trước khi Jira Done.
+- [x] **D3.1:** đối chiếu `OMTS-193`, story `OMTS-147`, backend `OMTS-192`, BA dependency `OMTS-123` và SRS UC12/SCR-10/BR-19;
+- [x] **D3.2:** định nghĩa contract data-driven cho role, feature catalog, supported action, data scope, impact account/zone và record version;
+- [x] **D3.3:** tách implication rule của View, schema role và validation matrix; reject unsupported/duplicate/unknown permission rows;
+- [x] **D3.4:** tạo repository/service/mock với create/edit/copy, duplicate name, conflict, impact confirmation và discontinue-blocked;
+- [x] **D3.5:** dựng route `/access/roles`, permission-aware navigation, role list/status/filter và create/copy/read-only discontinued states;
+- [x] **D3.6:** dựng matrix responsive function × Create/View/Edit/Delete/other + scope; accordion/card cho 360–1280 px và bảng ở desktop rất rộng;
+- [x] **D3.7:** nối MSG01/03/06/09/11/session expiry, save confirmation cho role đang dùng và discontinue không xóa lịch sử;
+- [x] **D3.8:** kiểm tra browser flow, keyboard/focus, 360 px, 1024 px, test/lint/typecheck/build và privacy scan;
+- [ ] **D3.9 (deferred — chờ BA/backend):** thay mock catalog bằng catalog chính thức từ `OMTS-123`, map QA API `OMTS-192` và chỉ xét Jira Done khi audit/immediate-effect chạy qua API thật.
+
+**Kết quả D3.1:** canonical Jira/SRS xác nhận chỉ Cooperative Owner quản lý role; role gồm tên duy nhất, mô tả, trạng thái In Use/Discontinued và một permission row cho mỗi function. Create/Edit/Delete/other bắt buộc có View; copy tạo role mới; sửa role đang dùng phải hiển thị số account/zone và xác nhận; discontinue bị chặn khi còn effective grant. `OMTS-123` vẫn To Do nên danh mục function/action/data scope chưa phải baseline được phê duyệt.
+
+**Kết quả D3.2–D3.3:** frontend contract coi catalog là dữ liệu do service cấp, không đóng enum function trong component. Mỗi feature tự công bố supported actions và scope options; `requiredWhenGranted` quyết định có bắt buộc chọn scope hay không. Hàm thuần tự bật/khóa View, bỏ scope khi row hết quyền và validation boundary từ chối action/scope không hỗ trợ, thiếu row, row trùng hoặc feature lạ.
+
+**Kết quả D3.4:** mock adapter được inject catalog/roles và không lưu vào browser storage. Save role đang dùng lần đầu trả typed `impact-confirmation-required`; chỉ request có xác nhận mới mutate. Duplicate trả MSG03 cùng role id để UI mở bản hiện có; stale version trả MSG06. Discontinue giữ record, đổi status và dùng MSG11 kèm account/zone nếu còn holder. Đây là mô phỏng UI, không chứng minh immediate-effect/audit của backend.
+
+**Kết quả D3.5–D3.7:** route production `/access/roles` chỉ xuất hiện với capability tạm `access.roles.manage`; mock Owner có capability còn SysAdmin không có. Màn gồm list/filter trạng thái, metadata editor, copy draft, discontinued read-only và matrix data-driven. Ở 360–1280 px mỗi function là accordion dễ đọc; từ 1536 px dùng bảng so sánh. Impact dialog ưu tiên focus hành động an toàn, liệt kê account/username/zone và chỉ áp dụng sau xác nhận MSG09.
+
+**Kết quả D3.8:** browser review xác nhận copy/save, View implication, scope validation focus, MSG09 impact confirmation, MSG11 discontinue block và discontinue role rảnh. Không overflow toàn trang tại CSS viewport 360/1024 px. Review phát hiện và sửa semantic button bị ghi đè bởi `role=listitem`, Save không đổi vẫn bấm được, badge impact sai ở copy mode, bảng xuất hiện quá sớm gây internal horizontal scroll, và scope còn sót khi bỏ custom action cuối. Full verification đạt 44 test files/202 tests; lint, typecheck, production build và diff check xanh. Next 16 dev-only instant-navigation warning vẫn thuộc protected client-auth/cache foundation và không được tự đổi trong D3.
 
 #### D4. OMTS-190 — SCR-09, account và AccessGrant
 
-- [ ] danh sách/tìm kiếm account;
-- [ ] form account;
-- [ ] mỗi grant là một cặp `zone hoặc All zones + role`;
-- [ ] một account có nhiều grant; không hiển thị nó như một global role;
-- [ ] xem effective permissions trước khi xác nhận;
-- [ ] one-time temporary password dialog;
-- [ ] lock, unlock, reset và revoke có reason + MSG09;
-- [ ] MSG01, MSG02, MSG03 và MSG09;
-- [ ] QA API trước khi Jira Done.
+- [x] **D4.1:** đối chiếu `OMTS-190`, story `OMTS-146`, backend `OMTS-188/189`, QA `OMTS-191` và SRS UC11/SCR-09/BR-01/19/31–34;
+- [x] **D4.2:** định nghĩa contract cho Account, AccessGrant, zone/role catalog, one-time credential và typed mutation outcomes;
+- [x] **D4.3:** tạo schema, effective-permission union rule, repository/service/mock và test create/duplicate/invalid grant/lock/revoke/reset;
+- [x] **D4.4:** dựng route `/access/accounts`, permission-aware navigation, danh sách/tìm kiếm và form account responsive;
+- [x] **D4.5:** dựng grant editor với `zone hoặc All zones + role`, effective dates, nhiều grant và lịch sử revoked không bị xóa;
+- [x] **D4.6:** bắt buộc xem effective permissions theo từng zone trước khi xác nhận save; không trình bày account như có một global role;
+- [x] **D4.7:** nối one-time temporary password, MSG01/02/03/09, lock/unlock/revoke có reason và reset có confirmation;
+- [x] **D4.8:** review browser create/duplicate/revoke/lock/unlock/reset, keyboard/focus, 360 px, 1024 px, test/lint/typecheck/build và privacy scan;
+- [ ] **D4.9 (deferred — chờ backend):** map QA API `OMTS-188/189`, kiểm chứng audit/session revocation/cache invalidation và chỉ xét Jira Done khi chạy qua QA API.
 
 Màn này phụ thuộc dữ liệu vùng nuôi và role. Khi UC15 chưa nằm trong phần việc Web hiện tại, mock chỉ cung cấp lựa chọn vùng đọc-only theo entity SRS; không tự xây thêm nghiệp vụ quản lý vùng.
 
+**Kết quả D4.1–D4.3:** account nội bộ có display name, username, phone bắt buộc, email tùy chọn, trạng thái Active/Locked và nhiều AccessGrant. Mỗi grant là một record riêng có role, vùng cụ thể hoặc All zones, effective from/to, status Effective/Revoked và lịch sử thu hồi. Hàm preview hợp action của mọi role có hiệu lực theo từng zone; All zones được áp vào mỗi zone đang dùng. Mock từ chối zone/role Discontinued, cặp grant trùng, username/phone trùng và sửa/khóa tài khoản Owner. Temporary password dài 10 ký tự được sinh bằng Web Crypto trong memory, không đóng secret cố định trong fixture.
+
+**Kết quả D4.4–D4.6:** route production `/access/accounts` chỉ xuất hiện với capability tạm `access.accounts.manage`; mock Owner có capability, SysAdmin không có. Màn có search theo tên/username/phone, trạng thái account, protected Owner summary, form account và grant editor. Grant đã lưu chỉ có hành động Thu hồi; grant revoked vẫn hiển thị reason/timestamp. Form không gọi save trực tiếp: người dùng phải qua bước preview union permission theo từng zone rồi mới xác nhận.
+
+**Kết quả D4.7:** create và reset trả one-time credential qua dialog không dismiss vô ý, có clipboard fallback và xóa secret khỏi React tree sau acknowledge. Lock/unlock/revoke đều yêu cầu reason và dùng MSG09 confirmation; reset dùng MSG09 confirmation nhưng không yêu cầu reason theo flow chi tiết UC11/SCR-09. Câu tóm tắt `OMTS-190` có thể được đọc là reset cũng cần reason, nên điểm này phải xác nhận với backend/BA trước QA integration thay vì tự đổi SRS.
+
+**Kết quả D4.8:** browser review trên production build xác nhận create → preview → save → one-time credential; duplicate mở được account hiện có; revoke thiếu reason bị chặn và sau xác nhận grant vẫn còn trong history; lock/unlock giữ grant đã revoke; reset chỉ trả credential sau confirmation. Production page không overflow ở viewport 360 px và 1024 px. Dev mode từng báo document rộng 451 px ở 360 px do Next DevTools Shadow DOM; đo app root và production build xác nhận đây không phải overflow của D4.
+
 #### D5. OMTS-186 — SCR-08, hồ sơ nhân viên
 
-- [ ] danh sách và tìm theo tên/số điện thoại;
-- [ ] form required/optional đúng SCR-08;
-- [ ] account picker chỉ chứa internal account chưa liên kết;
-- [ ] Employee và Account là hai entity riêng;
-- [ ] trạng thái Employed/Left theo SRS, dùng đúng nhãn tiếng Việt sau khi chốt catalog;
-- [ ] lock prompt khi chuyển trạng thái cần xử lý account;
-- [ ] MSG01, MSG02, MSG03, MSG10 và MSG24;
-- [ ] QA API trước khi Jira Done.
+- [x] **D5.1:** đối chiếu `OMTS-186`, story `OMTS-145`, backend `OMTS-185`, QA `OMTS-187` và SRS UC10/SCR-08/Employee/status catalog;
+- [x] **D5.2:** định nghĩa contract riêng cho Employee và account summary, schema required/optional, repository/service/mock và typed outcomes;
+- [x] **D5.3:** danh sách + tìm theo tên/số điện thoại, form đúng trường SCR-08 và trạng thái Employed/Left;
+- [x] **D5.4:** account picker chỉ chứa internal account chưa liên kết, nhưng vẫn giữ account hiện tại khi sửa;
+- [x] **D5.5:** duplicate full name + phone mở được hồ sơ cũ; account race trả MSG24 và chỉ rõ hồ sơ đang dùng;
+- [x] **D5.6:** chuyển Left/Employed chỉ nhắc sang UC11 khóa/mở/cấp lại quyền, không tự thay đổi Account;
+- [x] **D5.7:** route `/employees`, Owner capability, loading/empty/error/permission denied/success và responsive UI;
+- [x] **D5.8:** unit/integration tests, production build, browser review 360/1024 px và self-review;
+- [ ] **D5.9:** tích hợp QA API, audit và chạy `OMTS-187` trước khi Jira Done.
+
+**Kết quả D5.1–D5.2:** Employee được giữ tách biệt khỏi Account; account chỉ là liên kết tùy chọn và không mang role/permission vào hồ sơ nhân viên. Mock repository lọc account nội bộ chưa liên kết nhưng vẫn kiểm tra lại lúc save để chặn race bằng MSG24. Duplicate được xác định theo cặp full name + phone và trả `existingEmployeeId` để UI mở bản ghi hiện có. Hồ sơ mới luôn bắt đầu ở Employed theo status catalog.
+
+**Kết quả D5.3–D5.7:** route production `/employees` chỉ hiện với capability tạm `cooperative.employees.manage`. Màn có tìm kiếm, trạng thái tiếng Việt `Đang làm việc/Đã nghỉ`, các trường bắt buộc/tùy chọn đúng SCR-08, account picker, feedback theo field và toast sau save. Khi đổi trạng thái, UI chỉ hiện follow-up có thể để sau hoặc mở `/access/accounts`; không tự khóa/mở account và không tự cấp lại AccessGrant.
+
+**Kết quả D5.8:** production browser review xác nhận create + link account, account bị rút khỏi picker, duplicate mở hồ sơ cũ, hai chiều status đều hiện đúng follow-up và toàn trang không overflow ở CSS viewport 360/1024 px. Review phát hiện rồi sửa success feedback bị mất khi editor remount. Full verification đạt 51 test files/231 tests; lint, typecheck, production build và diff/privacy scan xanh.
+
+**Điểm chờ tích hợp:** UC56/57 dùng “ngày nghỉ” để chặn công việc/chấm công nhưng E03 và SCR-08 hiện không khai báo trường ngày nghỉ; D5 không tự thêm trường. Chuẩn định dạng số điện thoại và HTTP DTO của `OMTS-185` cũng chưa được chốt, nên client hiện chỉ yêu cầu giá trị không rỗng giống D4.
 
 ### Chặng E — Mobile sau Web
 

@@ -6,6 +6,7 @@ import type {
 import type { AccountRecoveryRepository } from "@/features/account-recovery/repositories/account-recovery-repository";
 import { verificationPolicy } from "@/features/verification/domain/verification-types";
 import type { VerificationToken } from "@/features/verification/domain/verification-types";
+import { maskVerificationRecipient } from "@/features/verification/lib/mask-verification-recipient";
 import { createMockVerificationRequestId } from "@/features/verification/repositories/mock-verification-repository";
 import type { VerificationService } from "@/features/verification/services/verification-service";
 import { satisfiesPasswordPolicy } from "@/shared/security/password-policy";
@@ -19,21 +20,6 @@ type MockAccountRecoveryOptions = Readonly<{
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function maskEmail(identifier: string): string {
-  const [localPart, domain] = identifier.split("@");
-  if (!localPart || !domain) return "***";
-  return `${localPart.slice(0, 2)}***@${domain}`;
-}
-
-function maskPhone(identifier: string): string {
-  const digits = identifier.replace(/\D/g, "");
-  return digits.length > 3 ? `••••••${digits.slice(-3)}` : "••••••";
-}
-
-function maskIdentifier(channel: "email" | "sms", identifier: string): string {
-  return channel === "email" ? maskEmail(identifier) : maskPhone(identifier);
 }
 
 export function createMockAccountRecoveryRepository({
@@ -54,7 +40,10 @@ export function createMockAccountRecoveryRepository({
     return {
       expiresAtMs: currentTime + verificationPolicy.expiresAfterSeconds * 1_000,
       purpose: "recovery",
-      recipient: { channel, maskedValue: maskIdentifier(channel, identifier) },
+      recipient: {
+        channel,
+        maskedValue: maskVerificationRecipient(channel, identifier),
+      },
       requestId: createMockVerificationRequestId(),
       resendAvailableAtMs:
         currentTime + verificationPolicy.resendIntervalSeconds * 1_000,
@@ -93,7 +82,7 @@ export function createMockAccountRecoveryRepository({
         purpose: "recovery",
         recipient: {
           channel: input.channel,
-          maskedValue: maskIdentifier(input.channel, input.identifier),
+          maskedValue: maskVerificationRecipient(input.channel, input.identifier),
           value: input.identifier,
         },
       });

@@ -6,6 +6,7 @@ import type {
 import { getRegistrationVerificationChannel } from "@/features/registration/domain/registration-method";
 import type { RegistrationRepository } from "@/features/registration/repositories/registration-repository";
 import type { VerificationToken } from "@/features/verification/domain/verification-types";
+import { maskVerificationRecipient } from "@/features/verification/lib/mask-verification-recipient";
 import type { VerificationService } from "@/features/verification/services/verification-service";
 import { satisfiesPasswordPolicy } from "@/shared/security/password-policy";
 
@@ -32,26 +33,6 @@ type MockRegistrationOptions = Readonly<{
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function maskEmail(identifier: string): string {
-  const [localPart, domain] = identifier.split("@");
-  if (!localPart || !domain) return "***";
-
-  return `${localPart.slice(0, 2)}***@${domain}`;
-}
-
-function maskPhone(identifier: string): string {
-  if (identifier.length <= 4) return "••••";
-
-  const visibleSuffix = identifier.slice(-4);
-  return `••••••${visibleSuffix}`;
-}
-
-function maskIdentifier(draft: RegistrationDraft): string {
-  return draft.method === "email"
-    ? maskEmail(draft.identifier)
-    : maskPhone(draft.identifier);
 }
 
 function invalidRegistrationData(): CompleteRegistrationResult {
@@ -100,7 +81,7 @@ export function createMockRegistrationRepository({
         purpose: "registration",
         recipient: {
           channel,
-          maskedValue: maskIdentifier(draft),
+          maskedValue: maskVerificationRecipient(channel, draft.identifier),
           value: draft.identifier,
         },
       });

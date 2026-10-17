@@ -64,12 +64,22 @@ export function Dialog({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
+    let focusTimer: number | undefined;
 
-    if (open && !dialog.open) {
-      dialog.showModal();
-      initialFocusRef?.current?.focus();
+    if (open) {
+      if (!dialog.open) dialog.showModal();
+      focusTimer = window.setTimeout(() => {
+        const focusTarget =
+          initialFocusRef?.current ??
+          dialog.querySelector<HTMLElement>("[data-dialog-initial-focus]");
+        focusTarget?.focus();
+      }, 0);
     }
     if (!open && dialog.open) dialog.close();
+
+    return () => {
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+    };
   }, [initialFocusRef, open]);
 
   return (

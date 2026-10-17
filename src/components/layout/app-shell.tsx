@@ -25,10 +25,39 @@ const navigationItems = [
     label: "Tổng quan",
     requiredPermission: "workspace.overview.view",
   },
+  {
+    href: "/account",
+    label: "Tài khoản",
+  },
+  {
+    href: "/cooperative/profile",
+    label: "Hồ sơ HTX",
+    requiredPermission: "cooperative.profile.manage",
+  },
+  {
+    href: "/employees",
+    label: "Nhân viên",
+    requiredPermission: "cooperative.employees.manage",
+  },
+  {
+    href: "/access/accounts",
+    label: "Tài khoản nội bộ",
+    requiredPermission: "access.accounts.manage",
+  },
+  {
+    href: "/access/roles",
+    label: "Vai trò và quyền",
+    requiredPermission: "access.roles.manage",
+  },
+  {
+    href: "/system/cooperatives/new",
+    label: "Khởi tạo HTX",
+    requiredPermission: "platform.cooperative.provision",
+  },
 ] as const satisfies readonly {
   href: string;
   label: string;
-  requiredPermission: EffectivePermissionKey;
+  requiredPermission?: EffectivePermissionKey;
 }[];
 
 function MenuIcon() {
@@ -53,6 +82,48 @@ function DashboardIcon() {
         strokeLinejoin="round"
         strokeWidth="1.6"
       />
+    </svg>
+  );
+}
+
+function AccountIcon() {
+  return (
+    <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
+      <circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M4.5 16c.7-2.7 2.55-4 5.5-4s4.8 1.3 5.5 4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+function CooperativeIcon() {
+  return (
+    <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
+      <path
+        d="M3.5 16.25h13M5 16.25V7.5l5-3.75 5 3.75v8.75M7.5 9.5h5M7.5 12.25h5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+function AccessIcon() {
+  return (
+    <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
+      <path
+        d="M10 2.75 16 5v4.5c0 3.65-2.2 6.2-6 7.75-3.8-1.55-6-4.1-6-7.75V5l6-2.25Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+      <path d="m7.5 10 1.55 1.55L12.75 8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -116,6 +187,7 @@ function NavigationList({
 }) {
   const pathname = usePathname();
   const visibleItems = navigationItems.filter((item) =>
+    !("requiredPermission" in item) ||
     hasEffectivePermission(access, item.requiredPermission),
   );
 
@@ -146,7 +218,16 @@ function NavigationList({
             title={collapsed ? item.label : undefined}
           >
             <span className="shrink-0">
-              <DashboardIcon />
+              {item.href === "/account" || item.href === "/employees" ? (
+                <AccountIcon />
+              ) : item.href === "/access/roles" || item.href === "/access/accounts" ? (
+                <AccessIcon />
+              ) : item.href === "/system/cooperatives/new" ||
+                item.href === "/cooperative/profile" ? (
+                <CooperativeIcon />
+              ) : (
+                <DashboardIcon />
+              )}
             </span>
             <span className={collapsed ? "sr-only" : undefined}>{item.label}</span>
           </Link>
@@ -255,7 +336,11 @@ export function AppShell({
 
           <p className="hidden text-sm font-semibold text-text lg:block">Không gian làm việc</p>
 
-          <div className="flex min-w-0 items-center gap-3">
+          <Link
+            aria-label={`Mở hồ sơ của ${accountLabel}`}
+            className="flex min-h-11 min-w-0 items-center gap-3 rounded-control px-2 transition hover:bg-surface-subtle"
+            href="/account"
+          >
             <span
               aria-hidden="true"
               className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary-hover"
@@ -265,7 +350,7 @@ export function AppShell({
             <span className="max-w-40 truncate text-sm font-semibold text-text">
               {accountLabel}
             </span>
-          </div>
+          </Link>
         </header>
 
         <main className="mx-auto w-full max-w-[var(--omts-content-max-width)] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

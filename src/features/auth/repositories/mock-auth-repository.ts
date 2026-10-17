@@ -16,6 +16,22 @@ const demoSession = {
     access: {
       permissions: [
         {
+          key: "access.accounts.manage",
+          scope: { kind: "all-zones" },
+        },
+        {
+          key: "access.roles.manage",
+          scope: { kind: "all-zones" },
+        },
+        {
+          key: "cooperative.profile.manage",
+          scope: { kind: "all-zones" },
+        },
+        {
+          key: "cooperative.employees.manage",
+          scope: { kind: "all-zones" },
+        },
+        {
           key: "workspace.overview.view",
           scope: { kind: "all-zones" },
         },
@@ -24,6 +40,27 @@ const demoSession = {
     accountId: "account-owner-demo",
     displayName: "Chủ HTX Trung Nam",
     username: "owner",
+  },
+  status: "authenticated",
+} as const;
+
+const systemAdminSession = {
+  account: {
+    access: {
+      permissions: [
+        {
+          key: "workspace.overview.view",
+          scope: { kind: "global" },
+        },
+        {
+          key: "platform.cooperative.provision",
+          scope: { kind: "global" },
+        },
+      ],
+    },
+    accountId: "account-system-admin-demo",
+    displayName: "Quản trị viên hệ thống",
+    username: "sysadmin",
   },
   status: "authenticated",
 } as const;
@@ -42,6 +79,10 @@ const loginResultsByIdentifier: ReadonlyMap<string, LoginResult> =
     ],
     ["owner@omts.test", accessGrantedResult],
     ["owner", accessGrantedResult],
+    [
+      "sysadmin",
+      { session: systemAdminSession, status: "access-granted" },
+    ],
     ["staff-first-login", { status: "password-change-required" }],
     [
       "temp-password-expired",

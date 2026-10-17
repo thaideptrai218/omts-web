@@ -41,4 +41,68 @@ describe("hasEffectivePermission", () => {
       hasEffectivePermission({ permissions: [] }, "workspace.overview.view"),
     ).toBe(false);
   });
+
+  it("allows a platform-wide permission without a farming-zone scope", () => {
+    expect(
+      hasEffectivePermission(
+        {
+          permissions: [
+            {
+              key: "platform.cooperative.provision",
+              scope: { kind: "global" },
+            },
+          ],
+        },
+        "platform.cooperative.provision",
+      ),
+    ).toBe(true);
+  });
+
+  it("recognizes the Owner capability for cooperative profile management", () => {
+    expect(
+      hasEffectivePermission(
+        {
+          permissions: [
+            {
+              key: "cooperative.profile.manage",
+              scope: { kind: "all-zones" },
+            },
+          ],
+        },
+        "cooperative.profile.manage",
+      ),
+    ).toBe(true);
+  });
+
+  it("recognizes the Owner capability for internal account management", () => {
+    expect(
+      hasEffectivePermission(
+        {
+          permissions: [
+            {
+              key: "access.accounts.manage",
+              scope: { kind: "all-zones" },
+            },
+          ],
+        },
+        "access.accounts.manage",
+      ),
+    ).toBe(true);
+  });
+
+  it("recognizes the Owner capability for employee management", () => {
+    expect(
+      hasEffectivePermission(
+        {
+          permissions: [
+            {
+              key: "cooperative.employees.manage",
+              scope: { kind: "all-zones" },
+            },
+          ],
+        },
+        "cooperative.employees.manage",
+      ),
+    ).toBe(true);
+  });
 });

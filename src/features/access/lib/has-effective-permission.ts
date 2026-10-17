@@ -11,7 +11,13 @@ export function hasEffectivePermission(
   const permission = access?.permissions.find(({ key }) => key === permissionKey);
 
   if (!permission) return false;
-  if (!zoneId || permission.scope.kind === "all-zones") return true;
+  if (
+    !zoneId ||
+    permission.scope.kind === "all-zones" ||
+    permission.scope.kind === "global"
+  ) {
+    return true;
+  }
 
   return permission.scope.zoneIds.includes(zoneId);
 }

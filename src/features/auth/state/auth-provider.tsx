@@ -32,6 +32,7 @@ type AuthContextValue = Readonly<{
   login(input: LoginInput): Promise<LoginResult>;
   logout(): Promise<void>;
   state: AuthState;
+  updateDisplayName(displayName: string): void;
 }>;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -125,9 +126,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }, [replaceState]);
 
+  const updateDisplayName = useCallback((displayName: string) => {
+    setState((current) => {
+      if (current.status !== "authenticated") return current;
+
+      return {
+        ...current,
+        account: { ...current.account, displayName },
+      };
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ login, logout, state }),
-    [login, logout, state],
+    () => ({ login, logout, state, updateDisplayName }),
+    [login, logout, state, updateDisplayName],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
