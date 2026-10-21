@@ -1,4 +1,5 @@
 type BrandMarkProps = {
+  autoReveal?: boolean;
   compact?: boolean;
   iconOnly?: boolean;
   tone?: "default" | "inverse";
@@ -18,6 +19,7 @@ const toneStyles = {
 } as const;
 
 export function BrandMark({
+  autoReveal = false,
   compact = false,
   iconOnly = false,
   tone = "default",
@@ -57,7 +59,15 @@ export function BrandMark({
         </svg>
       </span>
 
-      <span className={iconOnly ? "sr-only" : undefined}>
+      <span
+        className={
+          iconOnly
+            ? "sr-only"
+            : autoReveal
+              ? "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100 motion-reduce:transition-none"
+              : "whitespace-nowrap"
+        }
+      >
         <span className={`block text-lg font-bold tracking-tight ${styles.name}`}>
           OMTS
         </span>

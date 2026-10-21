@@ -5,15 +5,32 @@ import { Button } from "@/components/ui/button";
 import { ProfileOverview } from "@/features/profile/components/profile-overview";
 import { ProfilePageSkeleton } from "@/features/profile/components/profile-page-skeleton";
 import type { PersonalProfile } from "@/features/profile/domain/personal-profile";
-import { personalProfileService } from "@/features/profile/services/personal-profile-service.instance";
+import { useAuth } from "@/features/auth/state/auth-provider";
+import { getPersonalProfileEnvironment } from "@/features/profile/services/personal-profile-service.instance";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
+import { getAccountSecurityService } from "@/features/account-security/services/account-security-service.instance";
 
 export function ProfileExperience() {
+  const { state } = useAuth();
   const [profile, setProfile] = useState<PersonalProfile>();
   const [hasLoadError, setHasLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const environment =
+    state.status === "authenticated"
+      ? getPersonalProfileEnvironment(state.account.accountId)
+      : null;
+  const personalProfileService = environment?.profileService;
+  const accountSecurityService =
+    state.status === "authenticated"
+      ? getAccountSecurityService(state.account.accountId)
+      : null;
 
   async function loadProfile() {
+    if (!personalProfileService) {
+      setHasLoadError(true);
+      setIsLoading(false);
+      return;
+    }
     setHasLoadError(false);
     setIsLoading(true);
 
@@ -34,6 +51,8 @@ export function ProfileExperience() {
 
   useEffect(() => {
     let isActive = true;
+
+    if (!personalProfileService) return;
 
     personalProfileService
       .load()
@@ -56,7 +75,18 @@ export function ProfileExperience() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [personalProfileService]);
+
+  if (!environment || !personalProfileService || !accountSecurityService) {
+    return (
+      <section className="mx-auto mt-10 max-w-md rounded-card border border-border bg-surface p-6 text-center shadow-card">
+        <h1 className="text-2xl font-semibold text-text">Chưa có hồ sơ phù hợp</h1>
+        <p className="mt-3 leading-7 text-text-muted">
+          Tài khoản hiện tại chưa được liên kết với hồ sơ cá nhân. Vui lòng liên hệ quản trị viên hệ thống.
+        </p>
+      </section>
+    );
+  }
 
   if (isLoading) return <ProfilePageSkeleton />;
 
@@ -74,5 +104,13 @@ export function ProfileExperience() {
     );
   }
 
-  return <ProfileOverview onProfileChange={setProfile} profile={profile} />;
+  return (
+    <ProfileOverview
+      onProfileChange={setProfile}
+      profile={profile}
+      profileService={personalProfileService}
+      securityService={accountSecurityService}
+      verificationService={environment.verificationService}
+    />
+  );
 }

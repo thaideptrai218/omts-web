@@ -20,11 +20,12 @@ function createRepository() {
 describe("mock account management repository", () => {
   beforeEach(() => vi.useRealTimers());
 
-  it("creates an internal account with a 10-character one-time credential", async () => {
+  it("creates an internal account and returns a secret-free delivery receipt", async () => {
     const repository = createRepository();
     const result = await repository.save({
-      displayName: "Lê Minh",
+      deliveryChannel: "phone",
       email: "",
+      fullName: "Lê Minh",
       id: null,
       newGrants: [
         {
@@ -37,22 +38,29 @@ describe("mock account management repository", () => {
       ],
       phone: "0911222333",
       recordVersion: null,
-      username: "le.minh",
     });
 
     expect(result.status).toBe("saved");
     if (result.status === "saved") {
-      expect(result.credential?.temporaryPassword).toHaveLength(10);
+      expect(result.account.username).toMatch(/^le\.minh\.\d{4}$/);
+      expect(result.delivery).toMatchObject({
+        channel: "phone",
+        deliveryStatus: "sent",
+        maskedRecipient: "••••••2333",
+        username: result.account.username,
+      });
+      expect(result.delivery).not.toHaveProperty("temporaryPassword");
       expect(result.account.phoneVerified).toBe(false);
       expect(result.account.grants).toHaveLength(1);
     }
   });
 
-  it("reports duplicate username and does not create a copy", async () => {
+  it("reports a case-insensitive duplicate email", async () => {
     const repository = createRepository();
     const result = await repository.save({
-      displayName: "Bản sao",
-      email: "",
+      deliveryChannel: "email",
+      email: "AN.NGUYEN@OMTS.TEST",
+      fullName: "Bản sao",
       id: null,
       newGrants: [
         {
@@ -65,11 +73,10 @@ describe("mock account management repository", () => {
       ],
       phone: "0911000000",
       recordVersion: null,
-      username: "NGUYEN.AN",
     });
     expect(result).toMatchObject({
       existingAccountId: "account-nguyen-an",
-      field: "username",
+      field: "email",
       status: "duplicate",
     });
   });
@@ -77,8 +84,9 @@ describe("mock account management repository", () => {
   it("rejects an ineffective role or zone", async () => {
     const repository = createRepository();
     const result = await repository.save({
-      displayName: "Lê Minh",
+      deliveryChannel: "phone",
       email: "",
+      fullName: "Lê Minh",
       id: null,
       newGrants: [
         {
@@ -91,7 +99,6 @@ describe("mock account management repository", () => {
       ],
       phone: "0911222333",
       recordVersion: null,
-      username: "le.minh",
     });
     expect(result).toMatchObject({ field: "grants", status: "invalid-input" });
   });
@@ -165,5 +172,23 @@ describe("mock account management repository", () => {
         confirmed: false,
       }),
     ).resolves.toMatchObject({ status: "confirmation-required" });
+  });
+
+  it("returns only delivery metadata after a confirmed password reset", async () => {
+    const repository = createRepository();
+    const result = await repository.resetPassword({
+      accountId: "account-nguyen-an",
+      confirmed: true,
+    });
+
+    expect(result).toMatchObject({
+      delivery: {
+        channel: "email",
+        deliveryStatus: "sent",
+        username: "nguyen.an",
+      },
+      status: "reset",
+    });
+    expect(result).not.toHaveProperty("delivery.temporaryPassword");
   });
 });

@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OneTimeCredentialDialog } from "@/components/security/one-time-credential-dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { AccountEditor } from "@/features/account-management/components/account-editor";
 import { AccountList } from "@/features/account-management/components/account-list";
 import { AccountManagementPageSkeleton } from "@/features/account-management/components/account-management-page-skeleton";
+import { CredentialDeliveryDialog } from "@/features/account-management/components/credential-delivery-dialog";
 import type {
   AccountManagementWorkspace,
+  CredentialDeliveryReceipt,
   ManagedAccount,
-  OneTimeTemporaryCredential,
 } from "@/features/account-management/domain/account-management";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
 import { useAuth } from "@/features/auth/state/auth-provider";
@@ -17,9 +18,9 @@ import { accountManagementService } from "@/features/account-management/services
 import { formatMessage } from "@/shared/messages/message-catalog";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
-type CredentialState = Readonly<{
-  credential: OneTimeTemporaryCredential;
+type DeliveryState = Readonly<{
   kind: "created" | "reset";
+  receipt: CredentialDeliveryReceipt;
 }>;
 
 function PermissionDenied() {
@@ -37,9 +38,10 @@ export function AccountManagementExperience() {
   const [workspace, setWorkspace] = useState<AccountManagementWorkspace>();
   const [selectedAccountId, setSelectedAccountId] = useState<string>();
   const [isCreating, setIsCreating] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
-  const [credentialState, setCredentialState] = useState<CredentialState>();
+  const [deliveryState, setDeliveryState] = useState<DeliveryState>();
   const canManage =
     state.status === "authenticated" &&
     hasEffectivePermission(state.account.access, "access.accounts.manage");
@@ -100,7 +102,7 @@ export function AccountManagementExperience() {
   function openAccount(accountId: string) {
     setSelectedAccountId(accountId);
     setIsCreating(false);
-    requestAnimationFrame(() => document.getElementById("account-editor-start")?.focus());
+    setIsEditorOpen(true);
   }
 
   function updateAccount(account: ManagedAccount) {
@@ -142,35 +144,55 @@ export function AccountManagementExperience() {
             Tạo tài khoản nội bộ, gán nhiều cặp vùng–vai trò và kiểm tra quyền thực tế trước khi xác nhận.
           </p>
         </div>
-        <Button className="lg:w-auto" onClick={() => { setIsCreating(true); setSelectedAccountId(undefined); }}>
+        <Button className="lg:w-auto" onClick={() => { setIsCreating(true); setSelectedAccountId(undefined); setIsEditorOpen(true); }}>
           Thêm tài khoản
         </Button>
       </header>
 
-      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]">
-        <AccountList
-          accounts={workspace.accounts}
-          onSelect={openAccount}
-          selectedAccountId={selectedAccountId}
-        />
-        <div className="min-w-0 outline-none" id="account-editor-start" tabIndex={-1}>
+      <AccountList
+        accounts={workspace.accounts}
+        onSelect={openAccount}
+        roles={workspace.roles}
+        selectedAccountId={selectedAccountId}
+        zones={workspace.zones}
+      />
+
+      <Dialog
+        description={
+          isCreating
+            ? "Nhập thông tin nhân viên, chọn kênh gửi kích hoạt và kiểm tra quyền hiệu lực trước khi tạo tài khoản."
+            : "Kiểm tra thông tin đăng nhập, trạng thái và quyền truy cập theo từng vùng."
+        }
+        onOpenChange={setIsEditorOpen}
+        open={isEditorOpen}
+        size="xl"
+        title={
+          isCreating
+            ? "Thêm tài khoản nội bộ"
+            : selectedAccount?.displayName ?? "Chi tiết tài khoản"
+        }
+      >
+        {isEditorOpen && (isCreating || selectedAccount) && (
           <AccountEditor
             account={isCreating ? undefined : selectedAccount}
+            embedded
             key={isCreating ? "create" : selectedAccount?.id ?? "empty"}
-            onCredential={(credential, kind) => setCredentialState({ credential, kind })}
+            onDelivery={(receipt, kind) => {
+              if (kind === "created") setIsEditorOpen(false);
+              setDeliveryState({ kind, receipt });
+            }}
             onOpenExisting={openAccount}
             onSaved={updateAccount}
             workspace={workspace}
           />
-        </div>
-      </div>
+        )}
+      </Dialog>
 
-      {credentialState && (
-        <OneTimeCredentialDialog
-          credential={credentialState.credential}
-          description="Bàn giao trực tiếp cho người dùng. Sau khi đóng, mật khẩu sẽ không được hiển thị lại."
-          onAcknowledge={() => setCredentialState(undefined)}
-          title={credentialState.kind === "created" ? "Tài khoản đã được tạo" : "Mật khẩu đã được đặt lại"}
+      {deliveryState && (
+        <CredentialDeliveryDialog
+          kind={deliveryState.kind}
+          onAcknowledge={() => setDeliveryState(undefined)}
+          receipt={deliveryState.receipt}
         />
       )}
     </div>

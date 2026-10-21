@@ -14,7 +14,7 @@ export function requiresPostLoginGate(
   result: LoginResult,
 ): result is PostLoginGate {
   return (
-    result.status === "password-change-required" ||
+    result.status === "staff-onboarding-required" ||
     result.status === "phone-verification-required"
   );
 }

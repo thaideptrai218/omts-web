@@ -4,9 +4,9 @@ import type {
   AssignableRole,
   ChangeAccountStatusInput,
   ChangeAccountStatusResult,
+  CredentialDeliveryReceipt,
   FarmingZoneOption,
   ManagedAccount,
-  OneTimeTemporaryCredential,
   ResetPasswordInput,
   ResetPasswordResult,
   RevokeGrantInput,
@@ -14,6 +14,7 @@ import type {
   SaveAccountInput,
   SaveAccountResult,
 } from "@/features/account-management/domain/account-management";
+import { mockIdentities } from "@/shared/mocks/mock-identities";
 import type { FeatureCatalogItem } from "@/features/role-management/domain/role-management";
 import type { AccountManagementRepository } from "@/features/account-management/repositories/account-management-repository";
 import { accountEditorSchema } from "@/features/account-management/schemas/account-editor-schema";
@@ -28,9 +29,6 @@ type MockOptions = Readonly<{
   zones: readonly FarmingZoneOption[];
 }>;
 
-const temporaryPasswordCharacters =
-  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -39,20 +37,55 @@ function cloneAccount(account: ManagedAccount): ManagedAccount {
   return { ...account, grants: account.grants.map((grant) => ({ ...grant })) };
 }
 
-function generateTemporaryPassword(): string {
-  const values = new Uint32Array(10);
-  crypto.getRandomValues(values);
-  return Array.from(
-    values,
-    (value) => temporaryPasswordCharacters[value % temporaryPasswordCharacters.length],
-  ).join("");
+function usernameBase(fullName: string): string {
+  const normalized = fullName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.|\.$/g, "");
+
+  return normalized || "staff";
 }
 
-function createCredential(username: string): OneTimeTemporaryCredential {
+function createUniqueUsername(
+  fullName: string,
+  accounts: readonly ManagedAccount[],
+): string {
+  const base = usernameBase(fullName);
+
+  for (let suffix = accounts.length + 1; suffix < accounts.length + 10_001; suffix += 1) {
+    const candidate = `${base}.${String(suffix).padStart(4, "0")}`;
+    const exists = accounts.some(
+      (account) => account.username.toLowerCase() === candidate.toLowerCase(),
+    );
+    if (!exists) return candidate;
+  }
+
+  throw new Error("Unable to generate a unique mock username.");
+}
+
+function maskRecipient(channel: "email" | "phone", value: string): string {
+  if (channel === "email") {
+    const [localPart, domain] = value.split("@");
+    return localPart && domain ? `${localPart.slice(0, 2)}***@${domain}` : "***";
+  }
+
+  const digits = value.replace(/\D/g, "");
+  return digits.length > 4 ? `••••••${digits.slice(-4)}` : "••••";
+}
+
+function createDeliveryReceipt(account: ManagedAccount): CredentialDeliveryReceipt {
+  const channel = account.credentialDeliveryChannel;
+  const recipient = channel === "email" ? account.email : account.phone;
+
   return {
-    accountIdentifier: username,
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    temporaryPassword: generateTemporaryPassword(),
+    channel,
+    deliveryStatus: "sent",
+    expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+    maskedRecipient: maskRecipient(channel, recipient),
+    username: account.username,
   };
 }
 
@@ -122,9 +155,12 @@ export function createMockAccountManagementRepository({
         const field = parsed.error.issues[0]?.path[0];
         return {
           field:
-            field === "displayName" || field === "email" || field === "phone" || field === "username"
+            field === "deliveryChannel" ||
+            field === "email" ||
+            field === "fullName" ||
+            field === "phone"
               ? field
-              : "displayName",
+              : "fullName",
           message: { code: "MSG01" },
           status: "invalid-input",
         };
@@ -135,23 +171,30 @@ export function createMockAccountManagementRepository({
         return { message: { code: "MSG02" }, status: "forbidden" };
       }
 
-      const duplicateUsername = accounts.find(
-        (account) =>
-          account.id !== input.id &&
-          account.username.localeCompare(parsed.data.username, "vi", { sensitivity: "base" }) === 0,
-      );
-      if (duplicateUsername) {
+      const duplicateEmail = parsed.data.email
+        ? accounts.find(
+            (account) =>
+              account.id !== input.id &&
+              account.email.localeCompare(parsed.data.email, "en", {
+                sensitivity: "base",
+              }) === 0,
+          )
+        : undefined;
+      if (duplicateEmail) {
         return {
-          existingAccountId: duplicateUsername.id,
-          field: "username",
-          message: { code: "MSG03", params: { object_name: "Tên đăng nhập" } },
+          existingAccountId: duplicateEmail.id,
+          field: "email",
+          message: { code: "MSG03", params: { object_name: "Email" } },
           status: "duplicate",
         };
       }
 
-      const duplicatePhone = accounts.find(
-        (account) => account.id !== input.id && account.phone === parsed.data.phone,
-      );
+      const duplicatePhone = parsed.data.phone
+        ? accounts.find(
+            (account) =>
+              account.id !== input.id && account.phone === parsed.data.phone,
+          )
+        : undefined;
       if (duplicatePhone) {
         return {
           existingAccountId: duplicatePhone.id,
@@ -205,7 +248,7 @@ export function createMockAccountManagementRepository({
       const addedGrants: readonly AccessGrant[] = input.newGrants.map((grant) => ({
         effectiveFrom: grant.effectiveFrom,
         effectiveTo: grant.effectiveTo || null,
-        grantedBy: "Chủ HTX Trung Nam",
+        grantedBy: mockIdentities.owner.displayName,
         id: `grant-${nextGrantNumber++}`,
         revocationReason: null,
         revokedAt: null,
@@ -215,29 +258,35 @@ export function createMockAccountManagementRepository({
       }));
 
       nextVersion += 1;
+      const username = current?.username ?? createUniqueUsername(parsed.data.fullName, accounts);
       const saved: ManagedAccount = current
         ? {
             ...current,
-            displayName: parsed.data.displayName,
+            credentialDeliveryChannel: parsed.data.deliveryChannel,
+            displayName: parsed.data.fullName,
             email: parsed.data.email,
+            emailVerified:
+              current.email === parsed.data.email ? current.emailVerified : false,
             grants: [...current.grants, ...addedGrants],
             phone: parsed.data.phone,
             phoneVerified:
               current.phone === parsed.data.phone ? current.phoneVerified : false,
             recordVersion: `account-v${nextVersion}`,
-            username: parsed.data.username,
+            username,
           }
         : {
             accountType: "internal",
-            displayName: parsed.data.displayName,
+            credentialDeliveryChannel: parsed.data.deliveryChannel,
+            displayName: parsed.data.fullName,
             email: parsed.data.email,
+            emailVerified: false,
             grants: addedGrants,
             id: `account-${nextAccountNumber++}`,
             phone: parsed.data.phone,
             phoneVerified: false,
             recordVersion: `account-v${nextVersion}`,
             status: "active",
-            username: parsed.data.username,
+            username,
           };
 
       if (current) replaceAccount(saved);
@@ -245,7 +294,7 @@ export function createMockAccountManagementRepository({
 
       return {
         account: cloneAccount(saved),
-        credential: current ? undefined : createCredential(saved.username),
+        delivery: current ? undefined : createDeliveryReceipt(saved),
         status: "saved",
       };
     },
@@ -358,7 +407,7 @@ export function createMockAccountManagementRepository({
         };
       }
       return {
-        credential: createCredential(account.username),
+        delivery: createDeliveryReceipt(account),
         status: "reset",
       };
     },

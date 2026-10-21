@@ -11,10 +11,21 @@ type PostLoginGatePanelProps = Readonly<{
 }>;
 
 function getGateContent(gate: PostLoginGate) {
-  if (gate.status === "password-change-required") {
+  if (gate.status === "staff-onboarding-required") {
+    if (gate.nextStep === "verify-contact") {
+      const availableChannels = gate.availableContactChannels
+        .map((channel) => (channel === "email" ? "email" : "số điện thoại"))
+        .join(" hoặc ");
+
+      return {
+        description: `Mật khẩu mới đã được lưu. Tiếp theo, hãy xác minh ${availableChannels} mà Chủ hợp tác xã đã khai báo.`,
+        title: "Xác minh thông tin liên hệ",
+      };
+    }
+
     return {
       description:
-        "Mật khẩu tạm thời đã được chấp nhận. Bạn cần đặt mật khẩu mới trước khi sử dụng các chức năng khác.",
+        "Mật khẩu tạm thời đã được chấp nhận. Bạn cần đặt mật khẩu mới trước khi xác minh thông tin liên hệ.",
       title: "Đổi mật khẩu tạm thời",
     };
   }

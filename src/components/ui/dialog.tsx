@@ -16,8 +16,15 @@ type DialogProps = Readonly<{
   initialFocusRef?: RefObject<HTMLElement | null>;
   onOpenChange(open: boolean): void;
   open: boolean;
+  size?: "md" | "lg" | "xl";
   title: string;
 }>;
+
+const dialogWidthStyles = {
+  md: "max-w-lg",
+  lg: "max-w-3xl",
+  xl: "max-w-6xl",
+} as const;
 
 const focusableSelector = [
   "button:not([disabled])",
@@ -55,6 +62,7 @@ export function Dialog({
   initialFocusRef,
   onOpenChange,
   open,
+  size = "md",
   title,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -86,7 +94,7 @@ export function Dialog({
     <dialog
       aria-describedby={description ? descriptionId : undefined}
       aria-labelledby={titleId}
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-card border border-border bg-surface p-0 text-text shadow-2xl backdrop:bg-slate-950/45 backdrop:backdrop-blur-[1px] open:motion-safe:animate-[omts-reveal-from-bottom_180ms_ease-out_both] max-sm:m-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:w-full max-sm:max-w-none max-sm:rounded-none"
+      className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${dialogWidthStyles[size]} overflow-y-auto overscroll-contain rounded-card border border-border bg-surface p-0 text-text shadow-2xl backdrop:bg-slate-950/45 backdrop:backdrop-blur-[1px] open:motion-safe:animate-[omts-dialog-enter_220ms_cubic-bezier(0.22,1,0.36,1)_both] max-sm:m-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:w-full max-sm:max-w-none max-sm:rounded-none`}
       onCancel={(event) => {
         event.preventDefault();
         if (dismissible) onOpenChange(false);

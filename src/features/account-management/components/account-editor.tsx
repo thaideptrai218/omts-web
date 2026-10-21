@@ -12,9 +12,9 @@ import type {
   AccessGrant,
   AccountAction,
   AccountManagementWorkspace,
+  CredentialDeliveryReceipt,
   GrantDraft,
   ManagedAccount,
-  OneTimeTemporaryCredential,
 } from "@/features/account-management/domain/account-management";
 import { buildEffectivePermissionPreview } from "@/features/account-management/lib/effective-permissions";
 import {
@@ -27,7 +27,8 @@ import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
 type AccountEditorProps = Readonly<{
   account?: ManagedAccount;
-  onCredential(credential: OneTimeTemporaryCredential, kind: "created" | "reset"): void;
+  embedded?: boolean;
+  onDelivery(receipt: CredentialDeliveryReceipt, kind: "created" | "reset"): void;
   onOpenExisting(accountId: string): void;
   onSaved(account: ManagedAccount): void;
   workspace: AccountManagementWorkspace;
@@ -40,16 +41,17 @@ const inputStyles =
 
 function initialValues(account?: ManagedAccount): AccountEditorValues {
   return {
-    displayName: account?.displayName ?? "",
+    deliveryChannel: account?.credentialDeliveryChannel ?? "phone",
     email: account?.email ?? "",
+    fullName: account?.displayName ?? "",
     phone: account?.phone ?? "",
-    username: account?.username ?? "",
   };
 }
 
 export function AccountEditor({
   account,
-  onCredential,
+  embedded = false,
+  onDelivery,
   onOpenExisting,
   onSaved,
   workspace,
@@ -156,7 +158,7 @@ export function AccountEditor({
 
       onSaved(result.account);
       setDuplicateAccountId(undefined);
-      if (result.credential) onCredential(result.credential, "created");
+      if (result.delivery) onDelivery(result.delivery, "created");
       setDrafts([]);
       setStep("edit");
       setFeedback({ text: isCreate ? "Tài khoản đã được tạo." : "Tài khoản đã được cập nhật.", tone: "success" });
@@ -243,7 +245,7 @@ export function AccountEditor({
       }
       if (result.status === "reset") {
         setResetDialogOpen(false);
-        onCredential(result.credential, "reset");
+        onDelivery(result.delivery, "reset");
         return;
       }
       setFeedback({ text: formatMessage(result.message), tone: "danger" });
@@ -256,41 +258,63 @@ export function AccountEditor({
 
   if (!isInternal && account) {
     return (
-      <section className="rounded-card border border-border bg-surface p-5 shadow-card sm:p-6">
-        <p className="text-sm font-semibold text-primary">Tài khoản được bảo vệ</p>
-        <h2 className="mt-2 text-2xl font-semibold text-text">{account.displayName}</h2>
+      <section
+        className={
+          embedded
+            ? "min-w-0"
+            : "rounded-card border border-border bg-surface p-5 shadow-card sm:p-6"
+        }
+      >
+        <p className="text-sm font-semibold text-primary">Tài khoản Chủ hợp tác xã</p>
+        {!embedded && (
+          <h2 className="mt-2 text-2xl font-semibold text-text">
+            {account.displayName}
+          </h2>
+        )}
         <dl className="mt-5 grid gap-4 sm:grid-cols-2">
           <div><dt className="text-sm text-text-muted">Tên đăng nhập</dt><dd className="mt-1 font-semibold">@{account.username}</dd></div>
           <div><dt className="text-sm text-text-muted">Loại tài khoản</dt><dd className="mt-1 font-semibold">Chủ hợp tác xã</dd></div>
           <div><dt className="text-sm text-text-muted">Số điện thoại</dt><dd className="mt-1 font-semibold">{account.phone}</dd></div>
           <div><dt className="text-sm text-text-muted">Trạng thái</dt><dd className="mt-1 font-semibold">Hoạt động</dd></div>
         </dl>
-        <p className="mt-6 rounded-card border border-warning/30 bg-warning-soft p-4 leading-7 text-text">
-          SCR-09 không cho sửa hoặc khóa tài khoản Chủ HTX. Chủ tài khoản tự cập nhật hồ sơ; hỗ trợ truy cập thuộc quy trình quản trị hệ thống riêng.
+        <p className="mt-6 rounded-card border border-info/20 bg-sky-50 p-4 leading-7 text-info">
+          Tài khoản này được bảo vệ và không thể chỉnh sửa hoặc khóa tại màn
+          quản lý tài khoản nội bộ. Chủ hợp tác xã tự cập nhật thông tin liên hệ
+          trong hồ sơ cá nhân.
         </p>
       </section>
     );
   }
 
   return (
-    <section className="min-w-0 rounded-card border border-border bg-surface p-5 shadow-card sm:p-6">
-      <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-primary">{isCreate ? "Tài khoản mới" : "Chi tiết tài khoản"}</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-text">
-            {isCreate ? "Thêm tài khoản nội bộ" : account.displayName}
-          </h2>
-          {!isCreate && <p className="mt-2 text-sm text-text-muted">@{account.username} · {account.status === "active" ? "Đang hoạt động" : "Đã khóa"}</p>}
+    <section
+      className={
+        embedded
+          ? "min-w-0"
+          : "min-w-0 rounded-card border border-border bg-surface p-5 shadow-card sm:p-6"
+      }
+    >
+      {(!embedded || !isCreate) && (
+        <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between">
+          {!embedded && (
+            <div>
+              <p className="text-sm font-semibold text-primary">{isCreate ? "Tài khoản mới" : "Chi tiết tài khoản"}</p>
+              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-text">
+                {isCreate ? "Thêm tài khoản nội bộ" : account.displayName}
+              </h2>
+              {!isCreate && <p className="mt-2 text-sm text-text-muted">@{account.username} · {account.status === "active" ? "Đang hoạt động" : "Đã khóa"}</p>}
+            </div>
+          )}
+          {!isCreate && (
+            <div className="grid w-full gap-2 sm:ml-auto sm:w-auto sm:grid-cols-2">
+              <Button onClick={() => setResetDialogOpen(true)} variant="secondary">Đặt lại mật khẩu</Button>
+              <Button onClick={() => setAction(account.status === "active" ? "lock" : "unlock")} variant={account.status === "active" ? "danger" : "secondary"}>
+                {account.status === "active" ? "Khóa" : "Mở khóa"}
+              </Button>
+            </div>
+          )}
         </div>
-        {!isCreate && (
-          <div className="flex flex-wrap gap-2">
-            <Button className="w-auto" onClick={() => setResetDialogOpen(true)} variant="secondary">Đặt lại mật khẩu</Button>
-            <Button className="w-auto" onClick={() => setAction(account.status === "active" ? "lock" : "unlock")} variant={account.status === "active" ? "danger" : "secondary"}>
-              {account.status === "active" ? "Khóa" : "Mở khóa"}
-            </Button>
-          </div>
-        )}
-      </div>
+      )}
 
       <ol aria-label="Các bước tạo tài khoản" className="mt-5 grid gap-2 sm:grid-cols-2">
         <li className={`rounded-control border px-3 py-2 text-sm font-semibold ${step === "edit" ? "border-primary bg-primary-soft text-primary-hover" : "border-border text-text-muted"}`}>1. Thông tin và quyền</li>
@@ -316,25 +340,47 @@ export function AccountEditor({
         <form className="mt-6 space-y-7" onSubmit={(event) => { event.preventDefault(); void continueToPreview(); }}>
           <fieldset className="min-w-0">
             <legend className="text-lg font-semibold text-text">Thông tin tài khoản</legend>
-            <p className="mt-1 text-sm leading-6 text-text-muted">Số điện thoại phải được người dùng xác minh ở lần đăng nhập đầu tiên hoặc sau khi được đổi.</p>
+            <p className="mt-1 text-sm leading-6 text-text-muted">Nhập ít nhất email hoặc số điện thoại. Nhân viên sẽ xác minh một trong các liên hệ này khi thiết lập tài khoản.</p>
             <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
-              <label className="min-w-0 text-sm font-semibold text-text">Tên hiển thị <span className="text-danger">*</span>
-                <input aria-invalid={Boolean(errors.displayName)} className={inputStyles} {...register("displayName")} />
-                {errors.displayName && <span className="mt-2 block font-normal text-danger">{errors.displayName.message}</span>}
+              <label className="min-w-0 text-sm font-semibold text-text">Họ và tên nhân viên <span className="text-danger">*</span>
+                <input aria-invalid={Boolean(errors.fullName)} className={inputStyles} {...register("fullName")} />
+                {errors.fullName && <span className="mt-2 block font-normal text-danger">{errors.fullName.message}</span>}
               </label>
-              <label className="min-w-0 text-sm font-semibold text-text">Tên đăng nhập <span className="text-danger">*</span>
-                <input aria-invalid={Boolean(errors.username)} autoCapitalize="none" className={inputStyles} {...register("username")} />
-                {errors.username && <span className="mt-2 block font-normal text-danger">{errors.username.message}</span>}
-              </label>
-              <label className="min-w-0 text-sm font-semibold text-text">Số điện thoại <span className="text-danger">*</span>
+              {!isCreate && (
+                <div className="min-w-0 text-sm font-semibold text-text">
+                  Tên đăng nhập
+                  <p className={`${inputStyles} flex items-center`}>
+                    @{account.username}
+                  </p>
+                  <p className="mt-2 font-normal leading-5 text-text-muted">Username không đổi khi họ tên được cập nhật.</p>
+                </div>
+              )}
+              <label className="min-w-0 text-sm font-semibold text-text">Số điện thoại
                 <input aria-invalid={Boolean(errors.phone)} className={inputStyles} inputMode="tel" {...register("phone")} />
                 {errors.phone && <span className="mt-2 block font-normal text-danger">{errors.phone.message}</span>}
               </label>
-              <label className="min-w-0 text-sm font-semibold text-text">Email <span className="font-normal text-text-muted">(không bắt buộc)</span>
+              <label className="min-w-0 text-sm font-semibold text-text">Email
                 <input aria-invalid={Boolean(errors.email)} autoCapitalize="none" className={inputStyles} type="email" {...register("email")} />
                 {errors.email && <span className="mt-2 block font-normal text-danger">{errors.email.message}</span>}
               </label>
             </div>
+            {isCreate && (
+              <fieldset className="mt-5">
+                <legend className="text-sm font-semibold text-text">Gửi thông tin kích hoạt qua</legend>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <label className="flex min-h-12 flex-1 cursor-pointer items-center gap-3 rounded-control border border-border-strong px-4 py-3">
+                    <input type="radio" value="phone" {...register("deliveryChannel")} />
+                    <span>SMS</span>
+                  </label>
+                  <label className="flex min-h-12 flex-1 cursor-pointer items-center gap-3 rounded-control border border-border-strong px-4 py-3">
+                    <input type="radio" value="email" {...register("deliveryChannel")} />
+                    <span>Email</span>
+                  </label>
+                </div>
+                {errors.deliveryChannel && <p className="mt-2 text-sm text-danger">{errors.deliveryChannel.message}</p>}
+                <p className="mt-2 text-sm leading-6 text-text-muted">Hệ thống tự sinh username và mật khẩu tạm, sau đó gửi trực tiếp cho nhân viên. Chủ HTX không nhìn thấy mật khẩu.</p>
+              </fieldset>
+            )}
           </fieldset>
 
           <div className="min-w-0 outline-none" id="account-grants" tabIndex={-1}>
@@ -362,8 +408,9 @@ export function AccountEditor({
           </div>
           <EffectivePermissionPreview catalog={workspace.featureCatalog} zones={preview} />
           <div className="rounded-card border border-border bg-surface-subtle p-4">
-            <p className="font-semibold text-text">{getValues("displayName")} · @{getValues("username")}</p>
-            <p className="mt-1 text-sm text-text-muted">{getValues("phone")}{getValues("email") ? ` · ${getValues("email")}` : ""}</p>
+            <p className="font-semibold text-text">{getValues("fullName")}{account ? ` · @${account.username}` : ""}</p>
+            <p className="mt-1 text-sm text-text-muted">{getValues("phone")}{getValues("phone") && getValues("email") ? " · " : ""}{getValues("email")}</p>
+            {isCreate && <p className="mt-2 text-sm font-medium text-primary">Thông tin kích hoạt sẽ được gửi qua {getValues("deliveryChannel") === "email" ? "email" : "SMS"}.</p>}
           </div>
           <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
             <Button className="sm:w-auto" disabled={isSaving} onClick={() => setStep("edit")} variant="secondary">Quay lại chỉnh sửa</Button>

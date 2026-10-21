@@ -7,15 +7,30 @@ const optionalEmail = z
     message: "Email chưa đúng định dạng.",
   });
 
-export const accountEditorSchema = z.object({
-  displayName: z.string().trim().min(1, "Vui lòng nhập tên hiển thị."),
-  email: optionalEmail,
-  phone: z.string().trim().min(1, "Vui lòng nhập số điện thoại."),
-  username: z
-    .string()
-    .trim()
-    .min(1, "Vui lòng nhập tên đăng nhập.")
-    .regex(/^[a-zA-Z0-9._-]+$/, "Chỉ dùng chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang."),
-});
+export const accountEditorSchema = z
+  .object({
+    deliveryChannel: z.enum(["email", "phone"]),
+    email: optionalEmail,
+    fullName: z.string().trim().min(1, "Vui lòng nhập họ và tên nhân viên."),
+    phone: z.string().trim(),
+  })
+  .superRefine((values, context) => {
+    if (!values.email && !values.phone) {
+      const message = "Vui lòng nhập email hoặc số điện thoại.";
+      context.addIssue({ code: "custom", message, path: ["email"] });
+      context.addIssue({ code: "custom", message, path: ["phone"] });
+      return;
+    }
+
+    const selectedContact =
+      values.deliveryChannel === "email" ? values.email : values.phone;
+    if (!selectedContact) {
+      context.addIssue({
+        code: "custom",
+        message: "Kênh nhận thông tin phải có địa chỉ liên hệ tương ứng.",
+        path: ["deliveryChannel"],
+      });
+    }
+  });
 
 export type AccountEditorValues = z.infer<typeof accountEditorSchema>;

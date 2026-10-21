@@ -1,5 +1,6 @@
 import { createMockPersonalProfileRepository } from "@/features/profile/repositories/mock-personal-profile-repository";
 import { createPersonalProfileService } from "@/features/profile/services/personal-profile-service";
+import type { PersonalProfile } from "@/features/profile/domain/personal-profile";
 import type { VerificationToken } from "@/features/verification/domain/verification-types";
 import {
   createMockVerificationRepository,
@@ -9,6 +10,7 @@ import {
 import { createVerificationService } from "@/features/verification/services/verification-service";
 
 type MockPersonalProfileEnvironmentOptions = Readonly<{
+  initialProfile?: PersonalProfile;
   isAmbiguousTraderPhone?: (value: string) => boolean;
   isSessionActive?: () => boolean;
   latencyMs?: number;
@@ -16,6 +18,7 @@ type MockPersonalProfileEnvironmentOptions = Readonly<{
 }>;
 
 export function createMockPersonalProfileEnvironment({
+  initialProfile,
   isAmbiguousTraderPhone,
   isSessionActive,
   latencyMs,
@@ -52,6 +55,7 @@ export function createMockPersonalProfileEnvironment({
   const profileRepository = createMockPersonalProfileRepository({
     consumeVerificationProof: ({ token }) => proofs.delete(token),
     hasVerificationProof: matchesProof,
+    initialProfile,
     isAmbiguousTraderPhone,
     isSessionActive,
     latencyMs,

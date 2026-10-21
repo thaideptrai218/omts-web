@@ -13,6 +13,9 @@ const authenticatedSession: AuthenticatedSession = {
     access: { permissions: [] },
     accountId: "account-test",
     displayName: "Tài khoản kiểm thử",
+    organizationName: "HTX kiểm thử",
+    primaryRoleLabel: "Vai trò kiểm thử",
+    scopeLabel: "Phạm vi kiểm thử",
     username: "test-user",
   },
   status: "authenticated",
@@ -31,8 +34,30 @@ const outcomes = [
   {
     grantsAccess: false,
     requiresGate: true,
-    label: "required password change",
-    result: { status: "password-change-required" },
+    label: "staff onboarding starts with temporary-password change",
+    result: {
+      availableContactChannels: ["email", "phone"],
+      checklist: {
+        contactVerified: false,
+        passwordChanged: false,
+      },
+      nextStep: "change-temporary-password",
+      status: "staff-onboarding-required",
+    },
+  },
+  {
+    grantsAccess: false,
+    requiresGate: true,
+    label: "staff onboarding continues with contact verification",
+    result: {
+      availableContactChannels: ["email"],
+      checklist: {
+        contactVerified: false,
+        passwordChanged: true,
+      },
+      nextStep: "verify-contact",
+      status: "staff-onboarding-required",
+    },
   },
   {
     grantsAccess: false,

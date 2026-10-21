@@ -26,6 +26,7 @@ export type RoleEditorMode = "copy" | "create" | "edit";
 
 type RoleEditorProps = Readonly<{
   catalog: readonly FeatureCatalogItem[];
+  embedded?: boolean;
   mode: RoleEditorMode;
   onOpenExisting(roleId: string): void;
   onReload(): void;
@@ -78,6 +79,7 @@ function ImpactAccountList({ accounts }: { accounts: readonly RoleImpactAccount[
 
 export function RoleEditor({
   catalog,
+  embedded = false,
   mode,
   onOpenExisting,
   onReload,
@@ -260,7 +262,14 @@ export function RoleEditor({
   }
 
   return (
-    <section className="min-w-0 rounded-card border border-border bg-surface shadow-card">
+    <section
+      className={
+        embedded
+          ? "min-w-0"
+          : "min-w-0 rounded-card border border-border bg-surface shadow-card"
+      }
+    >
+      {!embedded && (
       <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
         <div>
           <p className="text-sm font-semibold text-primary">
@@ -280,8 +289,9 @@ export function RoleEditor({
           {roleStatusLabel(isExistingRole ? role : undefined)}
         </span>
       </div>
+      )}
 
-      <div className="space-y-6 p-5 sm:p-6">
+      <div className={`space-y-6 ${embedded ? "" : "p-5 sm:p-6"}`}>
         {isReadOnly && (
           <div className="rounded-control border border-border bg-surface-subtle p-4 text-sm leading-6 text-text-muted">
             Vai trò này đã ngừng dùng nên chỉ có thể xem hoặc sao chép. OMTS không xóa vai trò để giữ lịch sử cấp quyền.

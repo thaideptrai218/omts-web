@@ -31,8 +31,10 @@ export type AccessGrant = Readonly<{
 
 export type ManagedAccount = Readonly<{
   accountType: "cooperative-owner" | "internal" | "system-administrator";
+  credentialDeliveryChannel: "email" | "phone";
   displayName: string;
   email: string;
+  emailVerified: boolean;
   grants: readonly AccessGrant[];
   id: string;
   phone: string;
@@ -58,13 +60,13 @@ export type GrantDraft = Readonly<{
 }>;
 
 export type SaveAccountInput = Readonly<{
-  displayName: string;
+  deliveryChannel: "email" | "phone";
   email: string;
+  fullName: string;
   id: string | null;
   newGrants: readonly GrantDraft[];
   phone: string;
   recordVersion: string | null;
-  username: string;
 }>;
 
 export type EffectivePermissionRow = Readonly<{
@@ -80,10 +82,12 @@ export type EffectivePermissionZone = Readonly<{
   zoneLabel: string;
 }>;
 
-export type OneTimeTemporaryCredential = Readonly<{
-  accountIdentifier: string;
+export type CredentialDeliveryReceipt = Readonly<{
+  channel: "email" | "phone";
+  deliveryStatus: "failed" | "sent";
   expiresAt: string;
-  temporaryPassword: string;
+  maskedRecipient: string;
+  username: string;
 }>;
 
 type ForbiddenResult = Readonly<{
@@ -104,17 +108,17 @@ export type LoadAccountWorkspaceResult =
 export type SaveAccountResult =
   | Readonly<{
       account: ManagedAccount;
-      credential?: OneTimeTemporaryCredential;
+      delivery?: CredentialDeliveryReceipt;
       status: "saved";
     }>
   | Readonly<{
-      field: "displayName" | "email" | "grants" | "phone" | "username";
+      field: "deliveryChannel" | "email" | "fullName" | "grants" | "phone";
       message: AppMessage & { code: "MSG01" };
       status: "invalid-input";
     }>
   | Readonly<{
       existingAccountId: string;
-      field: "phone" | "username";
+      field: "email" | "phone";
       message: AppMessage & { code: "MSG03" };
       status: "duplicate";
     }>
@@ -167,7 +171,7 @@ export type RevokeGrantResult =
 
 export type ResetPasswordResult =
   | Readonly<{
-      credential: OneTimeTemporaryCredential;
+      delivery: CredentialDeliveryReceipt;
       status: "reset";
     }>
   | Readonly<{

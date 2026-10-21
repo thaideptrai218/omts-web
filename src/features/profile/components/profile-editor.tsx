@@ -17,10 +17,8 @@ import {
   profileDetailsSchema,
   type ProfileDetailsFormValues,
 } from "@/features/profile/schemas/profile-schema";
-import {
-  personalProfileService,
-  profileVerificationService,
-} from "@/features/profile/services/personal-profile-service.instance";
+import type { PersonalProfileService } from "@/features/profile/services/personal-profile-service";
+import type { VerificationService } from "@/features/verification/services/verification-service";
 import { VerificationDialog } from "@/features/verification/components/verification-dialog";
 import type {
   VerificationChallenge,
@@ -93,9 +91,13 @@ function ContactEditor({
 export function ProfileEditor({
   onProfileChange,
   profile,
+  profileService,
+  verificationService,
 }: {
   onProfileChange(profile: PersonalProfile): void;
   profile: PersonalProfile;
+  profileService: PersonalProfileService;
+  verificationService: VerificationService;
 }) {
   const { notify } = useToast();
   const { updateDisplayName } = useAuth();
@@ -129,7 +131,7 @@ export function ProfileEditor({
     const verification = activeVerification;
     setActiveVerification(undefined);
     if (verification) {
-      await profileVerificationService.cancel(verification.challenge.requestId);
+      await verificationService.cancel(verification.challenge.requestId);
     }
   }
 
@@ -153,7 +155,7 @@ export function ProfileEditor({
     setFormError(undefined);
 
     try {
-      const result = await personalProfileService.save({
+      const result = await profileService.save({
         displayName: values.displayName,
         emailChange: verifiedChanges.email,
         phoneChange: verifiedChanges.phone,
@@ -272,7 +274,7 @@ export function ProfileEditor({
             beginVerification(activeIdentifierDialog, value, result.challenge);
           }}
           open
-          service={personalProfileService}
+          service={profileService}
         />
       )}
 
@@ -289,7 +291,7 @@ export function ProfileEditor({
           }}
           onVerified={completeVerification}
           open
-          service={profileVerificationService}
+          service={verificationService}
         />
       )}
     </>

@@ -13,9 +13,17 @@ import {
 import { useToast } from "@/components/ui/toast-provider";
 import type {
   AuthSession,
+  CompleteStaffOnboardingInput,
+  CompleteStaffOnboardingResult,
   LoginInput,
   LoginResult,
+  OnboardingContactChannel,
+  StartStaffContactVerificationResult,
 } from "@/features/auth/domain/auth-types";
+import type {
+  CurrentPasswordChangeInput,
+  CurrentPasswordChangeResult,
+} from "@/features/account-security/domain/change-password";
 import { grantsApplicationAccess } from "@/features/auth/domain/login-result";
 import { authService } from "@/features/auth/services/auth-service.instance";
 import { createLatestOperationTracker } from "@/features/auth/state/latest-operation";
@@ -29,9 +37,18 @@ type LoadingSession = Readonly<{ status: "loading" }>;
 export type AuthState = AuthSession | LoadingSession;
 
 type AuthContextValue = Readonly<{
+  changeTemporaryPassword(
+    input: CurrentPasswordChangeInput,
+  ): Promise<CurrentPasswordChangeResult>;
+  completeStaffOnboarding(
+    input: CompleteStaffOnboardingInput,
+  ): Promise<CompleteStaffOnboardingResult>;
   login(input: LoginInput): Promise<LoginResult>;
   logout(): Promise<void>;
   state: AuthState;
+  startStaffContactVerification(
+    channel: OnboardingContactChannel,
+  ): Promise<StartStaffContactVerificationResult>;
   updateDisplayName(displayName: string): void;
 }>;
 
@@ -112,6 +129,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [replaceState]);
 
+  const changeTemporaryPassword = useCallback(
+    (input: CurrentPasswordChangeInput) =>
+      authService.changeTemporaryPassword(input),
+    [],
+  );
+
+  const completeStaffOnboarding = useCallback(
+    async (input: CompleteStaffOnboardingInput) => {
+      const result = await authService.completeStaffOnboarding(input);
+      if (grantsApplicationAccess(result)) replaceState(result.session);
+      return result;
+    },
+    [replaceState],
+  );
+
+  const startStaffContactVerification = useCallback(
+    (channel: OnboardingContactChannel) =>
+      authService.startStaffContactVerification(channel),
+    [],
+  );
+
   const logout = useCallback(async () => {
     const operation = operationTracker.current.start();
 
@@ -138,8 +176,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ login, logout, state, updateDisplayName }),
-    [login, logout, state, updateDisplayName],
+    () => ({
+      changeTemporaryPassword,
+      completeStaffOnboarding,
+      login,
+      logout,
+      state,
+      startStaffContactVerification,
+      updateDisplayName,
+    }),
+    [
+      changeTemporaryPassword,
+      completeStaffOnboarding,
+      login,
+      logout,
+      startStaffContactVerification,
+      state,
+      updateDisplayName,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

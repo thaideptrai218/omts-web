@@ -8,6 +8,7 @@ import type { PersonalProfileRepository } from "@/features/profile/repositories/
 import type { VerificationToken } from "@/features/verification/domain/verification-types";
 import { maskVerificationRecipient } from "@/features/verification/lib/mask-verification-recipient";
 import type { VerificationService } from "@/features/verification/services/verification-service";
+import { requireMockPersonalProfile } from "@/features/profile/mocks/personal-profile-fixtures";
 
 export type ConsumeProfileProofInput = Readonly<{
   kind: ProfileIdentifierKind;
@@ -27,15 +28,7 @@ type MockPersonalProfileOptions = Readonly<{
   verificationService: VerificationService;
 }>;
 
-const defaultProfile: PersonalProfile = {
-  accountId: "account-owner-demo",
-  displayName: "Chủ HTX Trung Nam",
-  email: { isVerified: true, value: "owner@omts.test" },
-  phone: { isVerified: true, value: "0900000000" },
-  recordVersion: "profile-v1",
-  roles: [{ roleLabel: "Chủ hợp tác xã", scopeLabel: "Toàn hợp tác xã" }],
-  username: "owner",
-};
+const defaultProfile = requireMockPersonalProfile("account-owner-demo");
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));

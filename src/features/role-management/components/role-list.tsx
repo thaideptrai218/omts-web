@@ -24,7 +24,7 @@ export function RoleList({
   );
 
   return (
-    <section className="min-w-0 rounded-card border border-border bg-surface p-4 shadow-card xl:sticky xl:top-24">
+    <section className="min-w-0 rounded-card border border-border bg-surface p-4 shadow-card sm:p-5">
       <div>
         <h2 className="text-lg font-semibold text-text">Danh sách vai trò</h2>
         <p className="mt-1 text-sm text-text-muted">{roles.length} vai trò trong hợp tác xã</p>
@@ -57,14 +57,14 @@ export function RoleList({
           Không có vai trò ở trạng thái này.
         </p>
       ) : (
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visibleRoles.map((role) => {
             const isSelected = selectedRoleId === role.id;
             return (
               <li key={role.id}>
                 <button
                   aria-current={isSelected ? "true" : undefined}
-                  className={`min-h-20 w-full min-w-0 rounded-control border p-3 text-left transition ${
+                  className={`min-h-20 w-full min-w-0 rounded-control border p-3 text-left transition duration-200 motion-safe:hover:-translate-y-0.5 ${
                     isSelected
                       ? "border-primary bg-primary-soft shadow-sm"
                       : "border-border bg-surface hover:border-primary/50 hover:bg-surface-subtle"

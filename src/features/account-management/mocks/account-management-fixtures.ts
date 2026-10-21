@@ -3,6 +3,7 @@ import type {
   ManagedAccount,
 } from "@/features/account-management/domain/account-management";
 import { mockRoles } from "@/features/role-management/mocks/role-management-fixtures";
+import { mockIdentities } from "@/shared/mocks/mock-identities";
 
 export const mockFarmingZones = [
   { id: "zone-east", label: "Khu Đông", status: "in-use" },
@@ -20,8 +21,10 @@ export const mockAssignableRoles = mockRoles.map((role) => ({
 export const mockManagedAccounts = [
   {
     accountType: "cooperative-owner",
-    displayName: "Chủ HTX Trung Nam",
+    credentialDeliveryChannel: "email",
+    displayName: mockIdentities.owner.displayName,
     email: "owner@omts.test",
+    emailVerified: true,
     grants: [],
     id: "account-owner-demo",
     phone: "0900000000",
@@ -32,13 +35,15 @@ export const mockManagedAccounts = [
   },
   {
     accountType: "internal",
+    credentialDeliveryChannel: "email",
     displayName: "Nguyễn Văn An",
     email: "an.nguyen@omts.test",
+    emailVerified: true,
     grants: [
       {
         effectiveFrom: "2026-09-15",
         effectiveTo: null,
-        grantedBy: "Chủ HTX Trung Nam",
+        grantedBy: mockIdentities.owner.displayName,
         id: "grant-an-east-manager",
         revocationReason: null,
         revokedAt: null,
@@ -49,7 +54,7 @@ export const mockManagedAccounts = [
       {
         effectiveFrom: "2026-08-01",
         effectiveTo: "2026-09-14",
-        grantedBy: "Chủ HTX Trung Nam",
+        grantedBy: mockIdentities.owner.displayName,
         id: "grant-an-old-accountant",
         revocationReason: "Chuyển phạm vi phụ trách",
         revokedAt: "2026-09-14T09:15:00.000Z",
@@ -67,13 +72,15 @@ export const mockManagedAccounts = [
   },
   {
     accountType: "internal",
+    credentialDeliveryChannel: "phone",
     displayName: "Trần Thị Bình",
     email: "",
+    emailVerified: false,
     grants: [
       {
         effectiveFrom: "2026-10-01",
         effectiveTo: null,
-        grantedBy: "Chủ HTX Trung Nam",
+        grantedBy: mockIdentities.owner.displayName,
         id: "grant-binh-all-accountant",
         revocationReason: null,
         revokedAt: null,
@@ -91,13 +98,15 @@ export const mockManagedAccounts = [
   },
   {
     accountType: "internal",
+    credentialDeliveryChannel: "email",
     displayName: "Phạm Quốc Cường",
     email: "cuong.pham@omts.test",
+    emailVerified: false,
     grants: [
       {
         effectiveFrom: "2026-10-10",
         effectiveTo: null,
-        grantedBy: "Chủ HTX Trung Nam",
+        grantedBy: mockIdentities.owner.displayName,
         id: "grant-cuong-south-manager",
         revocationReason: null,
         revokedAt: null,

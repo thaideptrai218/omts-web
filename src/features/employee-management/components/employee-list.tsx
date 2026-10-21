@@ -27,7 +27,7 @@ export function EmployeeList({
   );
 
   return (
-    <aside className="min-w-0 rounded-card border border-border bg-surface p-4 shadow-card">
+    <section className="min-w-0 rounded-card border border-border bg-surface p-4 shadow-card sm:p-5">
       <label className="text-sm font-semibold text-text" htmlFor="employee-search">
         Tìm nhân viên
       </label>
@@ -48,7 +48,7 @@ export function EmployeeList({
           Không tìm thấy nhân viên. Hãy kiểm tra từ khóa hoặc thêm hồ sơ mới.
         </p>
       ) : (
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filteredEmployees.map((employee) => {
             const isSelected = employee.id === selectedEmployeeId;
 
@@ -56,7 +56,7 @@ export function EmployeeList({
               <li key={employee.id}>
                 <button
                   aria-current={isSelected ? "true" : undefined}
-                  className={`min-h-20 w-full rounded-control border p-3 text-left transition ${
+                  className={`min-h-20 w-full rounded-control border p-3 text-left transition duration-200 motion-safe:hover:-translate-y-0.5 ${
                     isSelected
                       ? "border-primary bg-primary-soft"
                       : "border-border bg-surface hover:border-primary/60 hover:bg-surface-subtle"
@@ -94,6 +94,6 @@ export function EmployeeList({
           })}
         </ul>
       )}
-    </aside>
+    </section>
   );
 }

@@ -25,23 +25,23 @@ describe("AccountManagementService", () => {
     };
 
     await service.save({
-      displayName: "  Nguyễn Văn An  ",
+      deliveryChannel: "email",
       email: "  an@omts.test ",
+      fullName: "  Nguyễn Văn An  ",
       id: null,
       newGrants: [grant],
       phone: " 0901234567 ",
       recordVersion: null,
-      username: " nguyen.an ",
     });
 
     expect(repository.save).toHaveBeenCalledWith({
-      displayName: "Nguyễn Văn An",
+      deliveryChannel: "email",
       email: "an@omts.test",
+      fullName: "Nguyễn Văn An",
       id: null,
       newGrants: [{ ...grant }],
       phone: "0901234567",
       recordVersion: null,
-      username: "nguyen.an",
     });
   });
 

@@ -16,11 +16,10 @@ export class AccountManagementService {
   save(input: SaveAccountInput) {
     return this.repository.save({
       ...input,
-      displayName: input.displayName.trim(),
       email: input.email.trim(),
+      fullName: input.fullName.trim(),
       newGrants: input.newGrants.map((grant) => ({ ...grant })),
       phone: input.phone.trim(),
-      username: input.username.trim(),
     });
   }
 

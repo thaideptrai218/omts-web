@@ -19,6 +19,7 @@ import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
 type EmployeeEditorProps = Readonly<{
   availableAccounts: readonly EmployeeAccountSummary[];
+  embedded?: boolean;
   employee?: EmployeeProfile;
   onOpenExisting(employeeId: string): void;
   onSaved(employee: EmployeeProfile, followUp?: AccountFollowUp): void;
@@ -50,6 +51,7 @@ function FieldError({ message }: { message?: string }) {
 
 export function EmployeeEditor({
   availableAccounts,
+  embedded = false,
   employee,
   onOpenExisting,
   onSaved,
@@ -136,18 +138,26 @@ export function EmployeeEditor({
   });
 
   return (
-    <section className="min-w-0 rounded-card border border-border bg-surface p-5 shadow-card sm:p-6">
-      <div className="border-b border-border pb-5">
-        <p className="text-sm font-semibold text-primary">
-          {isCreate ? "Hồ sơ mới" : "Chi tiết nhân viên"}
-        </p>
-        <h2 className="mt-1 text-2xl font-semibold tracking-tight text-text">
-          {isCreate ? "Thêm nhân viên" : employee.fullName}
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-text-muted">
-          Hồ sơ nhân sự và tài khoản đăng nhập là hai dữ liệu riêng. Có thể lưu nhân viên mà chưa liên kết tài khoản.
-        </p>
-      </div>
+    <section
+      className={
+        embedded
+          ? "min-w-0"
+          : "min-w-0 rounded-card border border-border bg-surface p-5 shadow-card sm:p-6"
+      }
+    >
+      {!embedded && (
+        <div className="border-b border-border pb-5">
+          <p className="text-sm font-semibold text-primary">
+            {isCreate ? "Hồ sơ mới" : "Chi tiết nhân viên"}
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-text">
+            {isCreate ? "Thêm nhân viên" : employee.fullName}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-text-muted">
+            Hồ sơ nhân sự và tài khoản đăng nhập là hai dữ liệu riêng. Có thể lưu nhân viên mà chưa liên kết tài khoản.
+          </p>
+        </div>
+      )}
 
       {feedback && (
         <div
@@ -172,7 +182,7 @@ export function EmployeeEditor({
         </div>
       )}
 
-      <form className="mt-6 space-y-7" onSubmit={(event) => void saveEmployee(event)}>
+      <form className={`${embedded ? "" : "mt-6"} space-y-7`} onSubmit={(event) => void saveEmployee(event)}>
         <fieldset className="min-w-0">
           <legend className="text-lg font-semibold text-text">Thông tin nhận diện</legend>
           <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">

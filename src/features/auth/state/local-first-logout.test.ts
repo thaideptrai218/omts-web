@@ -20,7 +20,7 @@ describe("performLocalFirstLogout", () => {
     ]);
   });
 
-  it("keeps local cleanup applied when remote invalidation fails", async () => {
+  it("does not reject when remote invalidation fails", async () => {
     const clearLocalSession = vi.fn();
 
     await expect(
@@ -31,7 +31,23 @@ describe("performLocalFirstLogout", () => {
           throw new Error("network unavailable");
         },
       ),
-    ).rejects.toThrow("network unavailable");
+    ).resolves.toBeUndefined();
     expect(clearLocalSession).toHaveBeenCalledOnce();
+  });
+
+  it("stops waiting when remote invalidation never settles", async () => {
+    vi.useFakeTimers();
+    const clearLocalSession = vi.fn();
+    const logout = performLocalFirstLogout(
+      clearLocalSession,
+      vi.fn(),
+      () => new Promise(() => undefined),
+      { remoteTimeoutMs: 100 },
+    );
+
+    expect(clearLocalSession).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(100);
+    await expect(logout).resolves.toBeUndefined();
+    vi.useRealTimers();
   });
 });

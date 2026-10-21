@@ -29,13 +29,14 @@ export function AppSessionShell({ children }: { children: ReactNode }) {
     if (isLoggingOut) return;
 
     setIsLoggingOut(true);
+    router.replace("/login");
     try {
       await logout();
     } catch {
       // Local auth state is already cleared. Offline/server retry is handled
       // only after its contract is confirmed.
     } finally {
-      router.replace("/login");
+      setIsLoggingOut(false);
     }
   }
 
@@ -61,6 +62,8 @@ export function AppSessionShell({ children }: { children: ReactNode }) {
       access={account.access}
       accountInitials={getInitials(account.displayName)}
       accountLabel={account.displayName}
+      accountRole={account.primaryRoleLabel}
+      accountScope={account.scopeLabel}
       isLoggingOut={isLoggingOut}
       onLogout={handleLogout}
     >

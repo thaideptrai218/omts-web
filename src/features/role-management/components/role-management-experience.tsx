@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
 import { useAuth } from "@/features/auth/state/auth-provider";
 import {
@@ -36,6 +37,7 @@ export function RoleManagementExperience() {
   const { state } = useAuth();
   const [editorMode, setEditorMode] = useState<RoleEditorMode>("edit");
   const [hasLoadError, setHasLoadError] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRoleId, setSelectedRoleId] = useState<string>();
   const [workspace, setWorkspace] = useState<RoleWorkspace>();
@@ -106,7 +108,7 @@ export function RoleManagementExperience() {
   function openRole(roleId: string) {
     setSelectedRoleId(roleId);
     setEditorMode("edit");
-    requestAnimationFrame(() => document.getElementById("role-editor-start")?.focus());
+    setIsEditorOpen(true);
   }
 
   function handleSaved(savedRole: RoleDetails) {
@@ -122,6 +124,7 @@ export function RoleManagementExperience() {
     });
     setSelectedRoleId(savedRole.id);
     setEditorMode("edit");
+    setIsEditorOpen(false);
   }
 
   if (state.status !== "authenticated") return null;
@@ -154,7 +157,10 @@ export function RoleManagementExperience() {
           <Button
             className="sm:w-auto"
             disabled={!selectedRole}
-            onClick={() => setEditorMode("copy")}
+            onClick={() => {
+              setEditorMode("copy");
+              setIsEditorOpen(true);
+            }}
             variant="secondary"
           >
             Sao chép vai trò
@@ -164,6 +170,7 @@ export function RoleManagementExperience() {
             onClick={() => {
               setSelectedRoleId(undefined);
               setEditorMode("create");
+              setIsEditorOpen(true);
             }}
           >
             Thêm vai trò
@@ -171,15 +178,29 @@ export function RoleManagementExperience() {
         </div>
       </header>
 
-      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
-        <RoleList
-          onSelect={openRole}
-          roles={workspace.roles}
-          selectedRoleId={selectedRoleId}
-        />
-        <div className="min-w-0 outline-none" id="role-editor-start" tabIndex={-1}>
+      <RoleList
+        onSelect={openRole}
+        roles={workspace.roles}
+        selectedRoleId={selectedRoleId}
+      />
+
+      <Dialog
+        description="Thiết lập quyền theo chức năng và phạm vi dữ liệu. Các thay đổi với vai trò đang dùng cần được xác nhận trước khi áp dụng."
+        onOpenChange={setIsEditorOpen}
+        open={isEditorOpen}
+        size="xl"
+        title={
+          editorMode === "create"
+            ? "Thêm vai trò"
+            : editorMode === "copy"
+              ? `Sao chép ${selectedRole?.name ?? "vai trò"}`
+              : selectedRole?.name ?? "Chi tiết vai trò"
+        }
+      >
+        {isEditorOpen && (editorMode === "create" || selectedRole) && (
           <RoleEditor
             catalog={workspace.catalog}
+            embedded
             key={`${editorMode}-${selectedRole?.id ?? "new"}-${selectedRole?.recordVersion ?? "draft"}`}
             mode={editorMode}
             onOpenExisting={openRole}
@@ -187,8 +208,8 @@ export function RoleManagementExperience() {
             onSaved={handleSaved}
             role={selectedRole}
           />
-        </div>
-      </div>
+        )}
+      </Dialog>
     </div>
   );
 }

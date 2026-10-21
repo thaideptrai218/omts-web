@@ -27,7 +27,7 @@ type VerificationFormProps = Readonly<{
   deliveryFailureMessage?: AppMessage;
   onChallengeChange(challenge: VerificationChallenge): void;
   onSecondaryAction(): void;
-  onVerified(token: VerificationToken): void;
+  onVerified(token: VerificationToken): Promise<void> | void;
   secondaryActionLabel: string;
   secondaryActionPending?: boolean;
   secondaryActionPendingLabel?: string;
@@ -75,7 +75,7 @@ export function VerificationForm({
     try {
       const result = await service.verify({ code, requestId: challenge.requestId });
       if (result.status === "verified") {
-        onVerified(result.token);
+        await onVerified(result.token);
         return;
       }
 

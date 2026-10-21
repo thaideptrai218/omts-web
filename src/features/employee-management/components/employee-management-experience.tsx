@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast-provider";
 import { AccountFollowUpDialog } from "@/features/employee-management/components/account-follow-up-dialog";
 import { EmployeeEditor } from "@/features/employee-management/components/employee-editor";
@@ -72,7 +73,7 @@ export function EmployeeManagementExperience() {
       setSelectedEmployeeId((current) =>
         result.workspace.employees.some((employee) => employee.id === current)
           ? current
-          : result.workspace.employees[0]?.id,
+          : undefined,
       );
     } catch {
       setHasLoadError(true);
@@ -102,7 +103,7 @@ export function EmployeeManagementExperience() {
           return;
         }
         setWorkspace(result.workspace);
-        setSelectedEmployeeId(result.workspace.employees[0]?.id);
+        setSelectedEmployeeId(undefined);
       })
       .catch(() => {
         if (isActive) setHasLoadError(true);
@@ -119,9 +120,6 @@ export function EmployeeManagementExperience() {
   function openEmployee(employeeId: string) {
     setSelectedEmployeeId(employeeId);
     setIsCreating(false);
-    requestAnimationFrame(() =>
-      document.getElementById("employee-editor-start")?.focus(),
-    );
   }
 
   function updateEmployee(employee: EmployeeProfile, nextFollowUp?: AccountFollowUp) {
@@ -157,6 +155,7 @@ export function EmployeeManagementExperience() {
       title: "Đã lưu hồ sơ",
       tone: "success",
     });
+    setSelectedEmployeeId(undefined);
   }
 
   if (state.status !== "authenticated") return null;
@@ -203,35 +202,41 @@ export function EmployeeManagementExperience() {
           onClick={() => {
             setIsCreating(true);
             setSelectedEmployeeId(undefined);
-            requestAnimationFrame(() =>
-              document.getElementById("employee-editor-start")?.focus(),
-            );
           }}
         >
           Thêm nhân viên
         </Button>
       </header>
 
-      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]">
-        <EmployeeList
-          employees={workspace.employees}
-          onSelect={openEmployee}
-          selectedEmployeeId={selectedEmployeeId}
-        />
-        <div
-          className="min-w-0 outline-none"
-          id="employee-editor-start"
-          tabIndex={-1}
-        >
+      <EmployeeList
+        employees={workspace.employees}
+        onSelect={openEmployee}
+        selectedEmployeeId={selectedEmployeeId}
+      />
+
+      <Dialog
+        description="Cập nhật thông tin nhân sự. Hồ sơ nhân viên và tài khoản đăng nhập là hai dữ liệu riêng."
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreating(false);
+            setSelectedEmployeeId(undefined);
+          }
+        }}
+        open={isCreating || Boolean(selectedEmployee)}
+        size="lg"
+        title={isCreating ? "Thêm nhân viên" : selectedEmployee?.fullName ?? "Hồ sơ nhân viên"}
+      >
+        {(isCreating || selectedEmployee) && (
           <EmployeeEditor
             availableAccounts={workspace.availableAccounts}
+            embedded
             employee={isCreating ? undefined : selectedEmployee}
             key={isCreating ? "create" : selectedEmployee?.recordVersion ?? "empty"}
             onOpenExisting={openEmployee}
             onSaved={updateEmployee}
           />
-        </div>
-      </div>
+        )}
+      </Dialog>
 
       {followUp && (
         <AccountFollowUpDialog

@@ -22,6 +22,19 @@ describe("mock auth repository", () => {
     },
   );
 
+  it("grants access to the already-verified Staff review account", async () => {
+    const { result } = await loginAs("staff-verified");
+
+    expect(result).toMatchObject({
+      session: {
+        account: {
+          username: "staff-verified",
+        },
+      },
+      status: "access-granted",
+    });
+  });
+
   it.each([
     ["account-blocked", "MSG13"],
     ["temp-password-expired", "MSG68"],
@@ -33,10 +46,97 @@ describe("mock auth repository", () => {
     await expect(repository.getSession()).resolves.toEqual({ status: "anonymous" });
   });
 
-  it("returns the password-change gate before application access", async () => {
+  it("starts Staff onboarding at temporary-password change", async () => {
     const { repository, result } = await loginAs("staff-first-login");
 
-    expect(result).toEqual({ status: "password-change-required" });
+    expect(result).toEqual({
+      availableContactChannels: ["email", "phone"],
+      checklist: {
+        contactVerified: false,
+        passwordChanged: false,
+      },
+      nextStep: "change-temporary-password",
+      status: "staff-onboarding-required",
+    });
+    await expect(repository.getSession()).resolves.toEqual({ status: "anonymous" });
+  });
+
+  it("moves Staff to contact verification only after changing the temporary password", async () => {
+    const { repository } = await loginAs("staff-first-login");
+
+    await expect(
+      repository.changeTemporaryPassword({
+        currentPassword: demoPassword,
+        newPassword: "newpass8",
+      }),
+    ).resolves.toEqual({ message: { code: "MSG18" }, status: "changed" });
+
+    await expect(
+      repository.login({
+        identifier: "staff-first-login",
+        password: "newpass8",
+      }),
+    ).resolves.toMatchObject({
+      checklist: { passwordChanged: true },
+      nextStep: "verify-contact",
+      status: "staff-onboarding-required",
+    });
+  });
+
+  it("rejects a wrong temporary password without advancing onboarding", async () => {
+    const { repository } = await loginAs("staff-first-login");
+
+    await expect(
+      repository.changeTemporaryPassword({
+        currentPassword: "wrong-password",
+        newPassword: "newpass8",
+      }),
+    ).resolves.toEqual({
+      message: { code: "MSG17" },
+      reason: "invalid-current-password",
+      status: "rejected",
+    });
+
+    await expect(
+      repository.login({
+        identifier: "staff-first-login",
+        password: demoPassword,
+      }),
+    ).resolves.toMatchObject({
+      checklist: { passwordChanged: false },
+      nextStep: "change-temporary-password",
+    });
+  });
+
+  it("requires an active onboarding context to change a temporary password", async () => {
+    const repository = createMockAuthRepository({ latencyMs: 0 });
+
+    await expect(
+      repository.changeTemporaryPassword({
+        currentPassword: demoPassword,
+        newPassword: "newpass8",
+      }),
+    ).resolves.toEqual({
+      message: { code: "MSG19" },
+      reason: "session-expired",
+      status: "rejected",
+    });
+  });
+
+  it("continues Staff onboarding at contact verification after password change", async () => {
+    const { repository, result } = await loginAs(
+      "staff-needs-contact-verification",
+    );
+
+    expect(result).toEqual({
+      availableContactChannels: ["email"],
+      checklist: {
+        contactVerified: false,
+        passwordChanged: true,
+      },
+      nextStep: "verify-contact",
+      status: "staff-onboarding-required",
+    });
     await expect(repository.getSession()).resolves.toEqual({ status: "anonymous" });
   });
 
