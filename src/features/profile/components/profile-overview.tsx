@@ -44,7 +44,8 @@ export function ProfileOverview({
             {profile.displayName}
           </h1>
           <p className="mt-2 text-sm font-medium text-text-muted">
-            @{profile.username} · {profile.roles.map((role) => role.roleLabel).join(", ")}
+            @{profile.username}
+            {profile.roles.length > 0 && ` · ${profile.roles.map((role) => role.roleLabel).join(", ")}`}
           </p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
             Quản lý thông tin liên hệ, quyền truy cập và bảo mật của tài khoản.
@@ -91,10 +92,11 @@ export function ProfileOverview({
                   Vai trò và phạm vi
                 </dt>
                 <dd className="mt-2 space-y-2">
-                  {profile.roles.map((role) => (
+                  {profile.roles.length === 0 && <p>Không có vai trò theo vùng.</p>}
+                  {profile.roles.map((role, index) => (
                     <div
                       className="rounded-control bg-primary-soft px-3 py-2 text-sm text-primary-hover"
-                      key={`${role.roleLabel}-${role.scopeLabel ?? "no-scope"}`}
+                      key={`${role.roleLabel}-${role.zoneId ?? role.scopeLabel ?? "no-scope"}-${index}`}
                     >
                       <p className="font-semibold">{role.roleLabel}</p>
                       {role.scopeLabel && <p className="mt-0.5">{role.scopeLabel}</p>}

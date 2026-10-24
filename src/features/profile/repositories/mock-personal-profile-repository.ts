@@ -38,7 +38,7 @@ function cloneProfile(profile: PersonalProfile): PersonalProfile {
   return {
     ...profile,
     email: profile.email ? { ...profile.email } : null,
-    phone: { ...profile.phone },
+    phone: profile.phone ? { ...profile.phone } : null,
     roles: profile.roles.map((role) => ({ ...role })),
   };
 }
@@ -74,7 +74,7 @@ export function createMockPersonalProfileRepository({
   }
 
   function identifierIsUnavailable(kind: ProfileIdentifierKind, value: string) {
-    const currentValue = kind === "email" ? profile.email?.value : profile.phone.value;
+    const currentValue = kind === "email" ? profile.email?.value : profile.phone?.value;
     const unavailableValues = kind === "email" ? unavailableEmails : unavailablePhones;
     return value === currentValue || unavailableValues.has(value);
   }

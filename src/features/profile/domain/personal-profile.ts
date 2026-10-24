@@ -14,13 +14,14 @@ export type ProfileContact = Readonly<{
 export type ProfileRoleSummary = Readonly<{
   roleLabel: string;
   scopeLabel?: string;
+  zoneId?: string | null;
 }>;
 
 export type PersonalProfile = Readonly<{
   accountId: string;
   displayName: string;
   email: ProfileContact | null;
-  phone: ProfileContact;
+  phone: ProfileContact | null;
   recordVersion: string;
   roles: readonly ProfileRoleSummary[];
   username: string;

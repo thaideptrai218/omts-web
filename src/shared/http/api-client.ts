@@ -1,4 +1,6 @@
 import { ApiError } from "@/shared/http/api-error";
+import { isJsonContentType, readApiProblem, readRetryAfterMs } from "@/shared/http/api-problem";
+import { mapApiError, type ApiErrorContext } from "@/shared/http/map-api-error";
 import type { AppMessage } from "@/shared/messages/message-catalog";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
@@ -10,8 +12,12 @@ export type ApiClientOptions = Readonly<{
   onUnauthorized?: (message: AppMessage) => void;
 }>;
 
+export type ApiRequestOptions = RequestInit & Readonly<{
+  errorContext?: ApiErrorContext;
+}>;
+
 export type ApiClient = Readonly<{
-  request<T>(path: string, init?: RequestInit): Promise<T>;
+  request<T>(path: string, init?: ApiRequestOptions): Promise<T>;
 }>;
 
 function createRequestUrl(baseUrl: string, path: string): URL {
@@ -38,19 +44,17 @@ function isAbortError(error: unknown): boolean {
 async function readResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) return undefined as T;
 
-  const body = await response.text();
-  if (!body) return undefined as T;
-
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    try {
+  try {
+    const body = await response.text();
+    if (!body) return undefined as T;
+    if (isJsonContentType(response.headers.get("content-type"))) {
       return JSON.parse(body) as T;
-    } catch (error) {
-      throw new ApiError(response.status, { code: "MSG04" }, { cause: error });
     }
+    return body as T;
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    throw new ApiError(response.status, { code: "MSG04" }, { cause: error });
   }
-
-  return body as T;
 }
 
 export function createApiClient({
@@ -59,13 +63,14 @@ export function createApiClient({
   onUnauthorized,
 }: ApiClientOptions): ApiClient {
   return {
-    async request<T>(path: string, init?: RequestInit): Promise<T> {
+    async request<T>(path: string, init: ApiRequestOptions = {}): Promise<T> {
       let response: Response;
+      const { errorContext = "public", ...fetchInit } = init;
 
       try {
         response = await fetchImplementation(createRequestUrl(baseUrl, path), {
-          ...init,
-          headers: createRequestHeaders(init?.headers),
+          ...fetchInit,
+          headers: createRequestHeaders(fetchInit.headers),
         });
       } catch (error) {
         if (isAbortError(error)) throw error;
@@ -73,15 +78,22 @@ export function createApiClient({
         throw new ApiError(null, { code: "MSG04" }, { cause: error });
       }
 
-      if (response.status === 401) {
-        const message = { code: "MSG19" } as const;
-        sessionExpiryChannel.publish(message);
-        onUnauthorized?.(message);
-        throw new ApiError(response.status, message);
-      }
-
       if (!response.ok) {
-        throw new ApiError(response.status, { code: "MSG04" });
+        const problem = await readApiProblem(response);
+        const { expireSession, message } = mapApiError(response.status, errorContext, problem);
+        if (expireSession) {
+          const expiryMessage = { code: "MSG19" } as const;
+          sessionExpiryChannel.publish(expiryMessage);
+          try {
+            onUnauthorized?.(expiryMessage);
+          } catch {
+            // Observers must not replace the original HTTP error.
+          }
+        }
+        throw new ApiError(response.status, message, {
+          problem,
+          retryAfterMs: readRetryAfterMs(response.headers.get("retry-after")),
+        });
       }
 
       return readResponse<T>(response);

@@ -1,5 +1,9 @@
 # OMTS Web — kế hoạch triển khai theo từng màn hình
 
+> **Review tổng W0–W1 ngày 24/10/2026:** xem [báo cáo review](reports/WEB_W0_W1_FULL_REVIEW_2026-10-24.md). 401 tests và các kiểm tra local đạt; chưa ghép API thật, W0.5/MSG06 vẫn mở. Không dùng kết quả này để đóng toàn bộ foundation/QA.
+
+> **Ưu tiên mới 24/10/2026:** dùng [plan API Web](WEB_REAL_API_IMPLEMENTATION_PLAN.md) và [report W1.3/W1.4 mới nhất](reports/WEB_API_W1_3_W1_4_PROFILE_PERMISSION_MAPPING_2026-10-24.md). W0.4/W1.1/W1.3/W1.4 có implementation/tests snapshot; MSG06 chờ backend, không dùng câu dự phòng. Các checkbox/Jira snapshot dưới đây là lịch sử UI, không chứng minh API đã ghép. BFF được chốt nhưng store/server guard/catalog production còn mở; mock composition/menu chưa thay. Dependency advisory23/10 đã vá.
+
 > Cập nhật: 15/10/2026 (Asia/Saigon)
 >
 > Phạm vi: các hạng mục Web đang giao cho D DT trên Jira

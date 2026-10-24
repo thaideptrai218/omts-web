@@ -10,6 +10,7 @@ import { useAuth } from "@/features/auth/state/auth-provider";
 import { ProfileIdentifierDialog } from "@/features/profile/components/profile-identifier-dialog";
 import type {
   PersonalProfile,
+  ProfileContact,
   ProfileIdentifierKind,
   VerifiedProfileIdentifierChange,
 } from "@/features/profile/domain/personal-profile";
@@ -26,6 +27,7 @@ import type {
 } from "@/features/verification/domain/verification-types";
 import { formatMessage } from "@/shared/messages/message-catalog";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
+import { describeProfileContact } from "@/features/profile/lib/describe-profile-contact";
 
 type VerifiedChanges = Partial<
   Record<ProfileIdentifierKind, VerifiedProfileIdentifierChange>
@@ -38,19 +40,18 @@ type ActiveVerification = Readonly<{
 }>;
 
 function ContactEditor({
-  isVerified,
+  contact,
   kind,
   onChange,
   pendingValue,
-  value,
 }: {
-  isVerified: boolean;
+  contact: ProfileContact | null;
   kind: ProfileIdentifierKind;
   onChange(): void;
   pendingValue?: string;
-  value: string;
 }) {
   const label = kind === "email" ? "Email" : "Số điện thoại";
+  const { isVerified, statusLabel, value } = describeProfileContact(contact, kind);
 
   return (
     <div className="rounded-control border border-border bg-surface-subtle/60 p-4">
@@ -66,7 +67,7 @@ function ContactEditor({
               : "bg-warning-soft text-warning"
           }`}
         >
-          {isVerified ? "Đã xác minh" : "Chưa xác minh"}
+          {statusLabel}
         </span>
       </div>
 
@@ -82,7 +83,9 @@ function ContactEditor({
         onClick={onChange}
         type="button"
       >
-        {pendingValue ? `Chọn ${label.toLocaleLowerCase("vi")} khác` : `Thay đổi ${label.toLocaleLowerCase("vi")}`}
+        {pendingValue
+          ? `Chọn ${label.toLocaleLowerCase("vi")} khác`
+          : `${contact ? "Thay đổi" : "Thêm"} ${label.toLocaleLowerCase("vi")}`}
       </button>
     </div>
   );
@@ -214,18 +217,16 @@ export function ProfileEditor({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <ContactEditor
-            isVerified={profile.email?.isVerified ?? false}
+            contact={profile.email}
             kind="email"
             onChange={() => setActiveIdentifierDialog("email")}
             pendingValue={verifiedChanges.email?.value}
-            value={profile.email?.value ?? "Chưa thêm email"}
           />
           <ContactEditor
-            isVerified={profile.phone.isVerified}
+            contact={profile.phone}
             kind="phone"
             onChange={() => setActiveIdentifierDialog("phone")}
             pendingValue={verifiedChanges.phone?.value}
-            value={profile.phone.value}
           />
         </div>
 
@@ -261,7 +262,7 @@ export function ProfileEditor({
           currentValue={
             activeIdentifierDialog === "email"
               ? (profile.email?.value ?? null)
-              : profile.phone.value
+              : (profile.phone?.value ?? null)
           }
           kind={activeIdentifierDialog}
           onOpenChange={(open) => {

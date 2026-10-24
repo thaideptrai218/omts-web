@@ -77,7 +77,7 @@ describe("createApiClient", () => {
     });
 
     try {
-      await expect(client.request("protected")).rejects.toMatchObject({
+      await expect(client.request("protected", { errorContext: "protected" })).rejects.toMatchObject({
         appMessage: { code: "MSG19" },
         status: 401,
       });

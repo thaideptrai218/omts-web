@@ -8,16 +8,11 @@ export function hasEffectivePermission(
   permissionKey: EffectivePermissionKey,
   zoneId?: string,
 ): boolean {
-  const permission = access?.permissions.find(({ key }) => key === permissionKey);
-
-  if (!permission) return false;
-  if (
-    !zoneId ||
-    permission.scope.kind === "all-zones" ||
-    permission.scope.kind === "global"
-  ) {
-    return true;
-  }
-
-  return permission.scope.zoneIds.includes(zoneId);
+  return access?.permissions.some((permission) => {
+    if (permission.key !== permissionKey) return false;
+    if (permission.scope.kind !== "zones") return true;
+    if (permission.scope.zoneIds.length === 0) return false;
+    // Without a zone this is menu visibility, not permission to read every zone.
+    return zoneId === undefined || permission.scope.zoneIds.includes(zoneId);
+  }) ?? false;
 }

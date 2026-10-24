@@ -16,6 +16,7 @@ export type EffectivePermission = Readonly<{
   scope: AccessScope;
 }>;
 
+// UI capabilities, not a substitute for function/record-level authorization.
 export type EffectiveAccess = Readonly<{
   permissions: readonly EffectivePermission[];
 }>;
