@@ -6,7 +6,7 @@
 
 > **Tiến độ 24/10/2026:** W0.4, W1.1, W1.3 và W1.4 đã có implementation/tests độc lập theo snapshot. W1.2 phần MSG06 chờ backend bổ sung đủ thông tin, không thêm câu dự phòng. Mapper chưa ghép vào API/menu live; catalog BA và binding platform còn chờ. Báo cáo mới nhất: [W1.3/W1.4](reports/WEB_API_W1_3_W1_4_PROFILE_PERMISSION_MAPPING_2026-10-24.md); báo cáo trước: [W0–W1](reports/WEB_API_W0_W1_SECURITY_SCHEMA_ERRORS_2026-10-24.md).
 
-> **Review toàn W0–W1:** [kết quả, findings và các cổng còn mở](reports/WEB_W0_W1_FULL_REVIEW_2026-10-24.md). Chạy lại 69 files/401 tests, lint/typecheck/build đều đạt; dependency audit 0 findings. W0.5 và phần conflict W1.2 vẫn chưa hoàn tất. CI hiện chưa chạy `npm test`; push nhánh feature không tự kích hoạt CI/secret-scan workflow hiện có.
+> **Review toàn W0–W1:** [kết quả, findings và các cổng còn mở](reports/WEB_W0_W1_FULL_REVIEW_2026-10-24.md). Chạy lại 69 files/401 tests, lint/typecheck/build đều đạt; dependency audit 0 findings tại lượt review đó. W0.5 và phần conflict W1.2 vẫn chưa hoàn tất. Finding WREV-02 đã được [vá cấu hình CI](reports/WEB_CI_TEST_GATE_REVIEW_2026-10-24.md): thêm `npm test` trước build, checks local đạt. Giữ nguyên triggers; push feature không có PR phù hợp chưa kích hoạt CI/secret scan, chưa có bằng chứng GitHub runner cho bản vá.
 
 ## 1. Phạm vi và quyết định
 

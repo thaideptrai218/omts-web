@@ -2,6 +2,8 @@
 
 Repo `omts-web`, nhánh `feature/OMTS-132-web-foundation`, baseline `5ae1b665594bf2c7d664c059dcd39d48051c717b`. Review cả thay đổi tracked lẫn file mới từ audit/W0/W1, không chỉ phần mapper cuối. Theo yêu cầu Duy Thái: cập nhật báo cáo, commit/push nhánh hiện tại; không merge hoặc push vào `develop`.
 
+> **Cập nhật sau review:** Duy Thái yêu cầu sửa WREV-02; [bản vá CI và kết quả kiểm tra](WEB_CI_TEST_GATE_REVIEW_2026-10-24.md) đã thêm `npm test`. Finding thiếu test step được giải quyết trong cấu hình nhánh; các nhận xét “còn mở/chưa sửa workflow” bên dưới là snapshot của lượt review trước bản vá, không phải trạng thái cấu hình mới. GitHub runner vẫn chưa được xác nhận chạy bản vá; không thay các cổng QA/API.
+
 ## 1. Kết luận
 
 Phần chuẩn bị W0–W1 đã triển khai có thể bàn giao trên nhánh feature: dependency patch, wire schemas, lỗi HTTP theo context, profile mapper và permission projection có test độc lập. Đợt review này chưa phát hiện thêm lỗi logic ứng dụng trong phạm vi đã đọc/kiểm thử; không có sửa runtime mới trong riêng lượt review này. Không coi kết luận đó là bảo đảm không còn lỗi.

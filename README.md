@@ -39,7 +39,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) — branches, Jira keys, commit/PR rules,
 - [Security, schemas and errors — 24 October 2026](docs/reports/WEB_API_W0_W1_SECURITY_SCHEMA_ERRORS_2026-10-24.md)
 - [Profile and permission mapping — 24 October 2026](docs/reports/WEB_API_W1_3_W1_4_PROFILE_PERMISSION_MAPPING_2026-10-24.md)
 - [Latest full W0–W1 review and remaining gates — 24 October 2026](docs/reports/WEB_W0_W1_FULL_REVIEW_2026-10-24.md)
+- [CI test-gate fix and workflow review — 24 October 2026](docs/reports/WEB_CI_TEST_GATE_REVIEW_2026-10-24.md)
 
 Auth/profile currently use mock adapters; setting the API URL alone does not enable integration. The BFF direction is approved, but its session store is not yet chosen. The dependency security build blocker found on 23 October was patched on 24 October; server authorization and real-API verification are still pending.
 
-Run `npm test` locally before handoff: the current CI workflow runs lint/typecheck/build but does not yet run Vitest. Its push trigger only covers `main`/`develop`, so a feature-branch push alone is not evidence of a GitHub CI pass.
+Run `npm test` locally before handoff. The current CI job runs `npm ci` → lint → typecheck → tests → build; tests use non-watch `vitest run` and failures are not ignored. Existing triggers are unchanged: PRs targeting `main`/`develop`, or pushes to those branches. A feature-branch push without an open eligible PR does not trigger this workflow and is not evidence of a GitHub CI pass.

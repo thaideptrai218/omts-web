@@ -36,7 +36,7 @@ The current Figma file is a low-fidelity wireframe and a reference for informati
 
 - Next.js 16 App Router, React, TypeScript, Tailwind CSS, and ESLint.
 - Default integration branch is `develop`; implementation changes go through reviewed pull requests.
-- CI requires lint/typecheck, secret scan, and a Conventional Commit PR title.
+- CI `build-test` runs lint/typecheck/tests/build after `npm ci`; secret scan and a Conventional Commit PR-title check remain separate workflows.
 - Important Web flows must work at 360 px and 1024 px.
 - Public, authentication, and protected application routes should have explicit layout boundaries.
 - Components should depend on service/repository contracts, not directly on mock storage or HTTP.
@@ -55,7 +55,8 @@ The current Figma file is a low-fidelity wireframe and a reference for informati
 - W1.4 now projects permissions by function/action/zone/dataScope using snapshot48ae1e0. Navigation keys are separate from per-function restrictions; Owner-only endpoints cannot be opened by a Staff role label. OwnRecords is preserved, never merged into AssignedZone. No live adapter/menu uses this projection yet; platform provisioning is unmapped and BA catalog OMTS-123 remains To Do. The existing navigation helper now denies empty zone scopes and unions matching entries.
 - Next/eslint-config-next remain16.4.3, Vitest/mocker4.1.12. Current tests:69 files/401 tests PASS; lint/typecheck/build and audit have passed in this slice, with0 audit findings. No dependency changes in W1.3/W1.4. The prior nonfatal Windows SWC cleanup warning and old dev-process restart limitation remain documented.
 - Mapper completion is not authorization/API integration. BFF store/server guard, record-ownership semantics, BA catalog/platform binding, refresh policy, contact/security API capability and Web QA remain pending. This is not a release-ready real-API application.
-- Full review reran all 401 tests, lint, typecheck, build and dependency audit successfully. No new application logic defect was identified within the reviewed scope; this is not proof of defect absence. W0.5 and the conflict part of W1.2 remain open. CI currently omits `npm test` and does not trigger on feature pushes; local verification is not a GitHub CI result. Workflow changes are proposed separately, not applied in this review.
+- Full W0–W1 review reran all 401 tests, lint, typecheck, build and dependency audit successfully. No new application logic defect was identified within the reviewed scope; this is not proof of defect absence. W0.5 and the conflict part of W1.2 remain open.
+- Follow-up [CI review/fix](reports/WEB_CI_TEST_GATE_REVIEW_2026-10-24.md) resolves WREV-02 in branch configuration: `npm test` now runs after typecheck and before build, without skip/continue-on-error. All four workflows parse; exact-change/order assertions and two negative fixtures pass, as do 401 tests/lint/typecheck/build locally. Trigger/permission/job names remain unchanged. There was no open PR for this branch at preflight, so this is not a GitHub runner result; feature push alone does not activate CI. No PR or Jira changes are made in this task.
 
 ### Earlier Web UI progress
 
