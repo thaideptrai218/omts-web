@@ -1,4 +1,4 @@
-import type { SaveEmployeeInput } from "@/features/employee-management/domain/employee-management";
+import type { SaveEmployeeInput, UnlinkEmployeeAccountInput } from "@/features/employee-management/domain/employee-management";
 import type { EmployeeManagementRepository } from "@/features/employee-management/repositories/employee-management-repository";
 
 export class EmployeeManagementService {
@@ -6,6 +6,11 @@ export class EmployeeManagementService {
 
   load() {
     return this.repository.load();
+  }
+
+  unlinkAccount(input: UnlinkEmployeeAccountInput) {
+    // A version is opaque: do not trim, decode or regenerate it.
+    return this.repository.unlinkAccount(input);
   }
 
   save(input: SaveEmployeeInput) {

@@ -5,9 +5,12 @@ import type {
   EmployeeProfile,
   SaveEmployeeInput,
   SaveEmployeeResult,
+  UnlinkEmployeeAccountInput,
+  UnlinkEmployeeAccountResult,
 } from "@/features/employee-management/domain/employee-management";
 import type { EmployeeManagementRepository } from "@/features/employee-management/repositories/employee-management-repository";
 import { employeeEditorSchema } from "@/features/employee-management/schemas/employee-editor-schema";
+import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 
 type MockOptions = Readonly<{
   accounts: readonly EmployeeAccountSummary[];
@@ -15,6 +18,8 @@ type MockOptions = Readonly<{
   isAuthorized?: boolean;
   isSessionExpired?: boolean;
   latencyMs?: number;
+  actorName?: string;
+  now?: () => Date;
 }>;
 
 function wait(milliseconds: number): Promise<void> {
@@ -42,10 +47,37 @@ export function createMockEmployeeManagementRepository({
   isAuthorized = true,
   isSessionExpired = false,
   latencyMs = 350,
+  actorName = "Lê Minh Hải",
+  now = () => new Date(),
 }: MockOptions): EmployeeManagementRepository {
   let employees = initialEmployees.map(cloneEmployee);
   let nextEmployeeNumber = employees.length + 1;
   let nextVersion = employees.length + 1;
+  const issuedVersions = new Set(employees.map((employee) => employee.recordVersion));
+  // Simulated audit metadata only; never used to fill missing backend MSG06 params.
+  const updatedAt = new Map(employees.map((employee) => [employee.id, now()]));
+
+  function allocateVersion() {
+    let version: string;
+    do {
+      version = btoa(`mock-employee-${++nextVersion}`);
+    } while (issuedVersions.has(version));
+    issuedVersions.add(version);
+    return version;
+  }
+
+  function conflict(employee: EmployeeProfile) {
+    return {
+      status: "conflict",
+      message: {
+        code: "MSG06",
+        params: {
+          user_name: actorName,
+          time: updatedAt.get(employee.id)!.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
+        },
+      },
+    } as const;
+  }
 
   async function prepareRequest() {
     if (latencyMs > 0) await wait(latencyMs);
@@ -77,6 +109,24 @@ export function createMockEmployeeManagementRepository({
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;
       return { status: "loaded", workspace: workspace() };
+    },
+
+    async unlinkAccount(input: UnlinkEmployeeAccountInput): Promise<UnlinkEmployeeAccountResult> {
+      const earlyResult = await prepareRequest();
+      if (earlyResult) return earlyResult;
+      if (!employeeRowVersionSchema.safeParse(input.recordVersion).success) {
+        return { status: "invalid-version", message: { code: "MSG01" } };
+      }
+      const current = employees.find((employee) => employee.id === input.employeeId);
+      if (!current) return { status: "not-found" };
+      // Backend validates the syntax first, then treats an absent link as a no-op.
+      if (!current.account) return { status: "unlinked", employee: cloneEmployee(current) };
+      if (input.recordVersion !== current.recordVersion) return conflict(current);
+
+      const employee = { ...current, account: null, recordVersion: allocateVersion() };
+      employees = employees.map((item) => item.id === current.id ? employee : item);
+      updatedAt.set(employee.id, now());
+      return { status: "unlinked", employee: cloneEmployee(employee) };
     },
 
     async save(input: SaveEmployeeInput): Promise<SaveEmployeeResult> {
@@ -116,6 +166,7 @@ export function createMockEmployeeManagementRepository({
           status: "invalid-input",
         };
       }
+      if (current && input.recordVersion !== current.recordVersion) return conflict(current);
 
       const duplicate = employees.find(
         (employee) =>
@@ -163,7 +214,9 @@ export function createMockEmployeeManagementRepository({
       }
 
       const saved: EmployeeProfile = {
-        account: selectedAccount ? cloneAccount(selectedAccount) : null,
+        account: selectedAccount
+          ? cloneAccount(selectedAccount)
+          : current?.account ? cloneAccount(current.account) : null,
         address: parsed.data.address.trim(),
         area: parsed.data.area.trim(),
         birthday: parsed.data.birthday,
@@ -172,7 +225,7 @@ export function createMockEmployeeManagementRepository({
         notes: parsed.data.notes.trim(),
         otherInformation: parsed.data.otherInformation.trim(),
         phone: parsed.data.phone,
-        recordVersion: `employee-v${++nextVersion}`,
+        recordVersion: allocateVersion(),
         status: current ? parsed.data.status : "employed",
         wardCommune: parsed.data.wardCommune.trim(),
       };
@@ -184,6 +237,7 @@ export function createMockEmployeeManagementRepository({
       } else {
         employees = [...employees, saved];
       }
+      updatedAt.set(saved.id, now());
 
       const statusChanged = current && current.status !== saved.status;
       const followUp: AccountFollowUp | undefined =

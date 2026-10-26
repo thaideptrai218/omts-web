@@ -50,6 +50,27 @@ export type AccountFollowUp = Readonly<{
   action: "review-access" | "review-lock";
 }>;
 
+export type UnlinkEmployeeAccountInput = Readonly<{
+  employeeId: string;
+  recordVersion: string;
+}>;
+
+type EmployeeConflictResult = Readonly<{
+  status: "conflict";
+  message: Readonly<{
+    code: "MSG06";
+    params: Readonly<{ user_name: string; time: string }>;
+  }>;
+}>;
+
+export type UnlinkEmployeeAccountResult =
+  | Readonly<{ status: "unlinked"; employee: EmployeeProfile }>
+  | Readonly<{ status: "not-found" }>
+  | Readonly<{ status: "invalid-version"; message: AppMessage & { code: "MSG01" } }>
+  | EmployeeConflictResult
+  | ForbiddenResult
+  | SessionExpiredResult;
+
 type ForbiddenResult = Readonly<{
   message: AppMessage & { code: "MSG02" };
   status: "forbidden";
@@ -94,5 +115,6 @@ export type SaveEmployeeResult =
       message: AppMessage & { code: "MSG24" };
       status: "account-already-linked";
     }>
+  | EmployeeConflictResult
   | ForbiddenResult
   | SessionExpiredResult;

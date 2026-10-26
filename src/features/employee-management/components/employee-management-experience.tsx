@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast-provider";
@@ -14,6 +15,7 @@ import type {
   EmployeeProfile,
 } from "@/features/employee-management/domain/employee-management";
 import { employeeManagementService } from "@/features/employee-management/services/employee-management-service.instance";
+import { updateEmployeeWorkspace } from "@/features/employee-management/state/update-employee-workspace";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
 import { useAuth } from "@/features/auth/state/auth-provider";
 import { formatMessage } from "@/shared/messages/message-catalog";
@@ -24,9 +26,9 @@ function PermissionDenied() {
     <section className="mx-auto mt-10 max-w-lg rounded-card border border-border bg-surface p-6 text-center shadow-card sm:p-8">
       <div
         aria-hidden="true"
-        className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft text-xl"
+        className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft"
       >
-        ⛔
+        <RestrictedAccessIcon />
       </div>
       <h1 className="mt-5 text-2xl font-semibold tracking-tight text-text">
         Không có quyền quản lý nhân viên
@@ -44,6 +46,7 @@ export function EmployeeManagementExperience() {
   const [workspace, setWorkspace] = useState<EmployeeManagementWorkspace>();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>();
   const [isCreating, setIsCreating] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
   const [followUp, setFollowUp] = useState<AccountFollowUp>();
   const [hasLoadError, setHasLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,28 +126,7 @@ export function EmployeeManagementExperience() {
   }
 
   function updateEmployee(employee: EmployeeProfile, nextFollowUp?: AccountFollowUp) {
-    setWorkspace((current) => {
-      if (!current) return current;
-      const previous = current.employees.find((item) => item.id === employee.id);
-      const exists = Boolean(previous);
-      const availableById = new Map(
-        current.availableAccounts.map((account) => [account.id, account]),
-      );
-      if (previous?.account && previous.account.id !== employee.account?.id) {
-        availableById.set(previous.account.id, previous.account);
-      }
-      if (employee.account) availableById.delete(employee.account.id);
-
-      return {
-        availableAccounts: [...availableById.values()],
-        employees: exists
-          ? current.employees.map((item) =>
-              item.id === employee.id ? employee : item,
-            )
-          : [...current.employees, employee],
-      };
-    });
-    setSelectedEmployeeId(employee.id);
+    setWorkspace((current) => current ? updateEmployeeWorkspace(current, employee) : current);
     setIsCreating(false);
     setFollowUp(nextFollowUp);
     notify({
@@ -156,6 +138,11 @@ export function EmployeeManagementExperience() {
       tone: "success",
     });
     setSelectedEmployeeId(undefined);
+  }
+
+  function accountUnlinked(employee: EmployeeProfile) {
+    setWorkspace((current) => current ? updateEmployeeWorkspace(current, employee) : current);
+    notify({ title: "Đã bỏ liên kết", description: "Tài khoản đăng nhập vẫn được giữ lại.", tone: "success" });
   }
 
   if (state.status !== "authenticated") return null;
@@ -216,6 +203,7 @@ export function EmployeeManagementExperience() {
 
       <Dialog
         description="Cập nhật thông tin nhân sự. Hồ sơ nhân viên và tài khoản đăng nhập là hai dữ liệu riêng."
+        dismissible={!isMutating}
         onOpenChange={(open) => {
           if (!open) {
             setIsCreating(false);
@@ -231,9 +219,11 @@ export function EmployeeManagementExperience() {
             availableAccounts={workspace.availableAccounts}
             embedded
             employee={isCreating ? undefined : selectedEmployee}
-            key={isCreating ? "create" : selectedEmployee?.recordVersion ?? "empty"}
+            key={isCreating ? "create" : selectedEmployee?.id ?? "empty"}
             onOpenExisting={openEmployee}
+            onPendingChange={setIsMutating}
             onSaved={updateEmployee}
+            onUnlinked={accountUnlinked}
           />
         )}
       </Dialog>

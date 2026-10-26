@@ -97,6 +97,9 @@ export function Dialog({
       className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${dialogWidthStyles[size]} overflow-y-auto overscroll-contain rounded-card border border-border bg-surface p-0 text-text shadow-2xl backdrop:bg-slate-950/45 backdrop:backdrop-blur-[1px] open:motion-safe:animate-[omts-dialog-enter_220ms_cubic-bezier(0.22,1,0.36,1)_both] max-sm:m-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:w-full max-sm:max-w-none max-sm:rounded-none`}
       onCancel={(event) => {
         event.preventDefault();
+        // React also propagates cancel to ancestor dialogs. Escape belongs only
+        // to the topmost dialog; closing its parent would discard the editor.
+        event.stopPropagation();
         if (dismissible) onOpenChange(false);
       }}
       onClick={(event) => {

@@ -1,9 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useEmployeeEditorActions } from "@/features/employee-management/components/use-employee-editor-actions";
 import type {
   AccountFollowUp,
   EmployeeAccountSummary,
@@ -14,15 +15,18 @@ import {
   type EmployeeEditorValues,
 } from "@/features/employee-management/schemas/employee-editor-schema";
 import { employeeManagementService } from "@/features/employee-management/services/employee-management-service.instance";
+import type { EmployeeManagementService } from "@/features/employee-management/services/employee-management-service";
 import { formatMessage } from "@/shared/messages/message-catalog";
-import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
 type EmployeeEditorProps = Readonly<{
   availableAccounts: readonly EmployeeAccountSummary[];
   embedded?: boolean;
   employee?: EmployeeProfile;
+  service?: Pick<EmployeeManagementService, "save" | "unlinkAccount">;
   onOpenExisting(employeeId: string): void;
+  onPendingChange(pending: boolean): void;
   onSaved(employee: EmployeeProfile, followUp?: AccountFollowUp): void;
+  onUnlinked(employee: EmployeeProfile): void;
 }>;
 
 const inputStyles =
@@ -53,17 +57,12 @@ export function EmployeeEditor({
   availableAccounts,
   embedded = false,
   employee,
+  service = employeeManagementService,
   onOpenExisting,
+  onPendingChange,
   onSaved,
+  onUnlinked,
 }: EmployeeEditorProps) {
-  const [feedback, setFeedback] = useState<
-    Readonly<{
-      existingEmployeeId?: string;
-      text: string;
-      tone: "danger" | "success";
-    }> | undefined
-  >();
-  const [isSaving, setIsSaving] = useState(false);
   const isCreate = !employee;
   const options = employee?.account
     ? [employee.account, ...availableAccounts]
@@ -72,70 +71,13 @@ export function EmployeeEditor({
     (account, index) =>
       options.findIndex((candidate) => candidate.id === account.id) === index,
   );
-  const {
-    formState: { errors, isDirty },
-    handleSubmit,
-    register,
-    setError,
-    setFocus,
-  } = useForm<EmployeeEditorValues>({
+  const form = useForm<EmployeeEditorValues>({
     defaultValues: initialValues(employee),
     resolver: zodResolver(employeeEditorSchema),
   });
-
-  const saveEmployee = handleSubmit(async (values) => {
-    setFeedback(undefined);
-    setIsSaving(true);
-
-    try {
-      const result = await employeeManagementService.save({
-        ...values,
-        accountId: values.accountId || null,
-        id: employee?.id ?? null,
-        recordVersion: employee?.recordVersion ?? null,
-      });
-
-      if (result.status === "session-expired") {
-        sessionExpiryChannel.publish(result.message);
-        return;
-      }
-      if (result.status === "forbidden") {
-        setFeedback({ text: formatMessage(result.message), tone: "danger" });
-        return;
-      }
-      if (result.status === "invalid-input") {
-        const field = result.field;
-        setError(field, { message: formatMessage(result.message) });
-        requestAnimationFrame(() => setFocus(field));
-        return;
-      }
-      if (
-        result.status === "duplicate" ||
-        result.status === "account-already-linked"
-      ) {
-        const field =
-          result.status === "duplicate" ? "fullName" : "accountId";
-        setError(field, { message: formatMessage(result.message) });
-        setFeedback({
-          existingEmployeeId: result.existingEmployeeId,
-          text: formatMessage(result.message),
-          tone: "danger",
-        });
-        requestAnimationFrame(() => setFocus(field));
-        return;
-      }
-
-      setFeedback({ text: formatMessage(result.message), tone: "success" });
-      onSaved(result.employee, result.followUp);
-    } catch {
-      setFeedback({
-        text: "Chưa thể lưu hồ sơ. Dữ liệu hiện tại chưa bị thay đổi; hãy thử lại.",
-        tone: "danger",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  });
+  const { formState: { errors, isDirty }, register } = form;
+  const { feedback, pending, confirmUnlink, setConfirmUnlink, saveEmployee, unlinkAccount } =
+    useEmployeeEditorActions({ employee, form, service, onPendingChange, onSaved, onUnlinked });
 
   return (
     <section
@@ -182,7 +124,8 @@ export function EmployeeEditor({
         </div>
       )}
 
-      <form className={`${embedded ? "" : "mt-6"} space-y-7`} onSubmit={(event) => void saveEmployee(event)}>
+      <form className={embedded ? "" : "mt-6"} onSubmit={(event) => void saveEmployee(event)}>
+        <fieldset className="min-w-0 space-y-7" disabled={pending !== null || confirmUnlink}>
         <fieldset className="min-w-0">
           <legend className="text-lg font-semibold text-text">Thông tin nhận diện</legend>
           <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
@@ -234,7 +177,7 @@ export function EmployeeEditor({
         <fieldset className="min-w-0 border-t border-border pt-6">
           <legend className="text-lg font-semibold text-text">Tài khoản đăng nhập</legend>
           <p className="mt-1 text-sm leading-6 text-text-muted">
-            Chỉ hiển thị tài khoản nội bộ chưa liên kết với nhân viên khác. Liên kết account không tự cấp vai trò hoặc quyền truy cập.
+            Chọn tài khoản nội bộ chưa liên kết với nhân viên khác. Liên kết tài khoản không tự cấp vai trò hoặc quyền truy cập.
           </p>
           <label className="mt-4 block min-w-0 text-sm font-semibold text-text">
             Tài khoản hệ thống <span className="font-normal text-text-muted">(không bắt buộc)</span>
@@ -243,7 +186,7 @@ export function EmployeeEditor({
               className={inputStyles}
               {...register("accountId")}
             >
-              <option value="">Chưa liên kết tài khoản</option>
+              <option value="">{employee?.account ? "Giữ tài khoản hiện tại" : "Chưa liên kết tài khoản"}</option>
               {accountOptions.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.displayName} · @{account.username}
@@ -253,6 +196,17 @@ export function EmployeeEditor({
             </select>
             <FieldError message={errors.accountId?.message} />
           </label>
+          {employee?.account && (
+            <div className="mt-4 flex flex-col items-start gap-3 rounded-control border border-border bg-surface-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 text-sm leading-6">
+                <p className="font-semibold text-text">Đang liên kết: <span className="break-all">@{employee.account.username}</span></p>
+                <p className="text-text-muted">Bỏ liên kết không xóa hay khóa tài khoản đăng nhập.</p>
+              </div>
+              <Button className="shrink-0 sm:w-auto" onClick={() => setConfirmUnlink(true)} variant="secondary">
+                Bỏ liên kết tài khoản
+              </Button>
+            </div>
+          )}
         </fieldset>
 
         <fieldset className="min-w-0 border-t border-border pt-6">
@@ -290,14 +244,25 @@ export function EmployeeEditor({
           <Button
             className="sm:w-auto"
             disabled={!isCreate && !isDirty}
-            isPending={isSaving}
+            isPending={pending === "save"}
             pendingLabel="Đang lưu hồ sơ..."
             type="submit"
           >
             {isCreate ? "Thêm nhân viên" : "Lưu thay đổi"}
           </Button>
         </div>
+        </fieldset>
       </form>
+      <ConfirmDialog
+        confirmLabel="Bỏ liên kết"
+        description={`${formatMessage({ code: "MSG09", params: { action: `bỏ liên kết tài khoản @${employee?.account?.username ?? ""} khỏi hồ sơ nhân viên` } })} Tài khoản vẫn được giữ lại. Các thay đổi khác đang nhập chưa được lưu.`}
+        isPending={pending === "unlink"}
+        onConfirm={() => void unlinkAccount()}
+        onOpenChange={setConfirmUnlink}
+        open={confirmUnlink}
+        title="Bỏ liên kết tài khoản?"
+        tone="danger"
+      />
     </section>
   );
 }
