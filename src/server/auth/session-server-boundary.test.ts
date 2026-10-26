@@ -26,6 +26,7 @@ describe("session crypto server-only markers", () => {
     "protected-access-decision",
     "session-destinations", "session-gateway", "session-gateway.instance", "session-http", "next-session-access",
     "login-session-service",
+    "pending-login-delivery", "login-http",
   ])("keeps the server-only marker on %s", (name) => {
     const source = readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8");
     expect(source.trimStart()).toMatch(/^import "server-only";/);

@@ -6,8 +6,11 @@ import { createServerSessionResolver, type ServerSessionResolution } from "./ser
 import { parseServerSessionRuntimeConfig } from "./server-session-runtime-config";
 import { readSessionCookie } from "./session-cookie-reader";
 import { connectSessionRedis } from "./session-redis-client";
-import type { SessionClock } from "./session-store";
+import type { SessionClock, SessionStore } from "./session-store";
 import { createSessionTokenProtector } from "./session-token-protector";
+import { createLoginSessionService, type LoginOperationOptions, type LoginSessionResult } from "./login-session-service";
+import type { createBackendTransport } from "../backend/backend-transport";
+import { parseServerBackendConfig } from "../config/backend-config";
 
 type RuntimeDependencies = Readonly<{
   connectRedis: typeof connectSessionRedis;
@@ -29,8 +32,8 @@ export type ServerSessionReadRuntime = Readonly<{
   close(): void;
 }>;
 
-export type ServerSessionRuntimeOpenResult =
-  | Readonly<{ status: "ready"; runtime: ServerSessionReadRuntime }>
+export type ServerSessionRuntimeOpenResult<Runtime extends ServerSessionReadRuntime = ServerSessionReadRuntime> =
+  | Readonly<{ status: "ready"; runtime: Runtime }>
   | Readonly<{ status: "invalid-config"; fields: readonly string[] }>
   | Readonly<{ status: "unavailable" }>;
 
@@ -38,6 +41,21 @@ export async function openServerSessionReadRuntime(
   environment: Readonly<Record<string, unknown>>,
   dependencies: RuntimeDependencies = defaultDependencies,
 ): Promise<ServerSessionRuntimeOpenResult> {
+  return openRuntime(environment, dependencies, () => ({}));
+}
+
+type RuntimeCapabilities = Readonly<{
+  store: SessionStore;
+  protector: ReturnType<typeof createSessionTokenProtector>;
+  clock: SessionClock;
+  isOpen(): boolean;
+}>;
+
+async function openRuntime<Actions extends object>(
+  environment: Readonly<Record<string, unknown>>,
+  dependencies: RuntimeDependencies,
+  extend: (capabilities: RuntimeCapabilities) => Actions,
+): Promise<ServerSessionRuntimeOpenResult<ServerSessionReadRuntime & Actions>> {
   const parsed = parseServerSessionRuntimeConfig(environment);
   if (parsed.status !== "valid") return parsed;
 
@@ -82,14 +100,17 @@ export async function openServerSessionReadRuntime(
     });
     let closed = false;
 
-    const runtime: ServerSessionReadRuntime = Object.freeze({
+    const runtime: ServerSessionReadRuntime & Actions = Object.freeze({
+      ...extend({ store, protector, clock: dependencies.clock, isOpen: () => !closed }),
       async resolve(cookieHeader) {
         if (closed) return Object.freeze({ status: "unavailable" });
-        return resolver.resolve(cookieHeader);
+        const result = await resolver.resolve(cookieHeader);
+        return closed ? Object.freeze({ status: "unavailable" }) : result;
       },
       async resolveApplication(cookieHeader) {
         if (closed) return Object.freeze({ status: "unavailable" });
-        return guardApplicationSession(await resolver.resolve(cookieHeader));
+        const result = await resolver.resolve(cookieHeader);
+        return closed ? Object.freeze({ status: "unavailable" }) : guardApplicationSession(result);
       },
       close() {
         if (closed) return;
@@ -103,4 +124,33 @@ export async function openServerSessionReadRuntime(
     connection.connection.close();
     return Object.freeze({ status: "unavailable" });
   }
+}
+
+export type ServerSessionLoginRuntime = ServerSessionReadRuntime & Readonly<{
+  login(input: unknown, options?: LoginOperationOptions): Promise<LoginSessionResult>;
+}>;
+
+// Preparation only: product composition still opens the read-only runtime.
+export async function openServerSessionLoginRuntime(
+  environment: Readonly<Record<string, unknown>>,
+  backend: Pick<ReturnType<typeof createBackendTransport>, "request">,
+  dependencies: RuntimeDependencies = defaultDependencies,
+): Promise<ServerSessionRuntimeOpenResult<ServerSessionLoginRuntime>> {
+  let snapshot: Readonly<Record<string, unknown>>;
+  try { snapshot = Object.freeze({ ...environment }); }
+  catch { return { status: "invalid-config", fields: ["environment"] }; }
+  const source = parseServerBackendConfig(snapshot);
+  if (source.status !== "valid") return source;
+  if (source.config.source !== "api") return { status: "unavailable" };
+  return openRuntime(snapshot, dependencies, (capabilities) => {
+    const service = createLoginSessionService({ environment: snapshot, backend, ...capabilities });
+    return {
+      login(input: unknown, options: LoginOperationOptions = {}) {
+        return service.login(input, {
+          signal: options.signal,
+          isCurrent: () => capabilities.isOpen() && (options.isCurrent?.() ?? true),
+        });
+      },
+    };
+  });
 }

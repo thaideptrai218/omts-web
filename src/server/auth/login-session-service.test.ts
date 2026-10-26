@@ -159,4 +159,57 @@ describe("server login session creation without a public login handler", () => {
     await expect(h.service.login({ identifier: "fixture.user", password })).resolves.toEqual({ status: "unavailable" });
     expect(h.request).toHaveBeenLastCalledWith({ endpoint: "logout", accessToken });
   });
+
+  it("does not contact backend or storage for an already-cancelled request", async () => {
+    const h = harness();
+    const create = vi.spyOn(h.store, "create");
+    expect(await h.service.login({ identifier: "fixture.user", password }, { signal: AbortSignal.abort() }))
+      .toEqual({ status: "unavailable" });
+    expect(h.request).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("cleans a session created while cancellation is in flight and does not issue its cookie", async () => {
+    const h = harness();
+    const abort = new AbortController();
+    const actualCreate = h.store.create;
+    let hash = "";
+    vi.spyOn(h.store, "create").mockImplementation(async (input) => {
+      hash = input.idHash;
+      const result = await actualCreate(input);
+      abort.abort();
+      return result;
+    });
+    expect(await h.service.login({ identifier: "fixture.user", password }, { signal: abort.signal }))
+      .toEqual({ status: "unavailable" });
+    expect(await h.store.read(hash)).toEqual({ status: "revoked" });
+    expect(h.request).toHaveBeenLastCalledWith({ endpoint: "logout", accessToken });
+  });
+
+  it.each(["abort", "expiry", "runtime-close"] as const)("refuses late cookie delivery after %s", async (reason) => {
+    const h = harness();
+    const abort = new AbortController();
+    let current = true;
+    const result = await h.service.login({ identifier: "fixture.user", password }, {
+      signal: abort.signal, isCurrent: () => current,
+    });
+    if (result.status !== "created") throw new Error("Expected candidate");
+    if (reason === "abort") abort.abort();
+    if (reason === "expiry") h.setTime(initialTime + 60_000);
+    if (reason === "runtime-close") current = false;
+    expect(() => result.cookie.readForResponseHeader()).toThrow("LOGIN_DELIVERY_UNAVAILABLE");
+    await result.abandon();
+  });
+
+  it("abandons only its own new session and coalesces repeated cleanup", async () => {
+    const h = harness();
+    const result = await h.service.login({ identifier: "fixture.user", password });
+    if (result.status !== "created") throw new Error("Expected candidate");
+    const header = result.cookie.readForResponseHeader();
+    const hash = hashSessionId(header.split(";")[0].split("=")[1])!;
+    const revoke = vi.spyOn(h.store, "revoke");
+    await Promise.all([result.abandon(), result.abandon()]);
+    expect(revoke).toHaveBeenCalledExactlyOnceWith(hash);
+    expect(await h.store.read(hash)).toEqual({ status: "revoked" });
+  });
 });

@@ -5,6 +5,7 @@ import { myPermissionsSchema } from "@/features/auth/api/permissions-contract.sc
 import type { MessageCode } from "@/shared/messages/message-catalog";
 import type { BackendRequest } from "../backend/backend-request";
 import type { BackendTransportResult } from "../backend/backend-result";
+import type { BackendRequestOptions } from "../backend/backend-transport";
 import { parseServerAuthTokens } from "../backend/server-auth-tokens";
 import { projectPermissionsDto } from "../backend/browser-dto";
 import { createSessionCookieHelpers } from "./session-cookies";
@@ -12,14 +13,21 @@ import { deriveAccessBoundExpiry, checkAccessBoundExpiry } from "./session-expir
 import { createSessionId } from "./session-id";
 import type { NewSession, SessionClock, SessionPhase, SessionStore } from "./session-store";
 import type { createSessionTokenProtector } from "./session-token-protector";
+import { createPendingLoginDelivery } from "./pending-login-delivery";
 
-type BackendRequester = Readonly<{ request(input: BackendRequest): Promise<BackendTransportResult> }>;
+type BackendRequester = Readonly<{ request(input: BackendRequest, options?: BackendRequestOptions): Promise<BackendTransportResult> }>;
 type PreparedCookie = Readonly<{ readForResponseHeader(): string }>;
 
 export type LoginSessionResult =
-  | Readonly<{ status: "created"; phase: SessionPhase; cookie: PreparedCookie }>
+  | Readonly<{ status: "created"; phase: SessionPhase; cookie: PreparedCookie; abandon(): Promise<void> }>
   | Readonly<{ status: "rejected"; httpStatus: number; code?: MessageCode; retryAfterMs?: number }>
-  | Readonly<{ status: "invalid-input" | "unavailable" }>;
+  | Readonly<{ status: "invalid-input" }>
+  | Readonly<{ status: "unavailable" }>;
+
+export type LoginOperationOptions = Readonly<{
+  signal?: AbortSignal;
+  isCurrent?: () => boolean;
+}>;
 
 export function createLoginSessionService(dependencies: Readonly<{
   environment: Readonly<Record<string, unknown>>;
@@ -31,13 +39,20 @@ export function createLoginSessionService(dependencies: Readonly<{
   const { backend, store, protector, clock } = dependencies;
   const cookies = createSessionCookieHelpers(dependencies.environment);
 
-  async function send(input: BackendRequest): Promise<BackendTransportResult> {
-    try { return await backend.request(input); } catch { return { status: "unavailable" }; }
+  async function send(input: BackendRequest, signal?: AbortSignal): Promise<BackendTransportResult> {
+    try {
+      if (signal?.aborted) return { status: "unavailable" };
+      return await (signal ? backend.request(input, { signal }) : backend.request(input));
+    } catch { return { status: "unavailable" }; }
   }
 
   return Object.freeze({
-    async login(input: unknown): Promise<LoginSessionResult> {
-      if (cookies.status !== "available") return { status: "unavailable" };
+    async login(input: unknown, options: LoginOperationOptions = {}): Promise<LoginSessionResult> {
+      function active() {
+        try { return !options.signal?.aborted && (options.isCurrent?.() ?? true); }
+        catch { return false; }
+      }
+      if (cookies.status !== "available" || !active()) return { status: "unavailable" };
       let parsed: ReturnType<typeof loginRequestSchema.safeParse>;
       try {
         if (typeof input !== "object" || input === null) return { status: "invalid-input" };
@@ -49,7 +64,7 @@ export function createLoginSessionService(dependencies: Readonly<{
       } catch { return { status: "invalid-input" }; }
       if (!parsed.success) return { status: "invalid-input" };
 
-      const response = await send({ endpoint: "login", body: parsed.data });
+      const response = await send({ endpoint: "login", body: parsed.data }, options.signal);
       if (response.status === "http-error") return {
         status: "rejected", httpStatus: response.httpStatus,
         code: response.code, retryAfterMs: response.retryAfterMs,
@@ -62,9 +77,24 @@ export function createLoginSessionService(dependencies: Readonly<{
       let candidateHash: string | undefined;
       let candidateSeal: string | undefined;
 
+      async function cleanup() {
+        // No replay and no claim that an unavailable revocation succeeded.
+        if (candidateHash !== undefined && candidateSeal !== undefined) {
+          try {
+            const current = await store.read(candidateHash);
+            if (current.status === "found" && current.session.protectedTokens.sealed === candidateSeal) {
+              await store.revoke(candidateHash);
+            }
+          } catch { /* Keep failure redacted. */ }
+        }
+        // Cleanup must not inherit the browser's already-aborted signal.
+        await send({ endpoint: "logout", accessToken: credentials.accessToken });
+      }
+
       try {
-        const identityResponse = await send({ endpoint: "identity", accessToken: credentials.accessToken });
-        if (identityResponse.status !== "success") return { status: "unavailable" };
+        if (!active()) return { status: "unavailable" };
+        const identityResponse = await send({ endpoint: "identity", accessToken: credentials.accessToken }, options.signal);
+        if (!active() || identityResponse.status !== "success") return { status: "unavailable" };
         const identity = currentIdentitySchema.safeParse(identityResponse.data);
         if (!identity.success || identity.data.accountId.toLowerCase() !== credentials.accountId.toLowerCase()
           || identity.data.subjectType !== credentials.subjectType) return { status: "unavailable" };
@@ -74,8 +104,8 @@ export function createLoginSessionService(dependencies: Readonly<{
         const phase: SessionPhase = credentials.mustChangePassword ? "password-change-required"
           : credentials.phoneVerificationRequired ? "contact-verification-required" : "application";
         if (phase === "application") {
-          const result = await send({ endpoint: "permissions", accessToken: credentials.accessToken });
-          if (result.status !== "success") return { status: "unavailable" };
+          const result = await send({ endpoint: "permissions", accessToken: credentials.accessToken }, options.signal);
+          if (!active() || result.status !== "success") return { status: "unavailable" };
           const permissions = myPermissionsSchema.safeParse(result.data);
           if (!permissions.success || permissions.data.subjectType !== credentials.subjectType
             || projectPermissionsDto(permissions.data, credentials.accountId).status !== "projected") {
@@ -94,33 +124,25 @@ export function createLoginSessionService(dependencies: Readonly<{
         const protectedResult = await protector.protect({
           accessToken: credentials.accessToken, refreshToken: credentials.refreshToken,
         }, context);
-        if (protectedResult.status !== "protected" || checkAccessBoundExpiry(context, clock).status !== "active") {
+        if (!active() || protectedResult.status !== "protected" || checkAccessBoundExpiry(context, clock).status !== "active") {
           return { status: "unavailable" };
         }
         const draft: NewSession = { ...context, protectedTokens: protectedResult.protectedTokens };
         candidateSeal = draft.protectedTokens.sealed;
         const created = await store.create(draft);
         if (created.status !== "created") return { status: "unavailable" };
-        if (checkAccessBoundExpiry(created.session, clock).status !== "active") return { status: "unavailable" };
+        if (!active() || checkAccessBoundExpiry(created.session, clock).status !== "active") return { status: "unavailable" };
         const cookie = cookies.cookies.issue(id.sid);
         if (cookie.status !== "prepared") return { status: "unavailable" };
+        const delivery = createPendingLoginDelivery(cookie.cookie,
+          () => active() && checkAccessBoundExpiry(created.session, clock).status === "active", cleanup);
         completed = true;
-        return Object.freeze({ status: "created", phase, cookie: cookie.cookie });
+        return Object.freeze({ status: "created", phase, ...delivery });
       } catch {
         return { status: "unavailable" };
       } finally {
         if (!completed) {
-          // A create timeout can have committed. Revoke this candidate only;
-          // never retry the write or claim that upstream cleanup succeeded.
-          if (candidateHash !== undefined && candidateSeal !== undefined) {
-            try {
-              const current = await store.read(candidateHash);
-              if (current.status === "found" && current.session.protectedTokens.sealed === candidateSeal) {
-                await store.revoke(candidateHash);
-              }
-            } catch { /* Keep failure redacted. */ }
-          }
-          await send({ endpoint: "logout", accessToken: credentials.accessToken });
+          await cleanup();
         }
       }
     },

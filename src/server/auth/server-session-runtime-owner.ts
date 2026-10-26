@@ -5,10 +5,10 @@ import type {
   ServerSessionRuntimeOpenResult,
 } from "./server-session-runtime";
 
-type RuntimeOpener = () => Promise<ServerSessionRuntimeOpenResult>;
+type RuntimeOpener<Runtime extends ServerSessionReadRuntime> = () => Promise<ServerSessionRuntimeOpenResult<Runtime>>;
 
-export type ServerSessionRuntimeOwner = Readonly<{
-  get(): Promise<ServerSessionRuntimeOpenResult>;
+export type ServerSessionRuntimeOwner<Runtime extends ServerSessionReadRuntime = ServerSessionReadRuntime> = Readonly<{
+  get(): Promise<ServerSessionRuntimeOpenResult<Runtime>>;
   dispose(): void;
 }>;
 
@@ -26,11 +26,11 @@ function closeSafely(runtime: ServerSessionReadRuntime | undefined): void {
  * Owns one ready runtime and shares one in-flight open operation. Failed opens
  * are not cached; late results after disposal are closed and never published.
  */
-export function createServerSessionRuntimeOwner(
-  open: RuntimeOpener,
-): ServerSessionRuntimeOwner {
-  let ready: ServerSessionReadRuntime | undefined;
-  let pending: Promise<ServerSessionRuntimeOpenResult> | undefined;
+export function createServerSessionRuntimeOwner<Runtime extends ServerSessionReadRuntime>(
+  open: RuntimeOpener<Runtime>,
+): ServerSessionRuntimeOwner<Runtime> {
+  let ready: Runtime | undefined;
+  let pending: Promise<ServerSessionRuntimeOpenResult<Runtime>> | undefined;
   let generation = 0;
 
   return Object.freeze({
@@ -44,7 +44,7 @@ export function createServerSessionRuntimeOwner(
       const opening = Promise.resolve()
         .then(open)
         .catch(() => unavailable)
-        .then((result): ServerSessionRuntimeOpenResult => {
+        .then((result): ServerSessionRuntimeOpenResult<Runtime> => {
           if (generation !== startedAtGeneration) {
             if (result.status === "ready") closeSafely(result.runtime);
             return unavailable;

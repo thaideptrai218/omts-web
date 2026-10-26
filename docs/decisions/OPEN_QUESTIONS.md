@@ -1,5 +1,13 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## WEB-API-08 — Đăng nhập khi trình duyệt đã có phiên BFF
+
+- **Decided, 26/10/2026, Duy Thái:** giữ phiên BFF vẫn hợp lệ và trả đích tương ứng với phase hiện tại. Muốn đổi tài khoản phải đăng xuất trước. Không gọi login backend hoặc ghi cookie mới cho request đó.
+- Phạm vi: POST login sau CSRF/schema validation, với cookie đã được server xác thực. Không suy từ việc cookie tồn tại rằng phiên còn hợp lệ.
+- Cookie không hợp lệ đi qua recovery hiện có; hạ tầng không sẵn sàng không tự xóa hoặc thay cookie.
+- **Không được coi là đã chốt:** hai request đăng nhập ban đầu đều chưa có cookie, hai tab/worker tranh nhau phát cookie, logout cũ về sau login mới. Cần thiết kế phối hợp attempt/session và test trước khi mount route đăng nhập. Quyết định này không cho phép tự chọn “phản hồi cuối ghi đè tài khoản”.
+- [Báo cáo chuẩn bị W3.1b](../reports/WEB_W3_1B_LOGIN_HTTP_RUNTIME_PREPARATION_2026-10-26.md). UI vẫn mock; API và refresh thật chưa bật.
+
 ## Ghi nhận26/10 — contract nhân viên và ticket mới
 
 - **Contract nguồn nhóm; API còn chờ:** OMTS-214 ghi PM quyết định PUT accountId thiếu/null giữ link; bỏ liên kết dùng DELETE riêng, trả EmployeeSaved.employee.rowVersion. Lời nhắc D DT ở comment10034 yêu cầu phát hành cùng PR16. PR còn draft/chưa merge tại lượt kiểm, develop vẫn776fbc0 theo audit. Xem [audit và micro-plan](../reports/BACKEND_JIRA_EMPLOYEE_UNLINK_AUDIT_2026-10-26.md); tiến độ UI/mock mới ở dòng dưới.
