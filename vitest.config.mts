@@ -9,5 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Keep Next/ESLint workers within a predictable memory budget alongside Docker.
+    maxWorkers: 4,
   },
 });

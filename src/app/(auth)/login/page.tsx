@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
 import { LoginExperience } from "@/features/auth/components/login-experience";
+import { Suspense } from "react";
+import { getSessionGateway } from "@/server/auth/session-gateway.instance";
+import { ApiLoginEntry } from "@/features/auth/components/api-login-entry";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "Đăng nhập | OMTS",
 };
 
-export default function LoginPage() {
+async function LoginContent() {
+  await connection();
+  if (getSessionGateway().mode !== "mock") {
+    return <Suspense fallback={<p role="status">Đang kiểm tra phiên đăng nhập...</p>}><ApiLoginEntry /></Suspense>;
+  }
   return (
     <section
       aria-labelledby="login-title"
@@ -21,4 +29,8 @@ export default function LoginPage() {
       <LoginExperience />
     </section>
   );
+}
+
+export default function LoginPage() {
+  return <Suspense fallback={<p role="status">Đang tải trang đăng nhập...</p>}><LoginContent /></Suspense>;
 }

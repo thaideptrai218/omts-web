@@ -16,9 +16,36 @@
 # local learning and defense notes (kept on each developer's machine)
 /docs/learning/
 
+# Local Hallmark audit captures (review findings are summarized in docs/reports)
+/.hallmark/
+
 # next.js
 /.next/
 /out/
+
+# Generated output from the intentionally invalid, isolated Next.js boundary fixture
+/tests/fixtures/server-boundary/.next/
+/tests/fixtures/server-boundary/next-env.d.ts
+/tests/fixtures/server-boundary/tsconfig.json
+/tests/fixtures/serialization/.next/
+/tests/fixtures/serialization/next-env.d.ts
+/tests/fixtures/web-config-boundary/.next/
+/tests/fixtures/web-config-boundary/next-env.d.ts
+/tests/fixtures/web-config-boundary/tsconfig.json
+/tests/fixtures/expiry-boundary/.next/
+/tests/fixtures/expiry-boundary/next-env.d.ts
+/tests/fixtures/expiry-boundary/tsconfig.json
+/tests/fixtures/session-runtime-boundary/.next/
+/tests/fixtures/session-runtime-boundary/next-env.d.ts
+/tests/fixtures/session-runtime-boundary/tsconfig.json
+/tests/fixtures/session-access-boundary/.next/
+/tests/fixtures/session-access-boundary/next-env.d.ts
+/tests/fixtures/session-access-boundary/tsconfig.json
+/tests/fixtures/session-routes-boundary/.next/
+/tests/fixtures/session-routes-boundary/next-env.d.ts
+/tests/fixtures/session-routes-boundary/tsconfig.json
+/tests/fixtures/cookie-browser/.next/
+/tests/fixtures/cookie-browser/next-env.d.ts
 
 # production
 /build

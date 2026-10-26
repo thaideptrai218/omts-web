@@ -54,9 +54,9 @@ type AuthContextValue = Readonly<{
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ status: "loading" });
-  const sessionStatus = useRef<AuthState["status"]>("loading");
+export function AuthProvider({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
+  const [state, setState] = useState<AuthState>(enabled ? { status: "loading" } : { status: "anonymous" });
+  const sessionStatus = useRef<AuthState["status"]>(enabled ? "loading" : "anonymous");
   const operationTracker = useRef(createLatestOperationTracker());
   const { notify } = useToast();
 
@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     let isActive = true;
     const operation = operationTracker.current.start();
 
@@ -83,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [replaceState]);
+  }, [enabled, replaceState]);
 
   useEffect(
     () =>
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const login = useCallback(async (input: LoginInput) => {
+    if (!enabled) throw new Error("AUTH_SERVICE_UNAVAILABLE");
     const operation = operationTracker.current.start();
 
     try {
@@ -127,30 +129,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       throw error;
     }
-  }, [replaceState]);
+  }, [enabled, replaceState]);
 
   const changeTemporaryPassword = useCallback(
-    (input: CurrentPasswordChangeInput) =>
-      authService.changeTemporaryPassword(input),
-    [],
+    (input: CurrentPasswordChangeInput) => {
+      if (!enabled) throw new Error("AUTH_SERVICE_UNAVAILABLE");
+      return authService.changeTemporaryPassword(input);
+    },
+    [enabled],
   );
 
   const completeStaffOnboarding = useCallback(
     async (input: CompleteStaffOnboardingInput) => {
+      if (!enabled) throw new Error("AUTH_SERVICE_UNAVAILABLE");
       const result = await authService.completeStaffOnboarding(input);
       if (grantsApplicationAccess(result)) replaceState(result.session);
       return result;
     },
-    [replaceState],
+    [enabled, replaceState],
   );
 
   const startStaffContactVerification = useCallback(
-    (channel: OnboardingContactChannel) =>
-      authService.startStaffContactVerification(channel),
-    [],
+    (channel: OnboardingContactChannel) => {
+      if (!enabled) throw new Error("AUTH_SERVICE_UNAVAILABLE");
+      return authService.startStaffContactVerification(channel);
+    },
+    [enabled],
   );
 
   const logout = useCallback(async () => {
+    if (!enabled) throw new Error("AUTH_SERVICE_UNAVAILABLE");
     const operation = operationTracker.current.start();
 
     await performLocalFirstLogout(
@@ -162,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       () => authService.logout(),
     );
-  }, [replaceState]);
+  }, [enabled, replaceState]);
 
   const updateDisplayName = useCallback((displayName: string) => {
     setState((current) => {
