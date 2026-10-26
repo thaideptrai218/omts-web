@@ -78,7 +78,7 @@ export function PostLoginGatePanel({
         </svg>
       </div>
 
-      <p className="mt-4 text-sm font-semibold uppercase tracking-[0.12em] text-primary">
+      <p className="mt-4 text-sm font-semibold text-primary">
         Bước bảo mật bắt buộc
       </p>
       <h2

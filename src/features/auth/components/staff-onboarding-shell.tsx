@@ -152,7 +152,7 @@ export function StaffOnboardingShell({
 
   return (
     <section aria-labelledby="staff-onboarding-title" className="mt-7">
-      <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
+      <p className="text-sm font-semibold text-primary">
         Thiết lập tài khoản
       </p>
       <h2

@@ -432,6 +432,10 @@ Màn này phụ thuộc dữ liệu vùng nuôi và role. Khi UC15 chưa nằm t
 
 #### D5. OMTS-186 — SCR-08, hồ sơ nhân viên
 
+> **Triển khai tiếp26/10:** đã hoàn thiện UI/service/mock bỏ liên kết theo [báo cáo review](reports/WEB_EMPLOYEE_ACCOUNT_UNLINK_REVIEW_2026-10-26.md): giữ draft, version mới, pending và Escape chỉ đóng xác nhận. EMP-API-02/03 đạt phạm vi mock/UI; EMP-API-01/05 mới một phần, EMP-API-04/BFF/HTTP/QA chưa làm. Không coi D5 hoặc OMTS-203 API là hoàn thành.
+
+> **Audit26/10:** tiêu đề/checklist dưới đây là lịch sử mock D5. Ticket Web hiện hành là OMTS-203 (D DT), backend OMTS-199, QA OMTS-204; key185/186 trả404 khi đọc lại. PR16 backend (draft/chưa merge) đổi save-null thành giữ account và thêm DELETE unlink riêng. Chưa triển khai alignment; làm EMP-API-01…05 trong [báo cáo](reports/BACKEND_JIRA_EMPLOYEE_UNLINK_AUDIT_2026-10-26.md) trước ghép API. Checkbox D5 mock không chứng minh đã đạt OMTS-203.
+
 - [x] **D5.1:** đối chiếu `OMTS-186`, story `OMTS-145`, backend `OMTS-185`, QA `OMTS-187` và SRS UC10/SCR-08/Employee/status catalog;
 - [x] **D5.2:** định nghĩa contract riêng cho Employee và account summary, schema required/optional, repository/service/mock và typed outcomes;
 - [x] **D5.3:** danh sách + tìm theo tên/số điện thoại, form đúng trường SCR-08 và trạng thái Employed/Left;

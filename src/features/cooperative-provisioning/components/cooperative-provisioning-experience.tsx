@@ -1,5 +1,6 @@
 "use client";
 
+import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { CooperativeProvisioningForm } from "@/features/cooperative-provisioning/components/cooperative-provisioning-form";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
 import { useAuth } from "@/features/auth/state/auth-provider";
@@ -9,9 +10,9 @@ function PermissionDenied() {
     <section className="mx-auto mt-10 max-w-lg rounded-card border border-border bg-surface p-6 text-center shadow-card sm:p-8">
       <div
         aria-hidden="true"
-        className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft text-xl"
+        className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft"
       >
-        ⛔
+        <RestrictedAccessIcon />
       </div>
       <h1 className="mt-5 text-2xl font-semibold tracking-tight text-text">
         Không có quyền khởi tạo hợp tác xã

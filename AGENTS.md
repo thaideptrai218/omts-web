@@ -22,6 +22,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Build with Next.js App Router and TypeScript. Keep public, authentication, and protected application routes conceptually separated.
 - Design Web first, but verify important flows at 360 px and 1024 px. Web-first does not mean desktop-only.
 - Prioritize Vietnamese copy, accessibility, keyboard use, meaningful landmarks, visible focus, and clear loading, empty, error, offline, success, syncing, and permission-denied states.
+- Khi Hallmark có sẵn trên máy, dùng `audit` để rà soát các màn cần polish; đối chiếu từng phát hiện với công việc thực tế của Owner, quản lý vùng và nhân viên. Giữ nguyên luồng, nội dung và quyền đã chốt; không áp máy móc quy tắc trang quảng bá vào màn quản trị. Lưu ảnh/chẩn đoán tạm trong `.hallmark/` (đã ignore), tóm tắt kết quả đã kiểm chứng trong `docs/reports/`.
 - Treat implemented screens as production UI. Do not add developer explanation panels, context selectors, warning copy about unfinished implementation, or permanent `/dev/*` showcase routes unless the user explicitly requests a showcase. Verify components through the real flow when possible; a temporary local test harness must not be committed as product UI.
 - Components must not call mock storage or HTTP directly. Put data access behind service/repository contracts so mock and API adapters can share the same interface.
 - Use skeletons for initial content loading. Use local pending/disabled/progress feedback for mutations; do not replace every loading state with a skeleton.

@@ -31,13 +31,13 @@ export function AuthShell({ children }: AuthShellProps) {
             <BrandMark tone="inverse" />
 
             <div className="my-auto max-w-lg py-16">
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-teal-100">
+              <p className="text-sm font-semibold text-sky-100">
                 Hệ thống quản lý hợp tác xã
               </p>
               <h2 className="mt-4 text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">
                 Công việc rõ ràng, dữ liệu dễ kiểm soát.
               </h2>
-              <p className="mt-5 max-w-md text-base leading-7 text-teal-50 xl:text-lg">
+              <p className="mt-5 max-w-md text-base leading-7 text-sky-50 xl:text-lg">
                 OMTS giúp các thành viên làm đúng phần việc của mình mà không cần làm quen với giao diện phức tạp.
               </p>
 
@@ -49,7 +49,7 @@ export function AuthShell({ children }: AuthShellProps) {
                   >
                     <svg
                       aria-hidden="true"
-                      className="mt-1 size-5 shrink-0 text-teal-100"
+                      className="mt-1 size-5 shrink-0 text-sky-100"
                       fill="none"
                       viewBox="0 0 20 20"
                       xmlns="http://www.w3.org/2000/svg"
@@ -68,7 +68,7 @@ export function AuthShell({ children }: AuthShellProps) {
               </ul>
             </div>
 
-            <p className="text-sm text-teal-100">
+            <p className="text-sm text-sky-100">
               Hợp tác xã Thủy sản Trung Nam
             </p>
           </div>

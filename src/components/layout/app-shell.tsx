@@ -150,7 +150,7 @@ function LogoutButton({
   return (
     <button
       aria-busy={isPending || undefined}
-      className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-teal-50/80 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-sky-50/80 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
       disabled={isPending}
       onClick={onClick}
       type="button"
@@ -196,7 +196,7 @@ function NavigationList({
 
   if (visibleGroups.length === 0) {
     return (
-      <p className="px-3 text-sm leading-6 text-teal-50/70">
+      <p className="px-3 text-sm leading-6 text-sky-50/80">
         Chưa có mục phù hợp với quyền hiện tại.
       </p>
     );
@@ -207,7 +207,7 @@ function NavigationList({
       {visibleGroups.map((group) => (
         <div key={group.label}>
           <p
-            className={`mb-2 whitespace-nowrap px-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-teal-100/55 ${
+            className={`mb-2 whitespace-nowrap px-3 text-xs font-semibold text-sky-100/80 ${
               autoRail
                 ? "opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100 motion-reduce:transition-none"
                 : ""
@@ -225,12 +225,12 @@ function NavigationList({
                     className={`group relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
                       isActive
                         ? "bg-white text-primary shadow-lg shadow-black/10"
-                        : "text-teal-50/80 hover:bg-white/10 hover:text-white"
+                        : "text-sky-50/80 hover:bg-white/10 hover:text-white"
                     }`}
                     href={item.href}
                     onClick={onNavigate}
                   >
-                    <span className={isActive ? "text-primary" : "text-teal-100/80 group-hover:text-white"}>
+                    <span className={isActive ? "text-primary" : "text-sky-100/80 group-hover:text-white"}>
                       <NavigationIcon kind={item.icon} />
                     </span>
                     <span
@@ -283,7 +283,7 @@ function IdentityCard({
       }`}
       href="/account"
     >
-      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-teal-50 text-sm font-bold text-primary shadow-sm">
+      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sm font-bold text-primary shadow-sm">
         {initials}
       </span>
       <span
@@ -294,7 +294,7 @@ function IdentityCard({
         }`}
       >
         <span className="block truncate text-sm font-semibold text-white">{label}</span>
-        <span className="block truncate text-xs text-teal-50/70">
+        <span className="block truncate text-xs text-sky-50/80">
           {role}{scope ? ` · ${scope}` : ""}
         </span>
       </span>
@@ -341,7 +341,7 @@ export function AppShell({
   return (
     <div className="min-h-dvh bg-canvas lg:pl-20">
       <aside className="group/sidebar fixed inset-y-0 left-0 z-30 hidden w-20 flex-col overflow-hidden bg-primary-hover text-white shadow-none transition-[width,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:w-72 hover:shadow-2xl focus-within:w-72 focus-within:shadow-2xl motion-reduce:transition-none lg:flex">
-        <div aria-hidden="true" className="pointer-events-none absolute -left-28 top-28 size-64 rounded-full bg-teal-400/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -left-28 top-28 size-64 rounded-full bg-sky-400/10 blur-3xl" />
         <div className="relative flex min-h-24 items-center border-b border-white/10 px-4">
           <div className="min-w-56">
             <BrandMark autoReveal tone="inverse" />
@@ -392,7 +392,7 @@ export function AppShell({
           <div className="flex min-h-16 items-center justify-between gap-3 border-b border-white/10 pb-4">
             <BrandMark tone="inverse" compact />
             <button
-              className="min-h-11 rounded-xl px-3 text-sm font-semibold text-teal-50/80 hover:bg-white/10 hover:text-white"
+              className="min-h-11 rounded-xl px-3 text-sm font-semibold text-sky-50/80 hover:bg-white/10 hover:text-white"
               onClick={() => setIsMobileMenuOpen(false)}
               ref={mobileCloseButtonRef}
               type="button"

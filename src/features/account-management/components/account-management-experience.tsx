@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { AccountEditor } from "@/features/account-management/components/account-editor";
@@ -26,7 +27,9 @@ type DeliveryState = Readonly<{
 function PermissionDenied() {
   return (
     <section className="mx-auto mt-10 max-w-lg rounded-card border border-border bg-surface p-6 text-center shadow-card sm:p-8">
-      <div aria-hidden="true" className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft text-xl">⛔</div>
+      <div aria-hidden="true" className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft">
+        <RestrictedAccessIcon />
+      </div>
       <h1 className="mt-5 text-2xl font-semibold tracking-tight text-text">Không có quyền quản lý tài khoản</h1>
       <p className="mt-3 leading-7 text-text-muted">{formatMessage({ code: "MSG02" })}</p>
     </section>

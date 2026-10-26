@@ -14,7 +14,7 @@ const toneStyles = {
   inverse: {
     icon: "bg-white text-primary",
     name: "text-white",
-    tagline: "text-teal-50",
+    tagline: "text-sky-50",
   },
 } as const;
 

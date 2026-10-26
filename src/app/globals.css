@@ -4,19 +4,19 @@
   color-scheme: light;
 
   /* Brand and interaction */
-  --omts-color-primary: #0f766e;
-  --omts-color-primary-hover: #115e59;
-  --omts-color-primary-soft: #ccfbf1;
+  --omts-color-primary: #075985;
+  --omts-color-primary-hover: #0c4a6e;
+  --omts-color-primary-soft: #e0f2fe;
   --omts-color-accent: #0284c7;
 
   /* Surfaces and content */
-  --omts-color-canvas: #f4f8f8;
+  --omts-color-canvas: #f5f9fc;
   --omts-color-surface: #ffffff;
-  --omts-color-surface-subtle: #eef5f5;
+  --omts-color-surface-subtle: #edf5fa;
   --omts-color-text: #0f172a;
   --omts-color-text-muted: #475569;
   --omts-color-border: #cbd5e1;
-  --omts-color-border-strong: #94a3b8;
+  --omts-color-border-strong: #64748b;
 
   /* Feedback */
   --omts-color-info: #0369a1;
@@ -30,7 +30,7 @@
   --omts-radius-control: 0.625rem;
   --omts-radius-card: 0.875rem;
   --omts-shadow-card: 0 1px 2px rgb(15 23 42 / 0.06),
-    0 10px 30px rgb(15 118 110 / 0.08);
+    0 10px 30px rgb(7 89 133 / 0.08);
   --omts-content-max-width: 80rem;
 }
 

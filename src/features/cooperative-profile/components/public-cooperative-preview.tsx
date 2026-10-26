@@ -9,7 +9,7 @@ export function PublicCooperativePreview({
       className="overflow-hidden rounded-card border border-primary/20 bg-surface shadow-card"
     >
       <div className="bg-gradient-to-br from-primary to-primary-hover px-5 py-6 text-white">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">
+        <p className="text-sm font-semibold text-white/85">
           Thông tin truy xuất
         </p>
         <h2 className="mt-3 text-xl font-semibold leading-snug" id="public-preview-title">
@@ -25,7 +25,7 @@ export function PublicCooperativePreview({
             ⌖
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-text-muted">Địa chỉ</p>
+            <p className="text-sm font-semibold text-text-muted">Địa chỉ</p>
             <p className="mt-1 break-words leading-6 text-text">
               {projection.officeAddress}
             </p>

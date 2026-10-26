@@ -96,7 +96,7 @@ function WorkforceChart({ summary }: { summary: DashboardWorkforceSummary }) {
           aria-label={`${employedPercentage}% nhân viên đang làm việc`}
           className="relative grid size-44 shrink-0 place-items-center rounded-full"
           role="img"
-          style={{ background: `conic-gradient(#0f766e ${employedPercentage}%, #e2e8f0 0)` }}
+          style={{ background: `conic-gradient(var(--omts-color-primary) ${employedPercentage}%, var(--omts-color-border) 0)` }}
         >
           <div className="grid size-32 place-items-center rounded-full bg-surface text-center shadow-inner">
             <div>
@@ -159,10 +159,10 @@ function PersonalAccessSummary({
 }) {
   return (
     <section className="rounded-card border border-border bg-gradient-to-br from-primary-hover to-primary p-6 text-white shadow-card">
-      <p className="text-sm font-semibold text-teal-50/75">Phạm vi làm việc của bạn</p>
+      <p className="text-sm font-semibold text-sky-50/80">Phạm vi làm việc của bạn</p>
       <h2 className="mt-3 text-2xl font-semibold">{roleLabel}</h2>
-      <p className="mt-2 text-sm leading-6 text-teal-50/85">{scopeLabel}</p>
-      <p className="mt-8 border-t border-white/15 pt-4 text-sm leading-6 text-teal-50/80">
+      <p className="mt-2 text-sm leading-6 text-sky-50/85">{scopeLabel}</p>
+      <p className="mt-8 border-t border-white/15 pt-4 text-sm leading-6 text-sky-50/80">
         Thanh điều hướng chỉ hiển thị những chức năng tài khoản được phép sử dụng.
       </p>
     </section>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
@@ -22,8 +23,8 @@ import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 function PermissionDenied() {
   return (
     <section className="mx-auto mt-10 max-w-lg rounded-card border border-border bg-surface p-6 text-center shadow-card sm:p-8">
-      <div aria-hidden="true" className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft text-xl">
-        ⛔
+      <div aria-hidden="true" className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft">
+        <RestrictedAccessIcon />
       </div>
       <h1 className="mt-5 text-2xl font-semibold tracking-tight text-text">
         Không có quyền quản lý vai trò

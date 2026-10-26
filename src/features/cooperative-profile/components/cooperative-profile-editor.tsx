@@ -492,7 +492,7 @@ export function CooperativeProfileEditor({
 
           <aside className="min-w-0 space-y-4 xl:sticky xl:top-24">
             <section className="rounded-card border border-primary/20 bg-primary-soft p-5 text-primary-hover">
-              <p className="text-xs font-bold uppercase tracking-[0.16em]">Bước tiếp theo</p>
+              <p className="text-sm font-semibold">Bước tiếp theo</p>
               <h2 className="mt-2 text-lg font-semibold">Xem trước trước khi lưu</h2>
               <p className="mt-2 text-sm leading-6">
                 Bạn sẽ kiểm tra riêng tên và địa chỉ xuất hiện trên trang truy xuất công khai.
