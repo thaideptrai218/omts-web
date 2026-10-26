@@ -61,6 +61,25 @@ describe("mutation body lifecycle and redacted failures", () => {
     try { expect(await guard().check(locked, loginPolicy)).toEqual({ status: "rejected", httpStatus: 400 }); }
     finally { await reader?.cancel(); reader?.releaseLock(); }
   });
+  it("rejects abort even when each buffered read wins Promise.race ordering", async () => {
+    const abort = new AbortController();
+    const request = mutation({ body: "{}", signal: abort.signal });
+    const stream = request.body!;
+    const getReader = stream.getReader.bind(stream);
+    Object.defineProperty(stream, "getReader", { value: () => {
+      const reader = getReader();
+      vi.spyOn(reader, "read")
+        .mockImplementationOnce(() => {
+          const ready = Promise.resolve({ done: false as const, value: new TextEncoder().encode("{}") });
+          abort.abort(new Error("fake-buffered-cancel-reason"));
+          return ready;
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined });
+      return reader;
+    } });
+    expect(await guard().check(request, loginPolicy)).toEqual({ status: "rejected", httpStatus: 400 });
+    expect(stream.locked).toBe(false);
+  });
   it("redacts read and cancellation errors and removes timers after failure", async () => {
     vi.useFakeTimers();
     const body = new ReadableStream<Uint8Array>({ pull(controller) { controller.error(new Error("fake-read-secret")); } });

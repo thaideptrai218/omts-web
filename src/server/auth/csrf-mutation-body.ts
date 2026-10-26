@@ -50,6 +50,9 @@ export async function readMutationBody(request: Request, policy: MutationBodyPol
     let size = 0;
     for (;;) {
       const { done, value } = await Promise.race([reader.read(), interrupted]);
+      // Both promises may already be settled. A buffered read winning the race
+      // must not authorize input from a request that has been aborted.
+      if (request.signal.aborted) throw new BodyFailure(400);
       if (done) break;
       if (!(value instanceof Uint8Array)) throw new BodyFailure(400);
       size += value.byteLength;
