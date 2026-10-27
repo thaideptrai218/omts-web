@@ -58,4 +58,15 @@ Agent đọc được kết quả check qua GitHub, nhưng không có kết nố
 
 ## Bàn giao
 
+### Đã kiểm lại GitHub trên e279e7d
+
+Commit test/report đã push: `e279e7dc18c6abe98456da8e43b3435efc9639cd`. Tất cả check đã kết thúc:
+
+- [build-test SUCCESS](https://github.com/thaideptrai218/omts-web/actions/runs/40486181903): log Linux xác nhận **1.635 PASS/31 SKIP**, build 18/18 và 24 HTTP assertions PASS.
+- [Gitleaks SUCCESS](https://github.com/thaideptrai218/omts-web/actions/runs/40486181897).
+- [PR title SUCCESS](https://github.com/thaideptrai218/omts-web/actions/runs/40486179063).
+- GitGuardian FAILURE, check run **122128437137**: **18 occurrences / cùng sáu incident IDs**. Incident38252611 nay có 13 occurrences, năm ID còn lại mỗi ID một occurrence. So output hai check cho thấy dòng thêm thuộc **7316e55**, `mock-auth-repository.ts` (credential demo lịch sử đã đọc), không có dòng nào trỏ tới e279e7d. Vì vậy không quy lần tăng 17→18 cho ba test mới; cũng không suy có credential mới bị lộ.
+
+Đây là bằng chứng CI thực trên e279e7d, không phải source local. Phần cập nhật bàn giao kế tiếp chỉ sửa tài liệu; check trên commit tài liệu vẫn phải xem theo head tương ứng. Chưa phân loại incident hoặc làm GitGuardian xanh.
+
 Ghi chú học giữ local trong bài100; báo cáo và ba test bổ sung được commit/push trên nhánh hiện tại. API/refresh vẫn tắt; PR giữ draft, chưa merge develop. Kết quả GitHub của commit kế tiếp phải được kiểm riêng, không suy từ ddb2b21 hoặc checks local.

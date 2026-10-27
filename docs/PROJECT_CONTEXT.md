@@ -8,6 +8,8 @@ Latest UI evidence: [27/10 management polish review](reports/WEB_MANAGEMENT_POLI
 
 CI on ddb2b21: build-test, Gitleaks and pr-title SUCCESS; GitGuardian FAILURE with 17 occurrences across six incident IDs, including new locations in ddb2b21. [Detailed source classification and follow-up tests](reports/WEB_CI_DDB2B21_REVIEW_2026-10-27.md). These are reviewed synthetic/mock findings, with dashboard classification still pending owner verification; do not describe all checks as green or suppress the scanner. Three extra raw-HTTP redaction cases pass; follow-up local suite is 1,635 passed/31 Redis skipped, with lint/typecheck/build and 24 HTTP assertions passing. No application/workflow behavior changed in this CI audit.
 
+Follow-up e279e7d is verified on GitHub: build-test/Gitleaks/pr-title SUCCESS, including 1,635 passed tests and 24 HTTP assertions. GitGuardian remains FAILURE: 18 occurrences across the same six incidents; the extra row points to the historical 7316e55 mock, with no occurrence attributed to e279e7d in that check. See the report for exact run/check IDs and owner classification steps. PR remains draft/unmerged.
+
 ## Product boundary
 
 OMTS supports Trung Nam Aquaculture Cooperative in managing farming zones, rafts, oyster cultivation activities, sales, traceability, employees, attendance, payroll, and related costs.
