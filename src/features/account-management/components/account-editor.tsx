@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -71,9 +71,6 @@ export function AccountEditor({
   const [action, setAction] = useState<AccountAction>();
   const [grantToRevoke, setGrantToRevoke] = useState<AccessGrant>();
   const [isActionPending, setIsActionPending] = useState(false);
-  useEffect(() => {
-    onPendingChange?.(isSaving || isActionPending);
-  }, [isSaving, isActionPending, onPendingChange]);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [duplicateAccountId, setDuplicateAccountId] = useState<string>();
 
@@ -125,6 +122,7 @@ export function AccountEditor({
   }
 
   const saveAccount = handleSubmit(async (values) => {
+    onPendingChange?.(true);
     setIsSaving(true);
     setFeedback(undefined);
     try {
@@ -188,11 +186,13 @@ export function AccountEditor({
       });
     } finally {
       setIsSaving(false);
+      onPendingChange?.(false);
     }
   });
 
   async function confirmStatusChange(reason: string) {
     if (!account || !action) return;
+    onPendingChange?.(true);
     setIsActionPending(true);
     try {
       const result = await accountManagementService.changeStatus({
@@ -225,11 +225,13 @@ export function AccountEditor({
       });
     } finally {
       setIsActionPending(false);
+      onPendingChange?.(false);
     }
   }
 
   async function confirmRevoke(reason: string) {
     if (!account || !grantToRevoke) return;
+    onPendingChange?.(true);
     setIsActionPending(true);
     try {
       const result = await accountManagementService.revokeGrant({
@@ -256,11 +258,13 @@ export function AccountEditor({
       setFeedback({ text: "Chưa thể thu hồi quyền truy cập.", tone: "danger" });
     } finally {
       setIsActionPending(false);
+      onPendingChange?.(false);
     }
   }
 
   async function resetPassword() {
     if (!account) return;
+    onPendingChange?.(true);
     setIsActionPending(true);
     try {
       const result = await accountManagementService.resetPassword({
@@ -281,6 +285,7 @@ export function AccountEditor({
       setFeedback({ text: "Chưa thể đặt lại mật khẩu.", tone: "danger" });
     } finally {
       setIsActionPending(false);
+      onPendingChange?.(false);
     }
   }
 

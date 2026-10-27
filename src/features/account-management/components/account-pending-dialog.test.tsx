@@ -72,14 +72,15 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-it("keeps the account editor open on Escape while a confirmed save is pending", async () => {
+it.each(["saved", "forbidden"] as const)("keeps the account editor open while saving and releases the close guard after %s", async (outcome) => {
   let finish!: (result: SaveAccountResult) => void;
-  service.save.mockImplementationOnce(
-    () =>
-      new Promise((resolve) => {
-        finish = resolve;
-      }),
-  );
+  service.save.mockImplementationOnce(() => {
+    // Escape can arrive before a passive pending effect has reached the parent.
+    fireEvent(editor, new Event("cancel", { bubbles: true, cancelable: true }));
+    return new Promise((resolve) => {
+      finish = resolve;
+    });
+  });
   render(<AccountManagementExperience />);
   fireEvent.click(await screen.findByRole("button", { name: /Nguyễn Văn An/ }));
   const editor = screen.getByRole("dialog", {
@@ -97,11 +98,9 @@ it("keeps the account editor open on Escape while a confirmed save is pending", 
   );
   await waitFor(() => expect(service.save).toHaveBeenCalledOnce());
   fireEvent(editor, new Event("cancel", { bubbles: true, cancelable: true }));
-  expect(
-    screen.getByRole("dialog", { name: "Nguyễn Văn An" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("dialog", { name: "Nguyễn Văn An" })).toBeTruthy();
   await act(async () => {
-    finish({
+    finish(outcome === "forbidden" ? { status: "forbidden", message: { code: "MSG02" } } : {
       status: "saved",
       account: {
         ...environment.accounts
@@ -112,8 +111,9 @@ it("keeps the account editor open on Escape while a confirmed save is pending", 
       },
     });
   });
+  const expectedName = outcome === "saved" ? "Nguyễn Văn An kiểm thử" : "Nguyễn Văn An";
   const savedEditor = screen.getByRole("dialog", {
-    name: "Nguyễn Văn An kiểm thử",
+    name: expectedName,
   });
   fireEvent(
     savedEditor,
@@ -122,7 +122,7 @@ it("keeps the account editor open on Escape while a confirmed save is pending", 
   await waitFor(() =>
     expect(
       screen.queryByRole("dialog", {
-        name: "Nguyễn Văn An kiểm thử",
+        name: expectedName,
       }),
     ).toBeNull(),
   );

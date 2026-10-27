@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -55,6 +55,11 @@ export function AccountManagementExperience() {
   const [isCreating, setIsCreating] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
+  const mutationPending = useRef(false);
+  const updateMutationPending = useCallback((pending: boolean) => {
+    mutationPending.current = pending;
+    setIsMutating(pending);
+  }, []);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [deliveryState, setDeliveryState] = useState<DeliveryState>();
@@ -229,7 +234,10 @@ export function AccountManagementExperience() {
             ? "Nhập thông tin nhân viên, chọn kênh gửi kích hoạt và kiểm tra quyền hiệu lực trước khi tạo tài khoản."
             : "Kiểm tra thông tin đăng nhập, trạng thái và quyền truy cập theo từng vùng."
         }
-        onOpenChange={setIsEditorOpen}
+        onOpenChange={(open) => {
+          if (!open && mutationPending.current) return;
+          setIsEditorOpen(open);
+        }}
         dismissible={!isMutating}
         open={isEditorOpen}
         size="xl"
@@ -250,7 +258,7 @@ export function AccountManagementExperience() {
             }}
             onOpenExisting={openAccount}
             onSaved={updateAccount}
-            onPendingChange={setIsMutating}
+            onPendingChange={updateMutationPending}
             workspace={workspace}
           />
         )}
