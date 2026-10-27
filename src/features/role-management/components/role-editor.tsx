@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog } from "@/components/ui/dialog";
@@ -27,6 +27,8 @@ export type RoleEditorMode = "copy" | "create" | "edit";
 type RoleEditorProps = Readonly<{
   catalog: readonly FeatureCatalogItem[];
   embedded?: boolean;
+  fixedName?: boolean;
+  onPendingChange?(pending: boolean): void;
   mode: RoleEditorMode;
   onOpenExisting(roleId: string): void;
   onReload(): void;
@@ -58,9 +60,16 @@ function roleStatusLabel(role?: RoleDetails): string {
   return role.status === "in-use" ? "Đang sử dụng" : "Đã ngừng dùng";
 }
 
-function ImpactAccountList({ accounts }: { accounts: readonly RoleImpactAccount[] }) {
+function ImpactAccountList({
+  accounts,
+}: {
+  accounts: readonly RoleImpactAccount[];
+}) {
   return (
-    <ul className="max-h-60 space-y-2 overflow-y-auto" aria-label="Tài khoản bị ảnh hưởng">
+    <ul
+      className="max-h-60 space-y-2 overflow-y-auto"
+      aria-label="Tài khoản bị ảnh hưởng"
+    >
       {accounts.map((account) => (
         <li
           className="rounded-control border border-border bg-surface-subtle p-3"
@@ -80,6 +89,8 @@ function ImpactAccountList({ accounts }: { accounts: readonly RoleImpactAccount[
 export function RoleEditor({
   catalog,
   embedded = false,
+  fixedName = false,
+  onPendingChange,
   mode,
   onOpenExisting,
   onReload,
@@ -91,22 +102,31 @@ export function RoleEditor({
     () => createInitialPermissions(catalog, role),
     [catalog, role],
   );
-  const initialName = mode === "copy" && role ? `Bản sao của ${role.name}` : role?.name ?? "";
+  const initialName =
+    mode === "copy" && role ? `Bản sao của ${role.name}` : (role?.name ?? "");
   const initialDescription = role?.description ?? "";
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [alert, setAlert] = useState<EditorAlert>();
   const [description, setDescription] = useState(initialDescription);
   const [duplicateRoleId, setDuplicateRoleId] = useState<string>();
-  const [impactAccounts, setImpactAccounts] = useState<readonly RoleImpactAccount[]>([]);
+  const [impactAccounts, setImpactAccounts] = useState<
+    readonly RoleImpactAccount[]
+  >([]);
   const [isDiscontinueDialogOpen, setIsDiscontinueDialogOpen] = useState(false);
+  const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
   const [isImpactDialogOpen, setIsImpactDialogOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [name, setName] = useState(initialName);
   const [nameError, setNameError] = useState<string>();
-  const [permissionErrors, setPermissionErrors] = useState<Record<string, string>>({});
+  const [permissionErrors, setPermissionErrors] = useState<
+    Record<string, string>
+  >({});
   const [permissions, setPermissions] = useState(initialPermissions);
   const isExistingRole = mode === "edit" && Boolean(role);
   const isReadOnly = isExistingRole && role?.status === "discontinued";
+  useEffect(() => {
+    onPendingChange?.(isPending);
+  }, [isPending, onPendingChange]);
   const hasChanges =
     mode !== "edit" ||
     name !== initialName ||
@@ -127,10 +147,10 @@ export function RoleEditor({
     return {
       confirmImpact,
       description,
-      id: isExistingRole ? role?.id ?? null : null,
+      id: isExistingRole ? (role?.id ?? null) : null,
       name,
       permissions,
-      recordVersion: isExistingRole ? role?.recordVersion ?? null : null,
+      recordVersion: isExistingRole ? (role?.recordVersion ?? null) : null,
     };
   }
 
@@ -143,7 +163,9 @@ export function RoleEditor({
 
     setPermissionErrors(nextPermissionErrors);
     if (!metadata.success) {
-      setNameError(metadata.error.issues[0]?.message ?? formatMessage({ code: "MSG01" }));
+      setNameError(
+        metadata.error.issues[0]?.message ?? formatMessage({ code: "MSG01" }),
+      );
       nameInputRef.current?.focus();
       return false;
     }
@@ -155,7 +177,9 @@ export function RoleEditor({
         const candidates = document.querySelectorAll<HTMLElement>(
           `[data-permission-feature="${featureCode}"]`,
         );
-        Array.from(candidates).find((candidate) => candidate.offsetParent !== null)?.focus();
+        Array.from(candidates)
+          .find((candidate) => candidate.offsetParent !== null)
+          ?.focus();
       });
       return false;
     }
@@ -171,7 +195,9 @@ export function RoleEditor({
     setIsPending(true);
 
     try {
-      const result = await roleManagementService.save(createSaveInput(confirmImpact));
+      const result = await roleManagementService.save(
+        createSaveInput(confirmImpact),
+      );
 
       if (result.status === "session-expired") {
         sessionExpiryChannel.publish(result.message);
@@ -261,6 +287,37 @@ export function RoleEditor({
     }
   }
 
+  async function reactivateRole() {
+    if (!role || isPending) return;
+    setIsPending(true);
+    setAlert(undefined);
+    try {
+      const result = await roleManagementService.reactivate({
+        id: role.id,
+        recordVersion: role.recordVersion,
+      });
+      if (result.status === "session-expired") {
+        sessionExpiryChannel.publish(result.message);
+        return;
+      }
+      if (result.status !== "reactivated") {
+        setAlert({
+          message: formatMessage(result.message),
+          tone: result.status === "conflict" ? "warning" : "danger",
+        });
+        return;
+      }
+      setIsReactivateDialogOpen(false);
+      notify({ title: "Vai trò đã được khôi phục sử dụng.", tone: "success" });
+      onSaved(result.role);
+    } catch {
+      setAlert({ message: formatMessage({ code: "MSG04" }), tone: "danger" });
+    } finally {
+      setIsReactivateDialogOpen(false);
+      setIsPending(false);
+    }
+  }
+
   return (
     <section
       className={
@@ -270,41 +327,59 @@ export function RoleEditor({
       }
     >
       {!embedded && (
-      <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
-        <div>
-          <p className="text-sm font-semibold text-primary">
-            {mode === "create" ? "Tạo vai trò" : mode === "copy" ? "Sao chép vai trò" : "Chi tiết vai trò"}
-          </p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-text">
-            {mode === "create" ? "Vai trò mới" : role?.name ?? "Vai trò"}
-          </h2>
+        <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+          <div>
+            <p className="text-sm font-semibold text-primary">
+              {mode === "create"
+                ? "Tạo vai trò"
+                : mode === "copy"
+                  ? "Sao chép vai trò"
+                  : "Chi tiết vai trò"}
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-text">
+              {mode === "create" ? "Vai trò mới" : (role?.name ?? "Vai trò")}
+            </h2>
+          </div>
+          <span
+            className={`w-fit rounded-full px-3 py-1.5 text-sm font-semibold ${
+              role?.status === "discontinued"
+                ? "bg-surface-subtle text-text-muted"
+                : "bg-emerald-50 text-success"
+            }`}
+          >
+            {roleStatusLabel(isExistingRole ? role : undefined)}
+          </span>
         </div>
-        <span
-          className={`w-fit rounded-full px-3 py-1.5 text-sm font-semibold ${
-            role?.status === "discontinued"
-              ? "bg-surface-subtle text-text-muted"
-              : "bg-emerald-50 text-success"
-          }`}
-        >
-          {roleStatusLabel(isExistingRole ? role : undefined)}
-        </span>
-      </div>
       )}
 
       <div className={`space-y-6 ${embedded ? "" : "p-5 sm:p-6"}`}>
         {isReadOnly && (
           <div className="rounded-control border border-border bg-surface-subtle p-4 text-sm leading-6 text-text-muted">
-            Vai trò này đã ngừng dùng nên chỉ có thể xem hoặc sao chép. OMTS không xóa vai trò để giữ lịch sử cấp quyền.
+            {fixedName
+              ? "Vai trò đã ngừng dùng. Khôi phục sử dụng để tiếp tục cấu hình và cấp quyền mới; các quyền đã thu hồi không tự được cấp lại."
+              : "Vai trò này đã ngừng dùng nên chỉ có thể xem hoặc sao chép. OMTS không xóa vai trò để giữ lịch sử cấp quyền."}
           </div>
         )}
 
         <div className="grid gap-5 lg:grid-cols-2">
           <div>
-            <label className="block text-sm font-semibold text-text" htmlFor="role-name">
-              Tên vai trò<span aria-hidden="true" className="ml-1 text-danger">*</span>
+            <label
+              className="block text-sm font-semibold text-text"
+              htmlFor="role-name"
+            >
+              Tên vai trò
+              <span aria-hidden="true" className="ml-1 text-danger">
+                *
+              </span>
             </label>
             <input
-              aria-describedby={nameError ? "role-name-error" : undefined}
+              aria-describedby={
+                nameError
+                  ? "role-name-error"
+                  : fixedName
+                    ? "role-name-hint"
+                    : undefined
+              }
               aria-invalid={nameError ? true : undefined}
               className={`mt-2 min-h-12 w-full rounded-control border bg-surface px-3.5 text-base text-text outline-none transition ${
                 nameError
@@ -313,6 +388,7 @@ export function RoleEditor({
               }`}
               disabled={isReadOnly || isPending}
               id="role-name"
+              readOnly={fixedName}
               maxLength={100}
               onChange={(event) => {
                 setName(event.target.value);
@@ -322,15 +398,31 @@ export function RoleEditor({
               required
               value={name}
             />
+            {fixedName && (
+              <p
+                id="role-name-hint"
+                className="mt-2 text-xs leading-5 text-text-muted"
+              >
+                Tên vai trò do hệ thống quy định. Bạn có thể điều chỉnh quyền
+                bên dưới.
+              </p>
+            )}
             {nameError && (
-              <p className="mt-1.5 text-sm font-medium text-danger" id="role-name-error" role="alert">
+              <p
+                className="mt-1.5 text-sm font-medium text-danger"
+                id="role-name-error"
+                role="alert"
+              >
                 {nameError}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-text" htmlFor="role-description">
+            <label
+              className="block text-sm font-semibold text-text"
+              htmlFor="role-description"
+            >
               Mô tả
             </label>
             <textarea
@@ -345,8 +437,13 @@ export function RoleEditor({
 
         {isExistingRole && role && role.activeAccountCount > 0 && (
           <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-control border border-info/20 bg-info-soft p-4 text-sm text-info">
-            <span><strong>{role.activeAccountCount}</strong> tài khoản đang giữ vai trò</span>
-            <span><strong>{role.activeZoneCount}</strong> khu vực bị ảnh hưởng</span>
+            <span>
+              <strong>{role.activeAccountCount}</strong> tài khoản đang giữ vai
+              trò
+            </span>
+            <span>
+              <strong>{role.activeZoneCount}</strong> khu vực bị ảnh hưởng
+            </span>
           </div>
         )}
 
@@ -354,7 +451,8 @@ export function RoleEditor({
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-text">Ma trận quyền</h3>
             <p className="mt-1 text-sm leading-6 text-text-muted">
-              Chọn quyền theo từng chức năng. Khi có quyền thao tác, quyền Xem được bật và giữ tự động.
+              Chọn quyền theo từng chức năng. Khi có quyền thao tác, quyền Xem
+              được bật và giữ tự động.
             </p>
           </div>
           <PermissionMatrixEditor
@@ -405,7 +503,7 @@ export function RoleEditor({
           </div>
         )}
 
-        <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-3 border-t border-border bg-surface py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             {isExistingRole && role?.status === "in-use" && (
               <Button
@@ -415,6 +513,15 @@ export function RoleEditor({
                 variant="danger"
               >
                 Ngừng sử dụng
+              </Button>
+            )}
+            {fixedName && isReadOnly && (
+              <Button
+                className="sm:w-auto"
+                disabled={isPending}
+                onClick={() => setIsReactivateDialogOpen(true)}
+              >
+                Khôi phục sử dụng
               </Button>
             )}
           </div>
@@ -476,6 +583,16 @@ export function RoleEditor({
           </Button>
         </div>
       </Dialog>
+
+      <ConfirmDialog
+        confirmLabel="Khôi phục sử dụng"
+        description="Vai trò sẽ xuất hiện trở lại khi phân quyền mới. Những quyền truy cập đã thu hồi vẫn được giữ nguyên lịch sử."
+        isPending={isPending}
+        onConfirm={() => void reactivateRole()}
+        onOpenChange={setIsReactivateDialogOpen}
+        open={isReactivateDialogOpen}
+        title={`Khôi phục vai trò ${role?.name ?? ""}?`}
+      />
 
       <ConfirmDialog
         confirmLabel="Ngừng sử dụng"

@@ -10,11 +10,13 @@ import { createVerificationService } from "@/features/verification/services/veri
 
 type MockAccountRecoveryEnvironmentOptions = Readonly<{
   latencyMs?: number;
+  onPasswordReset?: (input: Readonly<{ identifier: string; newPassword: string }>) => void;
   verification?: Omit<MockVerificationOptions, "onVerified">;
 }>;
 
 export function createMockAccountRecoveryEnvironment({
   latencyMs,
+  onPasswordReset,
   verification,
 }: MockAccountRecoveryEnvironmentOptions = {}) {
   const proofs = new Map<VerificationToken, MockVerifiedProof>();
@@ -29,9 +31,10 @@ export function createMockAccountRecoveryEnvironment({
       if (!proof || proof.purpose !== "recovery") return false;
 
       proofs.delete(token);
-      return true;
+      return { identifier: proof.recipientValue };
     },
     latencyMs,
+    onPasswordReset,
     verificationService,
   });
 

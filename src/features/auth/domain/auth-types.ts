@@ -49,7 +49,7 @@ type StaffPasswordChangeRequired = Readonly<{
     ...OnboardingContactChannel[],
   ];
   checklist: Readonly<{
-    contactVerified: false;
+    contactVerified: boolean;
     passwordChanged: false;
   }>;
   nextStep: "change-temporary-password";

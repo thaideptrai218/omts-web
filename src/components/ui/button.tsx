@@ -41,7 +41,7 @@ export function Button({
           className="size-5 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
         />
       )}
-      <span>{isPending ? pendingLabel : children}</span>
+      <span className="inline-flex items-center justify-center gap-2">{isPending ? pendingLabel : children}</span>
     </button>
   );
 }

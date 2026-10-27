@@ -13,6 +13,7 @@ import { employeeEditorSchema } from "@/features/employee-management/schemas/emp
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 
 type MockOptions = Readonly<{
+  getAccounts?: () => readonly EmployeeAccountSummary[];
   accounts: readonly EmployeeAccountSummary[];
   initialEmployees: readonly EmployeeProfile[];
   isAuthorized?: boolean;
@@ -42,14 +43,16 @@ function sameName(first: string, second: string): boolean {
 }
 
 export function createMockEmployeeManagementRepository({
-  accounts,
+  accounts: initialAccounts,
+  getAccounts,
   initialEmployees,
   isAuthorized = true,
   isSessionExpired = false,
   latencyMs = 350,
   actorName = "Lê Minh Hải",
   now = () => new Date(),
-}: MockOptions): EmployeeManagementRepository {
+}: MockOptions): EmployeeManagementRepository & Readonly<{ snapshotEmployees(): readonly EmployeeProfile[] }> {
+  let accounts = initialAccounts;
   let employees = initialEmployees.map(cloneEmployee);
   let nextEmployeeNumber = employees.length + 1;
   let nextVersion = employees.length + 1;
@@ -87,6 +90,7 @@ export function createMockEmployeeManagementRepository({
     if (!isAuthorized) {
       return { message: { code: "MSG02" }, status: "forbidden" } as const;
     }
+    accounts = getAccounts?.() ?? accounts;
   }
 
   function workspace(): EmployeeManagementWorkspace {
@@ -105,6 +109,7 @@ export function createMockEmployeeManagementRepository({
   }
 
   return {
+    snapshotEmployees: () => employees.map(cloneEmployee),
     async load() {
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;

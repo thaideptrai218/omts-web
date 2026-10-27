@@ -3,10 +3,18 @@ import type {
   RoleDetails,
 } from "@/features/role-management/domain/role-management";
 
-const createAction = { category: "create", key: "CREATE", label: "Tạo" } as const;
+const createAction = {
+  category: "create",
+  key: "CREATE",
+  label: "Tạo",
+} as const;
 const viewAction = { category: "view", key: "VIEW", label: "Xem" } as const;
 const editAction = { category: "edit", key: "EDIT", label: "Sửa" } as const;
-const deleteAction = { category: "delete", key: "DELETE", label: "Xóa" } as const;
+const deleteAction = {
+  category: "delete",
+  key: "DELETE",
+  label: "Xóa",
+} as const;
 
 const zoneScope = {
   options: [
@@ -58,7 +66,8 @@ export const mockRoles = [
   {
     activeAccountCount: 2,
     activeZoneCount: 2,
-    description: "Theo dõi và điều phối hoạt động tại các khu nuôi được phân công.",
+    description:
+      "Theo dõi và điều phối hoạt động tại các khu nuôi được phân công.",
     id: "role-zone-manager",
     impactAccounts: [
       {
@@ -87,7 +96,11 @@ export const mockRoles = [
         dataScopeId: "ZONE",
         featureCode: "RAFT",
       },
-      { actionKeys: ["VIEW"], dataScopeId: "ZONE", featureCode: "PAYMENT_RECEIPT" },
+      {
+        actionKeys: ["VIEW"],
+        dataScopeId: "ZONE",
+        featureCode: "PAYMENT_RECEIPT",
+      },
     ],
     recordVersion: "role-v1",
     status: "in-use",
@@ -115,7 +128,8 @@ export const mockRoles = [
   {
     activeAccountCount: 0,
     activeZoneCount: 0,
-    description: "Vai trò lưu lại để tham khảo, không còn dùng khi cấp quyền mới.",
+    description:
+      "Vai trò lưu lại để tham khảo, không còn dùng khi cấp quyền mới.",
     id: "role-observer-old",
     impactAccounts: [],
     name: "Theo dõi cũ",
@@ -129,3 +143,26 @@ export const mockRoles = [
     status: "discontinued",
   },
 ] as const satisfies readonly RoleDetails[];
+
+// Canonical product fixture after the fixed-role decision. The legacy mockRoles
+// above remains for isolated historical contract tests, not the active picker.
+export const mockFixedRoles: readonly RoleDetails[] = [
+  mockRoles[0],
+  mockRoles[1],
+  {
+    id: "role-staff",
+    name: "Nhân viên",
+    description:
+      "Quyền công việc do Chủ hợp tác xã cấu hình theo nhu cầu phân công.",
+    status: "in-use",
+    activeAccountCount: 0,
+    activeZoneCount: 0,
+    impactAccounts: [],
+    recordVersion: "role-staff-v1",
+    permissions: mockFeatureCatalog.map((feature) => ({
+      featureCode: feature.code,
+      actionKeys: [],
+      dataScopeId: null,
+    })),
+  },
+];

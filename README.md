@@ -12,10 +12,13 @@ Team repositories: [Web](https://github.com/thaideptrai218/omts-web) · [Backend
 
 For a presentation without development overlays, use `npm run build` followed by `npm run start`. Use `npm run dev` while editing code.
 
-> Last updated: **October 26, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
+> Last updated: **October 27, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
 
 - **The UI can run with mock data** without a backend, database, Docker, or Redis.
 - Cooperative profile, employee, account, role, and personal profile screens currently use mock service/repository adapters.
+- The review build shares mock state between management screens: updated role permissions can be assigned, new accounts can be linked to employees, and dashboard counts update. Created staff accounts can complete first-login password/contact setup; account locking and password reset affect their mock login. Personal profile changes, password recovery, and notification settings can be demonstrated without a backend.
+- The approved October 27 role policy is now **three fixed zone roles: Zone Manager, Accountant, and Staff**. Owners can edit permissions and discontinue/reactivate roles; they cannot add, copy, or rename roles. Staff initially has no business permissions. This policy is implemented in the product mock; backend/SRS alignment is tracked separately.
+- Dashboard headings and permitted shortcuts render while metrics load. Management directories now include clearer rows, summaries and combined filters; editors continue to open in dialogs.
 - Real API integration through the Next.js BFF is in progress. Some session, authorization, and routing layers are implemented, but **a complete real-API login → profile → logout flow is not available yet**. Live token refresh remains disabled.
 - The current UI work is on `feature/OMTS-132-web-foundation` and has not been merged into `develop`. Check out the correct branch to review the screens and configuration described below.
 
@@ -114,6 +117,10 @@ These accounts exist only in the **frontend mock**. They are not backend or QA c
 | `sysadmin` | System Administrator: cooperative provisioning |
 | `staff-first-login` | First-login onboarding: change the temporary password and verify contact information; not intended for a quick management UI review |
 
+You can also use **`nguyen.an`** (zone manager) or **`pham.cuong`** (zone manager in Khu Nam). `staff-verified` remains a review alias for `nguyen.an`. `tran.binh` is a locked fixture and should be rejected. These fixtures also use `demo123` initially.
+
+For newly created mock staff accounts, use the generated username shown in the delivery receipt and the same **public mock password** `demo123`. The first login requires a new password and one verified contact. In this review mode, OTP codes are `123456` for the initial send, then `654321` and `112233` after resends. No actual email or SMS is sent. These values are not backend credential-generation rules or production secrets.
+
 For a quick management UI review, use **`owner / demo123`**. Account fixtures are defined in [mock-auth-repository.ts](src/features/auth/repositories/mock-auth-repository.ts).
 
 The mock does not send real email or SMS. Mock data is separate from backend data; many changes exist only in the current browser session and may be lost on reload. Mock authentication also does not survive a page reload like a real server session.
@@ -131,7 +138,7 @@ Sign in with the appropriate account and use the sidebar to navigate. Opening a 
 | `/employees` | Employee list/editor and account linking/unlinking | Owner |
 | `/access/accounts` | Internal accounts, account status, and zone-based access grants | Owner |
 | `/access/roles` | Roles and permissions | Owner |
-| `/account` | Personal profile and account settings | Signed-in users, subject to each action's permissions and prerequisites |
+| `/account` | Personal profile, change-password dialog, and notification-preferences dialog | Signed-in users, subject to each action's permissions and prerequisites |
 | `/system/cooperatives/new` | Cooperative provisioning | Sysadmin |
 
 This table lists existing UI screens, not use cases accepted against a real API. Income, expenses, rafts, and harvest metrics display the appropriate no-data state when their data sources are unavailable.

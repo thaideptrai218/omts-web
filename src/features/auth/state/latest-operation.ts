@@ -1,4 +1,5 @@
 export type OperationHandle = Readonly<{
+  isCurrent(): boolean;
   commit(action: () => void): boolean;
 }>;
 
@@ -12,10 +13,12 @@ export function createLatestOperationTracker(): LatestOperationTracker {
   return {
     start() {
       const operationId = ++latestOperationId;
+      const isCurrent = () => operationId === latestOperationId;
 
       return {
+        isCurrent,
         commit(action) {
-          if (operationId !== latestOperationId) return false;
+          if (!isCurrent()) return false;
 
           action();
           return true;

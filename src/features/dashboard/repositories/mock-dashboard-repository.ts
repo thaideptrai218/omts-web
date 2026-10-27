@@ -2,6 +2,12 @@ import { mockManagedAccounts, mockFarmingZones } from "@/features/account-manage
 import type { DashboardRepository } from "@/features/dashboard/repositories/dashboard-repository";
 import { mockEmployeeProfiles } from "@/features/employee-management/mocks/employee-management-fixtures";
 import { mockRoles } from "@/features/role-management/mocks/role-management-fixtures";
+import type { ManagedAccount, FarmingZoneOption } from "@/features/account-management/domain/account-management";
+import type { RoleDetails } from "@/features/role-management/domain/role-management";
+import type { EmployeeProfile } from "@/features/employee-management/domain/employee-management";
+
+type SummarySources = Readonly<{ accounts: readonly ManagedAccount[]; roles: readonly RoleDetails[];
+  zones: readonly FarmingZoneOption[]; employees: readonly EmployeeProfile[] }>;
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -9,12 +15,15 @@ function wait(milliseconds: number): Promise<void> {
 
 export function createMockDashboardRepository(
   latencyMs = 350,
+  getSources: () => SummarySources = () => ({ accounts: mockManagedAccounts, roles: mockRoles,
+    zones: mockFarmingZones, employees: mockEmployeeProfiles }),
 ): DashboardRepository {
   return {
     async load() {
       if (latencyMs > 0) await wait(latencyMs);
 
-      const internalAccounts = mockManagedAccounts.filter(
+      const source = getSources();
+      const internalAccounts = source.accounts.filter(
         (account) => account.accountType === "internal",
       );
 
@@ -26,17 +35,17 @@ export function createMockDashboardRepository(
           lockedInternalAccountCount: internalAccounts.filter(
             (account) => account.status === "locked",
           ).length,
-          roleInUseCount: mockRoles.filter((role) => role.status === "in-use")
+          roleInUseCount: source.roles.filter((role) => role.status === "in-use")
             .length,
-          zoneInUseCount: mockFarmingZones.filter(
+          zoneInUseCount: source.zones.filter(
             (zone) => zone.status === "in-use",
           ).length,
         },
         workforce: {
-          employedCount: mockEmployeeProfiles.filter(
+          employedCount: source.employees.filter(
             (employee) => employee.status === "employed",
           ).length,
-          leftCount: mockEmployeeProfiles.filter(
+          leftCount: source.employees.filter(
             (employee) => employee.status === "left",
           ).length,
         },

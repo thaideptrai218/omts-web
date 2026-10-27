@@ -132,18 +132,27 @@ export function AuthProvider({ children, enabled = true }: { children: ReactNode
   }, [enabled, replaceState]);
 
   const changeTemporaryPassword = useCallback(
-    (input: CurrentPasswordChangeInput) => {
+    async (input: CurrentPasswordChangeInput) => {
       if (!enabled) throw new Error("AUTH_SERVICE_UNAVAILABLE");
-      return authService.changeTemporaryPassword(input);
+      const operation = operationTracker.current.start();
+      const result = await authService.changeTemporaryPassword(input);
+      if (result.status === "changed") {
+        const session = await authService.getSession();
+        if (session.status === "authenticated") operation.commit(() => replaceState(session));
+      }
+      return result;
     },
-    [enabled],
+    [enabled, replaceState],
   );
 
   const completeStaffOnboarding = useCallback(
     async (input: CompleteStaffOnboardingInput) => {
       if (!enabled) throw new Error("AUTH_SERVICE_UNAVAILABLE");
+      const operation = operationTracker.current.start();
       const result = await authService.completeStaffOnboarding(input);
-      if (grantsApplicationAccess(result)) replaceState(result.session);
+      if (grantsApplicationAccess(result)) {
+        operation.commit(() => replaceState(result.session));
+      }
       return result;
     },
     [enabled, replaceState],

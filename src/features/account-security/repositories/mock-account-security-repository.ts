@@ -8,6 +8,7 @@ import { satisfiesPasswordPolicy } from "@/shared/security/password-policy";
 type MockSessionState = "active" | "expired";
 
 type MockAccountSecurityOptions = Readonly<{
+  credentials?: Readonly<{ verify(password: string): boolean | undefined; replace(password: string): void }>;
   initialPassword?: string;
   latencyMs?: number;
   sessionState?: () => MockSessionState;
@@ -20,6 +21,7 @@ function wait(milliseconds: number): Promise<void> {
 }
 
 export function createMockAccountSecurityRepository({
+  credentials,
   initialPassword = defaultPassword,
   latencyMs = 450,
   sessionState = () => "active",
@@ -40,7 +42,8 @@ export function createMockAccountSecurityRepository({
         };
       }
 
-      if (input.currentPassword !== currentPassword) {
+      const verified = credentials?.verify(input.currentPassword);
+      if (!(verified ?? input.currentPassword === currentPassword)) {
         return {
           message: { code: "MSG17" },
           reason: "invalid-current-password",
@@ -57,6 +60,7 @@ export function createMockAccountSecurityRepository({
       }
 
       currentPassword = input.newPassword;
+      credentials?.replace(input.newPassword);
 
       return {
         message: { code: "MSG18" },

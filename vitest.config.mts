@@ -9,7 +9,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    // Keep Next/ESLint workers within a predictable memory budget alongside Docker.
-    maxWorkers: 4,
+    // Next/ESLint setup and nested CLI checks contend heavily on Windows.
+    // Keep every test, but use one local worker; Linux CI retains four.
+    maxWorkers: process.platform === "win32" ? 1 : 4,
   },
 });

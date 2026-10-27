@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { useDocumentScrollLock } from "./use-document-scroll-lock";
 
 type DialogProps = Readonly<{
   children: ReactNode;
@@ -68,6 +69,8 @@ export function Dialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
+
+  useDocumentScrollLock(open);
 
   useEffect(() => {
     const dialog = dialogRef.current;

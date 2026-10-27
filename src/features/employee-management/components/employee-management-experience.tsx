@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import {
+  ManagementHeading,
+  ManagementSummary,
+} from "@/components/ui/management-page";
 import { useToast } from "@/components/ui/toast-provider";
 import { AccountFollowUpDialog } from "@/features/employee-management/components/account-follow-up-dialog";
 import { EmployeeEditor } from "@/features/employee-management/components/employee-editor";
@@ -52,7 +57,10 @@ export function EmployeeManagementExperience() {
   const [isLoading, setIsLoading] = useState(true);
   const canManage =
     state.status === "authenticated" &&
-    hasEffectivePermission(state.account.access, "cooperative.employees.manage");
+    hasEffectivePermission(
+      state.account.access,
+      "cooperative.employees.manage",
+    );
   const selectedEmployee = workspace?.employees.find(
     (employee) => employee.id === selectedEmployeeId,
   );
@@ -125,8 +133,13 @@ export function EmployeeManagementExperience() {
     setIsCreating(false);
   }
 
-  function updateEmployee(employee: EmployeeProfile, nextFollowUp?: AccountFollowUp) {
-    setWorkspace((current) => current ? updateEmployeeWorkspace(current, employee) : current);
+  function updateEmployee(
+    employee: EmployeeProfile,
+    nextFollowUp?: AccountFollowUp,
+  ) {
+    setWorkspace((current) =>
+      current ? updateEmployeeWorkspace(current, employee) : current,
+    );
     setIsCreating(false);
     setFollowUp(nextFollowUp);
     notify({
@@ -141,8 +154,14 @@ export function EmployeeManagementExperience() {
   }
 
   function accountUnlinked(employee: EmployeeProfile) {
-    setWorkspace((current) => current ? updateEmployeeWorkspace(current, employee) : current);
-    notify({ title: "Đã bỏ liên kết", description: "Tài khoản đăng nhập vẫn được giữ lại.", tone: "success" });
+    setWorkspace((current) =>
+      current ? updateEmployeeWorkspace(current, employee) : current,
+    );
+    notify({
+      title: "Đã bỏ liên kết",
+      description: "Tài khoản đăng nhập vẫn được giữ lại.",
+      tone: "success",
+    });
   }
 
   if (state.status !== "authenticated") return null;
@@ -171,19 +190,11 @@ export function EmployeeManagementExperience() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-primary">Nhân sự hợp tác xã</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text sm:text-4xl">
-            Hồ sơ nhân viên
-          </h1>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-text-muted">
-            Quản lý thông tin nhân viên dùng cho phân công công việc, chấm công và tính lương.
-          </p>
-          <p className="mt-2 text-sm font-medium text-text-muted">
-            {employedCount} đang làm việc · {workspace.employees.length - employedCount} đã nghỉ
-          </p>
-        </div>
+      <ManagementHeading
+        title="Nhân viên"
+        description="Tra cứu nhân sự, cập nhật hồ sơ và quản lý liên kết tài khoản đăng nhập."
+        icon="users"
+      >
         <Button
           className="lg:w-auto"
           onClick={() => {
@@ -191,9 +202,25 @@ export function EmployeeManagementExperience() {
             setSelectedEmployeeId(undefined);
           }}
         >
-          Thêm nhân viên
+          <InterfaceIcon name="add" /> Thêm nhân viên
         </Button>
-      </header>
+      </ManagementHeading>
+      <ManagementSummary
+        items={[
+          {
+            label: "Tổng hồ sơ",
+            value: workspace.employees.length,
+            icon: "users",
+          },
+          { label: "Đang làm việc", value: employedCount, icon: "check" },
+          {
+            label: "Đã liên kết tài khoản",
+            value: workspace.employees.filter((employee) => employee.account)
+              .length,
+            icon: "link",
+          },
+        ]}
+      />
 
       <EmployeeList
         employees={workspace.employees}
@@ -212,14 +239,18 @@ export function EmployeeManagementExperience() {
         }}
         open={isCreating || Boolean(selectedEmployee)}
         size="lg"
-        title={isCreating ? "Thêm nhân viên" : selectedEmployee?.fullName ?? "Hồ sơ nhân viên"}
+        title={
+          isCreating
+            ? "Thêm nhân viên"
+            : (selectedEmployee?.fullName ?? "Hồ sơ nhân viên")
+        }
       >
         {(isCreating || selectedEmployee) && (
           <EmployeeEditor
             availableAccounts={workspace.availableAccounts}
             embedded
             employee={isCreating ? undefined : selectedEmployee}
-            key={isCreating ? "create" : selectedEmployee?.id ?? "empty"}
+            key={isCreating ? "create" : (selectedEmployee?.id ?? "empty")}
             onOpenExisting={openEmployee}
             onPendingChange={setIsMutating}
             onSaved={updateEmployee}

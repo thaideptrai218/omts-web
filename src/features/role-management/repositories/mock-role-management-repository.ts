@@ -6,12 +6,20 @@ import type {
   RoleMutationResult,
   RolePermission,
   SaveRoleInput,
+  ReactivateRoleResult,
 } from "@/features/role-management/domain/role-management";
 import { validatePermissionMatrix } from "@/features/role-management/lib/role-permission-rules";
 import type { RoleManagementRepository } from "@/features/role-management/repositories/role-management-repository";
 import { roleEditorSchema } from "@/features/role-management/schemas/role-editor-schema";
 
 type MockRoleManagementOptions = Readonly<{
+  fixedNames?: Readonly<Record<string, string>>;
+  getUsage?: (
+    roleId: string,
+  ) => Pick<
+    RoleDetails,
+    "activeAccountCount" | "activeZoneCount" | "impactAccounts"
+  >;
   catalog: readonly FeatureCatalogItem[];
   initialRoles: readonly RoleDetails[];
   isAuthorized?: boolean;
@@ -44,12 +52,15 @@ function cloneRole(role: RoleDetails): RoleDetails {
 }
 
 export function createMockRoleManagementRepository({
+  fixedNames,
+  getUsage,
   catalog,
   initialRoles,
   isAuthorized = true,
   isSessionExpired = false,
   latencyMs = 350,
-}: MockRoleManagementOptions): RoleManagementRepository {
+}: MockRoleManagementOptions): RoleManagementRepository &
+  Readonly<{ snapshotRoles(): readonly RoleDetails[] }> {
   let roles = initialRoles.map(cloneRole);
   let nextRoleNumber = roles.length + 1;
   let nextVersion = roles.length + 1;
@@ -66,10 +77,16 @@ export function createMockRoleManagementRepository({
   }
 
   function findRole(id: string): RoleDetails | undefined {
-    return roles.find((role) => role.id === id);
+    const role = roles.find((role) => role.id === id);
+    return role ? withUsage(role) : undefined;
+  }
+
+  function withUsage(role: RoleDetails): RoleDetails {
+    return getUsage ? { ...role, ...getUsage(role.id) } : role;
   }
 
   return {
+    snapshotRoles: () => roles.map((role) => cloneRole(withUsage(role))),
     async load() {
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;
@@ -84,7 +101,7 @@ export function createMockRoleManagementRepository({
               : undefined,
             supportedActions: [...feature.supportedActions],
           })),
-          roles: roles.map(cloneRole),
+          roles: roles.map((role) => cloneRole(withUsage(role))),
         },
       };
     },
@@ -92,6 +109,10 @@ export function createMockRoleManagementRepository({
     async save(input: SaveRoleInput): Promise<RoleMutationResult> {
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;
+
+      if (fixedNames && (!input.id || !Object.hasOwn(fixedNames, input.id))) {
+        return { status: "forbidden", message: { code: "MSG02" } };
+      }
 
       const metadata = roleEditorSchema.safeParse({
         description: input.description,
@@ -102,6 +123,18 @@ export function createMockRoleManagementRepository({
           field: "name",
           message: { code: "MSG01" },
           status: "invalid-input",
+        };
+      }
+
+      if (
+        fixedNames &&
+        input.id &&
+        metadata.data.name !== fixedNames[input.id]
+      ) {
+        return {
+          status: "invalid-input",
+          field: "name",
+          message: { code: "MSG01" },
         };
       }
 
@@ -117,7 +150,9 @@ export function createMockRoleManagementRepository({
       const duplicate = roles.find(
         (role) =>
           role.id !== input.id &&
-          role.name.localeCompare(metadata.data.name, "vi", { sensitivity: "base" }) === 0,
+          role.name.localeCompare(metadata.data.name, "vi", {
+            sensitivity: "base",
+          }) === 0,
       );
       if (duplicate) {
         return {
@@ -128,7 +163,13 @@ export function createMockRoleManagementRepository({
       }
 
       const currentRole = input.id ? findRole(input.id) : undefined;
-      if (input.id && (!currentRole || currentRole.recordVersion !== input.recordVersion)) {
+      if (fixedNames && currentRole?.status === "discontinued") {
+        return { status: "forbidden", message: { code: "MSG02" } };
+      }
+      if (
+        input.id &&
+        (!currentRole || currentRole.recordVersion !== input.recordVersion)
+      ) {
         return {
           message: {
             code: "MSG06",
@@ -238,6 +279,40 @@ export function createMockRoleManagementRepository({
         message: { code: "MSG10", params: { object_name: "Vai trò" } },
         role: cloneRole(discontinuedRole),
         status: "discontinued",
+      };
+    },
+
+    async reactivate(
+      input: DiscontinueRoleInput,
+    ): Promise<ReactivateRoleResult> {
+      const earlyResult = await prepareRequest();
+      if (earlyResult) return earlyResult;
+      if (fixedNames && !Object.hasOwn(fixedNames, input.id)) {
+        return { status: "forbidden", message: { code: "MSG02" } };
+      }
+      const currentRole = findRole(input.id);
+      if (!currentRole || currentRole.recordVersion !== input.recordVersion) {
+        return {
+          status: "conflict",
+          message: {
+            code: "MSG06",
+            params: { time: "vừa xong", user_name: "một người dùng khác" },
+          },
+        };
+      }
+      const restored: RoleDetails =
+        currentRole.status === "in-use"
+          ? currentRole
+          : {
+              ...currentRole,
+              status: "in-use",
+              recordVersion: `role-v${++nextVersion}`,
+            };
+      roles = roles.map((role) => (role.id === restored.id ? restored : role));
+      return {
+        status: "reactivated",
+        role: cloneRole(restored),
+        message: { code: "MSG10", params: { object_name: "Vai trò" } },
       };
     },
   };

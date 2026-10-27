@@ -10,6 +10,8 @@ import {
 import { createVerificationService } from "@/features/verification/services/verification-service";
 
 type MockPersonalProfileEnvironmentOptions = Readonly<{
+  isIdentifierTaken?: (value: string) => boolean;
+  onProfileSaved?: (profile: PersonalProfile) => void;
   initialProfile?: PersonalProfile;
   isAmbiguousTraderPhone?: (value: string) => boolean;
   isSessionActive?: () => boolean;
@@ -19,6 +21,8 @@ type MockPersonalProfileEnvironmentOptions = Readonly<{
 
 export function createMockPersonalProfileEnvironment({
   initialProfile,
+  isIdentifierTaken,
+  onProfileSaved,
   isAmbiguousTraderPhone,
   isSessionActive,
   latencyMs,
@@ -56,6 +60,8 @@ export function createMockPersonalProfileEnvironment({
     consumeVerificationProof: ({ token }) => proofs.delete(token),
     hasVerificationProof: matchesProof,
     initialProfile,
+    isIdentifierTaken,
+    onProfileSaved,
     isAmbiguousTraderPhone,
     isSessionActive,
     latencyMs,

@@ -1,10 +1,13 @@
-export type EffectivePermissionKey =
-  | "access.accounts.manage"
-  | "access.roles.manage"
-  | "cooperative.employees.manage"
-  | "cooperative.profile.manage"
-  | "platform.cooperative.provision"
-  | "workspace.overview.view";
+export const effectivePermissionKeys = [
+  "access.accounts.manage",
+  "access.roles.manage",
+  "cooperative.employees.manage",
+  "cooperative.profile.manage",
+  "platform.cooperative.provision",
+  "workspace.overview.view",
+] as const;
+
+export type EffectivePermissionKey = (typeof effectivePermissionKeys)[number];
 
 export type AccessScope =
   | Readonly<{ kind: "global" }>

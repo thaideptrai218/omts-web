@@ -1,29 +1,32 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import {
+  DirectoryEmpty,
+  PersonAvatar,
+  StatusPill,
+  directoryRowStyles,
+} from "@/components/ui/management-page";
 import {
   getEffectiveAssignments,
   matchesAccountListFilters,
-} from "@/features/account-management/components/account-list-view";
+} from "./account-list-view";
 import type {
   AssignableRole,
   FarmingZoneOption,
   ManagedAccount,
-} from "@/features/account-management/domain/account-management";
+} from "../domain/account-management";
 
-type AccountListProps = Readonly<{
+type Props = Readonly<{
   accounts: readonly ManagedAccount[];
   onSelect(accountId: string): void;
   roles: readonly AssignableRole[];
   selectedAccountId?: string;
   zones: readonly FarmingZoneOption[];
 }>;
-
-function accountTypeLabel(account: ManagedAccount) {
-  if (account.accountType === "cooperative-owner") return "Chủ HTX";
-  if (account.accountType === "system-administrator") return "Quản trị hệ thống";
-  return "Nội bộ";
-}
+const fieldStyles =
+  "mt-2 min-h-11 w-full min-w-0 rounded-control border border-border bg-surface px-3 text-sm font-normal text-text";
 
 export function AccountList({
   accounts,
@@ -31,11 +34,12 @@ export function AccountList({
   roles,
   selectedAccountId,
   zones,
-}: AccountListProps) {
+}: Props) {
   const [query, setQuery] = useState("");
   const [roleId, setRoleId] = useState("all");
   const [zoneId, setZoneId] = useState("all");
-  const accountRows = useMemo(
+  const [status, setStatus] = useState("all");
+  const rows = useMemo(
     () =>
       accounts.map((account) => ({
         account,
@@ -43,148 +47,223 @@ export function AccountList({
       })),
     [accounts, roles, zones],
   );
-  const filteredAccounts = useMemo(
-    () =>
-      accountRows.filter(({ account, assignments }) =>
-        matchesAccountListFilters(account, assignments, {
-          query,
-          roleId,
-          zoneId,
-        }),
-      ),
-    [accountRows, query, roleId, zoneId],
+  const visible = rows.filter(
+    ({ account, assignments }) =>
+      (status === "all" || account.status === status) &&
+      matchesAccountListFilters(account, assignments, {
+        query,
+        roleId,
+        zoneId,
+      }),
   );
-  const activeRoles = roles.filter((role) => role.status === "in-use");
-  const activeZones = zones.filter((zone) => zone.status === "in-use");
-  const hasActiveFilters = Boolean(query.trim()) || roleId !== "all" || zoneId !== "all";
+  const hasFilters =
+    Boolean(query.trim()) ||
+    roleId !== "all" ||
+    zoneId !== "all" ||
+    status !== "all";
 
   return (
-    <section className="min-w-0 rounded-card border border-border bg-surface p-4 shadow-card sm:p-5">
-      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_14rem_14rem]">
-        <label className="min-w-0 text-sm font-semibold text-text" htmlFor="account-search">
-          Tìm tài khoản
-          <input
-            className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 font-normal text-text placeholder:text-text-muted"
-            id="account-search"
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Tên, username, vai trò hoặc vùng"
-            type="search"
-            value={query}
-          />
-        </label>
-
-        <label className="min-w-0 text-sm font-semibold text-text" htmlFor="account-zone-filter">
-          Vùng phụ trách
-          <select
-            className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 font-normal text-text"
-            id="account-zone-filter"
-            onChange={(event) => setZoneId(event.target.value)}
-            value={zoneId}
-          >
-            <option value="all">Tất cả vùng</option>
-            <option value="all-zones">Được phân công toàn HTX</option>
-            {activeZones.map((zone) => (
-              <option key={zone.id} value={zone.id}>{zone.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="min-w-0 text-sm font-semibold text-text" htmlFor="account-role-filter">
-          Vai trò đảm nhiệm
-          <select
-            className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 font-normal text-text"
-            id="account-role-filter"
-            onChange={(event) => setRoleId(event.target.value)}
-            value={roleId}
-          >
-            <option value="all">Tất cả vai trò</option>
-            {activeRoles.map((role) => (
-              <option key={role.id} value={role.id}>{role.name}</option>
-            ))}
-          </select>
-        </label>
+    <section
+      aria-label="Danh sách tài khoản nội bộ"
+      className="min-w-0 overflow-hidden rounded-card border border-border bg-surface"
+    >
+      <div className="border-b border-border p-4 sm:p-6">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_11rem_11rem_10rem]">
+          <div className="min-w-0">
+            <label
+              htmlFor="account-search"
+              className="text-sm font-medium text-text"
+            >
+              Tìm tài khoản
+            </label>
+            <div className="relative">
+              <InterfaceIcon
+                name="search"
+                className="pointer-events-none absolute left-3 top-5 size-5 text-text-muted"
+              />
+              <input
+                id="account-search"
+                type="search"
+                placeholder="Tên, username, điện thoại hoặc vùng"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className={`${fieldStyles} pl-10`}
+              />
+            </div>
+          </div>
+          <div className="min-w-0">
+            <label
+              htmlFor="account-zone-filter"
+              className="text-sm font-medium text-text"
+            >
+              Vùng phụ trách
+            </label>
+            <select
+              id="account-zone-filter"
+              value={zoneId}
+              onChange={(event) => setZoneId(event.target.value)}
+              className={fieldStyles}
+            >
+              <option value="all">Tất cả vùng</option>
+              <option value="all-zones">Được phân công toàn HTX</option>
+              {zones
+                .filter((zone) => zone.status === "in-use")
+                .map((zone) => (
+                  <option key={zone.id} value={zone.id}>
+                    {zone.label}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label
+              htmlFor="account-role-filter"
+              className="text-sm font-medium text-text"
+            >
+              Vai trò đảm nhiệm
+            </label>
+            <select
+              id="account-role-filter"
+              value={roleId}
+              onChange={(event) => setRoleId(event.target.value)}
+              className={fieldStyles}
+            >
+              <option value="all">Tất cả vai trò</option>
+              {roles
+                .filter((role) => role.status === "in-use")
+                .map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label
+              htmlFor="account-status-filter"
+              className="text-sm font-medium text-text"
+            >
+              Trạng thái tài khoản
+            </label>
+            <select
+              id="account-status-filter"
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              className={fieldStyles}
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Hoạt động</option>
+              <option value="locked">Đã khóa</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-4 flex min-h-8 items-center justify-between gap-3">
+          <p aria-live="polite" className="text-sm text-text-muted">
+            <strong className="font-semibold text-text">
+              {visible.length}
+            </strong>{" "}
+            / {accounts.length} tài khoản
+          </p>
+          {hasFilters && (
+            <button
+              className="min-h-11 rounded-control px-3 text-sm font-semibold text-primary hover:bg-primary-soft"
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setRoleId("all");
+                setZoneId("all");
+                setStatus("all");
+              }}
+            >
+              Xóa bộ lọc
+            </button>
+          )}
+        </div>
       </div>
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-text-muted">{filteredAccounts.length} tài khoản phù hợp</p>
-        {hasActiveFilters && (
-          <button
-            className="min-h-11 rounded-control px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft"
-            onClick={() => {
-              setQuery("");
-              setRoleId("all");
-              setZoneId("all");
-            }}
-            type="button"
-          >
-            Xóa bộ lọc
-          </button>
-        )}
+      <div
+        aria-hidden="true"
+        className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1.1fr)_8rem_1rem] gap-4 border-b border-border bg-surface-subtle px-6 py-3 text-xs font-medium text-text-muted lg:grid"
+      >
+        <span>Thông tin đăng nhập</span>
+        <span>Vai trò và vùng phụ trách</span>
+        <span>Trạng thái</span>
+        <span />
       </div>
-
-      {filteredAccounts.length === 0 ? (
-        <p className="mt-4 rounded-control bg-surface-subtle p-4 text-sm leading-6 text-text-muted">
-          Không tìm thấy tài khoản phù hợp.
-        </p>
+      {visible.length === 0 ? (
+        <DirectoryEmpty
+          title="Không tìm thấy tài khoản"
+          description="Thử từ khóa khác hoặc xóa bộ lọc vùng, vai trò và trạng thái."
+        />
       ) : (
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredAccounts.map(({ account, assignments }) => {
-            const isSelected = account.id === selectedAccountId;
-            return (
-              <li key={account.id}>
-                <button
-                  aria-current={isSelected ? "true" : undefined}
-                  className={`min-h-16 w-full rounded-control border p-3 text-left transition duration-200 motion-safe:hover:-translate-y-0.5 ${
-                    isSelected
-                      ? "border-primary bg-primary-soft"
-                      : "border-border bg-surface hover:border-primary/60 hover:bg-surface-subtle"
-                  }`}
-                  onClick={() => onSelect(account.id)}
-                  type="button"
-                >
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold text-text">
-                        {account.displayName}
-                      </span>
-                      <span className="mt-1 block truncate text-sm text-text-muted">
-                        @{account.username} · {accountTypeLabel(account)}
-                      </span>
+        <ul className="divide-y divide-border">
+          {visible.map(({ account, assignments }) => (
+            <li key={account.id}>
+              <button
+                type="button"
+                aria-current={
+                  selectedAccountId === account.id ? "true" : undefined
+                }
+                onClick={() => onSelect(account.id)}
+                className={`${directoryRowStyles} grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.1fr)_8rem_1rem] ${selectedAccountId === account.id ? "bg-primary-soft/50" : ""}`}
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <PersonAvatar name={account.displayName} />
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-text [overflow-wrap:anywhere]">
+                      {account.displayName}
                     </span>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
-                        account.status === "active"
-                          ? "bg-emerald-100 text-success"
-                          : "bg-rose-100 text-danger"
-                      }`}
-                    >
-                      {account.status === "active" ? "Hoạt động" : "Đã khóa"}
+                    <span className="mt-1 block text-sm text-text-muted [overflow-wrap:anywhere]">
+                      @{account.username}
+                    </span>
+                    <span className="mt-1 block text-xs text-text-muted [overflow-wrap:anywhere]">
+                      {account.phone ||
+                        account.email ||
+                        "Chưa có thông tin liên hệ"}
                     </span>
                   </span>
+                </span>
+                <span className="col-span-2 row-start-2 flex min-w-0 flex-wrap gap-2 lg:col-auto lg:row-auto">
                   {account.accountType === "cooperative-owner" ? (
-                    <span className="mt-3 inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-info">
-                      Chủ hợp tác xã · Toàn HTX
+                    <span className="text-sm font-medium text-primary">
+                      Chủ hợp tác xã{" "}
+                      <span className="block text-xs font-normal text-text-muted">
+                        Toàn hợp tác xã
+                      </span>
                     </span>
-                  ) : assignments.length > 0 ? (
-                    <span className="mt-3 flex flex-wrap gap-1.5">
-                      {assignments.map((assignment) => (
-                        <span
-                          className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary-hover"
-                          key={assignment.grantId}
-                        >
-                          {assignment.roleName} · {assignment.zoneLabel}
+                  ) : assignments.length ? (
+                    assignments.map((assignment) => (
+                      <span
+                        key={assignment.grantId}
+                        className="rounded-control bg-primary-soft px-3 py-2 text-xs text-primary"
+                      >
+                        <strong className="block font-semibold">
+                          {assignment.roleName}
+                        </strong>
+                        <span className="mt-0.5 block">
+                          {assignment.zoneLabel}
                         </span>
-                      ))}
-                    </span>
+                      </span>
+                    ))
                   ) : (
-                    <span className="mt-3 inline-flex rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-amber-800">
+                    <span className="text-sm text-warning">
                       Chưa được phân quyền
                     </span>
                   )}
-                </button>
-              </li>
-            );
-          })}
+                </span>
+                <span className="col-start-2 row-start-1 lg:col-auto lg:row-auto">
+                  <StatusPill
+                    tone={account.status === "active" ? "success" : "danger"}
+                  >
+                    {account.status === "active" ? "Hoạt động" : "Đã khóa"}
+                  </StatusPill>
+                </span>
+                <InterfaceIcon
+                  name="arrow"
+                  className="hidden size-4 text-text-muted transition-transform motion-safe:group-hover:translate-x-1 lg:block"
+                />
+              </button>
+            </li>
+          ))}
         </ul>
       )}
     </section>

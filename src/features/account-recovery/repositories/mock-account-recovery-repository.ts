@@ -12,7 +12,8 @@ import type { VerificationService } from "@/features/verification/services/verif
 import { satisfiesPasswordPolicy } from "@/shared/security/password-policy";
 
 type MockAccountRecoveryOptions = Readonly<{
-  consumeRecoveryProof(token: VerificationToken): boolean;
+  consumeRecoveryProof(token: VerificationToken): boolean | Readonly<{ identifier: string }>;
+  onPasswordReset?: (input: Readonly<{ identifier: string; newPassword: string }>) => void;
   latencyMs?: number;
   now?: () => number;
   verificationService: VerificationService;
@@ -24,6 +25,7 @@ function wait(milliseconds: number): Promise<void> {
 
 export function createMockAccountRecoveryRepository({
   consumeRecoveryProof,
+  onPasswordReset,
   latencyMs = 350,
   now = Date.now,
   verificationService,
@@ -65,7 +67,8 @@ export function createMockAccountRecoveryRepository({
         };
       }
 
-      if (!consumeRecoveryProof(input.verificationToken)) {
+      const proof = consumeRecoveryProof(input.verificationToken);
+      if (!proof) {
         return {
           message: { code: "MSG16" },
           reason: "verification-invalid",
@@ -73,6 +76,7 @@ export function createMockAccountRecoveryRepository({
         };
       }
 
+      if (typeof proof === "object") onPasswordReset?.({ identifier: proof.identifier, newPassword: input.newPassword });
       return { status: "password-reset" };
     },
 

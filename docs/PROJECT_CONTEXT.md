@@ -1,8 +1,10 @@
 # OMTS Web — current project context
 
-> Cập nhật: 26/10/2026 (Asia/Saigon)
+> Cập nhật: 27/10/2026 (Asia/Saigon)
 >
 > Update this summary when Jira, the current SRS, or an approved team decision changes. Planned work is not evidence that a feature has already been implemented.
+
+Latest UI evidence: [27/10 management polish review](reports/WEB_MANAGEMENT_POLISH_REVIEW_2026-10-27.md) and [popup scroll-lock follow-up](reports/WEB_DIALOG_SCROLL_LOCK_REVIEW_2026-10-27.md). Dashboard, employees, accounts and fixed roles were checked at 360/1024 px. P3 background scrolling is fixed with a shared, nested-safe lock for popups/mobile menu. Local suite: 1,632 passed/31 Redis skipped; final lint/typecheck/build and 24 HTTP assertions passed. This remains mock UI; API/refresh and backend role-policy migration are not enabled or accepted by this review.
 
 ## Product boundary
 
@@ -44,6 +46,16 @@ The current Figma file is a low-fidelity wireframe and a reference for informati
 ## Current code status
 
 ### Active priority — Web real API preparation (26/10/2026)
+
+**Polish quản trị và quyết định mới 27/10:** Duy Thái chốt chỉ ba role vùng Quản lý vùng/Kế toán/Nhân viên, tên cố định; Owner được sửa quyền và ngừng dùng/khôi phục. Nhân viên khởi tạo không có quyền nghiệp vụ. [Quyết định/đề xuất BA-backend](decisions/WEB_FIXED_ROLES_DECISION_2026-10-27.md) thay thế phần Add/Copy ở snapshot trước đối với product mock; SRS/Jira/backend không được tự sửa. [Plan polish](WEB_MANAGEMENT_POLISH_PLAN.md) và [nghiên cứu dashboard](decisions/DASHBOARD_LOADING_AND_AGGREGATION_PROPOSAL.md) tách hiển thị khung sớm khỏi tổng hợp số liệu trước. Không thêm cache/session policy hoặc cron, API/refresh vẫn tắt. Các báo cáo trước về tạo role tùy ý là lịch sử, không còn là hướng dẫn product hiện hành.
+
+**Ưu tiên bản trình diễn27/10:** Duy Thái yêu cầu hoàn thiện các luồng quản trị hiện có để thầy kiểm tra; đã quyết định chưa thêm đăng ký Thương lái Web. [Plan review](WEB_REVIEW_READINESS_PLAN.md) và [báo cáo](reports/WEB_REVIEW_READINESS_2026-10-27.md) ghi phần làm được và giới hạn. Mock auth/profile/recovery/security đã dùng chung nguồn credential RAM; account/role/employee/dashboard dùng chung trạng thái. Có Staff tạo mới→đổi mật khẩu→xác minh một liên hệ→hồ sơ; khóa/reset phản ánh vào login; notification dialog có readonly/reason và lưu theo account. Đây không phải API/DB thật hoặc nghiệm thu Jira.
+
+**G1 được chốt hướng27/10:** đồng ý cookie HttpOnly điều phối + ledger Redis, contract/fixture trước; browser thiếu Web Locks sẽ chặn login API và hướng dẫn cập nhật. Đã có contract/reference RAM9 cases; chưa thêm cookie/Redis/Web Locks runtime. Các câu “chờ chốt giao thức” ở snapshot trước đã được quyết định mới này thay thế về hướng, không có nghĩa đã kiểm xong mọi cổng. Refresh/API thật vẫn tắt.
+
+**Quyết định27/10 — WEB-API-08b:** Duy Thái chốt một lượt login đang chờ cho mỗi browser; tab khác chờ rồi kiểm tra lại phiên, mất phản hồi không tự gửi lại mật khẩu. Không coi đây là chấp thuận cookie/công nghệ hoặc logout offline. [Thiết kế G1 để review](decisions/WEB_LOGIN_COORDINATION_PROTOCOL_PROPOSAL.md) đã nêu bootstrap, ledger/generation, response muộn, giới hạn và micro-task; chưa code giao thức/mount API. W3.2 ở dòng dưới là snapshot26/10, câu “chờ chốt hành vi” đã được quyết định mới này thay thế. API/refresh vẫn tắt, các thay đổi local trước đó được giữ.
+
+**W3.2 chuẩn bị đọc phiên:** [báo cáo hydration](reports/WEB_W3_2_SESSION_HYDRATION_PREPARATION_2026-10-26.md) có schema BFF browser, reader cùng origin và test loại kết quả cũ bằng operation tracker. Ghép gateway/DAL/HTTP sang parser bằng fixture đã kiểm A/B, phase, quyền lỗi và revoke; reader chưa import vào AuthProvider/service/product. W3.2 chưa hoàn thành phần UI/browser E2E, profile/name source và phối hợp login/logout. [Đề xuất login nhiều tab](decisions/WEB_LOGIN_CONCURRENCY_PROPOSAL.md) đã gửi để chốt hành vi, không tự thêm cookie/giao thức hoặc bật API/refresh. CI trên commit c2415cc: build-test/Gitleaks/pr-title SUCCESS, GitGuardian FAILURE; không gọi toàn bộ checks xanh.
 
 **W3.1b chuẩn bị HTTP/runtime:** [báo cáo](reports/WEB_W3_1B_LOGIN_HTTP_RUNTIME_PREPARATION_2026-10-26.md) ghi nhận factory login chưa mount, runtime đọc/ghi chung owner/store, cancellation và khả năng hủy candidate trước khi trao cookie. Đã chốt WEB-API-08: giữ phiên đang hợp lệ; muốn đổi tài khoản phải logout trước. Sửa kết quả resolve về muộn sau runtime close. W3.1b chưa hoàn thành: coordination hai anonymous login/tab/worker, race sau HTTP handoff và logout còn mở. Product vẫn dùng read-runtime; không bật API/refresh, không coi RAM fixture là Redis/backend E2E. Kết quả kiểm tra cụ thể nằm trong báo cáo mới; các dòng dưới giữ snapshot của từng lượt trước.
 

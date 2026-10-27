@@ -7,7 +7,8 @@ type StaffPasswordChangeRequired = Extract<
 
 export function completeStaffPasswordChange(
   current: StaffPasswordChangeRequired,
-): StaffOnboardingRequired {
+): StaffOnboardingRequired | Readonly<{ status: "onboarding-completed" }> {
+  if (current.checklist.contactVerified) return { status: "onboarding-completed" };
   return {
     availableContactChannels: current.availableContactChannels,
     checklist: {

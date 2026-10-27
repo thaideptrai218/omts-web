@@ -33,4 +33,8 @@ export class RoleManagementService {
   discontinue(input: DiscontinueRoleInput) {
     return this.repository.discontinue(input);
   }
+
+  reactivate(input: DiscontinueRoleInput) {
+    return this.repository.reactivate(input);
+  }
 }

@@ -73,6 +73,16 @@ export type DiscontinueRoleInput = Readonly<{
   recordVersion: string;
 }>;
 
+export type ReactivateRoleResult =
+  | Readonly<{
+      status: "reactivated";
+      role: RoleDetails;
+      message: AppMessage & { code: "MSG10" };
+    }>
+  | Readonly<{ status: "conflict"; message: AppMessage & { code: "MSG06" } }>
+  | ForbiddenResult
+  | SessionExpiredResult;
+
 type SessionExpiredResult = Readonly<{
   message: AppMessage & { code: "MSG19" };
   status: "session-expired";

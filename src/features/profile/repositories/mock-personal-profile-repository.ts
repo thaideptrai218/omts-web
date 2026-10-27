@@ -17,6 +17,8 @@ export type ConsumeProfileProofInput = Readonly<{
 }>;
 
 type MockPersonalProfileOptions = Readonly<{
+  isIdentifierTaken?: (value: string) => boolean;
+  onProfileSaved?: (profile: PersonalProfile) => void;
   consumeVerificationProof(input: ConsumeProfileProofInput): void;
   hasVerificationProof(input: ConsumeProfileProofInput): boolean;
   initialProfile?: PersonalProfile;
@@ -53,6 +55,8 @@ export function createMockPersonalProfileRepository({
   consumeVerificationProof,
   hasVerificationProof,
   initialProfile = defaultProfile,
+  isIdentifierTaken = () => false,
+  onProfileSaved,
   isAmbiguousTraderPhone = () => false,
   isSessionActive = () => true,
   latencyMs = 350,
@@ -76,7 +80,7 @@ export function createMockPersonalProfileRepository({
   function identifierIsUnavailable(kind: ProfileIdentifierKind, value: string) {
     const currentValue = kind === "email" ? profile.email?.value : profile.phone?.value;
     const unavailableValues = kind === "email" ? unavailableEmails : unavailablePhones;
-    return value === currentValue || unavailableValues.has(value);
+    return value === currentValue || unavailableValues.has(value) || isIdentifierTaken(value);
   }
 
   return {
@@ -199,6 +203,7 @@ export function createMockPersonalProfileRepository({
       };
       lastUpdatedBy = displayName;
       lastUpdatedAt = "vừa xong";
+      onProfileSaved?.(cloneProfile(profile));
 
       return {
         message: {

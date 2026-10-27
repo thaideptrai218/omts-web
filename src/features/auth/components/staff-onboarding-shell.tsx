@@ -164,7 +164,9 @@ export function StaffOnboardingShell({
         Hoàn tất bảo mật trước khi bắt đầu
       </h2>
       <p className="mt-3 text-base leading-7 text-text-muted">
-        Hai bước này bảo vệ tài khoản nhân viên và các vùng nuôi được phân công.
+        {gate.checklist.contactVerified
+          ? "Thông tin liên hệ đã được xác minh. Bạn cần đặt mật khẩu mới để tiếp tục."
+          : "Hai bước này bảo vệ tài khoản nhân viên và các vùng nuôi được phân công."}
       </p>
 
       <div className="mt-5 rounded-control border border-border bg-surface-subtle p-4">
@@ -186,11 +188,11 @@ export function StaffOnboardingShell({
           aria-current={passwordChanged ? "step" : undefined}
           className="flex items-start gap-3 rounded-control border border-border bg-surface p-4"
         >
-          <StepMarker completed={false} number={2} />
+          <StepMarker completed={gate.checklist.contactVerified} number={2} />
           <div>
             <p className="font-semibold text-text">Xác minh liên hệ</p>
             <p className="mt-1 text-sm leading-5 text-text-muted">
-              {passwordChanged ? "Sẵn sàng thực hiện" : "Mở sau bước 1"}
+              {gate.checklist.contactVerified ? "Đã xác minh" : passwordChanged ? "Sẵn sàng thực hiện" : "Mở sau bước 1"}
             </p>
           </div>
         </li>
@@ -209,7 +211,9 @@ export function StaffOnboardingShell({
                 mode="forced"
                 onChanged={(message) => {
                   onPasswordChanged(message);
-                  onGateChanged(completeStaffPasswordChange(gate));
+                  const next = completeStaffPasswordChange(gate);
+                  if (next.status === "onboarding-completed") onOnboardingCompleted();
+                  else onGateChanged(next);
                 }}
                 onSessionExpired={onSessionExpired}
               />

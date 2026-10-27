@@ -18,8 +18,10 @@ import { mockIdentities } from "@/shared/mocks/mock-identities";
 import type { FeatureCatalogItem } from "@/features/role-management/domain/role-management";
 import type { AccountManagementRepository } from "@/features/account-management/repositories/account-management-repository";
 import { accountEditorSchema } from "@/features/account-management/schemas/account-editor-schema";
+import type { PersonalProfile } from "@/features/profile/domain/personal-profile";
 
 type MockOptions = Readonly<{
+  getRoles?: () => readonly AssignableRole[];
   featureCatalog: readonly FeatureCatalogItem[];
   initialAccounts: readonly ManagedAccount[];
   isAuthorized?: boolean;
@@ -90,14 +92,22 @@ function createDeliveryReceipt(account: ManagedAccount): CredentialDeliveryRecei
 }
 
 export function createMockAccountManagementRepository({
+  getRoles,
   featureCatalog,
   initialAccounts,
   isAuthorized = true,
   isSessionExpired = false,
   latencyMs = 350,
-  roles,
+  roles: initialRoles,
   zones,
-}: MockOptions): AccountManagementRepository {
+}: MockOptions): AccountManagementRepository & Readonly<{
+  snapshotAccounts(): readonly ManagedAccount[];
+  recordMockVerifiedContact(accountId: string, channel: "email" | "sms", value: string): void;
+  recordMockProfile(profile: PersonalProfile): void;
+  mockCredentialVersion(accountId: string): number;
+}> {
+  let roles = initialRoles;
+  const credentialVersions = new Map<string, number>();
   let accounts = initialAccounts.map(cloneAccount);
   let nextAccountNumber = accounts.length + 1;
   let nextGrantNumber = 1;
@@ -111,6 +121,7 @@ export function createMockAccountManagementRepository({
     if (!isAuthorized) {
       return { message: { code: "MSG02" }, status: "forbidden" } as const;
     }
+    roles = getRoles?.() ?? roles;
   }
 
   function findAccount(accountId: string) {
@@ -140,6 +151,21 @@ export function createMockAccountManagementRepository({
   }
 
   return {
+    snapshotAccounts: () => accounts.map(cloneAccount),
+    mockCredentialVersion: (accountId) => credentialVersions.get(accountId) ?? 0,
+    recordMockVerifiedContact(accountId, channel, value) {
+      const current = accounts.find((account) => account.id === accountId);
+      if (!current || (channel === "email" ? current.email : current.phone) !== value) return;
+      replaceAccount({ ...current, emailVerified: channel === "email" ? true : current.emailVerified,
+        phoneVerified: channel === "sms" ? true : current.phoneVerified, recordVersion: `account-v${++nextVersion}` });
+    },
+    recordMockProfile(profile) {
+      const current = accounts.find((account) => account.id === profile.accountId);
+      if (!current) return;
+      replaceAccount({ ...current, displayName: profile.displayName, email: profile.email?.value ?? "",
+        emailVerified: profile.email?.isVerified ?? false, phone: profile.phone?.value ?? current.phone,
+        phoneVerified: profile.phone?.isVerified ?? false, recordVersion: `account-v${++nextVersion}` });
+    },
     async load() {
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;
@@ -406,6 +432,7 @@ export function createMockAccountManagementRepository({
           status: "confirmation-required",
         };
       }
+      credentialVersions.set(account.id, (credentialVersions.get(account.id) ?? 0) + 1);
       return {
         delivery: createDeliveryReceipt(account),
         status: "reset",

@@ -8,6 +8,8 @@ import type { PersonalProfile } from "@/features/profile/domain/personal-profile
 import { ProfileEditor } from "@/features/profile/components/profile-editor";
 import type { PersonalProfileService } from "@/features/profile/services/personal-profile-service";
 import type { VerificationService } from "@/features/verification/services/verification-service";
+import { NotificationPreferencesDialog } from "@/features/notification-preferences/components/notification-preferences-dialog";
+import { getNotificationPreferencesService } from "@/features/notification-preferences/services/notification-preferences-service.instance";
 
 export function ProfileOverview({
   onProfileChange,
@@ -23,6 +25,7 @@ export function ProfileOverview({
   verificationService: VerificationService;
 }) {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const initials = profile.displayName
     .split(/\s+/)
     .filter(Boolean)
@@ -121,6 +124,11 @@ export function ProfileOverview({
               Đổi mật khẩu
             </Button>
           </section>
+          <section className="rounded-card border border-border bg-surface p-5 shadow-card">
+            <h2 className="text-lg font-semibold text-text">Thông báo</h2>
+            <p className="mt-2 text-sm leading-6 text-text-muted">Điều chỉnh kênh nhận thông báo theo nhu cầu của bạn.</p>
+            <Button className="mt-4 w-full" variant="secondary" onClick={() => setIsNotificationDialogOpen(true)}>Tùy chọn thông báo</Button>
+          </section>
         </aside>
       </div>
 
@@ -129,6 +137,8 @@ export function ProfileOverview({
         open={isPasswordDialogOpen}
         service={securityService}
       />
+      <NotificationPreferencesDialog open={isNotificationDialogOpen} onOpenChange={setIsNotificationDialogOpen}
+        service={getNotificationPreferencesService(profile.accountId, profile.email?.isVerified ?? false)} />
     </div>
   );
 }

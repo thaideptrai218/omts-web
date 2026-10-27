@@ -1,4 +1,5 @@
 import type {
+  AuthenticatedSession,
   AuthSession,
   CompleteStaffOnboardingInput,
   CompleteStaffOnboardingResult,
@@ -13,6 +14,8 @@ import type {
   CurrentPasswordChangeResult,
 } from "@/features/account-security/domain/change-password";
 import { satisfiesPasswordPolicy } from "@/shared/security/password-policy";
+import type { MockAccountDirectory } from "@/shared/mocks/mock-account-directory";
+import type { ManagedMockLogin } from "@/shared/mocks/managed-mock-auth";
 import type {
   VerificationRecipientInput,
   VerificationToken,
@@ -24,10 +27,13 @@ import {
 } from "@/shared/mocks/mock-identities";
 
 type MockAuthOptions = Readonly<{
+  accountDirectory?: MockAccountDirectory;
+  resolveManagedAccount?: (identifier: string) => ManagedMockLogin | undefined;
+  onManagedContactVerified?: (accountId: string, channel: "email" | "sms", value: string) => void;
   consumeStaffContactProof?: (input: {
     allowedRecipients: readonly VerificationRecipientInput[];
     token: VerificationToken;
-  }) => boolean;
+  }) => boolean | Readonly<{ channel: "email" | "sms"; recipientValue: string }>;
   latencyMs?: number;
   verificationService?: VerificationService;
 }>;
@@ -107,6 +113,7 @@ const accessGrantedResult = {
 } as const satisfies LoginResult;
 
 type MockStaffOnboardingState = {
+  session?: AuthenticatedSession;
   availableContactChannels: readonly [
     OnboardingContactChannel,
     ...OnboardingContactChannel[],
@@ -133,7 +140,7 @@ function createStaffOnboardingStates() {
           {
             channel: "sms",
             maskedValue: "••••••4567",
-            value: "0901234567",
+            value: "0903454567",
           },
         ],
         currentPassword: demoPassword,
@@ -148,8 +155,8 @@ function createStaffOnboardingStates() {
         contacts: [
           {
             channel: "email",
-            maskedValue: "n***@omts.test",
-            value: "nhanvien@omts.test",
+            maskedValue: "x***@omts.test",
+            value: "xacminh@omts.test",
           },
         ],
         currentPassword: demoPassword,
@@ -201,6 +208,9 @@ function wait(milliseconds: number): Promise<void> {
 }
 
 export function createMockAuthRepository({
+  accountDirectory,
+  resolveManagedAccount,
+  onManagedContactVerified,
   consumeStaffContactProof = () => false,
   latencyMs = 450,
   verificationService,
@@ -209,9 +219,18 @@ export function createMockAuthRepository({
   let activeStaffOnboarding: MockStaffOnboardingState | undefined;
   let activeStaffIdentifier: string | undefined;
   const staffOnboardingStates = createStaffOnboardingStates();
+  const credentialVersions = new Map<string, number>();
+  const resetAccounts = new Set<string>();
 
   async function simulateLatency() {
     if (latencyMs > 0) await wait(latencyMs);
+  }
+
+  function withCurrentIdentity(session: AuthenticatedSession): AuthenticatedSession {
+    const identity = accountDirectory?.findAccount(session.account.accountId);
+    const managed = resolveManagedAccount?.(session.account.username);
+    const account = managed?.account ?? session.account;
+    return { ...session, account: { ...account, displayName: managed?.account.displayName ?? identity?.displayName ?? account.displayName } };
   }
 
   return {
@@ -246,6 +265,12 @@ export function createMockAuthRepository({
 
       activeStaffOnboarding.currentPassword = input.newPassword;
       activeStaffOnboarding.passwordChanged = true;
+      if (activeStaffOnboarding.session) accountDirectory?.replacePassword(activeStaffOnboarding.session.account.accountId, input.newPassword);
+      if (activeStaffOnboarding.contactVerified && activeStaffIdentifier) {
+        currentSession = withCurrentIdentity(activeStaffOnboarding.session ?? createStaffSession(activeStaffIdentifier));
+        activeStaffIdentifier = undefined;
+        activeStaffOnboarding = undefined;
+      }
 
       return { message: { code: "MSG18" }, status: "changed" };
     },
@@ -259,17 +284,22 @@ export function createMockAuthRepository({
         return { message: { code: "MSG19" }, status: "rejected" };
       }
 
-      if (
-        !activeStaffOnboarding.passwordChanged ||
-        !consumeStaffContactProof({
+      const proof = activeStaffOnboarding.passwordChanged ? consumeStaffContactProof({
           allowedRecipients: activeStaffOnboarding.contacts,
           token: input.verificationToken,
-        })
-      ) {
+        }) : false;
+      if (!proof) {
         return { message: { code: "MSG16" }, status: "rejected" };
       }
 
-      const session = createStaffSession(activeStaffIdentifier);
+      const session = activeStaffOnboarding.session ?? createStaffSession(activeStaffIdentifier);
+      const verified = typeof proof === "object" ? proof : undefined;
+      const registered = accountDirectory?.register({ ...session.account, password: activeStaffOnboarding.currentPassword,
+        identifiers: verified ? [verified.recipientValue] : [],
+        contacts: activeStaffOnboarding.contacts.map((contact) => ({ kind: contact.channel === "sms" ? "phone" : "email",
+          value: contact.value, isVerified: contact.value === verified?.recipientValue && contact.channel === verified.channel })) });
+      if (registered === false) return { message: { code: "MSG16" }, status: "rejected" };
+      if (verified) onManagedContactVerified?.(session.account.accountId, verified.channel, verified.recipientValue);
       activeStaffOnboarding.contactVerified = true;
       currentSession = session;
       activeStaffOnboarding = undefined;
@@ -280,7 +310,14 @@ export function createMockAuthRepository({
 
     async getSession() {
       await simulateLatency();
-      return currentSession;
+      if (currentSession.status === "authenticated") {
+        const managed = resolveManagedAccount?.(currentSession.account.username);
+        if (managed && (managed.locked || managed.requiresContactVerification
+          || managed.credentialVersion !== (credentialVersions.get(managed.account.accountId) ?? 0))) {
+          currentSession = { status: "anonymous" };
+        }
+      }
+      return currentSession.status === "authenticated" ? withCurrentIdentity(currentSession) : currentSession;
     },
 
     async login(input: LoginInput): Promise<LoginResult> {
@@ -288,21 +325,66 @@ export function createMockAuthRepository({
       activeStaffOnboarding = undefined;
       activeStaffIdentifier = undefined;
 
-      const staffOnboarding = staffOnboardingStates.get(input.identifier);
+      let known = accountDirectory?.findIdentifier(input.identifier);
+      const managed = resolveManagedAccount?.(known?.username ?? input.identifier);
+      if (managed && managed.credentialVersion !== (credentialVersions.get(managed.account.accountId) ?? 0)) {
+        accountDirectory?.replacePassword(managed.account.accountId, demoPassword);
+        staffOnboardingStates.delete(managed.account.username);
+        resetAccounts.add(managed.account.accountId);
+        credentialVersions.set(managed.account.accountId, managed.credentialVersion);
+      }
+      if (managed && !known) {
+        known = accountDirectory?.findIdentifier(managed.account.username);
+        if (!known && input.password !== demoPassword) return { message: { code: "MSG12" }, status: "rejected" };
+      }
+      if (accountDirectory?.isRetiredIdentifier(input.identifier)
+        || (known && accountDirectory?.verifyPassword(known.accountId, input.password) === false)) {
+        return { message: { code: "MSG12" }, status: "rejected" };
+      }
+      if (managed && input.identifier !== managed.account.username && input.identifier !== "staff-verified"
+        && !managed.verifiedIdentifiers.includes(input.identifier)) return { message: { code: "MSG12" }, status: "rejected" };
+      if (managed?.locked) return { message: { code: "MSG13" }, status: "rejected" };
+      const identifier = managed?.account.username ?? known?.username ?? input.identifier;
+      if (managed && !known) {
+        accountDirectory?.register({ ...managed.account, password: demoPassword, identifiers: [
+          ...managed.verifiedIdentifiers, ...(input.identifier === "staff-verified" ? ["staff-verified"] : []),
+        ], contacts: managed.contacts.map((contact) => ({ kind: contact.channel === "email" ? "email" : "phone",
+          value: contact.value, isVerified: managed.verifiedIdentifiers.includes(contact.value) })) });
+      }
+      if (managed && known) accountDirectory?.updateIdentity({ ...managed.account,
+        identifiers: [...managed.verifiedIdentifiers, ...(identifier === "nguyen.an" ? ["staff-verified"] : [])],
+        contacts: managed.contacts.map((contact) => ({ kind: contact.channel === "email" ? "email" : "phone", value: contact.value,
+          isVerified: managed.verifiedIdentifiers.includes(contact.value) })) });
+      const previousGate = staffOnboardingStates.get(identifier);
+      if (managed?.requiresContactVerification && previousGate) {
+        previousGate.contactVerified = false;
+        previousGate.contacts = managed.contacts;
+      }
+      if (managed && (managed.requiresOnboarding || managed.requiresContactVerification || resetAccounts.has(managed.account.accountId)) && !previousGate) {
+        const channels: OnboardingContactChannel[] = managed.contacts.map((contact) => contact.channel === "email" ? "email" : "phone");
+        const first = channels[0];
+        if (!first) return { message: { code: "MSG13" }, status: "rejected" };
+        staffOnboardingStates.set(identifier, { availableContactChannels: [first, ...channels.slice(1)],
+          contactVerified: managed.verifiedIdentifiers.length > 0,
+          passwordChanged: !managed.requiresOnboarding && !resetAccounts.has(managed.account.accountId),
+          currentPassword: input.password, contacts: managed.contacts,
+          session: { status: "authenticated", account: managed.account } });
+      }
+      const staffOnboarding = staffOnboardingStates.get(identifier);
 
       if (staffOnboarding) {
-        if (input.password !== staffOnboarding.currentPassword) {
+        if (!known && input.password !== staffOnboarding.currentPassword) {
           return { message: { code: "MSG12" }, status: "rejected" };
         }
 
         if (staffOnboarding.passwordChanged && staffOnboarding.contactVerified) {
-          const session = createStaffSession(input.identifier);
+          const session = withCurrentIdentity(staffOnboarding.session ?? createStaffSession(identifier));
           currentSession = session;
           return { session, status: "access-granted" };
         }
 
         activeStaffOnboarding = staffOnboarding;
-        activeStaffIdentifier = input.identifier;
+        activeStaffIdentifier = identifier;
 
         return staffOnboarding.passwordChanged
           ? {
@@ -319,7 +401,7 @@ export function createMockAuthRepository({
               availableContactChannels:
                 staffOnboarding.availableContactChannels,
               checklist: {
-                contactVerified: false,
+                contactVerified: staffOnboarding.contactVerified,
                 passwordChanged: false,
               },
               nextStep: "change-temporary-password",
@@ -327,14 +409,15 @@ export function createMockAuthRepository({
             };
       }
 
-      if (input.password !== demoPassword) {
+      if (!known && input.password !== demoPassword) {
         return {
           message: { code: "MSG12" },
           status: "rejected",
         };
       }
 
-      const result = loginResultsByIdentifier.get(input.identifier);
+      const result = managed ? { status: "access-granted" as const, session: { status: "authenticated" as const, account: managed.account } }
+        : loginResultsByIdentifier.get(identifier);
 
       if (!result) {
         return {
@@ -344,7 +427,9 @@ export function createMockAuthRepository({
       }
 
       if (result.status === "access-granted") {
-        currentSession = result.session;
+        const session = withCurrentIdentity(result.session);
+        currentSession = session;
+        return { ...result, session };
       }
 
       return result;

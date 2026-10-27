@@ -2,6 +2,8 @@
 
 This guide covers the **mock-backed Web UI** on `feature/OMTS-132-web-foundation`. It is intended for a local code/UI review, not acceptance of the real backend integration. Interface labels are Vietnamese; this guide uses the labels you will see on screen.
 
+Updated **October 27, 2026**: the management and authentication mock flows now share state. Use the walkthrough below to demonstrate actions across screens, rather than inspecting isolated forms.
+
 ## Download and run
 
 Use Node.js **24.x** and npm. Clone the review branch rather than the default `develop` branch:
@@ -54,6 +56,25 @@ Use **`owner` / `demo123`** first. These are public mock credentials, not a back
 
 Repeat important interactions at narrow and desktop widths. Check text wrapping, keyboard navigation, visible focus, dialog dismissal, pending buttons, and validation errors. Reference viewport widths are **360 px** and **1024 px**.
 
+## End-to-end presentation walkthrough
+
+This sequence stays within one running browser tab. A full reload resets mock sessions and data; use the sidebar and the app's **Đăng xuất** action between accounts.
+
+1. Sign in as **owner / demo123**. On the dashboard, the heading and permitted shortcuts appear while metrics load. Open **Vai trò & quyền**: there are three fixed roles, **Quản lý vùng**, **Kế toán**, and **Nhân viên**. Add/copy controls are absent and names are read-only. Open **Nhân viên**, edit its description or configure business permissions, then save. Initially this role has no business permissions. Search/group filters in the permission editor keep selections made outside the filter; write actions retain View. You may also discontinue and reactivate this role while no account holds it.
+2. Open **Tài khoản nội bộ** and create an internal account with a synthetic full name, a unique email/phone, and at least one zone-role grant. The updated fixed role from step 1 is available. The system generates the username; note it from the receipt. This is a simulated delivery receipt, not a real email/SMS.
+3. Open **Nhân viên**, create an employee, and link the new account from the picker. It disappears from the picker for other employees. **Bỏ liên kết tài khoản** has its own confirmation; unlink preserves the editor draft and supplies the version for the next save.
+4. Return to the dashboard. Employee and active-account counts reflect the new records; the in-use-role count changes with role status and does not grow by creating custom roles. Workforce and account-status charts use available mock counts. Operating income, expenses, raft and harvest figures remain a no-data summary because those modules are not delivered by this snapshot.
+5. Log out. Sign in with the generated username and **demo123**, the public mock temporary password. Set a password for the presentation with at least 8 characters, letters and digits. Verify either email or phone; the initial mock OTP is **123456**. After a resend use **654321**, then **112233**. The app grants access only after the required steps.
+6. In **Hồ sơ cá nhân**, check the generated username, assigned role/zone, and verified-contact badge. Only the contact actually verified is marked verified. Save a new display name; verify and save a contact change if needed. A new contact is not a login alias before verified save; the old alias is retired after replacement.
+7. Open **Tùy chọn thông báo** from the profile. Required in-app cells stay locked on, unavailable channels explain why, and Email is unavailable until verified. Change an editable cell and save. Reopen to see the saved preference; close an unsaved draft to discard it. Category/channel defaults are mock fixtures pending the final backend/BA catalog.
+8. Open **Đổi mật khẩu**. Use the password from step 5 as the current password. After success, log out and sign in with the new password; the old password should fail. Forgotten-password recovery at `/recover` follows the mock OTP flow and updates the same credential source. Use only a verified contact.
+9. Sign back in as Owner. Lock the new internal account with a reason; its next login is rejected. Unlock it to restore access. Resetting its password simulates delivery of the public temporary password **demo123** and requires a password change at the next login. An already verified contact is not forced through verification again; an unverified account still requires verification.
+10. Try discontinuing the role while the new account holds a grant. The app blocks the operation and lists the affected account. Existing grant history is preserved; reactivating a role never restores revoked grants. The three-role policy is a newly approved requirement; the backend still needs corresponding enforcement before API activation.
+
+The employee directory combines search, employment status and account-link filters. The account directory combines search, zone, role and account status; a grant covering all zones still matches a selected zone. Clear filters to restore the full list. Account editors cannot be dismissed while a confirmed save/status mutation is pending; after it finishes, dismissal is available again.
+
+For a shorter presentation, use the seeded accounts `nguyen.an` or `pham.cuong` with `demo123` to show role/scope labels and Owner-only menu restrictions without creating a new account. `staff-first-login` is a separate first-login scenario; `staff-needs-contact-verification` starts at the contact step. Web Trader registration remains deferred by the user's decision on October 27; there is no `/register` route to demonstrate.
+
 ## Automated checks
 
 Stop the development server before building in the same checkout. Run these sequentially:
@@ -67,6 +88,8 @@ npm run test:session-pages
 ```
 
 The last command tests the built app's session/API-mode guards with fixture configuration. It does not authenticate against the actual backend. Live Redis suites skip when `OMTS_TEST_REDIS_URL` is absent; the UI review does not need that variable.
+
+Windows uses one Vitest worker and two Next.js static-build workers to reduce contention when loading Next/ESLint and generating pages. Other platforms retain four Vitest workers and Next's normal build-worker selection. No test is skipped and no timeout is increased. The earlier timeout observations remain documented; limiting workers does not prove all sources of tool-startup latency have been eliminated.
 
 To inspect the production build after checks, run `npm run start` and open the URL printed in the terminal.
 

@@ -1,5 +1,13 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## WEB-ROLE-01 — Chỉ dùng vai trò cố định
+
+**Decided, 27/10/2026, Duy Thái:** chỉ Quản lý vùng, Kế toán, Nhân viên; tên cố định; Owner sửa quyền và ngừng dùng/khôi phục, không Add/Copy. Nhân viên ban đầu không có quyền nghiệp vụ. [Chi tiết và đề xuất BA/backend](WEB_FIXED_ROLES_DECISION_2026-10-27.md). Product mock áp quy tắc mới; backend/SRS/Jira hiện còn khác, chưa bật API thật và chưa tự sửa các nguồn đó.
+
+## WEB-DASH-01 — Dashboard hiện sớm và dữ liệu tính trước
+
+**Nghiên cứu/đề xuất:** FE hiển thị khung/lối tắt trước số liệu trong lượt polish; không đổi auth/SSR/cache policy. [So sánh procedure, job, bảng tổng hợp](DASHBOARD_LOADING_AND_AGGREGATION_PROPOSAL.md) ghi rõ cần BA/backend chốt độ mới dữ liệu, scope và hạ tầng trước khi tính trước/cache. Chưa có cron/job hoặc DB change được áp dụng.
+
 ## WEB-API-08 — Đăng nhập khi trình duyệt đã có phiên BFF
 
 - **Decided, 26/10/2026, Duy Thái:** giữ phiên BFF vẫn hợp lệ và trả đích tương ứng với phase hiện tại. Muốn đổi tài khoản phải đăng xuất trước. Không gọi login backend hoặc ghi cookie mới cho request đó.
@@ -7,6 +15,26 @@
 - Cookie không hợp lệ đi qua recovery hiện có; hạ tầng không sẵn sàng không tự xóa hoặc thay cookie.
 - **Không được coi là đã chốt:** hai request đăng nhập ban đầu đều chưa có cookie, hai tab/worker tranh nhau phát cookie, logout cũ về sau login mới. Cần thiết kế phối hợp attempt/session và test trước khi mount route đăng nhập. Quyết định này không cho phép tự chọn “phản hồi cuối ghi đè tài khoản”.
 - [Báo cáo chuẩn bị W3.1b](../reports/WEB_W3_1B_LOGIN_HTTP_RUNTIME_PREPARATION_2026-10-26.md). UI vẫn mock; API và refresh thật chưa bật.
+
+### WEB-API-08b — Hai tab cùng đăng nhập khi chưa có phiên
+
+- **Decided về hành vi, 27/10/2026, Duy Thái:** chọn một lượt login đang chờ cho mỗi trình duyệt; tab khác chờ rồi kiểm tra lại phiên. Mất phản hồi không tự gửi lại mật khẩu/POST login. Xác nhận trực tiếp: “Đồng ý quy tắc chờ và kiểm tra lại phiên”.
+- [Đề xuất gốc](WEB_LOGIN_CONCURRENCY_PROPOSAL.md) lưu lịch sử26/10 và quyết định27/10. WEB-API-08 vẫn áp dụng khi phiên đã hợp lệ: không tự chuyển tài khoản, phải logout trước.
+- **Chưa được chốt theo quyết định này:** thêm cookie, chọn API phối hợp tab, giao thức Redis/TTL, xử lý browser không hỗ trợ hoặc logout offline. Chấp thuận hành vi không phải nghiệm thu giao thức/triển khai.
+- W3.2 reader/schema/fixtures đã làm độc lập26/10; tới lần ghi này chưa thêm khóa cross-tab, cookie mới hoặc thay mock login/logout.
+
+### WEB-API-08c — Giao thức điều phối browser/BFF/Redis
+
+- **Decided về hướng G1, 27/10/2026, Duy Thái:** đồng ý cookie điều phối HttpOnly riêng + ledger Redis kiểm lượt; triển khai contract/fixture trước, API/refresh vẫn tắt. Cookie điều phối không phải bằng chứng đăng nhập, không cấp lại SID và không chứa JWT.
+- **Decided về browser:** nếu thiếu Web Locks thì chặn đăng nhập API và hướng dẫn cập nhật; không fallback im lặng sang khóa RAM/localStorage. Đây là yêu cầu cho adapter API tương lai, chưa có Web Locks adapter hoặc cookie mới trong product hiện tại.
+- [Thiết kế đã chốt hướng](WEB_LOGIN_COORDINATION_PROTOCOL_PROPOSAL.md); contract và RAM reference model hiện có9 cases. Chưa phải runtime Redis/Next/browser cookie acceptance.
+- TTL/budget, crash/restore, atomics, cookie response muộn và browser fixture còn là cổng bắt buộc trước product mount. Không dùng một Map RAM hoặc lock hết hạn làm bằng chứng đã giải quyết mọi race.
+
+### WEB-REVIEW-01 — Phạm vi buổi kiểm tra tiến độ27/10
+
+- Duy Thái ưu tiên hoàn thiện các luồng quản trị đang có để trình diễn. Khi được hỏi riêng về đăng ký Thương lái trên web, trả lời: **“Chưa, ưu tiên các luồng quản trị đang có”**. Không thêm `/register` hoặc coi khả năng đăng ký Web là đã chốt.
+- Đã nối các nguồn mock phục vụ luồng Owner→vai trò→tài khoản→nhân viên→Staff onboarding/profile, khóa/reset, khôi phục mật khẩu và tùy chọn thông báo. Đây là mô phỏng frontend; không mở API thật hoặc sửa SRS/Jira/backend.
+- Catalog notification trong bản review là fixture theo các nhóm hiện mô tả ở ACS-07; không biến defaults/channels/actor fixtures thành catalog production đã duyệt.
 
 ## Ghi nhận26/10 — contract nhân viên và ticket mới
 

@@ -6,6 +6,7 @@ import type {
 import type { NotificationPreferencesRepository } from "@/features/notification-preferences/repositories/notification-preferences-repository";
 
 type MockNotificationPreferencesOptions = Readonly<{
+  isEmailVerified?: () => boolean;
   initialSettings: NotificationPreferenceSettings;
   isSessionActive?: () => boolean;
   latencyMs?: number;
@@ -40,6 +41,7 @@ function cloneSettings(
 }
 
 export function createMockNotificationPreferencesRepository({
+  isEmailVerified,
   initialSettings,
   isSessionActive = () => true,
   latencyMs = 350,
@@ -50,6 +52,14 @@ export function createMockNotificationPreferencesRepository({
     if (latencyMs > 0) await wait(latencyMs);
   }
 
+  function refreshEmailEligibility() {
+    if (!isEmailVerified) return;
+    const eligible = isEmailVerified();
+    settings = { ...settings, items: settings.items.map((item) => ({ ...item, channels: item.channels.map((cell) =>
+      cell.channelId !== "email" ? cell : eligible ? { channelId: cell.channelId, enabled: cell.enabled, isEditable: true }
+        : { channelId: cell.channelId, enabled: false, isEditable: false, reason: { code: "MSG21", params: { channel_name: "Email" } } }) })) };
+  }
+
   return {
     async load() {
       await simulateLatency();
@@ -57,6 +67,7 @@ export function createMockNotificationPreferencesRepository({
         return { message: { code: "MSG19" }, status: "session-expired" };
       }
 
+      refreshEmailEligibility();
       return { settings: cloneSettings(settings), status: "loaded" };
     },
 
@@ -67,6 +78,7 @@ export function createMockNotificationPreferencesRepository({
       }
 
       const requestedKeys = new Set<string>();
+      refreshEmailEligibility();
       let pushWasDenied = false;
 
       for (const selection of input.selections) {

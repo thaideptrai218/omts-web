@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { useDocumentScrollLock } from "@/components/ui/use-document-scroll-lock";
 import type {
   EffectiveAccess,
   EffectivePermissionKey,
@@ -269,12 +270,14 @@ function IdentityCard({
   label,
   role,
   scope,
+  onNavigate,
 }: {
   autoRail?: boolean;
   initials: string;
   label: string;
   role: string;
   scope?: string;
+  onNavigate?: () => void;
 }) {
   return (
     <Link
@@ -282,6 +285,7 @@ function IdentityCard({
         autoRail ? "p-1" : "p-2.5"
       }`}
       href="/account"
+      onClick={onNavigate}
     >
       <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sm font-bold text-primary shadow-sm">
         {initials}
@@ -319,6 +323,8 @@ export function AppShell({
   const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
   const hasOpenedMobileMenu = useRef(false);
 
+  useDocumentScrollLock(isMobileMenuOpen);
+
   useEffect(() => {
     const dialog = mobileDialogRef.current;
     if (!isMobileMenuOpen) {
@@ -331,11 +337,6 @@ export function AppShell({
     hasOpenedMobileMenu.current = true;
     if (dialog && !dialog.open) dialog.showModal();
     mobileCloseButtonRef.current?.focus();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
   }, [isMobileMenuOpen]);
 
   return (
@@ -404,7 +405,8 @@ export function AppShell({
             <NavigationList access={access} onNavigate={() => setIsMobileMenuOpen(false)} />
           </div>
           <div className="space-y-2 border-t border-white/10 pt-4">
-            <IdentityCard initials={accountInitials} label={accountLabel} role={accountRole} scope={accountScope} />
+            <IdentityCard initials={accountInitials} label={accountLabel} role={accountRole} scope={accountScope}
+              onNavigate={() => setIsMobileMenuOpen(false)} />
             <LogoutButton
               isPending={isLoggingOut}
               onClick={() => {

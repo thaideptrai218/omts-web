@@ -1,6 +1,6 @@
-import { createMockDashboardRepository } from "@/features/dashboard/repositories/mock-dashboard-repository";
+import { mockManagementEnvironment } from "@/shared/mocks/mock-management-environment.instance";
 import { createDashboardService } from "@/features/dashboard/services/dashboard-service";
 
 export const dashboardService = createDashboardService(
-  createMockDashboardRepository(),
+  mockManagementEnvironment.dashboard,
 );

@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import {
+  ManagementHeading,
+  ManagementSummary,
+} from "@/components/ui/management-page";
 import { AccountEditor } from "@/features/account-management/components/account-editor";
 import { AccountList } from "@/features/account-management/components/account-list";
 import { AccountManagementPageSkeleton } from "@/features/account-management/components/account-management-page-skeleton";
@@ -27,11 +32,18 @@ type DeliveryState = Readonly<{
 function PermissionDenied() {
   return (
     <section className="mx-auto mt-10 max-w-lg rounded-card border border-border bg-surface p-6 text-center shadow-card sm:p-8">
-      <div aria-hidden="true" className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft">
+      <div
+        aria-hidden="true"
+        className="mx-auto grid size-12 place-items-center rounded-full bg-warning-soft"
+      >
         <RestrictedAccessIcon />
       </div>
-      <h1 className="mt-5 text-2xl font-semibold tracking-tight text-text">Không có quyền quản lý tài khoản</h1>
-      <p className="mt-3 leading-7 text-text-muted">{formatMessage({ code: "MSG02" })}</p>
+      <h1 className="mt-5 text-2xl font-semibold tracking-tight text-text">
+        Không có quyền quản lý tài khoản
+      </h1>
+      <p className="mt-3 leading-7 text-text-muted">
+        {formatMessage({ code: "MSG02" })}
+      </p>
     </section>
   );
 }
@@ -42,6 +54,7 @@ export function AccountManagementExperience() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>();
   const [isCreating, setIsCreating] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [deliveryState, setDeliveryState] = useState<DeliveryState>();
@@ -81,7 +94,10 @@ export function AccountManagementExperience() {
 
   useEffect(() => {
     let isActive = true;
-    if (!canManage) return () => { isActive = false; };
+    if (!canManage)
+      return () => {
+        isActive = false;
+      };
     accountManagementService
       .load()
       .then((result) => {
@@ -97,9 +113,15 @@ export function AccountManagementExperience() {
         setWorkspace(result.workspace);
         setSelectedAccountId(result.workspace.accounts[0]?.id);
       })
-      .catch(() => { if (isActive) setHasLoadError(true); })
-      .finally(() => { if (isActive) setIsLoading(false); });
-    return () => { isActive = false; };
+      .catch(() => {
+        if (isActive) setHasLoadError(true);
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+    return () => {
+      isActive = false;
+    };
   }, [canManage]);
 
   function openAccount(accountId: string) {
@@ -115,7 +137,9 @@ export function AccountManagementExperience() {
       return {
         ...current,
         accounts: exists
-          ? current.accounts.map((item) => (item.id === account.id ? account : item))
+          ? current.accounts.map((item) =>
+              item.id === account.id ? account : item,
+            )
           : [...current.accounts, account],
       };
     });
@@ -130,27 +154,66 @@ export function AccountManagementExperience() {
   if (hasLoadError || !workspace) {
     return (
       <section className="mx-auto mt-10 max-w-md rounded-card border border-border bg-surface p-6 text-center shadow-card">
-        <h1 className="text-2xl font-semibold text-text">Chưa tải được danh sách tài khoản</h1>
-        <p className="mt-3 leading-7 text-text-muted">Kết nối có thể đang gián đoạn. Dữ liệu chưa bị thay đổi.</p>
-        <Button className="mt-6" onClick={() => void loadWorkspace()}>Tải lại</Button>
+        <h1 className="text-2xl font-semibold text-text">
+          Chưa tải được danh sách tài khoản
+        </h1>
+        <p className="mt-3 leading-7 text-text-muted">
+          Kết nối có thể đang gián đoạn. Dữ liệu chưa bị thay đổi.
+        </p>
+        <Button className="mt-6" onClick={() => void loadWorkspace()}>
+          Tải lại
+        </Button>
       </section>
     );
   }
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-primary">Quản trị truy cập</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text sm:text-4xl">Tài khoản và vùng phụ trách</h1>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-text-muted">
-            Tạo tài khoản nội bộ, gán nhiều cặp vùng–vai trò và kiểm tra quyền thực tế trước khi xác nhận.
-          </p>
-        </div>
-        <Button className="lg:w-auto" onClick={() => { setIsCreating(true); setSelectedAccountId(undefined); setIsEditorOpen(true); }}>
-          Thêm tài khoản
+      <ManagementHeading
+        title="Tài khoản nội bộ"
+        description="Quản lý đăng nhập, trạng thái truy cập và phân công vai trò theo vùng."
+        icon="account"
+      >
+        <Button
+          className="lg:w-auto"
+          onClick={() => {
+            setIsCreating(true);
+            setSelectedAccountId(undefined);
+            setIsEditorOpen(true);
+          }}
+        >
+          <InterfaceIcon name="add" /> Thêm tài khoản
         </Button>
-      </header>
+      </ManagementHeading>
+      <ManagementSummary
+        items={[
+          {
+            label: "Tài khoản nội bộ",
+            value: workspace.accounts.filter(
+              (account) => account.accountType === "internal",
+            ).length,
+            icon: "account",
+          },
+          {
+            label: "Nội bộ đang hoạt động",
+            value: workspace.accounts.filter(
+              (account) =>
+                account.accountType === "internal" &&
+                account.status === "active",
+            ).length,
+            icon: "check",
+          },
+          {
+            label: "Nội bộ đã khóa",
+            value: workspace.accounts.filter(
+              (account) =>
+                account.accountType === "internal" &&
+                account.status === "locked",
+            ).length,
+            icon: "lock",
+          },
+        ]}
+      />
 
       <AccountList
         accounts={workspace.accounts}
@@ -167,25 +230,27 @@ export function AccountManagementExperience() {
             : "Kiểm tra thông tin đăng nhập, trạng thái và quyền truy cập theo từng vùng."
         }
         onOpenChange={setIsEditorOpen}
+        dismissible={!isMutating}
         open={isEditorOpen}
         size="xl"
         title={
           isCreating
             ? "Thêm tài khoản nội bộ"
-            : selectedAccount?.displayName ?? "Chi tiết tài khoản"
+            : (selectedAccount?.displayName ?? "Chi tiết tài khoản")
         }
       >
         {isEditorOpen && (isCreating || selectedAccount) && (
           <AccountEditor
             account={isCreating ? undefined : selectedAccount}
             embedded
-            key={isCreating ? "create" : selectedAccount?.id ?? "empty"}
+            key={isCreating ? "create" : (selectedAccount?.id ?? "empty")}
             onDelivery={(receipt, kind) => {
               if (kind === "created") setIsEditorOpen(false);
               setDeliveryState({ kind, receipt });
             }}
             onOpenExisting={openAccount}
             onSaved={updateAccount}
+            onPendingChange={setIsMutating}
             workspace={workspace}
           />
         )}
