@@ -1,5 +1,19 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## WEB-EMP-ERROR-01 — Metadata còn thiếu trước khi bind lỗi vào form API
+
+**Open về contract,28/10/2026; chưa đổi nghiệp vụ.** [Projection field/ID đã chuẩn bị](../reports/WEB_EMPLOYEE_ERROR_METADATA_REVIEW_2026-10-28.md) chỉ dành cho PUT/unlink. Backend953f597 trả existingEmployeeId cho MSG24 nhưng chưa có tên nhân viên structured; câu hiện hành cần employee_name. Chưa parse tên từ detail, dùng tên draft, tự GET thêm hoặc thay catalog bằng fallback.
+
+Đề xuất BA/backend xác nhận field tên riêng và ví dụ payload trước khi render đầy đủ MSG24. Chưa tự chốt tên wire field. Generic existingId trong flow tạo Account vẫn là entity khác; không đổi thành Employee ID. Nested/index model-binding paths và form cũ thiếu bank/zones/version target cần mapping/binding riêng, không ẩn lỗi chưa map được. MSG06 giữ nguyên quyết định chờ user/time từ backend.
+
+**Tiến độ UI 28/10:** [binding MSG01/MSG03](../reports/WEB_EMPLOYEE_ERROR_UI_BINDING_REVIEW_2026-10-28.md) đã có cho các ô hiện hữu; lỗi bank/zones/version giữ ở phần tổng hợp, chưa có form sửa nhóm. ID trùng chỉ mở sau cú bấm; nếu chưa có trong workspace thì giữ nháp, chưa tự GET. Việc này không đóng câu hỏi tên MSG24, nested paths hoặc MSG06 và không bật API thật.
+
+## Đối chiếu backend27/10 — trạng thái mới, không đổi các quyết định đã chốt
+
+PR15/16/17 đã merge, source đã pull tới `develop@953f597`. **Điều kiện chờ merge PR16 đã đạt**; các dòng draft/chưa merge ở ghi nhận26/10 là lịch sử. [Báo cáo source/CI và đề xuất phần làm tiếp](../reports/BACKEND_DEVELOP_UPDATE_AUDIT_2026-10-27.md). Chưa bật API thật hoặc cập nhật DB/runtime; CI mới có một integration test lỗi.
+
+Backend vẫn chưa khớp ba vai trò cố định, Staff xác minh email OR phone, metadata MSG06 và retry/idempotency refresh. Giữ quyết định hiện có, không yêu cầu người dùng chọn lại hoặc tự chuyển UI sang hành vi backend cũ.
+
 ## WEB-ROLE-01 — Chỉ dùng vai trò cố định
 
 **Decided, 27/10/2026, Duy Thái:** chỉ Quản lý vùng, Kế toán, Nhân viên; tên cố định; Owner sửa quyền và ngừng dùng/khôi phục, không Add/Copy. Nhân viên ban đầu không có quyền nghiệp vụ. [Chi tiết và đề xuất BA/backend](WEB_FIXED_ROLES_DECISION_2026-10-27.md). Product mock áp quy tắc mới; backend/SRS/Jira hiện còn khác, chưa bật API thật và chưa tự sửa các nguồn đó.

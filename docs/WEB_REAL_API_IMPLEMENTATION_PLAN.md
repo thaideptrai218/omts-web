@@ -1,8 +1,24 @@
 # Web — kế hoạch ghép API thật: Auth và hồ sơ
 
-> Lập ngày 23/10/2026, cập nhật/review ngày 24/10/2026 (Asia/Saigon). Trạng thái thực hiện xem checklist W0–W7 bên dưới; không coi toàn bộ plan là chưa làm hoặc đã hoàn thành.
+> Lập ngày 23/10/2026, cập nhật ngày 28/10/2026 (Asia/Saigon). Trạng thái thực hiện xem checklist W0–W7 và nhánh contract nhân viên bên dưới; không coi toàn bộ plan là chưa làm hoặc đã hoàn thành.
 > Duy Thái ưu tiên Web, tạm dừng Mobile. Không thay SRS/Jira, không tự sửa backend.
 > Bằng chứng và vấn đề: [báo cáo audit](reports/WEB_REAL_API_READINESS_AUDIT_2026-10-23.md).
+
+> **Review nhân viên 28/10:** [báo cáo tổng thể](reports/WEB_EMPLOYEE_FULL_REVIEW_2026-10-28.md). Đã review01–04a-E/UI, sửa EMP-FULL-REV-01 mất focus sau unlink native và thêm test hồi quy. Source chuẩn bị commit: 2.044 pass/31 Redis skip; lint/typecheck/build,24 HTTP,12 boundary và4 serialization checks đạt. Browser1280 xác nhận giữ nháp→unlink→lưu tiếp và focus; API/refresh vẫn tắt, MSG06/tên MSG24 và các phần LAB-01 còn thiếu giữ pending.
+
+> **EMP-API-04a-E-UI ngày 28/10:** [binding lỗi vào form](reports/WEB_EMPLOYEE_ERROR_UI_BINDING_REVIEW_2026-10-28.md) đã có cho MSG01/MSG03: nhiều ô lỗi, phần tổng hợp nhóm/version, focus sau commit, duplicate ID chỉ mở sau cú bấm và giữ nháp nếu ID chưa có trong workspace. Có 18 test mới; chưa nối BFF/API thật. MSG06, tên MSG24, nested paths và form sửa ngân hàng/vùng vẫn chờ.
+>
+> **EMP-API-04a-E ngày28/10:** đã chuẩn bị bounded metadata projection cho MSG01/03/24, normalize field DTO phẳng, canonical field/Employee-ID issue DTO và ghép sau session recheck. [Báo cáo](reports/WEB_EMPLOYEE_ERROR_METADATA_REVIEW_2026-10-28.md):112 test mới; full suite2.039 pass/31 Redis skip, lint/typecheck đạt tại thời điểm đó. Binding UI đủ dữ liệu được làm ở bước trên; MSG24 thiếu tên structured, nested field paths và MSG06 vẫn có điều kiện còn mở.
+
+> **EMP-API-04a GET ngày28/10:** đã chuẩn bị query/serializer, catalog server và read adapter Owner cho danh sách, detail, linkable-account picker. [Báo cáo](reports/WEB_EMPLOYEE_GET_ADAPTER_REVIEW_2026-10-28.md):84 test mới; full suite1.927 pass/31 Redis skip, lint/typecheck/build đạt; boundary đã kiểm hai adapter và helper phiên. Không mount route, đổi service/UI hoặc bật API/refresh. Phần field/duplicate error projection từng ghi chung04a được tách khỏi lát GET, chưa đánh dấu xong.
+
+> **EMP-API-03 ngày28/10:** phần adapter mutation BFF đã chuẩn bị theo yêu cầu mới: server catalog/transport, CSRF/Owner/session, cancellation/recheck và safe result. [Báo cáo](reports/WEB_EMPLOYEE_BFF_ADAPTER_REVIEW_2026-10-28.md):61 test mới; full suite1.843 pass/31 Redis skip; lint/typecheck/build,12 compiler-boundary và4 serialization checks đạt. Factory chưa mount và API/refresh vẫn tắt; MSG06/G1/runtime không được đóng bằng fixture. Audit26/10 gọi phần BFF là EMP-API-04; bảng hiện tại tách lại03a–d để tránh nhầm với UI mock đã làm.
+
+> **EMP-API-02 ngày28/10:** đã dựng PUT/DELETE descriptor, query encode một lần và success decoder200;56 test mới. [Báo cáo tự review](reports/WEB_EMPLOYEE_REQUEST_SERIALIZATION_REVIEW_2026-10-28.md): full suite1.782 pass/31 Redis skip, lint/typecheck/build đạt. Chưa ghép HTTP/BFF employee hoặc bật API/refresh. Các câu EMP-API-02 chưa làm trong snapshot01a/01b dưới đây là lịch sử; không đồng nghĩa các phần runtime đã hoàn tất.
+
+> **EMP-API-01a/01b ngày28/10:** đã có schema/mapper thuần và77 test mới, giữ đủ ngân hàng/vùng/draft/version. [Báo cáo triển khai và tự review](reports/WEB_EMPLOYEE_SCHEMA_MAPPER_REVIEW_2026-10-28.md): full suite1.726 pass/31 Redis skip; lint/typecheck/build đạt. Chưa ghép service/UI/HTTP, chưa làm URL serializer EMP-API-02 hoặc bật API/refresh. Không đổi trạng thái W0–W7 hoặc nghiệm thu QA từ kết quả chuẩn bị này.
+
+> **Cập nhật source27/10:** đã pull repo `omts-backend` tới `develop@953f597`; PR15/16/17 đã merge. Mục “PR16 chưa merge” trong snapshot26/10 bên dưới đã được thay thế về trạng thái release. Runtime `omts-backend-local` vẫn48ae1e0, chưa chạy seed/migration; CI953 có một integration test lỗi. [Audit mới và micro-plan nhân viên](reports/BACKEND_DEVELOP_UPDATE_AUDIT_2026-10-27.md) cho phép chuẩn bị schema/mapper/serialization độc lập; không bật API/refresh, không tự đóng W0.5/MSG06 hoặc đổi role/contact gate.
 
 > **Cập nhật source 25/10:** `origin/develop@776fbc0` thêm Docker demo seed (Owner, Staff, Trader và dữ liệu HTX), nên W0.5 có thể thử bằng Development local sau khi Docker chạy; QA fixture/deployment vẫn chưa được chứng minh và checkbox W0.5 giữ mở. Endpoint auth/profile hiện hữu, nhưng refresh vẫn không có retry/idempotency và MSG06 vẫn không trả tên/thời gian dạng field. Xem [audit mới](reports/WEB_HALLMARK_BACKEND_AUDIT_2026-10-25.md); các dòng ghi `48ae1e0` bên dưới là snapshot lịch sử.
 
@@ -27,8 +43,8 @@ Mục tiêu đầu tiên là một lát có thể kiểm tra độc lập: crede
 
 ## 2. Contract là snapshot, không phải cam kết bất biến
 
-Backend được kiểm tra: `develop@48ae1e0438cec5d1123e7f7f6726377242855ce5`; Web gốc `5ae1b66`, nhánh `feature/OMTS-132-web-foundation`.
-Backend local `http://127.0.0.1:5280`, Swagger `/swagger/v1/swagger.json`, readiness 200. Chỉ truy cập loopback; không đưa dev inbox lên LAN/tunnel. Không ghi token, mật khẩu hay nội dung inbox vào fixture/report.
+Snapshot ban đầu23/10: backend `48ae1e0438cec5d1123e7f7f6726377242855ce5`; Web gốc `5ae1b66`, nhánh `feature/OMTS-132-web-foundation`. Source được kiểm tra mới nhất27/10 là `develop@953f5977f880d5ea7916d6e91482a0d0a5b2a95a`; bảng auth bên dưới vẫn khớp hình dạng endpoint sau đối chiếu, không đồng nghĩa đã bật/chạy QA.
+Backend local từng kiểm tại `http://127.0.0.1:5280`, Swagger `/swagger/v1/swagger.json`, readiness200 trong snapshot23/10; lượt27/10 chưa thử lại và chưa cập nhật runtime. Chỉ truy cập loopback; không đưa dev inbox lên LAN/tunnel. Không ghi token, mật khẩu hay nội dung inbox vào fixture/report.
 
 | Nghiệp vụ | Wire contract đang thấy | Ranh giới cần giữ |
 | --- | --- | --- |
@@ -49,6 +65,31 @@ Khi bắt đầu mỗi lát:
 3. Dùng fixture đã bỏ secret; test chấp nhận thêm field không ảnh hưởng, nhưng báo lỗi khi mất field thiết yếu/đổi kiểu/đổi enum ảnh hưởng bảo mật.
 4. Nếu khác: chỉ dừng adapter phụ thuộc; không sửa toàn bộ UI hoặc tự nhận contract mới là nghiệp vụ được duyệt.
 5. Smoke contract phải opt-in với server/fixture QA được cho phép; unit test vẫn chạy khi backend tắt. Không tự ghi đè expected fixture cho test xanh.
+
+### 2.1. Chuẩn bị contract nhân viên sau PR16 — chưa mở API
+
+Đây là nhánh chuẩn bị cho OMTS-203, không thay checklist nghiệm thu W0–W7 của auth. [Báo cáo27/10](reports/BACKEND_DEVELOP_UPDATE_AUDIT_2026-10-27.md) ghi source/CI và điều kiện còn thiếu; [UI unlink26/10](reports/WEB_EMPLOYEE_ACCOUNT_UNLINK_REVIEW_2026-10-26.md) là phần mock đã có.
+
+| Micro-task | Sản phẩm và kiểm tra cần có | Trạng thái28/10 |
+| --- | --- | --- |
+| EMP-API-01a | Schema riêng list/detail/save envelope theo953f597; test nullable, DateOnly, trường bắt buộc/kiểu lỗi và version nguyên chuỗi | Done phần chuẩn bị update/unlink;48 response tests, chưa có contract tạo account/credential |
+| EMP-API-01b | Mapper đọc/ghi giữ vùng/ngân hàng/các field chưa sửa; không bịa phone của linked account; test giữ draft và version mới sau unlink | Done hàm thuần;29 mapper tests, chưa thay workspace/form hoặc ghép runtime |
+| EMP-API-02 | Serializer PUT và DELETE riêng; URL encode rowVersion đúng một lần, parse200 EmployeeSaved; test ký tự đặc biệt/không fallback PUT null | Done hàm thuần +56 test; chưa có HTTP/BFF employee runtime |
+| EMP-API-03a | Catalog employeeUpdate/employeeUnlink, params GUID/version và transport server chung | Done factory; không nhận URL/headers tùy ý, chưa đổi source runtime |
+| EMP-API-03b | Mutation adapter với CSRF/body limits, application session và Owner | Done factory server-only; token chỉ từ phiên server, chưa mount route |
+| EMP-API-03c | Success200, cancellation/session recheck và phân loại lỗi an toàn | Done seam nội bộ; MSG06 metadata và error DTO UI còn pending, không thêm fallback |
+| EMP-API-03d | Target/input/lifecycle/HTTP fixture và compiler-boundary regression | Done61 test mới +12 compiler checks;4 HTTP ca dùng Node peer, không phải .NET/QA |
+| EMP-API-04a.1 | Query GET có kiểm kiểu/key trùng, defaults API, filter IDs và URL encoding | Done hàm thuần;34 test, không đổi default filter UI |
+| EMP-API-04a.2 | Catalog/transport cho list/detail/linkable-accounts và read adapter Owner/session | Done factory chưa mount; helper phiên dùng chung với mutation, không thêm cache/refresh |
+| EMP-API-04a.3 | Success projection, kiểm ID/page, nullable fields và phân biệt summary/detail/picker | Done15 test; lỗi chưa biến thành empty/loaded giả |
+| EMP-API-04a.4 | Gate/lifecycle/concurrent request, HTTP loopback và compiler boundary | Done12+17+6 test mới; chưa phải browser/.NET/QA nghiệm thu |
+| EMP-API-04a-E1 | Bounded error metadata đúng endpoint/status/code, field allowlist/DTO aliases và Employee ID | Done projection; không nhận generic Account ID, detail/params/version;55 test |
+| EMP-API-04a-E2 | Typed issue DTO và adapter integration sau session recheck | Done mapper/server seam;20+22+8+7 test bổ sung, không tự fetch/navigate/retry |
+| EMP-API-04a-E-UI.1 | Bind MSG01/MSG03 vào form hiện có; tổng hợp nhóm/version, giữ nháp và ID trùng | Done UI/service contract +18 test mới; nguồn vẫn mock; không reset/retry/tự GET |
+| EMP-API-04a-E-UI.2 | Form sửa ngân hàng/vùng đầy đủ, message MSG24 và các path lồng | Pending; chờ tên MSG24 structured, mapping path và luồng sửa nhóm; MSG06 tiếp tục chờ backend |
+| EMP-API-04b/05 | Route/client binding, session/G1 và nghiệm thu race/release trên môi trường được chọn | Pending: MSG06, auth runtime và QA/DB/revision; merge PR16 đã đạt |
+
+Chỉ chuẩn bị hàm thuần và fixture khi chưa đủ điều kiện runtime. Không thêm tác vụ seed/khóa tài khoản/thu hồi grant vào thao tác unlink. Nếu model thật đòi thêm trường/luồng chưa được quyết định thì hỏi trước, không lược bỏ để test xanh.
 
 ## 3. Thiết kế đã chọn và phần còn mở
 

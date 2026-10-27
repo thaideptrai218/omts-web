@@ -1,4 +1,5 @@
 import type { AppMessage } from "@/shared/messages/message-catalog";
+import type { BindableEmployeeProblem } from "./employee-problem";
 
 export type EmployeeStatus = "employed" | "left";
 
@@ -64,6 +65,7 @@ type EmployeeConflictResult = Readonly<{
 }>;
 
 export type UnlinkEmployeeAccountResult =
+  | Extract<BindableEmployeeProblem, { status: "invalid-fields" }>
   | Readonly<{ status: "unlinked"; employee: EmployeeProfile }>
   | Readonly<{ status: "not-found" }>
   | Readonly<{ status: "invalid-version"; message: AppMessage & { code: "MSG01" } }>
@@ -90,6 +92,7 @@ export type LoadEmployeeWorkspaceResult =
   | SessionExpiredResult;
 
 export type SaveEmployeeResult =
+  | BindableEmployeeProblem
   | Readonly<{
       employee: EmployeeProfile;
       followUp?: AccountFollowUp;

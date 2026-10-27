@@ -20,7 +20,7 @@ export function createBackendTransport(environment: Readonly<Record<string, unkn
       // cannot change the endpoint, token, or body of an in-flight operation.
       const request = prepareBackendRequest(input);
       if (!request) return { status: "invalid-request" };
-      const target = resolveBackendEndpoint(config, request.endpoint);
+      const target = resolveBackendEndpoint(config, request.endpoint, request.parameters);
       if (target.status !== "resolved") return { status: "invalid-request" };
       const signal = options.signal;
       if (signal?.aborted) return { status: "unavailable" };

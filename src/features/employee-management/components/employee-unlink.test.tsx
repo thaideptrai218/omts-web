@@ -77,6 +77,44 @@ function deferred<T>() {
 }
 
 describe("employee unlink through list and editor", () => {
+  it("opens the duplicate profile from the workspace only after an explicit click", async () => {
+    const existingEmployeeId = "b669dc43-c9dc-4df8-930b-ab9de6d978e3";
+    const target = { ...mockEmployeeProfiles[1], id: existingEmployeeId };
+    const loaded = await repository.load();
+    if (loaded.status !== "loaded") throw new Error("Expected loaded workspace");
+    service.load.mockResolvedValueOnce({
+      ...loaded,
+      workspace: { ...loaded.workspace, employees: [employee, target] },
+    });
+    service.save.mockResolvedValueOnce({ status: "duplicate", code: "MSG03", existingEmployeeId });
+    const { user, editor, notes } = await openEditor();
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    const open = await within(editor).findByRole("button", { name: "Mở hồ sơ hiện có" });
+    expect(screen.getByRole("dialog", { name: employee.fullName })).toBe(editor);
+    expect(notes.value).toBe("Bản nháp chưa lưu");
+    await user.click(open);
+    const targetEditor = screen.getByRole("dialog", { name: target.fullName });
+    expect(within(targetEditor).getByRole<HTMLInputElement>("textbox", { name: "Họ và tên" }).value).toBe(target.fullName);
+    expect(service.load).toHaveBeenCalledTimes(1);
+    expect(service.save).toHaveBeenCalledTimes(1);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("retains the editor and draft when the duplicate ID is absent from the workspace", async () => {
+    service.save.mockResolvedValueOnce({
+      status: "duplicate", code: "MSG03", existingEmployeeId: "b669dc43-c9dc-4df8-930b-ab9de6d978e3",
+    });
+    const { user, editor, notes } = await openEditor();
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    await user.click(await within(editor).findByRole("button", { name: "Mở hồ sơ hiện có" }));
+    expect(within(editor).getByText(/Chưa mở được hồ sơ này/)).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: employee.fullName })).toBe(editor);
+    expect(notes.isConnected).toBe(true);
+    expect(notes.value).toBe("Bản nháp chưa lưu");
+    expect(service.load).toHaveBeenCalledTimes(1);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
   it("keeps the actual editor mounted, retains notes, then saves with the returned version", async () => {
     const { user, editor, notes } = await openEditor();
     const confirmation = await openConfirmation(user, editor);

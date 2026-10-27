@@ -8,6 +8,8 @@ import type { EmployeeManagementService } from "@/features/employee-management/s
 import { createEmployeeMutationTracker } from "@/features/employee-management/state/employee-mutation";
 import { formatMessage } from "@/shared/messages/message-catalog";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
+import { bindEmployeeEditorProblem, type EmployeeEditorProblem } from "./employee-editor-problem";
+import type { BindableEmployeeProblem } from "../domain/employee-problem";
 
 type Feedback = Readonly<{
   existingEmployeeId?: string;
@@ -32,12 +34,35 @@ export function useEmployeeEditorActions({
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [mutations] = useState(createEmployeeMutationTracker);
   const version = useRef(employee?.recordVersion ?? null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  const requestedFocus = useRef<{
+    operation?: NonNullable<ReturnType<typeof mutations.start>>;
+    field?: EmployeeEditorProblem["fieldErrors"][number]["field"];
+  } | undefined>(undefined);
 
-  useEffect(() => () => mutations.invalidate(), [mutations]);
+  useEffect(() => () => {
+    requestedFocus.current = undefined;
+    mutations.invalidate();
+  }, [mutations]);
+
+  useEffect(() => {
+    const focus = requestedFocus.current;
+    if (!focus || pending !== null || confirmUnlink) return;
+    // Schedule after commit and the child dialog's close effect. Never race a
+    // newly rendered summary against the old confirmation's focus restoration.
+    const frame = requestAnimationFrame(() => {
+      if (requestedFocus.current !== focus || (focus.operation && !focus.operation.isCurrent())) return;
+      if (focus.field) form.setFocus(focus.field);
+      else feedbackRef.current?.focus();
+      requestedFocus.current = undefined;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [feedback, pending, confirmUnlink, form]);
 
   function start(action: "save" | "unlink") {
     const operation = mutations.start();
     if (!operation) return null;
+    requestedFocus.current = undefined;
     setFeedback(undefined);
     setPending(action);
     onPendingChange(true);
@@ -51,10 +76,16 @@ export function useEmployeeEditorActions({
   }
 
   function changeUnlinkConfirmation(open: boolean) {
+    requestedFocus.current = open ? undefined : { field: "accountId" };
     setConfirmUnlink(open);
-    // The launcher is disabled while confirmation is open. Restore focus only
-    // after React has enabled the editor again, instead of relying on native close.
-    if (!open) requestAnimationFrame(() => form.setFocus("accountId"));
+    // The effect restores focus after commit, pending completion and native close.
+  }
+
+  function showProblem(problem: BindableEmployeeProblem, operation: NonNullable<ReturnType<typeof start>>) {
+    const binding = bindEmployeeEditorProblem(problem);
+    requestedFocus.current = { operation, field: binding.fieldErrors[0]?.field };
+    for (const error of binding.fieldErrors) form.setError(error.field, { type: "server", message: error.message });
+    setFeedback({ text: binding.summary, existingEmployeeId: binding.existingEmployeeId, tone: "danger" });
   }
 
   async function persistEmployee(values: EmployeeEditorValues) {
@@ -69,7 +100,9 @@ export function useEmployeeEditorActions({
         recordVersion: version.current,
       });
       if (!operation.isCurrent()) return;
-      if (result.status === "session-expired") {
+      if (result.status === "invalid-fields" || (result.status === "duplicate" && "code" in result)) {
+        showProblem(result, operation);
+      } else if (result.status === "session-expired") {
         sessionExpiryChannel.publish(result.message);
       } else if (result.status === "forbidden" || result.status === "conflict") {
         setFeedback({ text: formatMessage(result.message), tone: "danger" });
@@ -113,8 +146,11 @@ export function useEmployeeEditorActions({
         employeeId: employee.id, recordVersion: version.current,
       });
       if (!operation.isCurrent()) return;
-      changeUnlinkConfirmation(false);
-      if (result.status === "session-expired") {
+      if (result.status === "invalid-fields") setConfirmUnlink(false);
+      else changeUnlinkConfirmation(false);
+      if (result.status === "invalid-fields") {
+        showProblem(result, operation);
+      } else if (result.status === "session-expired") {
         sessionExpiryChannel.publish(result.message);
       } else if (result.status === "not-found") {
         setFeedback({ text: "Không tìm thấy hồ sơ nhân viên. Vui lòng tải lại danh sách.", tone: "danger" });
@@ -143,5 +179,5 @@ export function useEmployeeEditorActions({
     }
   }
 
-  return { feedback, pending, confirmUnlink, setConfirmUnlink: changeUnlinkConfirmation, saveEmployee, unlinkAccount };
+  return { feedback, feedbackRef, pending, confirmUnlink, setConfirmUnlink: changeUnlinkConfirmation, saveEmployee, unlinkAccount };
 }

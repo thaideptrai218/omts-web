@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useEmployeeEditorActions } from "@/features/employee-management/components/use-employee-editor-actions";
@@ -17,20 +18,21 @@ import {
 import { employeeManagementService } from "@/features/employee-management/services/employee-management-service.instance";
 import type { EmployeeManagementService } from "@/features/employee-management/services/employee-management-service";
 import { formatMessage } from "@/shared/messages/message-catalog";
+import { EmployeeEditorField } from "./employee-editor-field";
 
 type EmployeeEditorProps = Readonly<{
   availableAccounts: readonly EmployeeAccountSummary[];
   embedded?: boolean;
   employee?: EmployeeProfile;
   service?: Pick<EmployeeManagementService, "save" | "unlinkAccount">;
-  onOpenExisting(employeeId: string): void;
+  onOpenExisting(employeeId: string): boolean | void;
   onPendingChange(pending: boolean): void;
   onSaved(employee: EmployeeProfile, followUp?: AccountFollowUp): void;
   onUnlinked(employee: EmployeeProfile): void;
 }>;
 
 const inputStyles =
-  "mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 text-text placeholder:text-text-muted disabled:bg-surface-subtle disabled:text-text-muted";
+  "mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 text-text placeholder:text-text-muted disabled:bg-surface-subtle disabled:text-text-muted aria-[invalid=true]:border-danger";
 const textareaStyles = `${inputStyles} min-h-28 py-3`;
 
 function initialValues(employee?: EmployeeProfile): EmployeeEditorValues {
@@ -48,11 +50,6 @@ function initialValues(employee?: EmployeeProfile): EmployeeEditorValues {
   };
 }
 
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <span className="mt-2 block font-normal text-danger">{message}</span>;
-}
-
 export function EmployeeEditor({
   availableAccounts,
   embedded = false,
@@ -64,6 +61,7 @@ export function EmployeeEditor({
   onUnlinked,
 }: EmployeeEditorProps) {
   const isCreate = !employee;
+  const fieldPrefix = useId();
   const options = employee?.account
     ? [employee.account, ...availableAccounts]
     : [...availableAccounts];
@@ -76,8 +74,17 @@ export function EmployeeEditor({
     resolver: zodResolver(employeeEditorSchema),
   });
   const { formState: { errors, isDirty }, register } = form;
-  const { feedback, pending, confirmUnlink, setConfirmUnlink, saveEmployee, unlinkAccount } =
+  const { feedback, feedbackRef, pending, confirmUnlink, setConfirmUnlink, saveEmployee, unlinkAccount } =
     useEmployeeEditorActions({ employee, form, service, onPendingChange, onSaved, onUnlinked });
+  const [unavailableFeedback, setUnavailableFeedback] = useState<typeof feedback>();
+  function controlProps(field: keyof EmployeeEditorValues) {
+    const id = `${fieldPrefix}-${field}`;
+    return {
+      id,
+      "aria-invalid": Boolean(errors[field]),
+      "aria-describedby": errors[field] ? `${id}-error` : undefined,
+    };
+  }
 
   return (
     <section
@@ -103,6 +110,8 @@ export function EmployeeEditor({
 
       {feedback && (
         <div
+          ref={feedbackRef}
+          tabIndex={-1}
           aria-live="polite"
           className={`mt-5 rounded-control border p-3 text-sm font-medium ${
             feedback.tone === "success"
@@ -115,11 +124,18 @@ export function EmployeeEditor({
           {feedback.existingEmployeeId && (
             <button
               className="mt-2 min-h-11 rounded-control px-3 font-semibold underline underline-offset-4 hover:bg-white/60"
-              onClick={() => onOpenExisting(feedback.existingEmployeeId!)}
+              disabled={pending !== null || confirmUnlink}
+              onClick={() => {
+                const id = feedback.existingEmployeeId;
+                if (id && onOpenExisting(id) === false) setUnavailableFeedback(feedback);
+              }}
               type="button"
             >
               Mở hồ sơ hiện có
             </button>
+          )}
+          {feedback.existingEmployeeId && unavailableFeedback === feedback && (
+            <p className="mt-2">Chưa mở được hồ sơ này. Các thay đổi đang nhập vẫn được giữ.</p>
           )}
         </div>
       )}
@@ -129,48 +145,43 @@ export function EmployeeEditor({
         <fieldset className="min-w-0">
           <legend className="text-lg font-semibold text-text">Thông tin nhận diện</legend>
           <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Họ và tên <span className="text-danger">*</span>
+            <EmployeeEditorField id={controlProps("fullName").id} label="Họ và tên" required error={errors.fullName?.message}>
               <input
-                aria-invalid={Boolean(errors.fullName)}
+                {...controlProps("fullName")}
+                aria-required="true"
                 autoComplete="name"
                 className={inputStyles}
                 {...register("fullName")}
               />
-              <FieldError message={errors.fullName?.message} />
-            </label>
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Số điện thoại <span className="text-danger">*</span>
+            </EmployeeEditorField>
+            <EmployeeEditorField id={controlProps("phone").id} label="Số điện thoại" required error={errors.phone?.message}>
               <input
-                aria-invalid={Boolean(errors.phone)}
+                {...controlProps("phone")}
+                aria-required="true"
                 autoComplete="tel"
                 className={inputStyles}
                 inputMode="tel"
                 {...register("phone")}
               />
-              <FieldError message={errors.phone?.message} />
-            </label>
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Ngày sinh <span className="font-normal text-text-muted">(không bắt buộc)</span>
-              <input className={inputStyles} type="date" {...register("birthday")} />
-            </label>
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Trạng thái <span className="text-danger">*</span>
+            </EmployeeEditorField>
+            <EmployeeEditorField id={controlProps("birthday").id} label="Ngày sinh" optional error={errors.birthday?.message}>
+              <input {...controlProps("birthday")} className={inputStyles} type="date" {...register("birthday")} />
+            </EmployeeEditorField>
+            <EmployeeEditorField id={controlProps("status").id} label="Trạng thái" required error={errors.status?.message}>
               {isCreate ? (
                 <>
                   <input type="hidden" value="employed" {...register("status")} />
-                  <span className="mt-2 flex min-h-12 items-center rounded-control border border-border bg-surface-subtle px-3 text-text">
+                  <output {...controlProps("status")} className="mt-2 flex min-h-12 items-center rounded-control border border-border bg-surface-subtle px-3 text-text">
                     Đang làm việc
-                  </span>
+                  </output>
                 </>
               ) : (
-                <select className={inputStyles} {...register("status")}>
+                <select {...controlProps("status")} className={inputStyles} {...register("status")}>
                   <option value="employed">Đang làm việc</option>
                   <option value="left">Đã nghỉ</option>
                 </select>
               )}
-              <FieldError message={errors.status?.message} />
-            </label>
+            </EmployeeEditorField>
           </div>
         </fieldset>
 
@@ -179,10 +190,10 @@ export function EmployeeEditor({
           <p className="mt-1 text-sm leading-6 text-text-muted">
             Chọn tài khoản nội bộ chưa liên kết với nhân viên khác. Liên kết tài khoản không tự cấp vai trò hoặc quyền truy cập.
           </p>
-          <label className="mt-4 block min-w-0 text-sm font-semibold text-text">
-            Tài khoản hệ thống <span className="font-normal text-text-muted">(không bắt buộc)</span>
+          <div className="mt-4">
+          <EmployeeEditorField id={controlProps("accountId").id} label="Tài khoản hệ thống" optional error={errors.accountId?.message}>
             <select
-              aria-invalid={Boolean(errors.accountId)}
+              {...controlProps("accountId")}
               className={inputStyles}
               {...register("accountId")}
             >
@@ -194,8 +205,8 @@ export function EmployeeEditor({
                 </option>
               ))}
             </select>
-            <FieldError message={errors.accountId?.message} />
-          </label>
+          </EmployeeEditorField>
+          </div>
           {employee?.account && (
             <div className="mt-4 flex flex-col items-start gap-3 rounded-control border border-border bg-surface-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 text-sm leading-6">
@@ -215,28 +226,23 @@ export function EmployeeEditor({
             Các trường dưới đây không bắt buộc và có thể cập nhật sau.
           </p>
           <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Địa chỉ
-              <input className={inputStyles} {...register("address")} />
-            </label>
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Khu vực
-              <input className={inputStyles} {...register("area")} />
-            </label>
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Phường/Xã
-              <input className={inputStyles} {...register("wardCommune")} />
-            </label>
+            <EmployeeEditorField id={controlProps("address").id} label="Địa chỉ" error={errors.address?.message}>
+              <input {...controlProps("address")} className={inputStyles} {...register("address")} />
+            </EmployeeEditorField>
+            <EmployeeEditorField id={controlProps("area").id} label="Khu vực" error={errors.area?.message}>
+              <input {...controlProps("area")} className={inputStyles} {...register("area")} />
+            </EmployeeEditorField>
+            <EmployeeEditorField id={controlProps("wardCommune").id} label="Phường/Xã" error={errors.wardCommune?.message}>
+              <input {...controlProps("wardCommune")} className={inputStyles} {...register("wardCommune")} />
+            </EmployeeEditorField>
           </div>
           <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Thông tin khác
-              <textarea className={textareaStyles} {...register("otherInformation")} />
-            </label>
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Ghi chú
-              <textarea className={textareaStyles} {...register("notes")} />
-            </label>
+            <EmployeeEditorField id={controlProps("otherInformation").id} label="Thông tin khác" error={errors.otherInformation?.message}>
+              <textarea {...controlProps("otherInformation")} className={textareaStyles} {...register("otherInformation")} />
+            </EmployeeEditorField>
+            <EmployeeEditorField id={controlProps("notes").id} label="Ghi chú" error={errors.notes?.message}>
+              <textarea {...controlProps("notes")} className={textareaStyles} {...register("notes")} />
+            </EmployeeEditorField>
           </div>
         </fieldset>
 

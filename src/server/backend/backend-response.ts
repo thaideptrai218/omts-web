@@ -3,6 +3,7 @@ import { isJsonContentType, readRetryAfterMs } from "../../shared/http/api-probl
 import { messageCatalog, type MessageCode } from "../../shared/messages/message-catalog";
 import type { BackendRequest } from "./backend-request";
 import type { BackendTransportResult } from "./backend-result";
+import { projectEmployeeProblemMetadata } from "../../features/employee-management/api/employee-problem-metadata";
 
 export const MAX_RESPONSE_BYTES = 1024 * 1024;
 
@@ -55,8 +56,14 @@ export async function readBackendResponse(response: Response, endpoint: BackendR
     // No arbitrary upstream strings/params/headers/cause in failures. MSG06's
     // structured conflict projection is deferred; this layer does not render copy.
     let code: MessageCode | undefined;
-    try { code = knownCode(await readBoundedJson(response)); } catch { /* Status is still authoritative. */ }
-    return { status: "http-error", httpStatus: response.status, code, retryAfterMs };
+    let employeeProblem: ReturnType<typeof projectEmployeeProblemMetadata>;
+    try {
+      const data = await readBoundedJson(response);
+      code = knownCode(data);
+      employeeProblem = projectEmployeeProblemMetadata(endpoint, response.status, code, data);
+    } catch { /* Status is still authoritative. */ }
+    return { status: "http-error", httpStatus: response.status, code, retryAfterMs,
+      ...(employeeProblem ? { employeeProblem } : {}) };
   }
   try {
     return { status: "success", httpStatus: response.status, data: await readBoundedJson(response) };

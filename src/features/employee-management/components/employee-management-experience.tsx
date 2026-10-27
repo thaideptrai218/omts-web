@@ -129,8 +129,10 @@ export function EmployeeManagementExperience() {
   }, [canManage]);
 
   function openEmployee(employeeId: string) {
+    if (!workspace?.employees.some((employee) => employee.id === employeeId)) return false;
     setSelectedEmployeeId(employeeId);
     setIsCreating(false);
+    return true;
   }
 
   function updateEmployee(

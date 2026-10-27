@@ -8,7 +8,7 @@ const next = fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.
 const cases = [
   { directory: "server-boundary", modules: ["backend-config", "backend-transport", "server-auth-tokens", "browser-dto", "backend-diagnostic"] },
   { directory: "web-config-boundary", modules: ["web-session-config", "session-cookie-reader", "session-cookies", "csrf-guard", "csrf-mutation-body"] },
-  { directory: "expiry-boundary", modules: ["session-expiry"] },
+  { directory: "expiry-boundary", modules: ["session-expiry", "employee-mutation-adapter", "employee-read-adapter", "employee-session"] },
   { directory: "session-runtime-boundary", modules: ["session-keyring-config", "server-session-runtime-config", "server-session-runtime", "application-context-dal", "function-capability-guard"] },
   { directory: "session-access-boundary", modules: ["server-session-runtime-owner", "protected-access-decision", "login-session-service", "login-http", "pending-login-delivery"] },
   { directory: "session-routes-boundary", modules: ["session-destinations", "session-gateway", "session-gateway.instance", "session-http", "next-session-access"] },
