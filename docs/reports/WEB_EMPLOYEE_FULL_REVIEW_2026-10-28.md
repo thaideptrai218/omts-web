@@ -63,3 +63,7 @@ Sau kiểm, log đã lưu ra `.hallmark/employee-review-evidence-20261028/`. L�
 Kết luận sau kiểm: một lỗi P2 mới đã sửa và có test bổ sung; không còn P1/P2 chưa xử lý được phát hiện trong lát code đã review. Backlog toàn LAB-01 và hai message chờ vẫn giữ mở. Commit chỉ chứa phần nhân viên cùng transport/fixture/tài liệu liên quan; không gom code hồ sơ, thông báo, tài khoản hoặc bản sửa Dialog dùng chung từ lượt khác.
 
 Không sửa lịch sử Git, tắt scanner hoặc xử lý các incident GitGuardian trong lượt này. CI GitHub chỉ được gọi là đạt sau khi kiểm check của đúng SHA đã push; kết quả local không thay thế CI.
+
+## Bổ sung sau push — CI đã hoàn tất
+
+Đã push `e3c3013` lên nhánh hiện tại và [kiểm đúng SHA trên GitHub](WEB_CI_E3C3013_REVIEW_2026-10-28.md): build-test/Gitleaks/pr-title SUCCESS; log Linux xác nhận2.044 test pass/31 Redis skip, build18/18 và24 HTTP assertions. GitGuardian vẫn FAILURE với sáu incident lịch sử, không có dòng phát hiện trỏ vào e3c3013 trong check này. Không có lỗi code mới cần vá; không gọi toàn bộ CI xanh. PR vẫn draft, chưa merge develop; API và hai message chờ giữ nguyên.
