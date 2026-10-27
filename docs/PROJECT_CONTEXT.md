@@ -6,6 +6,8 @@
 
 Latest UI evidence: [27/10 management polish review](reports/WEB_MANAGEMENT_POLISH_REVIEW_2026-10-27.md) and [popup scroll-lock follow-up](reports/WEB_DIALOG_SCROLL_LOCK_REVIEW_2026-10-27.md). Dashboard, employees, accounts and fixed roles were checked at 360/1024 px. P3 background scrolling is fixed with a shared, nested-safe lock for popups/mobile menu. Local suite: 1,632 passed/31 Redis skipped; final lint/typecheck/build and 24 HTTP assertions passed. This remains mock UI; API/refresh and backend role-policy migration are not enabled or accepted by this review.
 
+CI on ddb2b21: build-test, Gitleaks and pr-title SUCCESS; GitGuardian FAILURE with 17 occurrences across six incident IDs, including new locations in ddb2b21. [Detailed source classification and follow-up tests](reports/WEB_CI_DDB2B21_REVIEW_2026-10-27.md). These are reviewed synthetic/mock findings, with dashboard classification still pending owner verification; do not describe all checks as green or suppress the scanner. Three extra raw-HTTP redaction cases pass; follow-up local suite is 1,635 passed/31 Redis skipped, with lint/typecheck/build and 24 HTTP assertions passing. No application/workflow behavior changed in this CI audit.
+
 ## Product boundary
 
 OMTS supports Trung Nam Aquaculture Cooperative in managing farming zones, rafts, oyster cultivation activities, sales, traceability, employees, attendance, payroll, and related costs.
