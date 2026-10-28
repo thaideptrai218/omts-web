@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { EmployeeManagementExperience } from "./employee-management-experience";
 import type { UnlinkEmployeeAccountResult } from "@/features/employee-management/domain/employee-management";
+import type { ChangeEmployeeEmploymentResult } from "../domain/employee-employment";
 import { mockEmployeeAccounts, mockEmployeeProfiles, mockEmployeeZones } from "@/features/employee-management/mocks/employee-management-fixtures";
 import { createMockEmployeeManagementRepository } from "@/features/employee-management/repositories/mock-employee-management-repository";
 import { employeeManagementService } from "@/features/employee-management/services/employee-management-service.instance";
@@ -17,7 +18,7 @@ vi.mock("@/features/auth/state/auth-provider", () => ({
 vi.mock("@/features/access/lib/has-effective-permission", () => ({ hasEffectivePermission: () => true }));
 vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify }) }));
 vi.mock("@/features/employee-management/services/employee-management-service.instance", () => ({
-  employeeManagementService: { load: vi.fn(), save: vi.fn(), unlinkAccount: vi.fn() },
+  employeeManagementService: { load: vi.fn(), save: vi.fn(), unlinkAccount: vi.fn(), endEmployment: vi.fn(), reinstate: vi.fn() },
 }));
 
 const employee = mockEmployeeProfiles[0];
@@ -46,6 +47,8 @@ beforeEach(() => {
   service.load.mockImplementation(() => repository.load());
   service.save.mockImplementation((input) => repository.save(input));
   service.unlinkAccount.mockImplementation((input) => repository.unlinkAccount(input));
+  service.endEmployment.mockImplementation((input) => repository.endEmployment(input));
+  service.reinstate.mockImplementation((input) => repository.reinstate(input));
 });
 
 async function openEditor() {
@@ -472,5 +475,188 @@ describe("employee unlink through list and editor", () => {
       expect(notes.value).toBe("Bản nháp chưa lưu");
       expect(notify).not.toHaveBeenCalled();
     } finally { unsubscribe(); }
+  });
+});
+
+describe("explicit employment changes through the actual editor", () => {
+  beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-28T10:00:00Z')); });
+  afterEach(() => vi.useRealTimers());
+
+  async function cleanEditor() {
+    const opened = await openEditor();
+    expect(within(opened.editor).getByRole<HTMLButtonElement>('button', { name: 'Nghỉ việc' }).disabled).toBe(true);
+    await opened.user.click(within(opened.editor).getByRole('button', { name: 'Hủy thay đổi' }));
+    return opened;
+  }
+  it('requires saving or discarding the draft and sends only the employment command', async () => {
+    const { user, editor, notes } = await cleanEditor();
+    expect(notes.value).toBe(employee.notes);
+    expect(service.save).not.toHaveBeenCalled();
+    expect(within(editor).queryByRole('combobox', { name: 'Trạng thái' })).toBeNull();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    const confirm = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    expect(within(confirm).getByLabelText<HTMLInputElement>('Ngày nghỉ việc').value).toBe('2026-10-28');
+    await user.click(within(confirm).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
+    await screen.findByRole('dialog', { name: 'Nhắc xử lý tài khoản' });
+    expect(screen.getByRole('link', { name: 'Mở tài khoản nội bộ' }).getAttribute('href')).toBe(`/access/accounts?accountId=${encodeURIComponent(employee.account.id)}`);
+    expect(service.endEmployment).toHaveBeenCalledExactlyOnceWith({ employeeId: employee.id, recordVersion: employee.recordVersion, endDate: '2026-10-28' });
+    expect(repository.snapshotEmployees()[0]).toMatchObject({ status: 'left', employmentEndDate: '2026-10-28', notes: employee.notes, account: employee.account });
+    expect(screen.queryByRole('button', { name: /Nguyễn Văn An/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Để sau' }));
+    fireEvent.change(screen.getByLabelText('Tình trạng làm việc'), { target: { value: 'left' } });
+    await user.click(screen.getByRole('button', { name: /Nguyễn Văn An/ }));
+    expect(screen.getByText('Ngày nghỉ: 28/10/2026')).toBeTruthy();
+  });
+
+  it('requires confirmation to reinstate and clears the end date without unlocking the account', async () => {
+    const former = { ...employee, status: 'left' as const, employmentEndDate: '2026-10-01', account: { ...employee.account, status: 'locked' as const } };
+    repository = createMockEmployeeManagementRepository({ accounts: mockEmployeeAccounts.map((account) => account.id === employee.account.id ? former.account : account),
+      zones: mockEmployeeZones, initialEmployees: [former], latencyMs: 0 });
+    const user = userEvent.setup(); render(<EmployeeManagementExperience />);
+    await screen.findByRole('heading', { name: 'Nhân viên' });
+    fireEvent.change(screen.getByLabelText('Tình trạng làm việc'), { target: { value: 'left' } });
+    await user.click(screen.getByRole('button', { name: /Nguyễn Văn An/ }));
+    await user.click(screen.getByRole('button', { name: 'Đi làm lại' }));
+    const confirm = screen.getByRole('dialog', { name: 'Đi làm lại?' });
+    expect(service.reinstate).not.toHaveBeenCalled();
+    await user.click(within(confirm).getByRole('button', { name: 'Xác nhận đi làm lại' }));
+    await screen.findByRole('dialog', { name: 'Nhắc kiểm tra quyền truy cập' });
+    expect(repository.snapshotEmployees()[0]).toMatchObject({ status: 'employed', employmentEndDate: null, account: { status: 'locked' } });
+  });
+
+  it('keeps the employee unchanged when the date is invalid or the confirmation is cancelled', async () => {
+    const { user, editor } = await cleanEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    const confirm = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    fireEvent.change(within(confirm).getByLabelText('Ngày nghỉ việc'), { target: { value: '2026-10-29' } });
+    fireEvent.submit(within(confirm).getByRole('button', { name: 'Xác nhận nghỉ việc' }).closest('form')!);
+    await waitFor(() => expect(within(confirm).getByLabelText('Ngày nghỉ việc').getAttribute('aria-invalid')).toBe('true'));
+    expect(service.endEmployment).not.toHaveBeenCalled();
+    await user.click(within(confirm).getByRole('button', { name: 'Hủy' }));
+    expect(repository.snapshotEmployees()[0]).toEqual(employee);
+  });
+
+  it('does not send a command when the date confirmation is cancelled before validation settles', async () => {
+    const { user, editor } = await cleanEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    await act(async () => {
+      fireEvent.submit(within(dialog).getByRole('button', { name: 'Xác nhận nghỉ việc' }).closest('form')!);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Hủy' }));
+    });
+    expect(service.endEmployment).not.toHaveBeenCalled();
+    expect(repository.snapshotEmployees()[0]).toEqual(employee);
+    expect(screen.getByRole('dialog', { name: employee.fullName })).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Nhắc xử lý tài khoản' })).toBeNull();
+  });
+
+  it('does not start a command after unmount during date validation', async () => {
+    const { user, editor, unmount } = await cleanEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    await act(async () => {
+      fireEvent.submit(within(dialog).getByRole('button', { name: 'Xác nhận nghỉ việc' }).closest('form')!);
+      unmount();
+    });
+    expect(service.endEmployment).not.toHaveBeenCalled();
+    expect(repository.snapshotEmployees()[0]).toEqual(employee);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('does not reuse the old confirmation after cancelling and reopening the date dialog', async () => {
+    const { user, editor } = await cleanEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    await act(async () => {
+      fireEvent.submit(within(dialog).getByRole('button', { name: 'Xác nhận nghỉ việc' }).closest('form')!);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Hủy' }));
+      fireEvent.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    });
+    expect(service.endEmployment).not.toHaveBeenCalled();
+    expect(repository.snapshotEmployees()[0]).toEqual(employee);
+    const reopened = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    await user.click(within(reopened).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
+    await screen.findByRole('dialog', { name: 'Nhắc xử lý tài khoản' });
+    expect(service.endEmployment).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the date dialog and editor open for MSG11 and preserves the employee', async () => {
+    repository = createMockEmployeeManagementRepository({ accounts: mockEmployeeAccounts, zones: mockEmployeeZones, initialEmployees: [employee], latencyMs: 0,
+      laborRecords: [{ employeeId: employee.id, date: '2026-10-29', kind: 'attendance' }] });
+    const { user, editor } = await cleanEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    const confirm = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
+    expect((await within(confirm).findByRole('alert')).textContent).toContain('1 bản ghi');
+    expect(repository.snapshotEmployees()[0]).toEqual(employee);
+    expect(screen.getByRole('dialog', { name: employee.fullName })).toBeTruthy();
+  });
+
+  it('allows a saved draft before ending and uses the new profile version', async () => {
+    const { user, editor } = await openEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: employee.fullName })).toBeNull());
+    const saved = repository.snapshotEmployees()[0];
+    await user.click(screen.getByRole('button', { name: /Nguyễn Văn An/ }));
+    await user.click(screen.getByRole('button', { name: 'Nghỉ việc' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Nghỉ việc?' })).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
+    await screen.findByRole('dialog', { name: 'Nhắc xử lý tài khoản' });
+    expect(service.endEmployment).toHaveBeenCalledWith({ employeeId: employee.id, recordVersion: saved.recordVersion, endDate: '2026-10-28' });
+    expect(repository.snapshotEmployees()[0].notes).toBe('Bản nháp chưa lưu');
+  });
+
+  it('publishes active session expiry and does not show an employment success', async () => {
+    const expired = vi.fn(); const unsubscribe = sessionExpiryChannel.subscribe(expired);
+    try {
+      service.endEmployment.mockResolvedValueOnce({ status: 'session-expired', message: { code: 'MSG19' } });
+      const { user, editor } = await cleanEditor();
+      await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+      await user.click(within(screen.getByRole('dialog', { name: 'Nghỉ việc?' })).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
+      await waitFor(() => expect(expired).toHaveBeenCalledWith({ code: 'MSG19' }));
+      expect(repository.snapshotEmployees()[0]).toEqual(employee);
+      expect(screen.queryByRole('dialog', { name: 'Nhắc xử lý tài khoản' })).toBeNull();
+    } finally { unsubscribe(); }
+  });
+
+  it('keeps an unknown result visible without automatically sending the command again', async () => {
+    service.endEmployment.mockRejectedValueOnce(new Error('Response unavailable'));
+    const { user, editor } = await cleanEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain('Chưa xác nhận được kết quả');
+    expect(service.endEmployment).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog', { name: 'Nhắc xử lý tài khoản' })).toBeNull();
+  });
+
+  it('ignores a response after the employee view unmounts without claiming to cancel the command', async () => {
+    let finish!: (result: ChangeEmployeeEmploymentResult) => void;
+    service.endEmployment.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    const { user, editor, unmount } = await cleanEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Nghỉ việc?' })).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
+    notify.mockClear(); unmount();
+    await act(async () => finish({ status: 'changed', employee: { ...employee, status: 'left', employmentEndDate: '2026-10-28' } }));
+    expect(notify).not.toHaveBeenCalled();
+  });
+  it('blocks Escape and duplicate submission immediately when the service takes the command', async () => {
+    const { user, editor } = await cleanEditor();
+    await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
+    const confirm = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
+    let finish!: (result: ChangeEmployeeEmploymentResult) => void;
+    service.endEmployment.mockImplementationOnce(() => {
+      fireEvent(confirm, new Event('cancel', { cancelable: true }));
+      fireEvent(editor, new Event('cancel', { cancelable: true }));
+      return new Promise((resolve) => { finish = resolve; });
+    });
+    await user.click(within(confirm).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
+    expect(screen.getByRole('dialog', { name: 'Nghỉ việc?' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: employee.fullName })).toBeTruthy();
+    fireEvent.submit(within(confirm).getByRole('button', { name: 'Đang cập nhật…' }).closest('form')!);
+    expect(service.endEmployment).toHaveBeenCalledTimes(1);
+    await act(async () => { finish({ status: 'forbidden', message: { code: 'MSG02' } }); });
+    await within(confirm).findByRole('alert');
+    await user.click(within(confirm).getByRole('button', { name: 'Hủy' }));
+    expect(repository.snapshotEmployees()[0]).toEqual(employee);
   });
 });

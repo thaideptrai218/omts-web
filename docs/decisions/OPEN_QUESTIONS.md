@@ -1,5 +1,9 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## WEB-EMP-EMPLOY-01/02 — Ngày nghỉ và bản nháp khi đổi tình trạng
+
+**Đã chốt, 28/10/2026, Duy Thái qua câu trả lời async:** ngày nghỉ chỉ hôm nay hoặc trước đó; nếu hồ sơ có thay đổi chưa lưu thì phải lưu hoặc hủy bản nháp trước khi nghỉ việc/đi làm lại. Không dùng phương án giữ bản nháp qua thao tác này như unlink. Ngày nghiệp vụ Việt Nam UTC+7 theo BusinessClock backend; status action có version riêng, không tự lưu thông tin cá nhân hoặc khóa/mở tài khoản. [Plan triển khai](../WEB_REAL_API_IMPLEMENTATION_PLAN.md#emp-employ--nghỉ-việcđi-làm-lại-bằng-mock-2810).
+
 ## WEB-EMP-LIST-01 — Bộ lọc mặc định của danh sách nhân viên
 
 **Đã chốt, 28/10/2026, Duy Thái:** “Đang làm việc — theo Jira (đề xuất)”. Mở màn mặc định Employed theo OMTS-203. Owner vẫn chọn All/Left hoặc xóa bộ lọc để xem người đã nghỉ; đây là lựa chọn hiển thị, không đổi trạng thái hồ sơ hay account. [Triển khai và giới hạn](../reports/WEB_EMPLOYEE_DIRECTORY_COMPLETION_2026-10-28.md).

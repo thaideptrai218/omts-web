@@ -35,6 +35,8 @@ export const messageCatalog = {
     "Danh tính chưa được xác minh nên hệ thống không thực hiện thao tác này.",
   MSG57:
     "Tài liệu cũ tạm thời bị ẩn cho đến khi việc xác minh danh tính hoàn tất.",
+  MSG61:
+    "Không thể chuyển nhân viên từ “{current_status}” sang “{new_status}”: hồ sơ đã ở trạng thái này.",
   MSG62:
     "Mã xác minh đã được gửi tới {masked_email}. Hãy nhập mã để hoàn tất; email cũ vẫn được sử dụng cho đến khi xác minh thành công.",
   MSG67:

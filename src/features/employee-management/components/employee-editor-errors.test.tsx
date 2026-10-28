@@ -21,6 +21,8 @@ const duplicateId = "b669dc43-c9dc-4df8-930b-ab9de6d978e3";
 
 function setup(result: SaveEmployeeResult) {
   const service = {
+    endEmployment: vi.fn(async () => ({ status: "not-found" as const })),
+    reinstate: vi.fn(async () => ({ status: "not-found" as const })),
     save: vi.fn<(input: SaveEmployeeInput) => Promise<SaveEmployeeResult>>().mockResolvedValue(result),
     unlinkAccount: vi.fn<(input: UnlinkEmployeeAccountInput) => Promise<UnlinkEmployeeAccountResult>>().mockResolvedValue({ status: "not-found" }),
   };

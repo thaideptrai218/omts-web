@@ -24,6 +24,7 @@ export type EmployeeProfile = Readonly<{
   phone: string;
   recordVersion: string;
   status: EmployeeStatus;
+  employmentEndDate: string | null;
   wardCommune: string;
   workingZoneIds: readonly string[];
   bankAccount: EmployeeBankAccount | null;

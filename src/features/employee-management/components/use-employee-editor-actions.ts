@@ -25,10 +25,11 @@ type Options = Readonly<{
   onPendingChange(pending: boolean): void;
   onSaved(employee: EmployeeProfile, followUp?: AccountFollowUp): void;
   onUnlinked(employee: EmployeeProfile): void;
+  blocked: boolean;
 }>;
 
 export function useEmployeeEditorActions({
-  employee, form, service, onPendingChange, onSaved, onUnlinked,
+  employee, form, service, onPendingChange, onSaved, onUnlinked, blocked,
 }: Options) {
   const [feedback, setFeedback] = useState<Feedback>();
   const [pending, setPending] = useState<"save" | "unlink" | null>(null);
@@ -65,6 +66,7 @@ export function useEmployeeEditorActions({
   }, [feedback, pending, confirmUnlink, form]);
 
   function start(action: "save" | "unlink") {
+    if (blocked) return null;
     const operation = mutations.start();
     if (!operation) return null;
     requestedFocus.current = undefined;
@@ -185,5 +187,6 @@ export function useEmployeeEditorActions({
     }
   }
 
-  return { feedback, feedbackRef, bankGroupRef, zoneGroupRef, pending, confirmUnlink, setConfirmUnlink: changeUnlinkConfirmation, saveEmployee, unlinkAccount };
+  return { feedback, feedbackRef, bankGroupRef, zoneGroupRef, pending, confirmUnlink, setConfirmUnlink: changeUnlinkConfirmation, saveEmployee, unlinkAccount,
+    clearFeedback: () => { setFeedback(undefined); requestedFocus.current = undefined; } };
 }

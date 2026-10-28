@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { apiIdSchema, apiTextSchema } from "@/features/auth/api/auth-contract.schemas";
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
+import { employeeDateOnlySchema } from "../schemas/employee-date-only";
 
 // Wire snapshot: omts-backend develop@953f597. No HTTP/runtime binding.
-export const employeeDateOnlySchema = z.iso.date().refine((value) => !value.startsWith("0000-"));
+export { employeeDateOnlySchema } from "../schemas/employee-date-only";
 export const employeeStatusSchema = z.enum(["Employed", "Left"]);
 const accountStatusSchema = z.enum(["Active", "Locked"]);
 

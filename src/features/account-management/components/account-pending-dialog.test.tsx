@@ -70,7 +70,23 @@ beforeEach(() => {
   environment = createMockManagementEnvironment(0);
   service.load.mockImplementation(() => environment.accounts.load());
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); window.history.replaceState(null, "", "/access/accounts"); });
+
+it("opens the linked employee account requested by the follow-up URL", async () => {
+  window.history.replaceState(null, "", "/access/accounts?accountId=account-tran-binh");
+  render(<AccountManagementExperience />);
+  await screen.findByRole("dialog", { name: "Trần Thị Bình" });
+  expect(screen.queryByRole("dialog", { name: "Nguyễn Văn An" })).toBeNull();
+  expect(service.save).not.toHaveBeenCalled();
+  expect(service.changeStatus).not.toHaveBeenCalled();
+});
+
+it("does not open an unrelated account for an unknown follow-up target", async () => {
+  window.history.replaceState(null, "", "/access/accounts?accountId=unknown-account");
+  render(<AccountManagementExperience />);
+  await screen.findByRole("button", { name: /Nguyễn Văn An/ });
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
 
 it.each(["saved", "forbidden"] as const)("keeps the account editor open while saving and releases the close guard after %s", async (outcome) => {
   let finish!: (result: SaveAccountResult) => void;

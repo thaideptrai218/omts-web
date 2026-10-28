@@ -48,6 +48,11 @@ function PermissionDenied() {
   );
 }
 
+function requestedAccount(workspace: AccountManagementWorkspace) {
+  const accountId = new URLSearchParams(window.location.search).get("accountId");
+  return accountId ? workspace.accounts.find((account) => account.id === accountId) : undefined;
+}
+
 export function AccountManagementExperience() {
   const { state } = useAuth();
   const [workspace, setWorkspace] = useState<AccountManagementWorkspace>();
@@ -85,8 +90,10 @@ export function AccountManagementExperience() {
         return;
       }
       setWorkspace(result.workspace);
+      const target = requestedAccount(result.workspace);
+      if (target) setIsEditorOpen(true);
       setSelectedAccountId((current) =>
-        result.workspace.accounts.some((account) => account.id === current)
+        target ? target.id : result.workspace.accounts.some((account) => account.id === current)
           ? current
           : result.workspace.accounts[0]?.id,
       );
@@ -116,7 +123,9 @@ export function AccountManagementExperience() {
           return;
         }
         setWorkspace(result.workspace);
-        setSelectedAccountId(result.workspace.accounts[0]?.id);
+        const target = requestedAccount(result.workspace);
+        if (target) setIsEditorOpen(true);
+        setSelectedAccountId(target?.id ?? result.workspace.accounts[0]?.id);
       })
       .catch(() => {
         if (isActive) setHasLoadError(true);

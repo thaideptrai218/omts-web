@@ -108,9 +108,36 @@ Làm phần đọc không phụ thuộc API/MSG06/MSG24 trước. Đã đọc l�
 
 EMP-LIST-01–04 đã hoàn tất trong phạm vi mock:21 ca mới, source riêng2.104 pass/31 Redis skip, lint/typecheck/build18/18/24 HTTP và browser360/1024 đạt. Review sửa mất focus sau reset; báo cáo giữ cả RED/GREEN và giới hạn dataset browser3 người/paging test45 người. API/runtime/employment/create-account/MSG06/tên MSG24 tiếp tục là các bước riêng.
 
+#### EMP-LIFE — Tải/retry workspace theo tài khoản (đã làm local)
+
+Sau khi xuất bản danh sách19c47bc, kiểm đường đọc trên cùng OMTS-203. Không đổi quyền, session/cookie hoặc cơ chế HTTP/cache.
+
+| Lát | Thay đổi | Kiểm chứng |
+| --- | --- | --- |
+| EMP-LIFE-01 | Test account A→B đều có quyền, retry cũ, mất quyền/unmount và MSG19 về muộn | Dữ liệu/phản hồi A không tác động view B; không phát expiry từ request đã rời |
+| EMP-LIFE-02 | Workspace có key accountId; gom initial load và retry vào cùng effect có cleanup | Bỏ state/query/editor của account cũ, retry vẫn dùng service cũ, không tự retry mutation |
+| EMP-LIFE-03 | Regression module/full suite, lint/typecheck/build, báo cáo/bài học local | Không thay cổng API/MSG06/MSG24; không tự gọi toàn LAB-01 Done |
+
 Chỉ chuẩn bị hàm thuần và fixture khi chưa đủ điều kiện runtime. Không thêm tác vụ seed/khóa tài khoản/thu hồi grant vào thao tác unlink. Nếu model thật đòi thêm trường/luồng chưa được quyết định thì hỏi trước, không lược bỏ để test xanh.
 
 ## 3. Thiết kế đã chọn và phần còn mở
+
+### EMP-EMPLOY — Nghỉ việc/đi làm lại bằng mock, 28/10
+
+Đã đối chiếu OMTS-203/199 và EmployeeService local953f597. Duy Thái chốt: ngày nghỉ không ở tương lai; phải lưu hoặc hủy bản nháp trước khi đổi tình trạng. Dùng ngày nghiệp vụ Việt Nam UTC+7 theo BusinessClock backend. Không tự khóa/mở account, xóa lịch sử lao động, tạo grant hoặc bật API.
+
+| Micro-task | Phần việc | Tiêu chí kiểm |
+| --- | --- | --- |
+| EMP-EMPLOY-01 | Ngày nghiệp vụ, schema ngày nghỉ và input/result riêng | Ngày lịch hợp lệ, biên UTC+7, bắt buộc/không tương lai; version giữ nguyên |
+| EMP-EMPLOY-02 | Model ngày nghỉ và mock/service end/reinstate tách save | Đúng chuyển trạng thái; thiếu/stale version, same-status, bản ghi sau ngày nghỉ; không đổi account/history |
+| EMP-EMPLOY-03 | Thay status select bằng action/confirm; lưu/hủy draft trước | Không tự lưu bản nháp; pending chặn đóng/lặp; readonly status/ngày nghỉ; trả version mới |
+| EMP-EMPLOY-04 | Ghép list/follow-up và kiểm hồi quy/browser | Lọc Employed/Left đúng sau action; follow-up tùy account; report/learning local; API/MSG06/tên MSG24 tiếp tục chờ |
+
+Fixture labor cho mock chỉ là dữ liệu tham chiếu phục vụ ca MSG11; chưa có module chấm công/giao việc trên web, không dựng một bảng lịch sử hoặc endpoint giả trong product. Nguồn thật của count/related-list cần contract riêng khi bật API.
+
+**Kết quả local:** EMP-EMPLOY-01…04 hoàn tất bằng mock; [báo cáo và giới hạn](reports/WEB_EMPLOYEE_EMPLOYMENT_ACTIONS_2026-10-28.md). Thêm 41 test; source tách đạt 2.157 test / 31 Redis skip, lint/typecheck/build 18/18 và 24 HTTP assertions. Browser kiểm nghỉ → đúng tài khoản → đi làm lại, responsive 360/1024 px. Chưa commit/push; chưa nghiệm thu API/QA hoặc hoàn tất toàn bộ LAB-01.
+
+**Review xuất bản 28/10:** sửa P2 EMP-EMPLOY-REV-01: callback kiểm tra ngày sau Hủy/unmount không được bắt đầu lệnh; thêm 3 hồi quy (tổng 44 test employment mới). File luồng đạt 39/39; source tách 2.160 pass/31 Redis skip. Người dùng cho phép commit/push cùng nhánh, kèm lifecycle đang local; các sửa đổi profile/notification/Dialog khác giữ riêng. Bằng chứng kiểm cuối ở báo cáo trên, không thay cổng API/refresh/MSG06/tên MSG24 hoặc nghiệm thu QA.
 
 Trình duyệt gọi endpoint cùng origin trong Next.js. Route Handler/DAL phía server gọi .NET với token lấy từ session store. React nhận DTO tối thiểu đã bỏ token, không nhận nguyên AuthTokens. Server Component gọi DAL trực tiếp thay vì vòng HTTP qua chính Route Handler.
 
@@ -280,3 +307,5 @@ Trong lúc chờ contract/gate/QA account: hoàn thiện test dữ liệu null, 
 Đọc lại ticket và parent/dependency truy cập được; ghi rõ phần không đọc được. Cập nhật contract revision và decision liên quan. Thêm test happy/error/race, chạy checks; tự review security và UI. Cập nhật report và bài local. Chỉ commit/push khi được yêu cầu, không merge develop. Mốc “chuẩn bị xong” không phải “ghép API xong”, “local xong” không phải “QA xong”.
 
 Review EMP-LIST trước xuất bản28/10 bổ sung2 ca (paging khi debounce, nhiều nhãn vùng); tổng21 test mới và14 workflow cases. Không đổi các cổng API/MSG06/MSG24. Kết quả source cuối và phạm vi commit được ghi trong báo cáo danh sách.
+
+EMP-LIFE-01–03 hoàn tất local ngày28/10:12 test mới, source riêng2.116 pass/31 Redis skip, lint/typecheck/build18/18/24 HTTP đạt; [review và giới hạn](reports/WEB_EMPLOYEE_WORKSPACE_LIFECYCLE_2026-10-28.md). Key accountId/cleanup không thay quyền hoặc bảo vệ backend. Chưa commit/push lifecycle; danh sách đã push19c47bc và CI kỹ thuật đạt, GitGuardian lịch sử còn mở.

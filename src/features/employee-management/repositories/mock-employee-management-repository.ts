@@ -1,5 +1,4 @@
 import type {
-  AccountFollowUp,
   EmployeeAccountSummary,
   EmployeeManagementWorkspace,
   EmployeeProfile,
@@ -13,6 +12,7 @@ import { employeeEditorSchema } from "@/features/employee-management/schemas/emp
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 import { employeeBankFields, toEmployeeBankAccount } from "../schemas/employee-bank-schema";
 import type { EmployeeZoneOption } from "../domain/employee-working-details";
+import { createMockEmployeeEmployment, type MockEmployeeLaborReference } from "./mock-employee-employment";
 
 type MockOptions = Readonly<{
   getAccounts?: () => readonly EmployeeAccountSummary[];
@@ -24,6 +24,7 @@ type MockOptions = Readonly<{
   actorName?: string;
   now?: () => Date;
   zones?: readonly EmployeeZoneOption[];
+  laborRecords?: readonly MockEmployeeLaborReference[];
 }>;
 
 function wait(milliseconds: number): Promise<void> {
@@ -57,6 +58,7 @@ export function createMockEmployeeManagementRepository({
   actorName = "Lê Minh Hải",
   now = () => new Date(),
   zones = [],
+  laborRecords = [],
 }: MockOptions): EmployeeManagementRepository & Readonly<{ snapshotEmployees(): readonly EmployeeProfile[] }> {
   let accounts = initialAccounts;
   let employees = initialEmployees.map(cloneEmployee);
@@ -116,6 +118,22 @@ export function createMockEmployeeManagementRepository({
   }
 
   return {
+    ...createMockEmployeeEmployment({
+      authorize: prepareRequest,
+      find: (id) => {
+        const employee = employees.find((item) => item.id === id);
+        const linkedAccountId = employee?.account?.id;
+        const account = linkedAccountId ? accounts.find((item) => item.id === linkedAccountId) : undefined;
+        return employee && account ? { ...employee, account: cloneAccount(account) } : employee;
+      },
+      commit: (employee) => {
+        employees = employees.map((current) => current.id === employee.id ? employee : current);
+        updatedAt.set(employee.id, now());
+        return cloneEmployee(employee);
+      },
+      conflict, nextVersion: allocateVersion, now,
+      laborRecords: laborRecords.map((record) => ({ ...record })),
+    }),
     snapshotEmployees: () => employees.map(cloneEmployee),
     async load() {
       const earlyResult = await prepareRequest();
@@ -186,6 +204,9 @@ export function createMockEmployeeManagementRepository({
         };
       }
       if (current && input.recordVersion !== current.recordVersion) return conflict(current);
+      if (current && parsed.data.status !== current.status) {
+        return { status: "invalid-input", field: "status", message: { code: "MSG01" } };
+      }
       if (parsed.data.workingZoneIds.some((id) => !zones.some((zone) => zone.id === id && zone.status === "in-use"))) {
         return { status: "invalid-fields", code: "MSG01", fields: ["workingZoneIds"] };
       }
@@ -249,6 +270,7 @@ export function createMockEmployeeManagementRepository({
         phone: parsed.data.phone,
         recordVersion: allocateVersion(),
         status: current ? parsed.data.status : "employed",
+        employmentEndDate: current?.employmentEndDate ?? null,
         wardCommune: parsed.data.wardCommune.trim(),
         workingZoneIds: [...parsed.data.workingZoneIds],
         bankAccount: toEmployeeBankAccount(parsed.data.bankAccount),
@@ -263,19 +285,8 @@ export function createMockEmployeeManagementRepository({
       }
       updatedAt.set(saved.id, now());
 
-      const statusChanged = current && current.status !== saved.status;
-      const followUp: AccountFollowUp | undefined =
-        statusChanged && saved.account
-          ? {
-              account: cloneAccount(saved.account),
-              action:
-                saved.status === "left" ? "review-lock" : "review-access",
-            }
-          : undefined;
-
       return {
         employee: cloneEmployee(saved),
-        followUp,
         message: {
           code: "MSG10",
           params: { object_name: "Hồ sơ nhân viên" },

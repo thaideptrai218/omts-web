@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -47,86 +47,68 @@ function PermissionDenied() {
 
 export function EmployeeManagementExperience() {
   const { state } = useAuth();
+  if (state.status !== "authenticated") return null;
+  if (!hasEffectivePermission(state.account.access, "cooperative.employees.manage")) {
+    return <PermissionDenied />;
+  }
+  return <EmployeeWorkspace key={state.account.accountId} />;
+}
+
+function EmployeeWorkspace() {
   const { notify } = useToast();
   const [workspace, setWorkspace] = useState<EmployeeManagementWorkspace>();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>();
   const [isCreating, setIsCreating] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
+  const mutatingRef = useRef(false);
   const [followUp, setFollowUp] = useState<AccountFollowUp>();
   const [hasLoadError, setHasLoadError] = useState(false);
+  const [isForbidden, setIsForbidden] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const canManage =
-    state.status === "authenticated" &&
-    hasEffectivePermission(
-      state.account.access,
-      "cooperative.employees.manage",
-    );
+  const [reload, setReload] = useState(0);
   const selectedEmployee = workspace?.employees.find(
     (employee) => employee.id === selectedEmployeeId,
   );
+  function changePending(pending: boolean) {
+    mutatingRef.current = pending;
+    setIsMutating(pending);
+  }
 
-  async function loadWorkspace() {
-    if (!canManage) return;
+  function loadWorkspace() {
     setHasLoadError(false);
+    setIsForbidden(false);
     setIsLoading(true);
-
-    try {
-      const result = await employeeManagementService.load();
-      if (result.status === "session-expired") {
-        sessionExpiryChannel.publish(result.message);
-        return;
-      }
-      if (result.status === "forbidden") {
-        setHasLoadError(true);
-        return;
-      }
-      setWorkspace(result.workspace);
-      setSelectedEmployeeId((current) =>
-        result.workspace.employees.some((employee) => employee.id === current)
-          ? current
-          : undefined,
-      );
-    } catch {
-      setHasLoadError(true);
-    } finally {
-      setIsLoading(false);
-    }
+    setReload((current) => current + 1);
   }
 
   useEffect(() => {
     let isActive = true;
-    if (!canManage) {
-      return () => {
-        isActive = false;
-      };
-    }
-
-    employeeManagementService
-      .load()
-      .then((result) => {
+    async function readWorkspace() {
+      try {
+        const result = await employeeManagementService.load();
         if (!isActive) return;
         if (result.status === "session-expired") {
           sessionExpiryChannel.publish(result.message);
           return;
         }
         if (result.status === "forbidden") {
-          setHasLoadError(true);
+          setIsForbidden(true);
           return;
         }
         setWorkspace(result.workspace);
         setSelectedEmployeeId(undefined);
-      })
-      .catch(() => {
+      } catch {
         if (isActive) setHasLoadError(true);
-      })
-      .finally(() => {
+      } finally {
         if (isActive) setIsLoading(false);
-      });
+      }
+    }
+    void readWorkspace();
 
     return () => {
       isActive = false;
     };
-  }, [canManage]);
+  }, [reload]);
 
   function openEmployee(employeeId: string) {
     if (!workspace?.employees.some((employee) => employee.id === employeeId)) return false;
@@ -166,8 +148,7 @@ export function EmployeeManagementExperience() {
     });
   }
 
-  if (state.status !== "authenticated") return null;
-  if (!canManage) return <PermissionDenied />;
+  if (isForbidden) return <PermissionDenied />;
   if (isLoading) return <EmployeeManagementPageSkeleton />;
 
   if (hasLoadError || !workspace) {
@@ -235,7 +216,7 @@ export function EmployeeManagementExperience() {
         description="Cập nhật thông tin nhân sự. Hồ sơ nhân viên và tài khoản đăng nhập là hai dữ liệu riêng."
         dismissible={!isMutating}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !mutatingRef.current) {
             setIsCreating(false);
             setSelectedEmployeeId(undefined);
           }
@@ -256,7 +237,7 @@ export function EmployeeManagementExperience() {
             employee={isCreating ? undefined : selectedEmployee}
             key={isCreating ? "create" : (selectedEmployee?.id ?? "empty")}
             onOpenExisting={openEmployee}
-            onPendingChange={setIsMutating}
+            onPendingChange={changePending}
             onSaved={updateEmployee}
             onUnlinked={accountUnlinked}
           />

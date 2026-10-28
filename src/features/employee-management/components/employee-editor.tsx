@@ -23,13 +23,14 @@ import { EmployeeBankFields } from "./employee-bank-fields";
 import { employeeBankFields } from "../schemas/employee-bank-schema";
 import { EmployeeWorkingZones } from "./employee-working-zones";
 import type { EmployeeZoneOption } from "../domain/employee-working-details";
+import { EmployeeEmploymentActions } from "./employee-employment-actions";
 
 type EmployeeEditorProps = Readonly<{
   availableAccounts: readonly EmployeeAccountSummary[];
   zones: readonly EmployeeZoneOption[];
   embedded?: boolean;
   employee?: EmployeeProfile;
-  service?: Pick<EmployeeManagementService, "save" | "unlinkAccount">;
+  service?: Pick<EmployeeManagementService, "save" | "unlinkAccount" | "endEmployment" | "reinstate">;
   onOpenExisting(employeeId: string): boolean | void;
   onPendingChange(pending: boolean): void;
   onSaved(employee: EmployeeProfile, followUp?: AccountFollowUp): void;
@@ -82,8 +83,9 @@ export function EmployeeEditor({
     resolver: zodResolver(employeeEditorSchema),
   });
   const { formState: { errors, isDirty }, register } = form;
-  const { feedback, feedbackRef, bankGroupRef, zoneGroupRef, pending, confirmUnlink, setConfirmUnlink, saveEmployee, unlinkAccount } =
-    useEmployeeEditorActions({ employee, form, service, onPendingChange, onSaved, onUnlinked });
+  const [employmentOpen, setEmploymentOpen] = useState(false);
+  const { feedback, feedbackRef, bankGroupRef, zoneGroupRef, pending, confirmUnlink, setConfirmUnlink, saveEmployee, unlinkAccount, clearFeedback } =
+    useEmployeeEditorActions({ employee, form, service, onPendingChange, onSaved, onUnlinked, blocked: employmentOpen });
   const [unavailableFeedback, setUnavailableFeedback] = useState<typeof feedback>();
   function controlProps(field: keyof EmployeeEditorValues) {
     const id = `${fieldPrefix}-${field}`;
@@ -148,8 +150,12 @@ export function EmployeeEditor({
         </div>
       )}
 
+      {employee && <EmployeeEmploymentActions employee={employee} service={service} hasDraft={isDirty}
+        disabled={pending !== null || confirmUnlink} onOpenChange={setEmploymentOpen}
+        onPendingChange={onPendingChange} onChanged={onSaved} />}
       <form className={embedded ? "" : "mt-6"} onSubmit={(event) => void saveEmployee(event)}>
-        <fieldset className="min-w-0 space-y-7" disabled={pending !== null || confirmUnlink}>
+        <input type="hidden" {...register("status")} />
+        <fieldset className="min-w-0 space-y-7" disabled={pending !== null || confirmUnlink || employmentOpen}>
         <fieldset className="min-w-0">
           <legend className="text-lg font-semibold text-text">Thông tin nhận diện</legend>
           <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
@@ -175,21 +181,9 @@ export function EmployeeEditor({
             <EmployeeEditorField id={controlProps("birthday").id} label="Ngày sinh" optional error={errors.birthday?.message}>
               <input {...controlProps("birthday")} className={inputStyles} type="date" {...register("birthday")} />
             </EmployeeEditorField>
-            <EmployeeEditorField id={controlProps("status").id} label="Trạng thái" required error={errors.status?.message}>
-              {isCreate ? (
-                <>
-                  <input type="hidden" value="employed" {...register("status")} />
-                  <output {...controlProps("status")} className="mt-2 flex min-h-12 items-center rounded-control border border-border bg-surface-subtle px-3 text-text">
-                    Đang làm việc
-                  </output>
-                </>
-              ) : (
-                <select {...controlProps("status")} className={inputStyles} {...register("status")}>
-                  <option value="employed">Đang làm việc</option>
-                  <option value="left">Đã nghỉ</option>
-                </select>
-              )}
-            </EmployeeEditorField>
+            {isCreate && <EmployeeEditorField id={controlProps("status").id} label="Trạng thái">
+              <output {...controlProps("status")} className="mt-2 flex min-h-12 items-center rounded-control border border-border bg-surface-subtle px-3 text-text">Đang làm việc</output>
+            </EmployeeEditorField>}
           </div>
         </fieldset>
 
@@ -258,6 +252,9 @@ export function EmployeeEditor({
         </fieldset>
 
         <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+          {!isCreate && isDirty && <Button variant="secondary" className="sm:w-auto" onClick={() => {
+            form.reset(initialValues(employee)); clearFeedback(); setUnavailableFeedback(undefined);
+          }}>Hủy thay đổi</Button>}
           <Button
             className="sm:w-auto"
             disabled={!isCreate && !isDirty}

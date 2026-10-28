@@ -4,6 +4,16 @@ import { EmployeeManagementService } from "@/features/employee-management/servic
 import { createMockEmployeeManagementRepository } from "@/features/employee-management/repositories/mock-employee-management-repository";
 
 describe("EmployeeManagementService", () => {
+  it.each(["endEmployment", "reinstate"] as const)("forwards only the explicit %s command and its opaque version", async (action) => {
+    const repository = createMockEmployeeManagementRepository({ accounts: [], initialEmployees: [], latencyMs: 0 });
+    const method = vi.spyOn(repository, action);
+    const command = { employeeId: "employee-id", recordVersion: "AAAAAAAA+/8=", ...(action === "endEmployment" ? { endDate: "2026-10-01" } : {}) };
+    const input = { ...command, fullName: "Không gửi thông tin hồ sơ" };
+    const service = new EmployeeManagementService(repository);
+    if (action === "endEmployment") await service.endEmployment({ ...input, endDate: "2026-10-01" });
+    else await service.reinstate(input);
+    expect(method).toHaveBeenCalledExactlyOnceWith(command);
+  });
   it("forwards the opaque unlink version without trimming, decoding or replacing it", async () => {
     const repository = createMockEmployeeManagementRepository({ accounts: [], initialEmployees: [], latencyMs: 0 });
     const unlink = vi.spyOn(repository, "unlinkAccount");
@@ -15,6 +25,8 @@ describe("EmployeeManagementService", () => {
   it("normalizes surrounding whitespace before saving", async () => {
     let receivedName = "";
     const repository: EmployeeManagementRepository = {
+      async endEmployment() { return { status: "not-found" }; },
+      async reinstate() { return { status: "not-found" }; },
       async unlinkAccount() {
         return { status: "not-found" };
       },
@@ -39,6 +51,7 @@ describe("EmployeeManagementService", () => {
             phone: input.phone,
             recordVersion: "employee-v1",
             status: input.status,
+            employmentEndDate: null,
             wardCommune: input.wardCommune,
             workingZoneIds: input.workingZoneIds,
             bankAccount: input.bankAccount,

@@ -37,8 +37,8 @@ export function AccountFollowUpDialog({
       </div>
       <p className="mt-4 text-sm leading-6 text-text-muted">
         {isLeaving
-          ? "Nếu người này không còn được đăng nhập OMTS, hãy sang Tài khoản nội bộ để khóa account theo UC11. Dữ liệu nhân sự, chấm công và tiền công vẫn được giữ nguyên."
-          : "Nếu cần, hãy mở khóa account hoặc cấp lại cặp vùng–vai trò theo UC11. Việc đổi trạng thái nhân viên không tự cấp quyền đăng nhập."}
+          ? "Nếu nhân viên không còn được đăng nhập OMTS, hãy mở tài khoản để kiểm tra và khóa khi cần. Hồ sơ, chấm công và tiền công vẫn được giữ nguyên."
+          : "Hãy kiểm tra trạng thái tài khoản và phân quyền theo vùng nếu cần. Việc đi làm lại không tự mở khóa hoặc cấp thêm quyền."}
       </p>
       <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button className="sm:w-auto" onClick={onClose} variant="secondary">
@@ -46,7 +46,7 @@ export function AccountFollowUpDialog({
         </Button>
         <Link
           className="inline-flex min-h-12 items-center justify-center rounded-control border border-primary bg-primary px-5 py-3 text-center font-semibold text-white transition hover:border-primary-hover hover:bg-primary-hover"
-          href="/access/accounts"
+          href={`/access/accounts?accountId=${encodeURIComponent(followUp.account.id)}`}
         >
           Mở tài khoản nội bộ
         </Link>

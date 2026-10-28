@@ -35,6 +35,7 @@ const initialEmployee = {
   phone: "0901000001",
   recordVersion: "AAAAAAAA+/8=",
   status: "employed",
+  employmentEndDate: null,
   wardCommune: "",
   workingZoneIds: [],
   bankAccount: null,
@@ -113,19 +114,11 @@ describe("mock employee management repository", () => {
   });
 
   it("prompts account review without changing the account when an employee leaves", async () => {
-    const result = await repository.save(
-      input({
-        accountId: "account-an",
-        fullName: initialEmployee.fullName,
-        id: initialEmployee.id,
-        phone: initialEmployee.phone,
-        recordVersion: initialEmployee.recordVersion,
-        status: "left",
-      }),
-    );
+    const result = await repository.endEmployment({ employeeId: initialEmployee.id,
+      recordVersion: initialEmployee.recordVersion, endDate: "2026-10-01" });
 
-    expect(result.status).toBe("saved");
-    if (result.status === "saved") {
+    expect(result.status).toBe("changed");
+    if (result.status === "changed") {
       expect(result.followUp?.action).toBe("review-lock");
       expect(result.followUp?.account.status).toBe("active");
     }
@@ -139,19 +132,10 @@ describe("mock employee management repository", () => {
       latencyMs: 0,
     });
 
-    const result = await repository.save(
-      input({
-        accountId: "account-an",
-        fullName: leftEmployee.fullName,
-        id: leftEmployee.id,
-        phone: leftEmployee.phone,
-        recordVersion: leftEmployee.recordVersion,
-        status: "employed",
-      }),
-    );
+    const result = await repository.reinstate({ employeeId: leftEmployee.id, recordVersion: leftEmployee.recordVersion });
 
-    expect(result.status).toBe("saved");
-    if (result.status === "saved") {
+    expect(result.status).toBe("changed");
+    if (result.status === "changed") {
       expect(result.followUp?.action).toBe("review-access");
     }
   });
