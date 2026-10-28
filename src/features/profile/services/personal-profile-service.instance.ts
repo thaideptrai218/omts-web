@@ -23,6 +23,9 @@ export function getPersonalProfileEnvironment(accountId: string) {
 
   const environment = createMockPersonalProfileEnvironment({
     initialProfile: profile,
+    getRoles: () => managedMockAuth.profile(accountId)?.roles ?? profile.roles.map((role) => ({
+      ...role, scopeLabel: role.zoneId ? mockManagementEnvironment.zones.snapshotOptions().find((zone) => zone.id === role.zoneId)?.label ?? role.scopeLabel : role.scopeLabel,
+    })),
     isIdentifierTaken: (value) => mockAccountDirectory.isIdentifierTaken(value, accountId)
       || mockManagementEnvironment.accounts.snapshotAccounts().some((account) => account.id !== accountId
         && (account.email === value || account.phone === value)),

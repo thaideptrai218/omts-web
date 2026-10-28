@@ -65,11 +65,12 @@ describe("approved product fixed-role policy", () => {
   });
   it("allows matrix/description edits and shares them with account assignment", async () => {
     const h = setup();
+    const permissions = h.roles.snapshotRoles()[0].permissions;
     expect(
       await h.roles.save({
         ...h.draft,
         description: "Theo dõi công việc",
-        permissions: mockRoles[0].permissions,
+        permissions,
       }),
     ).toMatchObject({ status: "saved" });
     const loaded = await h.accounts.load();
@@ -79,7 +80,7 @@ describe("approved product fixed-role policy", () => {
         roles: expect.arrayContaining([
           expect.objectContaining({
             id: h.staff.id,
-            permissions: mockRoles[0].permissions,
+            permissions,
           }),
         ]),
       },

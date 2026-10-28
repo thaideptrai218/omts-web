@@ -10,6 +10,7 @@ import type { MockAccountDirectory } from "@/shared/mocks/mock-account-directory
 import type { ManagedMockLogin } from "@/shared/mocks/managed-mock-auth";
 
 type MockAuthEnvironmentOptions = Readonly<{
+  getZoneLabel?: (zoneId: string) => string | undefined;
   accountDirectory?: MockAccountDirectory;
   resolveManagedAccount?: (identifier: string) => ManagedMockLogin | undefined;
   onManagedContactVerified?: (accountId: string, channel: "email" | "sms", value: string) => void;
@@ -18,6 +19,7 @@ type MockAuthEnvironmentOptions = Readonly<{
 }>;
 
 export function createMockAuthEnvironment({
+  getZoneLabel,
   accountDirectory,
   resolveManagedAccount,
   onManagedContactVerified,
@@ -31,6 +33,7 @@ export function createMockAuthEnvironment({
   });
   const verificationService = createVerificationService(verificationRepository);
   const authRepository = createMockAuthRepository({
+    getZoneLabel,
     accountDirectory,
     resolveManagedAccount,
     onManagedContactVerified,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { InterfaceIcon, type InterfaceIconName } from "@/components/ui/interface-icon";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { useDocumentScrollLock } from "@/components/ui/use-document-scroll-lock";
 import type {
@@ -24,7 +25,7 @@ type AppShellProps = {
 
 type NavigationItem = Readonly<{
   href: string;
-  icon: "account" | "access" | "cooperative" | "dashboard" | "employee";
+  icon: InterfaceIconName;
   label: string;
   requiredPermission?: EffectivePermissionKey;
 }>;
@@ -34,6 +35,12 @@ const navigationGroups = [
     label: "Điều hành",
     items: [
       {
+        href: "/farming/zones",
+        icon: "zone",
+        label: "Vùng nuôi",
+        requiredPermission: "farming.zones.view",
+      },
+      {
         href: "/dashboard",
         icon: "dashboard",
         label: "Bảng điều hành",
@@ -41,7 +48,7 @@ const navigationGroups = [
       },
       {
         href: "/cooperative/profile",
-        icon: "cooperative",
+        icon: "waves",
         label: "Hồ sơ hợp tác xã",
         requiredPermission: "cooperative.profile.manage",
       },
@@ -52,19 +59,19 @@ const navigationGroups = [
     items: [
       {
         href: "/employees",
-        icon: "employee",
+        icon: "users",
         label: "Nhân viên",
         requiredPermission: "cooperative.employees.manage",
       },
       {
         href: "/access/accounts",
-        icon: "account",
+        icon: "id-card",
         label: "Tài khoản nội bộ",
         requiredPermission: "access.accounts.manage",
       },
       {
         href: "/access/roles",
-        icon: "access",
+        icon: "roles",
         label: "Vai trò & quyền",
         requiredPermission: "access.roles.manage",
       },
@@ -75,7 +82,7 @@ const navigationGroups = [
     items: [
       {
         href: "/system/cooperatives/new",
-        icon: "cooperative",
+        icon: "settings",
         label: "Khởi tạo hợp tác xã",
         requiredPermission: "platform.cooperative.provision",
       },
@@ -90,43 +97,6 @@ function MenuIcon() {
   return (
     <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
       <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-    </svg>
-  );
-}
-
-function NavigationIcon({ kind }: { kind: NavigationItem["icon"] }) {
-  if (kind === "dashboard") {
-    return (
-      <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
-        <rect height="5.25" rx="1.25" stroke="currentColor" strokeWidth="1.6" width="5.25" x="3" y="3" />
-        <rect height="5.25" rx="1.25" stroke="currentColor" strokeWidth="1.6" width="5.25" x="11.75" y="3" />
-        <rect height="5.25" rx="1.25" stroke="currentColor" strokeWidth="1.6" width="5.25" x="3" y="11.75" />
-        <rect height="5.25" rx="1.25" stroke="currentColor" strokeWidth="1.6" width="5.25" x="11.75" y="11.75" />
-      </svg>
-    );
-  }
-
-  if (kind === "account" || kind === "employee") {
-    return (
-      <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
-        <circle cx="10" cy="6.5" r="3" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M4 16c.75-3 2.75-4.5 6-4.5s5.25 1.5 6 4.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
-      </svg>
-    );
-  }
-
-  if (kind === "access") {
-    return (
-      <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
-        <path d="M10 2.75 16 5v4.5c0 3.65-2.2 6.2-6 7.75-3.8-1.55-6-4.1-6-7.75V5l6-2.25Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
-        <path d="m7.5 10 1.55 1.55L12.75 8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 20 20">
-      <path d="M3.5 16.25h13M5 16.25V7.5l5-3.75 5 3.75v8.75M7.5 9.5h5M7.5 12.25h5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -232,7 +202,7 @@ function NavigationList({
                     onClick={onNavigate}
                   >
                     <span className={isActive ? "text-primary" : "text-sky-100/80 group-hover:text-white"}>
-                      <NavigationIcon kind={item.icon} />
+                      <InterfaceIcon name={item.icon} />
                     </span>
                     <span
                       className={`whitespace-nowrap ${
@@ -317,6 +287,9 @@ export function AppShell({
   onLogout,
 }: AppShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isSidebarFocused, setIsSidebarFocused] = useState(false);
+  const isSidebarExpanded = isSidebarHovered || isSidebarFocused;
   const mobileNavigationId = useId();
   const mobileDialogRef = useRef<HTMLDialogElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -340,8 +313,16 @@ export function AppShell({
   }, [isMobileMenuOpen]);
 
   return (
-    <div className="min-h-dvh bg-canvas lg:pl-20">
-      <aside className="group/sidebar fixed inset-y-0 left-0 z-30 hidden w-20 flex-col overflow-hidden bg-primary-hover text-white shadow-none transition-[width,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:w-72 hover:shadow-2xl focus-within:w-72 focus-within:shadow-2xl motion-reduce:transition-none lg:flex">
+    <div data-sidebar-expanded={isSidebarExpanded}
+      className={`min-h-dvh bg-canvas lg:grid transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none ${
+        isSidebarExpanded ? "lg:grid-cols-[18rem_minmax(0,1fr)]" : "lg:grid-cols-[5rem_minmax(0,1fr)]"
+      }`}>
+      <aside className="group/sidebar sticky top-0 z-30 hidden h-dvh min-w-0 flex-col overflow-hidden bg-primary-hover text-white lg:flex"
+        onMouseEnter={() => setIsSidebarHovered(true)} onMouseLeave={() => setIsSidebarHovered(false)}
+        onFocusCapture={() => setIsSidebarFocused(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setIsSidebarFocused(false);
+        }}>
         <div aria-hidden="true" className="pointer-events-none absolute -left-28 top-28 size-64 rounded-full bg-sky-400/10 blur-3xl" />
         <div className="relative flex min-h-24 items-center border-b border-white/10 px-4">
           <div className="min-w-56">
@@ -357,7 +338,7 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="min-h-dvh">
+      <div className="min-h-dvh min-w-0">
         <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-surface/95 px-4 backdrop-blur lg:hidden">
           <BrandMark compact />
           <button

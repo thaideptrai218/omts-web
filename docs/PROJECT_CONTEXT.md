@@ -4,6 +4,8 @@
 >
 > Update this summary when Jira, the current SRS, or an approved team decision changes. Planned work is not evidence that a feature has already been implemented.
 
+Đợt vùng/UX28/10: [kế hoạch theo SRS/vai trò](WEB_SRS_ROLE_IMPLEMENTATION_PLAN.md), [báo cáo](reports/WEB_FARMING_ZONES_UX_REVIEW_2026-10-28.md). Người dùng chốt Owner ghi/Manager chỉ xem vùng được cấp và lưu vùng trước/bổ sung giấy tờ sau. Thêm `/farming/zones`, nguồn tên vùng dùng chung, giấy tờ nhiều vùng/lịch sử gia hạn, ngày nhập tiếng Việt, icon riêng và sidebar grid không phủ nội dung. Phạm vi rộng còn lại ghi trong kế hoạch, không coi mọi chức năng của các role đã xong. API/refresh vẫn tắt; MSG06/tên MSG24, GitGuardian và ngân hàng HTX giữ chờ như trước. Bằng chứng kiểm cuối nằm trong báo cáo; các số liệu bên dưới là snapshot lịch sử.
+
 Hoàn thiện bản review tối28/10: [plan](WEB_EVENING_REVIEW_PLAN_2026-10-28.md), [báo cáo](reports/WEB_EVENING_REVIEW_COMPLETION_2026-10-28.md). Ghép xác minh liên hệ hiện có chưa verified theo WEB-PROFILE-CONTACT-01, vẫn OTP→chờ lưu→Save. Review chung P7 local và sửa phản hồi muộn, pending/double-submit/focus ở hồ sơ, thông báo, đổi mật khẩu, OTP và HTX. Native phát hiện login giữ credentials khi route được Activity giữ state; reset sau accepted và dọn gate sau complete. WEB-COOP-BANK-01 giữ ngân hàng HTX, chờ BA; không đổi ngân hàng nhân viên. Source cuối2.302 PASS/31 Redis SKIP, lint/typecheck/build18/18/24 HTTP đạt;575 source/test files khớp snapshot độc lập. Browser kiểm login→logout về form trống trên build cuối và luồng xác minh email→Save→login bằng email. Chi tiết/giới hạn nằm trong báo cáo, thay cho số liệu snapshot P7 cũ bên dưới. API/refresh/MSG06/tên MSG24 và GitGuardian giữ chờ; không merge hoặc đánh Jira Done. Bài120 local, reviewer guide tiếng Anh đã cập nhật.
 
 Review xuất bản personal/account28/10: [báo cáo](reports/WEB_EMPLOYEE_PERSONAL_ACCOUNT_FULL_REVIEW_2026-10-28.md). Tìm và sửa P2 callback validation-save vẫn gửi lệnh sau unmount/mở unlink; thêm3 hồi quy, module59/59 đạt. Source riêng2.249 pass/31 Redis skip, lint/typecheck/build18/18/24 HTTP đạt. Giữ nghiệp vụ personal validation và lưu employee trước/tạo account sau. Người dùng yêu cầu commit/push cùng nhánh, không merge; bằng chứng source cuối và phạm vi ở báo cáo. Profile/notification/Dialog local khác giữ riêng; API/refresh/MSG06/tên MSG24 và GitGuardian giữ chờ. Bài119 local; các câu “chưa commit/push” bên dưới là snapshot triển khai trước yêu cầu xuất bản.
@@ -74,8 +76,8 @@ These repositories release independently. Shared contracts cannot be assumed to 
 
 ## Source priority
 
-1. Current Jira issue: sprint scope, owner, dependencies, and done criteria.
-2. Current Report 3/SRS: actors, use cases, business rules, permissions, messages, and acceptance criteria.
+1. Confirmed user/team decisions and current Report 3/SRS: actors, use cases, business rules, permissions, messages, and acceptance criteria. Ask before resolving a new conflict.
+2. Current Jira issue: assignment, sprint tracking, dependencies and done criteria. As requested on October 28, Jira assignments are not a ceiling on the product's SRS scope; extra work does not imply a ticket is Done.
 3. Report 2: approved technology and project-management baseline.
 4. OMTS Figma: visual structure and screen flow; it does not override business rules.
 5. Historical reports/tracking: background only when they conflict with current sources.

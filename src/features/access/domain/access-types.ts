@@ -5,6 +5,8 @@ export const effectivePermissionKeys = [
   "cooperative.profile.manage",
   "platform.cooperative.provision",
   "workspace.overview.view",
+  "farming.zones.view",
+  "farming.zones.manage",
 ] as const;
 
 export type EffectivePermissionKey = (typeof effectivePermissionKeys)[number];

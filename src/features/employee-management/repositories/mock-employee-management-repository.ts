@@ -22,6 +22,7 @@ import { createMockEmployeeAccount, type MockEmployeeAccountCreator } from "./mo
 const validationTargets = new Set<string>([...employeePersonalFields, "bankAccount", "workingZoneIds"]);
 
 type MockOptions = Readonly<{
+  getZones?: () => readonly EmployeeZoneOption[];
   getAccounts?: () => readonly EmployeeAccountSummary[];
   accounts: readonly EmployeeAccountSummary[];
   initialEmployees: readonly EmployeeProfile[];
@@ -60,18 +61,20 @@ function sameName(first: string, second: string): boolean {
 export function createMockEmployeeManagementRepository({
   accounts: initialAccounts,
   getAccounts,
+  getZones,
   initialEmployees,
   isAuthorized = true,
   isSessionExpired = false,
   latencyMs = 350,
   actorName = "Lê Minh Hải",
   now = () => new Date(),
-  zones = [],
+  zones: initialZones = [],
   laborRecords = [],
   createAccount,
   getAccountCreationOptions,
 }: MockOptions): EmployeeManagementRepository & Readonly<{ snapshotEmployees(): readonly EmployeeProfile[] }> {
   let accounts = initialAccounts;
+  let zones = initialZones;
   let employees = initialEmployees.map(cloneEmployee);
   let nextEmployeeNumber = employees.length + 1;
   let nextVersion = employees.length + 1;
@@ -111,6 +114,7 @@ export function createMockEmployeeManagementRepository({
       return { message: { code: "MSG02" }, status: "forbidden" } as const;
     }
     accounts = getAccounts?.() ?? accounts;
+    zones = getZones?.() ?? zones;
   }
 
   function workspace(): EmployeeManagementWorkspace {

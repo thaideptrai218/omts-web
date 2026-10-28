@@ -18,6 +18,7 @@ import {
 import { AppShell } from "./app-shell";
 import { Dialog } from "@/components/ui/dialog";
 import type { ComponentProps } from "react";
+import { effectivePermissionKeys } from "@/features/access/domain/access-types";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 vi.mock("next/link", () => ({
@@ -52,6 +53,36 @@ afterAll(() => {
   Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
 });
 afterEach(cleanup);
+
+describe("desktop sidebar layout", () => {
+  function setup() {
+    const access = { permissions: effectivePermissionKeys.map((key) => ({ key, scope: { kind: "global" as const } })) };
+    const view = render(<AppShell access={access} onLogout={vi.fn()}><button>Bên ngoài menu</button></AppShell>);
+    return { ...view, sidebar: view.container.querySelector("aside")!, shell: view.container.firstElementChild! };
+  }
+  it("shares expanded state with the content grid instead of growing over it", () => {
+    const view = setup();
+    fireEvent.mouseEnter(view.sidebar);
+    expect(view.shell.getAttribute("data-sidebar-expanded")).toBe("true");
+    expect(view.shell.className).toContain("lg:grid-cols-[18rem_minmax(0,1fr)]");
+    fireEvent.mouseLeave(view.sidebar);
+    expect(view.shell.getAttribute("data-sidebar-expanded")).toBe("false");
+  });
+  it("stays expanded for keyboard focus even after the pointer leaves", () => {
+    const view = setup(); const link = view.sidebar.querySelector("a")!;
+    fireEvent.focus(link); fireEvent.mouseLeave(view.sidebar);
+    expect(view.shell.getAttribute("data-sidebar-expanded")).toBe("true");
+    fireEvent.blur(link, { relatedTarget: screen.getByRole("button", { name: "Bên ngoài menu" }) });
+    expect(view.shell.getAttribute("data-sidebar-expanded")).toBe("false");
+  });
+  it("uses distinguishable icons for employees, login accounts and roles", () => {
+    const view = setup();
+    const paths = ["/employees", "/access/accounts", "/access/roles"].map((href) =>
+      view.sidebar.querySelector(`a[href="${href}"] path`)?.getAttribute("d"));
+    expect(paths.every(Boolean)).toBe(true);
+    expect(new Set(paths).size).toBe(3);
+  });
+});
 
 describe("mobile menu account navigation", () => {
   it("shares the scroll lock with a popup and releases it only after both close", () => {

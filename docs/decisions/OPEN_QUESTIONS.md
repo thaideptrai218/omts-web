@@ -1,5 +1,13 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## WEB-ZONE-01/02 — Quyền và thứ tự khai báo vùng
+
+**Đã chốt 28/10/2026, Duy Thái trả lời trực tiếp qua async:** chỉ Owner tạo/sửa/ngừng/khôi phục vùng; Quản lý vùng chỉ xem trong phạm vi được cấp. Không dùng quyền Create ở “Tất cả vùng” để cho Manager tạo vùng như Report3Finnal UC15 cũ. Danh mục quyền vùng trong mock sản phẩm chỉ còn View cho vai trò được gán; quyền ghi Owner được kiểm riêng.
+
+**Đã chốt cùng ngày:** lưu vùng trước, bổ sung hoặc gia hạn giấy tờ sau trong popup hồ sơ vùng. Chưa đủ giấy tờ còn hiệu lực thì hiển thị “Thiếu hồ sơ”, không tự coi hợp lệ. Giữ bản cũ khi gia hạn, tra cứu theo ngày và giấy tờ dùng nội bộ. Backend develop953f597 hiện giới hạn licenses ở Owner; đọc hồ sơ theo vùng cho Manager và các quyết định giao diện này cần được đối chiếu khi nối API. Chưa bật API, không sửa SRS/Jira/backend.
+
+Theo yêu cầu mới, SRS cùng quyết định đã chốt xác định phạm vi chức năng; Jira phục vụ phân công/phụ thuộc, không phải giới hạn cuối cùng. [Kế hoạch theo màn và micro-task](../WEB_SRS_ROLE_IMPLEMENTATION_PLAN.md).
+
 ## WEB-EMP-ACCOUNT-01 — Tạo tài khoản từ hồ sơ nhân viên
 
 **Đã chốt, 28/10/2026, Duy Thái trả lời trực tiếp:** “Lưu hồ sơ trước, tạo tài khoản sau (đề xuất)”. Hồ sơ mới được lưu trước; từ profile đã lưu mới tạo tài khoản, điền sẵn tên/SĐT, Owner chọn vùng–vai trò và kênh nhận thông tin. Giữ quyết định username tự sinh và Owner không xem mật khẩu. Không tạo employee+account cùng lần lưu như ticket cũ. Bản nháp hồ sơ chưa lưu phải được lưu/hủy trước bước tạo account, không tự lưu kèm thao tác này.

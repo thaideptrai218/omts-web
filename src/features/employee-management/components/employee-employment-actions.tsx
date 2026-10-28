@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
+import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -66,10 +67,14 @@ export function EmployeeEmploymentActions(props: Readonly<{
         <form onSubmit={submit} noValidate className="space-y-5">
           {ending && <div>
             <label htmlFor="employee-end-date" className="text-sm font-medium text-text">Ngày nghỉ việc</label>
-            <input id="employee-end-date" type="date" max={employeeBusinessDate(new Date())} aria-required="true"
+            <Controller name="endDate" control={form.control} render={({ field }) => (
+            <VietnameseDateInput id="employee-end-date" max={employeeBusinessDate(new Date())} aria-required="true"
+              calendarLabel="Chọn ngày nghỉ việc" value={field.value} inputRef={field.ref} name={field.name}
+              onBlur={field.onBlur} onValueChange={field.onChange}
               disabled={pending} aria-invalid={Boolean(form.formState.errors.endDate)}
               aria-describedby={form.formState.errors.endDate ? "employee-end-date-error" : undefined}
-              className="mt-2 min-h-12 w-full rounded-control border border-border bg-surface px-3 text-text aria-[invalid=true]:border-danger focus-visible:outline-2 focus-visible:outline-primary active:border-primary disabled:bg-surface-subtle disabled:text-text-muted" {...form.register("endDate")} />
+              className="mt-2 min-h-12 w-full rounded-control border border-border bg-surface px-3 text-text aria-[invalid=true]:border-danger focus-visible:outline-2 focus-visible:outline-primary active:border-primary disabled:bg-surface-subtle disabled:text-text-muted" />
+            )} />
             {form.formState.errors.endDate && <p id="employee-end-date-error" className="mt-2 text-sm text-danger">{form.formState.errors.endDate.message}</p>}
           </div>}
           {feedback && <p ref={feedbackRef} tabIndex={-1} role="alert" className="text-sm text-danger focus-visible:outline-2 focus-visible:outline-primary">{feedback}</p>}

@@ -21,6 +21,7 @@ import { accountEditorSchema } from "@/features/account-management/schemas/accou
 import type { PersonalProfile } from "@/features/profile/domain/personal-profile";
 
 type MockOptions = Readonly<{
+  getZones?: () => readonly FarmingZoneOption[];
   getRoles?: () => readonly AssignableRole[];
   featureCatalog: readonly FeatureCatalogItem[];
   initialAccounts: readonly ManagedAccount[];
@@ -93,13 +94,14 @@ function createDeliveryReceipt(account: ManagedAccount): CredentialDeliveryRecei
 
 export function createMockAccountManagementRepository({
   getRoles,
+  getZones,
   featureCatalog,
   initialAccounts,
   isAuthorized = true,
   isSessionExpired = false,
   latencyMs = 350,
   roles: initialRoles,
-  zones,
+  zones: initialZones,
 }: MockOptions): AccountManagementRepository & Readonly<{
   snapshotAccounts(): readonly ManagedAccount[];
   recordMockVerifiedContact(accountId: string, channel: "email" | "sms", value: string): void;
@@ -109,6 +111,7 @@ export function createMockAccountManagementRepository({
     beforePublish: (account: ManagedAccount) => T | undefined): Promise<SaveAccountResult | T>;
 }> {
   let roles = initialRoles;
+  let zones = initialZones;
   const credentialVersions = new Map<string, number>();
   let accounts = initialAccounts.map(cloneAccount);
   let nextAccountNumber = accounts.length + 1;
@@ -124,6 +127,7 @@ export function createMockAccountManagementRepository({
       return { message: { code: "MSG02" }, status: "forbidden" } as const;
     }
     roles = getRoles?.() ?? roles;
+    zones = getZones?.() ?? zones;
   }
 
   function findAccount(accountId: string) {

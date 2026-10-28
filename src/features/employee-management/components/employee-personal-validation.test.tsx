@@ -50,10 +50,12 @@ describe("personal field validation in the employee editor", () => {
     setup();
     for (const label of ["Họ và tên", "Số điện thoại", "Ngày sinh (không bắt buộc)", "Địa chỉ", "Khu vực", "Phường/Xã", "Thông tin khác", "Ghi chú"]) {
       const control = personalControl(label);
-      const hint = document.getElementById(control.getAttribute("aria-describedby")!);
-      expect(hint?.textContent).toBeTruthy();
+      const ids = control.getAttribute("aria-describedby")!.split(" ");
+      for (const id of ids) expect(document.getElementById(id)?.textContent).toBeTruthy();
     }
-    expect(screen.getByLabelText("Ngày sinh (không bắt buộc)").getAttribute("max")).toBe("2026-10-28");
+    const birthday = screen.getByLabelText("Ngày sinh (không bắt buộc)");
+    const descriptions = birthday.getAttribute("aria-describedby")!.split(" ").map((id) => document.getElementById(id)?.textContent).join(" ");
+    expect(descriptions).toContain("Không sau 28/10/2026");
     expect(screen.getByLabelText("Ghi chú").hasAttribute("maxlength")).toBe(false);
   });
   it("rejects invalid phone before calling the service, focuses it and keeps the other draft", async () => {

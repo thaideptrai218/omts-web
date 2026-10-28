@@ -10,6 +10,7 @@ import {
 import { createVerificationService } from "@/features/verification/services/verification-service";
 
 type MockPersonalProfileEnvironmentOptions = Readonly<{
+  getRoles?: () => PersonalProfile["roles"];
   isIdentifierTaken?: (value: string) => boolean;
   onProfileSaved?: (profile: PersonalProfile) => void;
   initialProfile?: PersonalProfile;
@@ -20,6 +21,7 @@ type MockPersonalProfileEnvironmentOptions = Readonly<{
 }>;
 
 export function createMockPersonalProfileEnvironment({
+  getRoles,
   initialProfile,
   isIdentifierTaken,
   onProfileSaved,
@@ -57,6 +59,7 @@ export function createMockPersonalProfileEnvironment({
   }
 
   const profileRepository = createMockPersonalProfileRepository({
+    getRoles,
     consumeVerificationProof: ({ token }) => proofs.delete(token),
     hasVerificationProof: matchesProof,
     initialProfile,

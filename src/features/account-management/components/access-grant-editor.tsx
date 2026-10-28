@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
+import { isDateOnly, vietnameseBusinessDate } from "@/shared/format/date-only";
 import { Button } from "@/components/ui/button";
 import type {
   AccessGrant,
@@ -38,10 +40,11 @@ export function AccessGrantEditor({
   roles,
   zones,
 }: AccessGrantEditorProps) {
+  const dateId = useId();
   const [zoneId, setZoneId] = useState("");
   const [roleId, setRoleId] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState(
-    new Date().toISOString().slice(0, 10),
+    vietnameseBusinessDate(),
   );
   const [effectiveTo, setEffectiveTo] = useState("");
   const [draftError, setDraftError] = useState("");
@@ -53,6 +56,10 @@ export function AccessGrantEditor({
   function addDraft() {
     if (!zoneId || !roleId || !effectiveFrom) {
       setDraftError("Chọn vùng, vai trò và ngày bắt đầu.");
+      return;
+    }
+    if (!isDateOnly(effectiveFrom) || (effectiveTo && !isDateOnly(effectiveTo))) {
+      setDraftError("Nhập ngày hợp lệ theo ngày/tháng/năm.");
       return;
     }
     if (effectiveTo && effectiveTo < effectiveFrom) {
@@ -171,14 +178,14 @@ export function AccessGrantEditor({
                 {effectiveRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
               </select>
             </label>
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Hiệu lực từ <span className="text-danger">*</span>
-              <input className={`mt-2 ${inputStyles}`} onChange={(event) => setEffectiveFrom(event.target.value)} type="date" value={effectiveFrom} />
-            </label>
-            <label className="min-w-0 text-sm font-semibold text-text">
-              Hiệu lực đến <span className="font-normal text-text-muted">(không bắt buộc)</span>
-              <input className={`mt-2 ${inputStyles}`} min={effectiveFrom} onChange={(event) => setEffectiveTo(event.target.value)} type="date" value={effectiveTo} />
-            </label>
+            <div className="min-w-0 text-sm font-semibold text-text">
+              <label htmlFor={`${dateId}-from`}>Hiệu lực từ <span className="text-danger">*</span></label>
+              <VietnameseDateInput id={`${dateId}-from`} calendarLabel="Chọn ngày bắt đầu hiệu lực" className={`mt-2 ${inputStyles}`} onValueChange={setEffectiveFrom} value={effectiveFrom} />
+            </div>
+            <div className="min-w-0 text-sm font-semibold text-text">
+              <label htmlFor={`${dateId}-to`}>Hiệu lực đến <span className="font-normal text-text-muted">(không bắt buộc)</span></label>
+              <VietnameseDateInput id={`${dateId}-to`} calendarLabel="Chọn ngày kết thúc hiệu lực" className={`mt-2 ${inputStyles}`} min={effectiveFrom} onValueChange={setEffectiveTo} value={effectiveTo} />
+            </div>
           </div>
           {draftError && <p className="mt-3 text-sm font-medium text-danger">{draftError}</p>}
           <Button className="mt-4 sm:w-auto" onClick={addDraft} variant="secondary">Thêm dòng quyền</Button>

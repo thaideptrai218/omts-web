@@ -2,7 +2,10 @@ import type { AuthAccount } from "@/features/auth/domain/auth-types";
 import type { PersonalProfile } from "@/features/profile/domain/personal-profile";
 import type { VerificationRecipientInput } from "@/features/verification/domain/verification-types";
 import { maskVerificationRecipient } from "@/features/verification/lib/mask-verification-recipient";
-import { mockManagedAccounts, mockFarmingZones } from "@/features/account-management/mocks/account-management-fixtures";
+import { mockManagedAccounts } from "@/features/account-management/mocks/account-management-fixtures";
+import { resolveMockZoneAccess } from "./mock-zone-access";
+import { vietnameseBusinessDate } from "@/shared/format/date-only";
+import type { EffectivePermission } from "@/features/access/domain/access-types";
 import { trungNamCooperativeName } from "./mock-identities";
 import type { createMockManagementEnvironment } from "./mock-management-environment";
 
@@ -19,9 +22,14 @@ export function createManagedMockAuth(environment: ReturnType<typeof createMockM
     const row = environment.accounts.snapshotAccounts().find((account) => account.id === accountId && account.accountType === "internal");
     if (!row) return;
     const roles = environment.roles.snapshotRoles();
-    const grants = row.grants.filter((grant) => grant.status === "effective" && roles.some((role) => role.id === grant.roleId && role.status === "in-use"));
+    const today = vietnameseBusinessDate();
+    const grants = row.grants.filter((grant) => grant.status === "effective" && grant.effectiveFrom <= today && (!grant.effectiveTo || grant.effectiveTo >= today) && roles.some((role) => role.id === grant.roleId && role.status === "in-use"));
     const allZones = grants.some((grant) => grant.zoneId === null);
-    const zones = mockFarmingZones.filter((zone) => zone.status === "in-use" && grants.some((grant) => grant.zoneId === null || grant.zoneId === zone.id));
+    const zoneOptions = environment.zones.snapshotOptions();
+    const zones = zoneOptions.filter((zone) => grants.some((grant) => grant.zoneId === null || grant.zoneId === zone.id));
+    const zoneAccess = resolveMockZoneAccess(row.id, environment.accounts.snapshotAccounts(), roles, zoneOptions, today);
+    const permissions: EffectivePermission[] = zones.length ? [{ key: "workspace.overview.view", scope: allZones ? { kind: "all-zones" } : { kind: "zones", zoneIds: zones.map((zone) => zone.id) } }] : [];
+    if (zoneAccess) permissions.push({ key: "farming.zones.view", scope: zoneAccess.visibleZoneIds === null ? { kind: "all-zones" } : { kind: "zones", zoneIds: zoneAccess.visibleZoneIds } });
     const roleNames = [...new Set(grants.flatMap((grant) => roles.find((role) => role.id === grant.roleId)?.name ?? []))];
     const contacts: VerificationRecipientInput[] = [];
     if (row.email) contacts.push({ channel: "email", value: row.email, maskedValue: maskVerificationRecipient("email", row.email) });
@@ -32,8 +40,7 @@ export function createManagedMockAuth(environment: ReturnType<typeof createMockM
         scopeLabel: allZones ? "Toàn hợp tác xã" : zones.map((zone) => zone.label).join(", ") || "Chưa có vùng",
         // Existing mock Staff navigation only. Never elevate internal accounts
         // to Owner screens from a custom role name; real mapping remains W1/W3.
-        access: { permissions: zones.length ? [{ key: "workspace.overview.view",
-          scope: allZones ? { kind: "all-zones" } : { kind: "zones", zoneIds: zones.map((zone) => zone.id) } }] : [] } },
+        access: { permissions } },
       locked: row.status === "locked",
       credentialVersion: environment.accounts.mockCredentialVersion(row.id),
       requiresContactVerification: !row.emailVerified && !row.phoneVerified,

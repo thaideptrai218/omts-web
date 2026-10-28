@@ -5,6 +5,7 @@ import { managedMockAuth } from "@/shared/mocks/managed-mock-auth.instance";
 import { mockManagementEnvironment } from "@/shared/mocks/mock-management-environment.instance";
 
 const mockAuthEnvironment = createMockAuthEnvironment({ accountDirectory: mockAccountDirectory,
+  getZoneLabel: (zoneId) => mockManagementEnvironment.zones.snapshotOptions().find((zone) => zone.id === zoneId)?.label,
   resolveManagedAccount: managedMockAuth.resolve,
   onManagedContactVerified: mockManagementEnvironment.accounts.recordMockVerifiedContact });
 

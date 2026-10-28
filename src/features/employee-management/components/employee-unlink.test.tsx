@@ -505,7 +505,7 @@ describe("explicit employment changes through the actual editor", () => {
     expect(within(editor).queryByRole('combobox', { name: 'Trạng thái' })).toBeNull();
     await user.click(within(editor).getByRole('button', { name: 'Nghỉ việc' }));
     const confirm = screen.getByRole('dialog', { name: 'Nghỉ việc?' });
-    expect(within(confirm).getByLabelText<HTMLInputElement>('Ngày nghỉ việc').value).toBe('2026-10-28');
+    expect(within(confirm).getByLabelText<HTMLInputElement>('Ngày nghỉ việc').value).toBe('28/10/2026');
     await user.click(within(confirm).getByRole('button', { name: 'Xác nhận nghỉ việc' }));
     await screen.findByRole('dialog', { name: 'Nhắc xử lý tài khoản' });
     expect(screen.getByRole('link', { name: 'Mở tài khoản nội bộ' }).getAttribute('href')).toBe(`/access/accounts?accountId=${encodeURIComponent(employee.account.id)}`);

@@ -27,6 +27,7 @@ import {
 } from "@/shared/mocks/mock-identities";
 
 type MockAuthOptions = Readonly<{
+  getZoneLabel?: (zoneId: string) => string | undefined;
   accountDirectory?: MockAccountDirectory;
   resolveManagedAccount?: (identifier: string) => ManagedMockLogin | undefined;
   onManagedContactVerified?: (accountId: string, channel: "email" | "sms", value: string) => void;
@@ -44,6 +45,8 @@ const demoSession = {
   account: {
     access: {
       permissions: [
+        { key: "farming.zones.view", scope: { kind: "all-zones" } },
+        { key: "farming.zones.manage", scope: { kind: "all-zones" } },
         {
           key: "access.accounts.manage",
           scope: { kind: "all-zones" },
@@ -208,6 +211,7 @@ function wait(milliseconds: number): Promise<void> {
 }
 
 export function createMockAuthRepository({
+  getZoneLabel,
   accountDirectory,
   resolveManagedAccount,
   onManagedContactVerified,
@@ -230,7 +234,11 @@ export function createMockAuthRepository({
     const identity = accountDirectory?.findAccount(session.account.accountId);
     const managed = resolveManagedAccount?.(session.account.username);
     const account = managed?.account ?? session.account;
-    return { ...session, account: { ...account, displayName: managed?.account.displayName ?? identity?.displayName ?? account.displayName } };
+    const zoneIds = account.access.permissions.flatMap((permission) => permission.scope.kind === "zones" ? permission.scope.zoneIds : []);
+    const zoneLabels = [...new Set(zoneIds)].map((id) => getZoneLabel?.(id)).filter(Boolean);
+    return { ...session, account: { ...account,
+      scopeLabel: !managed && zoneLabels.length ? zoneLabels.join(", ") : account.scopeLabel,
+      displayName: managed?.account.displayName ?? identity?.displayName ?? account.displayName } };
   }
 
   return {

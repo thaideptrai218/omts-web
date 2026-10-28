@@ -36,6 +36,7 @@ function createStaffProfile(username: string): PersonalProfile {
       {
         roleLabel: identity.primaryRoleLabel,
         scopeLabel: identity.scopeLabel,
+        zoneId: "zone-east",
       },
     ],
     username,

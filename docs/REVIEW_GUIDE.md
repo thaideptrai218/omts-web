@@ -39,6 +39,20 @@ For coding with live updates, use `npm run dev` instead of `npm run start`. Next
 
 ## Suggested review sequence
 
+### Farming-zone walkthrough (October 28)
+
+Open **Vùng nuôi** (`/farming/zones`) as `owner`. Search by name/code/location and filter usage status, then open a card. Rename a sample zone, save, close the dialog and inspect the employee/account zone pickers: the new name is shared while existing assignments keep their IDs. `DEMO-*` codes and locations are sample data; rename them for a presentation rather than treating them as confirmed cooperative records.
+
+Use **Thêm vùng nuôi** to save code, name, location, coordinates, area and water-measurement point first. Legal documents are added afterwards inside the saved zone's dialog. Missing mandatory document types remain visible; creating a zone alone never marks its legal records complete. Attach a PDF/JPEG/PNG of at most 10 MiB and select all covered zones. **Gia hạn / thay thế** creates a new record, keeps the old file/dates and changes the old record to superseded only from the replacement's effective date. **Xem hiệu lực tại ngày** can inspect both sides of that date. Attachments stay in memory; this is not a cloud upload or a real reminder service.
+
+**Ngừng sử dụng vùng** and **Sử dụng lại vùng** require confirmation and retain history. Discontinuation is blocked by active rafts in repository tests; the review dataset does not yet contain a real raft registry. Save or discard metadata changes before changing usage status. A document save does not save or discard a metadata draft.
+
+Sign out and sign in as `nguyen.an / demo123`: only the assigned zone is readable, with no create/edit/status/document-write actions. A role name alone does not grant access. The disabled `tran.binh` fixture remains blocked. Other operational functions (rafts, cultivation, finance, payroll, orders and public QR) are still separate planned slices, not complete role workflows.
+
+All date-entry controls display **ngày/tháng/năm** and accept Vietnamese date input. ISO values remain inside service requests. Expand the sidebar by pointer or keyboard focus: it should move the content column rather than cover it. On a narrow screen, use the Menu drawer.
+
+Management and attachment changes are in-memory mock state and reset on a full page reload/server restart. Use client-side navigation during the walkthrough. Real API/refresh, MSG06 metadata and the structured MSG24 employee name remain gated.
+
 Use **`owner` / `demo123`** first. These are public mock credentials, not a backend account.
 
 | Step | Screen / action | Expected behavior |

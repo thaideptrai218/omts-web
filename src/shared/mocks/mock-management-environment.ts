@@ -5,7 +5,6 @@ import {
 import { fixedRoleNames } from "@/features/role-management/domain/fixed-role-policy";
 import {
   mockAssignableRoles,
-  mockFarmingZones,
   mockManagedAccounts,
 } from "@/features/account-management/mocks/account-management-fixtures";
 import {
@@ -16,14 +15,44 @@ import { createMockRoleManagementRepository } from "@/features/role-management/r
 import { createMockAccountManagementRepository } from "@/features/account-management/repositories/mock-account-management-repository";
 import { createMockEmployeeManagementRepository } from "@/features/employee-management/repositories/mock-employee-management-repository";
 import { createMockDashboardRepository } from "@/features/dashboard/repositories/mock-dashboard-repository";
+import { createMockFarmingZoneStore } from "@/features/farming-zones/repositories/mock-farming-zone-store";
+import { initialFarmingZones } from "@/features/farming-zones/mocks/farming-zone-fixtures";
 
 // Shared mock composition, not a backend or a persistence layer. Snapshots are
 // cloned by repositories; UI still goes through its existing service contract.
 export function createMockManagementEnvironment(latencyMs = 350) {
+  const zoneStore = createMockFarmingZoneStore({
+    initialZones: initialFarmingZones,
+    latencyMs,
+    initialActorName: "Lê Minh Hải",
+  });
+  const catalog = mockFeatureCatalog.map((feature) =>
+    feature.code === "FARMING_ZONE"
+      ? {
+          ...feature,
+          description:
+            "Xem vùng được phân công. Thêm và sửa vùng chỉ dành cho Chủ hợp tác xã.",
+          supportedActions: feature.supportedActions.filter(
+            (action) => action.key === "VIEW",
+          ),
+        }
+      : feature,
+  );
+  const initialRoles = mockFixedRoles.map((role) => ({
+    ...role,
+    permissions: role.permissions.map((permission) =>
+      permission.featureCode === "FARMING_ZONE"
+        ? {
+            ...permission,
+            actionKeys: permission.actionKeys.filter((key) => key === "VIEW"),
+          }
+        : permission,
+    ),
+  }));
   // Providers run on load/mutation, after all repositories below are initialized.
   const roles = createMockRoleManagementRepository({
-    catalog: mockFeatureCatalog,
-    initialRoles: mockFixedRoles,
+    catalog,
+    initialRoles,
     fixedNames: fixedRoleNames,
     latencyMs,
     getUsage(roleId) {
@@ -33,11 +62,13 @@ export function createMockManagementEnvironment(latencyMs = 350) {
           (grant) => grant.roleId === roleId && grant.status === "effective",
         );
         if (!grants.length) return [];
-        const zones = mockFarmingZones.filter((zone) =>
-          grants.some(
-            (grant) => grant.zoneId === null || grant.zoneId === zone.id,
-          ),
-        );
+        const zones = zoneStore
+          .snapshotOptions()
+          .filter((zone) =>
+            grants.some(
+              (grant) => grant.zoneId === null || grant.zoneId === zone.id,
+            ),
+          );
         zones.forEach((zone) => zoneIds.add(zone.id));
         return [
           {
@@ -56,18 +87,27 @@ export function createMockManagementEnvironment(latencyMs = 350) {
     },
   });
   const accounts = createMockAccountManagementRepository({
-    featureCatalog: mockFeatureCatalog,
+    featureCatalog: catalog,
     initialAccounts: mockManagedAccounts,
     roles: mockAssignableRoles,
-    zones: mockFarmingZones,
+    zones: zoneStore.snapshotOptions(),
     latencyMs,
     getRoles: () => roles.snapshotRoles(),
+    getZones: () => zoneStore.snapshotOptions(),
   });
   const employees = createMockEmployeeManagementRepository({
-    createAccount: (draft, beforePublish) => accounts.createLinkedAccount(draft, beforePublish),
-    getAccountCreationOptions: () => ({ roles: roles.snapshotRoles(), zones: mockFarmingZones.map((zone) => ({ ...zone })),
-      featureCatalog: mockFeatureCatalog.map((feature) => ({ ...feature, supportedActions: [...feature.supportedActions] })) }),
-    zones: mockFarmingZones,
+    createAccount: (draft, beforePublish) =>
+      accounts.createLinkedAccount(draft, beforePublish),
+    getAccountCreationOptions: () => ({
+      roles: roles.snapshotRoles(),
+      zones: zoneStore.snapshotOptions(),
+      featureCatalog: catalog.map((feature) => ({
+        ...feature,
+        supportedActions: [...feature.supportedActions],
+      })),
+    }),
+    getZones: () => zoneStore.snapshotOptions(),
+    zones: zoneStore.snapshotOptions(),
     initialEmployees: mockEmployeeProfiles,
     accounts: mockEmployeeAccounts,
     latencyMs,
@@ -80,7 +120,7 @@ export function createMockManagementEnvironment(latencyMs = 350) {
     accounts: accounts.snapshotAccounts(),
     roles: roles.snapshotRoles(),
     employees: employees.snapshotEmployees(),
-    zones: mockFarmingZones,
+    zones: zoneStore.snapshotOptions(),
   }));
-  return { accounts, roles, employees, dashboard };
+  return { accounts, roles, employees, dashboard, zones: zoneStore };
 }

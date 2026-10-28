@@ -17,6 +17,7 @@ export type ConsumeProfileProofInput = Readonly<{
 }>;
 
 type MockPersonalProfileOptions = Readonly<{
+  getRoles?: () => PersonalProfile["roles"];
   isIdentifierTaken?: (value: string) => boolean;
   onProfileSaved?: (profile: PersonalProfile) => void;
   consumeVerificationProof(input: ConsumeProfileProofInput): void;
@@ -52,6 +53,7 @@ function getVerificationDetails(kind: ProfileIdentifierKind) {
 }
 
 export function createMockPersonalProfileRepository({
+  getRoles,
   consumeVerificationProof,
   hasVerificationProof,
   initialProfile = defaultProfile,
@@ -77,6 +79,10 @@ export function createMockPersonalProfileRepository({
     if (latencyMs > 0) await wait(latencyMs);
   }
 
+  function currentProfile() {
+    return cloneProfile({ ...profile, roles: getRoles?.() ?? profile.roles });
+  }
+
   function identifierIsUnavailable(kind: ProfileIdentifierKind, value: string, allowUnverifiedCurrent = false) {
     const contact = profile[kind];
     const isCurrentValue = value === contact?.value;
@@ -92,7 +98,7 @@ export function createMockPersonalProfileRepository({
         return { message: { code: "MSG19" }, status: "session-expired" };
       }
 
-      return { profile: cloneProfile(profile), status: "loaded" };
+      return { profile: currentProfile(), status: "loaded" };
     },
 
     async startIdentifierChange(input): Promise<StartProfileIdentifierChangeResult> {
@@ -208,7 +214,7 @@ export function createMockPersonalProfileRepository({
       };
       lastUpdatedBy = displayName;
       lastUpdatedAt = "vừa xong";
-      onProfileSaved?.(cloneProfile(profile));
+      onProfileSaved?.(currentProfile());
 
       return {
         message: {
@@ -219,7 +225,7 @@ export function createMockPersonalProfileRepository({
           input.phoneChange && isAmbiguousTraderPhone(input.phoneChange.value)
             ? { code: "MSG57" }
             : undefined,
-        profile: cloneProfile(profile),
+        profile: currentProfile(),
         status: "saved",
       };
     },

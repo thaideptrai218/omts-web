@@ -12,10 +12,12 @@ Team repositories: [Web](https://github.com/thaideptrai218/omts-web) · [Backend
 
 For a presentation without development overlays, use `npm run build` followed by `npm run start`. Use `npm run dev` while editing code.
 
-> Last updated: **October 27, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
+> Last updated: **October 28, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
 
 - **The UI can run with mock data** without a backend, database, Docker, or Redis.
 - Cooperative profile, employee, account, role, and personal profile screens currently use mock service/repository adapters.
+- Farming zones now have a searchable directory and profile dialogs. Owners can create, rename, edit and discontinue/reactivate zones, then add shared legal documents and replacement versions. Assigned internal users with View permission have read-only access. Renames keep stable zone IDs and update management pickers and role/scope labels from a shared source. Sample locations are not verified cooperative records.
+- Date fields use Vietnamese day/month/year entry and a Vietnamese picker while service values remain ISO dates. The desktop sidebar reserves layout space when it expands instead of covering page text.
 - The review build shares mock state between management screens: updated role permissions can be assigned, new accounts can be linked to employees, and dashboard counts update. Created staff accounts can complete first-login password/contact setup; account locking and password reset affect their mock login. Personal profile changes, password recovery, and notification settings can be demonstrated without a backend.
 - The approved October 27 role policy is now **three fixed zone roles: Zone Manager, Accountant, and Staff**. Owners can edit permissions and discontinue/reactivate roles; they cannot add, copy, or rename roles. Staff initially has no business permissions. This policy is implemented in the product mock; backend/SRS alignment is tracked separately.
 - Dashboard headings and permitted shortcuts render while metrics load. Management directories now include clearer rows, summaries and combined filters; editors continue to open in dialogs.
@@ -135,6 +137,7 @@ Sign in with the appropriate account and use the sidebar to navigate. Opening a 
 | `/recover` | Password recovery | Signed-out users |
 | `/dashboard` | Dashboard with sample metrics and no-data states | Owner / Staff |
 | `/cooperative/profile` | Cooperative profile | Owner |
+| `/farming/zones` | Zone directory, metadata, legal documents and renewal history | Owner writes; permitted internal users read assigned zones |
 | `/employees` | Employee list/editor and account linking/unlinking | Owner |
 | `/access/accounts` | Internal accounts, account status, and zone-based access grants | Owner |
 | `/access/roles` | Roles and permissions | Owner |

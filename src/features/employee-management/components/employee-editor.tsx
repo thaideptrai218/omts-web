@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
+import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -185,7 +186,11 @@ export function EmployeeEditor({
               />
             </EmployeeEditorField>
             <EmployeeEditorField id={controlProps("birthday").id} label="Ngày sinh" optional hint={employeePersonalHints.birthday} error={errors.birthday?.message}>
-              <input {...controlProps("birthday")} className={inputStyles} type="date" max={employeeBusinessDate(new Date())} {...register("birthday")} />
+              <Controller name="birthday" control={form.control} render={({ field }) => (
+                <VietnameseDateInput {...controlProps("birthday")} className={inputStyles} calendarLabel="Chọn ngày sinh"
+                  max={employeeBusinessDate(new Date())} value={field.value} inputRef={field.ref}
+                  name={field.name} onBlur={field.onBlur} onValueChange={field.onChange} />
+              )} />
             </EmployeeEditorField>
             {isCreate && <EmployeeEditorField id={controlProps("status").id} label="Trạng thái">
               <output {...controlProps("status")} className="mt-2 flex min-h-12 items-center rounded-control border border-border bg-surface-subtle px-3 text-text">Đang làm việc</output>

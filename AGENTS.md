@@ -12,10 +12,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project context
 
-- Before starting a new task, read `docs/PROJECT_CONTEXT.md` and the relevant Jira issue, SRS use case, and Figma frame.
+- Before starting a new task, read `docs/PROJECT_CONTEXT.md`, the relevant SRS use cases and approved decisions. Read Jira for assignment/dependency context and Figma when its reference flow is useful.
 - The canonical repositories are `thaideptrai218/omts-web`, `thaideptrai218/omts-mobile`, and `thaideptrai218/omts-backend`. This repository contains Web only; do not create an Expo app inside it.
 - Current SRS actors are System Administrator, Cooperative Owner, Staff, Zone Manager, Accountant, Trader, and QR Viewer. Do not introduce Household/Farmer actors from historical reports unless the current SRS and Jira explicitly add them again.
-- Jira defines sprint scope and dependencies; the current SRS defines business rules; Figma illustrates layout and screen flow but does not override either source.
+- User decision (28 October 2026): implement complete role workflows against the SRS; Jira assignments are not a ceiling on feature scope. Approved user decisions override conflicting historical SRS/Jira text. Record material conflicts and ask before resolving them. Figma is a reference, not a mandatory template. Do not mark Jira Done merely because mock UI is complete.
 
 ## Frontend and UX
 
