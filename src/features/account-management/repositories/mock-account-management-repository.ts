@@ -105,6 +105,8 @@ export function createMockAccountManagementRepository({
   recordMockVerifiedContact(accountId: string, channel: "email" | "sms", value: string): void;
   recordMockProfile(profile: PersonalProfile): void;
   mockCredentialVersion(accountId: string): number;
+  createLinkedAccount<T>(input: Omit<SaveAccountInput, "id" | "recordVersion">,
+    beforePublish: (account: ManagedAccount) => T | undefined): Promise<SaveAccountResult | T>;
 }> {
   let roles = initialRoles;
   const credentialVersions = new Map<string, number>();
@@ -150,7 +152,7 @@ export function createMockAccountManagementRepository({
     };
   }
 
-  return {
+  const repository = {
     snapshotAccounts: () => accounts.map(cloneAccount),
     mockCredentialVersion: (accountId) => credentialVersions.get(accountId) ?? 0,
     recordMockVerifiedContact(accountId, channel, value) {
@@ -172,7 +174,7 @@ export function createMockAccountManagementRepository({
       return { status: "loaded", workspace: workspace() };
     },
 
-    async save(input: SaveAccountInput): Promise<SaveAccountResult> {
+    async save<T = never>(input: SaveAccountInput, beforePublish?: (account: ManagedAccount) => T | undefined): Promise<SaveAccountResult | T> {
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;
 
@@ -315,6 +317,11 @@ export function createMockAccountManagementRepository({
             username,
           };
 
+      // No await between this check/link and publication: one mock commit turn.
+      if (!current && beforePublish) {
+        const rejection = beforePublish(cloneAccount(saved));
+        if (rejection !== undefined) return rejection;
+      }
       if (current) replaceAccount(saved);
       else accounts = [...accounts, saved];
 
@@ -437,6 +444,16 @@ export function createMockAccountManagementRepository({
         delivery: createDeliveryReceipt(account),
         status: "reset",
       };
+    },
+  } satisfies AccountManagementRepository & Readonly<{
+    snapshotAccounts(): readonly ManagedAccount[];
+    mockCredentialVersion(accountId: string): number;
+    recordMockVerifiedContact(accountId: string, channel: "email" | "sms", value: string): void;
+    recordMockProfile(profile: PersonalProfile): void;
+  }>;
+  return { ...repository,
+    createLinkedAccount<T>(input: Omit<SaveAccountInput, "id" | "recordVersion">, beforePublish: (account: ManagedAccount) => T | undefined) {
+      return repository.save({ ...input, id: null, recordVersion: null }, beforePublish);
     },
   };
 }

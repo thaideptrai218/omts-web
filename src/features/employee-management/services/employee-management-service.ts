@@ -2,12 +2,20 @@ import type { SaveEmployeeInput, UnlinkEmployeeAccountInput } from "@/features/e
 import type { EmployeeManagementRepository } from "@/features/employee-management/repositories/employee-management-repository";
 import { employeeBankFields, toEmployeeBankAccount } from "../schemas/employee-bank-schema";
 import type { EndEmployeeEmploymentInput, ReinstateEmployeeInput } from "../domain/employee-employment";
+import type { CreateEmployeeAccountInput } from "../domain/employee-account-creation";
 
 export class EmployeeManagementService {
   constructor(private readonly repository: EmployeeManagementRepository) {}
 
   load() {
     return this.repository.load();
+  }
+
+  createLoginAccount(input: CreateEmployeeAccountInput) {
+    const { fullName, email, phone, deliveryChannel, newGrants } = input.account;
+    return this.repository.createLoginAccount({ employeeId: input.employeeId, recordVersion: input.recordVersion,
+      account: { fullName: fullName.trim(), email: email.trim(), phone: phone.trim(), deliveryChannel,
+        newGrants: newGrants.map(({ key, zoneId, roleId, effectiveFrom, effectiveTo }) => ({ key, zoneId, roleId, effectiveFrom, effectiveTo })) } });
   }
 
   unlinkAccount(input: UnlinkEmployeeAccountInput) {

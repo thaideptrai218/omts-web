@@ -2,22 +2,13 @@ import { z } from "zod";
 import { apiIdSchema, apiTextSchema } from "@/features/auth/api/auth-contract.schemas";
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 import { employeeDateOnlySchema } from "./employee-contract.schemas";
-
-function isBackendPhoneNumber(value: string) {
-  // Match PhoneNumbers.Normalize for validation only; the server normalizes
-  // the actual value. Do not reject its supported separators or 84 prefix.
-  const compact = value.trim().replace(/[\s.()-]/gu, "");
-  const domestic = compact.startsWith("+84")
-    ? `0${compact.slice(3)}`
-    : compact.startsWith("84") && compact.length === 11 ? `0${compact.slice(2)}` : compact;
-  return /^0\d{9}$/u.test(domestic);
-}
+import { normalizeEmployeePhone } from "../schemas/employee-phone";
 
 // Full personal-data PUT only; status changes, unlink and account creation
 // have separate endpoints. This does not replace the product form schema.
 export const employeeUpdateRequestSchema = z.strictObject({
   fullName: apiTextSchema.max(100),
-  phoneNumber: z.string().refine(isBackendPhoneNumber),
+  phoneNumber: z.string().refine((value) => normalizeEmployeePhone(value) !== null),
   birthday: employeeDateOnlySchema.nullable(),
   address: z.string().max(500).nullable(),
   area: z.string().max(100).nullable(),

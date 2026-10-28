@@ -8,11 +8,18 @@ import type {
   UnlinkEmployeeAccountResult,
 } from "@/features/employee-management/domain/employee-management";
 import type { EmployeeManagementRepository } from "@/features/employee-management/repositories/employee-management-repository";
-import { employeeEditorSchema } from "@/features/employee-management/schemas/employee-editor-schema";
+import { createEmployeeEditorSchema } from "@/features/employee-management/schemas/employee-editor-schema";
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 import { employeeBankFields, toEmployeeBankAccount } from "../schemas/employee-bank-schema";
 import type { EmployeeZoneOption } from "../domain/employee-working-details";
 import { createMockEmployeeEmployment, type MockEmployeeLaborReference } from "./mock-employee-employment";
+import { employeePersonalFields } from "../schemas/employee-personal-schema";
+import { normalizeEmployeePhone } from "../schemas/employee-phone";
+import type { EmployeeIssueTarget } from "../domain/employee-problem";
+import type { EmployeeAccountCreationOptions } from "../domain/employee-account-creation";
+import { createMockEmployeeAccount, type MockEmployeeAccountCreator } from "./mock-employee-account";
+
+const validationTargets = new Set<string>([...employeePersonalFields, "bankAccount", "workingZoneIds"]);
 
 type MockOptions = Readonly<{
   getAccounts?: () => readonly EmployeeAccountSummary[];
@@ -25,6 +32,8 @@ type MockOptions = Readonly<{
   now?: () => Date;
   zones?: readonly EmployeeZoneOption[];
   laborRecords?: readonly MockEmployeeLaborReference[];
+  createAccount?: MockEmployeeAccountCreator;
+  getAccountCreationOptions?: () => EmployeeAccountCreationOptions;
 }>;
 
 function wait(milliseconds: number): Promise<void> {
@@ -59,12 +68,15 @@ export function createMockEmployeeManagementRepository({
   now = () => new Date(),
   zones = [],
   laborRecords = [],
+  createAccount,
+  getAccountCreationOptions,
 }: MockOptions): EmployeeManagementRepository & Readonly<{ snapshotEmployees(): readonly EmployeeProfile[] }> {
   let accounts = initialAccounts;
   let employees = initialEmployees.map(cloneEmployee);
   let nextEmployeeNumber = employees.length + 1;
   let nextVersion = employees.length + 1;
   const issuedVersions = new Set(employees.map((employee) => employee.recordVersion));
+  const editorSchema = createEmployeeEditorSchema(now);
   // Simulated audit metadata only; never used to fill missing backend MSG06 params.
   const updatedAt = new Map(employees.map((employee) => [employee.id, now()]));
 
@@ -114,10 +126,17 @@ export function createMockEmployeeManagementRepository({
         .map(cloneAccount),
       employees: employees.map(cloneEmployee),
       zones: zones.map((zone) => ({ ...zone })),
+      accountCreation: getAccountCreationOptions?.(),
     };
   }
 
   return {
+    createLoginAccount: createMockEmployeeAccount({ authorize: prepareRequest, find: (id) => employees.find((item) => item.id === id),
+      conflict, nextVersion: allocateVersion, create: createAccount, commit: (employee) => {
+        employees = employees.map((current) => current.id === employee.id ? employee : current);
+        updatedAt.set(employee.id, now());
+        return cloneEmployee(employee);
+      } }),
     ...createMockEmployeeEmployment({
       authorize: prepareRequest,
       find: (id) => {
@@ -163,16 +182,15 @@ export function createMockEmployeeManagementRepository({
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;
 
-      const parsed = employeeEditorSchema.safeParse({
+      const parsed = editorSchema.safeParse({
         ...input,
         accountId: input.accountId ?? "",
         bankAccount: employeeBankFields(input.bankAccount),
       });
       if (!parsed.success) {
         const fields = [...new Set(parsed.error.issues.map((issue) => issue.path[0]))]
-          .filter((field): field is "bankAccount" | "workingZoneIds" | "fullName" | "phone" =>
-            field === "bankAccount" || field === "workingZoneIds" || field === "fullName" || field === "phone");
-        if (fields.some((field) => field === "bankAccount" || field === "workingZoneIds")) {
+          .filter((field): field is EmployeeIssueTarget => typeof field === "string" && validationTargets.has(field));
+        if (fields.some((field) => field !== "fullName" && field !== "phone")) {
           return { status: "invalid-fields", code: "MSG01", fields };
         }
         const field = parsed.error.issues[0]?.path[0];
@@ -185,6 +203,9 @@ export function createMockEmployeeManagementRepository({
           status: "invalid-input",
         };
       }
+
+      const normalizedPhone = normalizeEmployeePhone(parsed.data.phone);
+      if (normalizedPhone === null) return { status: "invalid-input", field: "phone", message: { code: "MSG01" } };
 
       const current = input.id
         ? employees.find((employee) => employee.id === input.id)
@@ -215,7 +236,7 @@ export function createMockEmployeeManagementRepository({
         (employee) =>
           employee.id !== input.id &&
           sameName(employee.fullName, parsed.data.fullName) &&
-          employee.phone === parsed.data.phone,
+          normalizeEmployeePhone(employee.phone) === normalizedPhone,
       );
       if (duplicate) {
         return {
@@ -267,7 +288,7 @@ export function createMockEmployeeManagementRepository({
         id: current?.id ?? `employee-${nextEmployeeNumber++}`,
         notes: parsed.data.notes.trim(),
         otherInformation: parsed.data.otherInformation.trim(),
-        phone: parsed.data.phone,
+        phone: normalizedPhone,
         recordVersion: allocateVersion(),
         status: current ? parsed.data.status : "employed",
         employmentEndDate: current?.employmentEndDate ?? null,

@@ -64,6 +64,9 @@ export function createMockManagementEnvironment(latencyMs = 350) {
     getRoles: () => roles.snapshotRoles(),
   });
   const employees = createMockEmployeeManagementRepository({
+    createAccount: (draft, beforePublish) => accounts.createLinkedAccount(draft, beforePublish),
+    getAccountCreationOptions: () => ({ roles: roles.snapshotRoles(), zones: mockFarmingZones.map((zone) => ({ ...zone })),
+      featureCatalog: mockFeatureCatalog.map((feature) => ({ ...feature, supportedActions: [...feature.supportedActions] })) }),
     zones: mockFarmingZones,
     initialEmployees: mockEmployeeProfiles,
     accounts: mockEmployeeAccounts,

@@ -1,5 +1,11 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## WEB-EMP-ACCOUNT-01 — Tạo tài khoản từ hồ sơ nhân viên
+
+**Đã chốt, 28/10/2026, Duy Thái trả lời trực tiếp:** “Lưu hồ sơ trước, tạo tài khoản sau (đề xuất)”. Hồ sơ mới được lưu trước; từ profile đã lưu mới tạo tài khoản, điền sẵn tên/SĐT, Owner chọn vùng–vai trò và kênh nhận thông tin. Giữ quyết định username tự sinh và Owner không xem mật khẩu. Không tạo employee+account cùng lần lưu như ticket cũ. Bản nháp hồ sơ chưa lưu phải được lưu/hủy trước bước tạo account, không tự lưu kèm thao tác này.
+
+Backend develop953f597/ticket vẫn có username bắt buộc và trả temporaryPassword; API tiếp tục chờ alignment, không sửa SRS/Jira/backend. Mock tạo và liên kết trong một thao tác repository; không ghép hai mutation rồi báo atomic. [Plan thực hiện](../WEB_REAL_API_IMPLEMENTATION_PLAN.md#emp-account--tạo-tài-khoản-sau-khi-lưu-hồ-sơ).
+
 ## WEB-EMP-EMPLOY-01/02 — Ngày nghỉ và bản nháp khi đổi tình trạng
 
 **Đã chốt, 28/10/2026, Duy Thái qua câu trả lời async:** ngày nghỉ chỉ hôm nay hoặc trước đó; nếu hồ sơ có thay đổi chưa lưu thì phải lưu hoặc hủy bản nháp trước khi nghỉ việc/đi làm lại. Không dùng phương án giữ bản nháp qua thao tác này như unlink. Ngày nghiệp vụ Việt Nam UTC+7 theo BusinessClock backend; status action có version riêng, không tự lưu thông tin cá nhân hoặc khóa/mở tài khoản. [Plan triển khai](../WEB_REAL_API_IMPLEMENTATION_PLAN.md#emp-employ--nghỉ-việcđi-làm-lại-bằng-mock-2810).

@@ -82,6 +82,20 @@ The employee directory combines search, employment status, working-zone and acco
 
 These actions use the shared mock repository. Labor-record blockers, concurrent versions and pending/cancellation races are covered by automated fixtures; the demo does not include a real labor-history dataset. Real API/QA acceptance and structured MSG06/MSG24 integration remain open.
 
+### Employee personal-data validation (mock)
+
+The editor explains the supported phone formats and text limits. Birthday remains optional and cannot be later than today's Vietnamese business date. Invalid fields retain their entered values and receive inline errors/focus; text is not silently truncated. Correct the values and save, then reopen the employee to inspect the result. The mock normalizes supported +84/84 phone input to the domestic form and uses the normalized number when checking for an existing person with the same name. Account status, zone access and employment status do not change as a side effect.
+
+### Create an account from a saved employee (mock)
+
+1. Save a new employee first, or open **Lê Thị Lan**, who has no linked account. Save or discard any personal-data draft before selecting **Tạo tài khoản đăng nhập**.
+2. Check the prefilled display name and phone, optionally enter email, and select the delivery channel. These fields belong to the new account; editing them does not save personal-profile changes.
+3. In **Phân quyền theo vùng**, select a zone and role, then add the grant. At least one valid grant is required; working zones do not automatically grant access.
+4. Select **Xem quyền trước khi tạo**, inspect the scope, then confirm. Cancel before confirmation to check that nothing was created.
+5. The receipt shows the generated username and a masked recipient. No password is shown. After acknowledging it, reopen the employee to inspect the linked account or open the account directory to review its grants.
+
+This uses the existing in-memory credential-delivery simulation, including its 72-hour setup receipt. No real SMS/email or backend transaction is performed. A lost response is not automatically retried. The real API remains gated while the backend username/credential-delivery contract differs from the approved frontend workflow.
+
 For a shorter presentation, use the seeded accounts `nguyen.an` or `pham.cuong` with `demo123` to show role/scope labels and Owner-only menu restrictions without creating a new account. `staff-first-login` is a separate first-login scenario; `staff-needs-contact-verification` starts at the contact step. Web Trader registration remains deferred by the user's decision on October 27; there is no `/register` route to demonstrate.
 
 ## Automated checks

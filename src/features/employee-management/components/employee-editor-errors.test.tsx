@@ -40,8 +40,9 @@ describe("structured employee errors in the actual editor", () => {
     for (const name of ["Số điện thoại", "Ngày sinh (không bắt buộc)", "Phường/Xã", "Ghi chú"]) {
       const field = name === "Số điện thoại" ? screen.getByRole("textbox", { name }) : screen.getByLabelText(name);
       await waitFor(() => expect(field.getAttribute("aria-invalid")).toBe("true"));
-      const error = document.getElementById(field.getAttribute("aria-describedby")!);
-      expect(error?.textContent).toContain("Vui lòng kiểm tra lại");
+      const descriptions = field.getAttribute("aria-describedby")!.split(/\s+/).map((id) => document.getElementById(id));
+      expect(descriptions.every(Boolean)).toBe(true);
+      expect(descriptions.map((element) => element?.textContent).join(" ")).toContain("Vui lòng kiểm tra lại");
     }
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Số điện thoại" })));
     expect(notes.value).toBe("Bản nháp đang nhập"); expect(callbacks.onSaved).not.toHaveBeenCalled();

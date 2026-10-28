@@ -25,6 +25,10 @@ import { hasEffectivePermission } from "@/features/access/lib/has-effective-perm
 import { useAuth } from "@/features/auth/state/auth-provider";
 import { formatMessage } from "@/shared/messages/message-catalog";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
+import { CredentialDeliveryDialog } from "@/features/account-management/components/credential-delivery-dialog";
+import type { CredentialDeliveryReceipt } from "@/features/account-management/domain/account-management";
+import { EmployeeAccountDialog } from "./employee-account-dialog";
+import type { CreateEmployeeAccountResult } from "../domain/employee-account-creation";
 
 function PermissionDenied() {
   return (
@@ -59,6 +63,8 @@ function EmployeeWorkspace() {
   const [workspace, setWorkspace] = useState<EmployeeManagementWorkspace>();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>();
   const [isCreating, setIsCreating] = useState(false);
+  const [accountCreationOpen, setAccountCreationOpen] = useState(false);
+  const [delivery, setDelivery] = useState<CredentialDeliveryReceipt>();
   const [isMutating, setIsMutating] = useState(false);
   const mutatingRef = useRef(false);
   const [followUp, setFollowUp] = useState<AccountFollowUp>();
@@ -148,6 +154,12 @@ function EmployeeWorkspace() {
     });
   }
 
+  function accountCreated(result: Extract<CreateEmployeeAccountResult, { status: "created" }>) {
+    setWorkspace((current) => current ? updateEmployeeWorkspace(current, result.employee) : current);
+    setAccountCreationOpen(false); setSelectedEmployeeId(undefined); setDelivery(result.delivery);
+    notify({ title: "Đã tạo tài khoản", description: "Tài khoản đăng nhập đã được liên kết với nhân viên.", tone: "success" });
+  }
+
   if (isForbidden) return <PermissionDenied />;
   if (isLoading) return <EmployeeManagementPageSkeleton />;
 
@@ -217,6 +229,7 @@ function EmployeeWorkspace() {
         dismissible={!isMutating}
         onOpenChange={(open) => {
           if (!open && !mutatingRef.current) {
+            setAccountCreationOpen(false);
             setIsCreating(false);
             setSelectedEmployeeId(undefined);
           }
@@ -231,6 +244,8 @@ function EmployeeWorkspace() {
       >
         {(isCreating || selectedEmployee) && (
           <EmployeeEditor
+            accountCreationOpen={accountCreationOpen}
+            onRequestCreateAccount={workspace.accountCreation ? () => setAccountCreationOpen(true) : undefined}
             zones={workspace.zones}
             availableAccounts={workspace.availableAccounts}
             embedded
@@ -243,6 +258,11 @@ function EmployeeWorkspace() {
           />
         )}
       </Dialog>
+
+      {accountCreationOpen && selectedEmployee && workspace.accountCreation && <EmployeeAccountDialog
+        employee={selectedEmployee} options={workspace.accountCreation} service={employeeManagementService}
+        onPendingChange={changePending} onClose={() => setAccountCreationOpen(false)} onCreated={accountCreated} />}
+      {delivery && <CredentialDeliveryDialog kind="created" receipt={delivery} onAcknowledge={() => setDelivery(undefined)} />}
 
       {followUp && (
         <AccountFollowUpDialog

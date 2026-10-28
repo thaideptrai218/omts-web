@@ -1,5 +1,7 @@
 # Nhân viên — nghỉ việc và đi làm lại bằng mock
 
+> Sau xuất bản: commit `d1bcca5` đã push cùng nhánh. CI đúng SHA đạt build-test/Gitleaks/pr-title; Linux 2.160 test pass/31 Redis skip, build18/18 và24 HTTP assertions. GitGuardian lịch sử còn FAILURE. [Bằng chứng và đối chiếu run cũ người dùng gửi](WEB_CI_D1BCCA5_REVIEW_2026-10-28.md). Các câu chưa có kết quả CI bên dưới là snapshot trước lượt kiểm này, không phải trạng thái mới nhất; cập nhật bằng chứng hiện đang local.
+
 Ngày 28/10/2026, Asia/Saigon, nhánh `feature/OMTS-132-web-foundation`, nền `19c47bc`. Triển khai ban đầu giữ local; lượt review tiếp theo được người dùng yêu cầu cập nhật báo cáo và commit/push cùng nhánh. Đọc OMTS-203, parent OMTS-119, dependency OMTS-199, UC10 và backend local953f597: EmployeeService, EmployeeDtos, BusinessClock, EmployeeRepository. Không coi đây là kiểm tra backend remote mới nhất hoặc nghiệm thu API thật.
 
 ## Hai quyết định đã xác nhận

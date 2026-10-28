@@ -1,6 +1,7 @@
 import type { AppMessage } from "@/shared/messages/message-catalog";
 import type { BindableEmployeeProblem } from "./employee-problem";
 import type { EmployeeBankAccount, EmployeeZoneOption } from "./employee-working-details";
+import type { EmployeeAccountCreationOptions } from "./employee-account-creation";
 
 export type EmployeeStatus = "employed" | "left";
 
@@ -34,6 +35,7 @@ export type EmployeeManagementWorkspace = Readonly<{
   availableAccounts: readonly EmployeeAccountSummary[];
   employees: readonly EmployeeProfile[];
   zones: readonly EmployeeZoneOption[];
+  accountCreation?: EmployeeAccountCreationOptions;
 }>;
 
 export type SaveEmployeeInput = Readonly<{

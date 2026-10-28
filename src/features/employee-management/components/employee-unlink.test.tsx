@@ -89,6 +89,16 @@ function deferred<T>() {
 }
 
 describe("employee unlink through list and editor", () => {
+  it("does not start an old profile save after opening the unlink confirmation", async () => {
+    const { editor, notes } = await openEditor();
+    await act(async () => {
+      fireEvent.submit(notes.closest("form")!);
+      fireEvent.click(within(editor).getByRole("button", { name: "Bỏ liên kết tài khoản" }));
+    });
+    expect(service.save).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Bỏ liên kết tài khoản?" })).toBeTruthy();
+    expect(repository.snapshotEmployees()[0]).toEqual(employee);
+  });
   it("updates working-zone rows and an active zone filter after saving the actual editor", async () => {
     const { user, editor } = await openEditor();
     fireEvent.change(screen.getByLabelText("Vùng làm việc"), { target: { value: "zone-east" } });

@@ -122,6 +122,36 @@ Chỉ chuẩn bị hàm thuần và fixture khi chưa đủ điều kiện runti
 
 ## 3. Thiết kế đã chọn và phần còn mở
 
+### EMP-ACCOUNT — Tạo tài khoản sau khi lưu hồ sơ
+
+**Review trước xuất bản28/10:** đã sửa P2 validation-save của profile gửi muộn sau unmount/mở unlink, thêm3 hồi quy; ba file UI59/59 đạt, source riêng2.249 pass/31 Redis skip, lint/typecheck/build18/18/24 HTTP đạt. [Báo cáo kiểm cuối và phạm vi commit](reports/WEB_EMPLOYEE_PERSONAL_ACCOUNT_FULL_REVIEW_2026-10-28.md). Người dùng yêu cầu commit/push cùng nhánh; không đổi các gate API/refresh/MSG06/tên MSG24 hoặc làm incident GitGuardian trong lượt này.
+
+WEB-EMP-ACCOUNT-01 đã chốt28/10: lưu hồ sơ trước, sau đó tạo login account riêng. Giữ username tự sinh và secret-free delivery. Không tự chọn role/quyền từ vùng làm việc hoặc sửa backend/Jira/SRS; API/refresh/MSG06/tên MSG24 tiếp tục chờ.
+
+| Micro-task | Phần việc | Tiêu chí kiểm |
+| --- | --- | --- |
+| EMP-ACCOUNT-01 | Domain input/result, options, service và schema contact | Không có username/mật khẩu từ UI; chỉ account nội bộ mới, employeeId/version có chủ đích |
+| EMP-ACCOUNT-02 | Shared mock create+link với pre-publication check đồng bộ | Stale/đã có link/duplicate/role ngừng không tạo account mồ côi; hai request cùng version chỉ một thành công |
+| EMP-ACCOUNT-03 | Popup riêng từ hồ sơ sạch đã lưu, prefill tên/SĐT, chọn quyền, preview/xác nhận và receipt | Hủy không ghi, pending chống đóng/gửi lặp, bỏ callback cũ, không xem mật khẩu hoặc sửa hồ sơ cá nhân |
+| EMP-ACCOUNT-04 | Tests, browser360/1024, review/báo cáo/bài học local | Kiểm list/account/grant/version nhất quán; API vẫn mock, không nhận kết quả local là QA/transaction DB |
+
+**Hoàn tất local bằng mock:**29 test mới; full source có personal validation đạt2.246 pass/31 Redis skip, lint/typecheck/build18/18 và24 HTTP assertions. Native tạo Lan→chọn Khu Nam/Nhân viên→receipt→reopen link→account directory đã kiểm, responsive360/1024 không tràn ngang. [Báo cáo và giới hạn](reports/WEB_EMPLOYEE_ACCOUNT_CREATION_2026-10-28.md). Bài118 local; chưa commit/push/merge. Các mục bên dưới ghi WEB-EMP-ACCOUNT-01 còn hỏi là snapshot trước câu trả lời chốt; không giữ proposal ở trạng thái Open nữa. API/refresh/MSG06/tên MSG24 không được đóng bằng kết quả này.
+
+### EMP-PERSON — Kiểm tra thông tin cá nhân theo LAB-01, 28/10
+
+Pull backend `develop` bằng fast-forward-only ngày 28/10 trả Already up to date, vẫn `953f597`. Đã đọc lại OMTS-203/199/119 và EmployeeInput/PhoneNumbers. Làm phần form/mock không phụ thuộc session/API; không coi PR đang mở là contract đã merge. Giữ quy tắc ngày nghiệp vụ UTC+7 đã dùng ở employment.
+
+| Micro-task | Phần việc | Tiêu chí kiểm |
+| --- | --- | --- |
+| EMP-PERSON-01 | Schema cá nhân: ngày sinh tùy chọn, không tương lai; giới hạn 100/500/1000 theo field; SĐT cùng PhoneNumbers backend | Test ranh giới độ dài/ngày/UTC+7 và định dạng +84/84/separators; không thêm min tuổi hoặc đổi field bắt buộc |
+| EMP-PERSON-02 | Mock save dùng clock/schema chung, báo lỗi đúng field, chuẩn hóa SĐT để chặn trùng | Lỗi không ghi/version không đổi; alias số cùng người không tạo bản sao; không sửa account/grant |
+| EMP-PERSON-03 | Form có max ngày, hướng dẫn giới hạn và lỗi gắn ARIA/focus | Submit lỗi không gọi service, giữ bản nháp, sửa lỗi rồi lưu/reopen; không cắt bớt nội dung đã nhập |
+| EMP-PERSON-04 | Regression, browser responsive, tự review/báo cáo và bài học local | Lint/typecheck/test/build/HTTP trên source tách; API/refresh/MSG06/tên MSG24 giữ nguyên |
+
+Tạo account inline vẫn chờ alignment: ticket/backend yêu cầu username và trả temporaryPassword cho Owner, khác quyết định frontend đã chốt tự sinh username và secret-free delivery. Không ghép account service thành chuỗi ghi employee/account rồi giả là một transaction; chưa có quyết định mới để đổi luồng này. GitGuardian tiếp tục để sau.
+
+**Kết quả local:** EMP-PERSON-01…04 hoàn tất trong phạm vi form/mock:57 test mới; source riêng2.217 pass/31 Redis skip, lint/typecheck/build18/18 và24 HTTP assertions đạt. Browser360/1024 không tràn ngang; ngày tương lai bị chặn, sửa rồi lưu/reopen giữ ghi chú/account và chuẩn hóa SĐT. [Báo cáo backend pull, kiểm chứng và giới hạn](reports/WEB_EMPLOYEE_PERSONAL_FORM_COMPLETION_2026-10-28.md). WEB-EMP-ACCOUNT-01 đang hỏi về lưu hồ sơ trước/tạo account sau; chưa nhận câu trả lời thì giữ pending. Không commit/push/merge, bật API/refresh hoặc đóng MSG06/tên MSG24 từ kết quả này.
+
 ### EMP-EMPLOY — Nghỉ việc/đi làm lại bằng mock, 28/10
 
 Đã đối chiếu OMTS-203/199 và EmployeeService local953f597. Duy Thái chốt: ngày nghỉ không ở tương lai; phải lưu hoặc hủy bản nháp trước khi đổi tình trạng. Dùng ngày nghiệp vụ Việt Nam UTC+7 theo BusinessClock backend. Không tự khóa/mở account, xóa lịch sử lao động, tạo grant hoặc bật API.

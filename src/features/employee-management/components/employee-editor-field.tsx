@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 
-export function EmployeeEditorField({ id, label, required, optional, error, children }: Readonly<{
+export function EmployeeEditorField({ id, label, required, optional, error, hint, children }: Readonly<{
   id: string;
   label: string;
   required?: boolean;
   optional?: boolean;
   error?: string;
+  hint?: string;
   children: ReactNode;
 }>) {
   return (
@@ -15,6 +16,7 @@ export function EmployeeEditorField({ id, label, required, optional, error, chil
         {optional && <span className="font-normal text-text-muted"> (không bắt buộc)</span>}
       </label>
       {children}
+      {hint && <p className="mt-2 font-normal leading-5 text-text-muted" id={`${id}-hint`}>{hint}</p>}
       {error && <span className="mt-2 block font-normal text-danger" id={`${id}-error`}>{error}</span>}
     </div>
   );

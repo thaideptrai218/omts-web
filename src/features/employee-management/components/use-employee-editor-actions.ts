@@ -35,6 +35,7 @@ export function useEmployeeEditorActions({
   const [pending, setPending] = useState<"save" | "unlink" | null>(null);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [mutations] = useState(createEmployeeMutationTracker);
+  const validationAttempt = useRef(0);
   const version = useRef(employee?.recordVersion ?? null);
   const feedbackRef = useRef<HTMLDivElement>(null);
   const bankGroupRef = useRef<HTMLFieldSetElement>(null);
@@ -45,9 +46,12 @@ export function useEmployeeEditorActions({
   } | undefined>(undefined);
 
   useEffect(() => () => {
+    validationAttempt.current++;
     requestedFocus.current = undefined;
     mutations.invalidate();
   }, [mutations]);
+
+  useEffect(() => { if (blocked) validationAttempt.current++; }, [blocked]);
 
   useEffect(() => {
     const focus = requestedFocus.current;
@@ -83,6 +87,7 @@ export function useEmployeeEditorActions({
   }
 
   function changeUnlinkConfirmation(open: boolean) {
+    validationAttempt.current++;
     requestedFocus.current = open ? undefined : { field: "accountId" };
     setConfirmUnlink(open);
     // The effect restores focus after commit, pending completion and native close.
@@ -142,7 +147,12 @@ export function useEmployeeEditorActions({
   }
 
   function saveEmployee(event: BaseSyntheticEvent) {
-    return form.handleSubmit(persistEmployee)(event);
+    const attempt = ++validationAttempt.current;
+    return form.handleSubmit((values) => {
+      // Closing the editor or starting another action invalidates validation
+      // before a write begins, independently of the in-flight write tracker.
+      if (attempt === validationAttempt.current) return persistEmployee(values);
+    })(event);
   }
 
   async function unlinkAccount() {
@@ -188,5 +198,5 @@ export function useEmployeeEditorActions({
   }
 
   return { feedback, feedbackRef, bankGroupRef, zoneGroupRef, pending, confirmUnlink, setConfirmUnlink: changeUnlinkConfirmation, saveEmployee, unlinkAccount,
-    clearFeedback: () => { setFeedback(undefined); requestedFocus.current = undefined; } };
+    clearFeedback: () => { validationAttempt.current++; setFeedback(undefined); requestedFocus.current = undefined; } };
 }

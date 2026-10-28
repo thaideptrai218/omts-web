@@ -4,6 +4,21 @@ import { EmployeeManagementService } from "@/features/employee-management/servic
 import { createMockEmployeeManagementRepository } from "@/features/employee-management/repositories/mock-employee-management-repository";
 
 describe("EmployeeManagementService", () => {
+  it("allows only employee identity, account contacts and grant fields into account creation", async () => {
+    const repository = createMockEmployeeManagementRepository({ accounts: [], initialEmployees: [], latencyMs: 0 });
+    const create = vi.spyOn(repository, "createLoginAccount").mockResolvedValue({ status: "unavailable" });
+    const service = new EmployeeManagementService(repository);
+    const grant = { key: "draft", zoneId: "zone-south", roleId: "role-staff", effectiveFrom: "2026-10-28", effectiveTo: "", injected: true };
+    await service.createLoginAccount({ employeeId: "employee-lan", recordVersion: "AAAAAAAA+/8=", account: {
+      fullName: " Lê Thị Lan ", email: " lan@omts.test ", phone: " 0914555666 ", deliveryChannel: "email", newGrants: [grant],
+      ...{ username: "injected", password: crypto.randomUUID(), id: "existing-account", accountType: "system-administrator" },
+    } });
+    grant.zoneId = "changed-later";
+    expect(create).toHaveBeenCalledExactlyOnceWith({ employeeId: "employee-lan", recordVersion: "AAAAAAAA+/8=", account: {
+      fullName: "Lê Thị Lan", email: "lan@omts.test", phone: "0914555666", deliveryChannel: "email",
+      newGrants: [{ key: "draft", zoneId: "zone-south", roleId: "role-staff", effectiveFrom: "2026-10-28", effectiveTo: "" }],
+    } });
+  });
   it.each(["endEmployment", "reinstate"] as const)("forwards only the explicit %s command and its opaque version", async (action) => {
     const repository = createMockEmployeeManagementRepository({ accounts: [], initialEmployees: [], latencyMs: 0 });
     const method = vi.spyOn(repository, action);
@@ -25,6 +40,7 @@ describe("EmployeeManagementService", () => {
   it("normalizes surrounding whitespace before saving", async () => {
     let receivedName = "";
     const repository: EmployeeManagementRepository = {
+      async createLoginAccount() { return { status: "unavailable" }; },
       async endEmployment() { return { status: "not-found" }; },
       async reinstate() { return { status: "not-found" }; },
       async unlinkAccount() {
