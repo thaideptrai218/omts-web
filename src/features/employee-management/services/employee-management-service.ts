@@ -1,5 +1,6 @@
 import type { SaveEmployeeInput, UnlinkEmployeeAccountInput } from "@/features/employee-management/domain/employee-management";
 import type { EmployeeManagementRepository } from "@/features/employee-management/repositories/employee-management-repository";
+import { employeeBankFields, toEmployeeBankAccount } from "../schemas/employee-bank-schema";
 
 export class EmployeeManagementService {
   constructor(private readonly repository: EmployeeManagementRepository) {}
@@ -23,6 +24,8 @@ export class EmployeeManagementService {
       otherInformation: input.otherInformation.trim(),
       phone: input.phone.trim(),
       wardCommune: input.wardCommune.trim(),
+      workingZoneIds: [...input.workingZoneIds],
+      bankAccount: toEmployeeBankAccount(employeeBankFields(input.bankAccount)),
     });
   }
 }

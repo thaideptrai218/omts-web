@@ -1,5 +1,11 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## WEB-EMP-ZONE-01 — Vùng cũ đã ngừng sử dụng trong hồ sơ nhân viên
+
+**Đã chốt, 28/10/2026, Duy Thái đồng ý đề xuất qua câu trả lời async.** Hiển thị vùng đã ngừng đang gắn với hồ sơ, cho Owner chủ động bỏ chọn và yêu cầu bỏ trước lưu. Không tự xóa hoặc cho thêm/chọn lại vùng ngừng. Quy tắc này giải quyết phần UI chưa được Jira mô tả rõ; không sửa SRS/Jira/backend.
+
+Đã áp dụng vào form và test giữ→từ chối lưu→bỏ chọn→lưu lại. Chọn vùng đang dùng không làm rơi các ID cũ; sau bỏ chọn, vùng ngừng không còn trong picker để chọn lại. ID không có trong danh mục vẫn được giữ/thông báo và trả MSG01 nhóm, không tự xóa hoặc đoán tên; việc nạp lại danh mục thật thuộc bước runtime sau. [Bằng chứng và giới hạn](../reports/WEB_EMPLOYEE_ZONES_BANK_FORM_REVIEW_2026-10-28.md).
+
 ## WEB-EMP-ERROR-01 — Metadata còn thiếu trước khi bind lỗi vào form API
 
 **Open về contract,28/10/2026; chưa đổi nghiệp vụ.** [Projection field/ID đã chuẩn bị](../reports/WEB_EMPLOYEE_ERROR_METADATA_REVIEW_2026-10-28.md) chỉ dành cho PUT/unlink. Backend953f597 trả existingEmployeeId cho MSG24 nhưng chưa có tên nhân viên structured; câu hiện hành cần employee_name. Chưa parse tên từ detail, dùng tên draft, tự GET thêm hoặc thay catalog bằng fallback.

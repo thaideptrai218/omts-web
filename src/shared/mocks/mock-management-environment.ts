@@ -64,6 +64,7 @@ export function createMockManagementEnvironment(latencyMs = 350) {
     getRoles: () => roles.snapshotRoles(),
   });
   const employees = createMockEmployeeManagementRepository({
+    zones: mockFarmingZones,
     initialEmployees: mockEmployeeProfiles,
     accounts: mockEmployeeAccounts,
     latencyMs,

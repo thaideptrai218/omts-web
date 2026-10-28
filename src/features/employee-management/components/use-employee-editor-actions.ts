@@ -10,6 +10,7 @@ import { formatMessage } from "@/shared/messages/message-catalog";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 import { bindEmployeeEditorProblem, type EmployeeEditorProblem } from "./employee-editor-problem";
 import type { BindableEmployeeProblem } from "../domain/employee-problem";
+import { toEmployeeBankAccount } from "../schemas/employee-bank-schema";
 
 type Feedback = Readonly<{
   existingEmployeeId?: string;
@@ -35,6 +36,8 @@ export function useEmployeeEditorActions({
   const [mutations] = useState(createEmployeeMutationTracker);
   const version = useRef(employee?.recordVersion ?? null);
   const feedbackRef = useRef<HTMLDivElement>(null);
+  const bankGroupRef = useRef<HTMLFieldSetElement>(null);
+  const zoneGroupRef = useRef<HTMLFieldSetElement>(null);
   const requestedFocus = useRef<{
     operation?: NonNullable<ReturnType<typeof mutations.start>>;
     field?: EmployeeEditorProblem["fieldErrors"][number]["field"];
@@ -52,7 +55,9 @@ export function useEmployeeEditorActions({
     // newly rendered summary against the old confirmation's focus restoration.
     const frame = requestAnimationFrame(() => {
       if (requestedFocus.current !== focus || (focus.operation && !focus.operation.isCurrent())) return;
-      if (focus.field) form.setFocus(focus.field);
+      if (focus.field === "bankAccount") bankGroupRef.current?.focus();
+      else if (focus.field === "workingZoneIds") zoneGroupRef.current?.focus();
+      else if (focus.field) form.setFocus(focus.field);
       else feedbackRef.current?.focus();
       requestedFocus.current = undefined;
     });
@@ -98,6 +103,7 @@ export function useEmployeeEditorActions({
         accountId: values.accountId || null,
         id: employee?.id ?? null,
         recordVersion: version.current,
+        bankAccount: toEmployeeBankAccount(values.bankAccount),
       });
       if (!operation.isCurrent()) return;
       if (result.status === "invalid-fields" || (result.status === "duplicate" && "code" in result)) {
@@ -179,5 +185,5 @@ export function useEmployeeEditorActions({
     }
   }
 
-  return { feedback, feedbackRef, pending, confirmUnlink, setConfirmUnlink: changeUnlinkConfirmation, saveEmployee, unlinkAccount };
+  return { feedback, feedbackRef, bankGroupRef, zoneGroupRef, pending, confirmUnlink, setConfirmUnlink: changeUnlinkConfirmation, saveEmployee, unlinkAccount };
 }

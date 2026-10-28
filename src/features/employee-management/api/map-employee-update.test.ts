@@ -11,6 +11,24 @@ function recordFrom(input: unknown = employeeDetailFixture()) {
 }
 
 describe("employee personal-data PUT mapping", () => {
+  it("uses edited bank/zones from the draft instead of silently copying the old record", () => {
+    const record = recordFrom();
+    const zoneId = "122bb318-a72e-49aa-a8d7-a6169f889007";
+    const draft = { ...employeeRecordToEditorValues(record), workingZoneIds: [zoneId],
+      bankAccount: { bankName: "Ngân hàng kiểm thử", accountNumber: "000001", accountHolderName: "lê thị lan" } };
+    const before = structuredClone({ record, draft });
+    expect(mapEmployeeUpdate(record, draft)).toMatchObject({ status: "ready", request: {
+      workingZoneIds: [zoneId], bankAccount: { ...draft.bankAccount, accountHolderName: "LÊ THỊ LAN" },
+    } });
+    expect({ record, draft }).toEqual(before);
+  });
+
+  it("maps intentionally cleared bank/zones to null and an empty array", () => {
+    const record = recordFrom();
+    expect(mapEmployeeUpdate(record, { ...employeeRecordToEditorValues(record), workingZoneIds: [],
+      bankAccount: { bankName: "", accountNumber: "", accountHolderName: "" } }))
+      .toMatchObject({ status: "ready", request: { workingZoneIds: [], bankAccount: null } });
+  });
   it("changing one field retains every other personal field, bank, zones and version", () => {
     const dto = employeeDetailFixture();
     const record = recordFrom(dto);

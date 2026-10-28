@@ -3,6 +3,7 @@ import type {
   EmployeeProfile,
 } from "@/features/employee-management/domain/employee-management";
 import { mockManagedAccounts } from "@/features/account-management/mocks/account-management-fixtures";
+export { mockFarmingZones as mockEmployeeZones } from "@/features/account-management/mocks/account-management-fixtures";
 
 export const mockEmployeeAccounts = mockManagedAccounts
   .filter((account) => account.accountType === "internal")
@@ -37,6 +38,8 @@ export const mockEmployeeProfiles = [
     recordVersion: "bW9jay1lbXBsb3llZS0x",
     status: "employed",
     wardCommune: "Hải Ninh",
+    workingZoneIds: ["zone-east"],
+    bankAccount: null,
   },
   {
     account: null,
@@ -51,6 +54,8 @@ export const mockEmployeeProfiles = [
     recordVersion: "bW9jay1lbXBsb3llZS0y",
     status: "employed",
     wardCommune: "Quảng Phú",
+    workingZoneIds: ["zone-south"],
+    bankAccount: null,
   },
   {
     account: accountById("account-tran-binh"),
@@ -65,5 +70,7 @@ export const mockEmployeeProfiles = [
     recordVersion: "bW9jay1lbXBsb3llZS0z",
     status: "left",
     wardCommune: "",
+    workingZoneIds: [],
+    bankAccount: null,
   },
 ] as const satisfies readonly EmployeeProfile[];

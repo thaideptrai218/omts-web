@@ -36,6 +36,8 @@ const initialEmployee = {
   recordVersion: "AAAAAAAA+/8=",
   status: "employed",
   wardCommune: "",
+  workingZoneIds: [],
+  bankAccount: null,
 } as const satisfies EmployeeProfile;
 
 function input(overrides: Partial<SaveEmployeeInput> = {}): SaveEmployeeInput {
@@ -52,6 +54,8 @@ function input(overrides: Partial<SaveEmployeeInput> = {}): SaveEmployeeInput {
     recordVersion: null,
     status: "employed",
     wardCommune: "",
+    workingZoneIds: [],
+    bankAccount: null,
     ...overrides,
   };
 }

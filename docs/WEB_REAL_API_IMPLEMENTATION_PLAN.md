@@ -86,7 +86,9 @@ Khi bắt đầu mỗi lát:
 | EMP-API-04a-E1 | Bounded error metadata đúng endpoint/status/code, field allowlist/DTO aliases và Employee ID | Done projection; không nhận generic Account ID, detail/params/version;55 test |
 | EMP-API-04a-E2 | Typed issue DTO và adapter integration sau session recheck | Done mapper/server seam;20+22+8+7 test bổ sung, không tự fetch/navigate/retry |
 | EMP-API-04a-E-UI.1 | Bind MSG01/MSG03 vào form hiện có; tổng hợp nhóm/version, giữ nháp và ID trùng | Done UI/service contract +18 test mới; nguồn vẫn mock; không reset/retry/tự GET |
-| EMP-API-04a-E-UI.2 | Form sửa ngân hàng/vùng đầy đủ, message MSG24 và các path lồng | Pending; chờ tên MSG24 structured, mapping path và luồng sửa nhóm; MSG06 tiếp tục chờ backend |
+| EMP-API-04a-E-UI.2a | Form nhóm ngân hàng/vùng đang dùng, schema all-or-none, mock save/reopen, mapper draft và giữ nháp qua unlink | Done phần mock/form/mapper +38 test mới gồm hồi quy focus khi gỡ vùng ngừng; source riêng từ index2.083 pass/31 Redis skip, lint/typecheck/build/24 HTTP đạt; browser360/1024 ở lượt triển khai trước đạt; [báo cáo](reports/WEB_EMPLOYEE_ZONES_BANK_FORM_REVIEW_2026-10-28.md); API thật vẫn tắt |
+| EMP-API-04a-E-UI.2b | Xử lý vùng cũ ngừng dùng/thiếu danh mục mà không tự xóa | Đã áp dụng WEB-EMP-ZONE-01 theo người dùng chốt: bỏ chọn vùng ngừng trước lưu, không cho chọn lại; thiếu catalog giữ nháp/báo lỗi, không tự xóa |
+| EMP-API-04a-E-UI.2c | Tên MSG24 structured và mapping các path backend lồng/index | Pending backend/contract; không parse detail hoặc giả định đã đủ dữ liệu; MSG06 tiếp tục chờ |
 | EMP-API-04b/05 | Route/client binding, session/G1 và nghiệm thu race/release trên môi trường được chọn | Pending: MSG06, auth runtime và QA/DB/revision; merge PR16 đã đạt |
 
 Chỉ chuẩn bị hàm thuần và fixture khi chưa đủ điều kiện runtime. Không thêm tác vụ seed/khóa tài khoản/thu hồi grant vào thao tác unlink. Nếu model thật đòi thêm trường/luồng chưa được quyết định thì hỏi trước, không lược bỏ để test xanh.

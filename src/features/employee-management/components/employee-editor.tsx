@@ -19,9 +19,14 @@ import { employeeManagementService } from "@/features/employee-management/servic
 import type { EmployeeManagementService } from "@/features/employee-management/services/employee-management-service";
 import { formatMessage } from "@/shared/messages/message-catalog";
 import { EmployeeEditorField } from "./employee-editor-field";
+import { EmployeeBankFields } from "./employee-bank-fields";
+import { employeeBankFields } from "../schemas/employee-bank-schema";
+import { EmployeeWorkingZones } from "./employee-working-zones";
+import type { EmployeeZoneOption } from "../domain/employee-working-details";
 
 type EmployeeEditorProps = Readonly<{
   availableAccounts: readonly EmployeeAccountSummary[];
+  zones: readonly EmployeeZoneOption[];
   embedded?: boolean;
   employee?: EmployeeProfile;
   service?: Pick<EmployeeManagementService, "save" | "unlinkAccount">;
@@ -47,11 +52,14 @@ function initialValues(employee?: EmployeeProfile): EmployeeEditorValues {
     phone: employee?.phone ?? "",
     status: employee?.status ?? "employed",
     wardCommune: employee?.wardCommune ?? "",
+    workingZoneIds: [...(employee?.workingZoneIds ?? [])],
+    bankAccount: employeeBankFields(employee?.bankAccount ?? null),
   };
 }
 
 export function EmployeeEditor({
   availableAccounts,
+  zones,
   embedded = false,
   employee,
   service = employeeManagementService,
@@ -74,7 +82,7 @@ export function EmployeeEditor({
     resolver: zodResolver(employeeEditorSchema),
   });
   const { formState: { errors, isDirty }, register } = form;
-  const { feedback, feedbackRef, pending, confirmUnlink, setConfirmUnlink, saveEmployee, unlinkAccount } =
+  const { feedback, feedbackRef, bankGroupRef, zoneGroupRef, pending, confirmUnlink, setConfirmUnlink, saveEmployee, unlinkAccount } =
     useEmployeeEditorActions({ employee, form, service, onPendingChange, onSaved, onUnlinked });
   const [unavailableFeedback, setUnavailableFeedback] = useState<typeof feedback>();
   function controlProps(field: keyof EmployeeEditorValues) {
@@ -184,6 +192,9 @@ export function EmployeeEditor({
             </EmployeeEditorField>
           </div>
         </fieldset>
+
+        <EmployeeWorkingZones form={form} zones={zones} prefix={fieldPrefix} groupRef={zoneGroupRef} />
+        <EmployeeBankFields form={form} prefix={fieldPrefix} groupRef={bankGroupRef} />
 
         <fieldset className="min-w-0 border-t border-border pt-6">
           <legend className="text-lg font-semibold text-text">Tài khoản đăng nhập</legend>

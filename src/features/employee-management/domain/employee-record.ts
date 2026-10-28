@@ -1,4 +1,6 @@
 import type { EmployeeStatus } from "./employee-management";
+import type { EmployeeBankAccount } from "./employee-working-details";
+export type { EmployeeBankAccount } from "./employee-working-details";
 
 export type EmployeeLinkedAccount = Readonly<{
   id: string;
@@ -8,11 +10,6 @@ export type EmployeeLinkedAccount = Readonly<{
 }>;
 
 export type EmployeeWorkingZone = Readonly<{ id: string; code: string; name: string }>;
-export type EmployeeBankAccount = Readonly<{
-  bankName: string;
-  accountNumber: string;
-  accountHolderName: string;
-}>;
 
 // Separate from the legacy mock workspace: a summary is not an editable record.
 export type EmployeeListRecord = Readonly<{

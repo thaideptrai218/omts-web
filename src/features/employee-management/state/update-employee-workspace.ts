@@ -11,6 +11,7 @@ export function updateEmployeeWorkspace(
   }
   if (employee.account) available.delete(employee.account.id);
   return {
+    zones: current.zones,
     availableAccounts: [...available.values()],
     employees: previous
       ? current.employees.map((item) => item.id === employee.id ? employee : item)

@@ -249,6 +249,7 @@ export function EmployeeManagementExperience() {
       >
         {(isCreating || selectedEmployee) && (
           <EmployeeEditor
+            zones={workspace.zones}
             availableAccounts={workspace.availableAccounts}
             embedded
             employee={isCreating ? undefined : selectedEmployee}

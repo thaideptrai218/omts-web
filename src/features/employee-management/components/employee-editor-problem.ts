@@ -4,7 +4,7 @@ import { formatMessage } from "@/shared/messages/message-catalog";
 
 // Visual order of the actual controls, not arbitrary backend field order.
 const editableFields = [
-  "fullName", "phone", "birthday", "accountId", "address", "area", "wardCommune", "otherInformation", "notes",
+  "fullName", "phone", "birthday", "workingZoneIds", "bankAccount", "accountId", "address", "area", "wardCommune", "otherInformation", "notes",
 ] as const satisfies readonly (keyof EmployeeEditorValues & EmployeeIssueTarget)[];
 type EditableField = typeof editableFields[number];
 const targetLabels: Readonly<Record<EmployeeIssueTarget, string>> = {

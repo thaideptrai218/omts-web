@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { mockEmployeeProfiles, mockEmployeeAccounts } from "@/features/employee-management/mocks/employee-management-fixtures";
+import { mockEmployeeProfiles, mockEmployeeAccounts, mockEmployeeZones } from "@/features/employee-management/mocks/employee-management-fixtures";
 import { updateEmployeeWorkspace } from "./update-employee-workspace";
 
 describe("employee workspace after mutations", () => {
   const employee = mockEmployeeProfiles[0];
   const workspace = {
+    zones: mockEmployeeZones,
     employees: mockEmployeeProfiles,
     availableAccounts: mockEmployeeAccounts.filter((account) =>
       !mockEmployeeProfiles.some((item) => item.account?.id === account.id)),

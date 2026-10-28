@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { EmployeeManagementExperience } from "./employee-management-experience";
 import type { UnlinkEmployeeAccountResult } from "@/features/employee-management/domain/employee-management";
-import { mockEmployeeAccounts, mockEmployeeProfiles } from "@/features/employee-management/mocks/employee-management-fixtures";
+import { mockEmployeeAccounts, mockEmployeeProfiles, mockEmployeeZones } from "@/features/employee-management/mocks/employee-management-fixtures";
 import { createMockEmployeeManagementRepository } from "@/features/employee-management/repositories/mock-employee-management-repository";
 import { employeeManagementService } from "@/features/employee-management/services/employee-management-service.instance";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
@@ -41,7 +41,7 @@ afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
   repository = createMockEmployeeManagementRepository({
-    accounts: mockEmployeeAccounts, initialEmployees: mockEmployeeProfiles, latencyMs: 0,
+    accounts: mockEmployeeAccounts, initialEmployees: mockEmployeeProfiles, zones: mockEmployeeZones, latencyMs: 0,
   });
   service.load.mockImplementation(() => repository.load());
   service.save.mockImplementation((input) => repository.save(input));
@@ -64,6 +64,15 @@ async function openConfirmation(user: ReturnType<typeof userEvent.setup>, editor
   return screen.getByRole("dialog", { name: "Bỏ liên kết tài khoản?" });
 }
 
+function fillBank(editor: HTMLElement) {
+  const values = { "Tên ngân hàng": "Ngân hàng kiểm thử", "Số tài khoản": "00123456", "Tên chủ tài khoản": "nguyễn văn an" };
+  for (const [name, value] of Object.entries(values)) {
+    const field = within(editor).getByRole("textbox", { name });
+    fireEvent.change(field, { target: { value } });
+    fireEvent.blur(field);
+  }
+}
+
 async function currentEmployee() {
   const result = await repository.load();
   if (result.status !== "loaded") throw new Error("Expected loaded workspace");
@@ -77,6 +86,134 @@ function deferred<T>() {
 }
 
 describe("employee unlink through list and editor", () => {
+  it("keeps keyboard focus in the working-zone group after removing a discontinued checkbox", async () => {
+    repository = createMockEmployeeManagementRepository({
+      accounts: mockEmployeeAccounts, zones: mockEmployeeZones, latencyMs: 0,
+      initialEmployees: [{ ...employee, workingZoneIds: ["zone-west"] }],
+    });
+    const { user, editor, notes } = await openEditor();
+    const stopped = within(editor).getByRole<HTMLInputElement>("checkbox", { name: /Khu Tây/ });
+    stopped.focus();
+    await user.keyboard(" ");
+    expect(within(editor).queryByRole("checkbox", { name: /Khu Tây/ })).toBeNull();
+    const group = within(editor).getByRole("group", { name: "Vùng làm việc" });
+    await waitFor(() => expect(document.activeElement).toBe(group));
+    expect(notes.value).toBe("Bản nháp chưa lưu");
+    expect(service.save).not.toHaveBeenCalled();
+  });
+  it("preserves a discontinued assignment until the Owner removes it, then saves without offering it again", async () => {
+    repository = createMockEmployeeManagementRepository({
+      accounts: mockEmployeeAccounts, zones: mockEmployeeZones, latencyMs: 0,
+      initialEmployees: [{ ...employee, workingZoneIds: ["zone-west"] }],
+    });
+    const { user, editor, notes } = await openEditor();
+    const stopped = within(editor).getByRole<HTMLInputElement>("checkbox", { name: /Khu Tây/ });
+    expect(stopped.checked).toBe(true);
+    expect(stopped.disabled).toBe(false);
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    const group = within(editor).getByRole("group", { name: "Vùng làm việc" });
+    await waitFor(() => expect(group.getAttribute("aria-invalid")).toBe("true"));
+    expect((await currentEmployee()).recordVersion).toBe(employee.recordVersion);
+    expect(notes.value).toBe("Bản nháp chưa lưu");
+    await user.click(stopped);
+    expect(within(editor).queryByRole("checkbox", { name: /Khu Tây/ })).toBeNull();
+    await user.click(within(editor).getByRole("checkbox", { name: "Khu Nam" }));
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ title: "Đã lưu hồ sơ" })));
+    const saved = await currentEmployee();
+    expect(saved.workingZoneIds).toEqual(["zone-south"]);
+    expect(saved.recordVersion).not.toBe(employee.recordVersion);
+    expect(saved.account).toEqual(employee.account);
+  });
+  it("creates a profile with bank and working zones without creating an account", async () => {
+    const user = userEvent.setup();
+    render(<EmployeeManagementExperience />);
+    await user.click(await screen.findByRole("button", { name: "Thêm nhân viên" }));
+    const editor = screen.getByRole("dialog", { name: "Thêm nhân viên" });
+    fireEvent.change(within(editor).getByRole("textbox", { name: "Họ và tên" }), { target: { value: "Nhân viên kiểm thử ngân hàng" } });
+    fireEvent.change(within(editor).getByRole("textbox", { name: "Số điện thoại" }), { target: { value: "0900000088" } });
+    fillBank(editor);
+    await user.click(within(editor).getByRole("checkbox", { name: "Khu Nam" }));
+    await user.click(within(editor).getByRole("button", { name: "Thêm nhân viên" }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ title: "Đã lưu hồ sơ" })));
+    const created = repository.snapshotEmployees().find((item) => item.fullName === "Nhân viên kiểm thử ngân hàng");
+    expect(created).toMatchObject({ account: null, workingZoneIds: ["zone-south"], bankAccount: {
+      bankName: "Ngân hàng kiểm thử", accountNumber: "00123456", accountHolderName: "NGUYỄN VĂN AN",
+    } });
+  });
+  it("saves bank and multiple working zones, then reopens the persisted values", async () => {
+    const { user, editor } = await openEditor();
+    await user.click(within(editor).getByRole("checkbox", { name: "Khu Nam" }));
+    fillBank(editor);
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ title: "Đã lưu hồ sơ" })));
+    const saved = await currentEmployee();
+    expect(saved.workingZoneIds).toEqual(["zone-east", "zone-south"]);
+    expect(saved.bankAccount).toEqual({ bankName: "Ngân hàng kiểm thử", accountNumber: "00123456", accountHolderName: "NGUYỄN VĂN AN" });
+    expect(saved.account).toEqual(employee.account);
+    await user.click(screen.getByRole("button", { name: new RegExp(employee.fullName) }));
+    const reopened = screen.getByRole("dialog", { name: employee.fullName });
+    expect(within(reopened).getByRole<HTMLInputElement>("checkbox", { name: "Khu Nam" }).checked).toBe(true);
+    expect(within(reopened).getByRole<HTMLInputElement>("textbox", { name: "Số tài khoản" }).value).toBe("00123456");
+    expect(within(reopened).getByRole<HTMLInputElement>("textbox", { name: "Tên chủ tài khoản" }).value).toBe("NGUYỄN VĂN AN");
+  });
+
+  it("marks every missing bank field and focuses the first without calling save", async () => {
+    const { user, editor, notes } = await openEditor();
+    fireEvent.change(within(editor).getByRole("textbox", { name: "Tên ngân hàng" }), { target: { value: "Ngân hàng kiểm thử" } });
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    const number = within(editor).getByRole("textbox", { name: "Số tài khoản" });
+    await waitFor(() => expect(number.getAttribute("aria-invalid")).toBe("true"));
+    expect(within(editor).getByRole("textbox", { name: "Tên chủ tài khoản" }).getAttribute("aria-invalid")).toBe("true");
+    expect(document.getElementById(number.getAttribute("aria-describedby")!)?.textContent).toContain("Vui lòng kiểm tra lại");
+    await waitFor(() => expect(document.activeElement).toBe(number));
+    expect(notes.value).toBe("Bản nháp chưa lưu");
+    expect(service.save).not.toHaveBeenCalled();
+  });
+
+  it("clears the optional bank and zones explicitly without changing the account link", async () => {
+    repository = createMockEmployeeManagementRepository({
+      accounts: mockEmployeeAccounts, zones: mockEmployeeZones, latencyMs: 0,
+      initialEmployees: [{ ...employee, bankAccount: { bankName: "Ngân hàng kiểm thử", accountNumber: "00123456", accountHolderName: "NGUYỄN VĂN AN" } }],
+    });
+    const { user, editor } = await openEditor();
+    for (const name of ["Tên ngân hàng", "Số tài khoản", "Tên chủ tài khoản"]) {
+      fireEvent.change(within(editor).getByRole("textbox", { name }), { target: { value: "" } });
+    }
+    await user.click(within(editor).getByRole("checkbox", { name: "Khu Đông" }));
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ title: "Đã lưu hồ sơ" })));
+    expect(await currentEmployee()).toMatchObject({ bankAccount: null, workingZoneIds: [], account: employee.account });
+  });
+
+  it("handles an empty zone catalog while saving an employee without bank or zones", async () => {
+    repository = createMockEmployeeManagementRepository({
+      accounts: mockEmployeeAccounts, zones: [], latencyMs: 0,
+      initialEmployees: [{ ...employee, workingZoneIds: [] }],
+    });
+    const { user, editor } = await openEditor();
+    expect(within(editor).getByText("Chưa có vùng đang sử dụng để chọn.")).toBeTruthy();
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ title: "Đã lưu hồ sơ" })));
+    expect(await currentEmployee()).toMatchObject({ bankAccount: null, workingZoneIds: [] });
+  });
+
+  it("keeps a zone missing from the catalog in the draft when an active zone is added", async () => {
+    repository = createMockEmployeeManagementRepository({
+      accounts: mockEmployeeAccounts, zones: mockEmployeeZones, latencyMs: 0,
+      initialEmployees: [{ ...employee, workingZoneIds: ["old-unlisted-zone"] }],
+    });
+    const { user, editor, notes } = await openEditor();
+    expect(within(editor).getByText(/Hồ sơ đang gắn 1 vùng chưa có/)).toBeTruthy();
+    expect(within(editor).queryByRole("checkbox", { name: /Khu Tây/ })).toBeNull();
+    await user.click(within(editor).getByRole("checkbox", { name: "Khu Nam" }));
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    await waitFor(() => expect(service.save).toHaveBeenCalledWith(expect.objectContaining({ workingZoneIds: ["old-unlisted-zone", "zone-south"] })));
+    const group = within(editor).getByRole("group", { name: "Vùng làm việc" });
+    await waitFor(() => expect(group.getAttribute("aria-invalid")).toBe("true"));
+    expect(notes.value).toBe("Bản nháp chưa lưu");
+    expect(notify).not.toHaveBeenCalled();
+  });
   it("opens the duplicate profile from the workspace only after an explicit click", async () => {
     const existingEmployeeId = "b669dc43-c9dc-4df8-930b-ab9de6d978e3";
     const target = { ...mockEmployeeProfiles[1], id: existingEmployeeId };
@@ -133,6 +270,26 @@ describe("employee unlink through list and editor", () => {
     })));
     expect((await currentEmployee()).notes).toBe("Bản nháp chưa lưu");
     expect((await currentEmployee()).account).toBeNull();
+  });
+
+  it("keeps edited bank and zones through unlink, then saves with the returned version", async () => {
+    const { user, editor } = await openEditor();
+    fillBank(editor);
+    await user.click(within(editor).getByRole("checkbox", { name: "Khu Nam" }));
+    const confirmation = await openConfirmation(user, editor);
+    await user.click(within(confirmation).getByRole("button", { name: /^Bỏ liên kết$/ }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ title: "Đã bỏ liên kết" })));
+    const unlinked = await currentEmployee();
+    expect(unlinked.bankAccount).toBeNull();
+    expect(unlinked.workingZoneIds).toEqual(["zone-east"]);
+    expect(within(editor).getByRole<HTMLInputElement>("textbox", { name: "Số tài khoản" }).value).toBe("00123456");
+    expect(within(editor).getByRole<HTMLInputElement>("checkbox", { name: "Khu Nam" }).checked).toBe(true);
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    await waitFor(() => expect(service.save).toHaveBeenCalledWith(expect.objectContaining({
+      recordVersion: unlinked.recordVersion, workingZoneIds: ["zone-east", "zone-south"],
+      bankAccount: { bankName: "Ngân hàng kiểm thử", accountNumber: "00123456", accountHolderName: "NGUYỄN VĂN AN" },
+    })));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ title: "Đã lưu hồ sơ" })));
   });
 
   it("canceling the confirmation retains the link, draft and original save version", async () => {

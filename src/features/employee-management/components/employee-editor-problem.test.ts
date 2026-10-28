@@ -8,16 +8,16 @@ describe("employee issue binding plan", () => {
       fields: ["notes", "phone", "wardCommune", "birthday", "phone", "bankAccount", "recordVersion"] };
     const before = structuredClone(problem);
     const result = bindEmployeeEditorProblem(problem);
-    expect(result.fieldErrors.map((error) => error.field)).toEqual(["phone", "birthday", "wardCommune", "notes"]);
+    expect(result.fieldErrors.map((error) => error.field)).toEqual(["phone", "birthday", "bankAccount", "wardCommune", "notes"]);
     expect(result.summary).toContain("Thông tin ngân hàng");
     expect(result.summary).toContain("Phiên bản hồ sơ");
     expect(result.summary).toContain("Phường/Xã");
     expect(problem).toEqual(before);
   });
 
-  it("keeps groups/version at form level without inventing controls or actions", () => {
+  it("binds existing groups while keeping the version at form level", () => {
     const result = bindEmployeeEditorProblem({ status: "invalid-fields", code: "MSG01", fields: ["bankAccount", "workingZoneIds", "recordVersion"] });
-    expect(result.fieldErrors).toEqual([]);
+    expect(result.fieldErrors.map((error) => error.field)).toEqual(["workingZoneIds", "bankAccount"]);
     expect(result.summary).toContain("Thông tin ngân hàng");
     expect(result.summary).toContain("Vùng làm việc");
     expect(result.summary).toContain("Phiên bản hồ sơ");

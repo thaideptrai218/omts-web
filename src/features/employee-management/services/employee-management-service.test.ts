@@ -21,7 +21,7 @@ describe("EmployeeManagementService", () => {
       async load() {
         return {
           status: "loaded",
-          workspace: { availableAccounts: [], employees: [] },
+          workspace: { availableAccounts: [], employees: [], zones: [] },
         };
       },
       async save(input) {
@@ -40,6 +40,8 @@ describe("EmployeeManagementService", () => {
             recordVersion: "employee-v1",
             status: input.status,
             wardCommune: input.wardCommune,
+            workingZoneIds: input.workingZoneIds,
+            bankAccount: input.bankAccount,
           },
           message: { code: "MSG10" },
           status: "saved",
@@ -61,6 +63,8 @@ describe("EmployeeManagementService", () => {
       recordVersion: null,
       status: "employed",
       wardCommune: " ",
+      workingZoneIds: [],
+      bankAccount: null,
     });
 
     expect(receivedName).toBe("Lê Thị Lan");

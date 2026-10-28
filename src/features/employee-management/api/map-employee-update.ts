@@ -1,6 +1,7 @@
 import type { EmployeeRecord } from "@/features/employee-management/domain/employee-record";
 import { employeeEditorSchema, type EmployeeEditorValues } from "@/features/employee-management/schemas/employee-editor-schema";
 import { employeeUpdateRequestSchema, type EmployeeUpdateRequestDto } from "./employee-update.schema";
+import { employeeBankFields, toEmployeeBankAccount } from "../schemas/employee-bank-schema";
 
 type UpdateMappingResult =
   | Readonly<{ status: "ready"; employeeId: string; request: EmployeeUpdateRequestDto }>
@@ -12,6 +13,8 @@ export function employeeRecordToEditorValues(record: EmployeeRecord): EmployeeEd
     fullName: record.fullName, phone: record.phone ?? "", birthday: record.birthday ?? "",
     address: record.address ?? "", area: record.area ?? "", wardCommune: record.wardCommune ?? "",
     otherInformation: record.otherInformation ?? "", notes: record.notes ?? "", status: record.status,
+    workingZoneIds: record.workingZones.map((zone) => zone.id),
+    bankAccount: employeeBankFields(record.bankAccount),
   };
 }
 
@@ -36,8 +39,8 @@ export function mapEmployeeUpdate(
     ward: optionalText(input.wardCommune, record.wardCommune),
     otherInformation: optionalText(input.otherInformation, record.otherInformation),
     notes: optionalText(input.notes, record.notes),
-    workingZoneIds: record.workingZones.map((zone) => zone.id),
-    bankAccount: record.bankAccount === null ? null : { ...record.bankAccount },
+    workingZoneIds: [...input.workingZoneIds],
+    bankAccount: toEmployeeBankAccount(input.bankAccount),
     accountId: input.accountId || null,
     rowVersion: record.recordVersion,
   });

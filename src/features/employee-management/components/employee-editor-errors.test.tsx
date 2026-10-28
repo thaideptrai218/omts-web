@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { EmployeeEditor } from "./employee-editor";
-import { mockEmployeeProfiles, mockEmployeeAccounts } from "../mocks/employee-management-fixtures";
+import { mockEmployeeProfiles, mockEmployeeAccounts, mockEmployeeZones } from "../mocks/employee-management-fixtures";
 import type { SaveEmployeeInput, SaveEmployeeResult, UnlinkEmployeeAccountInput, UnlinkEmployeeAccountResult } from "../domain/employee-management";
 
 vi.mock("../services/employee-management-service.instance", () => ({ employeeManagementService: { save: vi.fn(), unlinkAccount: vi.fn() } }));
@@ -25,7 +25,7 @@ function setup(result: SaveEmployeeResult) {
     unlinkAccount: vi.fn<(input: UnlinkEmployeeAccountInput) => Promise<UnlinkEmployeeAccountResult>>().mockResolvedValue({ status: "not-found" }),
   };
   const callbacks = { onOpenExisting: vi.fn<(id: string) => boolean | void>(), onPendingChange: vi.fn(), onSaved: vi.fn(), onUnlinked: vi.fn() };
-  const view = render(<EmployeeEditor employee={employee} availableAccounts={mockEmployeeAccounts} service={service} {...callbacks} />);
+  const view = render(<EmployeeEditor employee={employee} availableAccounts={mockEmployeeAccounts} zones={mockEmployeeZones} service={service} {...callbacks} />);
   const notes = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ghi chú" });
   fireEvent.change(notes, { target: { value: "Bản nháp đang nhập" } });
   return { ...view, service, callbacks, notes, user: userEvent.setup() };
@@ -53,11 +53,10 @@ describe("structured employee errors in the actual editor", () => {
     await waitFor(() => expect(screen.getByLabelText(name).getAttribute("aria-invalid")).toBe("true"));
   });
 
-  it("retains group/version issues in a focusable summary and does not advance the stored version", async () => {
-    const { user, notes, service } = setup({ status: "invalid-fields", code: "MSG01", fields: ["bankAccount", "workingZoneIds", "recordVersion"] });
+  it("retains version issues in a focusable summary and does not advance the stored version", async () => {
+    const { user, notes, service } = setup({ status: "invalid-fields", code: "MSG01", fields: ["recordVersion"] });
     await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
     const summary = await screen.findByRole("alert");
-    expect(summary.textContent).toContain("Thông tin ngân hàng"); expect(summary.textContent).toContain("Vùng làm việc");
     expect(summary.textContent).toContain("Phiên bản hồ sơ");
     await waitFor(() => expect(document.activeElement).toBe(summary));
     expect(screen.getByRole("textbox", { name: "Họ và tên" }).getAttribute("aria-invalid")).toBe("false");
@@ -71,6 +70,17 @@ describe("structured employee errors in the actual editor", () => {
     await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Thông tin ngân hàng");
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Số điện thoại" })));
+  });
+
+  it.each(["workingZoneIds", "bankAccount"] as const)("binds %s to its real group and focuses the group without guessing a child error", async (field) => {
+    const { user, notes } = setup({ status: "invalid-fields", code: "MSG01", fields: [field] });
+    await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
+    const group = screen.getByRole("group", { name: field === "bankAccount" ? "Thông tin ngân hàng" : "Vùng làm việc" });
+    await waitFor(() => expect(group.getAttribute("aria-invalid")).toBe("true"));
+    await waitFor(() => expect(document.activeElement).toBe(group));
+    expect(group.getAttribute("aria-describedby")).toContain("error");
+    expect(screen.getByRole("textbox", { name: "Tên ngân hàng" }).getAttribute("aria-invalid")).toBe("false");
+    expect(notes.value).toBe("Bản nháp đang nhập");
   });
 
   it("keeps a duplicate ID until an explicit click and never resets the draft on failure", async () => {

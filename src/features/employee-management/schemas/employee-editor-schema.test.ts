@@ -12,6 +12,8 @@ const validEmployee = {
   phone: "0901234567",
   status: "employed",
   wardCommune: "",
+  workingZoneIds: [],
+  bankAccount: { bankName: "", accountNumber: "", accountHolderName: "" },
 } as const;
 
 describe("employeeEditorSchema", () => {

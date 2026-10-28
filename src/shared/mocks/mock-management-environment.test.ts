@@ -99,6 +99,8 @@ describe("shared management mock state for the review", () => {
       wardCommune: "",
       notes: "",
       otherInformation: "",
+      workingZoneIds: [],
+      bankAccount: null,
       status: "employed",
     });
     if (saved.status !== "saved") throw new Error("Expected employee");
@@ -138,6 +140,8 @@ describe("shared management mock state for the review", () => {
       wardCommune: "",
       notes: "",
       otherInformation: "",
+      workingZoneIds: [],
+      bankAccount: null,
       status: "employed",
     });
     const after = await h.dashboard.load();

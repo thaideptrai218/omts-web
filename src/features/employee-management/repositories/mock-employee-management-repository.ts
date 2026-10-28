@@ -11,6 +11,8 @@ import type {
 import type { EmployeeManagementRepository } from "@/features/employee-management/repositories/employee-management-repository";
 import { employeeEditorSchema } from "@/features/employee-management/schemas/employee-editor-schema";
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
+import { employeeBankFields, toEmployeeBankAccount } from "../schemas/employee-bank-schema";
+import type { EmployeeZoneOption } from "../domain/employee-working-details";
 
 type MockOptions = Readonly<{
   getAccounts?: () => readonly EmployeeAccountSummary[];
@@ -21,6 +23,7 @@ type MockOptions = Readonly<{
   latencyMs?: number;
   actorName?: string;
   now?: () => Date;
+  zones?: readonly EmployeeZoneOption[];
 }>;
 
 function wait(milliseconds: number): Promise<void> {
@@ -35,6 +38,8 @@ function cloneEmployee(employee: EmployeeProfile): EmployeeProfile {
   return {
     ...employee,
     account: employee.account ? cloneAccount(employee.account) : null,
+    workingZoneIds: [...employee.workingZoneIds],
+    bankAccount: employee.bankAccount ? { ...employee.bankAccount } : null,
   };
 }
 
@@ -51,6 +56,7 @@ export function createMockEmployeeManagementRepository({
   latencyMs = 350,
   actorName = "Lê Minh Hải",
   now = () => new Date(),
+  zones = [],
 }: MockOptions): EmployeeManagementRepository & Readonly<{ snapshotEmployees(): readonly EmployeeProfile[] }> {
   let accounts = initialAccounts;
   let employees = initialEmployees.map(cloneEmployee);
@@ -105,6 +111,7 @@ export function createMockEmployeeManagementRepository({
         .filter((account) => !linkedAccountIds.has(account.id))
         .map(cloneAccount),
       employees: employees.map(cloneEmployee),
+      zones: zones.map((zone) => ({ ...zone })),
     };
   }
 
@@ -141,8 +148,15 @@ export function createMockEmployeeManagementRepository({
       const parsed = employeeEditorSchema.safeParse({
         ...input,
         accountId: input.accountId ?? "",
+        bankAccount: employeeBankFields(input.bankAccount),
       });
       if (!parsed.success) {
+        const fields = [...new Set(parsed.error.issues.map((issue) => issue.path[0]))]
+          .filter((field): field is "bankAccount" | "workingZoneIds" | "fullName" | "phone" =>
+            field === "bankAccount" || field === "workingZoneIds" || field === "fullName" || field === "phone");
+        if (fields.some((field) => field === "bankAccount" || field === "workingZoneIds")) {
+          return { status: "invalid-fields", code: "MSG01", fields };
+        }
         const field = parsed.error.issues[0]?.path[0];
         return {
           field:
@@ -172,6 +186,9 @@ export function createMockEmployeeManagementRepository({
         };
       }
       if (current && input.recordVersion !== current.recordVersion) return conflict(current);
+      if (parsed.data.workingZoneIds.some((id) => !zones.some((zone) => zone.id === id && zone.status === "in-use"))) {
+        return { status: "invalid-fields", code: "MSG01", fields: ["workingZoneIds"] };
+      }
 
       const duplicate = employees.find(
         (employee) =>
@@ -233,6 +250,8 @@ export function createMockEmployeeManagementRepository({
         recordVersion: allocateVersion(),
         status: current ? parsed.data.status : "employed",
         wardCommune: parsed.data.wardCommune.trim(),
+        workingZoneIds: [...parsed.data.workingZoneIds],
+        bankAccount: toEmployeeBankAccount(parsed.data.bankAccount),
       };
 
       if (current) {
