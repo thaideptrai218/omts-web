@@ -1,5 +1,7 @@
 # Quản lý vùng nuôi và sửa UX Web — 28/10/2026
 
+> **CI sau push93e738f đã kiểm:** [báo cáo CI](WEB_CI_93E738F_REVIEW_2026-10-28.md). Linux2.367 pass/31 Redis skip, gồm vá ZONE-REV-01; lint/typecheck/build19/19 và26 HTTP đạt. Gitleaks/pr-title SUCCESS; GitGuardian FAILURE tiếp tục để sau. Các số liệu local phía dưới là lịch sử kiểm trước khi có bằng chứng CI này.
+
 Đợt này bổ sung một lát chức năng theo UC15/SCR-11, thay vì dựng hàng loạt màn trống. Phần được triển khai là mock dùng trong Web; chưa tích hợp API hoặc hoàn thành toàn bộ chức năng của các vai trò. [Kế hoạch và phạm vi còn lại](../WEB_SRS_ROLE_IMPLEMENTATION_PLAN.md).
 
 ## Nguồn và quyết định
