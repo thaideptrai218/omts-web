@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FormField } from "@/components/form/form-field";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { useAuth } from "@/features/auth/state/auth-provider";
 import { ProfileIdentifierDialog } from "@/features/profile/components/profile-identifier-dialog";
 import type {
   PersonalProfile,
-  ProfileContact,
   ProfileIdentifierKind,
   VerifiedProfileIdentifierChange,
 } from "@/features/profile/domain/personal-profile";
@@ -27,7 +26,7 @@ import type {
 } from "@/features/verification/domain/verification-types";
 import { formatMessage } from "@/shared/messages/message-catalog";
 import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
-import { describeProfileContact } from "@/features/profile/lib/describe-profile-contact";
+import { ContactEditor } from "./profile-contact-card";
 
 type VerifiedChanges = Partial<
   Record<ProfileIdentifierKind, VerifiedProfileIdentifierChange>
@@ -38,58 +37,6 @@ type ActiveVerification = Readonly<{
   kind: ProfileIdentifierKind;
   value: string;
 }>;
-
-function ContactEditor({
-  contact,
-  kind,
-  onChange,
-  pendingValue,
-}: {
-  contact: ProfileContact | null;
-  kind: ProfileIdentifierKind;
-  onChange(): void;
-  pendingValue?: string;
-}) {
-  const label = kind === "email" ? "Email" : "Số điện thoại";
-  const { isVerified, statusLabel, value } = describeProfileContact(contact, kind);
-
-  return (
-    <div className="rounded-control border border-border bg-surface-subtle/60 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-text-muted">{label}</p>
-          <p className="mt-1 break-all font-medium text-text">{value}</p>
-        </div>
-        <span
-          className={`inline-flex min-h-7 items-center rounded-full px-2.5 text-xs font-semibold ${
-            isVerified
-              ? "bg-primary-soft text-primary-hover"
-              : "bg-warning-soft text-warning"
-          }`}
-        >
-          {statusLabel}
-        </span>
-      </div>
-
-      {pendingValue && (
-        <div className="mt-3 rounded-control border border-success/20 bg-emerald-50 p-3 text-sm text-success">
-          <p className="font-semibold">Đã xác minh, chờ lưu</p>
-          <p className="mt-1 break-all">{pendingValue}</p>
-        </div>
-      )}
-
-      <button
-        className="mt-3 min-h-11 rounded-control px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft"
-        onClick={onChange}
-        type="button"
-      >
-        {pendingValue
-          ? `Chọn ${label.toLocaleLowerCase("vi")} khác`
-          : `${contact ? "Thay đổi" : "Thêm"} ${label.toLocaleLowerCase("vi")}`}
-      </button>
-    </div>
-  );
-}
 
 export function ProfileEditor({
   onProfileChange,
@@ -104,11 +51,19 @@ export function ProfileEditor({
 }) {
   const { notify } = useToast();
   const { updateDisplayName } = useAuth();
+  const lifetime = useRef<{ active: boolean; pending: boolean } | null>(null);
+  const validation = useRef(0);
+  useEffect(() => {
+    const scope = { active: true, pending: false };
+    lifetime.current = scope;
+    return () => { scope.active = false; };
+  }, [profile.accountId, profileService]);
   const [activeIdentifierDialog, setActiveIdentifierDialog] =
     useState<ProfileIdentifierKind>();
   const [activeVerification, setActiveVerification] =
     useState<ActiveVerification>();
   const [formError, setFormError] = useState<string>();
+  const [sendingKind, setSendingKind] = useState<ProfileIdentifierKind>();
   const [verifiedChanges, setVerifiedChanges] = useState<VerifiedChanges>({});
   const {
     formState: { errors, isDirty, isSubmitting },
@@ -116,10 +71,14 @@ export function ProfileEditor({
     register,
     reset,
     setError,
+    setFocus,
   } = useForm<ProfileDetailsFormValues>({
     defaultValues: { displayName: profile.displayName },
     resolver: zodResolver(profileDetailsSchema),
   });
+  useEffect(() => {
+    if (!isSubmitting && errors.displayName) setFocus("displayName");
+  }, [errors.displayName, isSubmitting, setFocus]);
 
   function beginVerification(
     kind: ProfileIdentifierKind,
@@ -149,12 +108,36 @@ export function ProfileEditor({
     setActiveVerification(undefined);
     notify({
       description: "Bấm Lưu thay đổi để áp dụng giá trị mới vào hồ sơ.",
-      title: `${verification.kind === "email" ? "Email" : "Số điện thoại"} mới đã được xác minh`,
+      title: `${verification.kind === "email" ? "Email" : "Số điện thoại"} đã được xác minh`,
       tone: "success",
     });
   }
 
-  async function saveProfile(values: ProfileDetailsFormValues) {
+  async function verifyCurrentContact(kind: ProfileIdentifierKind) {
+    const scope = lifetime.current;
+    const contact = profile[kind];
+    if (!scope?.active || scope.pending || !contact || contact.isVerified) return;
+    scope.pending = true;
+    validation.current++;
+    setSendingKind(kind);
+    setFormError(undefined);
+    try {
+      const result = await profileService.startIdentifierChange({ kind, value: contact.value, intent: "verify-current" });
+      if (!scope.active) return;
+      if (result.status === "session-expired") sessionExpiryChannel.publish(result.message);
+      else if (result.status === "verification-started") beginVerification(kind, contact.value, result.challenge);
+      else setFormError(formatMessage(result.message));
+    } catch {
+      if (scope.active) setFormError(formatMessage({ code: "MSG04" }));
+    } finally {
+      scope.pending = false;
+      if (scope.active) setSendingKind(undefined);
+    }
+  }
+
+  async function saveProfile(values: ProfileDetailsFormValues, scope: { active: boolean; pending: boolean }) {
+    if (!scope.active || scope.pending) return;
+    scope.pending = true;
     setFormError(undefined);
 
     try {
@@ -164,6 +147,7 @@ export function ProfileEditor({
         phoneChange: verifiedChanges.phone,
         recordVersion: profile.recordVersion,
       });
+      if (!scope.active) return;
 
       if (result.status === "session-expired") {
         sessionExpiryChannel.publish(result.message);
@@ -176,7 +160,7 @@ export function ProfileEditor({
       if (result.status === "invalid-change") {
         const message = formatMessage(result.message);
         if (result.field === "displayName") {
-          setError("displayName", { message });
+          setError("displayName", { message }, { shouldFocus: true });
         } else {
           setVerifiedChanges((current) => ({ ...current, [result.field]: undefined }));
           setFormError(message);
@@ -184,6 +168,10 @@ export function ProfileEditor({
         return;
       }
 
+      if (result.profile.accountId !== profile.accountId) {
+        setFormError(formatMessage({ code: "MSG04" }));
+        return;
+      }
       setVerifiedChanges({});
       onProfileChange(result.profile);
       updateDisplayName(result.profile.displayName);
@@ -197,7 +185,9 @@ export function ProfileEditor({
         });
       }
     } catch {
-      setFormError(formatMessage({ code: "MSG04" }));
+      if (scope.active) setFormError(formatMessage({ code: "MSG04" }));
+    } finally {
+      scope.pending = false;
     }
   }
 
@@ -205,11 +195,19 @@ export function ProfileEditor({
 
   return (
     <>
-      <form className="space-y-5" noValidate onSubmit={handleSubmit(saveProfile)}>
+      <form className="space-y-5" noValidate onSubmit={(event) => {
+        const scope = lifetime.current;
+        const attempt = ++validation.current;
+        void handleSubmit((values) => {
+          if (scope?.active && attempt === validation.current) return saveProfile(values, scope);
+        })(event);
+      }}>
         <FormField
           autoComplete="name"
+          disabled={isSubmitting || Boolean(sendingKind)}
           error={errors.displayName?.message}
           id="profile-display-name"
+          hint="Tên bạn muốn hiển thị trên OMTS, tối đa 200 ký tự."
           label="Tên hiển thị"
           required
           {...register("displayName")}
@@ -218,14 +216,20 @@ export function ProfileEditor({
         <div className="grid gap-4 sm:grid-cols-2">
           <ContactEditor
             contact={profile.email}
+            disabled={isSubmitting || Boolean(sendingKind)}
+            isVerifying={sendingKind === "email"}
             kind="email"
             onChange={() => setActiveIdentifierDialog("email")}
+            onVerify={() => void verifyCurrentContact("email")}
             pendingValue={verifiedChanges.email?.value}
           />
           <ContactEditor
             contact={profile.phone}
+            disabled={isSubmitting || Boolean(sendingKind)}
+            isVerifying={sendingKind === "phone"}
             kind="phone"
             onChange={() => setActiveIdentifierDialog("phone")}
+            onVerify={() => void verifyCurrentContact("phone")}
             pendingValue={verifiedChanges.phone?.value}
           />
         </div>
@@ -245,15 +249,23 @@ export function ProfileEditor({
               ? "Giá trị mới đã xác minh nhưng chưa được lưu."
               : "Thông tin chỉ thay đổi sau khi lưu thành công."}
           </p>
-          <Button
-            className="sm:w-auto sm:min-w-44"
-            disabled={!isDirty && !hasVerifiedChange}
-            isPending={isSubmitting}
-            pendingLabel="Đang lưu..."
-            type="submit"
-          >
-            Lưu thay đổi
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {(isDirty || hasVerifiedChange) && <Button disabled={isSubmitting || Boolean(sendingKind)} variant="secondary" onClick={() => {
+              validation.current++;
+              reset({ displayName: profile.displayName });
+              setVerifiedChanges({});
+              setFormError(undefined);
+            }}>Hủy thay đổi</Button>}
+            <Button
+              className="sm:w-auto sm:min-w-44"
+              disabled={Boolean(sendingKind) || (!isDirty && !hasVerifiedChange)}
+              isPending={isSubmitting}
+              pendingLabel="Đang lưu..."
+              type="submit"
+            >
+              Lưu thay đổi
+            </Button>
+          </div>
         </div>
       </form>
 
@@ -281,6 +293,8 @@ export function ProfileEditor({
 
       {activeVerification && (
         <VerificationDialog
+          title={activeVerification.value === profile[activeVerification.kind]?.value
+            ? `Xác minh ${activeVerification.kind === "email" ? "email" : "số điện thoại"}` : undefined}
           challenge={activeVerification.challenge}
           onChallengeChange={(challenge) =>
             setActiveVerification((current) =>

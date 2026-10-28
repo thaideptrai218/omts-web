@@ -2,7 +2,7 @@
 
 This guide covers the **mock-backed Web UI** on `feature/OMTS-132-web-foundation`. It is intended for a local code/UI review, not acceptance of the real backend integration. Interface labels are Vietnamese; this guide uses the labels you will see on screen.
 
-Updated **October 27, 2026**: the management and authentication mock flows now share state. Use the walkthrough below to demonstrate actions across screens, rather than inspecting isolated forms.
+Updated **October 28, 2026**: management and authentication mock flows share state. Employee account creation, profile/contact verification, password-dialog handling and notification lifecycles have additional regression coverage. Use the walkthrough below to demonstrate actions across screens, rather than inspecting isolated forms.
 
 ## Download and run
 
@@ -97,6 +97,15 @@ The editor explains the supported phone formats and text limits. Birthday remain
 This uses the existing in-memory credential-delivery simulation, including its 72-hour setup receipt. No real SMS/email or backend transaction is performed. A lost response is not automatically retried. The real API remains gated while the backend username/credential-delivery contract differs from the approved frontend workflow.
 
 For a shorter presentation, use the seeded accounts `nguyen.an` or `pham.cuong` with `demo123` to show role/scope labels and Owner-only menu restrictions without creating a new account. `staff-first-login` is a separate first-login scenario; `staff-needs-contact-verification` starts at the contact step. Web Trader registration remains deferred by the user's decision on October 27; there is no `/register` route to demonstrate.
+
+## Profile and security checks for the October 28 review
+
+- In **Hồ sơ cá nhân**, edit the display name and use **Hủy thay đổi** to discard the draft. Names are limited to 200 characters; an overlong value stays visible with an error instead of being truncated. Save updates the personal name in the sidebar.
+- To demonstrate an existing unverified contact without changing a password, sign in as **pham.cuong / demo123** and open the profile. This seeded account has a verified phone and an unverified email, which offers **Xác minh email**. After OTP, the card says **Đã xác minh, chờ lưu**. Select **Lưu thay đổi** to apply verification. The first mock OTP is **123456**; no real message is delivered. A newly created account with both contacts can also demonstrate verifying one during onboarding and the other later from its profile.
+- Changing to a new email/phone uses a separate form. Closing it clears the draft. A late response must not reopen OTP or affect another opening. Verification of the current contact does not bypass validation for a replacement contact.
+- Open **Đổi mật khẩu**, close it and reopen: password fields are empty. During a submitted change, dismissal is blocked. Incorrect-current-password errors return focus to the current-password field after the form unlocks; connection failures keep the inputs available for a manual retry.
+- **Tùy chọn thông báo** discards an unsaved draft when closed, keeps pending saves from accidental dismissal and restores focus to the opening control. Reopen to inspect the saved values.
+- The cooperative receiving-bank section is intentionally retained pending BA confirmation. The current Jira request to move it to PAY-01 has not been applied. Logo upload/removal and a full real-API cooperative-profile release are not delivered by this snapshot.
 
 ## Automated checks
 

@@ -34,6 +34,20 @@ PR15/16/17 đã merge, source đã pull tới `develop@953f597`. **Điều kiệ
 
 Backend vẫn chưa khớp ba vai trò cố định, Staff xác minh email OR phone, metadata MSG06 và retry/idempotency refresh. Giữ quyết định hiện có, không yêu cầu người dùng chọn lại hoặc tự chuyển UI sang hành vi backend cũ.
 
+### WEB-NOTIFY-02 — Catalog và kênh thông báo thật
+
+**Open — cần BA/backend xác nhận trước khi nối API tùy chọn thông báo.** Backend953 trả nhóm Orders cho Staff cùng Work/DeadlineReminders/WaterAlerts, còn fixture Web hiện có ba nhóm sau. Backend cũng khóa InApp/Push ở nhóm bắt buộc và có eligibility theo thiết bị/phiên; fixture Web chưa thể hiện giống toàn bộ. Response lưu có `notice` dạng câu, chưa có code thông báo riêng.
+
+Đề xuất nhóm xác nhận catalog theo actor/quyền, kênh bắt buộc và khả năng chỉnh của từng kênh, đồng thời cung cấp ví dụ payload đủ các trường hợp. Không tự thêm Orders cho mọi Staff, bật Push hoặc suy MSG22 từ câu tiếng Anh. UI/mock hiện tại chỉ là fixture, chưa phải catalog production đã được duyệt. Chưa sửa SRS/Jira/backend.
+
+## WEB-PROFILE-CONTACT-01 — Xác minh liên hệ hiện có
+
+**Đã chốt 28/10/2026, Duy Thái:** cho phép xác minh email/SĐT đang thuộc hồ sơ nhưng chưa xác minh, không bắt đổi sang giá trị khác. Dùng OTP hiện có và bước Lưu thay đổi của hồ sơ; không tự đánh verified, cấp quyền hoặc bỏ gate. Form đổi liên hệ mới vẫn từ chối giá trị cũ. API thật vẫn tắt; không coi lựa chọn này là backend đã hỗ trợ.
+
+## WEB-COOP-BANK-01 — Khối ngân hàng trong hồ sơ HTX
+
+**Giữ nguyên, chờ BA xác nhận — Duy Thái chốt 28/10/2026.** OMTS-203 hiện yêu cầu chuyển khối nhận chuyển khoản sang PAY-01; source/SRS cũ vẫn có khối đó. Người dùng chọn giữ lại lúc này. Không xóa field/schema/mock hoặc tạo PAY-01 để tự giải quyết xung đột. Ngân hàng của nhân viên là dữ liệu khác và tiếp tục giữ nguyên.
+
 ## WEB-ROLE-01 — Chỉ dùng vai trò cố định
 
 **Decided, 27/10/2026, Duy Thái:** chỉ Quản lý vùng, Kế toán, Nhân viên; tên cố định; Owner sửa quyền và ngừng dùng/khôi phục, không Add/Copy. Nhân viên ban đầu không có quyền nghiệp vụ. [Chi tiết và đề xuất BA/backend](WEB_FIXED_ROLES_DECISION_2026-10-27.md). Product mock áp quy tắc mới; backend/SRS/Jira hiện còn khác, chưa bật API thật và chưa tự sửa các nguồn đó.

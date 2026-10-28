@@ -47,7 +47,7 @@ export function LoginExperience() {
 
       if (result.status === "rejected") {
         setFormError(formatMessage(result.message));
-        return;
+        return false;
       }
 
       if (requiresPostLoginGate(result)) {
@@ -55,15 +55,17 @@ export function LoginExperience() {
           gate: result,
           identifier: values.identifier.trim(),
         });
-        return;
+        return true;
       }
 
-      if (!grantsApplicationAccess(result)) return;
+      if (!grantsApplicationAccess(result)) return false;
 
       notify({ title: "Đăng nhập thành công.", tone: "success" });
       router.replace("/dashboard");
+      return true;
     } catch (error) {
       setFormError(getLoginErrorMessage(error));
+      return false;
     }
   }
 
@@ -81,6 +83,7 @@ export function LoginExperience() {
             )
           }
           onOnboardingCompleted={() => {
+            setPostLoginGate(undefined);
             notify({
               title: "Tài khoản đã được xác minh và sẵn sàng sử dụng.",
               tone: "success",

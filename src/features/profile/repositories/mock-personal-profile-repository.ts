@@ -77,10 +77,12 @@ export function createMockPersonalProfileRepository({
     if (latencyMs > 0) await wait(latencyMs);
   }
 
-  function identifierIsUnavailable(kind: ProfileIdentifierKind, value: string) {
-    const currentValue = kind === "email" ? profile.email?.value : profile.phone?.value;
+  function identifierIsUnavailable(kind: ProfileIdentifierKind, value: string, allowUnverifiedCurrent = false) {
+    const contact = profile[kind];
+    const isCurrentValue = value === contact?.value;
     const unavailableValues = kind === "email" ? unavailableEmails : unavailablePhones;
-    return value === currentValue || unavailableValues.has(value) || isIdentifierTaken(value);
+    return (isCurrentValue && !(allowUnverifiedCurrent && !contact?.isVerified))
+      || unavailableValues.has(value) || isIdentifierTaken(value);
   }
 
   return {
@@ -100,7 +102,10 @@ export function createMockPersonalProfileRepository({
       }
 
       const value = input.value.trim();
-      if (!value || identifierIsUnavailable(input.kind, value)) {
+      const verifyingCurrent = input.intent === "verify-current";
+      const contact = profile[input.kind];
+      if (!value || (verifyingCurrent && (!contact || contact.isVerified || contact.value !== value))
+        || identifierIsUnavailable(input.kind, value, verifyingCurrent)) {
         return {
           field: input.kind,
           message: { code: "MSG01" },
@@ -125,7 +130,7 @@ export function createMockPersonalProfileRepository({
       return {
         challenge: result.challenge,
         message:
-          input.kind === "email"
+          input.kind === "email" && !verifyingCurrent
             ? {
                 code: "MSG62",
                 params: { masked_email: result.challenge.recipient.maskedValue },
@@ -142,7 +147,7 @@ export function createMockPersonalProfileRepository({
       }
 
       const displayName = input.displayName.trim();
-      if (!displayName) {
+      if (!displayName || displayName.length > 200) {
         return {
           field: "displayName",
           message: { code: "MSG01" },
@@ -170,7 +175,7 @@ export function createMockPersonalProfileRepository({
       ].filter((change) => change !== undefined);
 
       for (const change of changes) {
-        if (identifierIsUnavailable(change.kind, change.value)) {
+        if (identifierIsUnavailable(change.kind, change.value, true)) {
           return {
             field: change.kind,
             message: { code: "MSG01" },

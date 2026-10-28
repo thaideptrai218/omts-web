@@ -131,6 +131,12 @@ export function CooperativeProfileEditor({
 }: CooperativeProfileEditorProps) {
   const { notify } = useToast();
   const activitySequence = useRef(10);
+  const lifetime = useRef<{ active: boolean; saving: boolean; validation: number } | null>(null);
+  useEffect(() => {
+    const scope = { active: true, saving: false, validation: 0 };
+    lifetime.current = scope;
+    return () => { scope.active = false; };
+  }, []);
   const previewHeadingRef = useRef<HTMLHeadingElement>(null);
   const initialValues = toFormValues(profile);
   const [activityRows, setActivityRows] = useState(() =>
@@ -196,6 +202,7 @@ export function CooperativeProfileEditor({
   }
 
   function cancelChanges() {
+    if (lifetime.current) lifetime.current.validation++;
     const values = toFormValues(profile);
     reset(values);
     setActivityRows(createActivityRows(values.businessActivities));
@@ -224,7 +231,9 @@ export function CooperativeProfileEditor({
   }
 
   async function confirmSave() {
-    if (!draft || isSaving) return;
+    const scope = lifetime.current;
+    if (!scope?.active || scope.saving || !draft) return;
+    scope.saving = true;
 
     setFormError(undefined);
     setHasConflict(false);
@@ -232,6 +241,7 @@ export function CooperativeProfileEditor({
 
     try {
       const result = await cooperativeProfileService.save(draft);
+      if (!scope.active) return;
 
       if (result.status === "session-expired") {
         sessionExpiryChannel.publish(result.message);
@@ -259,10 +269,13 @@ export function CooperativeProfileEditor({
       onProfileChange(result.profile);
       notify({ title: formatMessage(result.message), tone: "success" });
     } catch {
-      setFormError(formatMessage({ code: "MSG04" }));
-      setStep("details");
+      if (scope.active) {
+        setFormError(formatMessage({ code: "MSG04" }));
+        setStep("details");
+      }
     } finally {
-      setIsSaving(false);
+      scope.saving = false;
+      if (scope.active) setIsSaving(false);
     }
   }
 
@@ -323,7 +336,13 @@ export function CooperativeProfileEditor({
   return (
     <div className="space-y-5">
       <StepIndicator currentStep={step} />
-      <form noValidate onSubmit={handleSubmit(openPreview)}>
+      <form noValidate onSubmit={(event) => {
+        const scope = lifetime.current;
+        const attempt = scope ? ++scope.validation : undefined;
+        void handleSubmit((values) => {
+          if (scope?.active && attempt === scope.validation) openPreview(values);
+        })(event);
+      }}>
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
           <div className="min-w-0 space-y-6">
             <section className="rounded-card border border-border bg-surface p-5 shadow-card sm:p-7">

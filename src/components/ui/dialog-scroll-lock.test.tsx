@@ -133,3 +133,17 @@ it("retains the lock until the controlled parent actually closes", () => {
   view.rerender(<Popups parent={false} />);
   expect(document.documentElement.hasAttribute(lockAttribute)).toBe(false);
 });
+
+it("closes the native modal while still connected before unmounting", () => {
+  const view = render(<Popups />);
+  const dialog = screen.getByRole("dialog", {
+    name: "Hồ sơ",
+  }) as HTMLDialogElement;
+  const close = vi.spyOn(dialog, "close").mockImplementation(() => {
+    expect(dialog.isConnected).toBe(true);
+    dialog.removeAttribute("open");
+  });
+  view.unmount();
+  expect(close).toHaveBeenCalledOnce();
+  expect(dialog.open).toBe(false);
+});

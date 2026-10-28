@@ -3,6 +3,7 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   type KeyboardEvent,
   type ReactNode,
@@ -71,6 +72,14 @@ export function Dialog({
   const descriptionId = useId();
 
   useDocumentScrollLock(open);
+
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    return () => {
+      // Native close restores focus before React removes the modal/opener.
+      if (dialog?.open) dialog.close();
+    };
+  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;

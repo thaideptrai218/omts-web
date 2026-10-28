@@ -18,6 +18,7 @@ const titleByPurpose: Record<VerificationPurpose, string> = {
 };
 
 type VerificationDialogShellProps = Readonly<{
+  title?: string;
   children: ReactNode;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onOpenChange(open: boolean): void;
@@ -27,6 +28,7 @@ type VerificationDialogShellProps = Readonly<{
 }>;
 
 export function VerificationDialogShell({
+  title,
   children,
   initialFocusRef,
   onOpenChange,
@@ -42,7 +44,7 @@ export function VerificationDialogShell({
       initialFocusRef={initialFocusRef}
       onOpenChange={onOpenChange}
       open={open}
-      title={titleByPurpose[purpose]}
+      title={title ?? titleByPurpose[purpose]}
     >
       <div className="rounded-card border border-info/20 bg-info-soft p-4">
         <p className="text-sm font-medium text-text-muted">

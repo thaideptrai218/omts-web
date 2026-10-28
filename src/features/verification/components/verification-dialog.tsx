@@ -12,6 +12,7 @@ import type { VerificationService } from "@/features/verification/services/verif
 import type { AppMessage } from "@/shared/messages/message-catalog";
 
 type VerificationDialogProps = Readonly<{
+  title?: string;
   challenge: VerificationChallenge;
   deliveryFailureMessage?: AppMessage;
   onChallengeChange(challenge: VerificationChallenge): void;
@@ -22,6 +23,7 @@ type VerificationDialogProps = Readonly<{
 }>;
 
 function VerificationDialogContent({
+  title,
   challenge,
   deliveryFailureMessage = { code: "MSG04" },
   onChallengeChange,
@@ -34,6 +36,7 @@ function VerificationDialogContent({
 
   return (
     <VerificationDialogShell
+      title={title}
       initialFocusRef={codeInputRef}
       onOpenChange={onOpenChange}
       open={open}
@@ -55,5 +58,6 @@ function VerificationDialogContent({
 }
 
 export function VerificationDialog(props: VerificationDialogProps) {
+  if (!props.open) return null;
   return <VerificationDialogContent key={props.challenge.requestId} {...props} />;
 }

@@ -7,7 +7,8 @@ export const profileDetailsSchema = z.object({
   displayName: z
     .string()
     .trim()
-    .min(1, "Hãy nhập tên hiển thị."),
+    .min(1, "Hãy nhập tên hiển thị.")
+    .max(200, "Tên hiển thị không quá 200 ký tự."),
 });
 
 export type ProfileDetailsFormValues = z.infer<typeof profileDetailsSchema>;

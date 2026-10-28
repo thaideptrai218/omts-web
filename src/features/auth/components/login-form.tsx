@@ -12,7 +12,7 @@ import {
 
 type LoginFormProps = {
   formError?: string;
-  onSubmit: (values: LoginFormValues) => Promise<void>;
+  onSubmit: (values: LoginFormValues) => Promise<boolean>;
 };
 
 export function LoginForm({ formError, onSubmit }: LoginFormProps) {
@@ -20,6 +20,7 @@ export function LoginForm({ formError, onSubmit }: LoginFormProps) {
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
+    reset,
   } = useForm<LoginFormValues>({
     defaultValues: {
       identifier: "",
@@ -29,7 +30,9 @@ export function LoginForm({ formError, onSubmit }: LoginFormProps) {
   });
 
   return (
-    <form className="mt-7 space-y-5" noValidate onSubmit={handleSubmit(onSubmit)}>
+    <form className="mt-7 space-y-5" noValidate onSubmit={handleSubmit(async (values) => {
+      if (await onSubmit(values)) reset({ identifier: "", password: "" });
+    })}>
       <FormField
         autoComplete="username"
         autoCapitalize="none"

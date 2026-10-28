@@ -14,6 +14,8 @@ SRS `Report3Finnal.md` UC12 (khoảng dòng2379) và Jira [OMTS-201, ACS-10](htt
 
 Không sửa SRS/Jira/backend trong lượt này. Frontend mock sẽ thể hiện quy tắc mới; API thật vẫn tắt. Các tests/fixtures tạo role tùy ý ở repository độc lập là lịch sử/hợp đồng generic, không phải chế độ product hiện tại.
 
+**Đã kiểm lại sau pull27/10:** `develop@953f597` vẫn chỉ có hai role trong DefaultRoles và còn endpoint Create/Copy/đổi tên. Việc PR15/16/17 merge chưa giải quyết chính sách ba vai trò; `48ae1e0` ở đoạn trên là snapshot cũ. Giữ nguyên đề xuất bên dưới và API role tắt. [Audit source mới](../reports/BACKEND_DEVELOP_UPDATE_AUDIT_2026-10-27.md).
+
 ## Đề xuất cụ thể gửi BA/backend khi nhóm review
 
 1. BA xác nhận ba mã role ổn định và quyền khởi tạo của Nhân viên; phân biệt actor Staff với tên role vùng. Chưa dùng tên hiển thị hoặc GUID mock làm mã role backend.

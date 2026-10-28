@@ -1,5 +1,7 @@
 # Làm rõ thay đổi giao diện quản trị — 27/10/2026
 
+Tiếp tục28/10 theo [plan buổi review](WEB_EVENING_REVIEW_PLAN_2026-10-28.md): ghép xác minh liên hệ hiện có, review/phát hành P7 cùng các bản sửa vòng đời form, OTP và HTX; giữ ngân hàng chờ BA. [Báo cáo mới](reports/WEB_EVENING_REVIEW_COMPLETION_2026-10-28.md) có kết quả source hiện tại; các số P7 phía dưới là snapshot27/10.
+
 Yêu cầu: dashboard, nhân viên, tài khoản và vai trò phải có thay đổi nhìn thấy được, dễ thao tác và giữ các luồng đã chốt. Không bật API/refresh hoặc ghép mutation mock vào phiên thật. Không commit/push/merge trong lượt này khi chưa được yêu cầu.
 
 ## Thứ tự micro-task và tiêu chí kiểm
@@ -38,3 +40,19 @@ Giữ xanh biển của OMTS, chuyển các danh sách card giống nhau thành 
 ## Giới hạn tốc độ
 
 Mục tiêu frontend là không chặn toàn bộ màn để chờ số liệu: khung và lối tắt hiện trước, các ô chờ riêng. Con số mới chính xác vẫn phải có nguồn dữ liệu. Tổng hợp trước ở backend là đề xuất riêng, cần chốt mức trễ dữ liệu chấp nhận được, phạm vi account/zone và cơ chế cập nhật; không tự bật cache hoặc cron job.
+
+## P7 — Hồ sơ và tùy chọn thông báo (tiếp tục 27/10)
+
+Người dùng yêu cầu chuyển sang việc khác, để incident GitGuardian xử lý sau. Lát này hoàn thiện các màn hiện có, không đổi nghiệp vụ hoặc bật API. Jira OMTS-201 ACS-05/07 và parent OMTS-118 đã đọc lại; các khác biệt nghiệp vụ trước đó giữ theo quyết định đã chốt.
+
+| Micro-task | Phần việc | Tiêu chí |
+| --- | --- | --- |
+| P7.1 | Test vòng đời tải hồ sơ và retry | Account A không hiện khi đang tải B; response retry cũ không đè B; profile sai accountId không được render |
+| P7.2 | Tách state hồ sơ theo account và gom đường load/retry | Keyed workspace; mỗi effect có cleanup; retry cùng account vẫn hoạt động |
+| P7.3 | Test đóng/mở thông báo và response save muộn | Đóng từ parent bỏ draft; save cũ không đóng popup mới hoặc báo toast/expiry sau unmount; pending vẫn chặn dismiss |
+| P7.4 | Sửa ownership request của popup; chỉnh trạng thái loading/error nếu cần | Giữ matrix/quyền/kênh/MSG/validation; không tự hủy mutation backend hoặc tuyên bố rollback |
+| P7.4b | Race pending phát hiện trong full suite | Test Escape tại lúc bàn giao save phải RED/GREEN; khóa close đồng bộ ở tài khoản và thông báo, không chỉ chờ effect |
+| P7.5 | Regression, lint/typecheck/build và kiểm browser 360/1024 | Báo đúng pass/skip; kiểm các luồng thật có thể đi, không dựng showcase |
+| P7.6 | Báo cáo và bài học local | Ghi lỗi RED/GREEN, giới hạn và việc còn chờ; chưa tự commit/push/merge trong lượt này |
+
+P7.1–P7.6 đã hoàn tất trong phạm vi này: 14 case mới, full cuối 1.649 PASS/31 Redis SKIP; lint/typecheck/build/24 HTTP assertions PASS. Đã kiểm 360/1024, save/draft/focus và Owner→Staff bằng browser; fix thêm cleanup native dialog sau khi browser phát hiện mất focus. [Báo cáo chi tiết](reports/WEB_PROFILE_NOTIFICATION_LIFECYCLE_REVIEW_2026-10-27.md) giữ cả hai lượt full lỗi ban đầu, RED/GREEN và giới hạn. API/QA/HTTPS/GitGuardian vẫn là các phần riêng; chưa commit/push/merge.

@@ -5,6 +5,7 @@ import { useCountdown } from "@/features/verification/hooks/use-countdown";
 import { formatCountdown } from "@/features/verification/lib/countdown";
 
 type VerificationTimingProps = Readonly<{
+  disabled?: boolean;
   expiresAtMs: number;
   isResending?: boolean;
   onResend(): void;
@@ -13,6 +14,7 @@ type VerificationTimingProps = Readonly<{
 }>;
 
 export function VerificationTiming({
+  disabled = false,
   expiresAtMs,
   isResending = false,
   onResend,
@@ -46,7 +48,7 @@ export function VerificationTiming({
 
       <Button
         className="mt-4 sm:w-auto"
-        disabled={!canResend}
+        disabled={disabled || !canResend}
         isPending={isResending}
         onClick={onResend}
         pendingLabel="Đang gửi lại..."

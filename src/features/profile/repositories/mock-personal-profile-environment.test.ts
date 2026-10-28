@@ -28,6 +28,17 @@ async function verifyCandidate(
 }
 
 describe("mock personal profile environment", () => {
+  it("rejects an overlong name without changing the profile or consuming verified contact proof", async () => {
+    const environment = createMockPersonalProfileEnvironment({ latencyMs: 0, verification: { latencyMs: 0 } });
+    const loaded = await environment.profileService.load();
+    if (loaded.status !== "loaded") throw new Error("Expected profile");
+    const value = "candidate@omts.test";
+    const token = await verifyCandidate(environment, "email", value);
+    const input = { displayName: "a".repeat(201), recordVersion: loaded.profile.recordVersion, emailChange: { token, value } };
+    expect(await environment.profileService.save(input)).toMatchObject({ status: "invalid-change", field: "displayName" });
+    expect(await environment.profileService.load()).toEqual(loaded);
+    expect(await environment.profileService.save({ ...input, displayName: "Tên hợp lệ" })).toMatchObject({ status: "saved", profile: { email: { value, isVerified: true } } });
+  });
   it("loads the current profile and saves a verified email candidate", async () => {
     const environment = createMockPersonalProfileEnvironment({
       latencyMs: 0,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useState } from "react";
+
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast-provider";
 import { ChangePasswordForm } from "@/features/account-security/components/change-password-form";
@@ -14,22 +16,33 @@ type ChangePasswordDialogProps = Readonly<{
 }>;
 
 export function ChangePasswordDialog({
-  onOpenChange,
   open,
-  service,
+  ...props
 }: ChangePasswordDialogProps) {
+  if (!open) return null;
+  return <ChangePasswordSession {...props} />;
+}
+
+function ChangePasswordSession({
+  onOpenChange,
+  service,
+}: Omit<ChangePasswordDialogProps, "open">) {
   const { notify } = useToast();
+  const [pending, setPending] = useState(false);
+  const pendingRef = useRef(false);
 
   return (
     <Dialog
       description="Mật khẩu mới phải có ít nhất 8 ký tự, gồm chữ và số. Không chia sẻ mật khẩu với người khác."
-      onOpenChange={onOpenChange}
-      open={open}
+      dismissible={!pending}
+      onOpenChange={(next) => { if (!pendingRef.current) onOpenChange(next); }}
+      open
       title="Đổi mật khẩu"
     >
       <ChangePasswordForm
         changePassword={(input) => service.changeWithCurrentPassword(input)}
         mode="standard"
+        onPendingChange={(next) => { pendingRef.current = next; setPending(next); }}
         onChanged={(message) => {
           onOpenChange(false);
           notify({

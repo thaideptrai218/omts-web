@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent, type RefObject } from "react";
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 
 import { Button } from "@/components/ui/button";
 import { VerificationCodeField } from "@/features/verification/components/verification-code-field";
@@ -54,6 +54,12 @@ export function VerificationForm({
   const [isLocked, setIsLocked] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const lifetime = useRef<{ active: boolean; busy: boolean } | null>(null);
+  useEffect(() => {
+    const scope = { active: true, busy: false };
+    lifetime.current = scope;
+    return () => { scope.active = false; };
+  }, [challenge.requestId, service]);
 
   function handleCodeChange(value: string) {
     setCode(value);
@@ -63,17 +69,21 @@ export function VerificationForm({
 
   async function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const scope = lifetime.current;
+    if (!scope?.active || scope.busy || isLocked || secondaryActionPending) return;
     if (!isVerificationCodeComplete(code)) {
       setCodeError("Mã xác minh phải gồm đúng 6 chữ số.");
       return;
     }
 
+    scope.busy = true;
     setCodeError(undefined);
     setFeedback(undefined);
     setIsVerifying(true);
 
     try {
       const result = await service.verify({ code, requestId: challenge.requestId });
+      if (!scope.active) return;
       if (result.status === "verified") {
         await onVerified(result.token);
         return;
@@ -87,18 +97,23 @@ export function VerificationForm({
           : "";
       setCodeError(`${formatMessage({ code: "MSG16" })}${attemptsHint}`);
     } catch {
-      setFeedback({ text: formatMessage({ code: "MSG04" }), tone: "danger" });
+      if (scope.active) setFeedback({ text: formatMessage({ code: "MSG04" }), tone: "danger" });
     } finally {
-      setIsVerifying(false);
+      scope.busy = false;
+      if (scope.active) setIsVerifying(false);
     }
   }
 
   async function handleResend() {
+    const scope = lifetime.current;
+    if (!scope?.active || scope.busy || secondaryActionPending || challenge.sendsRemaining === 0 || Date.now() < challenge.resendAvailableAtMs) return;
+    scope.busy = true;
     setFeedback(undefined);
     setIsResending(true);
 
     try {
       const result = await service.resend(challenge.requestId);
+      if (!scope.active) return;
       if (result.status === "resent") {
         setCode("");
         setCodeError(undefined);
@@ -124,13 +139,14 @@ export function VerificationForm({
         setFeedback({ text: formatMessage({ code: "MSG16" }), tone: "danger" });
       }
     } catch {
-      setFeedback({ text: formatMessage({ code: "MSG04" }), tone: "danger" });
+      if (scope.active) setFeedback({ text: formatMessage({ code: "MSG04" }), tone: "danger" });
     } finally {
-      setIsResending(false);
+      scope.busy = false;
+      if (scope.active) setIsResending(false);
     }
   }
 
-  const isBusy = isResending || isVerifying;
+  const isBusy = isResending || isVerifying || secondaryActionPending;
 
   return (
     <form className="space-y-5" noValidate onSubmit={handleVerify}>
@@ -143,6 +159,7 @@ export function VerificationForm({
       />
 
       <VerificationTiming
+        disabled={isBusy}
         expiresAtMs={challenge.expiresAtMs}
         isResending={isResending}
         onResend={handleResend}

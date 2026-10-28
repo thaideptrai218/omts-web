@@ -33,46 +33,29 @@ function PermissionDenied() {
 
 export function CooperativeProfileExperience() {
   const { state } = useAuth();
-  const [data, setData] = useState<LoadedProfile>();
-  const [hasLoadError, setHasLoadError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const canManage =
     state.status === "authenticated" &&
     hasEffectivePermission(state.account.access, "cooperative.profile.manage");
+  if (state.status !== "authenticated") return null;
+  if (!canManage) return <PermissionDenied />;
+  return <CooperativeProfileWorkspace key={state.account.accountId} />;
+}
 
-  async function loadProfile() {
-    if (!canManage) return;
+function CooperativeProfileWorkspace() {
+  const [data, setData] = useState<LoadedProfile>();
+  const [hasLoadError, setHasLoadError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
+  const [reload, setReload] = useState(0);
 
+  function loadProfile() {
     setHasLoadError(false);
     setIsLoading(true);
-
-    try {
-      const result = await cooperativeProfileService.load();
-      if (result.status === "session-expired") {
-        sessionExpiryChannel.publish(result.message);
-        return;
-      }
-      if (result.status === "forbidden") {
-        setHasLoadError(true);
-        return;
-      }
-
-      setData({ banks: result.banks, profile: result.profile });
-    } catch {
-      setHasLoadError(true);
-    } finally {
-      setIsLoading(false);
-    }
+    setReload((value) => value + 1);
   }
 
   useEffect(() => {
     let isActive = true;
-
-    if (!canManage) {
-      return () => {
-        isActive = false;
-      };
-    }
 
     cooperativeProfileService
       .load()
@@ -83,7 +66,7 @@ export function CooperativeProfileExperience() {
           return;
         }
         if (result.status === "forbidden") {
-          setHasLoadError(true);
+          setForbidden(true);
           return;
         }
 
@@ -99,10 +82,9 @@ export function CooperativeProfileExperience() {
     return () => {
       isActive = false;
     };
-  }, [canManage]);
+  }, [reload]);
 
-  if (state.status !== "authenticated") return null;
-  if (!canManage) return <PermissionDenied />;
+  if (forbidden) return <PermissionDenied />;
   if (isLoading) return <CooperativeProfilePageSkeleton />;
 
   if (hasLoadError || !data) {

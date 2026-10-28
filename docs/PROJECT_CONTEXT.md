@@ -4,6 +4,8 @@
 >
 > Update this summary when Jira, the current SRS, or an approved team decision changes. Planned work is not evidence that a feature has already been implemented.
 
+Hoàn thiện bản review tối28/10: [plan](WEB_EVENING_REVIEW_PLAN_2026-10-28.md), [báo cáo](reports/WEB_EVENING_REVIEW_COMPLETION_2026-10-28.md). Ghép xác minh liên hệ hiện có chưa verified theo WEB-PROFILE-CONTACT-01, vẫn OTP→chờ lưu→Save. Review chung P7 local và sửa phản hồi muộn, pending/double-submit/focus ở hồ sơ, thông báo, đổi mật khẩu, OTP và HTX. Native phát hiện login giữ credentials khi route được Activity giữ state; reset sau accepted và dọn gate sau complete. WEB-COOP-BANK-01 giữ ngân hàng HTX, chờ BA; không đổi ngân hàng nhân viên. Source cuối2.302 PASS/31 Redis SKIP, lint/typecheck/build18/18/24 HTTP đạt;575 source/test files khớp snapshot độc lập. Browser kiểm login→logout về form trống trên build cuối và luồng xác minh email→Save→login bằng email. Chi tiết/giới hạn nằm trong báo cáo, thay cho số liệu snapshot P7 cũ bên dưới. API/refresh/MSG06/tên MSG24 và GitGuardian giữ chờ; không merge hoặc đánh Jira Done. Bài120 local, reviewer guide tiếng Anh đã cập nhật.
+
 Review xuất bản personal/account28/10: [báo cáo](reports/WEB_EMPLOYEE_PERSONAL_ACCOUNT_FULL_REVIEW_2026-10-28.md). Tìm và sửa P2 callback validation-save vẫn gửi lệnh sau unmount/mở unlink; thêm3 hồi quy, module59/59 đạt. Source riêng2.249 pass/31 Redis skip, lint/typecheck/build18/18/24 HTTP đạt. Giữ nghiệp vụ personal validation và lưu employee trước/tạo account sau. Người dùng yêu cầu commit/push cùng nhánh, không merge; bằng chứng source cuối và phạm vi ở báo cáo. Profile/notification/Dialog local khác giữ riêng; API/refresh/MSG06/tên MSG24 và GitGuardian giữ chờ. Bài119 local; các câu “chưa commit/push” bên dưới là snapshot triển khai trước yêu cầu xuất bản.
 
 Local tạo account từ hồ sơ28/10: [EMP-ACCOUNT](reports/WEB_EMPLOYEE_ACCOUNT_CREATION_2026-10-28.md) hoàn tất mock theo lựa chọn “lưu hồ sơ trước, tạo account sau”. Popup prefill tên/SĐT, Owner chọn vùng–role, preview/confirm và receipt không password; kiểm/version/link trước publish mock để tránh account mồ côi. Thêm29 test; source gồm personal validation2.246 pass/31 Redis skip, lint/typecheck/build18/18/24 HTTP đạt. Native Lan→Khu Nam/Nhân viên→receipt→reopen/account directory và360/1024 đạt. Bài118 local. WEB-EMP-ACCOUNT-01 đã chốt, các câu còn hỏi bên dưới là lịch sử; backend contract chưa align nên API/refresh/MSG06/tên MSG24 tiếp tục chờ. Chưa commit/push/merge; các chỉnh profile/notification/Dialog khác giữ riêng.
@@ -50,6 +52,8 @@ CI on ddb2b21: build-test, Gitleaks and pr-title SUCCESS; GitGuardian FAILURE wi
 
 Follow-up e279e7d is verified on GitHub: build-test/Gitleaks/pr-title SUCCESS, including 1,635 passed tests and 24 HTTP assertions. GitGuardian remains FAILURE: 18 occurrences across the same six incidents; the extra row points to the historical 7316e55 mock, with no occurrence attributed to e279e7d in that check. See the report for exact run/check IDs and owner classification steps. PR remains draft/unmerged.
 
+Current local follow-up: the user deferred GitGuardian and requested other work. [P7 profile/notification lifecycle review](reports/WEB_PROFILE_NOTIFICATION_LIFECYCLE_REVIEW_2026-10-27.md) fixes profile A/B/retry binding, notification draft and obsolete-save effects, the synchronous pending-close gap in account/notification dialogs, and native focus restoration before modal unmount. Final local checks: **1,649 passed/31 Redis skipped**, lint/typecheck/build and 24 HTTP assertions passed. Browser 360/1024, notification save/reopen/Escape/focus and normal Owner→Staff profile switching verified. No API/refresh, Jira state or incident change; these edits are not yet committed/pushed.
+
 ## Product boundary
 
 OMTS supports Trung Nam Aquaculture Cooperative in managing farming zones, rafts, oyster cultivation activities, sales, traceability, employees, attendance, payroll, and related costs.
@@ -89,7 +93,7 @@ The current Figma file is a low-fidelity wireframe and a reference for informati
 
 ## Current code status
 
-### Active priority — Web real API preparation (26/10/2026)
+### Active priority — Web review and API preparation (27/10/2026)
 
 **Polish quản trị và quyết định mới 27/10:** Duy Thái chốt chỉ ba role vùng Quản lý vùng/Kế toán/Nhân viên, tên cố định; Owner được sửa quyền và ngừng dùng/khôi phục. Nhân viên khởi tạo không có quyền nghiệp vụ. [Quyết định/đề xuất BA-backend](decisions/WEB_FIXED_ROLES_DECISION_2026-10-27.md) thay thế phần Add/Copy ở snapshot trước đối với product mock; SRS/Jira/backend không được tự sửa. [Plan polish](WEB_MANAGEMENT_POLISH_PLAN.md) và [nghiên cứu dashboard](decisions/DASHBOARD_LOADING_AND_AGGREGATION_PROPOSAL.md) tách hiển thị khung sớm khỏi tổng hợp số liệu trước. Không thêm cache/session policy hoặc cron, API/refresh vẫn tắt. Các báo cáo trước về tạo role tùy ý là lịch sử, không còn là hướng dẫn product hiện hành.
 

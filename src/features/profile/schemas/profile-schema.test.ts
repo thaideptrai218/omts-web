@@ -5,6 +5,10 @@ import {
 } from "@/features/profile/schemas/profile-schema";
 
 describe("profileDetailsSchema", () => {
+  it("accepts 200 characters and rejects 201 without truncating the name", () => {
+    expect(profileDetailsSchema.parse({ displayName: "a".repeat(200) }).displayName).toHaveLength(200);
+    expect(profileDetailsSchema.safeParse({ displayName: "a".repeat(201) }).success).toBe(false);
+  });
   it("trims and accepts a display name", () => {
     expect(profileDetailsSchema.parse({ displayName: "  Nguyễn An  " })).toEqual({
       displayName: "Nguyễn An",

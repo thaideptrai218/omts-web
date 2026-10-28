@@ -33,6 +33,7 @@ export type VerifiedProfileIdentifierChange = Readonly<{
 }>;
 
 export type StartProfileIdentifierChangeInput = Readonly<{
+  intent?: "verify-current";
   kind: ProfileIdentifierKind;
   value: string;
 }>;

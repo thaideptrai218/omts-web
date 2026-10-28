@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FormField } from "@/components/form/form-field";
 import { Button } from "@/components/ui/button";
@@ -34,14 +34,27 @@ type ProfileIdentifierDialogProps = Readonly<{
 }>;
 
 export function ProfileIdentifierDialog({
+  open,
+  ...props
+}: ProfileIdentifierDialogProps) {
+  if (!open) return null;
+  return <ProfileIdentifierSession key={`${props.kind}:${props.currentValue}`} {...props} />;
+}
+
+function ProfileIdentifierSession({
   currentValue,
   kind,
   onOpenChange,
   onStarted,
-  open,
   service,
-}: ProfileIdentifierDialogProps) {
+}: Omit<ProfileIdentifierDialogProps, "open">) {
   const [formError, setFormError] = useState<string>();
+  const lifetime = useRef<{ active: boolean; pending: boolean } | null>(null);
+  useEffect(() => {
+    const scope = { active: true, pending: false };
+    lifetime.current = scope;
+    return () => { scope.active = false; };
+  }, [service]);
   const inputRef = useRef<HTMLInputElement>(null);
   const isEmail = kind === "email";
   const schema = useMemo(
@@ -67,17 +80,21 @@ export function ProfileIdentifierDialog({
   const valueRegistration = register("value");
 
   function closeDialog() {
+    if (lifetime.current) lifetime.current.active = false;
     reset();
     setFormError(undefined);
     onOpenChange(false);
   }
 
-  async function submitCandidate(values: ProfileIdentifierCandidateValues) {
+  async function submitCandidate(values: ProfileIdentifierCandidateValues, scope: { active: boolean; pending: boolean }) {
+    if (!scope.active || scope.pending) return;
+    scope.pending = true;
     setFormError(undefined);
 
     try {
       const value = values.value.trim();
       const result = await service.startIdentifierChange({ kind, value });
+      if (!scope.active) return;
 
       if (result.status === "session-expired") {
         sessionExpiryChannel.publish(result.message);
@@ -92,7 +109,9 @@ export function ProfileIdentifierDialog({
       reset();
       onOpenChange(false);
     } catch {
-      setFormError(formatMessage({ code: "MSG04" }));
+      if (scope.active) setFormError(formatMessage({ code: "MSG04" }));
+    } finally {
+      scope.pending = false;
     }
   }
 
@@ -105,14 +124,18 @@ export function ProfileIdentifierDialog({
       onOpenChange={(nextOpen) => {
         if (!nextOpen) closeDialog();
       }}
-      open={open}
+      open
       title={isEmail ? "Thay đổi email" : "Thay đổi số điện thoại"}
     >
-      <form className="space-y-5" noValidate onSubmit={handleSubmit(submitCandidate)}>
+      <form className="space-y-5" noValidate onSubmit={(event) => {
+        const scope = lifetime.current;
+        void handleSubmit((values) => { if (scope?.active) return submitCandidate(values, scope); })(event);
+      }}>
         <FormField
           autoCapitalize="none"
           autoComplete={isEmail ? "email" : "tel"}
           data-dialog-initial-focus
+          disabled={isSubmitting}
           error={errors.value?.message}
           hint={
             isEmail

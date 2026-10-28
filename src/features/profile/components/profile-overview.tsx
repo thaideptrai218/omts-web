@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { ChangePasswordDialog } from "@/features/account-security/components/change-password-dialog";
 import type { AccountSecurityService } from "@/features/account-security/services/account-security-service";
 import type { PersonalProfile } from "@/features/profile/domain/personal-profile";
@@ -43,10 +44,10 @@ export function ProfileOverview({
           {initials}
         </span>
         <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight text-text sm:text-4xl">
+          <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-text [overflow-wrap:anywhere] sm:text-4xl">
             {profile.displayName}
           </h1>
-          <p className="mt-2 text-sm font-medium text-text-muted">
+          <p className="mt-2 break-all text-sm font-medium text-text-muted">
             @{profile.username}
             {profile.roles.length > 0 && ` · ${profile.roles.map((role) => role.roleLabel).join(", ")}`}
           </p>
@@ -112,7 +113,7 @@ export function ProfileOverview({
 
           <section className="rounded-card border border-border bg-surface p-5 shadow-card">
             <div className="flex items-start gap-3">
-              <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-lg text-primary-hover">⌁</span>
+              <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary-hover"><InterfaceIcon name="lock" /></span>
               <div>
                 <h2 className="text-lg font-semibold text-text">Mật khẩu & bảo mật</h2>
                 <p className="mt-1 text-sm leading-6 text-text-muted">
@@ -137,7 +138,7 @@ export function ProfileOverview({
         open={isPasswordDialogOpen}
         service={securityService}
       />
-      <NotificationPreferencesDialog open={isNotificationDialogOpen} onOpenChange={setIsNotificationDialogOpen}
+      <NotificationPreferencesDialog accountId={profile.accountId} open={isNotificationDialogOpen} onOpenChange={setIsNotificationDialogOpen}
         service={getNotificationPreferencesService(profile.accountId, profile.email?.isVerified ?? false)} />
     </div>
   );
