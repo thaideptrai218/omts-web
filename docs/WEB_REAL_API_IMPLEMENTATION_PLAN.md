@@ -4,6 +4,8 @@
 > Duy Thái ưu tiên Web, tạm dừng Mobile. Không thay SRS/Jira, không tự sửa backend.
 > Bằng chứng và vấn đề: [báo cáo audit](reports/WEB_REAL_API_READINESS_AUDIT_2026-10-23.md).
 
+> **EMP-LIST28/10:** đã hoàn thiện danh sách mock theo [review riêng](reports/WEB_EMPLOYEE_DIRECTORY_COMPLETION_2026-10-28.md): lọc vùng, nhãn vùng/trạng thái account, search300ms và paging20. Người dùng chốt default Employed;21 test mới, source riêng2.104 pass/31 Redis skip, lint/typecheck/build/24 HTTP đạt; browser360/1024 và focus reset đã kiểm. Chưa nối API, hoàn thành LAB-01 hoặc đóng MSG06/tên MSG24. Các snapshot nói UI chưa có lọc vùng/phân trang bên dưới là lịch sử.
+
 > **Review nhân viên 28/10:** [báo cáo tổng thể](reports/WEB_EMPLOYEE_FULL_REVIEW_2026-10-28.md). Đã review01–04a-E/UI, sửa EMP-FULL-REV-01 mất focus sau unlink native và thêm test hồi quy. Source chuẩn bị commit: 2.044 pass/31 Redis skip; lint/typecheck/build,24 HTTP,12 boundary và4 serialization checks đạt. Browser1280 xác nhận giữ nháp→unlink→lưu tiếp và focus; API/refresh vẫn tắt, MSG06/tên MSG24 và các phần LAB-01 còn thiếu giữ pending.
 
 > **EMP-API-04a-E-UI ngày 28/10:** [binding lỗi vào form](reports/WEB_EMPLOYEE_ERROR_UI_BINDING_REVIEW_2026-10-28.md) đã có cho MSG01/MSG03: nhiều ô lỗi, phần tổng hợp nhóm/version, focus sau commit, duplicate ID chỉ mở sau cú bấm và giữ nháp nếu ID chưa có trong workspace. Có 18 test mới; chưa nối BFF/API thật. MSG06, tên MSG24, nested paths và form sửa ngân hàng/vùng vẫn chờ.
@@ -90,6 +92,21 @@ Khi bắt đầu mỗi lát:
 | EMP-API-04a-E-UI.2b | Xử lý vùng cũ ngừng dùng/thiếu danh mục mà không tự xóa | Đã áp dụng WEB-EMP-ZONE-01 theo người dùng chốt: bỏ chọn vùng ngừng trước lưu, không cho chọn lại; thiếu catalog giữ nháp/báo lỗi, không tự xóa |
 | EMP-API-04a-E-UI.2c | Tên MSG24 structured và mapping các path backend lồng/index | Pending backend/contract; không parse detail hoặc giả định đã đủ dữ liệu; MSG06 tiếp tục chờ |
 | EMP-API-04b/05 | Route/client binding, session/G1 và nghiệm thu race/release trên môi trường được chọn | Pending: MSG06, auth runtime và QA/DB/revision; merge PR16 đã đạt |
+
+#### EMP-LIST — Hoàn thiện danh sách mock theo LAB-01 (28/10)
+
+Làm phần đọc không phụ thuộc API/MSG06/MSG24 trước. Đã đọc lại OMTS-203, parent OMTS-119, dependency OMTS-199 và UC10. Không đổi quyền Owner, thứ tự dữ liệu, mutation hoặc vòng đời tài khoản.
+
+| Lát nhỏ | Phần việc | Tiêu chí kiểm |
+| --- | --- | --- |
+| EMP-LIST-01 | Lọc tên/SĐT + trạng thái + liên kết + ID vùng; lọc trước khi chia trang20 | Nhiều vùng không làm trùng hồ sơ; kết hợp filter đúng; trang cuối/empty/giảm dữ liệu hợp lệ |
+| EMP-LIST-02 | Filter vùng, nhãn vùng trong hàng và badge tài khoản Active/Locked | Vùng lịch sử vẫn tra cứu được; ID thiếu danh mục không bị đoán tên hoặc tự xóa; row mở đúng ID |
+| EMP-LIST-03 | Search300ms, hủy timer cũ/unmount, pagination và reset lọc | Kết quả theo lần gõ cuối; reset không hồi sinh query cũ; đổi filter về trang1; không hiện pagination vô nghĩa |
+| EMP-LIST-04 | Regression, lint/typecheck/build, browser360/1024, báo cáo và bài học local | Không tràn ngang, nhãn/focus rõ; số liệu chỉ từ workspace đã tải; chưa gọi là paging API thật |
+
+Đã chốt ngày28/10 qua câu trả lời của Duy Thái: mở danh sách mặc định Employed theo Jira. Người dùng vẫn chọn All/Left hoặc xóa bộ lọc để xem hồ sơ đã nghỉ; không đổi trạng thái nhân viên. Không coi lát danh sách mock hoàn tất là QA/API LAB-01 đã xong.
+
+EMP-LIST-01–04 đã hoàn tất trong phạm vi mock:21 ca mới, source riêng2.104 pass/31 Redis skip, lint/typecheck/build18/18/24 HTTP và browser360/1024 đạt. Review sửa mất focus sau reset; báo cáo giữ cả RED/GREEN và giới hạn dataset browser3 người/paging test45 người. API/runtime/employment/create-account/MSG06/tên MSG24 tiếp tục là các bước riêng.
 
 Chỉ chuẩn bị hàm thuần và fixture khi chưa đủ điều kiện runtime. Không thêm tác vụ seed/khóa tài khoản/thu hồi grant vào thao tác unlink. Nếu model thật đòi thêm trường/luồng chưa được quyết định thì hỏi trước, không lược bỏ để test xanh.
 
@@ -261,3 +278,5 @@ Trong lúc chờ contract/gate/QA account: hoàn thiện test dữ liệu null, 
 ## 6. Checklist đóng mỗi lát
 
 Đọc lại ticket và parent/dependency truy cập được; ghi rõ phần không đọc được. Cập nhật contract revision và decision liên quan. Thêm test happy/error/race, chạy checks; tự review security và UI. Cập nhật report và bài local. Chỉ commit/push khi được yêu cầu, không merge develop. Mốc “chuẩn bị xong” không phải “ghép API xong”, “local xong” không phải “QA xong”.
+
+Review EMP-LIST trước xuất bản28/10 bổ sung2 ca (paging khi debounce, nhiều nhãn vùng); tổng21 test mới và14 workflow cases. Không đổi các cổng API/MSG06/MSG24. Kết quả source cuối và phạm vi commit được ghi trong báo cáo danh sách.

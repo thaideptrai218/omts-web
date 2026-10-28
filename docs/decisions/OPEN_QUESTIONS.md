@@ -1,5 +1,9 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## WEB-EMP-LIST-01 — Bộ lọc mặc định của danh sách nhân viên
+
+**Đã chốt, 28/10/2026, Duy Thái:** “Đang làm việc — theo Jira (đề xuất)”. Mở màn mặc định Employed theo OMTS-203. Owner vẫn chọn All/Left hoặc xóa bộ lọc để xem người đã nghỉ; đây là lựa chọn hiển thị, không đổi trạng thái hồ sơ hay account. [Triển khai và giới hạn](../reports/WEB_EMPLOYEE_DIRECTORY_COMPLETION_2026-10-28.md).
+
 ## WEB-EMP-ZONE-01 — Vùng cũ đã ngừng sử dụng trong hồ sơ nhân viên
 
 **Đã chốt, 28/10/2026, Duy Thái đồng ý đề xuất qua câu trả lời async.** Hiển thị vùng đã ngừng đang gắn với hồ sơ, cho Owner chủ động bỏ chọn và yêu cầu bỏ trước lưu. Không tự xóa hoặc cho thêm/chọn lại vùng ngừng. Quy tắc này giải quyết phần UI chưa được Jira mô tả rõ; không sửa SRS/Jira/backend.

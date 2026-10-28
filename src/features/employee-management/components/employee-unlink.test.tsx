@@ -86,6 +86,21 @@ function deferred<T>() {
 }
 
 describe("employee unlink through list and editor", () => {
+  it("updates working-zone rows and an active zone filter after saving the actual editor", async () => {
+    const { user, editor } = await openEditor();
+    fireEvent.change(screen.getByLabelText("Vùng làm việc"), { target: { value: "zone-east" } });
+    await user.click(within(editor).getByRole("checkbox", { name: "Khu Đông" }));
+    await user.click(within(editor).getByRole("checkbox", { name: "Khu Nam" }));
+    await user.click(within(editor).getByRole("button", { name: "Lưu thay đổi" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: employee.fullName })).toBeNull());
+    expect(screen.queryByRole("button", { name: /Nguyễn Văn An/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Vùng làm việc"), { target: { value: "zone-south" } });
+    const row = screen.getByRole("button", { name: /Nguyễn Văn An/ });
+    expect(within(row).getByText("Khu Nam")).toBeTruthy();
+    await user.click(row);
+    expect(screen.getByRole<HTMLInputElement>("checkbox", { name: "Khu Nam" }).checked).toBe(true);
+    expect(repository.snapshotEmployees()[0].account?.id).toBe(employee.account.id);
+  });
   it("keeps keyboard focus in the working-zone group after removing a discontinued checkbox", async () => {
     repository = createMockEmployeeManagementRepository({
       accounts: mockEmployeeAccounts, zones: mockEmployeeZones, latencyMs: 0,

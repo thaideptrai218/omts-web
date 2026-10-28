@@ -226,6 +226,7 @@ export function EmployeeManagementExperience() {
 
       <EmployeeList
         employees={workspace.employees}
+        zones={workspace.zones}
         onSelect={openEmployee}
         selectedEmployeeId={selectedEmployeeId}
       />
