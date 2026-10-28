@@ -87,3 +87,7 @@ Sửa tại onChange của `EmployeeWorkingZones`: khi bỏ chọn mục đã ng
 31 ca Redis tích hợp bị skip, không coi là đã nghiệm thu Redis thật. Số 2.083 thấp hơn working tree trước vì không chứa 14 ca hồ sơ/thông báo local, đồng thời có thêm 1 ca focus trong lượt review này. Không có sửa source sau bộ kiểm trên; chỉ hoàn thiện báo cáo/context/plan. Ảnh và số đo browser phía trên thuộc lượt triển khai trước; lượt review này dùng test component cho bản vá focus, không tuyên bố đã chạy lại browser native.
 
 Tự đánh giá: đã sửa P3 EMP-WORK-REV-01, không phát hiện lỗi mới còn mở trong phạm vi đã kiểm. Phạm vi xuất bản là nhánh hiện tại `feature/OMTS-132-web-foundation`; PR #3 tiếp tục draft, không merge develop. Chưa bật API/refresh; MSG06, tên MSG24, runtime catalog/session và QA/DB vẫn chờ. Kết quả local không thay cho trạng thái CI của commit sau push; GitGuardian lịch sử tiếp tục để sau theo yêu cầu người dùng.
+
+## Kết quả CI sau push
+
+Đã push `637e4a8` lên nhánh hiện tại. [Kiểm tra CI đúng commit](WEB_CI_637E4A8_REVIEW_2026-10-28.md) xác nhận build-test/Gitleaks/pr-title SUCCESS; Linux đạt2.083 test pass/31 Redis skip, build18/18 trang và24 HTTP assertions. Hồi quy focus vùng ngừng qua trong file26/26. GitGuardian vẫn FAILURE với7 vị trí thuộc6 incident lịch sử, không có dòng trỏ vào637e4a8. Không phát hiện lỗi code mới cần vá/thêm test trong lần kiểm CI này. PR vẫn draft, chưa merge develop; API/refresh, MSG06 và tên MSG24 giữ nguyên trạng thái chờ.
