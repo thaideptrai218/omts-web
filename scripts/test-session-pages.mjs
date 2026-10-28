@@ -53,7 +53,7 @@ try {
     try { await get("/"); ready = true; break; } catch { await new Promise((resolve) => setTimeout(resolve, 100)); }
   }
   assert.ok(ready, "Next child failed to start");
-  for (const path of ["/dashboard", "/account", "/employees", "/access/accounts", "/access/roles", "/cooperative/profile", "/farming/zones"]) {
+  for (const path of ["/dashboard", "/account", "/employees", "/access/accounts", "/access/roles", "/cooperative/profile", "/farming/zones", "/farming/rafts"]) {
     const response = await get(path);
     const body = await response.text();
     assert.ok(response.headers.get("location") === "/login" || body.includes("/login"), "Missing anonymous redirect");

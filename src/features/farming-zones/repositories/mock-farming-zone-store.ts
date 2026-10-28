@@ -8,6 +8,7 @@ import type { FarmingZoneRepository } from "./farming-zone-repository";
 import { farmingZoneSchema, zoneNumber } from "../schemas/farming-zone-schema";
 import {
   cloneZone,
+  currentZone,
   projectZones,
   stampZone,
   zoneConflict,
@@ -22,6 +23,7 @@ export function createMockFarmingZoneStore(
     latencyMs?: number;
     now?: () => Date;
     initialActorName?: string;
+    getInUseRaftCodes?: (zoneId: string) => readonly string[];
   }>,
 ) {
   const state: MockZoneState = {
@@ -33,6 +35,7 @@ export function createMockFarmingZoneStore(
     files: new Map(),
     updates: new Map(),
     now: options.now ?? (() => new Date()),
+    getInUseRaftCodes: options.getInUseRaftCodes,
   };
   for (const record of [...state.zones, ...state.documents])
     state.updates.set(record.id, {
@@ -115,8 +118,10 @@ export function createMockFarmingZoneStore(
           zone.status === input.status
         )
           return { status: "invalid", fields: ["status"] };
-        if (input.status === "discontinued" && zone.inUseRaftCodes.length)
-          return { status: "blocked", raftCodes: [...zone.inUseRaftCodes] };
+        const raftCodes =
+          state.getInUseRaftCodes?.(zone.id) ?? zone.inUseRaftCodes;
+        if (input.status === "discontinued" && raftCodes.length)
+          return { status: "blocked", raftCodes: [...raftCodes] };
         state.zones = state.zones.map((item) =>
           item.id === zone.id
             ? {
@@ -132,7 +137,7 @@ export function createMockFarmingZoneStore(
   }
   return {
     forAccess,
-    snapshotZones: () => state.zones.map(cloneZone),
+    snapshotZones: () => state.zones.map((zone) => currentZone(state, zone)),
     snapshotOptions: () =>
       state.zones.map((zone) => ({
         id: zone.id,

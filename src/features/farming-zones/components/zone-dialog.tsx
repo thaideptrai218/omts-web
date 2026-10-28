@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import Link from "next/link";
 import { Dialog } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -22,12 +23,14 @@ export function ZoneDialog({
   service,
   onSaved,
   onClose,
+  canViewRafts = false,
 }: {
   zone?: FarmingZone;
   workspace: ZoneWorkspace;
   service: FarmingZoneService;
   onSaved(result: Saved): void;
   onClose(): void;
+  canViewRafts?: boolean;
 }) {
   const [dirty, setDirty] = useState(false);
   const [pending, setPending] = useState(false);
@@ -66,6 +69,20 @@ export function ZoneDialog({
         if (!open) close();
       }}
     >
+      {zone && canViewRafts && (
+        <Link
+          href={`/farming/rafts?zoneId=${encodeURIComponent(zone.id)}`}
+          aria-disabled={dirty || pending || mutation.pending}
+          title={dirty ? "Lưu hoặc hủy thay đổi trước khi xem bè." : undefined}
+          onClick={(event) => {
+            if (dirty || editorLocked.current || mutation.isLocked())
+              event.preventDefault();
+          }}
+          className="mb-5 inline-flex min-h-11 items-center rounded-control px-3 text-sm font-semibold text-primary hover:bg-primary-soft aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+        >
+          Xem bè trong vùng
+        </Link>
+      )}
       {zone && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <StatusPill tone={zone.status === "in-use" ? "success" : "neutral"}>
@@ -76,7 +93,10 @@ export function ZoneDialog({
               className="sm:w-auto"
               variant="secondary"
               disabled={dirty || pending || mutation.pending}
-              onClick={() => setConfirmStatus(true)}
+              onClick={() => {
+                mutation.clearError();
+                setConfirmStatus(true);
+              }}
             >
               {zone.status === "in-use"
                 ? "Ngừng sử dụng vùng"
@@ -128,7 +148,7 @@ export function ZoneDialog({
           />
         </fieldset>
       )}
-      {mutation.error && (
+      {mutation.error && !confirmStatus && (
         <p
           role="alert"
           className="mt-4 rounded-control bg-danger/10 p-3 text-sm text-danger"
@@ -138,6 +158,7 @@ export function ZoneDialog({
       )}
       <ConfirmDialog
         open={confirmStatus}
+        error={mutation.error || undefined}
         isPending={mutation.pending}
         title={
           zone?.status === "in-use"

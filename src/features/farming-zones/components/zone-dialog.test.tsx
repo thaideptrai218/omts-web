@@ -35,7 +35,7 @@ vi.mock("@/components/ui/dialog", () => ({
     ) : null,
 }));
 afterEach(cleanup);
-function setup(canWrite = true) {
+function setup(canWrite = true, canViewRafts = false) {
   const store = createMockFarmingZoneStore({
     initialZones: initialFarmingZones,
     latencyMs: 0,
@@ -56,6 +56,7 @@ function setup(canWrite = true) {
   const onClose = vi.fn();
   const view = render(
     <ZoneDialog
+      canViewRafts={canViewRafts}
       zone={initialFarmingZones[0]}
       workspace={workspace}
       service={service}
@@ -199,4 +200,30 @@ it("focuses the required attachment without submitting an incomplete document", 
   await screen.findByText("Chọn tệp đính kèm cho giấy tờ mới.");
   expect(document.activeElement).toBe(screen.getByLabelText("Tệp đính kèm *"));
   expect(save).not.toHaveBeenCalled();
+});
+it("shows the actual in-use raft blocker inside the status confirmation", async () => {
+  const { service } = setup();
+  vi.spyOn(service, "changeStatus").mockResolvedValue({
+    status: "blocked",
+    raftCodes: ["B1-01", "B1-02"],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ngừng sử dụng vùng" }));
+  fireEvent.click(screen.getByRole("button", { name: "Ngừng sử dụng" }));
+  const confirmation = screen.getByRole("dialog", {
+    name: "Ngừng sử dụng vùng?",
+  });
+  await waitFor(() =>
+    expect(confirmation.querySelector('[role="alert"]')?.textContent).toContain(
+      "B1-01, B1-02",
+    ),
+  );
+});
+it("keeps the zone draft instead of following the raft shortcut while dirty", () => {
+  setup(true, true);
+  const input = screen.getByLabelText<HTMLInputElement>("Tên vùng *");
+  fireEvent.change(input, { target: { value: "Bản nháp tên vùng" } });
+  const link = screen.getByRole("link", { name: "Xem bè trong vùng" });
+  expect(link.getAttribute("aria-disabled")).toBe("true");
+  expect(fireEvent.click(link)).toBe(false);
+  expect(input.value).toBe("Bản nháp tên vùng");
 });

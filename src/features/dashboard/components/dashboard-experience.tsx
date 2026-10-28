@@ -14,6 +14,7 @@ import { useAuth } from "@/features/auth/state/auth-provider";
 import { dashboardService } from "../services/dashboard-service.instance";
 import type { DashboardView } from "../domain/dashboard";
 import { DashboardDataSkeleton, DashboardPanels } from "./dashboard-panels";
+import { DashboardFarmingSummaryPanel } from "./dashboard-farming-summary";
 
 const shortcuts: readonly {
   href: string;
@@ -22,6 +23,13 @@ const shortcuts: readonly {
   icon: InterfaceIconName;
   permission: EffectivePermissionKey;
 }[] = [
+  {
+    href: "/farming/rafts",
+    label: "Bè nuôi",
+    description: "Tra cứu và xem sơ đồ làn",
+    icon: "raft",
+    permission: "farming.rafts.view",
+  },
   {
     href: "/employees",
     label: "Nhân viên",
@@ -96,7 +104,7 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
             Bảng điều hành
           </h1>
           <p className="mt-2 text-sm leading-6 text-text-muted">
-            Nhân sự và truy cập trong hợp tác xã.
+            Theo dõi nhân sự, truy cập và tình hình bè nuôi trong hợp tác xã.
           </p>
         </div>
         <Button
@@ -165,6 +173,7 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
         ) : null}
       </div>
 
+      {view?.farming && <DashboardFarmingSummaryPanel summary={view.farming} />}
       <section
         className="flex flex-col gap-4 rounded-card border border-dashed border-border-strong bg-surface p-5 sm:flex-row sm:items-center sm:p-6"
         aria-labelledby="operations-title"
@@ -177,7 +186,7 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
             Thu chi và vận hành nuôi trồng
           </h2>
           <p className="mt-1 text-sm leading-6 text-text-muted">
-            Chưa có số liệu để tổng hợp thu chi, bè nuôi và sản lượng thu hoạch.
+            Chưa có số liệu để tổng hợp thu chi và sản lượng thu hoạch.
           </p>
         </div>
       </section>

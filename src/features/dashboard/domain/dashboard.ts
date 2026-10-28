@@ -11,11 +11,19 @@ export type DashboardAccessSummary = Readonly<{
 }>;
 
 export type DashboardSnapshot = Readonly<{
+  farming?: DashboardFarmingSummary;
   access: DashboardAccessSummary;
   workforce: DashboardWorkforceSummary;
 }>;
 
 export type DashboardView = Readonly<{
+  farming?: DashboardFarmingSummary;
   access?: DashboardAccessSummary;
   workforce?: DashboardWorkforceSummary;
+}>;
+
+export type DashboardFarmingSummary = Readonly<{
+  activeRaftCount: number;
+  discontinuedRaftCount: number;
+  openCycleCount: number;
 }>;

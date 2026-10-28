@@ -22,6 +22,11 @@ export function createDashboardService(
         hasEffectivePermission(access, "access.roles.manage");
 
       return {
+        ...(snapshot.farming &&
+        hasEffectivePermission(access, "cooperative.profile.manage") &&
+        hasEffectivePermission(access, "farming.rafts.view")
+          ? { farming: snapshot.farming }
+          : {}),
         access: canViewAccess ? snapshot.access : undefined,
         workforce: canViewWorkforce ? snapshot.workforce : undefined,
       };

@@ -40,6 +40,7 @@ const navigationGroups = [
         label: "Vùng nuôi",
         requiredPermission: "farming.zones.view",
       },
+      { href: "/farming/rafts", icon: "raft", label: "Bè nuôi", requiredPermission: "farming.rafts.view" },
       {
         href: "/dashboard",
         icon: "dashboard",

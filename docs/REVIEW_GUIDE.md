@@ -39,15 +39,29 @@ For coding with live updates, use `npm run dev` instead of `npm run start`. Next
 
 ## Suggested review sequence
 
+### Raft walkthrough (October 28)
+
+Open **Bè nuôi** (`/farming/rafts`) as `owner`, or use **Xem bè trong vùng** in a zone profile. Combine code/location search, zone and usage-status filters, then press **Lọc danh sách**. The initial six rafts are synthetic frontend scenarios, not production records. Zone names come from the shared zone registry.
+
+Open **B1-01** to inspect an open cycle. Its lane diagram has seeded, harvested and written-off portions plus a separate planned-harvest overlay. Select a colored portion or its text label to inspect its date, source record and recorder. Change **Ngày xem sơ đồ** using Vietnamese day/month/year input; selecting a closed cycle moves the viewing date to its closing day. No oyster weight is inferred from lane length or color.
+
+Use **Thêm bè nuôi** to select an active zone, enter code, coordinates, size and at least one lane with length and markers A/B. Save first, then attach a JPEG/PNG photo of at most 10 MiB. Photos are stored in memory in this review build. A duplicate code is rejected within the same zone; errors preserve the draft. Closing an edited draft requires confirmation. Material cost displays **Chưa có số liệu chi phí** until purchase-receipt data exists.
+
+On **B1-01**, **Chỉnh sửa** permits metadata changes but keeps the layout locked while its cycle is open. **Ngừng sử dụng** is disabled with a reason. On **B1-02**, the cycle is closed: edit a lane length and save to create another layout version, then inspect the earlier diagram by date. Removing a lane with recorded historical segments is rejected. A raft with no open cycle can be discontinued and reactivated with confirmation; a stopped zone blocks creation/reactivation. Metadata drafts must be saved or discarded before returning to status actions.
+
+Return to the Owner dashboard to inspect the raft/usage/open-cycle totals from the same mock registry. Sign in as `nguyen.an / demo123` to verify that only assigned-zone rafts are visible and create/edit/status/photo-upload controls are absent. Changing a URL filter does not grant access to other zones. Role permissions for farming zones and rafts expose View only; Owner write authority is checked separately.
+
+This is the raft/lane-management slice. Cultivation-cycle creation, seeding/harvest entry, purchase receipts, inventory, finance and real backend integration remain separate work. A browser reload resets the mock registry and attachments.
+
 ### Farming-zone walkthrough (October 28)
 
 Open **Vùng nuôi** (`/farming/zones`) as `owner`. Search by name/code/location and filter usage status, then open a card. Rename a sample zone, save, close the dialog and inspect the employee/account zone pickers: the new name is shared while existing assignments keep their IDs. `DEMO-*` codes and locations are sample data; rename them for a presentation rather than treating them as confirmed cooperative records.
 
 Use **Thêm vùng nuôi** to save code, name, location, coordinates, area and water-measurement point first. Legal documents are added afterwards inside the saved zone's dialog. Missing mandatory document types remain visible; creating a zone alone never marks its legal records complete. Attach a PDF/JPEG/PNG of at most 10 MiB and select all covered zones. **Gia hạn / thay thế** creates a new record, keeps the old file/dates and changes the old record to superseded only from the replacement's effective date. **Xem hiệu lực tại ngày** can inspect both sides of that date. Attachments stay in memory; this is not a cloud upload or a real reminder service.
 
-**Ngừng sử dụng vùng** and **Sử dụng lại vùng** require confirmation and retain history. Discontinuation is blocked by active rafts in repository tests; the review dataset does not yet contain a real raft registry. Save or discard metadata changes before changing usage status. A document save does not save or discard a metadata draft.
+**Ngừng sử dụng vùng** and **Sử dụng lại vùng** require confirmation and retain history. Discontinuation is blocked by active rafts from the shared raft registry, with the blocking codes shown inside the confirmation popup. Save or discard metadata changes before changing usage status. A document save does not save or discard a metadata draft. The raft shortcut is unavailable until a metadata draft is saved or discarded.
 
-Sign out and sign in as `nguyen.an / demo123`: only the assigned zone is readable, with no create/edit/status/document-write actions. A role name alone does not grant access. The disabled `tran.binh` fixture remains blocked. Other operational functions (rafts, cultivation, finance, payroll, orders and public QR) are still separate planned slices, not complete role workflows.
+Sign out and sign in as `nguyen.an / demo123`: only the assigned zone is readable, with no create/edit/status/document-write actions. A role name alone does not grant access. The disabled `tran.binh` fixture remains blocked. Other operational functions (cultivation entry, finance, payroll, orders and public QR) are still separate planned slices, not complete role workflows.
 
 All date-entry controls display **ngày/tháng/năm** and accept Vietnamese date input. ISO values remain inside service requests. Expand the sidebar by pointer or keyboard focus: it should move the content column rather than cover it. On a narrow screen, use the Menu drawer.
 

@@ -17,6 +17,7 @@ For a presentation without development overlays, use `npm run build` followed by
 - **The UI can run with mock data** without a backend, database, Docker, or Redis.
 - Cooperative profile, employee, account, role, and personal profile screens currently use mock service/repository adapters.
 - Farming zones now have a searchable directory and profile dialogs. Owners can create, rename, edit and discontinue/reactivate zones, then add shared legal documents and replacement versions. Assigned internal users with View permission have read-only access. Renames keep stable zone IDs and update management pickers and role/scope labels from a shared source. Sample locations are not verified cooperative records.
+- Rafts now have a directory, profile dialogs, dated lane diagrams and segment-source details. Owners can create/edit rafts and layouts, upload JPEG/PNG photos and discontinue/reactivate eligible rafts. Open cultivation cycles block layout changes and discontinuation; historical layouts are retained. Assigned readers stay within their zone/record scope. Missing material cost remains unknown until purchase receipts are available.
 - Date fields use Vietnamese day/month/year entry and a Vietnamese picker while service values remain ISO dates. The desktop sidebar reserves layout space when it expands instead of covering page text.
 - The review build shares mock state between management screens: updated role permissions can be assigned, new accounts can be linked to employees, and dashboard counts update. Created staff accounts can complete first-login password/contact setup; account locking and password reset affect their mock login. Personal profile changes, password recovery, and notification settings can be demonstrated without a backend.
 - The approved October 27 role policy is now **three fixed zone roles: Zone Manager, Accountant, and Staff**. Owners can edit permissions and discontinue/reactivate roles; they cannot add, copy, or rename roles. Staff initially has no business permissions. This policy is implemented in the product mock; backend/SRS alignment is tracked separately.
@@ -114,7 +115,7 @@ These accounts exist only in the **frontend mock**. They are not backend or QA c
 
 | Username | Review scenario |
 | --- | --- |
-| `owner` | Cooperative Owner: dashboard, cooperative profile, employees, internal accounts, and roles/permissions |
+| `owner` | Cooperative Owner: dashboard, cooperative profile, employees, internal accounts, roles/permissions, farming zones and rafts |
 | `staff-verified` | Verified Staff: restricted navigation and personal profile |
 | `sysadmin` | System Administrator: cooperative provisioning |
 | `staff-first-login` | First-login onboarding: change the temporary password and verify contact information; not intended for a quick management UI review |

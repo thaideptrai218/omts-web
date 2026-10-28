@@ -24,6 +24,10 @@ export function FarmingZoneExperience() {
     <Workspace
       key={state.account.accountId}
       accountId={state.account.accountId}
+      canViewRafts={hasEffectivePermission(
+        state.account.access,
+        "farming.rafts.view",
+      )}
     />
   );
 }
@@ -38,7 +42,13 @@ function Denied() {
     </section>
   );
 }
-function Workspace({ accountId }: { accountId: string }) {
+function Workspace({
+  accountId,
+  canViewRafts,
+}: {
+  accountId: string;
+  canViewRafts: boolean;
+}) {
   const service = getFarmingZoneService(accountId);
   const { notify } = useToast();
   const [workspace, setWorkspace] = useState<ZoneWorkspace>();
@@ -162,6 +172,7 @@ function Workspace({ accountId }: { accountId: string }) {
           key={selection}
           zone={selected}
           workspace={workspace}
+          canViewRafts={canViewRafts}
           service={service}
           onSaved={saved}
           onClose={() => setSelection(undefined)}

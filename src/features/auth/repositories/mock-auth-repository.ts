@@ -46,6 +46,7 @@ const demoSession = {
     access: {
       permissions: [
         { key: "farming.zones.view", scope: { kind: "all-zones" } },
+        { key: "farming.rafts.view", scope: { kind: "all-zones" } },
         { key: "farming.zones.manage", scope: { kind: "all-zones" } },
         {
           key: "access.accounts.manage",

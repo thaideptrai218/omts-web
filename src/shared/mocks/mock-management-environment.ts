@@ -17,21 +17,34 @@ import { createMockEmployeeManagementRepository } from "@/features/employee-mana
 import { createMockDashboardRepository } from "@/features/dashboard/repositories/mock-dashboard-repository";
 import { createMockFarmingZoneStore } from "@/features/farming-zones/repositories/mock-farming-zone-store";
 import { initialFarmingZones } from "@/features/farming-zones/mocks/farming-zone-fixtures";
+import { createMockRaftStore } from "@/features/rafts/repositories/mock-raft-store";
+import { mockRafts } from "@/features/rafts/mocks/raft-fixtures";
+import type { FarmingZoneOption } from "@/features/account-management/domain/account-management";
 
 // Shared mock composition, not a backend or a persistence layer. Snapshots are
 // cloned by repositories; UI still goes through its existing service contract.
 export function createMockManagementEnvironment(latencyMs = 350) {
+  const raftStore = createMockRaftStore({
+    initialRafts: mockRafts,
+    latencyMs,
+    getZones: (): readonly FarmingZoneOption[] => zoneStore.snapshotOptions(),
+  });
   const zoneStore = createMockFarmingZoneStore({
     initialZones: initialFarmingZones,
     latencyMs,
     initialActorName: "Lê Minh Hải",
+    getInUseRaftCodes: (id): readonly string[] =>
+      raftStore
+        .snapshotRafts()
+        .filter((raft) => raft.zoneId === id && raft.status === "in-use")
+        .map((raft) => raft.code),
   });
   const catalog = mockFeatureCatalog.map((feature) =>
-    feature.code === "FARMING_ZONE"
+    feature.code === "FARMING_ZONE" || feature.code === "RAFT"
       ? {
           ...feature,
           description:
-            "Xem vùng được phân công. Thêm và sửa vùng chỉ dành cho Chủ hợp tác xã.",
+            "Xem trong phạm vi được phân công. Thêm, sửa và đổi trạng thái chỉ dành cho Chủ hợp tác xã.",
           supportedActions: feature.supportedActions.filter(
             (action) => action.key === "VIEW",
           ),
@@ -41,7 +54,8 @@ export function createMockManagementEnvironment(latencyMs = 350) {
   const initialRoles = mockFixedRoles.map((role) => ({
     ...role,
     permissions: role.permissions.map((permission) =>
-      permission.featureCode === "FARMING_ZONE"
+      permission.featureCode === "FARMING_ZONE" ||
+      permission.featureCode === "RAFT"
         ? {
             ...permission,
             actionKeys: permission.actionKeys.filter((key) => key === "VIEW"),
@@ -117,10 +131,18 @@ export function createMockManagementEnvironment(latencyMs = 350) {
         .filter((account) => account.accountType === "internal"),
   });
   const dashboard = createMockDashboardRepository(latencyMs, () => ({
+    rafts: raftStore.snapshotRafts(),
     accounts: accounts.snapshotAccounts(),
     roles: roles.snapshotRoles(),
     employees: employees.snapshotEmployees(),
     zones: zoneStore.snapshotOptions(),
   }));
-  return { accounts, roles, employees, dashboard, zones: zoneStore };
+  return {
+    accounts,
+    roles,
+    employees,
+    dashboard,
+    zones: zoneStore,
+    rafts: raftStore,
+  };
 }

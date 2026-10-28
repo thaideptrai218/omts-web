@@ -1,5 +1,11 @@
 # OMTS Web — câu hỏi mở cần quyết định
 
+## RAFT-DEC-01/02 — Tạo bè/vật tư và quyền ghi bè
+
+**Đã chốt 28/10/2026, Duy Thái trả lời trực tiếp qua async.** Theo backend mới: lưu bè và sơ đồ trước, chi phí lấy từ phiếu nhập INP-03 sau; chưa có phiếu nhập thì chi phí chưa xác định, không thay bằng0. Chỉ Owner tạo/sửa/ngừng/khôi phục/cập nhật ảnh bè. Người có RAFT View chỉ đọc trong vùng và phạm vi bản ghi được cấp. Không triển khai phiếu vật tư tạo bè/thay thế cũ theo UC76/77 hoặc cấp quyền ghi bè cho Manager.
+
+Đây là quyết định riêng cho Bè nuôi, sau khi đối chiếu UC18/UC76 và OMTS-210/209/backend develop953f597; không suy từ quyết định Vùng nuôi. [Kế hoạch và phạm vi](../WEB_RAFT_IMPLEMENTATION_PLAN.md). Không sửa SRS/Jira/backend; API/refresh vẫn tắt.
+
 ## WEB-ZONE-01/02 — Quyền và thứ tự khai báo vùng
 
 **Đã chốt 28/10/2026, Duy Thái trả lời trực tiếp qua async:** chỉ Owner tạo/sửa/ngừng/khôi phục vùng; Quản lý vùng chỉ xem trong phạm vi được cấp. Không dùng quyền Create ở “Tất cả vùng” để cho Manager tạo vùng như Report3Finnal UC15 cũ. Danh mục quyền vùng trong mock sản phẩm chỉ còn View cho vai trò được gán; quyền ghi Owner được kiểm riêng.

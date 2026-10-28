@@ -1,13 +1,25 @@
-import { mockManagedAccounts, mockFarmingZones } from "@/features/account-management/mocks/account-management-fixtures";
+import {
+  mockManagedAccounts,
+  mockFarmingZones,
+} from "@/features/account-management/mocks/account-management-fixtures";
 import type { DashboardRepository } from "@/features/dashboard/repositories/dashboard-repository";
 import { mockEmployeeProfiles } from "@/features/employee-management/mocks/employee-management-fixtures";
 import { mockRoles } from "@/features/role-management/mocks/role-management-fixtures";
-import type { ManagedAccount, FarmingZoneOption } from "@/features/account-management/domain/account-management";
+import type {
+  ManagedAccount,
+  FarmingZoneOption,
+} from "@/features/account-management/domain/account-management";
 import type { RoleDetails } from "@/features/role-management/domain/role-management";
 import type { EmployeeProfile } from "@/features/employee-management/domain/employee-management";
+import type { RaftProfile } from "@/features/rafts/domain/raft";
 
-type SummarySources = Readonly<{ accounts: readonly ManagedAccount[]; roles: readonly RoleDetails[];
-  zones: readonly FarmingZoneOption[]; employees: readonly EmployeeProfile[] }>;
+type SummarySources = Readonly<{
+  accounts: readonly ManagedAccount[];
+  roles: readonly RoleDetails[];
+  zones: readonly FarmingZoneOption[];
+  employees: readonly EmployeeProfile[];
+  rafts?: readonly RaftProfile[];
+}>;
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -15,8 +27,12 @@ function wait(milliseconds: number): Promise<void> {
 
 export function createMockDashboardRepository(
   latencyMs = 350,
-  getSources: () => SummarySources = () => ({ accounts: mockManagedAccounts, roles: mockRoles,
-    zones: mockFarmingZones, employees: mockEmployeeProfiles }),
+  getSources: () => SummarySources = () => ({
+    accounts: mockManagedAccounts,
+    roles: mockRoles,
+    zones: mockFarmingZones,
+    employees: mockEmployeeProfiles,
+  }),
 ): DashboardRepository {
   return {
     async load() {
@@ -28,6 +44,24 @@ export function createMockDashboardRepository(
       );
 
       return {
+        ...(source.rafts
+          ? {
+              farming: {
+                activeRaftCount: source.rafts.filter(
+                  (raft) => raft.status === "in-use",
+                ).length,
+                discontinuedRaftCount: source.rafts.filter(
+                  (raft) => raft.status === "discontinued",
+                ).length,
+                openCycleCount: source.rafts.reduce(
+                  (count, raft) =>
+                    count +
+                    raft.cycles.filter((cycle) => !cycle.closedAt).length,
+                  0,
+                ),
+              },
+            }
+          : {}),
         access: {
           activeInternalAccountCount: internalAccounts.filter(
             (account) => account.status === "active",
@@ -35,8 +69,9 @@ export function createMockDashboardRepository(
           lockedInternalAccountCount: internalAccounts.filter(
             (account) => account.status === "locked",
           ).length,
-          roleInUseCount: source.roles.filter((role) => role.status === "in-use")
-            .length,
+          roleInUseCount: source.roles.filter(
+            (role) => role.status === "in-use",
+          ).length,
           zoneInUseCount: source.zones.filter(
             (zone) => zone.status === "in-use",
           ).length,

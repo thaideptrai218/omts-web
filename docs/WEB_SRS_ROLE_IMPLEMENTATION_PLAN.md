@@ -26,12 +26,12 @@ Theo yêu cầu mới, SRS và quyết định đã chốt xác định chức n
 
 Theo ma trận actor/UC của Report3Finnal: Owner quản trị và nghiệp vụ HTX; Manager vận hành vùng được cấp; Accountant thu/chi/công nợ/lương/báo cáo theo scope; Staff công việc/thu nhập của mình; Trader đơn hàng/chứng từ/công nợ/khiếu nại của mình; người xem QR chỉ nội dung công bố; SysAdmin quản trị nền tảng. Danh sách này là yêu cầu, không phải chức năng đã triển khai.
 
-Sau vùng/giấy phép sẽ đi theo lát có phụ thuộc: bè và vật tư → giống/chu kỳ/nhật ký/môi trường → thu hoạch/truy xuất → khách/đơn/handover → thanh toán/công nợ → lao động/lương → báo cáo/thông báo/audit. Mỗi lát có inventory màn/actor, dữ liệu mock, trạng thái, micro-task và kiểm chứng riêng trước khi code. Không dựng menu chết hoặc hàng loạt màn trống để giả tiến độ. Chức năng hiện trường/QR công khai vẫn cần đối chiếu chiến lược kênh, không mặc định mọi UC full Web/Mobile.
+Lát tiếp theo [bè và sơ đồ làn](WEB_RAFT_IMPLEMENTATION_PLAN.md) đã ghép mock; quyết định RAFT-DEC-01/02 chọn Owner ghi và vật tư theo phiếu nhập INP-03 sau. Tiếp theo là phiếu nhập/vật tư → giống/chu kỳ/nhật ký/môi trường → thu hoạch/truy xuất → khách/đơn/handover → thanh toán/công nợ → lao động/lương → báo cáo/thông báo/audit. Mỗi lát có inventory màn/actor, dữ liệu mock, trạng thái, micro-task và kiểm chứng riêng trước khi code. Không dựng menu chết hoặc hàng loạt màn trống để giả tiến độ. Chức năng hiện trường/QR công khai vẫn cần đối chiếu chiến lược kênh, không mặc định mọi UC full Web/Mobile.
 
 | Vai trò | Có thể review trong bản mock này | Phần nghiệp vụ còn phải triển khai theo lát |
 | --- | --- | --- |
-| Chủ HTX | Auth, hồ sơ/bảo mật, HTX, nhân viên, account/grants, ba role cố định, dashboard nhân sự và vùng/giấy tờ | Bè/vật tư, chu kỳ nuôi, thu hoạch, bán hàng, tài chính, lao động/lương và báo cáo vận hành |
-| Quản lý vùng | Auth/hồ sơ, tên role/phạm vi thật từ grant, xem vùng và giấy tờ trong phạm vi | Vận hành hiện trường, nhật ký, môi trường, công việc và các phần được phân công; đối chiếu kênh trước khi thêm Web |
+| Chủ HTX | Auth, hồ sơ/bảo mật, HTX, nhân viên, account/grants, ba role cố định, dashboard nhân sự/bè, vùng/giấy tờ và quản lý bè/sơ đồ/ảnh | Phiếu nhập/vật tư, ghi chu kỳ nuôi, thu hoạch, bán hàng, tài chính, lao động/lương và báo cáo vận hành |
+| Quản lý vùng | Auth/hồ sơ, tên role/phạm vi thật từ grant, xem vùng/giấy tờ/bè/sơ đồ và nguồn đoạn trong phạm vi | Ghi vận hành hiện trường, nhật ký, môi trường, công việc và các phần được phân công; đối chiếu kênh trước khi thêm Web |
 | Kế toán | Auth/hồ sơ, nhãn quyền/phạm vi; account mẫu đang khóa để thử chặn login | Thu/chi/công nợ, lương, chứng từ và báo cáo theo quyền; chưa có luồng tài chính đầu cuối |
 | Nhân viên | Onboarding/hồ sơ/bảo mật/thông báo; role mới không tự có quyền nghiệp vụ | Công việc, chấm công/xác nhận và thu nhập cá nhân; ưu tiên kênh theo SRS |
 | Quản trị hệ thống | Đăng nhập/hồ sơ và khởi tạo HTX bằng mock | Vận hành quản trị hệ thống khác cần inventory SRS chi tiết |

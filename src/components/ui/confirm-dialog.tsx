@@ -7,6 +7,7 @@ type ConfirmDialogProps = Readonly<{
   cancelLabel?: string;
   confirmLabel?: string;
   description: string;
+  error?: string;
   isPending?: boolean;
   onConfirm(): void;
   onOpenChange(open: boolean): void;
@@ -19,6 +20,7 @@ export function ConfirmDialog({
   cancelLabel = "Hủy",
   confirmLabel = "Xác nhận",
   description,
+  error,
   isPending = false,
   onConfirm,
   onOpenChange,
@@ -34,6 +36,14 @@ export function ConfirmDialog({
       open={open}
       title={title}
     >
+      {error && (
+        <p
+          className="mb-4 rounded-control bg-danger/10 p-3 text-sm leading-6 text-danger"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button
           className="sm:w-auto"
