@@ -5,16 +5,16 @@ import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { requireOnboardingPage } from "@/server/auth/next-session-access";
 import type { SessionPhase } from "@/server/auth/session-store";
 import { SessionServiceState } from "./session-service-state";
+import { ApiSecurityGate } from "./api-security-gate";
 
 type Phase = Exclude<SessionPhase, "application">;
 
 async function OnboardingAccess({ phase }: { phase: Phase }) {
   await connection();
   if (getSessionGateway().mode === "mock") redirect("/login");
-  await requireOnboardingPage(phase);
+  const access = await requireOnboardingPage(phase);
   const title = phase === "password-change-required" ? "Đổi mật khẩu tạm thời" : "Xác minh thông tin liên hệ";
-  // Backend onboarding mutation alignment is tracked in W3.3.
-  return <SessionServiceState title={title} />;
+  return access.status === "ready" ? <ApiSecurityGate phase={phase} /> : <SessionServiceState title={title} />;
 }
 
 export function OnboardingRouteBoundary({ phase }: { phase: Phase }) {

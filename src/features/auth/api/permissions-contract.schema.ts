@@ -7,6 +7,11 @@ import {
 } from "@/features/auth/api/auth-contract.schemas";
 
 const permissionActionSchema = z.enum(functionActions);
+// Stored RolePermission.OtherPermissions is case-insensitive in the backend
+// and the live demo returns EXPORT/PUBLISH; function summaries use Export/Publish.
+const storedPermissionActionSchema = z.union([permissionActionSchema,
+  z.enum(["VIEW", "CREATE", "EDIT", "DELETE", "EXPORT", "IMPORT", "APPROVE", "PUBLISH"]),
+]).transform((value) => functionActions.find((action) => action.toUpperCase() === value.toUpperCase())!);
 
 const grantedPermissionSchema = z.object({
   functionCode: apiTextSchema,
@@ -14,7 +19,7 @@ const grantedPermissionSchema = z.object({
   canCreate: z.boolean(),
   canEdit: z.boolean(),
   canDelete: z.boolean(),
-  otherPermissions: z.array(permissionActionSchema),
+  otherPermissions: z.array(storedPermissionActionSchema),
   dataScope: z.enum(["OwnRecords", "AssignedZone"]),
 });
 

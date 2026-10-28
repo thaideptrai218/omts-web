@@ -81,8 +81,8 @@ try {
   checks += 2;
   const login = await get("/login");
   const loginBody = await login.text();
-  assert.ok(loginBody.includes("Chưa thể đăng nhập"));
-  assert.ok(!loginBody.includes('name="password"'), "Mock password form remained active in API mode");
+  assert.ok(loginBody.includes("Đăng nhập OMTS"));
+  assert.ok(loginBody.includes('name="password"'), "API credential form is missing");
   privateFree(loginBody);
   checks += 2;
   const rejected = await fetch(origin + "/api/auth/session/recover", {

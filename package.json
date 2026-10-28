@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:api": "node scripts/run-api.mjs",
+    "start:api": "node scripts/run-api.mjs --production",
+    "setup:api": "node scripts/setup-api-local.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint src scripts tests/fixtures/cookie-browser --max-warnings=0",

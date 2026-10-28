@@ -1,5 +1,26 @@
 # Reviewer quick start
 
+## Real API workspace — local tester run
+
+The API workspace now uses the running .NET backend and Redis. Start the backend's existing Docker demo environment on `127.0.0.1:8080`. Start a separate Redis instance on loopback (or edit the generated configuration to use your existing Redis):
+
+```powershell
+docker run --detach --name omts-web-session-redis --publish 127.0.0.1:6380:6379 redis:7.4.11-alpine
+npm run setup:api
+npm run build
+npm run start:api
+```
+
+If that Redis container already exists, use `docker start omts-web-session-redis`. Open `http://localhost:3002/login`. `setup:api` preserves an existing `.env.api.local`, generates the session encryption key without printing it, and leaves `.env.local` alone. The local built-app launcher uses test mode for the HTTP loopback cookie profile; production deployments still require HTTPS. The launcher binds loopback and does not publish the site to the Internet.
+
+Use the backend demo accounts documented in the backend README, including `owner`, `quanlyvung1`, `quanlyvung2`, `ketoan` and `thuonglai1`. These are not the frontend mock accounts. A password changed earlier remains changed. The session is bounded by the backend access-token expiry; automatic refresh remains disabled.
+
+Current API workflows: login/session/logout; profile display-name save; cooperative profile save; zone, employee, supplier and farming-input list/detail/create/update; zone/supplier/input status actions; raft list/detail and lane forms; account list/detail/update/lock/unlock; role and permission read views. This is an initial API delivery, not completion of the full SRS. Files/licenses, receipt/payment/water workflows, employee employment/account-link actions and richer role/grant management remain separate slices. Staff requiring contact verification stays gated while the backend email-or-phone contract is pending. New account creation is withheld until the generated-username/secret-free delivery contract is available.
+
+For a conflict or lost mutation response, the editor retains the draft and asks the tester to load the current server record for comparison. It does not automatically replay the write. Test create/edit/status transitions on records explicitly named for QA; do not reset the shared demo database.
+
+## Mock UI review
+
 This guide covers the **mock-backed Web UI** on `feature/OMTS-132-web-foundation`. It is intended for a local code/UI review, not acceptance of the real backend integration. Interface labels are Vietnamese; this guide uses the labels you will see on screen.
 
 Updated **October 28, 2026**: management and authentication mock flows share state. Employee account creation, profile/contact verification, password-dialog handling and notification lifecycles have additional regression coverage. Use the walkthrough below to demonstrate actions across screens, rather than inspecting isolated forms.

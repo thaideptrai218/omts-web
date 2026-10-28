@@ -4,6 +4,7 @@ import { AppSessionShell } from "./app-session-shell";
 import { SessionServiceState } from "./session-service-state";
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { requireApplicationPage } from "@/server/auth/next-session-access";
+import { ApiWorkspaceShell } from "@/features/api-workspace/api-workspace-shell";
 
 async function ApplicationAccess({ children }: { children: ReactNode }) {
   await connection();
@@ -11,9 +12,7 @@ async function ApplicationAccess({ children }: { children: ReactNode }) {
   if (gateway.mode === "mock") return <AppSessionShell>{children}</AppSessionShell>;
   const result = await requireApplicationPage();
   if (result.status !== "ready") return <main><SessionServiceState /></main>;
-  // W3 hydration and feature API adapters must land before mounting existing
-  // mock-backed pages under a real session. Keep the API branch closed meanwhile.
-  return <main><SessionServiceState /></main>;
+  return <ApiWorkspaceShell context={result.context}>{children}</ApiWorkspaceShell>;
 }
 
 export function ServerApplicationBoundary({ children }: { children: ReactNode }) {

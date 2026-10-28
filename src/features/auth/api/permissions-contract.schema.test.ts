@@ -24,6 +24,10 @@ describe("permissions wire schema (not a permission mapper)", () => {
   it("preserves action and per-grant scope for subsequent mapping", () => {
     expect(myPermissionsSchema.parse(permissions)).toEqual(permissions);
   });
+  it("normalizes uppercase stored extra actions without accepting unknown actions", () => {
+    const parsed = myPermissionsSchema.parse({ ...permissions, grants: [{ ...grant, permissions: [{ ...permission, otherPermissions: ["EXPORT", "PUBLISH"] }] }] });
+    expect(parsed.grants[0].permissions[0].otherPermissions).toEqual(["Export", "Publish"]);
+  });
 
   it("accepts a cooperative-wide grant and empty permission lists", () => {
     const input = {

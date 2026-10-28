@@ -3,6 +3,15 @@ import { mapPermissionsResponse } from "@/features/access/api/map-permissions-re
 import { accountId, grant, permission, staffPayload, summary, zoneA } from "@/features/access/api/__fixtures__/permissions";
 
 describe("permission mapping identity, gates and capability bindings", () => {
+  it("maps the live backend's uppercase stored actions through the same scoped intersection", () => {
+    const payload = { ...staffPayload(), functions: [summary({ actions: ["View", "Export"] })],
+      grants: [{ ...grant(), permissions: [{ ...permission({ canView: true }), otherPermissions: ["EXPORT"] }] }] };
+    const result = mapPermissionsResponse(payload, accountId);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") expect(result.projection.functionPermissions).toContainEqual({
+      functionCode: "WATER_MEASUREMENTS", action: "Export", scope: { kind: "zones", zoneIds: [zoneA] }, dataScope: "AssignedZone",
+    });
+  });
   it("rejects another account while accepting equivalent GUID casing", () => {
     expect(mapPermissionsResponse(staffPayload(), accountId.toUpperCase()).status).toBe("mapped");
     expect(mapPermissionsResponse(staffPayload(), zoneA)).toEqual({ status: "account-mismatch" });

@@ -1,13 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
-
-const recoveryResponse = z.object({
-  status: z.enum(["active", "anonymous", "cleared"]),
-  destination: z.enum(["/login", "/dashboard", "/onboarding/password", "/onboarding/contact"]),
-});
+import { postAuth, withAuthLock } from "../api/api-auth-client";
 
 export function InvalidSessionRecovery() {
   const pending = useRef(false);
@@ -20,13 +15,8 @@ export function InvalidSessionRecovery() {
     setIsPending(true);
     setError(false);
     try {
-      const response = await fetch("/api/auth/session/recover", {
-        method: "POST", headers: { "X-OMTS-Request": "web" },
-        credentials: "same-origin", cache: "no-store", redirect: "error",
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!response.ok) throw new Error("Recovery unavailable");
-      const result = recoveryResponse.parse(await response.json());
+      const result = await withAuthLock(() => postAuth("session/recover"));
+      if (!result.destination) throw new Error("Recovery unavailable");
       // Full document navigation drops the previous account's client tree/cache.
       window.location.replace(result.destination);
     } catch {

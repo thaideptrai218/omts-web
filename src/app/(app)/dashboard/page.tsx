@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { DashboardExperience } from "@/features/dashboard/components/dashboard-experience";
+import { ApiPage } from "@/features/api-workspace/api-page";
+import { ApiWorkspaceHome } from "@/features/api-workspace/api-workspace-shell";
 
 export const metadata: Metadata = {
   title: "Bảng điều hành | OMTS",
@@ -10,5 +12,5 @@ export const metadata: Metadata = {
 export const instant = false;
 
 export default function DashboardPage() {
-  return <DashboardExperience />;
+  return <ApiPage api={<ApiWorkspaceHome />}><DashboardExperience /></ApiPage>;
 }

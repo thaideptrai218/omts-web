@@ -4,15 +4,17 @@ import type { ServerBackendConfig } from "@/server/config/backend-config";
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
 import { prepareEmployeeUnlinkRequest } from "@/features/employee-management/api/employee-mutation-request";
 import { employeeListQuerySchema, prepareEmployeeReadRequest } from "@/features/employee-management/api/employee-read-request";
+import { farmingZoneListQuerySchema, prepareFarmingZoneListRequest } from "@/features/farming-zones/api/farming-zone-read-request";
 
 export const backendEndpointSchema = z.enum([
   "login", "identity", "permissions", "profileRead", "profileUpdate", "logout",
   "employeeUpdate", "employeeUnlink", "employeeList", "employeeRead", "employeeLinkableAccounts",
+  "farmingZoneList", "passwordChange",
 ]);
 type Endpoint = z.infer<typeof backendEndpointSchema>;
 type Target = Readonly<{ url: string; method: "GET" | "POST" | "PUT" | "DELETE" }>;
 // Wire snapshots: auth48ae1e0, employee953f597. Catalog is not authorization or feature activation.
-type StaticEndpoint = Exclude<Endpoint, "employeeUpdate" | "employeeUnlink" | "employeeList" | "employeeRead">;
+type StaticEndpoint = Exclude<Endpoint, "employeeUpdate" | "employeeUnlink" | "employeeList" | "employeeRead" | "farmingZoneList">;
 const routes: Readonly<Record<StaticEndpoint, Readonly<{ path: string; method: Target["method"] }>>> = {
   login: { path: "/api/auth/login", method: "POST" },
   identity: { path: "/api/me", method: "GET" },
@@ -20,13 +22,21 @@ const routes: Readonly<Record<StaticEndpoint, Readonly<{ path: string; method: T
   profileRead: { path: "/api/me/profile", method: "GET" },
   profileUpdate: { path: "/api/me/profile", method: "PUT" },
   logout: { path: "/api/auth/logout", method: "POST" },
+  passwordChange: { path: "/api/me/password", method: "POST" },
   employeeLinkableAccounts: { path: "/api/employees/linkable-accounts", method: "GET" },
 };
 
 const employeeIdParameters = z.strictObject({ employeeId: apiIdSchema });
 const employeeListParameters = z.strictObject({ query: employeeListQuerySchema });
+const farmingZoneListParameters = z.strictObject({ query: farmingZoneListQuerySchema });
 
 function routeFor(endpoint: Endpoint, parameters: unknown) {
+  if (endpoint === "farmingZoneList") {
+    const parsed = farmingZoneListParameters.safeParse(parameters);
+    if (!parsed.success) return undefined;
+    const prepared = prepareFarmingZoneListRequest(parsed.data.query);
+    return prepared.status === "prepared" ? prepared : undefined;
+  }
   if (endpoint === "employeeList") {
     const parsed = employeeListParameters.safeParse(parameters);
     if (!parsed.success) return undefined;
