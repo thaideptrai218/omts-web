@@ -43,16 +43,16 @@ function Workforce({ employed, left }: { employed: number; left: number }) {
       <p className="mt-1 text-sm text-text-muted">
         Tình trạng làm việc trong hồ sơ nhân viên.
       </p>
-      <div className="mt-7 flex flex-col items-center gap-7 sm:flex-row sm:justify-center">
+      <div className="mt-7 flex flex-wrap items-center justify-center gap-6">
         <div
           role="img"
           aria-label={`${employed} nhân viên đang làm việc, ${left} đã nghỉ`}
-          className="grid size-44 shrink-0 place-items-center rounded-full"
+          className="grid size-36 shrink-0 place-items-center rounded-full"
           style={{
             background: `conic-gradient(var(--omts-color-primary) ${percentage}%, var(--omts-color-border) 0)`,
           }}
         >
-          <div className="grid size-32 place-items-center rounded-full bg-surface text-center">
+          <div className="grid size-28 place-items-center rounded-full bg-surface text-center">
             <div>
               <p className="text-4xl font-semibold tabular-nums text-text">
                 {total}
@@ -61,7 +61,7 @@ function Workforce({ employed, left }: { employed: number; left: number }) {
             </div>
           </div>
         </div>
-        <dl className="w-full space-y-4 sm:max-w-52">
+        <dl className="min-w-32 flex-1 space-y-4 sm:max-w-52">
           <div className="border-l-4 border-primary pl-3">
             <dt className="text-sm text-text-muted">Đang làm việc</dt>
             <dd className="mt-1 text-2xl font-semibold tabular-nums text-text">

@@ -8,7 +8,9 @@ const nextConfig: NextConfig = {
   experimental: process.platform === "win32" ? { cpus: 2 } : {},
   turbopack: {
     rules: {
-      "*.css": {
+      // Tailwind transforms the global entry only. Rewriting every CSS file
+      // as *.css strips CSS Modules' class exports in this loader pipeline.
+      "globals.css": {
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
       },

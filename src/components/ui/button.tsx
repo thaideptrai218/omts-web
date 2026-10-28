@@ -14,7 +14,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     "border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover",
   secondary:
-    "border-border-strong bg-surface text-text hover:border-primary hover:bg-primary-soft",
+    "border-border bg-surface text-text hover:border-primary/40 hover:bg-primary-soft/50",
 };
 
 export function Button({
@@ -31,7 +31,7 @@ export function Button({
     <button
       {...buttonProps}
       aria-busy={isPending || undefined}
-      className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border px-5 py-3 text-base font-semibold transition duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-60 ${variantStyles[variant]} ${className}`}
+      className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border px-5 py-3 text-sm font-semibold transition-[background-color,border-color,transform] duration-150 ease-out enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none motion-reduce:transition-none ${variantStyles[variant]} ${className}`}
       disabled={disabled || isPending}
       type={type}
     >
@@ -41,7 +41,9 @@ export function Button({
           className="size-5 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
         />
       )}
-      <span className="inline-flex items-center justify-center gap-2">{isPending ? pendingLabel : children}</span>
+      <span className="inline-flex items-center justify-center gap-2">
+        {isPending ? pendingLabel : children}
+      </span>
     </button>
   );
 }

@@ -39,6 +39,12 @@ For coding with live updates, use `npm run dev` instead of `npm run start`. Next
 
 ## Suggested review sequence
 
+### Navigation and dashboard refresh (October 28)
+
+The desktop sidebar opens with readable labels. **Thu gọn menu** switches to an icon rail; move the pointer into it to preview labels, or tab into a link. **Giữ menu mở** pins the preview. A brief pointer crossing does not expand it, and leaving has a short closing delay. The sidebar reserves a layout column instead of covering the directory. The account block shows the actual person's name, role and scope on separate lines.
+
+At a narrow width, use **Menu** to open the matching light drawer. Check Escape, closing, navigation and resizing back to desktop: the drawer should close and the page should scroll normally. Dashboard raft counts appear first, and **Truy cập nhanh** contains only permitted destinations. Use the same data/flows described below; this visual update does not enable backend APIs.
+
 ### Raft walkthrough (October 28)
 
 Open **Bè nuôi** (`/farming/rafts`) as `owner`, or use **Xem bè trong vùng** in a zone profile. Combine code/location search, zone and usage-status filters, then press **Lọc danh sách**. The initial six rafts are synthetic frontend scenarios, not production records. Zone names come from the shared zone registry.

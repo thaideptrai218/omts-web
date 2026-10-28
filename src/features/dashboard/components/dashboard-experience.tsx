@@ -15,6 +15,7 @@ import { dashboardService } from "../services/dashboard-service.instance";
 import type { DashboardView } from "../domain/dashboard";
 import { DashboardDataSkeleton, DashboardPanels } from "./dashboard-panels";
 import { DashboardFarmingSummaryPanel } from "./dashboard-farming-summary";
+import { DashboardShortcuts } from "./dashboard-shortcuts";
 
 const shortcuts: readonly {
   href: string;
@@ -68,6 +69,12 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
   const availableShortcuts = shortcuts.filter((item) =>
     hasEffectivePermission(account.access, item.permission),
   );
+  const waitingForFarming =
+    pending &&
+    !view &&
+    hasEffectivePermission(account.access, "cooperative.profile.manage") &&
+    hasEffectivePermission(account.access, "farming.rafts.view");
+  const hasFarmingPanel = !!view?.farming || waitingForFarming;
 
   useEffect(() => {
     let active = true;
@@ -98,13 +105,13 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="management-heading flex flex-col gap-4 pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-text">
             Bảng điều hành
           </h1>
           <p className="mt-2 text-sm leading-6 text-text-muted">
-            Theo dõi nhân sự, truy cập và tình hình bè nuôi trong hợp tác xã.
+            Theo dõi số liệu và hoạt động trong phạm vi bạn được cấp.
           </p>
         </div>
         <Button
@@ -120,25 +127,6 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
           <span>{pending ? "Đang tải số liệu" : "Làm mới số liệu"}</span>
         </Button>
       </header>
-
-      {availableShortcuts.length > 0 && (
-        <nav aria-label="Lối tắt quản trị" className="flex flex-wrap gap-2">
-          {availableShortcuts.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.description}
-              className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-control border border-border bg-surface px-3 py-2 text-sm font-medium text-text transition-colors hover:border-primary/50 hover:bg-primary-soft/40"
-            >
-              <InterfaceIcon
-                name={item.icon}
-                className="size-4 shrink-0 text-primary"
-              />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-      )}
 
       {hasError && (
         <div
@@ -165,6 +153,28 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
           </Button>
         </div>
       )}
+      <div
+        className={
+          hasFarmingPanel && availableShortcuts.length
+            ? "grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(16rem,1fr)]"
+            : "space-y-5"
+        }
+      >
+        {view?.farming ? (
+          <div aria-busy={pending}>
+            <DashboardFarmingSummaryPanel summary={view.farming} />
+          </div>
+        ) : waitingForFarming ? (
+          <div
+            aria-label="Đang tải tình hình bè nuôi"
+            aria-busy="true"
+            className="min-h-64 rounded-card border border-border bg-surface-subtle motion-safe:animate-pulse"
+          />
+        ) : null}
+        {availableShortcuts.length > 0 && (
+          <DashboardShortcuts items={availableShortcuts} />
+        )}
+      </div>
       <div aria-busy={pending}>
         {view ? (
           <DashboardPanels view={view} />
@@ -173,7 +183,6 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
         ) : null}
       </div>
 
-      {view?.farming && <DashboardFarmingSummaryPanel summary={view.farming} />}
       <section
         className="flex flex-col gap-4 rounded-card border border-dashed border-border-strong bg-surface p-5 sm:flex-row sm:items-center sm:p-6"
         aria-labelledby="operations-title"

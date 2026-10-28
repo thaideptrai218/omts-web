@@ -1,10 +1,16 @@
 import type { SVGProps } from "react";
 
 const paths = {
+  "panel-close": "M3 4h18v16H3V4ZM9 4v16m8-12-4 4 4 4",
+  "panel-open": "M3 4h18v16H3V4ZM9 4v16m4-12 4 4-4 4",
+  menu: "M4 6h16M4 12h16M4 18h16",
+  logout: "M9 4H4v16h5m6-12 4 4-4 4M8 12h11",
   raft: "M3 5h18M3 10h18M3 15h18M6 3v14M12 3v14M18 3v14M2 21c3-3 5 3 10 0s7 3 10 0",
   dashboard: "M3 3h7v7H3V3ZM14 3h7v7h-7V3ZM3 14h7v7H3v-7ZM14 14h7v7h-7v-7Z",
-  "id-card": "M3 5h18v14H3V5ZM8 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 16c0-3 6-3 6 0M14 9h4M14 13h4",
-  settings: "M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
+  "id-card":
+    "M3 5h18v14H3V5ZM8 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 16c0-3 6-3 6 0M14 9h4M14 13h4",
+  settings:
+    "M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
   calendar: "M4 5h16v16H4V5ZM8 3v4M16 3v4M4 10h16M8 14h2M14 14h2M8 18h2",
   document: "M5 3h9l5 5v13H5V3ZM14 3v6h5M8 13h8M8 17h6",
   users:

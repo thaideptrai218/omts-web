@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { checkSidebarStyles } from "./lib/check-sidebar-styles.mjs";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -53,6 +54,10 @@ try {
     try { await get("/"); ready = true; break; } catch { await new Promise((resolve) => setTimeout(resolve, 100)); }
   }
   assert.ok(ready, "Next child failed to start");
+  const chunks = fileURLToPath(new URL("../.next/static/chunks/", import.meta.url));
+  const assets = readdirSync(chunks);
+  const compiledAssetText = (extension) => assets.filter((name) => name.endsWith(extension)).map((name) => readFileSync(new URL(`../.next/static/chunks/${name}`, import.meta.url), "utf8")).join("\n");
+  checks += checkSidebarStyles(compiledAssetText(".css"), compiledAssetText(".js"));
   for (const path of ["/dashboard", "/account", "/employees", "/access/accounts", "/access/roles", "/cooperative/profile", "/farming/zones", "/farming/rafts"]) {
     const response = await get(path);
     const body = await response.text();
@@ -88,7 +93,7 @@ try {
   assert.equal(rejected.headers.get("set-cookie"), null);
   checks += 2;
   assert.ok(!logs.includes("demo123"));
-  console.log(`PASS: ${checks} built-product HTTP assertions for API mode, anonymous SSR, cookie recovery and unavailable Redis. TLS/browser not inferred.`);
+  console.log(`PASS: ${checks} built-product assertions (HTTP and compiled UI styles) for API mode, anonymous SSR, cookie recovery and unavailable Redis. TLS/browser not inferred.`);
 } finally {
   if (child.exitCode === null) child.kill();
   await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 3000))]);

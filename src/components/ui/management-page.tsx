@@ -13,22 +13,22 @@ export function ManagementHeading({
   children?: ReactNode;
 }) {
   return (
-    <header className="management-heading flex min-w-0 flex-col gap-5 rounded-card border border-border bg-surface p-5 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
+    <header className="management-heading flex min-w-0 flex-col gap-5 pb-6 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 items-start gap-4">
-        <span className="hidden size-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary sm:flex">
+        <span className="hidden size-11 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary sm:flex">
           <InterfaceIcon name={icon} className="size-6" />
         </span>
         <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight text-text [overflow-wrap:anywhere]">
+          <h1 className="text-[1.75rem] font-semibold tracking-tight text-text [overflow-wrap:anywhere] sm:text-3xl">
             {title}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
+          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-text-muted">
             {description}
           </p>
         </div>
       </div>
       {children && (
-        <div className="flex shrink-0 flex-wrap items-center gap-3">
+        <div className="flex shrink-0 flex-wrap items-center gap-2.5">
           {children}
         </div>
       )}

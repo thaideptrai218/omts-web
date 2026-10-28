@@ -24,6 +24,8 @@
   --omts-color-warning: #a16207;
   --omts-color-warning-soft: #fef3c7;
   --omts-color-danger: #be123c;
+  --omts-color-danger-soft: #fff1f2;
+  --omts-color-overlay: rgb(15 23 42 / 0.45);
   --omts-color-focus-ring: #0369a1;
 
   /* Shape, depth and readable content width */
@@ -98,8 +100,7 @@ html[data-omts-scroll-locked] body {
 }
 
 .management-heading {
-  border-top: 3px solid var(--omts-color-primary);
-  background: linear-gradient(110deg, var(--omts-color-surface) 55%, var(--omts-color-surface-subtle));
+  border-bottom: 1px solid var(--omts-color-border);
 }
 
 @keyframes omts-reveal-from-left {
