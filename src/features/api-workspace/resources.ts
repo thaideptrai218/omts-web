@@ -33,7 +33,7 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
   rafts: { title: "Bè nuôi", editable: true, zoneRequired: true,
     columns: [["code", "Mã bè"], ["status", "Trạng thái"], ["laneCount", "Số làn"]],
     fields: [{ key: "code", label: "Mã bè", required: true }, { key: "latitude", label: "Vĩ độ", type: "number", required: true },
-      { key: "longitude", label: "Kinh độ", type: "number", required: true }, { key: "location", label: "Vị trí" }, { key: "size", label: "Kích thước" }, { key: "conditionNotes", label: "Tình trạng bè", type: "textarea" }] },
+      { key: "longitude", label: "Kinh độ", type: "number", required: true }, { key: "location", label: "Vị trí" }, { key: "size", label: "Kích thước", required: true }, { key: "conditionNotes", label: "Tình trạng bè", type: "textarea" }] },
   accounts: { title: "Tài khoản", ownerOnly: true, editable: true, creatable: false,
     columns: [["username", "Tên đăng nhập"], ["displayName", "Tên hiển thị"], ["phoneNumber", "Số điện thoại"], ["status", "Trạng thái"]],
     fields: [{ key: "displayName", label: "Tên hiển thị", required: true }, { key: "username", label: "Tên đăng nhập", required: true },

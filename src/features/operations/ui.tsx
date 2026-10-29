@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
-import { workspaceError } from "@/features/api-workspace/api-resource-screen";
+import { workspaceError } from "@/features/api-workspace/workspace-error";
 
 function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
   if (result.httpStatus === 401 && result.uncertain) return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại và đối chiếu kết quả trước khi lập lượt mới.";

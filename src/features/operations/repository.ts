@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OperationArea } from "./permissions";
+type RepositoryArea = OperationArea | "zone-licenses" | "raft-details";
 
 export type Query = Record<string, string | undefined>;
 function queryString(input: Query) { return new URLSearchParams(Object.entries(input).filter((pair): pair is [string, string] => pair[1] !== undefined && pair[1] !== "")).toString(); }
-async function send<T>(area: OperationArea, query: Query, schema: z.ZodType<T>, body?: unknown, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
+async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>, body?: unknown, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
   try {
     const form = body instanceof FormData;
     const response = await fetch(`/api/operations/${area}?${queryString(query)}`, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", redirect: "error", cache: "no-store",
@@ -21,13 +22,13 @@ async function send<T>(area: OperationArea, query: Query, schema: z.ZodType<T>, 
       uncertain: response.status >= 500 || response.ok || body !== undefined && response.status === 401 };
   } catch { return { status: "error", httpStatus: 0, uncertain: true }; }
 }
-export function createOperationsRepository(area: OperationArea) {
+export function createOperationsRepository(area: RepositoryArea) {
   return {
     read<T>(action: string, query: Query, schema: z.ZodType<T>, signal?: AbortSignal) { return send(area, { ...query, action }, schema, undefined, signal); },
     write<T>(action: string, body: unknown, schema: z.ZodType<T>, id?: string, zoneId?: string) { return send(area, {}, schema, { action, id, zoneId, body }); },
     upload<T>(action: string, files: File[], body: unknown, schema: z.ZodType<T>, id?: string, zoneId?: string) {
       const form = new FormData(); form.set("payload", JSON.stringify(body));
-      for (const file of files) form.append(area === "water" ? "photo" : "files", file, file.name);
+      for (const file of files) form.append(area === "water" || area === "raft-details" ? "photo" : "files", file, file.name);
       return send(area, { action, id, zoneId }, schema, form);
     },
     async download(query: Query): Promise<WorkspaceResult<true>> {

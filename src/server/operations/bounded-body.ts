@@ -26,8 +26,8 @@ export async function readBoundedBytes(body: ReadableStream<Uint8Array> | null, 
   }
 }
 
-export async function readOperationUpload(request: Request, photo: boolean) {
-  const maxBytes = (photo ? 12 : 105) * 1024 * 1024;
+export async function readOperationUpload(request: Request, photo: boolean, options: { maxFiles?: number; optionalFile?: boolean; maxBytes?: number } = {}) {
+  const maxBytes = options.maxBytes ?? (photo ? 12 : 105) * 1024 * 1024;
   const contentType = request.headers.get("content-type") ?? "";
   if (!/^multipart\/form-data;\s*boundary=/i.test(contentType) || request.headers.has("content-encoding")) return undefined;
   const length = request.headers.get("content-length");
@@ -39,7 +39,7 @@ export async function readOperationUpload(request: Request, photo: boolean) {
     if ([...form.keys()].some((name) => name !== field && name !== "payload")) return undefined;
     const files = form.getAll(field);
     const payloads = form.getAll("payload");
-    if (!files.length || files.length > (photo ? 1 : 10) || payloads.length !== 1 || typeof payloads[0] !== "string" || payloads[0].length > 16_384) return undefined;
+    if (!files.length && !options.optionalFile || files.length > (options.maxFiles ?? (photo ? 1 : 10)) || payloads.length !== 1 || typeof payloads[0] !== "string" || payloads[0].length > 16_384) return undefined;
     const allowed = photo ? ["image/jpeg", "image/png"] : ["image/jpeg", "image/png", "application/pdf"];
     if (files.some((file) => typeof file === "string" || file.size < 1 || file.size > 10 * 1024 * 1024 || !allowed.includes(file.type))) return undefined;
     return { files: files as File[], payload: JSON.parse(payloads[0]) as unknown };

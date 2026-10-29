@@ -5,19 +5,12 @@ import { Dialog } from "@/components/ui/dialog";
 import { FormField } from "@/components/form/form-field";
 import { useApiWorkspace } from "./api-workspace-shell";
 import { resources, resourceAllowed, type ResourceKey } from "./resources";
-import { createWorkspaceRepository, type ApiPage, type ApiRecord, type WorkspaceResult } from "./workspace-repository";
+import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
+import { ResourceExtras } from "@/features/farming-api/resource-extras";
+import { workspaceError } from "./workspace-error";
+export { workspaceError } from "./workspace-error";
 
 const inputClass = "mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 py-2";
-export function workspaceError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
-  if (result.httpStatus === 401) return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.";
-  if (result.httpStatus === 403) return "Bạn không có quyền thực hiện thao tác này.";
-  if (result.code === "MSG06") return "Bản ghi đã thay đổi. Hãy tải dữ liệu mới để đối chiếu; bản nháp của bạn vẫn được giữ.";
-  if (result.code === "MSG03") return "Thông tin này đã tồn tại. Hãy kiểm tra bản ghi hiện có.";
-  if (result.code === "MSG11") return "Bản ghi đang được sử dụng nên chưa thể đổi trạng thái.";
-  if (result.code === "MSG01" || result.httpStatus === 400) return "Vui lòng kiểm tra lại thông tin đã nhập.";
-  return result.uncertain ? "Chưa xác nhận được kết quả. Hãy tải lại dữ liệu để đối chiếu trước khi thực hiện tiếp."
-    : "Chưa thể thực hiện thao tác. Hãy kiểm tra dữ liệu rồi thử lại.";
-}
 function text(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Có" : "Không";
@@ -224,5 +217,6 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
         }}>{record.status === "Locked" ? "Mở khóa" : "Khóa tài khoản"}</Button>}
       </div>
     </form>
+    {record && <ResourceExtras resource={resource} record={record} busy={pending} dirty={dirty} blocked={blocked} onSaved={onSaved} />}
   </Dialog>;
 }

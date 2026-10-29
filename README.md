@@ -12,7 +12,7 @@ Team repositories: [Web](https://github.com/thaideptrai218/omts-web) · [Backend
 
 For a presentation without development overlays, use `npm run build` followed by `npm run start`. Use `npm run dev` while editing code.
 
-> Last updated: **October 28, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
+> Last updated: **October 29, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
 
 - **The UI can run with mock data** without a backend, database, Docker, or Redis.
 - Cooperative profile, employee, account, role, and personal profile screens currently use mock service/repository adapters.
@@ -23,7 +23,7 @@ For a presentation without development overlays, use `npm run build` followed by
 - The review build shares mock state between management screens: updated role permissions can be assigned, new accounts can be linked to employees, and dashboard counts update. Created staff accounts can complete first-login password/contact setup; account locking and password reset affect their mock login. Personal profile changes, password recovery, and notification settings can be demonstrated without a backend.
 - The approved October 27 role policy is now **three fixed zone roles: Zone Manager, Accountant, and Staff**. Owners can edit permissions and discontinue/reactivate roles; they cannot add, copy, or rename roles. Staff initially has no business permissions. This policy is implemented in the product mock; backend/SRS alignment is tracked separately.
 - Dashboard headings and permitted shortcuts render while metrics load. Management directories now include clearer rows, summaries and combined filters; editors continue to open in dialogs.
-- A local API workspace supports real login → permissions/profile → logout through the Next.js BFF, management screens, purchase receipts, supplier payments and water measurement workflows. Use `npm run setup:api`, `npm run build` and `npm run start:api`; the default review mode remains mock. Staff contact activation and new-account creation still await backend alignment. Live token refresh remains disabled.
+- A local API workspace supports real login → permissions/profile → logout through the Next.js BFF, management screens, purchase receipts, supplier payments and water measurement workflows. Saved zone profiles also support shared licenses and renewal history; saved raft profiles support photos, dated lane conditions and receipt-backed costs. Use `npm run setup:api`, `npm run build` and `npm run start:api`; the default review mode remains mock. Staff contact activation and new-account creation still await backend alignment. Live token refresh remains disabled.
 - The current UI work is on `feature/OMTS-132-web-foundation` and has not been merged into `develop`. Check out the correct branch to review the screens and configuration described below.
 
 ## 1. Prerequisites

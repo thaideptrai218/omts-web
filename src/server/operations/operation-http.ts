@@ -9,6 +9,9 @@ import { readBackendResponse } from "../backend/backend-response";
 import { sameEmployeeSession } from "../employees/employee-session";
 import { planOperation, type OperationPlan } from "./operation-plan";
 import { readBoundedBytes, readOperationUpload } from "./bounded-body";
+import { localFileTarget } from "./evidence-target";
+import { handleFarmingRequest } from "../farming/farming-http";
+export { localFileTarget } from "./evidence-target";
 
 const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: responseHeaders });
@@ -23,16 +26,8 @@ function browserFiles(value: unknown): unknown {
   if ("photoUrl" in record) return { ...record, photoUrl: record.photoUrl ? `/api/operations/water?action=photo&id=${record.id}` : null };
   return value;
 }
-export function localFileTarget(value: unknown, origin: string): URL | undefined {
-  if (typeof value !== "string") return undefined;
-  try {
-    const target = new URL(value, origin);
-    return target.origin === origin && !target.username && !target.password && !target.hash && target.pathname.startsWith("/api/files/local/")
-      && [...target.searchParams.keys()].every((key) => key === "expires" || key === "sig") ? target : undefined;
-  } catch { return undefined; }
-}
-
 export async function handleOperationRequest(request: Request, areaName: string): Promise<Response> {
+  if (areaName === "zone-licenses" || areaName === "raft-details") return handleFarmingRequest(request, areaName);
   const area = z.enum(operationAreas).safeParse(areaName);
   if (!area.success) return json({ status: "not-found" }, 404);
   const gateway = getSessionGateway();
