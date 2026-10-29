@@ -36,6 +36,8 @@ Backend develop953f597/ticket vẫn có username bắt buộc và trả temporar
 
 ## WEB-EMP-ERROR-01 — Metadata còn thiếu trước khi bind lỗi vào form API
 
+**Chốt bổ sung29/10/2026:** Duy Thái đồng ý dùng tạm cho API MSG24: “Tài khoản này đã được liên kết với hồ sơ nhân viên khác”, kèm nút mở hồ sơ chỉ khi bấm. BFF chỉ project existingEmployeeId đã kiểm; không tự GET hoặc suy tên từ detail/bản nháp. Mở hồ sơ để đối chiếu giữ nháp đang nhập, chỉ bỏ nháp khi người dùng chọn dùng hồ sơ đã lưu. Tên structured từ backend vẫn là cải tiến contract còn thiếu; không còn chặn câu thông báo tạm này. Quyết định này không mở tạo account hay phone-only onboarding.
+
 **Open về contract,28/10/2026; chưa đổi nghiệp vụ.** [Projection field/ID đã chuẩn bị](../reports/WEB_EMPLOYEE_ERROR_METADATA_REVIEW_2026-10-28.md) chỉ dành cho PUT/unlink. Backend953f597 trả existingEmployeeId cho MSG24 nhưng chưa có tên nhân viên structured; câu hiện hành cần employee_name. Chưa parse tên từ detail, dùng tên draft, tự GET thêm hoặc thay catalog bằng fallback.
 
 Đề xuất BA/backend xác nhận field tên riêng và ví dụ payload trước khi render đầy đủ MSG24. Chưa tự chốt tên wire field. Generic existingId trong flow tạo Account vẫn là entity khác; không đổi thành Employee ID. Nested/index model-binding paths và form cũ thiếu bank/zones/version target cần mapping/binding riêng, không ẩn lỗi chưa map được. MSG06 giữ nguyên quyết định chờ user/time từ backend.

@@ -58,6 +58,7 @@ type EmployeeEditorProps = { record: Employee | null; zones: ApiRecord[]; accoun
 export function EmployeeApiEditor({ record, zones, accounts, lookupsReady, onClose, onReloadAccounts, onAdopt, onSaved, onUnlinked }: EmployeeEditorProps) {
   const repository = useMemo(() => createOperationsRepository("employees"), []), mutation = useMutation();
   const [baseline, setBaseline] = useState(record), [values, setValues] = useState(() => valuesOf(record)), [issues, setIssues] = useState<{ path: string; message: string }[]>([]), [latest, setLatest] = useState<Employee>(), [compared, setCompared] = useState<Employee>();
+  const [comparisonTarget, setComparisonTarget] = useState<{ id: string; linked: boolean }>();
   const [action, setAction] = useState<"unlink" | "end-employment" | "reinstate">(), [endDate, setEndDate] = useState(businessToday), [actionError, setActionError] = useState<string>(), [discard, setDiscard] = useState(false), [reconciledRows, setReconciledRows] = useState<EmployeeListItemDto[]>();
   const formRef = useRef<HTMLFormElement>(null), alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
@@ -77,6 +78,7 @@ export function EmployeeApiEditor({ record, zones, accounts, lookupsReady, onClo
     if (!checked.success) { showIssues(checked.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message }))); return; }
     if (inactiveZones.length) { showIssues([{ path: "workingZoneIds", message: "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu." }]); return; }
     setIssues([]);
+    setComparisonTarget(undefined); setCompared(undefined);
     const body = { fullName: checked.data.fullName, phoneNumber: normalizeEmployeePhone(checked.data.phone)!, birthday: checked.data.birthday || null,
       address: checked.data.address || null, area: checked.data.area || null, ward: checked.data.wardCommune || null, otherInformation: checked.data.otherInformation || null, notes: checked.data.notes || null,
       workingZoneIds: checked.data.workingZoneIds, bankAccount: toEmployeeBankAccount(checked.data.bankAccount), accountId: checked.data.accountId || null, ...(baseline ? { rowVersion: baseline.rowVersion } : {}) };
@@ -98,10 +100,14 @@ export function EmployeeApiEditor({ record, zones, accounts, lookupsReady, onClo
     }
   }
   return <Dialog open title={baseline ? `Hồ sơ · ${baseline.fullName}` : "Thêm nhân viên"} size="lg" dismissible={!mutation.pending && !action} onOpenChange={(open) => { if (!open) close(); }}>
-    <ErrorNotice error={mutation.error} />
+    <ErrorNotice error={mutation.failure?.code === "MSG24" ? "Tài khoản này đã được liên kết với hồ sơ nhân viên khác." : mutation.error} />
     {problem?.kind === "invalid-fields" && <p id="employee-api-server-errors" role="alert" className="my-3">Các mục cần kiểm tra: {problem.fields.map((field) => fieldLabels[field][1]).join(", ")}.</p>}
     {issues.length > 0 && <ul id="employee-api-errors" role="alert" className="my-4 space-y-2 text-danger">{issues.map((issue, index) => <li key={`${issue.path}-${index}`}>{issue.message}</li>)}</ul>}
-    {problem && problem.kind !== "invalid-fields" && <div className="my-4"><Button className="w-auto" variant="secondary" isPending={mutation.pending} onClick={async () => { const next = await mutation.run(() => repository.read("detail", { id: problem.existingEmployeeId }, employeeViewSchema), true); if (next) setCompared(next); }}>Đối chiếu hồ sơ hiện có</Button></div>}
+    {(comparisonTarget || problem && problem.kind !== "invalid-fields") && <div className="my-4"><Button className="w-auto" variant="secondary" isPending={mutation.pending} onClick={async () => {
+      const target = comparisonTarget ?? (problem && problem.kind !== "invalid-fields" ? { id: problem.existingEmployeeId, linked: problem.kind === "account-already-linked" } : undefined);
+      if (!target || mutation.busy()) return; setComparisonTarget(target);
+      const next = await mutation.run(() => repository.read("detail", { id: target.id }, employeeViewSchema), true); if (next) setCompared(next);
+    }}>{comparisonTarget?.linked || problem?.kind === "account-already-linked" ? "Mở hồ sơ đang liên kết" : "Đối chiếu hồ sơ hiện có"}</Button></div>}
     {compared && <div className="my-4 rounded-control border border-border p-4"><ProfileComparison employee={compared} /><Button className="mt-3 w-auto" variant="secondary" onClick={() => onAdopt(compared)}>Mở hồ sơ này và bỏ nháp hiện tại</Button></div>}
     {baseline && <div className="mb-5 rounded-control border border-border p-4"><p className="font-semibold">{employmentLabel(baseline.status)}{baseline.employmentEndDate ? ` · Ngày nghỉ: ${dateLabel(baseline.employmentEndDate)}` : ""}</p>
       <Button className="mt-3 sm:w-auto" variant="secondary" disabled={dirty || mutation.pending || mutation.blocked} onClick={() => { if (!dirty && !mutation.busy()) { setEndDate(businessToday()); setAction(baseline.status === "Employed" ? "end-employment" : "reinstate"); } }}>{baseline.status === "Employed" ? "Nghỉ việc" : "Đi làm lại"}</Button>

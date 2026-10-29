@@ -74,6 +74,16 @@ describe("employee API editor lifecycle", () => {
     render(<EmployeeApiEditor {...props()} />); fireEvent.change(screen.getByLabelText("Ghi chú"), { target: { value: "Nháp không mất" } }); fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
     const button = await screen.findByRole("button", { name: "Đối chiếu hồ sơ hiện có" }); expect(repository.read).not.toHaveBeenCalled(); fireEvent.click(button); await screen.findByText("Hồ sơ hiện tại trên hệ thống"); expect((screen.getByLabelText("Ghi chú") as HTMLTextAreaElement).value).toBe("Nháp không mất");
   });
+  it("uses the approved MSG24 copy and only opens the linked profile after an explicit click", async () => {
+    const callbacks = props();
+    repository.write.mockResolvedValue({ status: "error", httpStatus: 409, code: "MSG24", uncertain: false, employeeProblem: { kind: "account-already-linked", existingEmployeeId: fixture().id } }); repository.read.mockResolvedValueOnce({ status: "error", httpStatus: 503, uncertain: true }).mockResolvedValueOnce({ status: "success", data: fixture() });
+    render(<EmployeeApiEditor {...callbacks} />); fireEvent.change(screen.getByLabelText("Ghi chú"), { target: { value: "Bản nháp MSG24" } }); fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
+    await screen.findByText("Tài khoản này đã được liên kết với hồ sơ nhân viên khác."); expect(repository.read).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Mở hồ sơ đang liên kết" })); await waitFor(() => expect(repository.read).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect((screen.getByRole("button", { name: "Mở hồ sơ đang liên kết" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "Mở hồ sơ đang liên kết" })); await screen.findByText("Hồ sơ hiện tại trên hệ thống");
+    expect((screen.getByLabelText("Ghi chú") as HTMLTextAreaElement).value).toBe("Bản nháp MSG24"); expect(callbacks.onAdopt).not.toHaveBeenCalled(); expect(callbacks.onSaved).not.toHaveBeenCalled();
+  });
   it("asks before discarding a draft and leaves the form intact on continue", () => {
     const callbacks = props(); render(<EmployeeApiEditor {...callbacks} />); fireEvent.change(screen.getByLabelText("Ghi chú"), { target: { value: "Nháp" } }); fireEvent.click(screen.getByRole("button", { name: "Đóng hồ sơ" }));
     expect(callbacks.onClose).not.toHaveBeenCalled(); fireEvent.click(screen.getByRole("button", { name: "Tiếp tục sửa" })); expect((screen.getByLabelText("Ghi chú") as HTMLTextAreaElement).value).toBe("Nháp");
