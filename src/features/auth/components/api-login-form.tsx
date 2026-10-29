@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { LoginForm } from "./login-form";
 import { Button } from "@/components/ui/button";
 import { loginWithApi, logoutWithApi } from "../api/api-auth-client";
@@ -28,6 +29,7 @@ export function ApiLoginForm() {
       }
       return result.status === "waited";
     }} />
+    <div className="mt-5 flex flex-wrap gap-4 text-sm font-semibold text-primary"><Link href="/recover">Quên mật khẩu</Link><Link href="/register">Đăng ký thương lái</Link></div>
     {reset && <div className="mt-4 grid gap-3">
       <Button variant="secondary" onClick={() => window.location.reload()}>Kiểm tra lại phiên</Button>
       <Button variant="secondary" isPending={pending} onClick={async () => {

@@ -5,6 +5,7 @@ import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { SessionServiceState } from "@/features/auth/components/session-service-state";
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { PublicVerificationEntry } from "@/features/verification-api/public-entry";
 
 export const metadata: Metadata = {
   title: "Khôi phục tài khoản | OMTS",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 
 async function RecoverContent() {
   await connection();
+  if (getSessionGateway().mode === "api") return <PublicVerificationEntry purpose="recovery" />;
   if (getSessionGateway().mode !== "mock") return <SessionServiceState title="Chưa thể khôi phục tài khoản" />;
   return <RecoveryExperience />;
 }

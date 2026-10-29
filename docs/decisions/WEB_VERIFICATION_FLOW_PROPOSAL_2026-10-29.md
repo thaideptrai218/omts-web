@@ -1,6 +1,6 @@
 # G2 — Đề xuất nối các luồng OTP thật trên Web
 
-Trạng thái: đề xuất, chưa được duyệt. Không dùng văn bản này để coi G1 đã cho phép lưu proof OTP hoặc đổi luồng hồ sơ. Áp dụng backend develop953f597; các nhánh OMTS-216 chưa merge không phải contract runtime.
+Trạng thái: **người dùng đã duyệt G2 và báo lưu từng phần/giữ nháp ngày29/10/2026**, qua trả lời trực tiếp trong chat. Bắt đầu triển khai theo phương án bên dưới; phê duyệt thiết kế chưa phải bằng chứng kiểm thử hoặc hoàn thành. Áp dụng backend develop953f597; các nhánh OMTS-216 chưa merge không phải contract runtime.
 
 Các API đăng ký Trader, quên mật khẩu, xác minh/đổi liên hệ và đổi mật khẩu bằng email đã có, nhưng Web API hiện chưa có cơ chế giữ challenge/proof của chúng. G1 xử lý đăng nhập/phiên, không tự giải quyết các token xác minh dùng một lần. Quy tắc AGENTS: “Session storage, refresh-token handling, SSR/CSR boundaries, route protection, permission payloads, and caching can affect security or backend contracts. Present the proposed design and obtain confirmation before choosing one.”
 
@@ -17,3 +17,5 @@ Các API đăng ký Trader, quên mật khẩu, xác minh/đổi liên hệ và 
 ## Kiểm trước khi bật
 
 Test server cho session/context/purpose sai, flow ID giả, hai tab, TTL, verify thành công nhưng mất phản hồi, single-use/unknown write, logout/login xen giữa và không serialize/log proof. Test UI cho giới hạn/resend, sai/hết hạn OTP, OTP→chờ Lưu→Save/Cancel, partial success và giữ nháp. HTTP thật với QA dữ liệu giả, kiểm restore/contact cũ và các actor; không đổi mật khẩu tài khoản seed. Đây là điều kiện triển khai, chưa phải bằng chứng đã đạt.
+
+Bằng chứng triển khai sau phê duyệt: [báo cáo G2](../reports/WEB_G2_VERIFICATION_API_2026-10-29.md). Phần kiểm ở trên là tiêu chí thiết kế; report phân biệt test fixture, HTTP thật với Fake provider và browser.

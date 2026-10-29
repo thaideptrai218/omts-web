@@ -15,6 +15,7 @@ import { createBackendTransport } from "../backend/backend-transport";
 import type { ServerSessionReadRuntime, ServerSessionRuntimeOpenResult } from "./server-session-runtime";
 import { authTokensSchema } from "@/features/auth/api/auth-contract.schemas";
 import { currentPasswordChangeSchema } from "@/features/account-security/schemas/change-password-schema";
+import { newPasswordSchema } from "@/shared/security/new-password-schema";
 
 const config = z.object({
   OMTS_WEB_AUTH_CONTEXT_IDLE_TTL_MS: z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().min(60_000).max(86_400_000)),
@@ -29,7 +30,7 @@ export type ApiSessionRuntime = ServerSessionReadRuntime & Readonly<{
   bootstrap(header: string | null): Promise<AuthActionResult>;
   login(header: string | null, input: unknown, signal: AbortSignal): Promise<AuthActionResult>;
   logout(header: string | null, expectedRevision?: string): Promise<AuthActionResult>;
-  changePassword(header: string | null, input: unknown, signal: AbortSignal): Promise<AuthActionResult>;
+  changePassword(header: string | null, input: unknown, signal: AbortSignal, verificationProof?: string): Promise<AuthActionResult>;
 }>;
 
 export async function openApiSessionRuntime(environment: Readonly<Record<string, unknown>>,
@@ -143,8 +144,9 @@ export async function openApiSessionRuntime(environment: Readonly<Record<string,
       }
       return { status: "signed-out", destination: "/login", cookie: sessionCookies.cookies.clear(), contextCookie: contexts.cookies.clear() };
     },
-    async changePassword(header, input, signal) {
-      const values = currentPasswordChangeSchema.safeParse(input);
+    async changePassword(header, input, signal, verificationProof) {
+      // Proof is supplied only by the server verification flow, never the public password route.
+      const values = (verificationProof ? newPasswordSchema : currentPasswordChangeSchema).safeParse(input);
       if (!values.success) return { status: "invalid-input" };
       const session = await resolve(header);
       if (session.status !== "resolved") return { status: "reset-required" };
@@ -157,7 +159,7 @@ export async function openApiSessionRuntime(environment: Readonly<Record<string,
         pendingUntilMs: Math.min(record.context.expiresAtMs, Date.now() + policy.data.OMTS_WEB_AUTH_PENDING_TIMEOUT_MS), binding: originalBinding });
       if (reserved.status !== "started") return { status: "pending" };
       const response = await backend.request({ endpoint: "passwordChange", accessToken: session.session.readAccessTokenForBackend(),
-        body: { currentPassword: values.data.currentPassword, newPassword: values.data.newPassword,
+        body: { ...(verificationProof ? { verificationToken: verificationProof } : { currentPassword: "currentPassword" in values.data ? values.data.currentPassword : undefined }), newPassword: values.data.newPassword,
           passwordConfirmation: values.data.confirmPassword, clientType: "Web" } }, { signal });
       if (response.status === "http-error" && response.httpStatus < 500) {
         await ledger.publish({ attempt: reserved.attempt, binding: originalBinding });

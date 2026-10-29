@@ -40,3 +40,5 @@ Lệnh thu hồi được kiểm server/component fixtures cho Owner/CSRF/schema
 Các luồng OTP đăng ký/khôi phục/contact/email-password còn cần giao thức giữ proof server, [G2 đang đề xuất](../decisions/WEB_VERIFICATION_FLOW_PROPOSAL_2026-10-29.md), chưa tự áp thiết kế lưu trữ/partial save. Gate Staff email OR phone, generated-username/secret-free account-create, role codes và ngân hàng HTX vẫn giữ quyết định trước. Không có refresh/offline queue. Đây không phải nghiệm thu toàn SRS.
 
 Contract mới và các thay đổi Jira được tách rõ trong [báo cáo PR19/Jira](WEB_JIRA_PR19_CONTRACT_UPDATE_2026-10-29.md). PR19 chưa merge/deploy: compatibility mới được kiểm bằng fixture; HTTP thật ở develop953f597.
+
+Cập nhật sau snapshot9391d8b: người dùng đã duyệt G2 và partial-save; các luồng OTP/contact/email-password đã nối và kiểm, xem [báo cáo G2](WEB_G2_VERIFICATION_API_2026-10-29.md). Phần nói G2 chưa duyệt ở trên là thời điểm trước quyết định mới, không phải trạng thái cuối.

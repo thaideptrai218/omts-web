@@ -76,4 +76,23 @@ describe.skipIf(!endpoint)("G1 composed runtime with live Redis", () => {
       const state = await runtime.bootstrap(currentHeader); await runtime.logout(currentHeader, state.revision);
     } finally { runtime.close(); }
   });
+  it("rotates through G1 after a server-held email proof without sending a current password", async () => {
+    const { runtime, request } = await setup();
+    try {
+      const bootstrap = await runtime.bootstrap(null);
+      if (bootstrap.status !== "ready" || !bootstrap.contextCookie) throw new Error("Missing fixture context");
+      const context = bootstrap.contextCookie.readForResponseHeader().split(";")[0];
+      const login = await runtime.login(context, { identifier: "fixture", password: "fixture-password" }, new AbortController().signal);
+      if (login.status !== "created" || !login.cookie) throw new Error("Missing fixture session");
+      const oldHeader = `${context}; ${login.cookie.readForResponseHeader().split(";")[0]}`;
+      const changed = await runtime.changePassword(oldHeader, { newPassword: "NewValid123", confirmPassword: "NewValid123" }, new AbortController().signal, "server-proof");
+      if (changed.status !== "created" || !changed.cookie) throw new Error("Proof rotation failed");
+      const sent = request.mock.calls.find(([input]) => input.endpoint === "passwordChange")?.[0];
+      expect(sent?.endpoint === "passwordChange" && sent.body).toMatchObject({ verificationToken: "server-proof", newPassword: "NewValid123", clientType: "Web" });
+      expect(sent?.endpoint === "passwordChange" && sent.body.currentPassword).toBeUndefined();
+      expect((await runtime.resolve(oldHeader)).status).toBe("invalid-session");
+      const nextHeader = `${context}; ${changed.cookie.readForResponseHeader().split(";")[0]}`; expect((await runtime.resolve(nextHeader)).status).toBe("resolved");
+      const state = await runtime.bootstrap(nextHeader); await runtime.logout(nextHeader, state.revision);
+    } finally { runtime.close(); }
+  });
 });

@@ -99,6 +99,12 @@ try {
   assert.equal(rejected.status, 403);
   assert.equal(rejected.headers.get("set-cookie"), null);
   checks += 2;
+  for (const path of ["/register", "/recover"]) {
+    const publicPage = await get(path), publicBody = await publicPage.text();
+    assert.equal(publicPage.status, 200); privateFree(publicBody); checks++;
+  }
+  const verificationRejected = await fetch(origin + "/api/verifications", { method: "POST", headers: { Origin: "https://foreign.example", "X-OMTS-Request": "web", "Content-Type": "application/json" }, body: JSON.stringify({ op: "read", purpose: "recovery" }), redirect: "manual", signal: AbortSignal.timeout(5000) });
+  assert.equal(verificationRejected.status, 403); assert.equal(verificationRejected.headers.get("set-cookie"), null); assert.ok(verificationRejected.headers.get("cache-control").includes("no-store")); checks += 3;
   assert.ok(!logs.includes("demo123"));
   console.log(`PASS: ${checks} built-product assertions (HTTP and compiled UI styles) for API mode, anonymous SSR, cookie recovery and unavailable Redis. TLS/browser not inferred.`);
 } finally {

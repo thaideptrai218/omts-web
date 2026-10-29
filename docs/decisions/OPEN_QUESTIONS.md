@@ -62,6 +62,8 @@ Backend vẫn chưa khớp ba vai trò cố định, Staff xác minh email OR ph
 
 **Đã chốt 28/10/2026, Duy Thái:** cho phép xác minh email/SĐT đang thuộc hồ sơ nhưng chưa xác minh, không bắt đổi sang giá trị khác. Dùng OTP hiện có và bước Lưu thay đổi của hồ sơ; không tự đánh verified, cấp quyền hoặc bỏ gate. Form đổi liên hệ mới vẫn từ chối giá trị cũ. API thật vẫn tắt; không coi lựa chọn này là backend đã hỗ trợ.
 
+**Bổ sung29/10/2026:** người dùng đã duyệt [G2](WEB_VERIFICATION_FLOW_PROPOSAL_2026-10-29.md) cho proof mã hóa Redis/context/session/purpose và lưu hồ sơ từng phần. G2 API đã nối OTP→chờ Lưu, cancel không confirm, tên đã lưu/contact lỗi giữ nháp. Các câu API tắt ở đoạn trên là snapshot trước triển khai; Staff email OR phone activation tiếp tục chờ backend, không đổi phone-only.
+
 ## WEB-COOP-BANK-01 — Khối ngân hàng trong hồ sơ HTX
 
 **Giữ nguyên, chờ BA xác nhận — Duy Thái chốt 28/10/2026.** OMTS-203 hiện yêu cầu chuyển khối nhận chuyển khoản sang PAY-01; source/SRS cũ vẫn có khối đó. Người dùng chọn giữ lại lúc này. Không xóa field/schema/mock hoặc tạo PAY-01 để tự giải quyết xung đột. Ngân hàng của nhân viên là dữ liệu khác và tiếp tục giữ nguyên.

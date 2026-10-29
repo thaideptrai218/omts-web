@@ -21,6 +21,7 @@ export function createApiSessionGateway(environment: Readonly<Record<string, unk
     login: (header: string | null, input: unknown, signal: AbortSignal) => action((runtime) => runtime.login(header, input, signal)),
     logout: (header: string | null, expectedRevision?: string) => action((runtime) => runtime.logout(header, expectedRevision)),
     changePassword: (header: string | null, input: unknown, signal: AbortSignal) => action((runtime) => runtime.changePassword(header, input, signal)),
+    changePasswordFromVerification: (header: string | null, input: unknown, signal: AbortSignal, proof: string) => action((runtime) => runtime.changePassword(header, input, signal, proof)),
     dispose() { reads.dispose(); owner.dispose(); },
   });
 }

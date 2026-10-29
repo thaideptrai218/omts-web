@@ -5,9 +5,9 @@
 | Nhóm | Đã có luồng Web API | Phần còn lại/điều kiện |
 | --- | --- | --- |
 | Phiên | Login, bootstrap/session/recovery phiên, logout, current-password change | Refresh tự động chưa có retry/idempotency được duyệt; không bật |
-| Hồ sơ cá nhân | Xem identity/contact/verified/grants; lưu tên; MSG06/giữ nháp | Contact start/verify/confirm và email-password proof cần G2; không đổi OTP→chờ Lưu thành tự áp contact |
+| Hồ sơ cá nhân | Xem identity/contact/verified/grants; lưu tên; contact start/verify→chờ Save/confirm; partial success/MSG06/giữ nháp | G2 đã duyệt và nối; Staff activation email OR phone vẫn chờ backend; không tự áp contact sau OTP |
 | Thông báo | GET/PUT catalog theo actor, patch các ô hợp lệ, bắt buộc, Push read-only | Devices POST/DELETE là Mobile; Zalo chưa cấu hình ở backend, không giả lập eligible |
-| Trước login | API login/session thật | `/api/auth/register`, `/api/auth/recovery`, `/api/auth/recovery/reset`, verifications start/resend/verify có ở backend nhưng chưa ghép Web; [đề xuất G2](../decisions/WEB_VERIFICATION_FLOW_PROPOSAL_2026-10-29.md) |
+| Trước login | API login/session, đăng ký Trader Email/SMS, recovery/reset, verifications start/resend/verify/complete thật | [G2 đã nối](WEB_G2_VERIFICATION_API_2026-10-29.md); OTP delivery hiện là Fake; email-only Trader có thể vào contact gate của backend, chưa bỏ gate |
 | Account/grants | List/detail/update/lock/unlock, grant history và revoke hiện hữu | Create/reset vẫn trả temporaryPassword, trái secret-free; grant create/preview phụ thuộc role codes ổn định; chưa tự nối |
 | Roles | List/detail, ma trận chỉ đọc, catalog functions và impact | Backend còn custom Create/Copy/rename, chỉ hai role seed; không suy code cho đúng ba role, chưa bật role writes |
 | HTX | Thông tin/ngành nghề/preview/save/logo | Ngân hàng WEB-COOP-BANK-01 chờ BA/backend; chưa có profile-history endpoint |
