@@ -15,6 +15,20 @@ If that Redis container already exists, use `docker start omts-web-session-redis
 
 Use the backend demo accounts documented in the backend README, including `owner`, `quanlyvung1`, `quanlyvung2`, `ketoan` and `thuonglai1`. These are not the frontend mock accounts. A password changed earlier remains changed. The session is bounded by the backend access-token expiry; automatic refresh remains disabled.
 
+### Tài khoản kiểm thử API thật
+
+Các tài khoản dưới đây đã có trong demo seed của backend; ngày 30/10/2026 đã kiểm tra đăng nhập thành công trên API local. **Mật khẩu chung: `Demo@1234`**. Đây chỉ là dữ liệu demo local, không dùng cho môi trường triển khai thật.
+
+| Role / phạm vi | Tên đăng nhập | Màn nên kiểm tra |
+| --- | --- | --- |
+| Chủ hợp tác xã (Owner), mọi vùng | `owner` | Hồ sơ HTX, nhân viên, tài khoản/quyền, vùng/bè, nhà cung cấp, phiếu nhập, thanh toán, đo nước |
+| Quản lý vùng, DEMO-01 | `quanlyvung1` | Phạm vi DEMO-01 và các chức năng được cấp |
+| Quản lý vùng, DEMO-02 | `quanlyvung2` | Phạm vi DEMO-02 và các chức năng được cấp |
+| Kế toán, mọi vùng | `ketoan` | Công nợ, thanh toán nhà cung cấp, đọc phiếu nhập |
+| Thương lái | `thuonglai1` | Đăng nhập, hồ sơ cá nhân, thông báo; không vào vận hành HTX |
+
+Role **Nhân viên** mới chưa có mã role ổn định trong backend; **Quản trị hệ thống** và người xem QR cũng chưa có tài khoản demo tương ứng để đăng nhập Web. Không gán tạm quyền khác cho các role này. Nếu một mật khẩu seed đã được đổi trong DB dùng chung, seed không đặt lại mật khẩu; dùng thông tin mới của người đã đổi hoặc một môi trường demo riêng.
+
 Current API workflows: login/session/logout; profile display-name save; cooperative profile save; zone, employee, supplier and farming-input list/detail/create/update; employee account linking/unlinking and employment actions; zone/supplier/input status actions; zone licenses and replacement chains; raft/lane forms, photos and dated condition diagrams; account list/detail/update/lock/unlock; role and permission read views. The purchasing and water screens below use real API data too. This is not completion of the full SRS. Staff requiring contact verification stays gated while the backend email-or-phone contract is pending. New account creation is withheld until the generated-username/secret-free delivery contract is available.
 
 For the new personal/access slice, open **Hồ sơ cá nhân** (`/account`), inspect identity, contact verification and current grants, change the display name, then save or discard. Open **Tùy chọn thông báo** while keeping a name draft: toggle an optional eligible In-app cell, save and reopen to verify it. Restore the original value after QA. Mandatory In-app and all Push cells are locked; Email/Zalo follow backend eligibility. The server can return a notice after saving; that notice replaces the generic success text.
