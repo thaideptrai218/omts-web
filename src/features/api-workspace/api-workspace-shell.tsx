@@ -6,6 +6,7 @@ import type { BrowserIdentityDto } from "@/server/backend/browser-dto";
 import { logoutWithApi } from "@/features/auth/api/api-auth-client";
 import { Button } from "@/components/ui/button";
 import { resources, resourceKeys, resourceAllowed } from "./resources";
+import { operationModules, operationAllowed } from "@/features/operations/permissions";
 
 type Context = Readonly<{ identity: BrowserIdentityDto; permissions: PermissionProjection }>;
 const WorkspaceContext = createContext<Context | null>(null);
@@ -44,6 +45,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
           <Link className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href="/account/security">Đổi mật khẩu</Link>
           {context.identity.subjectType === "CooperativeOwner" && <Link className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href="/cooperative/profile">Hồ sơ hợp tác xã</Link>}
           {visible.map((key) => <Link key={key} className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href={`/workspace/${key}`}>{resources[key].title}</Link>)}
+          {operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <Link key={entry.key} className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href={`/operations/${entry.key}`}>{entry.title}</Link>)}
         </nav>
         <main className="min-w-0">{children}</main>
       </div>
@@ -57,6 +59,7 @@ export function ApiWorkspaceHome() {
     <p className="mt-3 text-text-muted">Chọn công việc cần thực hiện.</p>
     <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visible.map((key) => <Link key={key} href={`/workspace/${key}`}
       className="rounded-card border border-border bg-surface p-6 text-lg font-semibold hover:border-primary">{resources[key].title}</Link>)}</div>
+    <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <Link key={entry.key} href={`/operations/${entry.key}`} className="rounded-card border border-border bg-surface p-6 text-lg font-semibold hover:border-primary">{entry.title}</Link>)}</div>
     {!visible.length && <p className="mt-6 rounded-card border border-border bg-surface p-6">Tài khoản hiện chưa được cấp chức năng nghiệp vụ. Bạn có thể xem hồ sơ cá nhân.</p>}
   </section>;
 }

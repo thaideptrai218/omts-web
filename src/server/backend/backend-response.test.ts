@@ -57,7 +57,7 @@ describe("bounded server response and failure projection", () => {
   it("accepts the exact byte limit", async () => {
     expect((await readBackendResponse(json("x".repeat(MAX_RESPONSE_BYTES - 2)), "identity")).status).toBe("success");
   });
-  it.each(["MSG06", "MSG12", "MSG19", "MSG69"])("keeps known code %s but strips all free-form error strings", async (code) => {
+  it.each(["MSG05", "MSG06", "MSG12", "MSG19", "MSG28", "MSG41", "MSG45", "MSG59", "MSG69"])("keeps known code %s but strips all free-form error strings", async (code) => {
     const secret = "fake-token-password";
     const response = json({ code, detail: secret, title: secret, stack: secret, params: { user_name: secret }, currentRowVersion: secret }, 409,
       { "Set-Cookie": secret, Location: secret, "Retry-After": "3" });

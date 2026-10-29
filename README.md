@@ -23,7 +23,7 @@ For a presentation without development overlays, use `npm run build` followed by
 - The review build shares mock state between management screens: updated role permissions can be assigned, new accounts can be linked to employees, and dashboard counts update. Created staff accounts can complete first-login password/contact setup; account locking and password reset affect their mock login. Personal profile changes, password recovery, and notification settings can be demonstrated without a backend.
 - The approved October 27 role policy is now **three fixed zone roles: Zone Manager, Accountant, and Staff**. Owners can edit permissions and discontinue/reactivate roles; they cannot add, copy, or rename roles. Staff initially has no business permissions. This policy is implemented in the product mock; backend/SRS alignment is tracked separately.
 - Dashboard headings and permitted shortcuts render while metrics load. Management directories now include clearer rows, summaries and combined filters; editors continue to open in dialogs.
-- A local API workspace now supports real login → permissions/profile → logout through the Next.js BFF, plus the first management resource screens. Use `npm run build` then `npm run start:api` with an ignored `.env.api.local`; the default review mode remains mock. Staff contact activation and new-account creation still await backend alignment. Live token refresh remains disabled.
+- A local API workspace supports real login → permissions/profile → logout through the Next.js BFF, management screens, purchase receipts, supplier payments and water measurement workflows. Use `npm run setup:api`, `npm run build` and `npm run start:api`; the default review mode remains mock. Staff contact activation and new-account creation still await backend alignment. Live token refresh remains disabled.
 - The current UI work is on `feature/OMTS-132-web-foundation` and has not been merged into `develop`. Check out the correct branch to review the screens and configuration described below.
 
 ## 1. Prerequisites
@@ -210,9 +210,9 @@ CI currently runs `npm ci → lint → typecheck → test → build → test:ses
 
 The agreed architecture is a **BFF (Backend for Frontend)**: the browser calls the Next.js server, which communicates with the .NET backend. The browser holds a SID in an HttpOnly cookie; access and refresh tokens are managed on the server. Redis is the selected runtime session store; in-memory storage is for tests only.
 
-Setting `OMTS_DATA_SOURCE=api` does not automatically connect mock screens to the backend. API mode blocks screens that still depend on mocks while their adapters and flows remain unfinished. Do not enable real API access or refresh merely by supplying a backend URL.
+Use the [local tester guide](docs/REVIEW_GUIDE.md#real-api-workspace--local-tester-run) to start the backend, Redis and API workspace on `http://localhost:3002`. Supported management, purchasing and water screens use dedicated BFF adapters; existing mock screens stay separate. API mode requires the session/coordination configuration generated in the ignored `.env.api.local`, beyond the backend URL. Refresh remains disabled.
 
-Before integration, read the [real API implementation plan](docs/WEB_REAL_API_IMPLEMENTATION_PLAN.md), [open decisions](docs/decisions/OPEN_QUESTIONS.md), and [example configuration](.env.example). Backend URLs, encryption keys, and Redis configuration are server-only; do not expose them through `NEXT_PUBLIC_*` variables.
+For scope and remaining contract gaps, read the [INP/ENV integration report](docs/reports/WEB_INP_ENV_API_2026-10-29.md), [real API implementation plan](docs/WEB_REAL_API_IMPLEMENTATION_PLAN.md), [open decisions](docs/decisions/OPEN_QUESTIONS.md), and [example configuration](.env.example). Backend URLs, encryption keys, and Redis configuration are server-only; do not expose them through `NEXT_PUBLIC_*` variables.
 
 ## 8. Troubleshooting
 

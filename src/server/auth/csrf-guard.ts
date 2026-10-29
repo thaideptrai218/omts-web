@@ -21,7 +21,21 @@ export function createCsrfGuard(environment: Readonly<Record<string, unknown>>) 
   const parsed = parseServerWebSessionConfig(environment);
   if (parsed.status !== "valid") return parsed;
   const origin = parsed.config.origin;
+  function checkHeaders(request: Request, expectedMethod: z.infer<typeof method>) {
+    try {
+      if (!method.safeParse(expectedMethod).success) return invalidPolicy;
+      if (!(request instanceof Request)) return reject(400);
+      if (request.method !== expectedMethod) return reject(405);
+      if (request.headers.get("origin") !== origin
+        || request.headers.get(CSRF_REQUEST_HEADER) !== CSRF_REQUEST_VALUE) return reject(403);
+      const site = request.headers.get("sec-fetch-site");
+      if (site !== null && site !== "same-origin") return reject(403);
+      return Object.freeze({ status: "allowed" } as const);
+    } catch { return reject(400); }
+  }
   const guard = Object.freeze({
+    // Upload handlers use the same C2A header policy, then a bounded multipart reader.
+    checkHeaders,
     async check(request: Request, input: CsrfMutationPolicy) {
       let policy: CsrfMutationPolicy;
       try {
@@ -30,14 +44,8 @@ export function createCsrfGuard(environment: Readonly<Record<string, unknown>>) 
         policy = result.data; // Snapshot server-owned route policy before await.
       } catch { return invalidPolicy; }
       try {
-        if (!(request instanceof Request)) return reject(400);
-        if (request.method !== policy.method) return reject(405);
-        // Browser-serialized origin must exactly equal the configured origin.
-        // No URL path normalization, suffix match, Host/Referer/proxy fallback.
-        if (request.headers.get("origin") !== origin
-          || request.headers.get(CSRF_REQUEST_HEADER) !== CSRF_REQUEST_VALUE) return reject(403);
-        const site = request.headers.get("sec-fetch-site");
-        if (site !== null && site !== "same-origin") return reject(403);
+        const headers = checkHeaders(request, policy.method);
+        if (headers.status !== "allowed") return headers;
         const body = await readMutationBody(request, policy);
         return body.status === "checked" ? Object.freeze({ status: "allowed", body: body.body } as const) : body;
       } catch {

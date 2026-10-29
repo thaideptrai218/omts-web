@@ -4,6 +4,7 @@ export const messageCatalog = {
   MSG03:
     "{object_name} đã tồn tại. Hệ thống không tạo bản sao; hãy kiểm tra bản ghi hiện có.",
   MSG04: "Hệ thống đang tạm thời gián đoạn. Vui lòng thử lại sau.",
+  MSG05: "Chưa thể xử lý tệp. Vui lòng kiểm tra kết quả trước khi thử lại.",
   MSG06:
     "Dữ liệu vừa được {user_name} cập nhật lúc {time}. Thay đổi của bạn chưa được lưu; vui lòng tải dữ liệu mới để kiểm tra.",
   MSG09:
@@ -31,10 +32,14 @@ export const messageCatalog = {
   MSG23: "Loại thông báo này là bắt buộc và không thể tắt.",
   MSG24:
     "Tài khoản này đã được liên kết với hồ sơ nhân viên {employee_name}.",
+  MSG28: "Ngưỡng tối thiểu phải nhỏ hơn ngưỡng tối đa.",
+  MSG41: "Số tiền phải là bội số của 1.000 đồng.",
+  MSG45: "Số tiền hoặc số lượng vượt mức cho phép.",
   MSG55:
     "Danh tính chưa được xác minh nên hệ thống không thực hiện thao tác này.",
   MSG57:
     "Tài liệu cũ tạm thời bị ẩn cho đến khi việc xác minh danh tính hoàn tất.",
+  MSG59: "Số lượng phải lớn hơn 0 và đơn giá phải là số nguyên không âm.",
   MSG61:
     "Không thể chuyển nhân viên từ “{current_status}” sang “{new_status}”: hồ sơ đã ở trạng thái này.",
   MSG62:

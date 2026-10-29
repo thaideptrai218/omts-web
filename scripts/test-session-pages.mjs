@@ -58,7 +58,7 @@ try {
   const assets = readdirSync(chunks);
   const compiledAssetText = (extension) => assets.filter((name) => name.endsWith(extension)).map((name) => readFileSync(new URL(`../.next/static/chunks/${name}`, import.meta.url), "utf8")).join("\n");
   checks += checkSidebarStyles(compiledAssetText(".css"), compiledAssetText(".js"));
-  for (const path of ["/dashboard", "/account", "/employees", "/access/accounts", "/access/roles", "/cooperative/profile", "/farming/zones", "/farming/rafts"]) {
+  for (const path of ["/dashboard", "/account", "/employees", "/access/accounts", "/access/roles", "/cooperative/profile", "/farming/zones", "/farming/rafts", "/operations/purchase-receipts", "/operations/supplier-payments", "/operations/water"]) {
     const response = await get(path);
     const body = await response.text();
     assert.ok(response.headers.get("location") === "/login" || body.includes("/login"), "Missing anonymous redirect");
