@@ -1,6 +1,7 @@
 import "server-only";
 import { isJsonContentType, readRetryAfterMs } from "../../shared/http/api-problem";
-import { messageCatalog, type MessageCode } from "../../shared/messages/message-catalog";
+import type { MessageCode } from "../../shared/messages/message-catalog";
+import { knownBackendMessageCode } from "../../shared/messages/backend-message-code";
 import type { BackendRequest } from "./backend-request";
 import type { BackendTransportResult } from "./backend-result";
 import { projectEmployeeProblemMetadata } from "../../features/employee-management/api/employee-problem-metadata";
@@ -35,12 +36,6 @@ async function readBoundedJson(response: Response): Promise<unknown> {
   }
 }
 
-function knownCode(data: unknown): MessageCode | undefined {
-  if (typeof data !== "object" || data === null || !("code" in data)) return undefined;
-  return typeof data.code === "string" && Object.hasOwn(messageCatalog, data.code)
-    ? data.code as MessageCode : undefined;
-}
-
 export async function readBackendResponse(response: Response, endpoint: BackendRequest["endpoint"] | "employeeCreate"): Promise<BackendTransportResult> {
   if (response.status >= 300 && response.status < 400) {
     cancelBody(response);
@@ -59,7 +54,7 @@ export async function readBackendResponse(response: Response, endpoint: BackendR
     let employeeProblem: ReturnType<typeof projectEmployeeProblemMetadata>;
     try {
       const data = await readBoundedJson(response);
-      code = knownCode(data);
+      code = knownBackendMessageCode(data);
       employeeProblem = projectEmployeeProblemMetadata(endpoint, response.status, code, data);
     } catch { /* Status is still authoritative. */ }
     return { status: "http-error", httpStatus: response.status, code, retryAfterMs,

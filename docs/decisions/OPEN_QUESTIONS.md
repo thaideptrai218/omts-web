@@ -52,6 +52,8 @@ Backend vẫn chưa khớp ba vai trò cố định, Staff xác minh email OR ph
 
 ### WEB-NOTIFY-02 — Catalog và kênh thông báo thật
 
+**Đã chốt29/10/2026, Duy Thái trả lời trực tiếp qua async:** dùng catalog nhóm API trả theo loại tài khoản, gồm Orders cho Staff; Web chỉ sửa InApp/Email/Zalo khi đủ điều kiện, giữ khóa InApp bắt buộc; Push chỉ xem trạng thái và do Mobile quản lý. Không suy mã MSG22 từ raw notice. Phần câu hỏi dưới đây là snapshot trước quyết định; API Web không gửi thay đổi Push, không thêm device registration.
+
 **Open — cần BA/backend xác nhận trước khi nối API tùy chọn thông báo.** Backend953 trả nhóm Orders cho Staff cùng Work/DeadlineReminders/WaterAlerts, còn fixture Web hiện có ba nhóm sau. Backend cũng khóa InApp/Push ở nhóm bắt buộc và có eligibility theo thiết bị/phiên; fixture Web chưa thể hiện giống toàn bộ. Response lưu có `notice` dạng câu, chưa có code thông báo riêng.
 
 Đề xuất nhóm xác nhận catalog theo actor/quyền, kênh bắt buộc và khả năng chỉnh của từng kênh, đồng thời cung cấp ví dụ payload đủ các trường hợp. Không tự thêm Orders cho mọi Staff, bật Push hoặc suy MSG22 từ câu tiếng Anh. UI/mock hiện tại chỉ là fixture, chưa phải catalog production đã được duyệt. Chưa sửa SRS/Jira/backend.

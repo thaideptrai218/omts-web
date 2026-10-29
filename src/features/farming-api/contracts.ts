@@ -26,7 +26,7 @@ export const raftSchema = z.object({ id, zone, code: text, latitude: z.number().
   materialCost: z.number().nullable(), rowVersion: text.min(1) });
 export type Raft = z.infer<typeof raftSchema>;
 const segment = z.object({ id, type: z.enum(["Seeded", "PlannedHarvest", "Harvested", "WrittenOff"]), from: z.number(), to: z.number(), date: day,
-  recordedBy: nullableText, confirmedBy: nullableText, seedingEventId: id.nullable(), seedLotCode: nullableText, harvestEventId: id.nullable(), lotId: id.nullable(), writeOffReason: nullableText });
+  recordedBy: nullableText, confirmedBy: nullableText, seedingEventId: id.nullable(), seedLotCode: nullableText, writeOffReason: nullableText });
 export const conditionSchema = z.object({ raftId: id, raftCode: text, date: day, cycleId: id.nullable(), layoutVersion: z.number().int().nonnegative(),
   lanes: z.array(z.object({ laneNumber: z.number().int().positive(), length: z.number().nonnegative(), summary: z.enum(["NotSeeded", "Growing", "PartiallyHarvested", "FullyHarvested"]),
     portions: z.array(z.object({ from: z.number().nonnegative(), to: z.number().nonnegative(), condition: z.enum(["NotSeeded", "Growing", "Harvested", "WrittenOff"]), segments: z.array(segment) })), plannedHarvests: z.array(segment) })) });

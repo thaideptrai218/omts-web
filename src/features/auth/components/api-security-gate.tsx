@@ -6,6 +6,8 @@ import { PasswordField } from "@/components/form/password-field";
 import { Button } from "@/components/ui/button";
 import { currentPasswordChangeSchema, type CurrentPasswordChangeFormValues } from "@/features/account-security/schemas/change-password-schema";
 import { logoutWithApi, postAuth, withAuthLock } from "../api/api-auth-client";
+import { isSrsMessageCode } from "@/shared/messages/backend-message-code";
+import { formatMessage } from "@/shared/messages/message-catalog";
 
 export function ApiSecurityGate({ phase, forced = true }: { phase: "password-change-required" | "contact-verification-required"; forced?: boolean }) {
   const form = useForm<CurrentPasswordChangeFormValues>({ resolver: zodResolver(currentPasswordChangeSchema), defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" } });
@@ -20,7 +22,8 @@ export function ApiSecurityGate({ phase, forced = true }: { phase: "password-cha
         setError(undefined);
         const result = await withAuthLock(() => postAuth("password", values));
         if (result.destination) { form.reset(); window.location.replace(result.destination); return; }
-        if (result.status === "rejected" && result.code === "MSG17") setError("Mật khẩu hiện tại không đúng.");
+        if (result.status === "rejected" && (result.code === "MSG17" || result.code === "MSG-ACCOUNT-14")) setError("Mật khẩu hiện tại không đúng.");
+        else if (result.status === "rejected" && isSrsMessageCode(result.code)) setError(formatMessage({ code: result.code }));
         else if (result.status === "rejected" || result.status === "invalid-input") setError("Vui lòng kiểm tra mật khẩu mới và mật khẩu nhập lại.");
         else { form.reset(); setUncertain(true); setError("Chưa xác nhận được kết quả đổi mật khẩu. Hãy kiểm tra lại phiên trước khi tiếp tục."); }
       })}>

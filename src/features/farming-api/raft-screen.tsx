@@ -82,7 +82,6 @@ export function ConditionDiagram({ condition }: { condition: Condition }) {
       {portion.value.segments.map((source) => <dl key={source.id} className="mt-4 space-y-2 border-t border-border pt-3"><div><dt>Sự kiện nguồn</dt><dd>{stateLabel(source.type)} · {dateLabel(source.date)} · {source.from}–{source.to} m</dd></div>
         <div><dt>Người ghi / xác nhận</dt><dd>{source.recordedBy ?? "—"} / {source.confirmedBy ?? "—"}</dd></div>
         {source.seedLotCode && <div><dt>Lô giống</dt><dd>{source.seedLotCode}</dd></div>}{source.seedingEventId && <div><dt>Mã buổi thả</dt><dd className="break-all">{source.seedingEventId}</dd></div>}
-        {source.harvestEventId && <div><dt>Mã thu hoạch</dt><dd className="break-all">{source.harvestEventId}</dd></div>}{source.lotId && <div><dt>Mã lô</dt><dd className="break-all">{source.lotId}</dd></div>}
         {source.writeOffReason && <div><dt>Lý do ghi giảm</dt><dd>{source.writeOffReason}</dd></div>}</dl>)}
     </section>}
   </section>;

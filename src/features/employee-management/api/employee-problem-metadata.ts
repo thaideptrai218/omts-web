@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
+import { semanticMessageCode } from "@/shared/messages/backend-message-code";
 
 // Exact labels emitted by EmployeeInput/EmployeeService at backend953f597.
 export const employeeBackendFieldSchema = z.enum([
@@ -37,6 +38,7 @@ export function projectEmployeeProblemMetadata(
   endpoint: string, httpStatus: number, code: unknown, body: unknown,
 ): EmployeeProblemMetadata | undefined {
   if (endpoint !== "employeeCreate" && endpoint !== "employeeUpdate" && endpoint !== "employeeUnlink") return undefined;
+  code = semanticMessageCode(code);
   if (httpStatus === 400 && code === "MSG01") {
     const parsed = validationProblem.safeParse(body);
     if (!parsed.success) return undefined;

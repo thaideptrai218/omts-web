@@ -105,7 +105,7 @@ describe("raft condition sources", () => {
   });
   it("shows the source, recorder and confirmer for the selected colored portion", () => {
     const fixture = conditionFixture(); fixture.cycleId = ids.license;
-    fixture.lanes[0].summary = "Growing"; fixture.lanes[0].portions[0] = { from: 0, to: 30, condition: "Growing", segments: [{ id: ids.lane, type: "Seeded", from: 0, to: 30, date: "2026-10-01", recordedBy: "Người ghi QA", confirmedBy: "Người xác nhận QA", seedingEventId: ids.raft, seedLotCode: "LOT-QA", harvestEventId: null, lotId: null, writeOffReason: null }] };
+    fixture.lanes[0].summary = "Growing"; fixture.lanes[0].portions[0] = { from: 0, to: 30, condition: "Growing", segments: [{ id: ids.lane, type: "Seeded", from: 0, to: 30, date: "2026-10-01", recordedBy: "Người ghi QA", confirmedBy: "Người xác nhận QA", seedingEventId: ids.raft, seedLotCode: "LOT-QA", writeOffReason: null }] };
     render(<ConditionDiagram condition={fixture} />); fireEvent.click(screen.getByRole("button", { name: "Làn 1, 0–30 m, Đang nuôi" }));
     expect(screen.getByText("Người ghi QA / Người xác nhận QA")).toBeTruthy(); expect(screen.getByText("LOT-QA")).toBeTruthy(); expect(screen.getByText(ids.raft)).toBeTruthy();
   });

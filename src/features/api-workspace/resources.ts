@@ -63,7 +63,7 @@ const detailSchemas = {
     lanes: z.array(z.object({ laneNumber: z.number().int(), length: z.number().nullable(), markerA: nullableText, markerB: nullableText })),
     layoutDrawing: z.json().nullable(), ...version }),
   accounts: accountRow,
-  roles: roleRow.extend({ permissions: z.array(z.object({ functionCode: text, actions: z.array(text), dataScope: text })), ...version }),
+  roles: roleRow.extend({ description: nullableText.optional(), permissions: z.array(z.object({ functionCode: text, actions: z.array(text), dataScope: text })), ...version }),
 };
 export function projectResource(resource: ResourceKey, data: unknown, detail: boolean,
   query?: { page: number; pageSize: number; search?: string }): unknown | undefined {

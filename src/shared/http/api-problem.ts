@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { knownBackendMessageCode } from "@/shared/messages/backend-message-code";
 
 const problemSchema = z.object({
-  code: z.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/).optional().catch(undefined),
+  code: z.string().regex(/^[A-Z][A-Z0-9_-]{0,63}$/).optional().catch(undefined),
+  legacyCode: z.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/).optional().catch(undefined),
   params: z.record(z.string(), z.union([
     z.string().max(500), z.number().finite(),
   ])).optional().catch(undefined),
@@ -19,9 +21,11 @@ export async function readApiProblem(response: Response): Promise<ApiProblem | u
   if (!isJsonContentType(response.headers.get("content-type"))) return undefined;
 
   try {
-    const parsed = problemSchema.safeParse(await response.json());
+    const raw: unknown = await response.json();
+    const parsed = problemSchema.safeParse(raw);
     // Raw detail, stack traces and unrelated top-level fields never leave here.
-    return parsed.success ? parsed.data : undefined;
+    const known = knownBackendMessageCode(raw);
+    return parsed.success ? { ...parsed.data, ...(known ? { code: known } : {}) } : undefined;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") throw error;
     return undefined;

@@ -1,4 +1,5 @@
 import { employeeProblemMetadataSchema, type EmployeeProblemMetadata } from "./employee-problem-metadata";
+import { semanticMessageCode } from "@/shared/messages/backend-message-code";
 import type { EmployeeIssueTarget, EmployeeMutationProblem } from "@/features/employee-management/domain/employee-problem";
 export type { EmployeeIssueTarget, EmployeeMutationProblem } from "@/features/employee-management/domain/employee-problem";
 
@@ -20,6 +21,7 @@ export function mapEmployeeProblem(
   endpoint: string, httpStatus: number, code: unknown, metadata: unknown,
 ): EmployeeMutationProblem | undefined {
   if (endpoint !== "employeeUpdate" && endpoint !== "employeeUnlink") return undefined;
+  code = semanticMessageCode(code);
   if (code !== "MSG01" && code !== "MSG03" && code !== "MSG24") return undefined;
   const validation = httpStatus === 400 && code === "MSG01";
   const duplicate = endpoint === "employeeUpdate" && httpStatus === 409 && (code === "MSG03" || code === "MSG24");

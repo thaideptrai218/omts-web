@@ -70,6 +70,13 @@ try {
   assert.ok(anonymous.headers.get("cache-control").includes("no-store"));
   assert.equal(anonymous.headers.get("set-cookie"), null);
   checks += 3;
+  for (const path of ["/api/account-grants?accountId=122bb318-a72e-49aa-a8d7-a6169f889007", "/api/permission-functions", "/api/role-impact?roleId=122bb318-a72e-49aa-a8d7-a6169f889007"]) {
+    const privateRead = await get(path);
+    assert.equal(privateRead.status, 401, "Access reads must not be static mock-mode responses");
+    assert.ok(privateRead.headers.get("cache-control").includes("no-store"));
+    assert.equal(privateRead.headers.get("set-cookie"), null);
+    checks += 3;
+  }
   const invalid = await get("/dashboard", { Cookie: "__Host-omts_web_sid=bad" });
   const invalidBody = await invalid.text();
   assert.ok(invalid.headers.get("location") === "/session/recover" || invalidBody.includes("/session/recover"));
