@@ -10,6 +10,7 @@ import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./works
 import { ResourceExtras } from "@/features/farming-api/resource-extras";
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
 import { workspaceError } from "./workspace-error";
+import { ZoneMapDialog } from "@/features/farming-api/zone-map-dialog";
 export { workspaceError } from "./workspace-error";
 
 const inputClass = "mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 py-2";
@@ -43,6 +44,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const [opening, setOpening] = useState(false);
   const openGeneration = useRef(0);
   const [notice, setNotice] = useState<string>();
+  const [mapOpen, setMapOpen] = useState(false);
   const canView = resourceAllowed(resource, context.identity, context.permissions.functionPermissions);
   const canCreate = definition.editable && definition.creatable !== false && resourceAllowed(resource, context.identity, context.permissions.functionPermissions, "Create");
   const canEdit = definition.editable && resourceAllowed(resource, context.identity, context.permissions.functionPermissions, "Edit");
@@ -108,6 +110,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const statuses = resource === "accounts" ? [["301", "Hoạt động"], ["302", "Đã khóa"]]
     : resource === "employees" ? [["401", "Đang làm việc"], ["402", "Đã nghỉ việc"]] : [["101", "Đang dùng"], ["102", "Ngừng dùng"]];
   return <section>
+    {resource === "zones" && <><Button className="mb-4 w-auto" variant="secondary" onClick={() => setMapOpen(true)}>Vị trí vùng và bè</Button>{mapOpen && <ZoneMapDialog onClose={() => setMapOpen(false)} />}</>}
     <div className="flex flex-wrap items-center justify-between gap-4"><h1 className="text-3xl font-semibold">{definition.title}</h1>
       {canCreate && <Button className="w-auto" disabled={definition.zoneRequired && !zoneId} onClick={() => { setSelected(null); setEditorId((value) => value + 1); }}>Thêm mới</Button>}</div>
     <div className="mt-5 flex flex-wrap gap-3">
