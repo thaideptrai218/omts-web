@@ -1,3 +1,3 @@
-import { handleSingletonRequest } from "@/server/workspace/singleton-http";
-export const GET = (request: Request) => handleSingletonRequest(request, "cooperative");
+import { handleCooperativeRequest } from "@/server/workspace/cooperative-http";
+export const GET = (request: Request) => handleCooperativeRequest(request);
 export const PUT = GET;

@@ -25,6 +25,7 @@ For a presentation without development overlays, use `npm run build` followed by
 - Dashboard headings and permitted shortcuts render while metrics load. Management directories now include clearer rows, summaries and combined filters; editors continue to open in dialogs.
 - A local API workspace supports real login → permissions/profile → logout through the Next.js BFF, management screens, purchase receipts, supplier payments and water measurement workflows. Employee profiles support account link/unlink, working zones, bank details and separate employment changes with account follow-up. Saved zone profiles support shared licenses and renewal history; saved raft profiles support photos, dated lane conditions and receipt-backed costs. Use `npm run setup:api`, `npm run build` and `npm run start:api`; the default review mode remains mock. Staff contact activation and new-account creation still await backend alignment. Live token refresh remains disabled.
 - The current UI work is on `feature/OMTS-132-web-foundation` and has not been merged into `develop`. Check out the correct branch to review the screens and configuration described below.
+- In API mode, cooperative profiles now support editable industry rows, validation, name/address preview and confirmation, plus separate PNG/JPEG/WebP logo upload/removal. Drafts survive logo changes and conflicts. Receiving-bank integration still awaits the existing BA/backend decision; see the [tester flow and limitations](docs/reports/WEB_COOPERATIVE_API_2026-10-29.md).
 
 ## 1. Prerequisites
 

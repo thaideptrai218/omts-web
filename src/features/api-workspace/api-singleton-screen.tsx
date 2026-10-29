@@ -6,8 +6,12 @@ import { workspaceError } from "./api-resource-screen";
 import { FormField } from "@/components/form/form-field";
 import { Button } from "@/components/ui/button";
 import { useApiWorkspace } from "./api-workspace-shell";
+import { CooperativeApiScreen } from "@/features/cooperative-api/cooperative-screen";
 
 export function ApiSingletonScreen({ kind }: { kind: SingletonKey }) {
+  return kind === "cooperative" ? <CooperativeApiScreen /> : <BasicSingletonScreen kind={kind} />;
+}
+function BasicSingletonScreen({ kind }: { kind: SingletonKey }) {
   const context = useApiWorkspace();
   const repository = useMemo(() => createSingletonRepository(kind), [kind]);
   const definition = singletonDefinitions[kind];

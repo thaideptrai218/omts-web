@@ -43,6 +43,14 @@ Select an available login account and save. **Bỏ liên kết tài khoản** co
 
 Try a stale version: load the current profile, compare personal/bank/zone/account/status data, then explicitly choose the saved record or keep the draft with the reviewed version. An ambiguous write is not retried automatically. Duplicate employee IDs can be opened for comparison only after a click, retaining the current draft. The approved MSG24 fallback says **Tài khoản này đã được liên kết với hồ sơ nhân viên khác**; press **Mở hồ sơ đang liên kết** to load that profile for comparison. A failed comparison read retains the button for a manual retry. The backend still lacks the structured employee name. See [employee API coverage](reports/WEB_EMPLOYEE_API_WORKFLOWS_2026-10-29.md).
 
+### Cooperative profile tester flows (October 29)
+
+As Owner, open **Hồ sơ hợp tác xã** (`/cooperative/profile`). Edit legal/contact fields and add/remove industry rows. Invalid required data stays in the form; Save opens a name/address preview and requires confirmation. Check that the response updates both the saved fields and version. A preliminary profile may contain blank fields; the backend marks it Completed only after a valid full save.
+
+Select a PNG/JPEG/WebP logo up to2MB, then upload/replace. Logo changes save separately and retain unsaved text. Remove requires confirmation. If a concurrent text update is observed in a logo response, compare it before saving the old text draft. A stale profile write preserves the draft; explicitly load and compare before adopting the saved record or continuing with the reviewed version. An ambiguous write remains blocked even after a successful GET; it is never automatically replayed. Manager, Accountant and Trader cannot read or change this profile/logo.
+
+Receiving-bank fields still await WEB-COOP-BANK-01/backend alignment; the existing mock bank form is retained and no fake bank data is added to API mode. This is not full UC09 acceptance. The original local demo profile and logo were restored after QA; audit, rowVersions and old logo files remain. See [cooperative API coverage](reports/WEB_COOPERATIVE_API_2026-10-29.md).
+
 ## Mock UI review
 
 This guide covers the **mock-backed Web UI** on `feature/OMTS-132-web-foundation`. It is intended for a local code/UI review, not acceptance of the real backend integration. Interface labels are Vietnamese; this guide uses the labels you will see on screen.
