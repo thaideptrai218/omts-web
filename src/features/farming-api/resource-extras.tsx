@@ -7,9 +7,12 @@ import { LicenseWorkspace } from "./license-screen";
 import { RaftWorkspace } from "./raft-screen";
 import { AccountGrantHistory } from "@/features/personal-api/account-grants";
 import { RolePermissionReadView } from "@/features/personal-api/role-read-view";
+import { SupplierDocumentsDialog } from "@/features/supplier-api/documents-dialog";
+import { resourceAllowed } from "@/features/api-workspace/resources";
 export function ResourceExtras({ resource, record, busy, dirty, blocked, onSaved }: { resource: string; record: ApiRecord; busy: boolean; dirty: boolean; blocked: boolean; onSaved(record: ApiRecord): void }) {
   const context = useApiWorkspace(), [open, setOpen] = useState(false);
   const owner = context.identity.subjectType === "CooperativeOwner";
+  if (resource === "suppliers") return <div className="mt-5 border-t border-border pt-4"><Button className="w-auto" variant="secondary" disabled={busy || dirty || blocked} onClick={() => setOpen(true)}>Chứng nhận nhà cung cấp</Button>{dirty && <p className="mt-2 text-sm">Lưu hoặc hủy thay đổi hồ sơ trước khi mở chứng nhận.</p>}{open && <SupplierDocumentsDialog id={record.id} canEdit={resourceAllowed("suppliers", context.identity, context.permissions.functionPermissions, "Edit")} onClose={(saved) => { setOpen(false); if (saved) onSaved(saved); }} />}</div>;
   if (resource === "roles" && owner) return <RolePermissionReadView record={record} />;
   if (resource === "accounts" && owner) return <div className="mt-5 border-t border-border pt-4"><Button className="w-auto" variant="secondary" disabled={busy} onClick={() => setOpen((value) => !value)}>{open ? "Ẩn phân quyền vùng" : "Xem phân quyền vùng"}</Button>{open && <AccountGrantHistory accountId={record.id} canRevoke />}</div>;
   if (resource !== "rafts" && (resource !== "zones" || !owner)) return null;

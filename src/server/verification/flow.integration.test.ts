@@ -14,7 +14,7 @@ describe.skipIf(!endpoint)("G2 encrypted flows with live Redis", () => {
     const binding = { contextHash: randomBytes(32).toString("hex"), binding: randomBytes(32).toString("hex"), purpose }, backendId = randomUUID();
     const call = vi.fn<VerificationDependencies["call"]>(async (path) => {
       if (path.endsWith("/verify")) return { status: "success", httpStatus: 200, data: { verificationToken: "private-proof-do-not-return", expiresAt: new Date(Date.now() + 600_000).toISOString() } };
-      if (path === "/api/auth/register") return { status: "success", httpStatus: 201, data: { accountId: randomUUID(), username: "trader.qa", oldDocumentsHidden: false, password: "never-return" } };
+      if (path === "/api/auth/register") return { status: "success", httpStatus: 201, data: { accountId: randomUUID(), username: "trader.qa", oldDocumentsHidden: false, password: randomUUID() } };
       if (path === "/api/auth/recovery") return { status: "success", httpStatus: 202, data: { requestId: backendId, message: "never-return" } };
       if (path === "/api/auth/recovery/reset") return { status: "success", httpStatus: 200, data: { messageCode: "MSG-ACCOUNT-10", message: "never-return" } };
       if (path === "/api/me/contact-changes/confirm") return { status: "success", httpStatus: 200, data: { contact: "qa@example.test", oldDocumentsHidden: false } };

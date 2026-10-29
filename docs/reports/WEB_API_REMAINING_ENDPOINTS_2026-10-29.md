@@ -11,6 +11,7 @@
 | Account/grants | List/detail/update/lock/unlock, grant history và revoke hiện hữu | Create/reset vẫn trả temporaryPassword, trái secret-free; grant create/preview phụ thuộc role codes ổn định; chưa tự nối |
 | Roles | List/detail, ma trận chỉ đọc, catalog functions và impact | Backend còn custom Create/Copy/rename, chỉ hai role seed; không suy code cho đúng ba role, chưa bật role writes |
 | HTX | Thông tin/ngành nghề/preview/save/logo | Ngân hàng WEB-COOP-BANK-01 chờ BA/backend; chưa có profile-history endpoint |
+| Nhà cung cấp | Hồ sơ, đọc/tải/upload chứng nhận JPEG/PNG/PDF, private proxy và version sau upload | Delete certificate chỉ nhận index; chờ backend kiểm ID/version nguyên tử để tránh xóa nhầm khi danh sách đổi |
 | FARM | Zones/licenses/renewal/files; raft/lane/layout/photo/dated condition/source | Manager đọc license chờ backend; vật tư bè qua INP, không dựng UC76/77 cũ |
 | INP/ENV | Receipt/return/cancel/copy/invoice/cost/export; payments/debt/allocation; manual/OCR/confirm/correct/void/history/chart/threshold/export | OwnRecords-only chờ backend enforce creator scope; signed private evidence hiện hỗ trợ Local; không giả vờ OCR thật khi Fake provider |
 | Các nghiệp vụ khác | Không thêm màn ghi mock vào API mode | Cultivation cycles/seeding/log/write-off, harvest/sales/customer finance/QR publication, workforce/payroll cần backend chạy có endpoint đúng contract |

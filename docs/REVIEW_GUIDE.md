@@ -29,6 +29,8 @@ Backend PR19 is still draft and the local API remains develop953f597. Web accept
 
 For a conflict or lost mutation response, the editor retains the draft and asks the tester to load the current server record for comparison. It does not automatically replay the write. Test create/edit/status transitions on records explicitly named for QA; do not reset the shared demo database.
 
+Supplier certificates: open **Nhà cung cấp → Mở hồ sơ → Chứng nhận nhà cung cấp** after saving/discarding metadata drafts. Readers can download; SUPPLIERS Edit allows JPEG/PNG/PDF uploads (10MB per file, 10 certificates total). Confirmed uploads update the parent version on close. An ambiguous upload stays blocked for comparison and is never replayed by Reload. Use a QA supplier. Certificate deletion awaits a backend ID/version check; index alone can remove the wrong file after a concurrent list change. See [CI and certificate evidence](reports/WEB_CI_SUPPLIER_CERTIFICATES_2026-10-29.md).
+
 ### Purchasing and water tester flows (October 29)
 
 - **Phiếu nhập** (`/operations/purchase-receipts`): select a supplier and zone, save an empty draft, add seed/material lines (a raft is required for raft materials), upload invoice images/PDF, then complete it. Check the seed-lot references and outstanding amount. Try a partial return, cancel/copy, both payment choices on cancellation, raft costs and Excel export. A completed receipt is corrected through cancel/copy; it cannot be edited in place.
