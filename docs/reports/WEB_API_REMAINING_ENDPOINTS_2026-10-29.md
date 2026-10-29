@@ -20,6 +20,8 @@ Các API DevInbox dùng riêng môi trường Development để tester xem Fake 
 
 ## Nhánh backend chưa deploy
 
+Cập nhật30/10: `origin/chore/cors-zalo-mini-app@dc00b2f` thêm inbox, Trader approval và Zalo link/login/location. Đã chạy QA branch riêng8081/DB riêng và nối Web inbox tại127.0.0.1:3003; develop8080 chưa có. Web Trader approval chờ trả lời xác nhận bước nghiệp vụ mới; SDK token/link/location là Zalo Mini App, không đưa vào login Web. Xem [audit](WEB_BACKEND_BRANCH_INBOX_2026-10-30.md).
+
 - `origin/feature/OMTS-212-lab@c92787b`: workforce/payroll nằm trên nhánh riêng; audit trước đã chỉ ra auth/employee source cũ thiếu unlink. Không coi controllers trên nhánh đó là API đã có trong runtime953f597; không merge để tự xử lý.
 - `origin/feature/OMTS-216-legacy-cleanup@0fa690b`: dọn entity/scaffolding và migration; không thêm controller. Không chạy migration xóa dữ liệu demo.
 - `origin/feature/OMTS-216-message-catalogue@56b4a2f`: đổi MSG cũ sang mã theo nhóm và thêm MessageCode/NoticeCode, gồm notification response. Không có Http route mới trong diff controller. PR19 còn OPEN/DRAFT; Web đã thêm compatibility mã lỗi mới/legacy và notification notice, bỏ hai trường bè luôn-null. Fixture kiểm hai contract; HTTP thật vẫn ở953f597. Không lấy metadata chưa deploy để đóng vấn đề runtime hiện tại.

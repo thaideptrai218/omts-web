@@ -2,6 +2,14 @@
 
 ## Real API workspace — local tester run
 
+### Branch API QA — notifications (October 30)
+
+The local QA app at **http://127.0.0.1:3003/login** uses backend branch `chore/cors-zalo-mini-app@dc00b2f` on port8081 with a separate demo database. Use the same demo usernames/password listed below. Host `127.0.0.1` separates its cookies from the existing `localhost:3002` app, which still uses develop953f597/8080. This QA deployment does not merge either branch.
+
+Open **Thông báo** from the API menu. Check newest-first items, unread count, page navigation and explicit **Đánh dấu đã đọc** / **Đánh dấu tất cả đã đọc**; reload to verify persistence. Opening the dialog alone never marks a notification as read. Unknown mutation results remain blocked after Reload and are not replayed. Notification content is rendered as plain text; record references do not guess navigation targets. The new endpoint does not exist on develop8080 yet.
+
+The `/account` page explicitly opts out of the development instant-navigation validator because its authentication guard intentionally withholds the page while the session is unresolved. Authentication and private response rules remain active. Other route validation stays enabled. See [branch audit and local startup details](reports/WEB_BACKEND_BRANCH_INBOX_2026-10-30.md).
+
 The API workspace now uses the running .NET backend and Redis. Start the backend's existing Docker demo environment on `127.0.0.1:8080`. Start a separate Redis instance on loopback (or edit the generated configuration to use your existing Redis):
 
 ```powershell
