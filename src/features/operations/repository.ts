@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OperationArea } from "./permissions";
-type RepositoryArea = OperationArea | "zone-licenses" | "raft-details";
+import { employeeProblemMetadataSchema } from "@/features/employee-management/api/employee-problem-metadata";
+type RepositoryArea = OperationArea | "zone-licenses" | "raft-details" | "employees";
 
 export type Query = Record<string, string | undefined>;
 function queryString(input: Query) { return new URLSearchParams(Object.entries(input).filter((pair): pair is [string, string] => pair[1] !== undefined && pair[1] !== "")).toString(); }
@@ -18,7 +19,8 @@ async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>,
     }
     // Expiry may be detected by the BFF's recheck after the backend wrote.
     // A write returning 401 therefore also needs reconciliation, never replay.
-    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined,
+    const employeeProblem = area === "employees" ? employeeProblemMetadataSchema.safeParse(result.employeeProblem) : undefined;
+    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}),
       uncertain: response.status >= 500 || response.ok || body !== undefined && response.status === 401 };
   } catch { return { status: "error", httpStatus: 0, uncertain: true }; }
 }

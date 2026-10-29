@@ -1,8 +1,9 @@
 import type { ResourceKey } from "./resources";
+import type { EmployeeProblemMetadata } from "@/features/employee-management/api/employee-problem-metadata";
 
 export type ApiRecord = Record<string, unknown> & { id: string; rowVersion?: string };
 export type ApiPage = { items: ApiRecord[]; page: number; pageSize: number; total: number };
-export type WorkspaceResult<T> = { status: "success"; data: T } | { status: "error"; httpStatus: number; code?: string; uncertain: boolean };
+export type WorkspaceResult<T> = { status: "success"; data: T } | { status: "error"; httpStatus: number; code?: string; uncertain: boolean; employeeProblem?: EmployeeProblemMetadata };
 async function send<T>(resource: ResourceKey, query: URLSearchParams, body?: unknown, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
   try {
     const response = await fetch(`/api/workspace/${resource}?${query}`, { method: body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", redirect: "error",

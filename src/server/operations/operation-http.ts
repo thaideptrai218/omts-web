@@ -11,6 +11,7 @@ import { planOperation, type OperationPlan } from "./operation-plan";
 import { readBoundedBytes, readOperationUpload } from "./bounded-body";
 import { localFileTarget } from "./evidence-target";
 import { handleFarmingRequest } from "../farming/farming-http";
+import { handleEmployeeApi } from "../employees/employee-api-http";
 export { localFileTarget } from "./evidence-target";
 
 const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
@@ -27,6 +28,7 @@ function browserFiles(value: unknown): unknown {
   return value;
 }
 export async function handleOperationRequest(request: Request, areaName: string): Promise<Response> {
+  if (areaName === "employees") return handleEmployeeApi(request);
   if (areaName === "zone-licenses" || areaName === "raft-details") return handleFarmingRequest(request, areaName);
   const area = z.enum(operationAreas).safeParse(areaName);
   if (!area.success) return json({ status: "not-found" }, 404);

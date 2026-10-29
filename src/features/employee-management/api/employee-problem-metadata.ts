@@ -32,11 +32,11 @@ const validationProblem = z.object({
 const employeeIdProblem = z.object({ existingEmployeeId: apiIdSchema, existingId: z.never().optional() });
 
 // Deliberate allowlist, not a parser of raw detail/params or an authorization
-// decision. Only the active PUT/DELETE employee contracts are projected.
+// decision. Only profile create/update/unlink contracts are projected.
 export function projectEmployeeProblemMetadata(
   endpoint: string, httpStatus: number, code: unknown, body: unknown,
 ): EmployeeProblemMetadata | undefined {
-  if (endpoint !== "employeeUpdate" && endpoint !== "employeeUnlink") return undefined;
+  if (endpoint !== "employeeCreate" && endpoint !== "employeeUpdate" && endpoint !== "employeeUnlink") return undefined;
   if (httpStatus === 400 && code === "MSG01") {
     const parsed = validationProblem.safeParse(body);
     if (!parsed.success) return undefined;
@@ -46,7 +46,7 @@ export function projectEmployeeProblemMetadata(
     if (endpoint === "employeeUnlink" && selected.some((value) => value !== "RowVersion")) return undefined;
     return { kind: "invalid-fields", fields: selected };
   }
-  if (endpoint === "employeeUpdate" && httpStatus === 409 && (code === "MSG03" || code === "MSG24")) {
+  if ((endpoint === "employeeCreate" || endpoint === "employeeUpdate") && httpStatus === 409 && (code === "MSG03" || code === "MSG24")) {
     const parsed = employeeIdProblem.safeParse(body);
     if (!parsed.success) return undefined;
     return { kind: code === "MSG03" ? "duplicate-employee" : "account-already-linked", existingEmployeeId: parsed.data.existingEmployeeId };

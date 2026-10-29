@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FormField } from "@/components/form/form-field";
@@ -7,6 +8,7 @@ import { useApiWorkspace } from "./api-workspace-shell";
 import { resources, resourceAllowed, type ResourceKey } from "./resources";
 import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
 import { ResourceExtras } from "@/features/farming-api/resource-extras";
+import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
 import { workspaceError } from "./workspace-error";
 export { workspaceError } from "./workspace-error";
 
@@ -19,7 +21,12 @@ function text(value: unknown): string {
 }
 
 export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
+  return resource === "employees" ? <EmployeeApiScreen /> : <GenericResourceScreen resource={resource} />;
+}
+function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const context = useApiWorkspace();
+  const accountQuery = useSearchParams().getAll("accountId");
+  const initialAccountId = resource === "accounts" && accountQuery.length === 1 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountQuery[0]) ? accountQuery[0] : undefined;
   const definition = resources[resource];
   const repository = useMemo(() => createWorkspaceRepository(resource), [resource]);
   const [page, setPage] = useState<ApiPage>();
@@ -39,6 +46,21 @@ export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
   const canView = resourceAllowed(resource, context.identity, context.permissions.functionPermissions);
   const canCreate = definition.editable && definition.creatable !== false && resourceAllowed(resource, context.identity, context.permissions.functionPermissions, "Create");
   const canEdit = definition.editable && resourceAllowed(resource, context.identity, context.permissions.functionPermissions, "Edit");
+
+  useEffect(() => {
+    if (!initialAccountId || !canView) return;
+    const controller = new AbortController(), generation = ++openGeneration.current;
+    void Promise.resolve().then(async () => {
+      if (controller.signal.aborted) return;
+      setOpening(true); setError(undefined);
+      const result = await repository.detail(initialAccountId, controller.signal);
+      if (controller.signal.aborted || generation !== openGeneration.current) return;
+      setOpening(false);
+      if (result.status === "success") { setSelected(result.data); setEditorId((value) => value + 1); }
+      else setError(workspaceError(result));
+    });
+    return () => { controller.abort(); };
+  }, [initialAccountId, canView, repository]);
 
   useEffect(() => {
     const controller = new AbortController();

@@ -41,7 +41,7 @@ function knownCode(data: unknown): MessageCode | undefined {
     ? data.code as MessageCode : undefined;
 }
 
-export async function readBackendResponse(response: Response, endpoint: BackendRequest["endpoint"]): Promise<BackendTransportResult> {
+export async function readBackendResponse(response: Response, endpoint: BackendRequest["endpoint"] | "employeeCreate"): Promise<BackendTransportResult> {
   if (response.status >= 300 && response.status < 400) {
     cancelBody(response);
     return { status: "invalid-response" };

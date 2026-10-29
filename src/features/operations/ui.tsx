@@ -64,20 +64,21 @@ export function useRemote<T>(loader: (signal: AbortSignal) => Promise<WorkspaceR
 export function useMutation() {
   const [pending, setPending] = useState(false), [error, setError] = useState<string>(), [blocked, setBlocked] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [failure, setFailure] = useState<Exclude<WorkspaceResult<unknown>, { status: "success" }>>();
   const active = useRef(false), mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   async function run<T>(action: () => Promise<WorkspaceResult<T>>, readOnly = false): Promise<T | undefined> {
     if (active.current || blocked && !readOnly) return undefined;
-    active.current = true; setPending(true); setError(undefined);
+    active.current = true; setPending(true); setError(undefined); setFailure(undefined);
     let result: WorkspaceResult<T>;
     try { result = await action(); } catch { result = { status: "error", httpStatus: 0, uncertain: !readOnly }; }
     active.current = false;
     if (!mounted.current) return undefined;
     setPending(false);
     if (result.status === "success") return result.data;
-    setError(operationError(result));
+    setError(operationError(result)); setFailure(result);
     if (!readOnly) { setBlocked(result.uncertain || result.code === "MSG06"); if (result.uncertain) setUncertain(true); }
     return undefined;
   }
-  return { pending, error, blocked, uncertain, run, busy: () => active.current, reviewed: () => { if (!active.current) { setBlocked(false); setError(undefined); } } };
+  return { pending, error, failure, blocked, uncertain, run, busy: () => active.current, reviewed: () => { if (!active.current) { setBlocked(false); setError(undefined); setFailure(undefined); } } };
 }
