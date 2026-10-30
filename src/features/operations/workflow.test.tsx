@@ -16,6 +16,55 @@ import { ids, receiptFixture, waterFixture } from "./__tests__/fixtures";
 beforeEach(() => { vi.clearAllMocks(); vi.spyOn(window, "confirm").mockReturnValue(true); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("tester workflow safeguards", () => {
+  it.each([
+    ["Thời điểm đo (giờ Việt Nam)", "2026-01-01T08:15"],
+    ["Cách ghi", "ocr"],
+  ])("keeps a measurement draft when only %s changed until explicit discard", async (label, value) => {
+    const onClose = vi.fn();
+    render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={onClose} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
+    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(value);
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(repository.write).not.toHaveBeenCalled(); expect(repository.upload).not.toHaveBeenCalled();
+  });
+  it.each([
+    ["Ngày trả *", "2026-01-01"],
+    ["Hình thức *", "BankTransfer"],
+    ["Nhà cung cấp *", ids.supplier],
+  ])("keeps a payment draft when only %s changed until explicit discard", async (label, value) => {
+    const onClose = vi.fn(), record = receiptFixture();
+    const totals = { supplierId: ids.supplier, supplierName: record.supplier.name, payable: 100000, returned: 0, paid: 0, refunded: 0, unallocated: 0, outstanding: 100000 };
+    repository.read.mockResolvedValue({ status: "success", data: { totals, receipts: [] } });
+    render(<PaymentEditor payment={null} suppliers={[totals]} canCreate initialSupplierId="" onClose={onClose} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
+    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(value);
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(repository.write).not.toHaveBeenCalled();
+  });
+  it("closes untouched or restored measurement and payment forms without a discard prompt", async () => {
+    const closeMeasurement = vi.fn();
+    const measurement = render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={closeMeasurement} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Cách ghi"), { target: { value: "ocr" } });
+    fireEvent.change(screen.getByLabelText("Cách ghi"), { target: { value: "manual" } });
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    expect(closeMeasurement).toHaveBeenCalledOnce(); measurement.unmount();
+    const closePayment = vi.fn(); repository.read.mockResolvedValue({ status: "success", data: undefined });
+    render(<PaymentEditor payment={null} suppliers={[]} canCreate initialSupplierId={ids.supplier} onClose={closePayment} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Hình thức *"), { target: { value: "BankTransfer" } });
+    fireEvent.change(screen.getByLabelText("Hình thức *"), { target: { value: "Cash" } });
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    expect(closePayment).toHaveBeenCalledOnce(); expect(repository.write).not.toHaveBeenCalled();
+  });
   it("downloads an invoice without opening a popup window", () => {
     const url = `/api/operations/purchase-receipts?action=invoice&id=${ids.receipt}&index=0`;
     render(<ReceiptEditor record={receiptFixture({ invoicePhotoUrls: [url] })} zones={[]} suppliers={[]} items={[]} onClose={vi.fn()} onSaved={vi.fn()} />);

@@ -52,8 +52,9 @@ export function PaymentScreen() {
 
 export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId, onClose, onSaved }: { payment: c.Payment | null; suppliers: Debts; canCreate: boolean; initialSupplierId: string; onClose(): void; onSaved(payment: c.Payment): void }) {
   const confirmation = useActionDialog();
-  const [supplierId, setSupplierId] = useState(payment?.supplier.id ?? initialSupplierId), [receiptId, setReceiptId] = useState(""), [amount, setAmount] = useState("");
-  const [date, setDate] = useState(businessToday()), [method, setMethod] = useState("Cash"), [reference, setReference] = useState("");
+  const [initialDraft] = useState(() => ({ supplierId: payment?.supplier.id ?? initialSupplierId, date: businessToday() }));
+  const [supplierId, setSupplierId] = useState(initialDraft.supplierId), [receiptId, setReceiptId] = useState(""), [amount, setAmount] = useState("");
+  const [date, setDate] = useState(initialDraft.date), [method, setMethod] = useState("Cash"), [reference, setReference] = useState("");
   const [deduplicationKey] = useState(() => crypto.randomUUID()), [review, setReview] = useState<z.infer<typeof c.paymentSearchSchema>>();
   const [confirming, setConfirming] = useState(false);
   const frozen = useRef<unknown>(undefined), mutation = useMutation();
@@ -61,7 +62,7 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
     : Promise.resolve({ status: "success" as const, data: undefined as Debt | undefined }), [supplierId]));
   const canAllocate = payment?.statusId === 1801 && payment.receiptId === null && canCreate;
   const target = debt.data?.receipts.find((row) => row.receiptId === receiptId);
-  const dirty = !payment && (!!receiptId || !!amount || !!reference) || canAllocate && !!receiptId;
+  const dirty = !payment && (supplierId !== initialDraft.supplierId || !!receiptId || !!amount || !!reference || date !== initialDraft.date || method !== "Cash") || canAllocate && !!receiptId;
   const close = async () => { if (!mutation.busy() && (!dirty || await confirmation.confirm("Đóng và bỏ thông tin chưa xác nhận? Nếu lần gửi trước chưa rõ kết quả, hãy đối chiếu lịch sử trước khi lập khoản mới."))) onClose(); };
   async function submit() {
     const body = canAllocate ? { receiptId } : { supplierId, receiptId, amount: Number(amount), paymentDate: date, method, referenceCode: reference || null, deduplicationKey };

@@ -58,11 +58,13 @@ export function WaterScreen() {
 
 export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: { zoneId: string; zoneName: string; onClose(): void; onSaved(record: c.WaterMeasurement, ocr?: Recognition): void }) {
   const confirmation = useActionDialog();
-  const [mode, setMode] = useState("manual"), [photo, setPhoto] = useState<File>(), [values, setValues] = useState({ measuredAt: businessTime(), ph: "", salinity: "" });
+  const [initialValues] = useState(() => ({ measuredAt: businessTime(), ph: "", salinity: "" }));
+  const [mode, setMode] = useState("manual"), [photo, setPhoto] = useState<File>(), [values, setValues] = useState(initialValues);
   const [clientOperationId] = useState(() => crypto.randomUUID()), [review, setReview] = useState<c.WaterHistory>();
   const attempt = useRef<{ mode: string; photo?: File; payload: z.infer<typeof c.recordWaterSchema> }>(undefined);
   const mutation = useMutation();
-  const close = async () => { if (!mutation.busy() && (!photo && !values.ph && !values.salinity || await confirmation.confirm("Bỏ phép đo chưa xác nhận? Nếu lần gửi trước chưa rõ kết quả, hãy kiểm tra lịch sử nháp trước khi tạo phép đo mới."))) onClose(); };
+  const dirty = !!photo || mode !== "manual" || JSON.stringify(values) !== JSON.stringify(initialValues);
+  const close = async () => { if (!mutation.busy() && (!dirty || await confirmation.confirm("Bỏ phép đo chưa xác nhận? Nếu lần gửi trước chưa rõ kết quả, hãy kiểm tra lịch sử nháp trước khi tạo phép đo mới."))) onClose(); };
   async function save(confirm: boolean) {
     if (!mutation.uncertain) attempt.current = { mode, photo, payload: { clientOperationId, measuredAt: toApiTime(values.measuredAt), ph: values.ph === "" ? null : Number(values.ph), salinity: values.salinity === "" ? null : Number(values.salinity), confirm } };
     const current = attempt.current;
