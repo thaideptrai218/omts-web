@@ -43,6 +43,14 @@ try {
     const zone = username === "quanlyvung2" ? zone2 : zone1, ownBusiness = !isTrader;
     const profile = (await c.check("/api/account/profile", 200)).data; assert.equal(profile.username, username);
     await c.check("/api/auth/session", 200); await c.check("/api/account/notification-preferences", 200);
+    if (process.env.OMTS_QA_SALES_WORKFORCE === "1") {
+      await c.check("/api/operations/sales-products", isOwner || isTrader ? 200 : 403);
+      await c.check("/api/operations/sales-products?action=all", isOwner ? 200 : 403);
+      await c.check("/api/operations/purchase-requests?action=mine", isTrader ? 200 : 403);
+      await c.check("/api/operations/purchase-requests", isOwner || username.startsWith("quanlyvung") ? 200 : 403);
+      const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+      await c.check(`/api/operations/workforce?day=${day}`, isOwner || username.startsWith("quanlyvung") ? 200 : 403);
+    }
     for (const resource of ["zones", "suppliers", "input-items"]) await c.check(`/api/workspace/${resource}`, ownBusiness ? 200 : 403);
     for (const resource of ["employees", "accounts", "roles"]) await c.check(`/api/workspace/${resource}`, isOwner ? 200 : 403);
     await c.check("/api/cooperative/profile", isOwner ? 200 : 403); await c.check("/api/permission-functions", isOwner ? 200 : 403);

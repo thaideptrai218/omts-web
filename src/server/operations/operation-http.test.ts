@@ -15,6 +15,31 @@ function configure(subjectType = "CooperativeOwner", permissions: FunctionPermis
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 const get = (query: string) => new Request(`http://localhost:3002/api/operations/water?${query}`);
 describe("operations BFF authorization and evidence boundary", () => {
+  it("keeps Trader reads on the personal endpoint and denies cooperative/all-product reads", async () => {
+    configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 20, total: 0 }));
+    expect((await handleOperationRequest(get("action=mine"), "purchase-requests")).status).toBe(200);
+    expect(fetcher.mock.calls[0][0].toString()).toBe("http://127.0.0.1:8080/api/me/purchase-requests?page=1&pageSize=20");
+    expect((await handleOperationRequest(get("action=list"), "purchase-requests")).status).toBe(403);
+    expect((await handleOperationRequest(get("action=all"), "sales-products")).status).toBe(403);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it("rejects a validly shaped purchase request returned with another ID", async () => {
+    configure(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ id: ids.otherZone, code: "YC-QA", productId: ids.item, productName: "Hàu QA", quantityUnit: "Cage", requestedCages: 2,
+      requestedPickupDate: "2026-10-31", note: null, status: "AWAITING_RESPONSE", acceptedCages: null, acceptedPickupDate: null, allowPayLater: false, responseNote: null,
+      respondedAt: null, cancelledAt: null, cancellationReason: null, createdAt: "2026-10-31T02:00:00+07:00", customerName: "QA", rowVersion: "opaque" }));
+    expect((await handleOperationRequest(get(`action=detail&id=${ids.receipt}`), "purchase-requests")).status).toBe(502);
+  });
+  it("rejects workforce rows outside the current view-zone grants", async () => {
+    configure("Staff", [{ functionCode: "WORK_ASSIGNMENTS", action: "View", scope: { kind: "zones", zoneIds: [ids.zone] }, dataScope: "AssignedZone" }]);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([{ id: ids.receipt, employeeId: ids.item, employeeName: "QA outside", zoneId: ids.otherZone, raftId: null, raftCode: null, jobTypeId: null, job: "QA", date: "2026-10-31", checkedInAt: null, checkedOutAt: null }]));
+    const response = await handleOperationRequest(get("day=2026-10-31"), "workforce");
+    expect(response.status).toBe(502); expect(await response.text()).not.toContain("QA outside");
+  });
+  it("does not release new-module data after the session changes", async () => {
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([]));
+    expect((await handleOperationRequest(get(""), "sales-products")).status).toBe(401);
+  });
   it("blocks wrong-origin multipart uploads before consuming the body or calling backend", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch");
     const form = new FormData(); form.set("photo", new File(["image"], "qa.png", { type: "image/png" })); form.set("payload", JSON.stringify({ clientOperationId: ids.water }));

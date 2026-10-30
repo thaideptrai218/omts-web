@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/operations/contracts";
 import { operationAreas, type OperationArea } from "@/features/operations/permissions";
+import { planNewModule } from "./new-module-plan";
 
 const id = z.guid(), empty = z.strictObject({});
 const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
@@ -12,11 +13,12 @@ const querySchema = z.strictObject({ action: z.string().default("list"), id: id.
   index: z.string().regex(/^\d{1,3}$/).optional() });
 const mutationSchema = z.strictObject({ action: z.string(), id: id.optional(), zoneId: id.optional(), body: z.unknown().default({}) });
 export type OperationPlan = { area: OperationArea; action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE";
-  permission: string; zoneId?: string; body?: unknown; schema: z.ZodType; file?: "export" | "invoice" | "photo"; index?: number };
+  permission: string; zoneId?: string; body?: unknown; schema: z.ZodType; file?: "export" | "invoice" | "photo"; index?: number; expectedId?: string };
 
 export function planOperation(areaName: string, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   const area = z.enum(operationAreas).safeParse(areaName);
   if (!area.success) return undefined;
+  if (["sales-products", "purchase-requests", "workforce"].includes(area.data)) return planNewModule(area.data, method, query);
   const names = [...query.keys()];
   if (new Set(names).size !== names.length) return undefined;
   const q = querySchema.safeParse(Object.fromEntries(query));

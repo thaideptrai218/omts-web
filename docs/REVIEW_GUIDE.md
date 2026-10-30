@@ -2,7 +2,9 @@
 
 ## Real API workspace — local tester run
 
-For the complete currently integrated tester scope, use **http://127.0.0.1:3003/login** (isolated Zalo backend QA, includes inbox and trader decisions). The comparison app on localhost3002 still uses develop8080, which lacks those two endpoints. The [role flow audit](reports/WEB_ROLE_FLOW_AUDIT_2026-10-30.md) records current checks, fixes and remaining contract limitations.
+For the complete currently integrated tester scope, use **http://127.0.0.1:3003/login** (isolated Zalo backend QA, includes inbox and trader decisions). The comparison app on localhost3002 still uses develop8080, which lacks inbox/trader decisions and the new Sales/Workforce endpoints. The [role flow audit](reports/WEB_ROLE_FLOW_AUDIT_2026-10-30.md) records current checks, fixes and remaining contract limitations.
+
+October31: QA8081 now runs backend98e232c on the copied database **OMTS_QA_98e232c**. The old database/image are retained. **Sản phẩm bán**, **Yêu cầu mua hàng** and **Phân công và chấm công** are connected for reads, with filters/reload, personal-vs-internal feeds and existing role/scope checks. Products/requests/assignments are currently empty; create/respond/cancel and workforce writes remain unavailable pending the two business decisions. This is a read slice, not acceptance of complete Sales/LABOR workflows. See [coverage and runtime notes](reports/WEB_SALES_WORKFORCE_READ_QA_2026-10-31.md).
 
 The [October30 browser pass](reports/WEB_BROWSER_ROLE_QA_2026-10-30.md) now includes both Managers, Accountant and Trader; its matrix states actual checks and untested variants. The native-popup blocker was cleared. API confirmations use in-app dialogs: **Quay lại** keeps the draft; **Đồng ý** continues. Invoice/license/certificate links download directly. Reload older QA pages before checking. QA receipts026–029, payment references QA-BROWSER-M1/M2 and supplier QA browser Manager2 20261030 remain for tester comparison; see the report for exact final states.
 
@@ -16,6 +18,7 @@ The repeatable read-only role check uses the existing local demo accounts and cr
 $env:OMTS_QA_PASSWORD='Demo@1234'
 $env:OMTS_QA_WEB_ORIGIN='http://127.0.0.1:3003'
 $env:OMTS_QA_BRANCH_API='1'
+$env:OMTS_QA_SALES_WORKFORCE='1'
 npm run test:api-roles
 ```
 

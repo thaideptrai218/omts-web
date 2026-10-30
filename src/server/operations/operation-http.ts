@@ -105,6 +105,8 @@ export async function handleOperationRequest(request: Request, areaName: string)
         if (result.status !== "success" || ![200, 201].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
         const parsed = plan.schema.safeParse(result.data);
         if (!parsed.success) return json({ status: "invalid-response" }, 502);
+        if (plan.expectedId && (parsed.data as { id?: string }).id !== plan.expectedId) return json({ status: "invalid-response" }, 502);
+        if (area.data === "workforce" && Array.isArray(parsed.data) && parsed.data.some((row: { zoneId: string }) => !operationAllowed("workforce", context.context.identity, context.context.permissions.functionPermissions, "View", row.zoneId))) return json({ status: "invalid-response" }, 502);
         data = parsed.data;
       }
       if (plan.file === "invoice" || plan.file === "photo") {

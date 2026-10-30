@@ -67,6 +67,6 @@ export function ApiWorkspaceHome() {
     <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visible.map((key) => <a key={key} href={`/workspace/${key}`}
       className="rounded-card border border-border bg-surface p-6 text-lg font-semibold hover:border-primary">{resources[key].title}</a>)}</div>
     <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={`/operations/${entry.key}`} className="rounded-card border border-border bg-surface p-6 text-lg font-semibold hover:border-primary">{entry.title}</a>)}</div>
-    {!visible.length && <p className="mt-6 rounded-card border border-border bg-surface p-6">Tài khoản hiện chưa được cấp chức năng nghiệp vụ. Bạn có thể xem hồ sơ cá nhân.</p>}
+    {!visible.length && !operationModules.some((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)) && <p className="mt-6 rounded-card border border-border bg-surface p-6">Tài khoản hiện chưa được cấp chức năng nghiệp vụ. Bạn có thể xem hồ sơ cá nhân.</p>}
   </section>;
 }

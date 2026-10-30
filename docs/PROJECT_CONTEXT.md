@@ -1,8 +1,10 @@
 # OMTS Web — current project context
 
-> Cập nhật: 30/10/2026 (Asia/Saigon)
+> Cập nhật: 31/10/2026 (Asia/Saigon)
 >
 > Update this summary when Jira, the current SRS, or an approved team decision changes. Planned work is not evidence that a feature has already been implemented.
+
+Sales/Workforce đọc 31/10: [báo cáo](reports/WEB_SALES_WORKFORCE_READ_QA_2026-10-31.md). Backend Zalo mới 98e232c thêm products/cage requests và workforce; QA8081 chuyển sang image mới trên database sao chép OMTS_QA_98e232c, giữ nguyên OMTS cũ/backup/image để quay lại. Main8080 không đổi. Thêm 3 màn đọc: sản phẩm Owner/Trader; yêu cầu mua theo personal/internal feed và trạng thái/paging/detail; phân công/chấm công theo ngày và quyền vùng. Không có POST mới, không tự mở rộng OwnRecords; kiểm response ID/zone/session. Sửa dashboard Trader báo chưa có chức năng dù đã có module. 37 targeted tests, lint/typecheck/build41/61built assertions PASS; 204 HTTP role checks PASS. Browser cả5seed roles kiểm menu/read/filter/denial; Products/Requests/Assignments/JobTypes đều0, chưa nhận browser detail/write PASS. Hai câu hỏi số lồng so với Jira kg và Web/Mobile đang chờ; không gửi/hủy/phản hồi yêu cầu hoặc ghi workforce trước chốt. Không merge.
 
 Lookup recovery30/10: [báo cáo](reports/WEB_OPERATIONS_LOOKUP_RECOVERY_2026-10-30.md). Thêm tải lại GET danh mục phiếu nhập/bè/công nợ/vùng nước khi lỗi, giữ bộ lọc và nháp, không replay hay mở khóa writeunknown. Sửa OperationsRepository phân biệt lỗi đọc với ghi chưa rõ kết quả; write401/5xx/network/invalid-success giữ uncertain.14regression mới,46targeted/lint/typecheck/build41/61built assertions PASS. Browser Manager1 bè lỗi→retry giữ hàng/giá; Kế toán GET lỗi→retry PR029 giữ amount/method/reference, CSS360/1024 không tràn; Manager2 đo nước giữ nháp, Owner lookup đủ2vùng, Trader bị chặn thanh toán/profile đọc được. Không ghi business mới, sessionslogout, API8081/Web3002/3003 chạy lại; backend refs953f597/dc00b2f chưa có API mới, chưa merge.
 
