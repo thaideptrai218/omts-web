@@ -1,5 +1,7 @@
 # Branch backend và hộp thư Web — 30/10/2026
 
+**Cập nhật sau phê duyệt:** người dùng đã đồng ý Owner duyệt/từ chối Trader; luồng đã nối và kiểm HTTP thật. Xem [báo cáo hiện hành](WEB_TRADER_APPROVAL_API_2026-10-30.md). Những trạng thái “chờ trả lời” bên dưới là snapshot lúc làm inbox.
+
 Đã fetch origin và so sánh controller/DTO/service liên quan. Không merge, checkout nhánh khác hoặc sửa source backend.
 
 | Branch | SHA | Kết quả đối chiếu |
