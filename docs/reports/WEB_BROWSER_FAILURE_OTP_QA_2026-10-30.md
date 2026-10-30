@@ -32,12 +32,22 @@ Không coi ca mã chéo trên browser là chứng minh đầy đủ binding cont
 
 ## Bước cần người dùng thực hiện
 
-Recovery đã được đưa đến bước nhập mật khẩu, hai ô còn trống. Quy tắc điều khiển browser yêu cầu người dùng tự nhập và gửi mật khẩu mới. Đã yêu cầu người dùng hoàn tất ở `/recover` và chỉ báo kết quả, không gửi mật khẩu trong chat. **Đang chờ kết quả**, không ghi nhận reset/login bằng credential mới là PASS. Proof có thời hạn; nếu hết hạn cần lượt xác minh mới có chủ ý.
+Recovery đã được đưa đến bước nhập mật khẩu, hai ô còn trống. Quy tắc điều khiển browser yêu cầu người dùng tự nhập và gửi mật khẩu mới. Đã yêu cầu người dùng hoàn tất ở `/recover` và chỉ báo kết quả, không gửi mật khẩu trong chat. Lượt đầu hết hạn trước khi hoàn tất; lỗi kết thúc lượt được sửa bên dưới. **Chưa ghi nhận reset/login bằng credential mới là PASS**; bước mật khẩu vẫn cần người dùng thao tác trên lượt còn hạn.
 
 Không thay mật khẩu qua CLI để thay thế bằng chứng browser. Không đổi credential seed hoặc mở khóa/cấp grant chỉ để tạo ca test. Các ca ghi thay đổi quyền và các biến thể contact/password còn lại vẫn được phân biệt với bằng chứng HTTP cũ.
 
+## Lỗi tìm được khi kết thúc lượt đã hết hạn
+
+Sau handoff, người dùng thấy form bắt đầu. Đọc đúng tab mới sau đó cho thấy cùng lượt đã verified, nhưng ngay sau đó proof hết hạn thật. Không kết luận có lỗi cách ly cookie chỉ từ trạng thái trang được sao chép lúc đầu.
+
+Ở màn expired, bấm Kết thúc gọi cancel; Redis row đã mất do TTL nên server trả MSG16/410 với uncertain=false. UI cũ chỉ xử lý cancelled và giữ nguyên màn expired, khiến người dùng không bắt đầu lại được nếu không reload. Đã tái hiện thật và lưu ảnh trước sửa.
+
+Bản sửa chỉ ở VerificationPanel: sau cancel nhận đúng MSG16 không mơ hồ, đọc đối chiếu purpose hiện tại. Chỉ khi read xác nhận empty mới rời màn cũ, xóa input tạm và về form bắt đầu/đóng dialog. Nếu có lượt mới thì hiển thị lượt mới, không cancel nó và không mang input mật khẩu/OTP cũ sang. Nếu cancel hoặc read chưa rõ kết quả, vẫn giữ trạng thái bị chặn. Không đổi server TTL/binding/CAS/schema, không tự start/resend/verify/complete hoặc retry lệnh ghi.
+
+Thêm4 regression: expired cancel→known empty, newer flow không bị cancel/không giữ mật khẩu nháp cũ, uncertain cancel không tự bỏ chặn, reconciliation read lỗi không tự thoát. Nhóm G2 **33 tests PASS**; full **264file/2879PASS/0fail/0skip** vớiRedisDB2, lint/typecheck/build41routes và61built assertions PASS. JSON full tại `docs/learning/otp-expired-cancel-full-tests.json`. Browser bản sửa cuối giữ lượt code đến13:49:28 hết hạn tự nhiên, bấm Kết thúc trở về form bắt đầu ngay mà không reload. Không rút ngắn TTL hay sửa clock/Redis QA để làm nhanh ca này.
+
 ## Bằng chứng và trạng thái mã nguồn
 
-Không phát hiện lỗi sản phẩm mới trong các ca trên; chưa có thay đổi source cho các hành vi đã đúng. Head ứng dụng lúc kiểm là `e3ab215`. CI của head đó build-test/Gitleaks/title đạt; GitGuardian11 findings là check riêng đang unresolved. Backend fetch vẫn develop953f597/Zalo dc00b2f, không có API v2 mới để nối.
+Các ca đầu chạy trên `e3ab215`; lỗi expired-cancel được phát hiện sau đó và sửa như mục trên. CI e3ab215 và commit docs d4fad03 đã đạt build-test/Gitleaks/title; GitGuardian11 findings là check riêng đang unresolved. Backend fetch vẫn develop953f597/Zalo dc00b2f, không có API v2 mới để nối.
 
-Ảnh task outputs: `qa-upstream-outage-draft-retained.png`, `qa-recovery-verified-pending-password.png`. Kiểm thử hồi quy G2 **4file/29PASS/0skip**, gồm UI/repository/HTTP và encrypted-flow integration với RedisDB2 thật; backend calls trong integration được fixture mô phỏng, không phải thêm29browser cases. Không sửa source nên không thay kết quả build của e3ab215 bằng một claim build mới.
+Ảnh task outputs: `qa-upstream-outage-draft-retained.png`, `qa-recovery-verified-pending-password.png`, `qa-user-recovery-tab-verified.png`, `qa-otp-expired-cancel-stuck-before-fix.png`, `qa-otp-expired-cancel-fixed.png`. Snapshot trước sửa **4file/29PASS/0skip**, sau sửa **4file/33PASS/0skip**, gồm UI/repository/HTTP và encrypted-flow integration với RedisDB2 thật; backend calls trong integration được fixture mô phỏng, không phải thêm33browser cases.

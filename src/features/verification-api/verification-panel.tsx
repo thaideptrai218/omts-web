@@ -46,6 +46,25 @@ export function VerificationPanel({ purpose, onReady, onClose, onBusyChange, ini
     if (!parsed.success) { setError("Hãy kiểm tra email/số điện thoại, mã 6 chữ số hoặc mật khẩu ít nhất 8 ký tự gồm chữ và số, nhập lại trùng khớp."); return undefined; }
     return parsed.data;
   };
+  async function cancelFlow() {
+    if (!flow) return;
+    const result = await run({ op: "cancel", purpose, id: flow.id });
+    let ended = result?.status === "cancelled";
+    // An expired Redis row may already be gone. Reconcile that known rejection
+    // before leaving the old screen; never cancel a different, newer flow.
+    if (result?.status === "error" && result.code === "MSG16" && result.uncertain === false) {
+      const current = await run({ op: "read", purpose });
+      ended = current?.status === "empty";
+      if (current?.flow && current.flow.id !== flow.id && live.current) {
+        setPassword(""); setCode(""); setNewPassword(""); setConfirmation("");
+      }
+    }
+    if (ended && live.current) {
+      setFlow(undefined); setError(undefined); setUncertain(false); setCompleted(undefined);
+      setPassword(""); setCode(""); setNewPassword(""); setConfirmation("");
+      onClose?.();
+    }
+  }
   if (!loaded) return <Skeleton />;
   return <section aria-label={titles[purpose]} className="space-y-4"><h2 className="text-xl font-semibold">{titles[purpose]}</h2><ErrorNotice error={error} />
     {completed || flow?.phase === "done" ? <div className="space-y-3"><p role="status">{purpose === "registration" ? "Đã kết thúc lượt đăng ký. Hãy đăng nhập để kiểm tra tài khoản." : "Lượt xác minh đã kết thúc. Hãy kiểm tra thông tin đã lưu hoặc đăng nhập lại."}</p>
@@ -75,7 +94,7 @@ export function VerificationPanel({ purpose, onReady, onClose, onBusyChange, ini
             <Button type="submit" className="w-auto" isPending={busy}>{purpose === "registration" ? "Tạo tài khoản thương lái" : "Lưu mật khẩu mới"}</Button>
           </form>)}
         {(waiting || halted) && <Button className="w-auto" variant="secondary" disabled={busy} onClick={() => void run({ op: "read", purpose })}>Kiểm tra trạng thái lượt xác minh</Button>}
-        <Button className="w-auto" variant="secondary" disabled={busy || waiting} onClick={async () => { const result = await run({ op: "cancel", purpose, id: flow.id }); if (result?.status === "cancelled") onClose?.(); }}>Kết thúc lượt xác minh</Button>
+        <Button className="w-auto" variant="secondary" disabled={busy || waiting} onClick={() => void cancelFlow()}>Kết thúc lượt xác minh</Button>
       </div>}
     {onClose && <Button className="w-auto" variant="secondary" disabled={busy} onClick={onClose}>Để sau</Button>}
   </section>;
