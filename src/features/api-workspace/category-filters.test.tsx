@@ -9,8 +9,8 @@ import { ApiResourceScreen } from "./api-resource-screen";
 beforeEach(() => { vi.clearAllMocks(); state.list.mockImplementation(async (query) => ({ status: "success", data: { items: [], page: Number(query.page), pageSize: 20, total: 40 } })); });
 afterEach(cleanup);
 it.each([["suppliers", "Loại nhà cung cấp", "Material", "type"], ["input-items", "Nhóm vật tư", "RaftMaterial", "group"]] as const)("combines category, status and search and resets paging for %s", async (resource, label, value, key) => {
-  render(<ApiResourceScreen resource={resource} />); await vi.waitFor(() => expect(state.list).toHaveBeenCalled());
-  fireEvent.click(screen.getByRole("button", { name: "Sau" })); await vi.waitFor(() => expect(state.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: "2" }), expect.any(AbortSignal)));
+  render(<ApiResourceScreen resource={resource} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Sau" })); await vi.waitFor(() => expect(state.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: "2" }), expect.any(AbortSignal)));
   fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value } });
   fireEvent.change(screen.getByRole("combobox", { name: "Trạng thái" }), { target: { value: "101" } });
   fireEvent.change(screen.getByRole("textbox", { name: "Tìm kiếm" }), { target: { value: "qa" } });
