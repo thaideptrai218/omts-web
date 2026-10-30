@@ -103,7 +103,7 @@ export function PersonalApiEditor({ initial }: { initial: ProfileViewDto }) {
           if (!alive.current) return;
           if (result.status !== "cancelled" && !(Date.parse(contactFlow.expiresAt) <= Date.now() && !result.uncertain)) { setContactError(verificationError(result)); return; }
         }
-        setContactFlow(undefined); setDisplayName(record.displayName); setFieldError(undefined); setDiscard(false); setContactError(undefined);
+        setContactFlow(undefined); setDisplayName(record.displayName); setFieldError(undefined); setDiscard(false); setContactError(undefined); setNotice(undefined);
       } finally { saveLock.current = false; if (alive.current) setContactSaving(false); }
     }}>Bỏ thay đổi</Button><Button className="w-auto" variant="secondary" disabled={pending} onClick={() => setDiscard(false)}>Tiếp tục sửa</Button></div></Dialog>}
     {contactDialog && <Dialog open title="Xác minh liên hệ" dismissible={!contactBusy} onOpenChange={(open) => { if (!open && !contactBusy) setContactDialog(undefined); }}><VerificationPanel purpose="contact" initialContact={contactDialog} onBusyChange={setContactBusy} onClose={() => setContactDialog(undefined)} onReady={(flow) => { setContactFlow(flow); setContactDialog(undefined); setContactError(undefined); setNotice("Liên hệ đã xác minh, chờ Lưu thay đổi."); }} /></Dialog>}

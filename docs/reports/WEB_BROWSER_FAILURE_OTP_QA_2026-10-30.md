@@ -36,6 +36,8 @@ Recovery đã được đưa đến bước nhập mật khẩu, hai ô còn tr�
 
 Không thay mật khẩu qua CLI để thay thế bằng chứng browser. Không đổi credential seed hoặc mở khóa/cấp grant chỉ để tạo ca test. Các ca ghi thay đổi quyền và các biến thể contact/password còn lại vẫn được phân biệt với bằng chứng HTTP cũ.
 
+Lượt tiếp người dùng xác nhận **“Chưa đổi, tiếp tục kiểm tra các màn khác”**. Giữ ca credential mới là chưa chạy; không tiếp tục tạo lượt recovery/handoff lặp lại. Các ca contact-cancel và thông báo sau đó ở [báo cáo tiếp theo](WEB_BROWSER_CONTACT_INBOX_QA_2026-10-30.md).
+
 ## Lỗi tìm được khi kết thúc lượt đã hết hạn
 
 Sau handoff, người dùng thấy form bắt đầu. Đọc đúng tab mới sau đó cho thấy cùng lượt đã verified, nhưng ngay sau đó proof hết hạn thật. Không kết luận có lỗi cách ly cookie chỉ từ trạng thái trang được sao chép lúc đầu.

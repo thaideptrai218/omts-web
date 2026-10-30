@@ -33,6 +33,8 @@ describe("approved G2 profile partial saves", () => {
   it("cancel before Save discards proof without confirming contact or changing saved metadata", async () => {
     mocks.execute.mockResolvedValue({ status: "cancelled" }); render(<PersonalApiEditor initial={personalFixture()} />); choose(); click("Hủy thay đổi"); click("Bỏ thay đổi");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull()); expect(mocks.execute).toHaveBeenCalledWith({ op: "cancel", purpose: "contact", id: flow().id }); expect(mocks.saveProfile).not.toHaveBeenCalled();
+    expect(screen.queryByText("Liên hệ đã xác minh, chờ Lưu thay đổi.")).toBeNull();
+    expect(screen.queryByText(/Đã xác minh, chờ Lưu thay đổi/)).toBeNull();
   });
   it("keeps an uncertain contact write blocked after reading the saved profile", async () => {
     mocks.execute.mockResolvedValue({ status: "error", uncertain: true }); mocks.profile.mockResolvedValue({ status: "success", data: personalFixture() }); render(<PersonalApiEditor initial={personalFixture()} />); choose(); click("Lưu thay đổi"); await screen.findByText(/Lỗi liên hệ/); click("Tải hồ sơ mới để đối chiếu"); await screen.findByText(/Tên đã lưu:/);
