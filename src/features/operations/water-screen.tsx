@@ -43,6 +43,7 @@ export function WaterScreen() {
       <Select label="Trạng thái" value={filters.status} onChange={(e) => { setFilters((value) => ({ ...value, status: e.target.value })); setPage(1); }}>{[["Confirmed", "Đã xác nhận"], ["Draft", "Nháp"], ["Corrected", "Đã hiệu chỉnh"], ["Voided", "Đã hủy"], ["All", "Tất cả"]].map(([key, title]) => <option key={key} value={key}>{title}</option>)}</Select>
     </div>
     <ErrorNotice error={zones.error || history.error || mutation.error} />{notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
+    {zones.error && <Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending || zones.loading} onClick={zones.reload}>Tải lại danh sách vùng</Button>}
     {!zoneId ? <p className="mt-6 rounded-card border border-border bg-surface p-6">Chọn vùng để xem lịch sử đo nước.</p> : <>
       <Button className="mt-4 w-auto" variant="secondary" disabled={history.loading} onClick={() => { history.reload(); chart.reload(); }}>Tải lại dữ liệu</Button>
       <p className="mt-3 text-sm text-text-muted">Khi chưa chọn kỳ: lịch sử gồm 3 tháng gần đây, biểu đồ gồm 12 tháng. Thời gian hiển thị theo giờ Việt Nam.</p>

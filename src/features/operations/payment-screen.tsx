@@ -73,6 +73,7 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
   return <Dialog open title={payment ? "Khoản thanh toán nhà cung cấp" : "Ghi nhận thanh toán"} size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
     {confirmation.dialog}
     <ErrorNotice error={mutation.error || debt.error} />
+    {debt.error && <Button className="mb-3 w-auto" variant="secondary" disabled={mutation.pending || debt.loading} onClick={debt.reload}>Tải lại công nợ theo phiếu</Button>}
     {payment && <dl className="mb-5 grid gap-4 sm:grid-cols-2">{[["Nhà cung cấp", payment.supplier.name], ["Phiếu nhập", payment.receiptCode ?? "Chưa phân bổ"], ["Ngày trả", payment.paymentDate], ["Hình thức", methodLabel(payment.method)], ["Số tiền", <Money key="amount" value={payment.amount} />], ["Trạng thái", statusLabel(payment.statusId)], ["Mã tham chiếu", payment.referenceCode ?? "—"], ["Lý do hủy", payment.cancelReason ?? "—"]].map(([label, value]) => <div key={String(label)}><dt className="text-sm text-text-muted">{label}</dt><dd>{value}</dd></div>)}</dl>}
     {(!payment && canCreate || canAllocate) && <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirming(true); }}>
       <fieldset disabled={mutation.pending || mutation.uncertain || confirming} className="space-y-4">

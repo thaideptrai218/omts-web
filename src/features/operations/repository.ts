@@ -21,8 +21,8 @@ async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>,
     // A write returning 401 therefore also needs reconciliation, never replay.
     const employeeProblem = area === "employees" ? employeeProblemMetadataSchema.safeParse(result.employeeProblem) : undefined;
     return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}),
-      uncertain: response.status >= 500 || response.ok || body !== undefined && response.status === 401 };
-  } catch { return { status: "error", httpStatus: 0, uncertain: true }; }
+      uncertain: body !== undefined && (response.status >= 500 || response.ok || response.status === 401) };
+  } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
 }
 export function createOperationsRepository(area: RepositoryArea) {
   return {

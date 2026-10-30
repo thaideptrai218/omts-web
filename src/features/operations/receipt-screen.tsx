@@ -53,6 +53,7 @@ export function ReceiptScreen() {
       {filters.zoneId && <Select label="Bè" value={filters.raftId} onChange={(e) => filter("raftId", e.target.value)}><option value="">Tất cả bè</option>{rafts.data?.map((row) => <option key={row.id} value={row.id}>{String(row.code)}</option>)}</Select>}
     </div>
     <ErrorNotice error={list.error || mutation.error || zones.error || suppliers.error || items.error || rafts.error} />
+    {(zones.error || suppliers.error || items.error || rafts.error) && <Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending || zones.loading || suppliers.loading || items.loading || rafts.loading} onClick={() => { if (zones.error) zones.reload(); if (suppliers.error) suppliers.reload(); if (items.error) items.reload(); if (rafts.error) rafts.reload(); }}>Tải lại danh mục phiếu nhập</Button>}
     <Button className="mt-4 w-auto" variant="secondary" disabled={list.loading} onClick={list.reload}>Tải lại danh sách</Button>
     {notice && <p role="status" className="mt-3 text-primary">{notice}</p>}
     {list.loading ? <Skeleton /> : list.data && <>
@@ -104,6 +105,7 @@ export function ReceiptEditor({ record, zones, suppliers, items, initialFiles = 
   return <Dialog open size="xl" title={record ? `Phiếu ${record.code} · ${statusLabel(record.statusId)}` : "Tạo phiếu nhập"} dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
     {confirmation.dialog}
     <ErrorNotice error={localError || mutation.error || rafts.error} />
+    {rafts.error && <Button className="mb-3 w-auto" variant="secondary" disabled={mutation.pending || rafts.loading} onClick={rafts.reload}>Tải lại danh sách bè</Button>}
     {files.length > 0 && <p role="status" id="receipt-pending-invoices" className="my-3 rounded-control border border-border p-3">Có {files.length} hóa đơn chưa tải lên. Hãy tải lên hoặc bỏ chọn tệp trước khi hoàn thành hoặc hủy phiếu.</p>}
     {record && <ReceiptTotals record={record} />}
     <form onSubmit={(e) => { e.preventDefault(); const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null; void save(submitter?.value === "complete"); }}>

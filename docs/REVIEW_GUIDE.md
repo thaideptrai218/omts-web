@@ -292,3 +292,5 @@ To inspect the production build after checks, run `npm run start` and open the U
 - Passing mock tests does not mark the corresponding Jira stories complete or prove backend/QA acceptance.
 
 See the [README](../README.md) for environment troubleshooting, [project context](PROJECT_CONTEXT.md) for current status, and [open decisions](decisions/OPEN_QUESTIONS.md) for business/backend questions that remain unresolved.
+
+When a receipt catalog/raft list, supplier receipt debt, or water zone lookup fails, use its new **Tải lại…** button after the connection returns. It performs only a read and retains current filters, amount, method, reference and receipt lines. It does not unlock or replay an uncertain Save. Read failures now use the normal operation-error message; uncertain writes keep the reconciliation warning. See [lookup recovery QA](reports/WEB_OPERATIONS_LOOKUP_RECOVERY_2026-10-30.md).
