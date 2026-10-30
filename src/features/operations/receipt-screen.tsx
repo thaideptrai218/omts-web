@@ -97,7 +97,7 @@ export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSave
     const result = await mutation.run(() => repository.write(record ? "update" : "create", payload, c.receiptSchema, record?.id));
     if (result) onSaved(result);
   }
-  const close = async () => { if (!mutation.busy() && (!dirty && !mode || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose(); };
+  const close = async () => { if (!mutation.busy() && (!dirty && !mode && !files.length || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose(); };
   return <Dialog open size="xl" title={record ? `Phiếu ${record.code} · ${statusLabel(record.statusId)}` : "Tạo phiếu nhập"} dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
     {confirmation.dialog}
     <ErrorNotice error={localError || mutation.error || rafts.error} />
@@ -131,7 +131,10 @@ export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSave
         {record.statusId !== 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Create", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked} onClick={async () => { const saved = await mutation.run(() => repository.write("copy", {}, c.receiptSchema, record.id)); if (saved) onSaved(saved); }}>Sao chép thành nháp</Button>}
         {record.statusId === 1702 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Create", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked} onClick={() => setMode("return")}>Trả hàng</Button>}
       </div>
-      {mode && <ReceiptAction key={mode} mode={mode} record={record} disabled={mutation.pending || mutation.blocked} onCancel={() => setMode(undefined)} onSubmit={async (action, body) => { const saved = await mutation.run(() => repository.write(action, body, c.receiptSchema, record.id)); if (saved) onSaved(saved); }} />}
+      {mode && <ReceiptAction key={mode} mode={mode} record={record} disabled={mutation.pending || mutation.blocked} onCancel={() => setMode(undefined)} onSubmit={async (action, body) => {
+        const payload = action === "cancel" ? { ...body, rowVersion: baseline.current?.rowVersion ?? record.rowVersion } : body;
+        const saved = await mutation.run(() => repository.write(action, payload, c.receiptSchema, record.id)); if (saved) onSaved(saved);
+      }} />}
       <h3 className="mt-6 font-semibold">Hóa đơn</h3><ul className="my-3 space-y-2">{record.invoicePhotoUrls.map((url, index) => <li key={index}><a className="text-primary underline" href={url} download>Tải hóa đơn {index + 1}</a></li>)}</ul>
       {record.statusId === 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Edit", record.zone.id) && <div className="space-y-3"><Field label="Thêm hóa đơn (JPEG, PNG, PDF; tối đa 10 tệp, 10 MB/tệp)" type="file" accept="image/jpeg,image/png,application/pdf" multiple disabled={mutation.pending || mutation.blocked || dirty} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
         <Button className="w-auto" variant="secondary" disabled={!files.length || mutation.pending || mutation.blocked || dirty} onClick={async () => { const saved = await mutation.run(() => repository.upload("invoice-photos", files, {}, c.receiptSchema, record.id)); if (saved) onSaved(saved); }}>Tải hóa đơn lên</Button></div>}
@@ -150,7 +153,7 @@ export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSave
   </Dialog>;
 }
 
-function ReceiptAction({ mode, record, disabled, onCancel, onSubmit }: { mode: "cancel" | "return"; record: c.Receipt; disabled: boolean; onCancel(): void; onSubmit(action: string, body: unknown): Promise<void> }) {
+function ReceiptAction({ mode, record, disabled, onCancel, onSubmit }: { mode: "cancel" | "return"; record: c.Receipt; disabled: boolean; onCancel(): void; onSubmit(action: "cancel" | "return", body: Record<string, unknown>): Promise<void> }) {
   const confirmation = useActionDialog();
   const [reason, setReason] = useState(""), [date, setDate] = useState(businessToday()), [cancelPayments, setCancelPayments] = useState("");
   const [quantities, setQuantities] = useState<Record<string, string>>({}), [refund, setRefund] = useState("0"), [reduction, setReduction] = useState("0"), [method, setMethod] = useState("Cash");

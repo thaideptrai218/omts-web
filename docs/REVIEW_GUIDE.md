@@ -37,6 +37,8 @@ Contact/inbox browser follow-up: on QA3003, verified contact remains a draft unt
 
 Draft safeguards now also detect a changed measurement time/input mode and payment supplier/date/method. Close → Quay lại retains these fields; Đồng ý discards. Returning every field to its opening value lets an untouched form close directly. No save command is sent by these discard checks. See [role edge-case QA](reports/WEB_BROWSER_ROLE_EDGE_QA_2026-10-30.md).
 
+Receipt cancellation now uses the version explicitly adopted during conflict comparison; a GET alone still leaves writes blocked. The cancellation reason survives comparison and a fresh confirmation is required. Selected invoice files also trigger the existing discard dialog before Close; they are not uploaded automatically. QA receipt031 is Cancelled with no lines/money/upload. See [browser reconciliation evidence](reports/WEB_BROWSER_RECEIPT_RECONCILIATION_QA_2026-10-30.md).
+
 The `/account` page explicitly opts out of the development instant-navigation validator because its authentication guard intentionally withholds the page while the session is unresolved. Authentication and private response rules remain active. Other route validation stays enabled. See [branch audit and local startup details](reports/WEB_BACKEND_BRANCH_INBOX_2026-10-30.md).
 
 The API workspace now uses the running .NET backend and Redis. Start the backend's existing Docker demo environment on `127.0.0.1:8080`. Start a separate Redis instance on loopback (or edit the generated configuration to use your existing Redis):

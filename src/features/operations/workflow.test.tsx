@@ -16,6 +16,46 @@ import { ids, receiptFixture, waterFixture } from "./__tests__/fixtures";
 beforeEach(() => { vi.clearAllMocks(); vi.spyOn(window, "confirm").mockReturnValue(true); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("tester workflow safeguards", () => {
+  it("keeps a selected unuploaded invoice until explicit discard", async () => {
+    const onClose = vi.fn();
+    render(<ReceiptEditor record={receiptFixture()} zones={[]} suppliers={[]} items={[]} onClose={onClose} onSaved={vi.fn()} />);
+    const picker = screen.getByLabelText("Thêm hóa đơn (JPEG, PNG, PDF; tối đa 10 tệp, 10 MB/tệp)");
+    await userEvent.upload(picker, new File(["qa-png"], "invoice-qa.png", { type: "image/png" }));
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
+    expect((picker as HTMLInputElement).files?.[0]?.name).toBe("invoice-qa.png");
+    expect((screen.getByRole("button", { name: "Tải hóa đơn lên" }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(repository.upload).not.toHaveBeenCalled(); expect(repository.write).not.toHaveBeenCalled();
+  });
+  it("cancels against the explicitly reviewed receipt version while retaining the cancellation reason", async () => {
+    const record = receiptFixture(), latest = receiptFixture({ notes: "Tab khác đã lưu", rowVersion: "REVIEWED" }), onSaved = vi.fn();
+    repository.write.mockResolvedValueOnce({ status: "error", code: "MSG06", httpStatus: 409, uncertain: false })
+      .mockResolvedValueOnce({ status: "success", data: { ...latest, statusId: 1703, status: "Cancelled" } });
+    repository.read.mockResolvedValue({ status: "success", data: latest });
+    render(<ReceiptEditor record={record} zones={[]} suppliers={[]} items={[]} onClose={vi.fn()} onSaved={onSaved} />);
+    fireEvent.click(screen.getByRole("button", { name: "Hủy phiếu" }));
+    fireEvent.change(screen.getByLabelText("Lý do *"), { target: { value: "Lý do đang nhập" } });
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận hủy phiếu" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await screen.findByText(/Bản ghi đã thay đổi/);
+    expect(repository.write.mock.calls[0][1]).toMatchObject({ rowVersion: record.rowVersion, reason: "Lý do đang nhập" });
+    fireEvent.click(screen.getByRole("button", { name: "Tải bản mới để đối chiếu" }));
+    const adopt = await screen.findByRole("button", { name: "Đã đối chiếu, giữ bản nháp để sửa tiếp" });
+    expect((screen.getByRole("button", { name: "Xác nhận hủy phiếu" }) as HTMLButtonElement).matches(":disabled")).toBe(true);
+    expect(repository.write).toHaveBeenCalledTimes(1);
+    fireEvent.click(adopt);
+    expect((screen.getByLabelText("Lý do *") as HTMLTextAreaElement).value).toBe("Lý do đang nhập");
+    expect(repository.write).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận hủy phiếu" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(2));
+    expect(repository.write.mock.calls[1][1]).toMatchObject({ rowVersion: latest.rowVersion, reason: "Lý do đang nhập" });
+    expect(onSaved).toHaveBeenCalledOnce();
+  });
   it.each([
     ["Thời điểm đo (giờ Việt Nam)", "2026-01-01T08:15"],
     ["Cách ghi", "ocr"],
