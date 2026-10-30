@@ -2,6 +2,19 @@
 
 ## Real API workspace — local tester run
 
+For the complete currently integrated tester scope, use **http://127.0.0.1:3003/login** (isolated Zalo backend QA, includes inbox and trader decisions). The comparison app on localhost3002 still uses develop8080, which lacks those two endpoints. The [role flow audit](reports/WEB_ROLE_FLOW_AUDIT_2026-10-30.md) records current checks, fixes and remaining contract limitations.
+
+The repeatable read-only role check uses the existing local demo accounts and creates/revokes only its own login sessions. It expects the documented demo permissions. Set the local demo password in the terminal, then run:
+
+```powershell
+$env:OMTS_QA_PASSWORD='Demo@1234'
+$env:OMTS_QA_WEB_ORIGIN='http://127.0.0.1:3003'
+$env:OMTS_QA_BRANCH_API='1'
+npm run test:api-roles
+```
+
+For develop comparison use `OMTS_QA_WEB_ORIGIN=http://localhost:3002` and `OMTS_QA_BRANCH_API=0`. Optional `OMTS_QA_REPORT` writes a JSON status report (use an ignored path under docs/learning). The script checks APIs, actor/zone boundaries, HTML entry and logout; it does not drive browser controls or write business records.
+
 ### Branch API QA — notifications (October 30)
 
 The local QA app at **http://127.0.0.1:3003/login** uses backend branch `chore/cors-zalo-mini-app@dc00b2f` on port8081 with a separate demo database. Use the same demo usernames/password listed below. Host `127.0.0.1` separates its cookies from the existing `localhost:3002` app, which still uses develop953f597/8080. This QA deployment does not merge either branch.

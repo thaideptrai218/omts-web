@@ -12,6 +12,7 @@
     "lint": "eslint src scripts tests/fixtures/cookie-browser --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:api-roles": "node scripts/test-api-role-matrix.mjs",
     "test:redis": "node scripts/test-session-redis.mjs",
     "test:session-pages": "node scripts/test-session-pages.mjs",
     "test:boundary": "node scripts/test-server-boundary.mjs",

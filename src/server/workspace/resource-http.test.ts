@@ -13,6 +13,10 @@ function configure(subjectType: "CooperativeOwner" | "Staff" = "CooperativeOwner
 }
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 describe("workspace BFF routing and authorization", () => {
+  it("rejects a valid-looking detail for another record ID", async () => {
+    configure(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ id: "11111111-1111-4111-8111-111111111111", name: "Other supplier", supplierType: "Seed", phoneNumber: "0900000090", statusId: 101, status: "In Use", otherContacts: null, debt: 0, rowVersion: "v1" }));
+    expect((await handleResourceRequest(new Request("http://localhost:3002/api/workspace/suppliers?id=529ec3ce-af8f-42f7-a08f-4bab36ba7e62"), "suppliers")).status).toBe(502);
+  });
   it("forwards supplier type alongside server search/status/paging", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 2, pageSize: 20, total: 0 }));
     const response = await handleResourceRequest(new Request("http://localhost:3002/api/workspace/suppliers?type=Material&search=qa&statusId=101&page=2&pageSize=20"), "suppliers");

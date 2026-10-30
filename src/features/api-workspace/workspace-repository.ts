@@ -11,8 +11,8 @@ async function send<T>(resource: ResourceKey, query: URLSearchParams, body?: unk
       body: body ? JSON.stringify(body) : undefined, signal: signal ?? AbortSignal.timeout(30_000) });
     const value = await response.json();
     return response.ok && value.status === "success" ? { status: "success", data: value.data as T }
-      : { status: "error", httpStatus: response.status, code: value.code, uncertain: response.status >= 500 };
-  } catch { return { status: "error", httpStatus: 0, uncertain: true }; }
+      : { status: "error", httpStatus: response.status, code: value.code, uncertain: body !== undefined && (response.status === 401 || response.status >= 500 || response.ok) };
+  } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
 }
 export function createWorkspaceRepository(resource: ResourceKey) {
   return {

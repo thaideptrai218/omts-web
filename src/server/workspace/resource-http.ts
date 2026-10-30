@@ -100,6 +100,7 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     if (upstream.status !== "success" || ![200, 201].includes(upstream.httpStatus)) return json({ status: "unavailable" }, 503);
     const result = projectResource(key, upstream.data, action !== "list", action === "list"
       ? { page: Number(query.get("page") ?? 1), pageSize: Number(query.get("pageSize") ?? 20), search: query.get("search") ?? undefined } : undefined);
+    if (recordId && (!result || typeof result !== "object" || !("id" in result) || result.id !== recordId)) return json({ status: "invalid-response" }, 502);
     return result === undefined ? json({ status: "invalid-response" }, 502) : json({ status: "success", data: result });
   } catch { return json({ status: "unavailable" }, 503); }
 }

@@ -11,6 +11,7 @@ import { ResourceExtras } from "@/features/farming-api/resource-extras";
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
 import { workspaceError } from "./workspace-error";
 import { ZoneMapDialog } from "@/features/farming-api/zone-map-dialog";
+import { loadOptions } from "@/features/operations/lookups";
 export { workspaceError } from "./workspace-error";
 
 const inputClass = "mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 py-2";
@@ -40,6 +41,9 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const [pageNumber, setPageNumber] = useState(1);
   const [refresh, setRefresh] = useState(0);
   const [zones, setZones] = useState<ApiRecord[]>([]);
+  const [zoneError, setZoneError] = useState<string>();
+  const [zoneLoading, setZoneLoading] = useState(false);
+  const [zoneRefresh, setZoneRefresh] = useState(0);
   const [zoneId, setZoneId] = useState("");
   const [selected, setSelected] = useState<ApiRecord | null>();
   const [editorId, setEditorId] = useState(0);
@@ -68,16 +72,21 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    if (resource === "employees" || definition.zoneRequired) {
-      void createWorkspaceRepository("zones").list({ page: "1", pageSize: "100" }, controller.signal).then((result) => {
-        if (!controller.signal.aborted && result.status === "success") {
-          setZones(result.data.items);
-          if (definition.zoneRequired) setZoneId((current) => current || result.data.items[0]?.id || "");
-        }
+    if (definition.zoneRequired && canView) {
+      void Promise.resolve().then(async () => {
+        if (controller.signal.aborted) return;
+        setZoneLoading(true); setZoneError(undefined);
+        const result = await loadOptions("zones", controller.signal);
+        if (controller.signal.aborted) return;
+        setZoneLoading(false);
+        if (result.status === "success") {
+          setZones(result.data);
+          setZoneId((current) => result.data.some((zone) => zone.id === current) ? current : result.data[0]?.id || "");
+        } else { setZones([]); setZoneId(""); setZoneError(workspaceError(result)); }
       });
     }
     return () => controller.abort();
-  }, [resource, definition.zoneRequired]);
+  }, [definition.zoneRequired, canView, zoneRefresh]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -121,9 +130,11 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
         <option value="">Tất cả</option>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       {categoryFilter && <label className="text-sm">{categoryFilter.label}<select className={inputClass} value={category} onChange={(event) => { setCategory(event.target.value); setPageNumber(1); }}>
         <option value="">Tất cả</option>{categoryFilter.options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
-      {definition.zoneRequired && <label className="text-sm">Vùng nuôi<select className={inputClass} value={zoneId} onChange={(event) => { setZoneId(event.target.value); setPageNumber(1); }}>
+      {definition.zoneRequired && <label className="text-sm">Vùng nuôi<select className={inputClass} disabled={zoneLoading || !!zoneError} value={zoneId} onChange={(event) => { setZoneId(event.target.value); setPageNumber(1); }}>
         <option value="">Chọn vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{text(zone.name)}</option>)}</select></label>}
     </div>
+    {zoneError && <div role="alert" className="mt-4 rounded-control border border-danger p-4"><p>{zoneError}</p><Button className="mt-3 w-auto" variant="secondary" disabled={zoneLoading} onClick={() => setZoneRefresh((value) => value + 1)}>Tải lại danh mục vùng</Button></div>}
+    {zoneLoading && <p role="status" className="mt-3">Đang tải danh mục vùng...</p>}
     {notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
     {error && <div role="alert" className="mt-4 rounded-control border border-danger p-4"><p>{error}</p>
       <Button className="mt-3 w-auto" variant="secondary" onClick={() => setRefresh((value) => value + 1)}>Tải lại</Button></div>}
