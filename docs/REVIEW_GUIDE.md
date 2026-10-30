@@ -4,7 +4,7 @@
 
 For the complete currently integrated tester scope, use **http://127.0.0.1:3003/login** (isolated Zalo backend QA, includes inbox and trader decisions). The comparison app on localhost3002 still uses develop8080, which lacks those two endpoints. The [role flow audit](reports/WEB_ROLE_FLOW_AUDIT_2026-10-30.md) records current checks, fixes and remaining contract limitations.
 
-The [October30 browser pass](reports/WEB_BROWSER_ROLE_QA_2026-10-30.md) records Owner coverage and the native-confirm blocker; the other demo roles still need a fresh UI pass. API editors now use in-app confirmation dialogs: **Quay lại** keeps the current draft and **Đồng ý** continues the action. Reload an older open QA page before checking this fix. This is not yet a completed browser acceptance matrix.
+The [October30 browser pass](reports/WEB_BROWSER_ROLE_QA_2026-10-30.md) now includes both Managers, Accountant and Trader; its matrix states actual checks and untested variants. The native-popup blocker was cleared. API confirmations use in-app dialogs: **Quay lại** keeps the draft; **Đồng ý** continues. Invoice/license/certificate links download directly. Reload older QA pages before checking. QA receipts026–029, payment references QA-BROWSER-M1/M2 and supplier QA browser Manager2 20261030 remain for tester comparison; see the report for exact final states.
 
 The repeatable read-only role check uses the existing local demo accounts and creates/revokes only its own login sessions. It expects the documented demo permissions. Set the local demo password in the terminal, then run:
 
@@ -26,6 +26,8 @@ Open **Thông báo** from the API menu. Check newest-first items, unread count, 
 As **owner**, open **Yêu cầu thương lái** on the same QA app. Start with **Chờ duyệt**, search by name/phone, and review the exact person's phone/note in the confirmation panel. **Duyệt yêu cầu → Xác nhận duyệt** activates the account and links its customer profile. **Từ chối yêu cầu** requires a nonblank reason of at most1,000 characters; the trader can see that reason from the Mini App. Cancel before confirmation makes no write. Switch to **Đã từ chối** to verify persistence; rejected rows have no decision buttons. Two QA requests whose names begin `QA chờ duyệt` / `QA chờ từ chối` were retained for manual testing. These are ordinary pending requests; either action is available on both. Use them only on the separate8081 database.
 
 The user approved this decision workflow on30October. A rejected trader can submit a new request from the Mini App; Web does not reactivate a rejected request. The current backend addresses requests by account ID without an exposed version/request-generation ID. Reload before reviewing an old open request; Web does not claim atomic protection against a rejection/resubmission between review and save. The backend's current status rules decide validity. See [approval coverage and limits](reports/WEB_TRADER_APPROVAL_API_2026-10-30.md).
+
+After browser QA, `QA chờ từ chối 062bad05` is now under **Đã từ chối**, with reason `QA browser: kiểm tra luồng từ chối`; the other QA pending request was left for testers.
 
 The `/account` page explicitly opts out of the development instant-navigation validator because its authentication guard intentionally withholds the page while the session is unresolved. Authentication and private response rules remain active. Other route validation stays enabled. See [branch audit and local startup details](reports/WEB_BACKEND_BRANCH_INBOX_2026-10-30.md).
 

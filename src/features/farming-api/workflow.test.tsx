@@ -13,6 +13,12 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 const props = () => ({ zoneId: ids.zone, zones: licenseFixture().zones, onClose: vi.fn(), onMode: vi.fn(), onNavigate: vi.fn(), onSaved: vi.fn() });
 describe("license editor draft and history behavior", () => {
+  it("downloads the protected document without requiring a popup", () => {
+    const url = `/api/operations/zone-licenses?action=file&id=${ids.zone}`;
+    render(<LicenseEditor {...props()} record={licenseFixture({ fileUrl: url })} mode="view" />);
+    const link = screen.getByRole("link", { name: "Tải tệp giấy tờ" });
+    expect(link.getAttribute("href")).toBe(url); expect(link.hasAttribute("download")).toBe(true); expect(link.hasAttribute("target")).toBe(false);
+  });
   it("keeps the draft after MSG06, compares canonical fields and only rebases after an explicit choice", async () => {
     const latest = licenseFixture({ rowVersion: "NEW", holder: "HTX mới", documentNumber: "GP-MOI" });
     repository.upload.mockResolvedValueOnce({ status: "error", code: "MSG06", httpStatus: 409, uncertain: false }).mockResolvedValueOnce({ status: "success", data: latest });

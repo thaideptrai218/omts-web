@@ -231,7 +231,7 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
             <Button className="w-auto" variant="secondary" disabled={lanes.length <= 1} onClick={() => setLanes((current) => current.slice(0, -1))}>Bỏ làn cuối</Button></div>
         </fieldset>}
       </fieldset>
-      {record && <div className="mt-5 rounded-control border border-border p-4"><dl className="grid gap-3 sm:grid-cols-2">{definition.columns.map(([key, label]) => <div key={key}><dt className="text-sm text-text-muted">{label}</dt><dd>{text(record[key])}</dd></div>)}
+      {record && <div className="mt-5 rounded-control border border-border p-4"><dl className="grid gap-3 sm:grid-cols-2">{definition.columns.map(([key, label]) => <div key={key}><dt className="text-sm text-text-muted">{label}</dt><dd>{text(resource === "rafts" && key === "laneCount" && record[key] == null && Array.isArray(record.lanes) ? record.lanes.length : record[key])}</dd></div>)}
         {resource === "employees" && <div><dt className="text-sm text-text-muted">Tài khoản đăng nhập</dt><dd>{record.account && typeof record.account === "object" && "username" in record.account ? String(record.account.username) : "Chưa liên kết"}</dd></div>}</dl>
         {Array.isArray(record.lanes) && <ul className="mt-3">{record.lanes.map((lane) => <li key={lane.laneNumber}>Làn {lane.laneNumber}: {lane.length ?? "—"} m · {lane.markerA} → {lane.markerB}</li>)}</ul>}
         {Array.isArray(record.permissions) && <ul className="mt-3 space-y-2">{record.permissions.map((permission) => <li key={permission.functionCode}>{permission.functionCode}: {permission.actions?.join(", ")}</li>)}</ul>}

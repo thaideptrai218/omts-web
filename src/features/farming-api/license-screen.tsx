@@ -68,7 +68,7 @@ export function LicenseEditor({ mode, record, zoneId, zones, onClose, onMode, on
   return <Dialog open title={view ? `Giấy tờ · ${record?.documentNumber}` : mode === "replace" ? "Gia hạn / thay thế giấy tờ" : mode === "update" ? "Sửa giấy tờ" : "Thêm giấy tờ vùng"} size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
     <ErrorNotice error={mutation.error || fileError} />
     {view && record && <div className="mb-4 space-y-3"><p>Tình trạng tại {date(record.asOf)}: <strong>{stateLabel(record.state)}</strong></p>
-      {record.fileUrl && <a className="text-primary underline" href={record.fileUrl} target="_blank" rel="noreferrer">Tải tệp giấy tờ</a>}
+      {record.fileUrl && <a className="text-primary underline" href={record.fileUrl} download>Tải tệp giấy tờ</a>}
       <div className="flex flex-wrap gap-3">{!record.replacedByDocumentId && <><Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => onMode("update")}>Sửa giấy tờ</Button><Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => onMode("replace")}>Gia hạn / thay thế</Button></>}
         {record.replacesDocumentId && <Button className="w-auto" variant="secondary" isPending={mutation.pending} onClick={() => void navigate(record.replacesDocumentId!)}>Xem giấy tờ trước</Button>}
         {record.replacedByDocumentId && <Button className="w-auto" variant="secondary" isPending={mutation.pending} onClick={() => void navigate(record.replacedByDocumentId!)}>Xem giấy tờ thay thế</Button>}</div></div>}
@@ -93,7 +93,7 @@ export function LicenseEditor({ mode, record, zoneId, zones, onClose, onMode, on
         }}>Tải hồ sơ mới để đối chiếu</Button>
         {latest && <div className="mt-3 space-y-2"><p className="font-semibold">Giấy tờ hiện tại trên hệ thống</p><p>{licenseTypeLabel(latest.documentType)} · {latest.documentNumber} · {date(latest.effectiveDate)} – {date(latest.expiryDate)}</p>
           <p>{latest.issuingAuthority || "—"} · {latest.holder || "—"}</p><p>{latest.legalScope || "—"}</p><p>Vùng: {latest.zones.map((zone) => zone.code).join(", ")}</p><p>{stateLabel(latest.state)} {latest.replacedByDocumentId ? "· Đã có giấy thay thế" : ""}</p>
-          {latest.fileUrl && <a className="block text-primary underline" href={latest.fileUrl} target="_blank" rel="noreferrer">Tải tệp hiện tại</a>}
+          {latest.fileUrl && <a className="block text-primary underline" href={latest.fileUrl} download>Tải tệp hiện tại</a>}
           {!mutation.uncertain && !latest.replacedByDocumentId && <Button className="w-auto" variant="secondary" onClick={() => { setBaseline(latest); setLatest(undefined); mutation.reviewed(); }}>Đã đối chiếu, giữ bản nháp để sửa tiếp</Button>}
           <Button className="w-auto" variant="secondary" onClick={() => onNavigate(latest)}>Dùng dữ liệu đã lưu</Button></div>}
         {reconciliation && <ul className="mt-3 space-y-2">{reconciliation.licenses.map((row, i) => <li key={row.documentId ?? i}>{row.documentNumber ?? licenseTypeLabel(row.documentType)} · {stateLabel(row.state)} {row.documentId && <button className="text-primary underline" type="button" disabled={mutation.pending} onClick={async () => {

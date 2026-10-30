@@ -16,6 +16,12 @@ import { ids, receiptFixture, waterFixture } from "./__tests__/fixtures";
 beforeEach(() => { vi.clearAllMocks(); vi.spyOn(window, "confirm").mockReturnValue(true); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("tester workflow safeguards", () => {
+  it("downloads an invoice without opening a popup window", () => {
+    const url = `/api/operations/purchase-receipts?action=invoice&id=${ids.receipt}&index=0`;
+    render(<ReceiptEditor record={receiptFixture({ invoicePhotoUrls: [url] })} zones={[]} suppliers={[]} items={[]} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const link = screen.getByRole("link", { name: "Tải hóa đơn 1" });
+    expect(link.getAttribute("href")).toBe(url); expect(link.hasAttribute("download")).toBe(true); expect(link.hasAttribute("target")).toBe(false);
+  });
   it("allows a minimal receipt draft with supplier and zone before entering any lines", async () => {
     const record = receiptFixture();
     repository.write.mockResolvedValue({ status: "success", data: record });
