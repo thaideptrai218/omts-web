@@ -6,6 +6,8 @@ For the complete currently integrated tester scope, use **http://127.0.0.1:3003/
 
 The [October30 browser pass](reports/WEB_BROWSER_ROLE_QA_2026-10-30.md) now includes both Managers, Accountant and Trader; its matrix states actual checks and untested variants. The native-popup blocker was cleared. API confirmations use in-app dialogs: **Quay lại** keeps the draft; **Đồng ý** continues. Invoice/license/certificate links download directly. Reload older QA pages before checking. QA receipts026–029, payment references QA-BROWSER-M1/M2 and supplier QA browser Manager2 20261030 remain for tester comparison; see the report for exact final states.
 
+The [Owner browser follow-up](reports/WEB_BROWSER_ADMIN_QA_2026-10-30.md) adds employee/account/role/cooperative and farm/file/cost/threshold checks. Employee validation now names each field needing correction and explains existing bank rules. `QA browser employee 20261030` remains Employed/unlinked; account qa.audit.1793323694230 stays Locked with revoked grants. Zone QABROWSER30, raft QA-BROWSER-B30 and item QA-MAT30 are discontinued; receipt030 is cancelled. Cooperative website/logo were restored. Use these QA records for comparison instead of editing seed records.
+
 The repeatable read-only role check uses the existing local demo accounts and creates/revokes only its own login sessions. It expects the documented demo permissions. Set the local demo password in the terminal, then run:
 
 ```powershell

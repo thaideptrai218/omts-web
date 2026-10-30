@@ -12,6 +12,20 @@ const fixture = () => employeeViewSchema.parse(employeeDetailFixture());
 const props = () => ({ record: fixture(), zones: [{ id: workingZoneId, code: "V01", name: "Vùng Đông", statusId: 101 }], accounts: [], lookupsReady: true, onClose: vi.fn(), onAdopt: vi.fn(), onSaved: vi.fn(), onUnlinked: vi.fn(), onReloadAccounts: vi.fn() });
 beforeEach(() => vi.clearAllMocks()); afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("employee API editor lifecycle", () => {
+  it("names the missing bank fields, describes the existing rule and focuses the first error without writing", async () => {
+    render(<EmployeeApiEditor {...props()} record={null} />);
+    fireEvent.change(screen.getByLabelText("Họ và tên *"), { target: { value: "QA employee" } });
+    fireEvent.change(screen.getByLabelText("Số điện thoại *"), { target: { value: "0920000001" } });
+    fireEvent.change(screen.getByLabelText("Ngân hàng", { exact: true }), { target: { value: "QA Bank" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
+    expect(screen.getByText("Số tài khoản: Vui lòng kiểm tra lại thông tin đã nhập.")).toBeTruthy();
+    expect(screen.getByText("Chủ tài khoản: Vui lòng kiểm tra lại thông tin đã nhập.")).toBeTruthy();
+    const accountNumber = screen.getByLabelText("Số tài khoản", { exact: true });
+    expect(accountNumber.getAttribute("aria-invalid")).toBe("true");
+    expect(accountNumber.getAttribute("aria-describedby")).toContain("employee-api-bank-help");
+    await waitFor(() => expect(document.activeElement).toBe(accountNumber));
+    expect(repository.write).not.toHaveBeenCalled();
+  });
   it("keeps personal drafts and the new rowVersion after unlinking", async () => {
     const callbacks = props(), unlinked = { ...fixture(), account: null, rowVersion: "AQID" };
     repository.write.mockResolvedValueOnce({ status: "success", data: unlinked }).mockResolvedValueOnce({ status: "success", data: unlinked });
@@ -59,7 +73,7 @@ describe("employee API editor lifecycle", () => {
   it("blocks incomplete bank details and stopped working zones until the user fixes them", async () => {
     const callbacks = props(); callbacks.zones[0].statusId = 102; render(<EmployeeApiEditor {...callbacks} />);
     fireEvent.change(screen.getByLabelText("Ghi chú"), { target: { value: "Bản nháp" } }); fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
-    await screen.findByText("Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu."); expect(repository.write).not.toHaveBeenCalled();
+    await screen.findByText("Vùng làm việc: Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu."); expect(repository.write).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("checkbox", { name: /đã ngừng/ })); expect(screen.queryByRole("checkbox", { name: /Vùng Đông/ })).toBeNull();
     fireEvent.change(screen.getByLabelText("Số tài khoản", { exact: true }), { target: { value: "" } }); fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
     await screen.findByRole("alert"); expect(repository.write).not.toHaveBeenCalled(); expect(screen.getByLabelText("Số tài khoản", { exact: true }).getAttribute("aria-invalid")).toBe("true");

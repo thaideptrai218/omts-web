@@ -2,6 +2,8 @@
 
 Đợt này kiểm thao tác trên **http://127.0.0.1:3003**, backend QA Zalo8081 và RedisDB3 riêng. PR #3 tiếp tục draft, chưa merge. Báo cáo [role/API audit](WEB_ROLE_FLOW_AUDIT_2026-10-30.md) là bằng chứng HTTP riêng; không thay thế kiểm thử browser.
 
+Lượt Owner tiếp theo đã kiểm nhân viên/link/unlink/employment/duplicate/conflict hai tab, tài khoản/roles, HTX/logo và vùng/bè/giấy phép/chi phí/ngưỡng. Xem [bổ sung quản trị và bản sửa validation](WEB_BROWSER_ADMIN_QA_2026-10-30.md); các mục còn thiếu trong bảng dưới là snapshot trước lượt bổ sung đó.
+
 ## Kết quả thực tế trên browser
 
 | Tài khoản | Đã xác minh trong lượt này | Còn cần kiểm trên browser |
