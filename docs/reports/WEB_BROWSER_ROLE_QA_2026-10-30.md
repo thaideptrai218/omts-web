@@ -32,6 +32,8 @@ Bản sửa đã build và chạy lại QA3003. Do tab native cũ chưa giải p
 
 Những kết quả trên là unit/component/HTTP build checks. Chưa nâng thành browser E2E cho năm tài khoản. Không đổi backend, seed credentials/grants, session/cookie/cache policy hoặc các nghiệp vụ đang chờ contract. Không ghi nghiệp vụ vào DB8080.
 
+CI đầu04a628c bắt lỗi TypeScript trong test mới: `exact` là tùy chọn Playwright, không có trong Testing Library getByRole. File test được thêm sau lượt typecheck/build local nên bằng chứng local ở trên chưa bao phủ typecheck test này. Bỏ hai thuộc tính không hợp lệ (name string vốn khớp chính xác), chạy lại lint/typecheck và các test liên quan trước đẩy bản sửa; không đổi production code để né CI.
+
 ## Tiếp tục sau khi giải phóng hộp native
 
 Reload QA3003; mở nhà cung cấp QA nêu trên, sửa nháp → Đóng → Quay lại (nháp còn) → Đóng → Đồng ý (không lưu). Kiểm tiếp complete/cancel/return phiếu, hủy phép đo và ngưỡng với dữ liệu QA. Sau đó logout/login lần lượt hai Manager, Kế toán, Trader, kiểm menu/quyền và thao tác bằng UI, ở360/1024. Giữ tài khoản seed và dữ liệu gốc. Chỉ cập nhật hàng tương ứng trong ma trận khi có kết quả hiển thị xác nhận.

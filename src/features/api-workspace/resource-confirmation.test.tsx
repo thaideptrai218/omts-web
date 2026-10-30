@@ -11,9 +11,9 @@ import { ApiResourceScreen } from "./api-resource-screen";
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 it("keeps the supplier draft when discard is declined and closes only after explicit consent", async () => {
   state.list.mockResolvedValue({ status: "success", data: { items: [], page: 1, pageSize: 20, total: 0 } }); const native = vi.spyOn(window, "confirm"); render(<ApiResourceScreen resource="suppliers" />);
-  fireEvent.click(screen.getByRole("button", { name: "Thêm mới" })); fireEvent.change(screen.getByRole("textbox", { name: "Tên nhà cung cấp" }), { target: { value: "QA draft" } }); fireEvent.click(screen.getByRole("button", { name: "Đóng", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Thêm mới" })); fireEvent.change(screen.getByRole("textbox", { name: "Tên nhà cung cấp" }), { target: { value: "QA draft" } }); fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
   fireEvent.click(within(await screen.findByRole("dialog", { name: "Xác nhận thao tác" })).getByRole("button", { name: "Quay lại" }));
   expect((screen.getByRole("textbox", { name: "Tên nhà cung cấp" }) as HTMLInputElement).value).toBe("QA draft"); expect(state.mutate).not.toHaveBeenCalled(); expect(native).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Đóng", exact: true })); fireEvent.click(within(await screen.findByRole("dialog", { name: "Xác nhận thao tác" })).getByRole("button", { name: "Đồng ý" }));
+  fireEvent.click(screen.getByRole("button", { name: "Đóng" })); fireEvent.click(within(await screen.findByRole("dialog", { name: "Xác nhận thao tác" })).getByRole("button", { name: "Đồng ý" }));
   await vi.waitFor(() => expect(screen.queryByRole("dialog", { name: "Thêm mới · Nhà cung cấp" })).toBeNull()); expect(state.mutate).not.toHaveBeenCalled();
 });
