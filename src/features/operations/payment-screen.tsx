@@ -2,6 +2,7 @@
 import { useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { Dialog } from "@/components/ui/dialog";
+import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { Button } from "@/components/ui/button";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "./permissions";
@@ -50,6 +51,7 @@ export function PaymentScreen() {
 }
 
 export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId, onClose, onSaved }: { payment: c.Payment | null; suppliers: Debts; canCreate: boolean; initialSupplierId: string; onClose(): void; onSaved(payment: c.Payment): void }) {
+  const confirmation = useActionDialog();
   const [supplierId, setSupplierId] = useState(payment?.supplier.id ?? initialSupplierId), [receiptId, setReceiptId] = useState(""), [amount, setAmount] = useState("");
   const [date, setDate] = useState(businessToday()), [method, setMethod] = useState("Cash"), [reference, setReference] = useState("");
   const [deduplicationKey] = useState(() => crypto.randomUUID()), [review, setReview] = useState<z.infer<typeof c.paymentSearchSchema>>();
@@ -60,7 +62,7 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
   const canAllocate = payment?.statusId === 1801 && payment.receiptId === null && canCreate;
   const target = debt.data?.receipts.find((row) => row.receiptId === receiptId);
   const dirty = !payment && (!!receiptId || !!amount || !!reference) || canAllocate && !!receiptId;
-  const close = () => { if (!mutation.busy() && (!dirty || window.confirm("Đóng và bỏ thông tin chưa xác nhận? Nếu lần gửi trước chưa rõ kết quả, hãy đối chiếu lịch sử trước khi lập khoản mới."))) onClose(); };
+  const close = async () => { if (!mutation.busy() && (!dirty || await confirmation.confirm("Đóng và bỏ thông tin chưa xác nhận? Nếu lần gửi trước chưa rõ kết quả, hãy đối chiếu lịch sử trước khi lập khoản mới."))) onClose(); };
   async function submit() {
     const body = canAllocate ? { receiptId } : { supplierId, receiptId, amount: Number(amount), paymentDate: date, method, referenceCode: reference || null, deduplicationKey };
     if (!mutation.uncertain) frozen.current = body;
@@ -68,6 +70,7 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
     if (saved) onSaved(saved);
   }
   return <Dialog open title={payment ? "Khoản thanh toán nhà cung cấp" : "Ghi nhận thanh toán"} size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
+    {confirmation.dialog}
     <ErrorNotice error={mutation.error || debt.error} />
     {payment && <dl className="mb-5 grid gap-4 sm:grid-cols-2">{[["Nhà cung cấp", payment.supplier.name], ["Phiếu nhập", payment.receiptCode ?? "Chưa phân bổ"], ["Ngày trả", payment.paymentDate], ["Hình thức", methodLabel(payment.method)], ["Số tiền", <Money key="amount" value={payment.amount} />], ["Trạng thái", statusLabel(payment.statusId)], ["Mã tham chiếu", payment.referenceCode ?? "—"], ["Lý do hủy", payment.cancelReason ?? "—"]].map(([label, value]) => <div key={String(label)}><dt className="text-sm text-text-muted">{label}</dt><dd>{value}</dd></div>)}</dl>}
     {(!payment && canCreate || canAllocate) && <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirming(true); }}>

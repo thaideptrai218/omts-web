@@ -12,6 +12,7 @@ import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
 import { workspaceError } from "./workspace-error";
 import { ZoneMapDialog } from "@/features/farming-api/zone-map-dialog";
 import { loadOptions } from "@/features/operations/lookups";
+import { useActionDialog } from "@/components/ui/use-action-dialog";
 export { workspaceError } from "./workspace-error";
 
 const inputClass = "mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 py-2";
@@ -158,6 +159,7 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
   resource: ResourceKey; record: ApiRecord | null; canEdit: boolean; zones: ApiRecord[]; zoneId: string;
   onClose(): void; onSaved(record: ApiRecord): void;
 }) {
+  const confirmation = useActionDialog();
   const definition = resources[resource];
   const repository = useMemo(() => createWorkspaceRepository(resource), [resource]);
   const original = useRef(record);
@@ -202,9 +204,9 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
     if (result.status === "success") onSaved(result.data);
     else { setError(workspaceError(result)); setBlocked(result.uncertain || result.code === "MSG06"); }
   }
-  return <Dialog open title={`${record ? "Hồ sơ" : "Thêm mới"} · ${definition.title}`} size="lg" dismissible={!pending} onOpenChange={(open) => {
-    if (!open && !pendingRef.current && (!dirty || window.confirm("Bỏ các thay đổi chưa lưu?"))) onClose();
-  }}>
+  return <Dialog open title={`${record ? "Hồ sơ" : "Thêm mới"} · ${definition.title}`} size="lg" dismissible={!pending} onOpenChange={async (open) => {
+    if (!open && !pendingRef.current && (!dirty || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose();
+  }}>{confirmation.dialog}
     <form onSubmit={(event) => { event.preventDefault(); void mutate(record ? "update" : "create"); }}>
       {error && <p role="alert" className="mb-4 rounded-control border border-danger p-4">{error}</p>}
       <fieldset disabled={pending || !editable} className="grid gap-4 sm:grid-cols-2">
@@ -241,18 +243,18 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
         if (result.status === "success") setLatest(result.data); else setError(workspaceError(result));
       }}>Tải dữ liệu mới để đối chiếu</Button>
         {latest && <div className="mt-4"><p className="font-semibold">Dữ liệu hiện tại trên hệ thống</p><dl>{definition.fields.map((field) => <div key={field.key} className="mt-2"><dt className="text-sm text-text-muted">{field.label}</dt><dd>{text(latest[field.key])}</dd></div>)}</dl>
-          <Button className="mt-4 w-auto" variant="secondary" onClick={() => { if (window.confirm("Dùng dữ liệu mới và bỏ bản nháp đang mở?")) onSaved(latest); }}>Dùng dữ liệu mới</Button></div>}
+          <Button className="mt-4 w-auto" variant="secondary" onClick={async () => { if (await confirmation.confirm("Dùng dữ liệu mới và bỏ bản nháp đang mở?")) onSaved(latest); }}>Dùng dữ liệu mới</Button></div>}
       </div>}
       <div className="mt-6 flex flex-wrap justify-end gap-3">
-        <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => { if (!dirty || window.confirm("Bỏ các thay đổi chưa lưu?")) onClose(); }}>Đóng</Button>
+        <Button className="w-auto" variant="secondary" disabled={pending} onClick={async () => { if (!dirty || await confirmation.confirm("Bỏ các thay đổi chưa lưu?")) onClose(); }}>Đóng</Button>
         {editable && <Button className="w-auto" type="submit" isPending={pending} disabled={blocked || (record !== null && !dirty)}>Lưu</Button>}
-        {editable && record && ["zones", "suppliers", "input-items", "rafts"].includes(resource) && <Button className="w-auto" variant="secondary" disabled={pending || dirty || blocked} onClick={() => {
+        {editable && record && ["zones", "suppliers", "input-items", "rafts"].includes(resource) && <Button className="w-auto" variant="secondary" disabled={pending || dirty || blocked} onClick={async () => {
           const action = record.statusId === 102 ? "reactivate" : "discontinue";
-          if (window.confirm(action === "reactivate" ? "Khôi phục sử dụng bản ghi này?" : "Ngừng sử dụng bản ghi này?")) void mutate(action);
+          if (await confirmation.confirm(action === "reactivate" ? "Khôi phục sử dụng bản ghi này?" : "Ngừng sử dụng bản ghi này?")) void mutate(action);
         }}>{record.statusId === 102 ? "Khôi phục" : "Ngừng dùng"}</Button>}
-        {editable && record && resource === "accounts" && <Button className="w-auto" variant="secondary" disabled={pending || dirty || blocked} onClick={() => {
+        {editable && record && resource === "accounts" && <Button className="w-auto" variant="secondary" disabled={pending || dirty || blocked} onClick={async () => {
           const action = record.status === "Locked" ? "unlock" : "lock";
-          const reason = window.prompt(action === "lock" ? "Lý do khóa tài khoản" : "Lý do mở khóa tài khoản");
+          const reason = await confirmation.prompt(action === "lock" ? "Lý do khóa tài khoản" : "Lý do mở khóa tài khoản");
           if (reason?.trim()) void mutate(action, reason.trim());
         }}>{record.status === "Locked" ? "Mở khóa" : "Khóa tài khoản"}</Button>}
       </div>

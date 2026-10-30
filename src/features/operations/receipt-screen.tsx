@@ -2,6 +2,7 @@
 import { useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { Dialog } from "@/components/ui/dialog";
+import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { Button } from "@/components/ui/button";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
@@ -67,6 +68,7 @@ export function ReceiptScreen() {
 }
 
 export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSaved }: { record: c.Receipt | null; zones: ApiRecord[]; suppliers: ApiRecord[]; items: ApiRecord[]; onClose(): void; onSaved(record: c.Receipt): void }) {
+  const confirmation = useActionDialog();
   const context = useApiWorkspace();
   const initial = { supplierId: record?.supplier.id ?? "", zoneId: record?.zone.id ?? "", raftId: record?.raft?.id ?? "", receiptDate: record?.receiptDate ?? businessToday(),
     discountAmount: String(record?.discountAmount ?? 0), amountPaidNow: String(record?.amountPaidNow ?? 0), paidNowMethod: record?.paidNowMethod ?? "", notes: record?.notes ?? "" };
@@ -95,8 +97,9 @@ export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSave
     const result = await mutation.run(() => repository.write(record ? "update" : "create", payload, c.receiptSchema, record?.id));
     if (result) onSaved(result);
   }
-  const close = () => { if (!mutation.busy() && (!dirty && !mode || window.confirm("Bỏ các thay đổi chưa lưu?"))) onClose(); };
+  const close = async () => { if (!mutation.busy() && (!dirty && !mode || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose(); };
   return <Dialog open size="xl" title={record ? `Phiếu ${record.code} · ${statusLabel(record.statusId)}` : "Tạo phiếu nhập"} dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
+    {confirmation.dialog}
     <ErrorNotice error={localError || mutation.error || rafts.error} />
     {record && <ReceiptTotals record={record} />}
     <form onSubmit={(e) => { e.preventDefault(); const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null; void save(submitter?.value === "complete"); }}>
@@ -123,7 +126,7 @@ export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSave
     {record && <>
       <DataTable headings={["Vật tư", "Số lượng", "Thành tiền", "Lô giống", "Đã thả", "Đã trả", "Còn được trả"]}>{record.lines.map((row) => <tr key={row.id}><td>{row.itemName}</td><td>{row.quantity} {row.unit}</td><td><Money value={row.lineAmount} /></td><td>{row.seedLotCode ?? "—"}</td><td>{row.stocked}</td><td>{row.returnedQuantity}</td><td>{row.returnable}</td></tr>)}</DataTable>
       <div className="my-5 flex flex-wrap gap-2">
-        {record.statusId === 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Edit", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked || dirty} onClick={async () => { if (window.confirm("Hoàn thành phiếu đã lưu? Công nợ, lô giống và khoản trả ngay sẽ được ghi nhận.")) { const saved = await mutation.run(() => repository.write("complete", { rowVersion: baseline.current?.rowVersion }, c.receiptSchema, record.id)); if (saved) onSaved(saved); } }}>Hoàn thành phiếu đã lưu</Button>}
+        {record.statusId === 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Edit", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked || dirty} onClick={async () => { if (await confirmation.confirm("Hoàn thành phiếu đã lưu? Công nợ, lô giống và khoản trả ngay sẽ được ghi nhận.")) { const saved = await mutation.run(() => repository.write("complete", { rowVersion: baseline.current?.rowVersion }, c.receiptSchema, record.id)); if (saved) onSaved(saved); } }}>Hoàn thành phiếu đã lưu</Button>}
         {record.statusId !== 1703 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Delete", record.zone.id) && <Button className="w-auto" variant="danger" disabled={mutation.pending || mutation.blocked || dirty} onClick={() => setMode("cancel")}>Hủy phiếu</Button>}
         {record.statusId !== 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Create", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked} onClick={async () => { const saved = await mutation.run(() => repository.write("copy", {}, c.receiptSchema, record.id)); if (saved) onSaved(saved); }}>Sao chép thành nháp</Button>}
         {record.statusId === 1702 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Create", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked} onClick={() => setMode("return")}>Trả hàng</Button>}
@@ -141,21 +144,22 @@ export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSave
       <Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => { const value = await mutation.run(() => repository.read("detail", { id: record.id }, c.receiptSchema), true); if (value) setLatest(value); }}>Tải bản mới để đối chiếu</Button>
       {latest && <div className="mt-4"><p>{latest.code} · {statusLabel(latest.statusId)} · {latest.notes || "Không có ghi chú"}</p><p className="mt-2">{latest.supplier.name} · {latest.zone.name} · Bè {latest.raft?.code ?? "chưa chọn"} · Ngày {latest.receiptDate ?? "chưa nhập"}</p><p>Chiết khấu <Money value={latest.discountAmount} /> · Trả ngay <Money value={latest.amountPaidNow} /> · {latest.paidNowMethod ? methodLabel(latest.paidNowMethod) : "Chưa chọn hình thức"}</p><ReceiptTotals record={latest} /><DataTable headings={["Vật tư mới", "Số lượng", "Đơn giá", "Mã lô NCC", "Nguồn thực tế"]}>{latest.lines.map((row) => <tr key={row.id}><td>{row.itemName}</td><td>{row.quantity}</td><td><Money value={row.unitPrice} /></td><td>{row.supplierLotCode ?? "—"}</td><td>{row.actualSource ?? "—"}</td></tr>)}</DataTable>
         <div className="flex flex-wrap gap-2">{latest.statusId === 1701 && <Button className="w-auto" variant="secondary" onClick={() => { baseline.current = latest; mutation.reviewed(); setLatest(undefined); }}>Đã đối chiếu, giữ bản nháp để sửa tiếp</Button>}
-          <Button className="w-auto" variant="secondary" onClick={() => { if (window.confirm("Bỏ bản nháp và dùng dữ liệu mới?")) onSaved(latest); }}>Dùng bản mới</Button></div></div>}
+          <Button className="w-auto" variant="secondary" onClick={async () => { if (await confirmation.confirm("Bỏ bản nháp và dùng dữ liệu mới?")) onSaved(latest); }}>Dùng bản mới</Button></div></div>}
     </> : <a className="mt-3 block text-primary underline" href="/operations/purchase-receipts" target="_blank" rel="noreferrer">Mở danh sách ở tab khác để kiểm tra</a>}</div>}
     <Button className="mt-6 w-auto" variant="secondary" disabled={mutation.pending} onClick={close}>Đóng</Button>
   </Dialog>;
 }
 
 function ReceiptAction({ mode, record, disabled, onCancel, onSubmit }: { mode: "cancel" | "return"; record: c.Receipt; disabled: boolean; onCancel(): void; onSubmit(action: string, body: unknown): Promise<void> }) {
+  const confirmation = useActionDialog();
   const [reason, setReason] = useState(""), [date, setDate] = useState(businessToday()), [cancelPayments, setCancelPayments] = useState("");
   const [quantities, setQuantities] = useState<Record<string, string>>({}), [refund, setRefund] = useState("0"), [reduction, setReduction] = useState("0"), [method, setMethod] = useState("Cash");
-  return <form className="my-5 space-y-4 rounded-control border border-border p-4" onSubmit={(e) => {
-    e.preventDefault(); if (!window.confirm(mode === "cancel" ? "Hủy phiếu với lý do và cách xử lý tiền đã chọn?" : "Ghi nhận trả hàng và các khoản hoàn tiền/giảm nợ đã nhập?")) return;
+  return <form className="my-5 space-y-4 rounded-control border border-border p-4" onSubmit={async (e) => {
+    e.preventDefault(); if (!await confirmation.confirm(mode === "cancel" ? "Hủy phiếu với lý do và cách xử lý tiền đã chọn?" : "Ghi nhận trả hàng và các khoản hoàn tiền/giảm nợ đã nhập?")) return;
     void onSubmit(mode, mode === "cancel" ? { reason, rowVersion: record.rowVersion, cancelPayments: cancelPayments === "" ? null : cancelPayments === "cancel" }
       : { reason, returnDate: date, refundAmount: Number(refund), debtReductionAmount: Number(reduction), refundMethod: Number(refund) > 0 ? method : null,
         lines: record.lines.filter((row) => Number(quantities[row.id]) > 0).map((row) => ({ receiptLineId: row.id, quantity: Number(quantities[row.id]) })) });
-  }}><h3 className="font-semibold">{mode === "cancel" ? "Hủy phiếu nhập" : "Trả hàng nhà cung cấp"}</h3><fieldset disabled={disabled} className="space-y-4">
+  }}>{confirmation.dialog}<h3 className="font-semibold">{mode === "cancel" ? "Hủy phiếu nhập" : "Trả hàng nhà cung cấp"}</h3><fieldset disabled={disabled} className="space-y-4">
     <Note label="Lý do *" required maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} />
     {mode === "cancel" ? record.payments.some((row) => row.statusId === 1801) && <Select label="Xử lý khoản đã trả *" required value={cancelPayments} onChange={(e) => setCancelPayments(e.target.value)}><option value="">Chọn cách xử lý</option><option value="cancel">Hủy các khoản thanh toán của phiếu</option><option value="keep">Giữ thành khoản chưa phân bổ của nhà cung cấp</option></Select> : <>
       <Field label="Ngày trả *" required type="date" min={record.receiptDate ?? undefined} max={businessToday()} value={date} onChange={(e) => setDate(e.target.value)} />

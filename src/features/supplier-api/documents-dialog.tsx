@@ -2,17 +2,19 @@
 import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { supplierDocuments } from "./repository";
 import type { SupplierDocuments } from "./contracts";
 export function SupplierDocumentsDialog({ id, canEdit, onClose }: { id: string; canEdit: boolean; onClose(saved?: ApiRecord): void }) {
+  const confirmation = useActionDialog();
   const load = useCallback((signal: AbortSignal) => supplierDocuments(id, undefined, signal), [id]), remote = useRemote(load), mutation = useMutation();
   const [saved, setSaved] = useState<SupplierDocuments>(), [files, setFiles] = useState<File[]>([]), [error, setError] = useState<string>(), [notice, setNotice] = useState<string>();
   const [reviewed, setReviewed] = useState<SupplierDocuments>();
   const input = useRef<HTMLInputElement>(null), record = reviewed ?? saved ?? remote.data;
-  const close = () => { if (!mutation.busy() && (!files.length || window.confirm("Bỏ các tệp chưa tải lên?"))) onClose(saved ? reviewed ?? saved : undefined); };
-  return <Dialog open title="Chứng nhận nhà cung cấp" size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}><div className="space-y-4">
+  const close = async () => { if (!mutation.busy() && (!files.length || await confirmation.confirm("Bỏ các tệp chưa tải lên?"))) onClose(saved ? reviewed ?? saved : undefined); };
+  return <Dialog open title="Chứng nhận nhà cung cấp" size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) void close(); }}>{confirmation.dialog}<div className="space-y-4">
     {remote.loading && <Skeleton />}<ErrorNotice error={error || mutation.error || remote.error} />{notice && <p role="status">{notice}</p>}
     {record && <><p className="font-semibold">{record.name} · {record.certificates.length}/10 chứng nhận</p>{!record.certificates.length && <p>Chưa có chứng nhận.</p>}<ul className="space-y-2">{record.certificates.map((file) => <li key={file.index}>{file.url ? <a className="font-semibold text-primary underline" href={file.url}>Tải chứng nhận {file.index + 1}</a> : <span>Chứng nhận {file.index + 1} chưa thể tải.</span>}</li>)}</ul>
       {canEdit && <form className="space-y-3" onSubmit={async (event) => { event.preventDefault(); if (mutation.busy() || mutation.blocked || !files.length) return; setError(undefined); setNotice(undefined);

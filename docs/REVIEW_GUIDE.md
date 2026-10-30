@@ -4,6 +4,8 @@
 
 For the complete currently integrated tester scope, use **http://127.0.0.1:3003/login** (isolated Zalo backend QA, includes inbox and trader decisions). The comparison app on localhost3002 still uses develop8080, which lacks those two endpoints. The [role flow audit](reports/WEB_ROLE_FLOW_AUDIT_2026-10-30.md) records current checks, fixes and remaining contract limitations.
 
+The [October30 browser pass](reports/WEB_BROWSER_ROLE_QA_2026-10-30.md) records Owner coverage and the native-confirm blocker; the other demo roles still need a fresh UI pass. API editors now use in-app confirmation dialogs: **Quay lại** keeps the current draft and **Đồng ý** continues the action. Reload an older open QA page before checking this fix. This is not yet a completed browser acceptance matrix.
+
 The repeatable read-only role check uses the existing local demo accounts and creates/revokes only its own login sessions. It expects the documented demo permissions. Set the local demo password in the terminal, then run:
 
 ```powershell
