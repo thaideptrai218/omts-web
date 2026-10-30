@@ -38,6 +38,8 @@ Replay sau build: thiếu trường hiện đúng hai thông báo có nhãn và 
 
 ## Giới hạn
 
+Lượt tiếp đã kiểm upstream unavailable thật, các nhánh OTP/reload/resend/cancel bằng browser và chuẩn bị handoff bước mật khẩu. Xem [báo cáo lỗi API và OTP](WEB_BROWSER_FAILURE_OTP_QA_2026-10-30.md); bước lưu credential mới còn chờ người dùng, không tính PASS chỉ vì form đã mở.
+
 Không coi các kết quả trên là mọi race/offline đã kiểm. Mở khóa, grant revoke và thay credential/contact OTP chưa được ghi lại bằng browser trong lượt này; không thay quyền seed chỉ để tạo dữ liệu. Bằng chứng HTTP/component trước được ghi riêng. Staff activation/create-reset, fixed roles/new grants, Manager license, certificate delete, HTX bank và APIv2 vẫn chờ contract.
 
 Fetch backend trong lượt này vẫn develop953f597/Zalo dc00b2f. Không thêm màn dùng endpoint đoán hoặc fallback mock. Ảnh cục bộ task outputs: `qa-employee-unlink-saved.png`, `qa-employee-real-conflict.png`, `qa-cooperative-restored.png`, `qa-employee-validation-360.png`, `qa-employee-validation-1024.png`, `qa-license-future-dates.png`, `qa-raft-layout-v2.png`, `qa-raft-material-cost.png`, `qa-owner-threshold-persisted.png`.
