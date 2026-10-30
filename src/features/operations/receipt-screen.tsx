@@ -26,6 +26,7 @@ export function ReceiptScreen() {
   const [filters, setFilters] = useState({ code: "", zoneId: "", supplierId: "", raftId: "", itemId: "", itemGroup: "", statusId: "", from: businessToday().slice(0, 4) + "-01-01", to: businessToday() });
   const [page, setPage] = useState(1), [selected, setSelected] = useState<c.Receipt | null>(), [costs, setCosts] = useState<z.infer<typeof c.raftCostsSchema>>();
   const [editorSerial, setEditorSerial] = useState(0);
+  const [pendingInvoices, setPendingInvoices] = useState<{ receiptId: string; files: File[] }>();
   const [notice, setNotice] = useState<string>();
   const zones = useRemote(loadZones), suppliers = useRemote(loadSuppliers), items = useRemote(loadItems);
   const query = useMemo<Query>(() => ({ ...filters, page: String(page), pageSize: "20" }), [filters, page]);
@@ -35,9 +36,9 @@ export function ReceiptScreen() {
   const mutation = useMutation();
   const canCreate = operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Create");
   const filter = (key: keyof typeof filters, value: string) => { setFilters((current) => ({ ...current, [key]: value, ...(key === "zoneId" ? { raftId: "" } : {}) })); setPage(1); };
-  async function open(id: string) { const result = await mutation.run(() => repository.read("detail", { id }, c.receiptSchema), true); if (result) { setSelected(result); setEditorSerial((value) => value + 1); } }
+  async function open(id: string) { const result = await mutation.run(() => repository.read("detail", { id }, c.receiptSchema), true); if (result) { setPendingInvoices(undefined); setSelected(result); setEditorSerial((value) => value + 1); } }
   return <section><div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-3xl font-semibold">Phiếu nhập</h1><div className="flex flex-wrap gap-2">
-    {canCreate && <Button className="w-auto" disabled={mutation.pending} onClick={() => setSelected(null)}>Tạo phiếu nhập</Button>}
+    {canCreate && <Button className="w-auto" disabled={mutation.pending} onClick={() => { setPendingInvoices(undefined); setSelected(null); }}>Tạo phiếu nhập</Button>}
     <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => { const result = await mutation.run(() => repository.read("costs", query, c.raftCostsSchema), true); if (result) setCosts(result); }}>Chi phí vật tư bè</Button>
     {operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Export", filters.zoneId || undefined) && <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => void mutation.run(() => repository.download(query), true)}>Xuất Excel</Button>}
   </div></div>
@@ -62,22 +63,23 @@ export function ReceiptScreen() {
       <Paging page={page} total={list.data.page.total} disabled={list.loading} onChange={setPage} />
     </>}
     {selected !== undefined && <ReceiptEditor key={`${selected?.id ?? "new"}:${editorSerial}`} record={selected} zones={zones.data ?? []} suppliers={suppliers.data ?? []} items={items.data ?? []}
-      onClose={() => setSelected(undefined)} onSaved={(saved) => { setSelected(saved); setEditorSerial((value) => value + 1); list.reload(); setNotice(`Đã cập nhật phiếu ${saved.code}.`); }} />}
+      initialFiles={pendingInvoices?.receiptId === selected?.id ? pendingInvoices?.files : undefined}
+      onClose={() => { setPendingInvoices(undefined); setSelected(undefined); }} onSaved={(saved, files = []) => { setPendingInvoices(files.length ? { receiptId: saved.id, files } : undefined); setSelected(saved); setEditorSerial((value) => value + 1); list.reload(); setNotice(`Đã cập nhật phiếu ${saved.code}.`); }} />}
     {costs && <Dialog open title="Chi phí vật tư bè" size="lg" onOpenChange={(open) => { if (!open) setCosts(undefined); }}><DataTable headings={["Vùng", "Bè", "Chi phí", "Phiếu nhập"]} empty={!costs.length}>{costs.map((row) => <tr key={row.raft.id}><td>{row.zone.name}</td><td>{row.raft.code}</td><td><Money value={row.materialCost} /></td><td>{row.receipts.map((receipt) => <button key={receipt.receiptId} className="mr-3 text-primary underline" onClick={() => { setCosts(undefined); void open(receipt.receiptId); }}>{receipt.code}</button>)}</td></tr>)}</DataTable></Dialog>}
   </section>;
 }
 
-export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSaved }: { record: c.Receipt | null; zones: ApiRecord[]; suppliers: ApiRecord[]; items: ApiRecord[]; onClose(): void; onSaved(record: c.Receipt): void }) {
+export function ReceiptEditor({ record, zones, suppliers, items, initialFiles = [], onClose, onSaved }: { record: c.Receipt | null; zones: ApiRecord[]; suppliers: ApiRecord[]; items: ApiRecord[]; initialFiles?: File[]; onClose(): void; onSaved(record: c.Receipt, pendingFiles?: File[]): void }) {
   const confirmation = useActionDialog();
   const context = useApiWorkspace();
   const initial = { supplierId: record?.supplier.id ?? "", zoneId: record?.zone.id ?? "", raftId: record?.raft?.id ?? "", receiptDate: record?.receiptDate ?? businessToday(),
     discountAmount: String(record?.discountAmount ?? 0), amountPaidNow: String(record?.amountPaidNow ?? 0), paidNowMethod: record?.paidNowMethod ?? "", notes: record?.notes ?? "" };
   const initialLines: Lines = record?.lines.map((row) => ({ key: row.id, itemId: row.itemId, quantity: row.quantity ? String(row.quantity) : "", unitPrice: String(row.unitPrice), supplierLotCode: row.supplierLotCode ?? "", actualSource: row.actualSource ?? "" })) ?? [blankLine()];
   const [values, setValues] = useState(initial), [lines, setLines] = useState(initialLines), [localError, setLocalError] = useState<string>();
-  const [latest, setLatest] = useState<c.Receipt>(), [mode, setMode] = useState<"cancel" | "return">(), [files, setFiles] = useState<File[]>([]);
+  const [latest, setLatest] = useState<c.Receipt>(), [mode, setMode] = useState<"cancel" | "return">(), [files, setFiles] = useState<File[]>(initialFiles);
   const [returnDetail, setReturnDetail] = useState<z.infer<typeof c.returnSchema>>();
   const [initialSnapshot] = useState(() => JSON.stringify({ values: initial, lines: initialLines }));
-  const baseline = useRef(record), mutation = useMutation();
+  const baseline = useRef(record), invoicePicker = useRef<HTMLInputElement>(null), mutation = useMutation();
   const dirty = JSON.stringify({ values, lines }) !== initialSnapshot;
   const editable = !record || record.statusId === 1701;
   const action = record ? "Edit" : "Create";
@@ -90,17 +92,19 @@ export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSave
   const changeLine = (key: string, field: keyof Lines[number], value: string) => setLines((current) => current.map((row) => row.key === key ? { ...row, [field]: value } : row));
   async function save(complete: boolean) {
     setLocalError(undefined);
+    if (complete && files.length) { setLocalError("Hãy tải hóa đơn đã chọn lên hoặc bỏ chọn tệp trước khi hoàn thành phiếu."); return; }
     const payload = { ...values, raftId: values.raftId || null, receiptDate: values.receiptDate || null, discountAmount: Number(values.discountAmount || 0), amountPaidNow: Number(values.amountPaidNow || 0),
       paidNowMethod: values.paidNowMethod || null, notes: values.notes || null, complete, rowVersion: baseline.current?.rowVersion ?? null,
       lines: lines.filter((row) => row.itemId || row.quantity || row.unitPrice || row.supplierLotCode || row.actualSource).map((row) => ({ itemId: row.itemId, quantity: row.quantity === "" ? null : Number(row.quantity), unitPrice: row.unitPrice === "" ? null : Number(row.unitPrice), supplierLotCode: row.supplierLotCode || null, actualSource: row.actualSource || null })) };
     if (complete && (!values.receiptDate || !payload.lines.length || payload.lines.some((row) => !row.itemId || row.quantity === null || row.unitPrice === null))) { setLocalError("Để hoàn thành, cần ngày nhập và ít nhất một dòng có đủ vật tư, số lượng, đơn giá."); return; }
     const result = await mutation.run(() => repository.write(record ? "update" : "create", payload, c.receiptSchema, record?.id));
-    if (result) onSaved(result);
+    if (result) onSaved(result, result.statusId === 1701 ? files : undefined);
   }
   const close = async () => { if (!mutation.busy() && (!dirty && !mode && !files.length || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose(); };
   return <Dialog open size="xl" title={record ? `Phiếu ${record.code} · ${statusLabel(record.statusId)}` : "Tạo phiếu nhập"} dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
     {confirmation.dialog}
     <ErrorNotice error={localError || mutation.error || rafts.error} />
+    {files.length > 0 && <p role="status" id="receipt-pending-invoices" className="my-3 rounded-control border border-border p-3">Có {files.length} hóa đơn chưa tải lên. Hãy tải lên hoặc bỏ chọn tệp trước khi hoàn thành hoặc hủy phiếu.</p>}
     {record && <ReceiptTotals record={record} />}
     <form onSubmit={(e) => { e.preventDefault(); const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null; void save(submitter?.value === "complete"); }}>
       <fieldset disabled={mutation.pending || !canEdit} className="grid gap-4 sm:grid-cols-2">
@@ -121,22 +125,24 @@ export function ReceiptEditor({ record, zones, suppliers, items, onClose, onSave
         </div>)}<Button className="w-auto" variant="secondary" onClick={() => setLines((current) => [...current, blankLine()])}>Thêm dòng hàng</Button></fieldset>
       </fieldset>
       {canEdit && <div className="mt-5 flex flex-wrap justify-end gap-3"><Button className="w-auto" type="submit" value="draft" isPending={mutation.pending} disabled={mutation.blocked}>Lưu nháp</Button>
-        <Button className="w-auto" type="submit" value="complete" disabled={mutation.pending || mutation.blocked}>Lưu và hoàn thành</Button></div>}
+        <Button className="w-auto" type="submit" value="complete" aria-describedby={files.length ? "receipt-pending-invoices" : undefined} disabled={mutation.pending || mutation.blocked || files.length > 0}>Lưu và hoàn thành</Button></div>}
     </form>
     {record && <>
       <DataTable headings={["Vật tư", "Số lượng", "Thành tiền", "Lô giống", "Đã thả", "Đã trả", "Còn được trả"]}>{record.lines.map((row) => <tr key={row.id}><td>{row.itemName}</td><td>{row.quantity} {row.unit}</td><td><Money value={row.lineAmount} /></td><td>{row.seedLotCode ?? "—"}</td><td>{row.stocked}</td><td>{row.returnedQuantity}</td><td>{row.returnable}</td></tr>)}</DataTable>
       <div className="my-5 flex flex-wrap gap-2">
-        {record.statusId === 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Edit", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked || dirty} onClick={async () => { if (await confirmation.confirm("Hoàn thành phiếu đã lưu? Công nợ, lô giống và khoản trả ngay sẽ được ghi nhận.")) { const saved = await mutation.run(() => repository.write("complete", { rowVersion: baseline.current?.rowVersion }, c.receiptSchema, record.id)); if (saved) onSaved(saved); } }}>Hoàn thành phiếu đã lưu</Button>}
-        {record.statusId !== 1703 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Delete", record.zone.id) && <Button className="w-auto" variant="danger" disabled={mutation.pending || mutation.blocked || dirty} onClick={() => setMode("cancel")}>Hủy phiếu</Button>}
+        {record.statusId === 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Edit", record.zone.id) && <Button className="w-auto" variant="secondary" aria-describedby={files.length ? "receipt-pending-invoices" : undefined} disabled={mutation.pending || mutation.blocked || dirty || files.length > 0} onClick={async () => { if (files.length) return; if (await confirmation.confirm("Hoàn thành phiếu đã lưu? Công nợ, lô giống và khoản trả ngay sẽ được ghi nhận.")) { const saved = await mutation.run(() => repository.write("complete", { rowVersion: baseline.current?.rowVersion }, c.receiptSchema, record.id)); if (saved) onSaved(saved); } }}>Hoàn thành phiếu đã lưu</Button>}
+        {record.statusId !== 1703 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Delete", record.zone.id) && <Button className="w-auto" variant="danger" aria-describedby={files.length ? "receipt-pending-invoices" : undefined} disabled={mutation.pending || mutation.blocked || dirty || files.length > 0} onClick={() => setMode("cancel")}>Hủy phiếu</Button>}
         {record.statusId !== 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Create", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked} onClick={async () => { const saved = await mutation.run(() => repository.write("copy", {}, c.receiptSchema, record.id)); if (saved) onSaved(saved); }}>Sao chép thành nháp</Button>}
         {record.statusId === 1702 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Create", record.zone.id) && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked} onClick={() => setMode("return")}>Trả hàng</Button>}
       </div>
-      {mode && <ReceiptAction key={mode} mode={mode} record={record} disabled={mutation.pending || mutation.blocked} onCancel={() => setMode(undefined)} onSubmit={async (action, body) => {
+      {mode && <ReceiptAction key={mode} mode={mode} record={record} disabled={mutation.pending || mutation.blocked || mode === "cancel" && files.length > 0} onCancel={() => setMode(undefined)} onSubmit={async (action, body) => {
+        if (action === "cancel" && files.length) { setLocalError("Hãy tải hóa đơn đã chọn lên hoặc bỏ chọn tệp trước khi hủy phiếu."); return; }
         const payload = action === "cancel" ? { ...body, rowVersion: baseline.current?.rowVersion ?? record.rowVersion } : body;
         const saved = await mutation.run(() => repository.write(action, payload, c.receiptSchema, record.id)); if (saved) onSaved(saved);
       }} />}
       <h3 className="mt-6 font-semibold">Hóa đơn</h3><ul className="my-3 space-y-2">{record.invoicePhotoUrls.map((url, index) => <li key={index}><a className="text-primary underline" href={url} download>Tải hóa đơn {index + 1}</a></li>)}</ul>
-      {record.statusId === 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Edit", record.zone.id) && <div className="space-y-3"><Field label="Thêm hóa đơn (JPEG, PNG, PDF; tối đa 10 tệp, 10 MB/tệp)" type="file" accept="image/jpeg,image/png,application/pdf" multiple disabled={mutation.pending || mutation.blocked || dirty} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+      {record.statusId === 1701 && operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Edit", record.zone.id) && <div className="space-y-3"><Field ref={invoicePicker} label="Thêm hóa đơn (JPEG, PNG, PDF; tối đa 10 tệp, 10 MB/tệp)" type="file" accept="image/jpeg,image/png,application/pdf" multiple disabled={mutation.pending || mutation.blocked || dirty} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+        {files.length > 0 && <section aria-label="Hóa đơn chưa tải lên" className="min-w-0 space-y-2 rounded-control border border-border p-3"><p>Đã chọn {files.length} tệp, chưa tải lên. Lưu nháp phiếu giữ các tệp trong trang này; tải lại trang sẽ mất lựa chọn.</p><ul className="space-y-1">{files.map((file, index) => <li className="break-all text-sm" key={`${file.name}:${index}`}>{file.name}</li>)}</ul><Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked} onClick={async () => { if (await confirmation.confirm("Bỏ các tệp hóa đơn đã chọn nhưng chưa tải lên?")) { setFiles([]); if (invoicePicker.current) invoicePicker.current.value = ""; } }}>Bỏ chọn tệp</Button></section>}
         <Button className="w-auto" variant="secondary" disabled={!files.length || mutation.pending || mutation.blocked || dirty} onClick={async () => { const saved = await mutation.run(() => repository.upload("invoice-photos", files, {}, c.receiptSchema, record.id)); if (saved) onSaved(saved); }}>Tải hóa đơn lên</Button></div>}
       <h3 className="mt-6 font-semibold">Lịch sử thanh toán</h3><DataTable headings={["Ngày", "Số tiền", "Hình thức", "Trạng thái"]} empty={!record.payments.length}>{record.payments.map((row) => <tr key={row.id}><td>{row.paymentDate}</td><td><Money value={row.amount} /></td><td>{methodLabel(row.method)}</td><td>{statusLabel(row.statusId)}</td></tr>)}</DataTable>
       <h3 className="font-semibold">Lịch sử trả hàng</h3><DataTable headings={["Phiếu trả", "Ngày", "Lý do", "Giá trị", "Hoàn tiền", "Giảm nợ"]} empty={!record.returns.length}>{record.returns.map((row) => <tr key={row.id}><td><button className="text-primary underline" disabled={mutation.pending} onClick={async () => { const detail = await mutation.run(() => repository.read("return-detail", { id: row.id }, c.returnSchema), true); if (detail) setReturnDetail(detail); }}>{row.code}</button></td><td>{row.returnDate}</td><td>{row.reason}</td><td><Money value={row.returnValue} /></td><td><Money value={row.refundAmount} /></td><td><Money value={row.debtReductionAmount} /></td></tr>)}</DataTable>
