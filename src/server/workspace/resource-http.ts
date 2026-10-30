@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { resourceKeys, resources, projectResource, resourceAllowed, type ResourceKey } from "@/features/api-workspace/resources";
+import { resourceKeys, resources, resourceCategoryFilters, projectResource, resourceAllowed, type ResourceKey } from "@/features/api-workspace/resources";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -20,6 +20,7 @@ export async function handleResourceRequest(request: Request, resourceName: stri
   const resource = resourceSchema.safeParse(resourceName);
   if (!resource.success) return json({ status: "not-found" }, 404);
   const key = resource.data;
+  const category = resourceCategoryFilters[key];
   const gateway = getSessionGateway();
   if (gateway.mode === "mock") return json({ status: "disabled" }, 404);
   const config = parseServerBackendConfig(process.env);
@@ -32,7 +33,8 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     const query = new URL(request.url).searchParams;
     if (request.method === "GET") {
       const keys = [...query.keys()];
-      if (new Set(keys).size !== keys.length || keys.some((name) => !["id", "zoneId", "search", "page", "pageSize", "statusId"].includes(name))) return json({ status: "invalid-input" }, 400);
+      if (new Set(keys).size !== keys.length || keys.some((name) => !["id", "zoneId", "search", "page", "pageSize", "statusId", ...(category ? [category.key] : [])].includes(name))) return json({ status: "invalid-input" }, 400);
+      if (category && query.has(category.key) && (query.has("id") || !category.options.some(([value]) => value === query.get(category.key)))) return json({ status: "invalid-input" }, 400);
       if (query.has("id")) {
         const checked = id.safeParse(query.get("id"));
         if (!checked.success) return json({ status: "invalid-input" }, 400);
@@ -74,6 +76,7 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     if (action === "list") {
       const allowed = key === "roles" || key === "rafts" ? ["statusId"] : key === "input-items" ? ["search", "statusId"] : ["search", "statusId", "page", "pageSize"];
       for (const name of allowed) if (query.has(name)) upstreamQuery.set(name, query.get(name)!);
+      if (category && query.has(category.key)) upstreamQuery.set(category.key, query.get(category.key)!);
     }
     const target = new URL(path, config.config.origin);
     target.search = upstreamQuery.toString();

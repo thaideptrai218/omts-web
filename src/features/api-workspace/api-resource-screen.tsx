@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FormField } from "@/components/form/form-field";
 import { useApiWorkspace } from "./api-workspace-shell";
-import { resources, resourceAllowed, type ResourceKey } from "./resources";
+import { resources, resourceCategoryFilters, resourceAllowed, type ResourceKey } from "./resources";
 import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
 import { ResourceExtras } from "@/features/farming-api/resource-extras";
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
@@ -29,12 +29,14 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const accountQuery = useSearchParams().getAll("accountId");
   const initialAccountId = resource === "accounts" && accountQuery.length === 1 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountQuery[0]) ? accountQuery[0] : undefined;
   const definition = resources[resource];
+  const categoryFilter = resourceCategoryFilters[resource];
   const repository = useMemo(() => createWorkspaceRepository(resource), [resource]);
   const [page, setPage] = useState<ApiPage>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
+  const [category, setCategory] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [refresh, setRefresh] = useState(0);
   const [zones, setZones] = useState<ApiRecord[]>([]);
@@ -83,7 +85,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
     const timer = setTimeout(() => {
       setLoading(true); setError(undefined);
       void repository.list({ page: String(pageNumber), pageSize: "20", ...(search ? { search } : {}),
-        ...(filter ? { statusId: filter } : {}), ...(zoneId ? { zoneId } : {}) }, controller.signal).then((result) => {
+        ...(filter ? { statusId: filter } : {}), ...(category && categoryFilter ? { [categoryFilter.key]: category } : {}), ...(zoneId ? { zoneId } : {}) }, controller.signal).then((result) => {
         if (controller.signal.aborted) return;
         setLoading(false);
         if (result.status === "success") {
@@ -94,7 +96,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
       });
     }, 200);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [repository, resource, search, filter, pageNumber, refresh, zoneId, canView, definition]);
+  }, [repository, resource, search, filter, category, categoryFilter, pageNumber, refresh, zoneId, canView, definition]);
   useEffect(() => () => { openGeneration.current++; }, []);
 
   async function open(record: ApiRecord) {
@@ -117,6 +119,8 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
       <label className="min-w-48 flex-1 text-sm">Tìm kiếm<input className={inputClass} value={search} onChange={(event) => { setSearch(event.target.value); setPageNumber(1); }} /></label>
       <label className="text-sm">Trạng thái<select className={inputClass} value={filter} onChange={(event) => { setFilter(event.target.value); setPageNumber(1); }}>
         <option value="">Tất cả</option>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      {categoryFilter && <label className="text-sm">{categoryFilter.label}<select className={inputClass} value={category} onChange={(event) => { setCategory(event.target.value); setPageNumber(1); }}>
+        <option value="">Tất cả</option>{categoryFilter.options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
       {definition.zoneRequired && <label className="text-sm">Vùng nuôi<select className={inputClass} value={zoneId} onChange={(event) => { setZoneId(event.target.value); setPageNumber(1); }}>
         <option value="">Chọn vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{text(zone.name)}</option>)}</select></label>}
     </div>

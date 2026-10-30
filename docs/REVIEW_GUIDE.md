@@ -57,6 +57,8 @@ For a conflict or lost mutation response, the editor retains the draft and asks 
 
 Supplier certificates: open **Nhà cung cấp → Mở hồ sơ → Chứng nhận nhà cung cấp** after saving/discarding metadata drafts. Readers can download; SUPPLIERS Edit allows JPEG/PNG/PDF uploads (10MB per file, 10 certificates total). Confirmed uploads update the parent version on close. An ambiguous upload stays blocked for comparison and is never replayed by Reload. Use a QA supplier. Certificate deletion awaits a backend ID/version check; index alone can remove the wrong file after a concurrent list change. See [CI and certificate evidence](reports/WEB_CI_SUPPLIER_CERTIFICATES_2026-10-29.md).
 
+Catalogue filters (October30): **Nhà cung cấp → Loại nhà cung cấp** filters Seed/Material/Other; **Danh mục vật tư → Nhóm vật tư** filters Seed/RaftMaterial/Other. Combine with search and status, move to another page, then change the category: paging returns to1. Clearing the category keeps search/status. Filtering runs on the backend before paging, so it finds matching rows beyond the current page. Both API environments3002/3003 support these filters; original actor permissions still apply.
+
 ### Purchasing and water tester flows (October 29)
 
 - **Phiếu nhập** (`/operations/purchase-receipts`): select a supplier and zone, save an empty draft, add seed/material lines (a raft is required for raft materials), upload invoice images/PDF, then complete it. Check the seed-lot references and outstanding amount. Try a partial return, cancel/copy, both payment choices on cancellation, raft costs and Excel export. A completed receipt is corrected through cancel/copy; it cannot be edited in place.

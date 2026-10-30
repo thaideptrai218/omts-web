@@ -13,6 +13,25 @@ function configure(subjectType: "CooperativeOwner" | "Staff" = "CooperativeOwner
 }
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 describe("workspace BFF routing and authorization", () => {
+  it("forwards supplier type alongside server search/status/paging", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 2, pageSize: 20, total: 0 }));
+    const response = await handleResourceRequest(new Request("http://localhost:3002/api/workspace/suppliers?type=Material&search=qa&statusId=101&page=2&pageSize=20"), "suppliers");
+    expect(response.status).toBe(200); const target = new URL(String(fetcher.mock.calls[0][0])); expect(target.pathname).toBe("/api/suppliers");
+    expect(Object.fromEntries(target.searchParams)).toEqual({ type: "Material", search: "qa", statusId: "101", page: "2", pageSize: "20" });
+  });
+  it("filters the input array upstream before BFF paging", async () => {
+    configure(); const rows = Array.from({ length: 25 }, (_, index) => ({ id: "529ec3ce-af8f-42f7-a08f-4bab36ba7e62", code: `M${index}`, name: `Material ${index}`, group: "RaftMaterial", unit: "cái", statusId: 101, status: "In Use" }));
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(rows));
+    const response = await handleResourceRequest(new Request("http://localhost:3002/api/workspace/input-items?group=RaftMaterial&page=2&pageSize=20"), "input-items");
+    expect(response.status).toBe(200); const value = await response.json(); expect(value.data.items).toHaveLength(5); expect(value.data.total).toBe(25);
+    expect(String(fetcher.mock.calls[0][0])).toBe("http://127.0.0.1:8080/api/farming-input-items?group=RaftMaterial");
+  });
+  it.each([
+    ["suppliers", "?type=RaftMaterial"], ["input-items", "?group=Material"], ["zones", "?type=Seed"], ["suppliers", "?group=Seed"],
+    ["suppliers", "?type=Seed&type=Other"], ["suppliers", "?type=Seed&id=529ec3ce-af8f-42f7-a08f-4bab36ba7e62"],
+  ])("rejects an invalid or irrelevant category for %s", async (resource, query) => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch"); expect((await handleResourceRequest(new Request(`http://localhost:3002/api/workspace/${resource}${query}`), resource)).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
+  });
   it("rejects forged targets and duplicate query keys without calling upstream", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch");
     expect((await handleResourceRequest(new Request("http://localhost:3002/api/workspace/zones"), "../auth/login")).status).toBe(404);

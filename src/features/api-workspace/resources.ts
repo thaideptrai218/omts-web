@@ -5,6 +5,12 @@ import { employeeListItemSchema, employeeViewSchema } from "@/features/employee-
 
 export const resourceKeys = ["zones", "suppliers", "input-items", "employees", "rafts", "accounts", "roles"] as const;
 export type ResourceKey = typeof resourceKeys[number];
+const supplierTypes = [["Seed", "Giống"], ["Material", "Vật tư"], ["Other", "Khác"]] as const;
+const inputGroups = [["Seed", "Giống"], ["RaftMaterial", "Vật tư bè"], ["Other", "Khác"]] as const;
+export const resourceCategoryFilters: Partial<Record<ResourceKey, { key: "type" | "group"; label: string; options: readonly (readonly [string, string])[] }>> = {
+  suppliers: { key: "type", label: "Loại nhà cung cấp", options: supplierTypes },
+  "input-items": { key: "group", label: "Nhóm vật tư", options: inputGroups },
+};
 export type ResourceField = Readonly<{ key: string; label: string; type?: "text" | "number" | "textarea" | "select" | "date";
   required?: boolean; options?: readonly (readonly [string, string])[] }>;
 type ResourceDefinition = Readonly<{ title: string; functionCode?: string; ownerOnly?: boolean; editable: boolean; creatable?: boolean; zoneRequired?: boolean;
@@ -18,12 +24,12 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
   suppliers: { title: "Nhà cung cấp", functionCode: "SUPPLIERS", editable: true,
     columns: [["name", "Tên nhà cung cấp"], ["supplierType", "Loại"], ["phoneNumber", "Số điện thoại"], ["status", "Trạng thái"]],
     fields: [{ key: "name", label: "Tên nhà cung cấp", required: true }, { key: "supplierType", label: "Loại nhà cung cấp", type: "select", required: true,
-      options: [["Seed", "Giống"], ["Material", "Vật tư"], ["Other", "Khác"]] },
+      options: supplierTypes },
       { key: "phoneNumber", label: "Số điện thoại", required: true }, { key: "otherContacts", label: "Liên hệ khác", type: "textarea" }] },
   "input-items": { title: "Danh mục vật tư", editable: true,
     columns: [["code", "Mã"], ["name", "Tên vật tư"], ["group", "Nhóm"], ["unit", "Đơn vị"], ["status", "Trạng thái"]],
     fields: [{ key: "code", label: "Mã vật tư", required: true }, { key: "name", label: "Tên vật tư", required: true },
-      { key: "group", label: "Nhóm", type: "select", required: true, options: [["Seed", "Giống"], ["RaftMaterial", "Vật tư bè"], ["Other", "Khác"]] },
+      { key: "group", label: "Nhóm", type: "select", required: true, options: inputGroups },
       { key: "unit", label: "Đơn vị tính", required: true }, { key: "description", label: "Mô tả", type: "textarea" }] },
   employees: { title: "Nhân viên", ownerOnly: true, editable: true,
     columns: [["fullName", "Họ tên"], ["phoneNumber", "Số điện thoại"], ["status", "Tình trạng"]],
