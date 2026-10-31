@@ -98,7 +98,8 @@ export async function handleOperationRequest(request: Request, areaName: string)
       if (plan.file === "export" && upstream.ok) {
         if (contentType !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") return json({ status: "invalid-response" }, 502);
         bytes = await readBoundedBytes(upstream.body, controller.signal, 32 * 1024 * 1024, budget);
-      } else if (plan.action === "stop-editing" && upstream.status === 204) data = { stopped: true };
+      } else if (plan.noContent && upstream.status === 204) data = { done: true };
+      else if (plan.action === "stop-editing" && upstream.status === 204) data = { stopped: true };
       else {
         const result = await readBackendResponse(upstream, "profileRead");
         if (result.status === "http-error") return json({ status: "rejected", code: result.code }, result.httpStatus);
@@ -106,7 +107,10 @@ export async function handleOperationRequest(request: Request, areaName: string)
         const parsed = plan.schema.safeParse(result.data);
         if (!parsed.success) return json({ status: "invalid-response" }, 502);
         if (plan.expectedId && (parsed.data as { id?: string }).id !== plan.expectedId) return json({ status: "invalid-response" }, 502);
-        if (area.data === "workforce" && Array.isArray(parsed.data) && parsed.data.some((row: { zoneId: string }) => !operationAllowed("workforce", context.context.identity, context.context.permissions.functionPermissions, "View", row.zoneId))) return json({ status: "invalid-response" }, 502);
+        if (area.data === "workforce") {
+          const records = Array.isArray(parsed.data) ? parsed.data : [parsed.data];
+          if (records.some((row: { zoneId?: string }) => row.zoneId && !operationAllowed("workforce", context.context.identity, context.context.permissions.functionPermissions, plan.permission, row.zoneId))) return json({ status: "invalid-response" }, 502);
+        }
         data = parsed.data;
       }
       if (plan.file === "invoice" || plan.file === "photo") {

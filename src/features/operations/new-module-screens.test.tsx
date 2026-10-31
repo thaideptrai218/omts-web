@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), subjectType: "Trader" }));
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mocks.read }) }));
-vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType } }) }));
+vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType }, permissions: { functionPermissions: [] } }) }));
 import { PurchaseRequestsScreen, SalesProductsScreen, WorkforceScreen } from "./new-module-screens";
 import { ids } from "./__tests__/fixtures";
 beforeAll(() => {

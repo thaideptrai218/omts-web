@@ -50,6 +50,10 @@ try {
       await c.check("/api/operations/purchase-requests", isOwner || username.startsWith("quanlyvung") ? 200 : 403);
       const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       await c.check(`/api/operations/workforce?day=${day}`, isOwner || username.startsWith("quanlyvung") ? 200 : 403);
+      await c.check(`/api/operations/workforce?action=lookups&day=${day}`, isOwner || username.startsWith("quanlyvung") ? 200 : 403);
+      await c.check("/api/operations/workforce?action=leaves", isOwner ? 200 : 403);
+      await c.check("/api/operations/workforce?action=settings", isOwner ? 200 : 403);
+      await c.check(`/api/operations/my-work?from=${day}&to=${day}`, !isOwner && !isTrader ? 200 : 403);
     }
     for (const resource of ["zones", "suppliers", "input-items"]) await c.check(`/api/workspace/${resource}`, ownBusiness ? 200 : 403);
     for (const resource of ["employees", "accounts", "roles"]) await c.check(`/api/workspace/${resource}`, isOwner ? 200 : 403);

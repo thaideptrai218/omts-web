@@ -15,6 +15,31 @@ function configure(subjectType = "CooperativeOwner", permissions: FunctionPermis
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 const get = (query: string) => new Request(`http://localhost:3002/api/operations/water?${query}`);
 describe("operations BFF authorization and evidence boundary", () => {
+  it("requires CSRF on the newly approved sales writes before calling upstream", async () => {
+    configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch");
+    const request = new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "https://evil.test", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "submit", body: { productId: ids.item, requestedCages: 2, pickupDate: "2026-10-31", note: null, clientOperationId: ids.receipt } }) });
+    expect((await handleOperationRequest(request, "purchase-requests")).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("does not let a Trader respond as Owner or choose an employee for leave", async () => {
+    configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch");
+    const post = (body: unknown) => new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "http://localhost:3002", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify(body) });
+    expect((await handleOperationRequest(post({ action: "respond", id: ids.receipt, body: { accept: false, acceptedCages: null, pickupDate: null, allowPayLater: false, note: "QA", rowVersion: "opaque" } }), "purchase-requests")).status).toBe(403);
+    configure("Staff");
+    expect((await handleOperationRequest(post({ action: "leave", body: { from: "2026-10-31", to: "2026-10-31", reason: "QA", clientOperationId: ids.receipt, employeeId: ids.item } }), "my-work")).status).toBe(400);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("keeps bodyless workforce commands explicit and rechecks the session after 204", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
+    gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+    const request = new Request("http://localhost:3002/api/operations/workforce", { method: "POST", headers: { Origin: "http://localhost:3002", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "remove", id: ids.receipt, zoneId: ids.zone, body: {} }) });
+    expect((await handleOperationRequest(request, "workforce")).status).toBe(401); expect(fetcher.mock.calls[0][1]).toMatchObject({ method: "DELETE", body: undefined });
+  });
+  it("serves only the current Staff personal work endpoint, including a truthful unlinked result", async () => {
+    configure("Staff"); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ employeeId: null, name: null, assignments: [], attendance: [], requests: [] }));
+    expect((await handleOperationRequest(get("from=2026-10-01&to=2026-10-31"), "my-work")).status).toBe(200);
+    expect(fetcher.mock.calls[0][0].toString()).toBe("http://127.0.0.1:8080/api/me/workforce?from=2026-10-01&to=2026-10-31");
+    configure("Trader"); expect((await handleOperationRequest(get("from=2026-10-01&to=2026-10-31"), "my-work")).status).toBe(403);
+  });
   it("keeps Trader reads on the personal endpoint and denies cooperative/all-product reads", async () => {
     configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 20, total: 0 }));
     expect((await handleOperationRequest(get("action=mine"), "purchase-requests")).status).toBe(200);

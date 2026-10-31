@@ -1,5 +1,5 @@
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
-export const operationAreas = ["purchase-receipts", "supplier-payments", "water", "sales-products", "purchase-requests", "workforce"] as const;
+export const operationAreas = ["purchase-receipts", "supplier-payments", "water", "sales-products", "purchase-requests", "workforce", "my-work"] as const;
 export type OperationArea = typeof operationAreas[number];
 export const operationModules: readonly { key: OperationArea; title: string; functionCode: string }[] = [
   { key: "purchase-receipts", title: "Phiếu nhập", functionCode: "PURCHASE_RECEIPTS" },
@@ -8,11 +8,13 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "sales-products", title: "Sản phẩm bán", functionCode: "" },
   { key: "purchase-requests", title: "Yêu cầu mua hàng", functionCode: "PURCHASE_REQUESTS" },
   { key: "workforce", title: "Phân công và chấm công", functionCode: "WORK_ASSIGNMENTS" },
+  { key: "my-work", title: "Công việc và nghỉ phép của tôi", functionCode: "" },
 ];
 export function operationAllowed(area: OperationArea, identity: { subjectType: string }, permissions: readonly FunctionPermission[], action = "View", zoneId?: string) {
+  if (area === "my-work") return identity.subjectType === "Staff";
   if (area === "sales-products") return identity.subjectType === "CooperativeOwner" || identity.subjectType === "Trader" && action === "View";
   if (area === "purchase-requests") {
-    if (action === "Mine") return identity.subjectType === "Trader";
+    if (["Mine", "Submit", "CancelMine"].includes(action)) return identity.subjectType === "Trader";
     if (identity.subjectType === "Trader") return action === "View";
     if (identity.subjectType === "CooperativeOwner") return true;
     return identity.subjectType === "Staff" && ["View", "Review"].includes(action) && permissions.some((p) => p.functionCode === "PURCHASE_REQUESTS" && p.action === "View"
@@ -20,7 +22,9 @@ export function operationAllowed(area: OperationArea, identity: { subjectType: s
   }
   if (area === "workforce") {
     if (identity.subjectType === "CooperativeOwner") return true;
-    return identity.subjectType === "Staff" && action === "View" && permissions.some((p) => ["WORK_ASSIGNMENTS", "ATTENDANCE"].includes(p.functionCode) && p.action === "View"
+    const codes = action === "View" ? ["WORK_ASSIGNMENTS", "ATTENDANCE"] : action === "AttendanceCreate" ? ["ATTENDANCE"] : ["WORK_ASSIGNMENTS"];
+    const verb = action === "AttendanceCreate" ? "Create" : action;
+    return identity.subjectType === "Staff" && ["View", "Create", "Edit", "Delete", "AttendanceCreate"].includes(action) && permissions.some((p) => codes.includes(p.functionCode) && p.action === verb
       && p.dataScope === "AssignedZone" && (p.scope.kind === "all-zones" || (zoneId ? p.scope.zoneIds.includes(zoneId) : p.scope.zoneIds.length > 0)));
   }
   if (identity.subjectType === "CooperativeOwner") return true;

@@ -1,5 +1,7 @@
 # Màn đọc Sales và Workforce — QA 31/10/2026
 
+**Cập nhật sau phê duyệt:** hai câu hỏi đã được người dùng chốt; luồng ghi và màn cá nhân đã được nối/kiểm trong [báo cáo tiếp theo](WEB_SALES_WORKFORCE_WRITE_QA_2026-10-31.md). Các câu “chờ” và dữ liệu0 bên dưới là snapshot lát đọc trước đó.
+
 ## Backend mới, không merge
 
 Fetch origin ngày31/10 tìm thấy nhánh `chore/cors-zalo-mini-app` từdc00b2f lên98e232c: workforce8a41040, cage purchase requests c8210f5, tổ chức source98e232c. develop vẫn953f597. Controller mới có sales-products, purchase-requests, workforce assignments/attendance/leave/settings. Chưa thấy endpoint mới cho cycle/harvest/sales invoices/customer debt/payroll trong các commit này. Không coi LAB cũ là hợp đồng LABORv2 mới.
