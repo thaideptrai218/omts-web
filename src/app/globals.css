@@ -1,26 +1,140 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* Brand and interaction */
+  --omts-color-primary: #075985;
+  --omts-color-primary-hover: #0c4a6e;
+  --omts-color-primary-soft: #e0f2fe;
+  --omts-color-accent: #0284c7;
+
+  /* Surfaces and content */
+  --omts-color-canvas: #f5f9fc;
+  --omts-color-surface: #ffffff;
+  --omts-color-surface-subtle: #edf5fa;
+  --omts-color-text: #0f172a;
+  --omts-color-text-muted: #475569;
+  --omts-color-border: #cbd5e1;
+  --omts-color-border-strong: #64748b;
+
+  /* Feedback */
+  --omts-color-info: #0369a1;
+  --omts-color-success: #047857;
+  --omts-color-warning: #a16207;
+  --omts-color-warning-soft: #fef3c7;
+  --omts-color-danger: #be123c;
+  --omts-color-danger-soft: #fff1f2;
+  --omts-color-overlay: rgb(15 23 42 / 0.45);
+  --omts-color-focus-ring: #0369a1;
+
+  /* Shape, depth and readable content width */
+  --omts-radius-control: 0.625rem;
+  --omts-radius-card: 0.875rem;
+  --omts-shadow-card: 0 1px 2px rgb(15 23 42 / 0.06),
+    0 10px 30px rgb(7 89 133 / 0.08);
+  --omts-content-max-width: 80rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-primary: var(--omts-color-primary);
+  --color-primary-hover: var(--omts-color-primary-hover);
+  --color-primary-soft: var(--omts-color-primary-soft);
+  --color-accent: var(--omts-color-accent);
+  --color-canvas: var(--omts-color-canvas);
+  --color-surface: var(--omts-color-surface);
+  --color-surface-subtle: var(--omts-color-surface-subtle);
+  --color-text: var(--omts-color-text);
+  --color-text-muted: var(--omts-color-text-muted);
+  --color-border: var(--omts-color-border);
+  --color-border-strong: var(--omts-color-border-strong);
+  --color-info: var(--omts-color-info);
+  --color-success: var(--omts-color-success);
+  --color-warning: var(--omts-color-warning);
+  --color-warning-soft: var(--omts-color-warning-soft);
+  --color-danger: var(--omts-color-danger);
+  --color-focus-ring: var(--omts-color-focus-ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-control: var(--omts-radius-control);
+  --radius-card: var(--omts-radius-card);
+  --shadow-card: var(--omts-shadow-card);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  min-width: 20rem;
+  background: var(--omts-color-canvas);
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--omts-color-canvas);
+  color: var(--omts-color-text);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Only the open popup scrolls. Keep the desktop gutter to avoid layout jumps. */
+html[data-omts-scroll-locked] {
+  overflow: hidden !important;
+  scrollbar-gutter: stable;
+}
+
+html[data-omts-scroll-locked] body {
+  overflow: hidden !important;
+}
+
+::selection {
+  background: var(--omts-color-primary-soft);
+  color: var(--omts-color-text);
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 0.1875rem solid var(--omts-color-focus-ring);
+  outline-offset: 0.1875rem;
+}
+
+:where(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+}
+
+.management-heading {
+  border-bottom: 1px solid var(--omts-color-border);
+}
+
+@keyframes omts-reveal-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-1rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes omts-reveal-from-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes omts-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

@@ -8,7 +8,7 @@
 
 ## 1. Hướng thiết kế chung
 
-Figma hiện tại là wireframe low-fidelity ở chiều rộng 390 px. Nó xác định thứ tự trường, hành động và luồng, nhưng chưa phải visual design cuối. Giao diện Web sẽ giữ cấu trúc nghiệp vụ và nâng cấp theo hướng hiện đại, rõ ràng, phù hợp với Cooperative Owner, Zone Manager, Accountant, Staff và Trader không quen phần mềm phức tạp.
+Figma hiện tại là wireframe low-fidelity ở chiều rộng 390 px. Nó chỉ là tư liệu lịch sử để đối chiếu inventory màn hình hoặc luồng khi cần, không phải template hình thức và không phải điều kiện bắt buộc trước khi code. Giao diện Web được thiết kế mới từ Jira, SRS và nhu cầu sử dụng thực tế của Cooperative Owner, Zone Manager, Accountant, Staff và Trader không quen phần mềm phức tạp. Không pixel-copy màu sắc, tỷ lệ hoặc component từ wireframe.
 
 ### 1.1 Ngôn ngữ thị giác
 
@@ -55,6 +55,16 @@ focus-ring    cyan-500
 - **640–1023 px:** form tối đa 640–720 px; list/filter có thể thành hai cột nếu vẫn dễ đọc.
 - **Từ 1024 px:** sidebar + topbar cho khu vực đăng nhập; nội dung tối đa khoảng 1280 px; form không kéo dài toàn chiều ngang.
 - Không tạo một bản desktop bị phóng to từ mobile. Desktop tận dụng vùng trống cho summary, help panel, preview và bảng dữ liệu.
+
+### 1.4 Chuyển động và tương tác gọn
+
+- Motion phải giải thích được thay đổi trạng thái: panel mở/đóng, đổi tab, accordion, dialog, toast hoặc phản hồi lưu dữ liệu.
+- Thời lượng thông thường 160–240 ms; chuyển cảnh lớn tối đa khoảng 420 ms. Không dùng chuyển động liên tục chỉ để trang trông “sống”.
+- Sidebar desktop có thể thu gọn; mobile navigation dùng drawer có nút “Menu” và nút “Đóng” rõ ràng.
+- Tabs chỉ dùng khi các nhóm nội dung cùng cấp và người dùng cần chuyển qua lại thường xuyên; trên mobile phải giữ nhãn đọc được, không chỉ có icon.
+- Filter nâng cao và trợ giúp phụ có thể dùng accordion để màn hình gọn, nhưng hành động chính và trạng thái quan trọng không được giấu.
+- Dùng `prefers-reduced-motion` để tắt animation không thiết yếu cho người dùng nhạy cảm với chuyển động.
+- Animation không được trì hoãn thao tác, che lỗi hoặc thay đổi thứ tự nghiệp vụ.
 
 ## 2. Khung dùng chung
 
@@ -140,14 +150,16 @@ focus-ring    cyan-500
 **Pattern:** stepper ba bước nhưng mỗi lúc chỉ hiện một nhiệm vụ:
 
 1. Nhập verified email/phone.
-2. Chọn phương thức nếu có nhiều lựa chọn và xác minh mã.
+2. Xác minh mã được gửi tới identifier vừa nhập.
 3. Đặt mật khẩu mới.
 
 Stepper dùng nhãn “Thông tin → Xác minh → Mật khẩu mới”, không chỉ dùng số. MSG15 nằm trong info alert, luôn giống nhau để tránh lộ account tồn tại.
 
+“Đổi cách nhận mã” không hiển thị danh sách email/số điện thoại gắn với account. Theo UC03 nhánh 3a, người dùng quay lại nhập một verified identifier khác; request cũ phải được backend hủy. Cách này không tiết lộ account có bao nhiêu phương thức liên hệ hoặc các giá trị đã che.
+
 **Mobile:** mỗi bước là một page state, không nhồi tất cả trường. **Desktop:** vẫn dùng một card; progress nằm phía trên.
 
-**Micro-step:** F1 identifier + MSG15; F2 delivery choice; F3 dùng SCR-02; F4 password reset; F5 back/refresh behavior; F6 QA API.
+**Micro-step:** F1 source/anti-enumeration contract; F2 identifier schema + MSG15; F3 dùng SCR-02; F4 đổi identifier và hủy request cũ; F5 password reset; F6 back/refresh behavior; F7 QA API.
 
 ## 4. Tài khoản cá nhân
 

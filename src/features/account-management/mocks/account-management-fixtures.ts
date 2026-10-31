@@ -1,0 +1,125 @@
+import type {
+  FarmingZoneOption,
+  ManagedAccount,
+} from "@/features/account-management/domain/account-management";
+import { mockRoles } from "@/features/role-management/mocks/role-management-fixtures";
+import { mockIdentities } from "@/shared/mocks/mock-identities";
+
+export const mockFarmingZones = [
+  { id: "zone-east", label: "Khu Đông", status: "in-use" },
+  { id: "zone-south", label: "Khu Nam", status: "in-use" },
+  { id: "zone-west", label: "Khu Tây (đã ngừng)", status: "discontinued" },
+] as const satisfies readonly FarmingZoneOption[];
+
+export const mockAssignableRoles = mockRoles.map((role) => ({
+  id: role.id,
+  name: role.name,
+  permissions: role.permissions,
+  status: role.status,
+}));
+
+export const mockManagedAccounts = [
+  {
+    accountType: "cooperative-owner",
+    credentialDeliveryChannel: "email",
+    displayName: mockIdentities.owner.displayName,
+    email: "owner@omts.test",
+    emailVerified: true,
+    grants: [],
+    id: "account-owner-demo",
+    phone: "0900000000",
+    phoneVerified: true,
+    recordVersion: "account-v1",
+    status: "active",
+    username: "owner",
+  },
+  {
+    accountType: "internal",
+    credentialDeliveryChannel: "email",
+    displayName: "Nguyễn Văn An",
+    email: "an.nguyen@omts.test",
+    emailVerified: true,
+    grants: [
+      {
+        effectiveFrom: "2026-09-15",
+        effectiveTo: null,
+        grantedBy: mockIdentities.owner.displayName,
+        id: "grant-an-east-manager",
+        revocationReason: null,
+        revokedAt: null,
+        roleId: "role-zone-manager",
+        status: "effective",
+        zoneId: "zone-east",
+      },
+      {
+        effectiveFrom: "2026-08-01",
+        effectiveTo: "2026-09-14",
+        grantedBy: mockIdentities.owner.displayName,
+        id: "grant-an-old-accountant",
+        revocationReason: "Chuyển phạm vi phụ trách",
+        revokedAt: "2026-09-14T09:15:00.000Z",
+        roleId: "role-accountant",
+        status: "revoked",
+        zoneId: "zone-south",
+      },
+    ],
+    id: "account-nguyen-an",
+    phone: "0901234567",
+    phoneVerified: true,
+    recordVersion: "account-v2",
+    status: "active",
+    username: "nguyen.an",
+  },
+  {
+    accountType: "internal",
+    credentialDeliveryChannel: "phone",
+    displayName: "Trần Thị Bình",
+    email: "",
+    emailVerified: false,
+    grants: [
+      {
+        effectiveFrom: "2026-10-01",
+        effectiveTo: null,
+        grantedBy: mockIdentities.owner.displayName,
+        id: "grant-binh-all-accountant",
+        revocationReason: null,
+        revokedAt: null,
+        roleId: "role-accountant",
+        status: "effective",
+        zoneId: null,
+      },
+    ],
+    id: "account-tran-binh",
+    phone: "0902222333",
+    phoneVerified: false,
+    recordVersion: "account-v3",
+    status: "locked",
+    username: "tran.binh",
+  },
+  {
+    accountType: "internal",
+    credentialDeliveryChannel: "email",
+    displayName: "Phạm Quốc Cường",
+    email: "cuong.pham@omts.test",
+    emailVerified: false,
+    grants: [
+      {
+        effectiveFrom: "2026-10-10",
+        effectiveTo: null,
+        grantedBy: mockIdentities.owner.displayName,
+        id: "grant-cuong-south-manager",
+        revocationReason: null,
+        revokedAt: null,
+        roleId: "role-zone-manager",
+        status: "effective",
+        zoneId: "zone-south",
+      },
+    ],
+    id: "account-pham-cuong",
+    phone: "0936777888",
+    phoneVerified: true,
+    recordVersion: "account-v4",
+    status: "active",
+    username: "pham.cuong",
+  },
+] as const satisfies readonly ManagedAccount[];

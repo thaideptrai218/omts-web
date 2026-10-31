@@ -1,0 +1,6 @@
+import type { NotificationCatalog, ProfileViewDto } from "./contracts";
+export const notificationSavedFixture = (categories: NotificationCatalog = notificationFixture(), notice: string | null = null) => ({ categories, messageCode: "MSG-GEN-05" as const, notice, noticeCode: notice === null ? null : "MSG-ACCOUNT-21" as const });
+export const personalFixture = (): ProfileViewDto => ({ accountId: "122bb318-a72e-49aa-a8d7-a6169f889007", username: "qa.owner", displayName: "Chủ HTX kiểm thử", subjectType: "CooperativeOwner", email: "qa@example.test", emailVerified: true, phoneNumber: null, phoneVerified: false, rowVersion: "AQID", grants: [] });
+export const notificationFixture = (): NotificationCatalog => ["ORDERS", "WORK", "DEADLINE_REMINDERS", "WATER_ALERTS"].map((category) => ({ category: category as NotificationCatalog[number]["category"], mandatory: category === "ORDERS" || category === "WATER_ALERTS", channels: [
+  { channel: "InApp", enabled: true, eligible: true, ineligibleReason: null }, { channel: "Push", enabled: category === "ORDERS" || category === "WATER_ALERTS", eligible: false, ineligibleReason: "NO_PUSH_DEVICE" },
+  { channel: "Email", enabled: false, eligible: true, ineligibleReason: null }, { channel: "Zalo", enabled: false, eligible: false, ineligibleReason: "ZALO_NOT_CONFIGURED" } ] }));
