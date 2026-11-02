@@ -15,7 +15,12 @@ const repository = createOperationsRepository("workforce");
 type Assignment = z.infer<typeof c.assignmentSchema>;
 export function WorkforceScreen() {
   const context = useApiWorkspace(), [day, setDay] = useState(businessToday), [form, setForm] = useState<"assign" | "crew" | "job" | "settings" | "leaves">(), [notice, setNotice] = useState<string>();
+  const [zoneId, setZoneId] = useState(""), [search, setSearch] = useState("");
+  const zones = useRemote(useMemo(() => (signal: AbortSignal) => loadOptions("zones", signal), []));
   const rows = useRemote(useMemo(() => (signal: AbortSignal) => day ? repository.read("list", { day }, z.array(c.assignmentSchema), signal) : Promise.resolve({ status: "success" as const, data: [] }), [day]));
+  const term = search.trim().toLocaleLowerCase("vi-VN");
+  const filteredRows = rows.data?.filter((row) => (!zoneId || row.zoneId === zoneId) && (!term || [row.employeeName, row.raftCode ?? "", row.job].some((value) => value.toLocaleLowerCase("vi-VN").includes(term))));
+  const zoneName = (id: string) => String(zones.data?.find((zone) => zone.id === id)?.name ?? id);
   const editor = useOperationEditor(() => {}, false);
   const allowed = (action: string, zoneId?: string) => operationAllowed("workforce", context.identity, context.permissions.functionPermissions, action, zoneId);
   async function act(row: Assignment, action: "remove" | "check-in" | "check-out") {
@@ -28,9 +33,16 @@ export function WorkforceScreen() {
     {allowed("Edit") && <Button className="w-auto" disabled={editor.disabled} onClick={() => setForm("crew")}>Đổi việc trong ngày</Button>}
     {context.identity.subjectType === "CooperativeOwner" && <>{(["job", "settings", "leaves"] as const).map((key) => <Button key={key} className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => setForm(key)}>{key === "job" ? "Thêm loại công việc" : key === "settings" ? "Thiết lập chấm công" : "Duyệt nghỉ phép"}</Button>)}</>}
     </div><div className="mt-5 max-w-md"><Field label="Ngày làm việc" type="date" required value={day} onChange={(e) => setDay(e.target.value)} /></div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <Select label="Vùng làm việc" value={zoneId} onChange={(e) => setZoneId(e.target.value)}><option value="">Tất cả vùng được cấp</option>{[...new Set([...(zones.data?.filter((zone) => operationAllowed("workforce", context.identity, context.permissions.functionPermissions, "View", zone.id)).map((zone) => zone.id) ?? []), ...(rows.data?.map((row) => row.zoneId) ?? [])])].map((id) => <option key={id} value={id}>{zoneName(id)}</option>)}</Select>
+      <Field label="Tìm nhân viên, bè hoặc công việc" type="search" value={search} onChange={(e) => setSearch(e.target.value)} />
+    </div>
+    {(zoneId || search) && <Button className="mt-3 w-auto" variant="secondary" onClick={() => { setZoneId(""); setSearch(""); }}>Xóa bộ lọc phân công</Button>}
+    <ErrorNotice error={zones.error} />{zones.error && <Button className="mt-3 w-auto" variant="secondary" onClick={zones.reload}>Tải lại danh mục vùng</Button>}
     <Button className="mt-4 w-auto" variant="secondary" disabled={rows.loading || !day || editor.pending} onClick={rows.reload}>Tải lại phân công</Button><ErrorNotice error={rows.error || editor.mutation.error} />{notice && <p role="status" className="mt-3">{notice}</p>}
     {editor.mutation.blocked && <p className="mt-3">Chưa thể gửi tiếp. Hãy đối chiếu phân công và chấm công hiện tại trước khi lập lượt mới; tải lại không tự gửi lại thao tác.</p>}
-    {rows.loading ? <Skeleton /> : rows.data && <DataTable headings={["Nhân viên", "Bè", "Công việc", "Ngày", "Vào làm", "Ra về", "Thao tác"]} empty={!rows.data.length}>{rows.data.map((row) => <tr key={row.id}><td>{row.employeeName}</td><td>{row.raftCode || "—"}</td><td>{row.job}</td><td>{row.date}</td><td>{row.checkedInAt ? displayTime(row.checkedInAt) : "Chưa ghi nhận"}</td><td>{row.checkedOutAt ? displayTime(row.checkedOutAt) : "Chưa ghi nhận"}</td><td><div className="flex flex-wrap gap-2">
+    {!rows.loading && filteredRows && <p className="my-3" role="status">{filteredRows.length} phân công · {new Set(filteredRows.map((row) => row.employeeId)).size} nhân viên{rows.data && filteredRows.length !== rows.data.length ? ` (trong ${rows.data.length} phân công của ngày)` : ""}</p>}
+    {rows.loading ? <Skeleton /> : filteredRows && <DataTable headings={["Nhân viên", "Vùng", "Bè", "Công việc", "Ngày", "Vào làm", "Ra về", "Thao tác"]} empty={!filteredRows.length}>{filteredRows.map((row) => <tr key={row.id}><td>{row.employeeName}</td><td>{zoneName(row.zoneId)}</td><td>{row.raftCode || "—"}</td><td>{row.job}</td><td>{row.date}</td><td>{row.checkedInAt ? displayTime(row.checkedInAt) : "Chưa ghi nhận"}</td><td>{row.checkedOutAt ? displayTime(row.checkedOutAt) : "Chưa ghi nhận"}</td><td><div className="flex flex-wrap gap-2">
       {row.date >= businessToday() && !row.checkedInAt && !row.checkedOutAt && allowed("Delete", row.zoneId) && <Button className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => void act(row, "remove")}>Gỡ phân công</Button>}
       {row.date === businessToday() && allowed("AttendanceCreate", row.zoneId) && <>{!row.checkedInAt && !row.checkedOutAt && row.jobTypeId && row.raftId && <Button className="w-auto" disabled={editor.disabled} onClick={() => void act(row, "check-in")}>Vào làm</Button>}{!row.checkedOutAt && <Button className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => void act(row, "check-out")}>Ra về</Button>}</>}
     </div></td></tr>)}</DataTable>}

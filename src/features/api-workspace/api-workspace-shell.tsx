@@ -8,6 +8,14 @@ import { resources, resourceKeys, resourceAllowed } from "./resources";
 import { operationModules, operationAllowed } from "@/features/operations/permissions";
 import { InboxDialog } from "@/features/inbox-api/inbox-dialog";
 import { TraderRequestsDialog } from "@/features/trader-requests-api/requests-dialog";
+import { NavigationGroup } from "@/components/layout/navigation-group";
+
+const workspaceGroups = [
+  { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["water"] },
+  { label: "Vật tư & mua hàng", resources: ["input-items", "suppliers"], operations: ["purchase-receipts", "supplier-payments"] },
+  { label: "Nhân sự & phân quyền", resources: ["employees", "accounts", "roles"], operations: ["workforce", "my-work"] },
+  { label: "Kinh doanh", resources: [], operations: ["sales-products", "purchase-requests"] },
+];
 
 type Context = Readonly<{ identity: BrowserIdentityDto; permissions: PermissionProjection }>;
 const WorkspaceContext = createContext<Context | null>(null);
@@ -44,15 +52,23 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       {inboxOpen && <InboxDialog onClose={() => setInboxOpen(false)} />}
       {requestsOpen && context.identity.subjectType === "CooperativeOwner" && <TraderRequestsDialog onClose={() => setRequestsOpen(false)} />}
       <div className="mx-auto grid max-w-[1600px] gap-6 p-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:p-6">
-        <nav aria-label="Chức năng" className="flex gap-2 overflow-x-auto rounded-card border border-border bg-surface p-3 lg:block lg:space-y-1 lg:self-start">
+        <nav aria-label="Chức năng" className="space-y-2 rounded-card border border-border bg-surface p-3 lg:self-start">
+          <NavigationGroup label="Điều hành">
           <button className="block whitespace-nowrap rounded-control px-3 py-3 text-left hover:bg-primary-soft" onClick={() => setInboxOpen(true)}>Thông báo</button>
           {context.identity.subjectType === "CooperativeOwner" && <button className="block whitespace-nowrap rounded-control px-3 py-3 text-left hover:bg-primary-soft" onClick={() => setRequestsOpen(true)}>Yêu cầu thương lái</button>}
           <a className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href="/dashboard">Khu vực làm việc</a>
           <a className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href="/account">Hồ sơ cá nhân</a>
           <a className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href="/account/security">Đổi mật khẩu</a>
           {context.identity.subjectType === "CooperativeOwner" && <a className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href="/cooperative/profile">Hồ sơ hợp tác xã</a>}
-          {visible.map((key) => <a key={key} className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href={`/workspace/${key}`}>{resources[key].title}</a>)}
-          {operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} className="block whitespace-nowrap rounded-control px-3 py-3 hover:bg-primary-soft" href={`/operations/${entry.key}`}>{entry.title}</a>)}
+          </NavigationGroup>
+          {workspaceGroups.map((group) => {
+            const rows = visible.filter((key) => group.resources.includes(key));
+            const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions));
+            return rows.length || modules.length ? <NavigationGroup key={group.label} label={group.label}>
+              {rows.map((key) => <a key={key} className="block rounded-control px-3 py-3 hover:bg-primary-soft" href={`/workspace/${key}`}>{resources[key].title}</a>)}
+              {modules.map((entry) => <a key={entry.key} className="block rounded-control px-3 py-3 hover:bg-primary-soft" href={`/operations/${entry.key}`}>{entry.title}</a>)}
+            </NavigationGroup> : null;
+          })}
         </nav>
         <main className="min-w-0">{children}</main>
       </div>

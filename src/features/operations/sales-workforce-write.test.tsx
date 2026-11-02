@@ -7,7 +7,7 @@ vi.mock("./lookups", () => ({ loadOptions: (...args: unknown[]) => mocks.options
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType }, permissions: { functionPermissions: [] } }) }));
 import { CreatePurchaseRequest, PurchaseRequestDetails } from "./sales-editors";
 import { LeaveEditor, MyWorkScreen } from "./my-work-screen";
-import { AssignmentEditor } from "./workforce-screen";
+import { AssignmentEditor, WorkforceScreen } from "./workforce-screen";
 import { ids } from "./__tests__/fixtures";
 import { businessToday } from "./ui";
 beforeAll(() => {
@@ -22,6 +22,24 @@ const record = () => ({ id: ids.receipt, code: "YC-QA", productId: ids.item, pro
   status: "AWAITING_RESPONSE" as const, acceptedCages: null, acceptedPickupDate: null, allowPayLater: false, responseNote: null, respondedAt: null, cancelledAt: null, cancellationReason: null, createdAt: new Date().toISOString(), customerName: "QA trader", rowVersion: "version-A" });
 async function fillRequest() { await screen.findByRole("option", { name: "QA · Hàu QA" }); fireEvent.change(screen.getByLabelText("Sản phẩm *"), { target: { value: ids.item } }); fireEvent.change(screen.getByLabelText("Số lồng yêu cầu *"), { target: { value: "3" } }); }
 describe("approved sales/workforce writes and draft safety", () => {
+  it("filters assignments by zone and employee without sending a write or losing the working date", async () => {
+    mocks.subjectType = "CooperativeOwner";
+    mocks.options.mockResolvedValue({ status: "success", data: [{ id: ids.item, name: "Vùng Đông" }, { id: ids.receipt, name: "Vùng Tây" }] });
+    mocks.read.mockResolvedValue({ status: "success", data: [
+      { id: "a", employeeId: "e1", employeeName: "Nhân viên An", zoneId: ids.item, raftCode: "BE01", job: "Thu hoạch", date: businessToday(), checkedInAt: null, checkedOutAt: null },
+      { id: "b", employeeId: "e2", employeeName: "Nhân viên Bình", zoneId: ids.receipt, raftCode: "BE02", job: "Đo nước", date: businessToday(), checkedInAt: null, checkedOutAt: null },
+    ] });
+    render(<WorkforceScreen />);
+    await screen.findByText("Nhân viên Bình");
+    fireEvent.change(screen.getByLabelText("Vùng làm việc"), { target: { value: ids.item } });
+    expect(screen.queryByText("Nhân viên Bình")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Tìm nhân viên, bè hoặc công việc"), { target: { value: "không khớp" } });
+    expect(screen.queryByText("Nhân viên An")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Xóa bộ lọc phân công" }));
+    expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
+    expect((screen.getByLabelText("Ngày làm việc") as HTMLInputElement).value).toBe(businessToday());
+    expect(mocks.write).not.toHaveBeenCalled();
+  });
   it("does not send a cage request until confirmation and cancels a late confirmation on unmount", async () => {
     const view = render(<CreatePurchaseRequest onClose={vi.fn()} onSaved={vi.fn()} />); await fillRequest();
     fireEvent.click(screen.getByRole("button", { name: "Gửi yêu cầu" })); await screen.findByRole("button", { name: "Đồng ý" });

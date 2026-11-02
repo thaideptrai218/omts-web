@@ -86,13 +86,29 @@
   gap: 0.75rem;
 }
 .groupTitle {
-  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
   padding: 0.25rem 1rem;
   overflow: clip;
   color: var(--omts-color-text-muted);
   white-space: nowrap;
   font-size: 0.75rem;
   font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.groupTitle[hidden] {
+  display: none;
+}
+.groupArrow {
+  flex-shrink: 0;
+}
+.groupArrow[data-expanded="true"] {
+  transform: rotate(90deg);
 }
 .navigationItems {
   display: grid;

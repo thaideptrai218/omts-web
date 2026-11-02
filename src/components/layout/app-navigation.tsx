@@ -11,6 +11,7 @@ import type {
 } from "@/features/access/domain/access-types";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
 import styles from "./app-shell.module.css";
+import { NavigationGroup } from "./navigation-group";
 
 type NavigationItem = Readonly<{
   href: string;
@@ -124,8 +125,7 @@ export function AppNavigation({
   return (
     <nav aria-label="Điều hướng chính" className={styles.navigation}>
       {groups.map((group) => (
-        <div key={group.label} className={styles.navigationGroup}>
-          <p className={styles.groupTitle}>{group.label}</p>
+        <NavigationGroup key={group.label} label={group.label} compact={compact}>
           <ul className={styles.navigationItems}>
             {group.items.map((item) => (
               <li key={item.href}>
@@ -150,7 +150,7 @@ export function AppNavigation({
               </li>
             ))}
           </ul>
-        </div>
+        </NavigationGroup>
       ))}
     </nav>
   );
