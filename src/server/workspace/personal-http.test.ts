@@ -74,4 +74,18 @@ describe("notification catalog, channel policy and races", () => {
   it("refuses malformed catalog with duplicate channels instead of inventing eligible cells", async () => {
     configure(); const catalog = notificationFixture(); catalog[0].channels[1] = catalog[0].channels[0]; const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(catalog)); expect((await handlePersonalRequest(request(patch()), "notifications")).status).toBe(502); expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it("saves optional Push from a fresh type catalogue without requiring a device and prioritizes notice", async () => {
+    configure("Trader");
+    const catalog = { types: [{ type: "TRADER_ACCESS_APPROVED", name: "Approved", mandatory: false, push: false }], pushAllowedOnDevice: false };
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(catalog)).mockResolvedValueOnce(Response.json({ ...catalog, types: [{ ...catalog.types[0], push: true }], message: "raw-success", messageCode: "MSG-GEN-05", notice: "raw-notice", noticeCode: "MSG-ACCOUNT-21" }));
+    const response = await handlePersonalRequest(request({ items: [{ type: "TRADER_ACCESS_APPROVED", push: true }] }), "notifications");
+    expect(response.status).toBe(200); const data = await response.json(); expect(data.data.types[0].push).toBe(true);
+    expect(data.data.notice).toBeTruthy(); expect(JSON.stringify(data)).not.toMatch(/raw-success|raw-notice/);
+    expect(JSON.parse(fetcher.mock.calls[1][1]!.body as string)).toEqual({ items: [{ type: "TRADER_ACCESS_APPROVED", push: true }] });
+  });
+  it.each([{ type: "WATER_ALERT", push: false }, { type: "NOT_OFFERED", push: true }])("rejects a locked or unoffered Push change before PUT", async (change) => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ types: [{ type: "WATER_ALERT", name: "Water", mandatory: true, push: true }], pushAllowedOnDevice: false }));
+    expect((await handlePersonalRequest(request({ items: [change] }), "notifications")).status).toBe(400); expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
 });

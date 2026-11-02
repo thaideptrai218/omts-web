@@ -1,5 +1,7 @@
 # OMTS Web — current project context
 
+Đồng bộ 02/11/2026: người dùng đã duyệt D1–D3 cho #21/#23/#22. [Báo cáo code và kiểm tra](reports/WEB_BACKEND_21_23_ALIGNMENT_2026-11-02.md): fixed-role permissions/readonly role+grant history, catalog Push theo type cả hai client, inbox v2, Material/Seed unit/Resume/NCC Address/Email đã đồng bộ. Backend08ebaf0/PR25; Web186 targeted, lint/types/build41 PASS; Mobile10 contracts/build PASS. Chưa áp QA3003 do preflight grant nguy hiểm và Docker chưa sẵn sàng; /open notification và Manager employee-profile scope còn thiếu. Không merge develop, không sửa Mobile Expo local/original DB. Các đoạn dưới là snapshot lịch sử.
+
 > Cập nhật: 31/10/2026 (Asia/Saigon)
 >
 > Update this summary when Jira, the current SRS, or an approved team decision changes. Planned work is not evidence that a feature has already been implemented.

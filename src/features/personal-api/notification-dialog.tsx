@@ -1,4 +1,5 @@
 "use client";
+import { PushApiEditor } from "./push-dialog";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -10,7 +11,8 @@ import { createPersonalRepository } from "./repository";
 export function NotificationApiDialog({ onClose }: { onClose(): void }) {
   const load = useCallback((signal: AbortSignal) => createPersonalRepository().notifications(signal), []);
   const remote = useRemote(load);
-  if (remote.data) return <NotificationApiEditor initial={remote.data} onClose={onClose} />;
+  if (remote.data && !Array.isArray(remote.data)) return <PushApiEditor initial={remote.data} onClose={onClose} />;
+  if (remote.data && Array.isArray(remote.data)) return <NotificationApiEditor initial={remote.data} onClose={onClose} />;
   return <Dialog open title="Tùy chọn thông báo" onOpenChange={(open) => { if (!open) onClose(); }}>
     {remote.loading && <Skeleton />}<ErrorNotice error={remote.error} />
     {!remote.loading && <Button className="w-auto" onClick={remote.reload}>Tải lại tùy chọn</Button>}
@@ -44,7 +46,7 @@ export function NotificationApiEditor({ initial, onClose }: { initial: Notificat
         })}</div>
       </fieldset>)}
       {(mutation.error || blocked) && <section className="space-y-3 rounded-control border border-border p-3"><Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => {
-        setReviewing(true); setLatest(undefined); const next = await mutation.run(() => repository.notifications(), true); if (next) setLatest(next);
+        setReviewing(true); setLatest(undefined); const next = await mutation.run(() => repository.notifications(), true); if (next && Array.isArray(next)) setLatest(next);
       }}>Tải thiết lập hiện tại để đối chiếu</Button>
         {latest && <div className="space-y-3"><h3 className="font-semibold">Thiết lập hiện tại trên hệ thống</h3>{latest.map((row) => <div key={row.category} className="text-sm"><p className="font-semibold">{categoryLabels[row.category]}</p>{row.channels.map((cell) => <p key={cell.channel}>{channelLabels[cell.channel]}: {cell.enabled ? "Bật" : "Tắt"}{!cell.eligible ? " · Chưa đủ điều kiện" : ""}</p>)}</div>)}
           {!mutation.uncertain ? <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => { setCatalog(latest); setValues(notificationSelections(latest)); setLatest(undefined); setReviewing(false); setNotice(undefined); mutation.reviewed(); }}>Dùng thiết lập đã lưu</Button>

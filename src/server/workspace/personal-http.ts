@@ -1,4 +1,5 @@
 import "server-only";
+import { pushCatalogSchema, pushSaveSchema, pushSavedSchema } from "@/features/personal-api/push-contract";
 import { z } from "zod";
 import { profileViewSchema, updateProfileRequestSchema, notificationCatalogSchema, notificationSaveSchema } from "@/features/personal-api/contracts";
 import { getSessionGateway } from "../auth/session-gateway.instance";
@@ -31,7 +32,7 @@ export async function handlePersonalRequest(request: Request, area: "profile" | 
       if (guard.status !== "available") return json({ status: "unavailable" }, 503);
       const checked = await guard.guard.check(request, { method: "PUT", body: "json", maxBytes: 16_384, timeoutMs: 5000 });
       if (checked.status !== "allowed") return json({ status: "rejected" }, checked.status === "rejected" ? checked.httpStatus : 503);
-      const parsed = (area === "profile" ? updateProfileRequestSchema : notificationSaveSchema).safeParse(checked.body.readForValidation());
+      const parsed = (area === "profile" ? updateProfileRequestSchema : z.union([notificationSaveSchema, pushSaveSchema])).safeParse(checked.body.readForValidation());
       if (!parsed.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
       body = parsed.data;
     }
@@ -52,14 +53,26 @@ export async function handlePersonalRequest(request: Request, area: "profile" | 
       if (!await sameSession()) return json({ status: "session-expired" }, 401);
       if (before.status === "http-error") return json({ status: "rejected", code: before.code }, before.httpStatus);
       if (before.status !== "success" || before.httpStatus !== 200) return json({ status: "unavailable" }, 503);
-      const catalog = notificationCatalogSchema.safeParse(before.data);
-      if (!catalog.success) return json({ status: "invalid-response" }, 502);
-      const changes = notificationSaveSchema.parse(body);
-      for (const change of changes.items) {
-        const row = catalog.data.find((row) => row.category === change.category), cell = row?.channels.find((cell) => cell.channel === change.channel);
-        if (!row || !cell) return json({ status: "invalid-input", code: "MSG01" }, 400);
-        if (row.mandatory && cell.channel === "InApp" && !change.enabled) return json({ status: "rejected", code: "MSG23" }, 400);
-        if (!cell.eligible) return json({ status: "rejected", code: "MSG21" }, 400);
+      const pushCatalog = pushCatalogSchema.safeParse(before.data);
+      if (pushCatalog.success) {
+        const changes = pushSaveSchema.safeParse(body);
+        if (!changes.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
+        for (const change of changes.data.items) {
+          const row = pushCatalog.data.types.find((row) => row.type === change.type);
+          if (!row) return json({ status: "invalid-input", code: "MSG01" }, 400);
+          if (row.mandatory && !change.push) return json({ status: "rejected", code: "MSG23" }, 400);
+        }
+      } else {
+        const catalog = notificationCatalogSchema.safeParse(before.data);
+        const changes = notificationSaveSchema.safeParse(body);
+        if (!catalog.success) return json({ status: "invalid-response" }, 502);
+        if (!changes.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
+        for (const change of changes.data.items) {
+          const row = catalog.data.find((row) => row.category === change.category), cell = row?.channels.find((cell) => cell.channel === change.channel);
+          if (!row || !cell) return json({ status: "invalid-input", code: "MSG01" }, 400);
+          if (row.mandatory && cell.channel === "InApp" && !change.enabled) return json({ status: "rejected", code: "MSG23" }, 400);
+          if (!cell.eligible) return json({ status: "rejected", code: "MSG21" }, 400);
+        }
       }
       if (signal.aborted) return json({ status: "unavailable" }, 503);
     }
@@ -76,13 +89,18 @@ export async function handlePersonalRequest(request: Request, area: "profile" | 
       data = profile;
     } else {
       if (body) {
+        const push = pushSavedSchema.safeParse(result.data);
         const raw = savedPreferences.safeParse(result.data);
+        if (push.success) {
+          data = { ...push.data, notice: push.data.notice === null ? null : messageCatalog["MSG-ACCOUNT-21"] };
+        } else {
         if (!raw.success) return json({ status: "invalid-response" }, 502);
         // The old endpoint's notice field is MSG22; PR19 names it MSG-ACCOUNT-21.
         // Use the curated translation by contract, never parse/render raw prose.
         data = { categories: raw.data.categories, messageCode: "MSG-GEN-05", notice: raw.data.notice === null ? null : messageCatalog["MSG-ACCOUNT-21"], noticeCode: raw.data.notice === null ? null : "MSG-ACCOUNT-21" };
+        }
       } else {
-        const raw = notificationCatalogSchema.safeParse(result.data);
+        const raw = z.union([notificationCatalogSchema, pushCatalogSchema]).safeParse(result.data);
         if (!raw.success) return json({ status: "invalid-response" }, 502);
         data = raw.data;
       }

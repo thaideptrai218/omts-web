@@ -1,3 +1,4 @@
+import { projectCatalogueProblem } from "@/features/api-workspace/catalogue-problem";
 import "server-only";
 import { isJsonContentType, readRetryAfterMs } from "../../shared/http/api-problem";
 import type { MessageCode } from "../../shared/messages/message-catalog";
@@ -36,7 +37,7 @@ async function readBoundedJson(response: Response): Promise<unknown> {
   }
 }
 
-export async function readBackendResponse(response: Response, endpoint: BackendRequest["endpoint"] | "employeeCreate"): Promise<BackendTransportResult> {
+export async function readBackendResponse(response: Response, endpoint: BackendRequest["endpoint"] | "employeeCreate", catalogue = false): Promise<BackendTransportResult> {
   if (response.status >= 300 && response.status < 400) {
     cancelBody(response);
     return { status: "invalid-response" };
@@ -51,14 +52,16 @@ export async function readBackendResponse(response: Response, endpoint: BackendR
     // No arbitrary upstream strings/params/headers/cause in failures. MSG06's
     // structured conflict projection is deferred; this layer does not render copy.
     let code: MessageCode | undefined;
+    let catalogueProblem: ReturnType<typeof projectCatalogueProblem>;
     let employeeProblem: ReturnType<typeof projectEmployeeProblemMetadata>;
     try {
       const data = await readBoundedJson(response);
       code = knownBackendMessageCode(data);
+      if (catalogue) catalogueProblem = projectCatalogueProblem(response.status, code, data);
       employeeProblem = projectEmployeeProblemMetadata(endpoint, response.status, code, data);
     } catch { /* Status is still authoritative. */ }
     return { status: "http-error", httpStatus: response.status, code, retryAfterMs,
-      ...(employeeProblem ? { employeeProblem } : {}) };
+      ...(catalogueProblem ? { catalogueProblem } : {}), ...(employeeProblem ? { employeeProblem } : {}) };
   }
   try {
     return { status: "success", httpStatus: response.status, data: await readBoundedJson(response) };

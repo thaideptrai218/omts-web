@@ -6,7 +6,7 @@ import { employeeListItemSchema, employeeViewSchema } from "@/features/employee-
 export const resourceKeys = ["zones", "suppliers", "input-items", "employees", "rafts", "accounts", "roles"] as const;
 export type ResourceKey = typeof resourceKeys[number];
 const supplierTypes = [["Seed", "Giống"], ["Material", "Vật tư"], ["Other", "Khác"]] as const;
-const inputGroups = [["Seed", "Giống"], ["RaftMaterial", "Vật tư bè"], ["Other", "Khác"]] as const;
+const inputGroups = [["Seed", "Giống"], ["Material", "Vật tư"], ["Other", "Khác"]] as const;
 export const resourceCategoryFilters: Partial<Record<ResourceKey, { key: "type" | "group"; label: string; options: readonly (readonly [string, string])[] }>> = {
   suppliers: { key: "type", label: "Loại nhà cung cấp", options: supplierTypes },
   "input-items": { key: "group", label: "Nhóm vật tư", options: inputGroups },
@@ -25,7 +25,7 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
     columns: [["name", "Tên nhà cung cấp"], ["supplierType", "Loại"], ["phoneNumber", "Số điện thoại"], ["status", "Trạng thái"]],
     fields: [{ key: "name", label: "Tên nhà cung cấp", required: true }, { key: "supplierType", label: "Loại nhà cung cấp", type: "select", required: true,
       options: supplierTypes },
-      { key: "phoneNumber", label: "Số điện thoại", required: true }, { key: "otherContacts", label: "Liên hệ khác", type: "textarea" }] },
+      { key: "phoneNumber", label: "Số điện thoại", required: true }, { key: "address", label: "Địa chỉ", type: "textarea" }, { key: "email", label: "Email" }] },
   "input-items": { title: "Danh mục vật tư", editable: true,
     columns: [["code", "Mã"], ["name", "Tên vật tư"], ["group", "Nhóm"], ["unit", "Đơn vị"], ["status", "Trạng thái"]],
     fields: [{ key: "code", label: "Mã vật tư", required: true }, { key: "name", label: "Tên vật tư", required: true },
@@ -45,7 +45,7 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
     fields: [{ key: "displayName", label: "Tên hiển thị", required: true }, { key: "username", label: "Tên đăng nhập", required: true },
       { key: "phoneNumber", label: "Số điện thoại", required: true }, { key: "email", label: "Email" }] },
   roles: { title: "Vai trò và quyền", ownerOnly: true, editable: false,
-    columns: [["name", "Tên vai trò"], ["status", "Trạng thái"]], fields: [] },
+    columns: [["code", "Mã vai trò"], ["name", "Tên vai trò"]], fields: [] },
 };
 
 const text = z.string();
@@ -55,21 +55,21 @@ const version = { rowVersion: text.min(1) };
 const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, phoneNumber: text, ...usage });
 const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: text, unit: text, ...usage });
 const raftRow = z.object({ id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
-const roleRow = z.object({ id: apiIdSchema, name: text, status: text });
+const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), status: text.optional() }).refine((row) => row.code !== undefined || row.status !== undefined);
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
   subjectType: text.optional(), mustChangePassword: z.boolean().optional(), ...version });
 const listSchemas = { zones: farmingZoneListItemSchema, suppliers: supplierRow, "input-items": itemRow,
   employees: employeeListItemSchema, rafts: raftRow, accounts: accountRow, roles: roleRow };
 const detailSchemas = {
   zones: farmingZoneViewSchema,
-  suppliers: supplierRow.extend({ otherContacts: nullableText, debt: z.number(), ...version }),
+  suppliers: supplierRow.extend({ address: nullableText.optional(), email: nullableText.optional(), otherContacts: nullableText.optional(), ...version }),
   "input-items": itemRow.extend({ description: nullableText, isUsed: z.boolean(), ...version }),
   employees: employeeViewSchema,
   rafts: raftRow.extend({ location: nullableText, size: nullableText, conditionNotes: nullableText,
     lanes: z.array(z.object({ laneNumber: z.number().int(), length: z.number().nullable(), markerA: nullableText, markerB: nullableText })),
     layoutDrawing: z.json().nullable(), ...version }),
   accounts: accountRow,
-  roles: roleRow.extend({ description: nullableText.optional(), permissions: z.array(z.object({ functionCode: text, actions: z.array(text), dataScope: text })), ...version }),
+  roles: roleRow.extend({ description: nullableText.optional(), permissions: z.array(z.object({ functionCode: text, actions: z.array(text), dataScope: text.optional() })), rowVersion: text.optional() }),
 };
 export function projectResource(resource: ResourceKey, data: unknown, detail: boolean,
   query?: { page: number; pageSize: number; search?: string }): unknown | undefined {

@@ -8,7 +8,7 @@ vi.mock("./workspace-repository", () => ({ createWorkspaceRepository: () => stat
 import { ApiResourceScreen } from "./api-resource-screen";
 beforeEach(() => { vi.clearAllMocks(); state.list.mockImplementation(async (query) => ({ status: "success", data: { items: [], page: Number(query.page), pageSize: 20, total: 40 } })); });
 afterEach(cleanup);
-it.each([["suppliers", "Loại nhà cung cấp", "Material", "type"], ["input-items", "Nhóm vật tư", "RaftMaterial", "group"]] as const)("combines category, status and search and resets paging for %s", async (resource, label, value, key) => {
+it.each([["suppliers", "Loại nhà cung cấp", "Material", "type"], ["input-items", "Nhóm vật tư", "Material", "group"]] as const)("combines category, status and search and resets paging for %s", async (resource, label, value, key) => {
   render(<ApiResourceScreen resource={resource} />);
   fireEvent.click(await screen.findByRole("button", { name: "Sau" })); await vi.waitFor(() => expect(state.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: "2" }), expect.any(AbortSignal)));
   fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value } });

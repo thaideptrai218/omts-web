@@ -6,7 +6,7 @@ import { planNewModule } from "./new-module-plan";
 
 const id = z.guid(), empty = z.strictObject({});
 const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
-  raftId: id.optional(), itemId: id.optional(), itemGroup: z.enum(["Seed", "RaftMaterial", "Other"]).optional(), method: c.paymentMethod.optional(),
+  raftId: id.optional(), itemId: id.optional(), itemGroup: z.enum(["Seed", "Material", "Other"]).optional(), method: c.paymentMethod.optional(),
   statusId: z.string().regex(/^[1-9]\d{2,3}$/).optional(), status: z.enum(["Draft", "Confirmed", "Corrected", "Voided", "All"]).optional(),
   from: z.iso.date().optional(), to: z.iso.date().optional(), code: z.string().max(100).optional(), groupBy: z.enum(["day", "month"]).optional(),
   page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.string().regex(/^[1-9]\d{0,2}$/).refine((v) => Number(v) <= 100).optional(),

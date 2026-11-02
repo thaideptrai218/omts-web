@@ -33,8 +33,12 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     const query = new URL(request.url).searchParams;
     if (request.method === "GET") {
       const keys = [...query.keys()];
-      if (new Set(keys).size !== keys.length || keys.some((name) => !["id", "zoneId", "search", "page", "pageSize", "statusId", ...(category ? [category.key] : [])].includes(name))) return json({ status: "invalid-input" }, 400);
+      if (new Set(keys).size !== keys.length || keys.some((name) => !["proposal", "id", "zoneId", "search", "page", "pageSize", "statusId", ...(category ? [category.key] : [])].includes(name))) return json({ status: "invalid-input" }, 400);
       if (category && query.has(category.key) && (query.has("id") || !category.options.some(([value]) => value === query.get(category.key)))) return json({ status: "invalid-input" }, 400);
+      if (query.has("proposal")) {
+        if (key !== "input-items" || query.size !== 1 || query.get("proposal") !== "1") return json({ status: "invalid-input" }, 400);
+        action = "proposal";
+      }
       if (query.has("id")) {
         const checked = id.safeParse(query.get("id"));
         if (!checked.success) return json({ status: "invalid-input" }, 400);
@@ -69,9 +73,11 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     if (context.status !== "ready") return json({ status: "unavailable" }, 503);
     const permissionAction = action === "list" || action === "read" ? "View" : action === "create" ? "Create" : "Edit";
     if (!resourceAllowed(key, context.context.identity, context.context.permissions.functionPermissions, permissionAction)) return json({ status: "forbidden", code: "MSG02" }, 403);
+    if (action === "proposal" && initial.session.identity.subjectType !== "CooperativeOwner") return json({ status: "forbidden", code: "MSG02" }, 403);
     if (key === "rafts" && !recordId && !zoneId) return json({ status: "invalid-input" }, 400);
     let path = key === "rafts" && !recordId ? `/api/zones/${zoneId}/rafts` : paths[key] + (recordId ? `/${recordId}` : "");
-    if (["discontinue", "reactivate", "lock", "unlock"].includes(action)) path += `/${action}`;
+    if (action === "proposal") path += "/next-code";
+    if (["discontinue", "reactivate", "lock", "unlock"].includes(action)) path += `/${action === "reactivate" && ["suppliers", "input-items"].includes(key) ? "resume" : action}`;
     const upstreamQuery = new URLSearchParams();
     if (action === "list") {
       const allowed = key === "roles" || key === "rafts" ? ["statusId"] : key === "input-items" ? ["search", "statusId"] : ["search", "statusId", "page", "pageSize"];
@@ -80,7 +86,7 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     }
     const target = new URL(path, config.config.origin);
     target.search = upstreamQuery.toString();
-    const method = action === "list" || action === "read" ? "GET" : action === "update" ? "PUT" : "POST";
+    const method = action === "list" || action === "read" || action === "proposal" ? "GET" : action === "update" ? "PUT" : "POST";
     // Supplier/item status endpoints are bodyless; zone status needs rowVersion.
     const payload = (action === "discontinue" || action === "reactivate") && !["zones", "rafts"].includes(key) ? undefined : body;
     const controller = new AbortController();
@@ -91,13 +97,17 @@ export async function handleResourceRequest(request: Request, resourceName: stri
       const response = await fetch(target, { method, headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`,
         ...(payload ? { "Content-Type": "application/json" } : {}) }, body: payload ? JSON.stringify(payload) : undefined,
         credentials: "omit", redirect: "error", cache: "no-store", signal: controller.signal });
-      upstream = await readBackendResponse(response, "profileRead");
+      upstream = await readBackendResponse(response, "profileRead", ["suppliers", "input-items"].includes(key));
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", onAbort); }
     const current = await gateway.resolve(request.headers.get("cookie"));
     if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
     if (request.signal.aborted) return json({ status: "unavailable" }, 503);
-    if (upstream.status === "http-error") return json({ status: "rejected", code: upstream.code }, upstream.httpStatus);
+    if (upstream.status === "http-error") return json({ status: "rejected", code: upstream.code, ...(upstream.catalogueProblem ? { catalogueProblem: upstream.catalogueProblem } : {}) }, upstream.httpStatus);
     if (upstream.status !== "success" || ![200, 201].includes(upstream.httpStatus)) return json({ status: "unavailable" }, 503);
+    if (action === "proposal") {
+      const proposal = z.object({ code: z.string().min(1).max(30), seedUnit: z.string().min(1).max(50).nullable() }).safeParse(upstream.data);
+      return proposal.success ? json({ status: "success", data: proposal.data }) : json({ status: "invalid-response" }, 502);
+    }
     const result = projectResource(key, upstream.data, action !== "list", action === "list"
       ? { page: Number(query.get("page") ?? 1), pageSize: Number(query.get("pageSize") ?? 20), search: query.get("search") ?? undefined } : undefined);
     if (recordId && (!result || typeof result !== "object" || !("id" in result) || result.id !== recordId)) return json({ status: "invalid-response" }, 502);

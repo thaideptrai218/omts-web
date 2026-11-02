@@ -6,7 +6,7 @@ const request = vi.hoisted(() => vi.fn());
 vi.mock("./repository", () => ({ supplierDocuments: request }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ children }: { children: ReactNode }) => <div role="dialog">{children}</div> }));
 import { SupplierDocumentsDialog } from "./documents-dialog";
-const record = () => ({ id: "122bb318-a72e-49aa-a8d7-a6169f889007", name: "QA supplier", rowVersion: "v1", certificates: [] });
+const record = () => ({ id: "122bb318-a72e-49aa-a8d7-a6169f889007", name: "QA supplier", statusId: 101, rowVersion: "v1", certificates: [] });
 afterEach(() => { cleanup(); request.mockReset(); });
 describe("supplier documents workflow", () => {
   it("lets readers download without exposing upload controls or marking a read as saved", async () => {
@@ -21,4 +21,10 @@ describe("supplier documents workflow", () => {
     request.mockResolvedValueOnce({ status: "success", data: record() }).mockResolvedValueOnce({ status: "error", httpStatus: 503, uncertain: true }).mockResolvedValueOnce({ status: "success", data: { ...record(), certificates: [{ index: 0, url: "/api/supplier-documents?id=qa" }] } }); render(<SupplierDocumentsDialog id={record().id} canEdit onClose={vi.fn()} />);
     fireEvent.change(await screen.findByLabelText("Tệp chứng nhận"), { target: { files: [new File(["qa"], "qa.pdf", { type: "application/pdf" })] } }); fireEvent.click(screen.getByRole("button", { name: "Tải lên chứng nhận" })); fireEvent.click(await screen.findByRole("button", { name: "Tải lại danh sách" })); await screen.findByRole("link", { name: "Tải chứng nhận 1" }); expect((screen.getByRole("button", { name: "Tải lên chứng nhận" }) as HTMLButtonElement).disabled).toBe(true); expect(request).toHaveBeenCalledTimes(3);
   });
+  it("keeps discontinued certificates readable and requires Resume before upload", async () => {
+    request.mockResolvedValue({ status: "success", data: { ...record(), statusId: 102 } });
+    render(<SupplierDocumentsDialog id={record().id} canEdit onClose={vi.fn()} />);
+    await screen.findByText(/QA supplier/); expect(screen.queryByLabelText("Tệp chứng nhận")).toBeNull();
+  });
+
 });

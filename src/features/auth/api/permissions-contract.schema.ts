@@ -20,7 +20,7 @@ const grantedPermissionSchema = z.object({
   canEdit: z.boolean(),
   canDelete: z.boolean(),
   otherPermissions: z.array(storedPermissionActionSchema),
-  dataScope: z.enum(["OwnRecords", "AssignedZone"]),
+  dataScope: z.enum(["OwnRecords", "AssignedZone"]).optional(),
 });
 
 const permissionGrantSchema = z.object({
@@ -29,8 +29,9 @@ const permissionGrantSchema = z.object({
   zoneName: z.string().nullable(),
   allZones: z.boolean(),
   role: apiTextSchema,
+  roleCode: z.enum(["ZONE_MANAGER", "ACCOUNTANT"]).optional(),
   permissions: z.array(grantedPermissionSchema),
-});
+}).refine((grant) => grant.roleCode !== undefined || grant.permissions.every((permission) => permission.dataScope !== undefined), "Legacy grants require a data scope");
 
 const functionAccessSchema = z.object({
   function: apiTextSchema,

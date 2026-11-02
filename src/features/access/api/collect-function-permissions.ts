@@ -52,13 +52,14 @@ export function collectFunctionPermissions(dto: MyPermissionsDto): readonly Func
       const definition = backendFunctionCatalog[permission.functionCode];
       const functionSummary = summary.get(permission.functionCode);
       if (!functionSummary) continue;
-      if (definition.cooperativeWide && (!grant.allZones || !functionSummary.allZones)) continue;
-      const scope = intersectScope(grant, functionSummary);
+      if (definition.cooperativeWide && (!functionSummary.allZones || (!grant.roleCode && !grant.allZones))) continue;
+      const scope = grant.roleCode && definition.cooperativeWide && functionSummary.allZones
+        ? { kind: "all-zones" as const } : intersectScope(grant, functionSummary);
       if (!scope) continue;
       for (const action of definition.actions) {
         if (!allows(permission, action) || !functionSummary.actions.includes(action)) continue;
         results.push({
-          functionCode: permission.functionCode, action, dataScope: permission.dataScope,
+          functionCode: permission.functionCode, action, dataScope: permission.dataScope ?? "AssignedZone",
           scope,
         });
       }

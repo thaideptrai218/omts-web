@@ -1,5 +1,7 @@
 # Vai trò cố định — quyết định của Duy Thái ngày 27/10/2026
 
+> Phạm vi API đã được người dùng thay bằng D1 ngày 02/11/2026: [hai vai trò cố định, matrix chỉ đọc, grant không ngày hiệu lực](WEB_BACKEND_21_23_ALIGNMENT_PROPOSAL_2026-10-31.md). Nội dung dưới giữ để tra lịch sử.
+
 ## Đã xác nhận trực tiếp
 
 Danh sách vai trò có thể gán theo vùng chỉ gồm **Quản lý vùng, Kế toán, Nhân viên**. Không cho Owner tạo, sao chép hoặc đổi tên vai trò. Chủ HTX, System Administrator và Thương lái vẫn là loại tài khoản riêng, không đưa vào picker vai trò vùng.

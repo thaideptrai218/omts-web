@@ -127,8 +127,8 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
       {canCreate && <Button className="w-auto" disabled={definition.zoneRequired && !zoneId} onClick={() => { setSelected(null); setEditorId((value) => value + 1); }}>Thêm mới</Button>}</div>
     <div className="mt-5 flex flex-wrap gap-3">
       <label className="min-w-48 flex-1 text-sm">Tìm kiếm<input className={inputClass} value={search} onChange={(event) => { setSearch(event.target.value); setPageNumber(1); }} /></label>
-      <label className="text-sm">Trạng thái<select className={inputClass} value={filter} onChange={(event) => { setFilter(event.target.value); setPageNumber(1); }}>
-        <option value="">Tất cả</option>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      {resource !== "roles" && <label className="text-sm">Trạng thái<select className={inputClass} value={filter} onChange={(event) => { setFilter(event.target.value); setPageNumber(1); }}>
+        <option value="">Tất cả</option>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
       {categoryFilter && <label className="text-sm">{categoryFilter.label}<select className={inputClass} value={category} onChange={(event) => { setCategory(event.target.value); setPageNumber(1); }}>
         <option value="">Tất cả</option>{categoryFilter.options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
       {definition.zoneRequired && <label className="text-sm">Vùng nuôi<select className={inputClass} disabled={zoneLoading || !!zoneError} value={zoneId} onChange={(event) => { setZoneId(event.target.value); setPageNumber(1); }}>
@@ -164,6 +164,24 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
   const repository = useMemo(() => createWorkspaceRepository(resource), [resource]);
   const original = useRef(record);
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(definition.fields.map((field) => [field.key, record?.[field.key] == null ? "" : String(record[field.key])])));
+  const [seedUnit, setSeedUnit] = useState<string | null>();
+  const [proposalError, setProposalError] = useState<string>();
+  const [proposalRefresh, setProposalRefresh] = useState(0);
+  useEffect(() => {
+    if (resource !== "input-items" || record || !canEdit) return;
+    const controller = new AbortController();
+    void repository.proposal(controller.signal).then((result) => {
+      if (controller.signal.aborted) return;
+      if (result.status === "success") {
+        setSeedUnit(result.data.seedUnit); setProposalError(undefined);
+        setValues((current) => ({ ...current, code: current.code || result.data.code,
+          unit: current.group === "Seed" && result.data.seedUnit ? result.data.seedUnit : current.unit }));
+      } else setProposalError(workspaceError(result));
+    });
+    return () => controller.abort();
+  }, [resource, record, canEdit, repository, proposalRefresh]);
+  const discontinued = record?.statusId === 102 && ["suppliers", "input-items"].includes(resource);
+  const lockedField = (key: string) => resource === "input-items" && ((record?.isUsed === true && ["group", "unit"].includes(key)) || key === "unit" && values.group === "Seed" && !!seedUnit);
   const [workingZoneIds, setWorkingZoneIds] = useState<string[]>(() => Array.isArray(record?.workingZones) ? record.workingZones.map((zone) => zone.id) : []);
   const [bank, setBank] = useState<Record<string, string>>(() => record?.bankAccount && typeof record.bankAccount === "object" ? record.bankAccount as Record<string, string> : { bankName: "", accountNumber: "", accountHolderName: "" });
   const [lanes, setLanes] = useState<{ laneNumber: number; length: string; markerA: string; markerB: string }[]>(() => Array.isArray(record?.lanes)
@@ -173,6 +191,9 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
   const pendingRef = useRef(false);
   const [error, setError] = useState<string>();
   const [blocked, setBlocked] = useState(false);
+  const [problemField, setProblemField] = useState<string>();
+  const [duplicateId, setDuplicateId] = useState<string>();
+  const [duplicate, setDuplicate] = useState<ApiRecord>();
   const [latest, setLatest] = useState<ApiRecord>();
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -180,10 +201,11 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
     || resource === "employees" && (JSON.stringify(workingZoneIds) !== JSON.stringify(Array.isArray(record?.workingZones) ? record.workingZones.map((zone) => zone.id) : [])
       || JSON.stringify(bank) !== JSON.stringify(record?.bankAccount ?? { bankName: "", accountNumber: "", accountHolderName: "" }))
     || resource === "rafts" && JSON.stringify(lanes) !== JSON.stringify(Array.isArray(record?.lanes) ? record.lanes.map((lane) => ({ laneNumber: lane.laneNumber, length: String(lane.length ?? ""), markerA: lane.markerA ?? "", markerB: lane.markerB ?? "" })) : []);
-  const editable = definition.editable && (record ? canEdit : true);
+  const statusEditable = definition.editable && (record ? canEdit : true);
+  const editable = statusEditable && !discontinued;
   async function mutate(action: "create" | "update" | "discontinue" | "reactivate" | "lock" | "unlock", reason?: string) {
-    if (pendingRef.current || blocked) return;
-    pendingRef.current = true; setPending(true); setError(undefined);
+    if (pendingRef.current || blocked || ((action === "create" || action === "update") && !editable)) return;
+    pendingRef.current = true; setPending(true); setError(undefined); setProblemField(undefined); setDuplicateId(undefined); setDuplicate(undefined);
     const body: Record<string, unknown> = action === "lock" || action === "unlock" ? { reason }
       : action === "discontinue" || action === "reactivate" ? { rowVersion: original.current?.rowVersion }
       : Object.fromEntries(definition.fields.map((field) => [field.key, field.type === "number" ? values[field.key] === "" ? null : Number(values[field.key]) : values[field.key] || null]));
@@ -202,21 +224,34 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
     if (!mounted.current) return;
     setPending(false);
     if (result.status === "success") onSaved(result.data);
-    else { setError(workspaceError(result)); setBlocked(result.uncertain || result.code === "MSG06"); }
+    else {
+      setError(workspaceError(result)); setBlocked(result.uncertain || result.code === "MSG06");
+      setProblemField(result.catalogueProblem?.field); setDuplicateId(result.catalogueProblem?.existingId);
+    }
   }
   return <Dialog open title={`${record ? "Hồ sơ" : "Thêm mới"} · ${definition.title}`} size="lg" dismissible={!pending} onOpenChange={async (open) => {
     if (!open && !pendingRef.current && (!dirty || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose();
   }}>{confirmation.dialog}
     <form onSubmit={(event) => { event.preventDefault(); void mutate(record ? "update" : "create"); }}>
+      {discontinued && <p className="mb-4">Khôi phục sử dụng trước khi chỉnh sửa hồ sơ.</p>}
+      {proposalError && <div role="alert"><p>{proposalError}</p><Button variant="secondary" onClick={() => setProposalRefresh((value) => value + 1)}>Tải lại mã gợi ý và đơn vị giống</Button></div>}
       {error && <p role="alert" className="mb-4 rounded-control border border-danger p-4">{error}</p>}
+      {problemField && <p role="alert">Kiểm tra trường: {definition.fields.find((field) => field.key === problemField)?.label ?? "Thông tin danh mục"}.</p>}
+      {duplicateId && <section className="my-4 space-y-3"><Button variant="secondary" disabled={pending} onClick={async () => {
+        if (pendingRef.current) return; pendingRef.current = true; setPending(true);
+        const result = await repository.detail(duplicateId); pendingRef.current = false;
+        if (!mounted.current) return; setPending(false);
+        if (result.status === "success") setDuplicate(result.data); else setError(workspaceError(result));
+      }}>Xem bản ghi trùng</Button>{duplicate && <dl>{definition.fields.map((field) => <div key={field.key}><dt>{field.label}</dt><dd>{text(duplicate[field.key])}</dd></div>)}</dl>}</section>}
       <fieldset disabled={pending || !editable} className="grid gap-4 sm:grid-cols-2">
         {definition.fields.map((field) => field.type === "select" ? <label key={field.key} className="text-sm font-semibold">{field.label}<select required={field.required} className={inputClass}
-          value={values[field.key]} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}>
+          value={values[field.key]} disabled={lockedField(field.key)} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value,
+            ...(field.key === "group" && event.target.value === "Seed" && seedUnit ? { unit: seedUnit } : {}) }))}>
           <option value="">Chọn</option>{field.options?.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           : field.type === "textarea" ? <label key={field.key} className="text-sm font-semibold sm:col-span-2">{field.label}<textarea className={inputClass} rows={3} value={values[field.key]}
             onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>
           : <FormField key={field.key} id={`api-${field.key}`} label={field.label} required={field.required} type={field.type === "number" || field.type === "date" ? field.type : "text"}
-            step={field.type === "number" ? "any" : undefined} value={values[field.key]} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} />)}
+            disabled={lockedField(field.key)} step={field.type === "number" ? "any" : undefined} value={values[field.key]} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} />)}
         {resource === "employees" && <>
           <fieldset className="rounded-control border border-border p-4 sm:col-span-2"><legend>Vùng làm việc</legend>{zones.map((zone) => <label className="mr-4 inline-flex items-center gap-2 py-2" key={zone.id}>
             <input type="checkbox" checked={workingZoneIds.includes(zone.id)} onChange={(event) => setWorkingZoneIds((current) => event.target.checked ? [...current, zone.id] : current.filter((value) => value !== zone.id))} />{text(zone.name)}</label>)}</fieldset>
@@ -248,7 +283,7 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
       <div className="mt-6 flex flex-wrap justify-end gap-3">
         <Button className="w-auto" variant="secondary" disabled={pending} onClick={async () => { if (!dirty || await confirmation.confirm("Bỏ các thay đổi chưa lưu?")) onClose(); }}>Đóng</Button>
         {editable && <Button className="w-auto" type="submit" isPending={pending} disabled={blocked || (record !== null && !dirty)}>Lưu</Button>}
-        {editable && record && ["zones", "suppliers", "input-items", "rafts"].includes(resource) && <Button className="w-auto" variant="secondary" disabled={pending || dirty || blocked} onClick={async () => {
+        {statusEditable && record && ["zones", "suppliers", "input-items", "rafts"].includes(resource) && <Button className="w-auto" variant="secondary" disabled={pending || dirty || blocked} onClick={async () => {
           const action = record.statusId === 102 ? "reactivate" : "discontinue";
           if (await confirmation.confirm(action === "reactivate" ? "Khôi phục sử dụng bản ghi này?" : "Ngừng sử dụng bản ghi này?")) void mutate(action);
         }}>{record.statusId === 102 ? "Khôi phục" : "Ngừng dùng"}</Button>}
