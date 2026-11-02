@@ -103,6 +103,21 @@ describe("raft cost evidence", () => {
   });
 });
 describe("raft condition sources", () => {
+  it("totals mixed portion lengths across multiple lanes", () => {
+    const fixture = conditionFixture();
+    fixture.lanes[0].portions = [
+      { from: 0, to: 10.5, condition: "Growing", segments: [] },
+      { from: 10.5, to: 23, condition: "Harvested", segments: [] },
+      { from: 23, to: 30, condition: "WrittenOff", segments: [] },
+    ];
+    fixture.lanes.push({ laneNumber: 2, length: 5, summary: "NotSeeded", portions: [{ from: 0, to: 5, condition: "NotSeeded", segments: [] }], plannedHarvests: [] });
+    render(<ConditionDiagram condition={fixture} />);
+    const summary = screen.getByLabelText("Tổng chiều dài theo tình trạng");
+    expect(summary.textContent).toContain("Đang nuôi10,5 m");
+    expect(summary.textContent).toContain("Đã thu12,5 m");
+    expect(summary.textContent).toContain("Đã ghi giảm7 m");
+    expect(summary.textContent).toContain("Chưa thả5 m");
+  });
   it("shows no cycle as not seeded, and does not infer material cost or production", () => {
     render(<ConditionDiagram condition={conditionFixture()} />);
     expect(screen.getByText("Bè chưa có chu kỳ tại ngày xem.")).toBeTruthy();

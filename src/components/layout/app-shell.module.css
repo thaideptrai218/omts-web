@@ -75,8 +75,10 @@
   overflow-y: auto;
   overflow-x: clip;
   padding: 0.25rem 0.75rem 1rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--omts-color-border) transparent;
+  scrollbar-width: none;
+}
+.scrollArea::-webkit-scrollbar {
+  display: none;
 }
 .navigation {
   display: flex;

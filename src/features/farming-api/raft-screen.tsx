@@ -67,8 +67,17 @@ function LoadedCosts({ raftId, zoneId }: { raftId: string; zoneId: string }) {
 const colors = { NotSeeded: "bg-slate-200 text-slate-900", Growing: "bg-emerald-700 text-white", Harvested: "bg-sky-700 text-white", WrittenOff: "bg-amber-200 text-slate-900" };
 export function ConditionDiagram({ condition }: { condition: Condition }) {
   const [portion, setPortion] = useState<{ lane: number; value: Condition["lanes"][number]["portions"][number] }>();
+  const lengths = condition.lanes.flatMap((lane) => lane.portions).reduce((totals, part) => {
+    totals[part.condition] += part.to - part.from;
+    return totals;
+  }, { NotSeeded: 0, Growing: 0, Harvested: 0, WrittenOff: 0 });
+  const metres = (value: number) => `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 }).format(value)} m`;
   return <section className="mt-5" aria-label="Sơ đồ tình trạng làn"><h2 className="text-xl font-semibold">Tình trạng ngày {dateLabel(condition.date)} · sơ đồ v{condition.layoutVersion}</h2>
     <p className="mt-2">{condition.cycleId ? `Chu kỳ: ${condition.cycleId}` : "Bè chưa có chu kỳ tại ngày xem."}</p>
+    <dl className="my-4 grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Tổng chiều dài theo tình trạng">
+      {Object.entries(lengths).map(([status, length]) => <div key={status} className="rounded-control border border-border p-3"><dt>{stateLabel(status)}</dt><dd className="mt-1 font-semibold">{metres(length)}</dd></div>)}
+    </dl>
+    <p className="mt-2 text-sm">Chọn một đoạn làn để xem ngày, người ghi và sự kiện nguồn.</p>
     <ul className="my-4 flex flex-wrap gap-3" aria-label="Chú giải">{Object.entries(colors).map(([value, style]) => <li key={value} className={`rounded-control px-3 py-2 ${style}`}>{stateLabel(value)}</li>)}</ul>
     {condition.lanes.map((lane) => <div key={lane.laneNumber} className="my-4 rounded-control border border-border p-3"><h3 className="font-semibold">Làn {lane.laneNumber} · {lane.length} m · {stateLabel(lane.summary)}</h3>
       <div className="mt-3 overflow-x-auto"><div className="flex min-w-[480px] border border-border" aria-label={`Tình trạng làn ${lane.laneNumber}`}>
