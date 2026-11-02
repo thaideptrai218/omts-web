@@ -66,7 +66,7 @@ export function createMockEmployeeManagementRepository({
   isAuthorized = true,
   isSessionExpired = false,
   latencyMs = 350,
-  actorName = "Lê Minh Hải",
+  actorName = "Ngô Nam Trung",
   now = () => new Date(),
   zones: initialZones = [],
   laborRecords = [],

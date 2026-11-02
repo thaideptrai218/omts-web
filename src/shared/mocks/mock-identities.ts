@@ -13,7 +13,7 @@ export const trungNamCooperativeName =
 export const mockIdentities = {
   owner: {
     accountId: "account-owner-demo",
-    displayName: "Lê Minh Hải",
+    displayName: "Ngô Nam Trung",
     organizationName: trungNamCooperativeName,
     primaryRoleLabel: "Chủ hợp tác xã",
     scopeLabel: "Toàn hợp tác xã",

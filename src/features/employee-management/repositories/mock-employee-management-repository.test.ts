@@ -204,7 +204,7 @@ describe("mock employee management repository", () => {
     });
     expect(staleUnlink).toMatchObject({ status: "conflict", message: { code: "MSG06" } });
     if (staleUnlink.status === "conflict") {
-      expect(staleUnlink.message.params.user_name).toBe("Lê Minh Hải");
+      expect(staleUnlink.message.params.user_name).toBe("Ngô Nam Trung");
       expect(staleUnlink.message.params.time).not.toBe("");
     }
     expect(await repository.save(edit())).toMatchObject({ status: "conflict" });

@@ -32,7 +32,7 @@ export function createMockManagementEnvironment(latencyMs = 350) {
   const zoneStore = createMockFarmingZoneStore({
     initialZones: initialFarmingZones,
     latencyMs,
-    initialActorName: "Lê Minh Hải",
+    initialActorName: "Ngô Nam Trung",
     getInUseRaftCodes: (id): readonly string[] =>
       raftStore
         .snapshotRafts()

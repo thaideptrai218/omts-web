@@ -1,5 +1,9 @@
 # Bàn giao tester — cập nhật 02/11/2026
 
+Lưu ý local3000: đã xác minh đang chạy chế độ mock, nên sidebar không có Phân công và chấm công. Màn API ở `/operations/workforce` (menu Chức năng → Phân công và chấm công cho Owner/Manager đủ quyền); route này cố ý không mở ở mock. Cần backend và Redis chạy cùng cấu hình API trước khi kiểm luồng này. Chưa đổi `.env.local` hoặc tự mở dịch vụ. Owner demo đã đổi tên thành Ngô Nam Trung; nếu phiên đang mở còn tên cũ, đăng xuất/đăng nhập lại, không xóa dữ liệu hoặc reset mật khẩu.
+
+Manager chỉ xem bè/làn/vật tư theo quyền; Owner mới được sửa. Nhật ký Manager đã duyệt phạm vi trong [đề xuất](../decisions/WEB_MANAGER_ACTIVITY_PROPOSAL_2026-11-02.md), nhưng chỉ note để nhóm backend bổ sung API, chưa có màn/API phát hành. Đợt đổi tên/ghi nhận này:30 targeted tests, lint/types/build41 routes PASS trong bản copy riêng để tránh ghi `.next` của dev3000.
+
 **Chưa thông báo nghiệm thu end-to-end thu hoạch→giao dịch.** Những bước đó còn chờ API backend, theo lựa chọn trực tiếp của người dùng. Xem [báo cáo API](../reports/HARVEST_TO_TRANSACTION_API_GAP_2026-11-02.md).
 
 ## Địa chỉ và môi trường

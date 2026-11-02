@@ -42,7 +42,7 @@ async function get(path, headers = {}) {
   return fetch(origin + path, { headers, redirect: "manual", signal: AbortSignal.timeout(5000) });
 }
 function privateFree(body) {
-  for (const value of ["Chủ HTX Trung Nam", "Lê Minh Hải", "Nguyễn Văn An", "demo123"]) {
+  for (const value of ["Chủ HTX Trung Nam", "Lê Minh Hải", "Ngô Nam Trung", "Nguyễn Văn An", "demo123"]) {
     assert.ok(!body.includes(value), `Private/mock account data escaped into ${value}`);
   }
   checks++;
