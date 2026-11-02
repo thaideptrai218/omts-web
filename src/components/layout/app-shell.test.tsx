@@ -99,6 +99,10 @@ describe("desktop sidebar layout", () => {
     expect(view.shell.getAttribute("data-sidebar-expanded")).toBe("true");
     expect(view.shell.getAttribute("data-sidebar-pinned")).toBe("true");
   });
+  it("exposes the workforce route from the local sidebar", () => {
+    const view = setup();
+    expect(within(view.sidebar).getByRole("link", { name: "Phân công và chấm công" }).getAttribute("href")).toBe("/operations/workforce");
+  });
   it("stays expanded for keyboard focus even after the pointer leaves", () => {
     vi.useFakeTimers();
     const view = setup();

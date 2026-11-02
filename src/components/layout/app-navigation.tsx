@@ -55,6 +55,12 @@ export const navigationGroups: readonly Readonly<{
     label: "Nhân sự & phân quyền",
     items: [
       {
+        href: "/operations/workforce",
+        icon: "users",
+        label: "Phân công và chấm công",
+        requiredPermission: "workforce.assign",
+      },
+      {
         href: "/employees",
         icon: "users",
         label: "Nhân viên",

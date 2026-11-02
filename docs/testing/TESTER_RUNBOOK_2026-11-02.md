@@ -1,5 +1,7 @@
 # Bàn giao tester — cập nhật 02/11/2026
 
+**Cập nhật mới hơn: thử local không cần backend.** Người dùng làm rõ muốn chạy thử ngay trên3000, nên đã bổ sung demo workforce. Vào Nhân sự & phân quyền → Phân công và chấm công hoặc `/operations/workforce`; chọn ngày, vùng/bè, công việc và nhân viên → Lưu → xác nhận; thử Gỡ khi chưa vào làm hoặc Vào làm → Ra về. Owner xem các vùng đang dùng, Manager chỉ vùng được giao. Đây là dữ liệu thử trong bộ nhớ, reload/tab mới sẽ khởi tạo lại. Không tạo dữ liệu backend; các mô tả chỉ có route API ở đoạn lịch sử bên dưới đã được thay bằng bản demo cho workforce. Xem [báo cáo](../reports/WEB_LOCAL_WORKFORCE_DEMO_2026-11-02.md).
+
 Lưu ý local3000: đã xác minh đang chạy chế độ mock, nên sidebar không có Phân công và chấm công. Màn API ở `/operations/workforce` (menu Chức năng → Phân công và chấm công cho Owner/Manager đủ quyền); route này cố ý không mở ở mock. Cần backend và Redis chạy cùng cấu hình API trước khi kiểm luồng này. Chưa đổi `.env.local` hoặc tự mở dịch vụ. Owner demo đã đổi tên thành Ngô Nam Trung; nếu phiên đang mở còn tên cũ, đăng xuất/đăng nhập lại, không xóa dữ liệu hoặc reset mật khẩu.
 
 Manager chỉ xem bè/làn/vật tư theo quyền; Owner mới được sửa. Nhật ký Manager đã duyệt phạm vi trong [đề xuất](../decisions/WEB_MANAGER_ACTIVITY_PROPOSAL_2026-11-02.md), nhưng chỉ note để nhóm backend bổ sung API, chưa có màn/API phát hành. Đợt đổi tên/ghi nhận này:30 targeted tests, lint/types/build41 routes PASS trong bản copy riêng để tránh ghi `.next` của dev3000.

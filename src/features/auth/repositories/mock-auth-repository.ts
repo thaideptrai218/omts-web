@@ -47,6 +47,7 @@ const demoSession = {
       permissions: [
         { key: "farming.zones.view", scope: { kind: "all-zones" } },
         { key: "farming.rafts.view", scope: { kind: "all-zones" } },
+        { key: "workforce.assign", scope: { kind: "all-zones" } },
         { key: "farming.zones.manage", scope: { kind: "all-zones" } },
         {
           key: "access.accounts.manage",
@@ -99,6 +100,7 @@ function createStaffSession(username: string) {
     account: {
       access: {
         permissions: [
+          ...(username === "staff-verified" ? [{ key: "workforce.assign" as const, scope: { kind: "zones" as const, zoneIds: ["zone-east"] } }] : []),
           {
             key: "workspace.overview.view",
             scope: { kind: "zones", zoneIds: ["zone-east"] },

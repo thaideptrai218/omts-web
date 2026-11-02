@@ -2,7 +2,7 @@
 
 **Đã duyệt phạm vi 02/11/2026.** Người dùng đồng ý giới hạn đọc theo vùng và metadata bên dưới, đồng thời yêu cầu chỉ ghi API cần bổ sung, không tự tạo API; chờ xem thông báo của nhóm backend. Chưa triển khai endpoint, chưa mở menu nhật ký để tránh màn không có API.
 
-Người dùng yêu cầu Manager xem ai đã thao tác, lúc nào, làm gì; xác nhận lại chỉ Owner được sửa bè/làn và vật tư.
+Người dùng yêu cầu Manager xem ai đã thao tác, lúc nào, làm gì. Cập nhật tiếp theo: quyền Owner đối với thêm/xóa cấu trúc không cấm Manager ghi nhận đang/đã thu hoạch theo phần được giao; xem WEB_MANAGER_HARVEST_MARKING_2026-11-02.md. Vật tư vẫn theo quyền Owner.
 
 ## Contract đề nghị
 

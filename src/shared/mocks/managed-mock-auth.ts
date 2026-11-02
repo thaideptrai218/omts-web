@@ -64,6 +64,8 @@ export function createManagedMockAuth(
           },
         ]
       : [];
+    const workforceZones = zoneOptions.filter((zone) => zone.status === "in-use" && grants.some((grant) => grant.roleId === "role-zone-manager" && (grant.zoneId === null || grant.zoneId === zone.id)));
+    if (workforceZones.length) permissions.push({ key: "workforce.assign", scope: { kind: "zones", zoneIds: workforceZones.map((zone) => zone.id) } });
     if (zoneAccess)
       permissions.push({
         key: "farming.zones.view",
