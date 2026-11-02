@@ -1,5 +1,5 @@
-import { projectCatalogueProblem } from "@/features/api-workspace/catalogue-problem";
 import "server-only";
+import { projectCatalogueProblem } from "@/features/api-workspace/catalogue-problem";
 import { isJsonContentType, readRetryAfterMs } from "../../shared/http/api-problem";
 import type { MessageCode } from "../../shared/messages/message-catalog";
 import { knownBackendMessageCode } from "../../shared/messages/backend-message-code";

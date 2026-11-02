@@ -53,7 +53,7 @@ const nullableText = text.nullable();
 const usage = { statusId: z.number().int(), status: text };
 const version = { rowVersion: text.min(1) };
 const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, phoneNumber: text, ...usage });
-const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: text, unit: text, ...usage });
+const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: z.enum(["Seed", "Material", "Other"]), unit: text, ...usage });
 const raftRow = z.object({ id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
 const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), status: text.optional() }).refine((row) => row.code !== undefined || row.status !== undefined);
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
@@ -62,7 +62,7 @@ const listSchemas = { zones: farmingZoneListItemSchema, suppliers: supplierRow, 
   employees: employeeListItemSchema, rafts: raftRow, accounts: accountRow, roles: roleRow };
 const detailSchemas = {
   zones: farmingZoneViewSchema,
-  suppliers: supplierRow.extend({ address: nullableText.optional(), email: nullableText.optional(), otherContacts: nullableText.optional(), ...version }),
+  suppliers: supplierRow.extend({ address: nullableText, email: nullableText, ...version }),
   "input-items": itemRow.extend({ description: nullableText, isUsed: z.boolean(), ...version }),
   employees: employeeViewSchema,
   rafts: raftRow.extend({ location: nullableText, size: nullableText, conditionNotes: nullableText,

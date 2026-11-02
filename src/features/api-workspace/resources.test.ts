@@ -37,3 +37,10 @@ describe("API workspace data and actor boundaries", () => {
     expect(resourceAllowed("zones", { subjectType: "Trader" }, [])).toBe(false);
   });
 });
+
+it("rejects stale supplier and item contracts instead of acknowledging dropped catalogue fields", () => {
+  const base = { id, name: "Supplier", supplierType: "Material", phoneNumber: "0900000000", statusId: 101, status: "In Use", rowVersion: "v1" };
+  expect(projectResource("suppliers", { ...base, otherContacts: "old address", debt: 100 }, true)).toBeUndefined();
+  expect(projectResource("suppliers", { ...base, address: "Address", email: null, debt: 100 }, true)).toEqual({ ...base, address: "Address", email: null });
+  expect(projectResource("input-items", { id, code: "VT001", name: "Item", group: "RaftMaterial", unit: "cái", statusId: 101, status: "In Use", rowVersion: "v1", isUsed: true, description: null }, true)).toBeUndefined();
+});

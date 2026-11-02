@@ -5,7 +5,7 @@ vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => ga
 import { resolved, environment } from "../employees/__tests__/employee-fixture";
 import { certificateTarget, handleSupplierDocuments } from "./supplier-documents-http";
 const id = "122bb318-a72e-49aa-a8d7-a6169f889007", origin = "http://127.0.0.1:5280", url = `${origin}/api/files/local/supplier-certificates/qa.pdf?expires=1&sig=qa`;
-const supplier = () => ({ id, name: "QA", supplierType: "Seed", phoneNumber: "0900000000", otherContacts: null, statusId: 101, status: "In Use", debt: 0, rowVersion: "v2", certificates: [{ index: 0, url }] });
+const supplier = () => ({ id, name: "QA", supplierType: "Seed", phoneNumber: "0900000000", address: null, email: null, statusId: 101, status: "In Use", debt: 0, rowVersion: "v2", certificates: [{ index: 0, url }] });
 function setup(subject = "CooperativeOwner", actions = ["View", "Edit"]) {
   for (const [key, value] of Object.entries(environment)) vi.stubEnv(key, value);
   gateway.resolve.mockResolvedValue(resolved()); gateway.application.mockResolvedValue({ status: "ready", context: { identity: { subjectType: subject }, permissions: { functionPermissions: actions.map((action) => ({ functionCode: "SUPPLIERS", action })) } } });

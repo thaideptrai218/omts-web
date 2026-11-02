@@ -15,6 +15,7 @@ Người dùng đã duyệt cả D1/D2/D3 trong [quyết định](../decisions/W
 - Web: lint/typecheck và build 41 routes PASS; 186 targeted tests/26 files PASS. Bao gồm scope cố định, thiếu dataScope legacy, catalog Push mới/fresh validation, mandatory/unoffered Push, notice, inbox v2, proposal Owner-only, certificate discontinued và duplicate metadata.
 - Backend: build 0 warning/error; 253 application + 2 domain + 849 API tests PASS. 128 test SQL/provider skip vì thiếu dịch vụ; guard migration mới đã compile, skip riêng. EF không có model change chờ. CI phải được đối chiếu SHA mới; không dùng kết quả lịch sử làm bằng chứng cho lần này.
 - Mobile: lint/types, 10 contract tests, build PASS; cảnh báo chunk lớn còn. Chưa chạy thiết bị Zalo/provider.
+- Catalog v2 yêu cầu Address/Email và enum Material đúng contract; response v1 không được dùng để báo lưu thành công các trường mới. Sau khi nâng QA đồng bộ, tester đăng xuất/đăng nhập lại để nhận permission projection mới.
 - Web build ở thư mục riêng; không thay .next của máy tester đang chạy. Thay đổi local .gitignore/.vercel giữ ngoài commit này; Mobile Expo gốc và backend develop giữ nguyên.
 
 ## Chưa nhận là hoàn tất
@@ -24,3 +25,9 @@ Người dùng đã duyệt cả D1/D2/D3 trong [quyết định](../decisions/W
 - /open notification theo record ID/deep-link còn cần nối/kiểm ở client; không tính việc đọc/đánh đọc là đã hoàn tất open-related-record.
 - Employee profile API upstream vẫn RequireCooperativeOwner dù matrix có LABOR_WORKERS cho Manager. Web giữ gate đúng endpoint; chưa tự mở vùng/dữ liệu cá nhân.
 - Tạo/reset Staff account và onboarding email-or-phone vẫn chờ các contract đã chốt trước đây. Những màn chưa có API không mở bằng mock. GitGuardian history findings chưa được suppress/rewrite.
+
+## CI và bản sửa tiếp theo
+
+CI backend08ebaf0 chạy SQL thật:973 API PASS,2FAIL do kỳ vọng seed/rollback cũ,3SKIP đã ghi upstream; application/domain PASS. Test guard bốn tình huống được thực thi trong bộ này. Bản946df70 sửa đúng kỳ vọng chỉ phục hồi3delivery statuses và Down về schema sau cleanup; không đổi migration để tái tạo nhóm cũ. Chờ CI của946df70.
+
+CI Webbc1fc1c:2.922PASS/1FAIL/48RedisSKIP. Một lỗi thứ tự import trước `server-only` đã sửa, giữ nguyên test boundary.93focused regressions PASS sau sửa; cần kết quả fullCI commit tiếp theo. Mobile3abe7f5: toàn bộ checks CI xanh, gồm10contracttests/build/Gitleaks/title/GitGuardian. Web/Backend GitGuardian còn đỏ, không suppress hoặc viết lại lịch sử.
