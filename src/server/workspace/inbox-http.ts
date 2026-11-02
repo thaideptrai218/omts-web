@@ -1,5 +1,6 @@
 import "server-only";
-import { inboxSchema, inboxCommandSchema } from "@/features/inbox-api/contracts";
+import { z } from "zod";
+import { inboxSchema, inboxCommandSchema, openedNotificationSchema } from "@/features/inbox-api/contracts";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -14,9 +15,12 @@ export async function handleInbox(request: Request) {
   if (backend.status !== "valid" || backend.config.source !== "api") return json({ status: "unavailable" }, 503);
   if (!["GET", "POST"].includes(request.method)) return json({ status: "rejected" }, 405);
   const query = new URL(request.url).searchParams;
-  if ([...query.keys()].some((key) => key !== "page") || query.getAll("page").length > 1 || query.has("page") && !/^[1-9]\d{0,5}$/.test(query.get("page")!)) return json({ status: "invalid-input" }, 400);
+  if ([...query.keys()].some((key) => key !== "page" && key !== "open") || query.getAll("page").length > 1 || query.has("page") && !/^[1-9]\d{0,5}$/.test(query.get("page")!)) return json({ status: "invalid-input" }, 400);
+  const opening = query.has("open") ? z.guid().safeParse(query.get("open")) : undefined;
+  if (query.has("open") && (request.method !== "GET" || query.size !== 1 || !opening?.success)) return json({ status: "invalid-input" }, 400);
   try {
     let path = `/api/me/notifications?page=${query.get("page") ?? "1"}&pageSize=20`;
+    if (opening?.success) path = `/api/me/notifications/${opening.data}/open`;
     let commandId: string | undefined;
     if (request.method === "POST") {
       if (query.size) return json({ status: "invalid-input" }, 400);
@@ -42,6 +46,11 @@ export async function handleInbox(request: Request) {
     if (!result) return json({ status: "success", data: { saved: true } });
     if (result.status === "http-error") return json({ status: "rejected", code: result.code }, result.httpStatus);
     if (result.status !== "success" || result.httpStatus !== 200) return json({ status: "unavailable" }, 503);
+    if (opening?.success) {
+      const opened = openedNotificationSchema.safeParse(result.data);
+      return opened.success && opened.data.notificationId === opening.data
+        ? json({ status: "success", data: opened.data }) : json({ status: "invalid-response" }, 502);
+    }
     if (request.method === "POST") {
       const row = commandId ? parseInboxItem(result.data) : undefined;
       const valid = commandId ? row?.id === commandId && row.readAt !== null : readAllAck.safeParse(result.data).success;

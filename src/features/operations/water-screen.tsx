@@ -18,9 +18,9 @@ type Recognition = z.infer<typeof c.recognitionSchema>["ocr"];
 type Chart = z.infer<typeof c.waterChartSchema>;
 type ZoneThresholds = z.infer<typeof c.zoneThresholdsSchema>;
 
-export function WaterScreen() {
+export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } = {}) {
   const context = useApiWorkspace(), zones = useRemote(loadZones);
-  const [zoneId, setZoneId] = useState(""), [filters, setFilters] = useState({ from: "", to: "", status: "Confirmed" }), [page, setPage] = useState(1), [groupBy, setGroupBy] = useState("month");
+  const [zoneId, setZoneId] = useState(initialZoneId), [filters, setFilters] = useState({ from: "", to: "", status: "Confirmed" }), [page, setPage] = useState(1), [groupBy, setGroupBy] = useState("month");
   const [selected, setSelected] = useState<c.WaterMeasurement | null>(), [serial, setSerial] = useState(0), [ocr, setOcr] = useState<Recognition>(), [thresholdsOpen, setThresholdsOpen] = useState(false), [notice, setNotice] = useState<string>();
   const query = useMemo<Query>(() => ({ ...filters, zoneId, page: String(page), pageSize: "20" }), [filters, zoneId, page]);
   const history = useRemote(useMemo(() => (signal: AbortSignal) => zoneId ? repository.read("list", query, c.waterHistorySchema, signal)

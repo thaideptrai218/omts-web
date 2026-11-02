@@ -62,3 +62,24 @@ it("rejects a read acknowledgement that still says unread and a mismatched page"
   expect((await handleInbox(request({ action: "read", id }))).status).toBe(502);
   expect((await handleInbox(new Request("http://localhost:3003/api/inbox?page=2"))).status).toBe(502);
 });
+
+it("opens by notification ID through a fresh backend access check, without marking it read", async () => {
+  setup(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ notificationId: id, recordType: "WaterMeasurement", recordId: id, recordCode: null, zoneId: id, rawUrl: "https://untrusted.test", recipientAccountId: "private" }));
+  const response = await handleInbox(new Request(`http://localhost:3003/api/inbox?open=${id}`));
+  expect(response.status).toBe(200); expect(String(fetcher.mock.calls[0][0])).toBe(`http://127.0.0.1:8081/api/me/notifications/${id}/open`);
+  expect(fetcher.mock.calls[0][1]?.method).toBe("GET"); expect(fetcher).toHaveBeenCalledTimes(1); expect(JSON.stringify(await response.json())).not.toMatch(/private|untrusted/);
+});
+it.each([`?open=${id}&open=${id}`, `?open=${id}&page=1`, "?open=../accounts", `?open=${id}&recordId=${id}`])("rejects forged open query %s", async (query) => {
+  setup(); const fetcher = vi.spyOn(globalThis, "fetch"); expect((await handleInbox(new Request(`http://localhost:3003/api/inbox${query}`))).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
+});
+it.each([403,404])("preserves the backend open denial %s without a read request", async (status) => {
+  setup(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ code: status === 403 ? "MSG-GEN-08" : "MSG-ACCOUNT-22" }, { status }));
+  expect((await handleInbox(new Request(`http://localhost:3003/api/inbox?open=${id}`))).status).toBe(status); expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it("rejects a mismatched notification and a replaced session while opening", async () => {
+  setup(); vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ notificationId: "122bb318-a72e-49aa-a8d7-a6169f889008", recordType: "Account", recordId: id, recordCode: null, zoneId: null }))
+    .mockResolvedValueOnce(Response.json({ notificationId: id, recordType: "Account", recordId: id, recordCode: null, zoneId: null }));
+  expect((await handleInbox(new Request(`http://localhost:3003/api/inbox?open=${id}`))).status).toBe(502);
+  gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+  expect((await handleInbox(new Request(`http://localhost:3003/api/inbox?open=${id}`))).status).toBe(401);
+});

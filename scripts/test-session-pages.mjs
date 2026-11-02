@@ -54,6 +54,11 @@ try {
     try { await get("/"); ready = true; break; } catch { await new Promise((resolve) => setTimeout(resolve, 100)); }
   }
   assert.ok(ready, "Next child failed to start");
+  const entry = await get("/");
+  const entryBody = await entry.text();
+  assert.ok(entry.headers.get("location") === "/login" || entryBody.includes("/login"), "Public entry must lead to the real login flow");
+  privateFree(entryBody);
+  checks++;
   const chunks = fileURLToPath(new URL("../.next/static/chunks/", import.meta.url));
   const assets = readdirSync(chunks);
   const compiledAssetText = (extension) => assets.filter((name) => name.endsWith(extension)).map((name) => readFileSync(new URL(`../.next/static/chunks/${name}`, import.meta.url), "utf8")).join("\n");
