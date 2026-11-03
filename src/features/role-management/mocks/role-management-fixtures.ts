@@ -73,14 +73,14 @@ export const mockRoles = [
       {
         accountId: "account-nguyen-an",
         displayName: "Nguyễn Văn An",
-        username: "nguyen.an",
+        username: "manager",
         zoneLabels: ["Khu Đông"],
       },
       {
-        accountId: "account-tran-binh",
-        displayName: "Trần Thị Bình",
-        username: "tran.binh",
-        zoneLabels: ["Khu Đông", "Khu Nam"],
+        accountId: "account-pham-cuong",
+        displayName: "Phạm Quốc Cường",
+        username: "manager2",
+        zoneLabels: ["Khu Nam"],
       },
     ],
     name: "Quản lý vùng",
@@ -106,11 +106,18 @@ export const mockRoles = [
     status: "in-use",
   },
   {
-    activeAccountCount: 0,
-    activeZoneCount: 0,
+    activeAccountCount: 1,
+    activeZoneCount: 2,
     description: "Theo dõi chứng từ và xuất dữ liệu phục vụ đối soát.",
     id: "role-accountant",
-    impactAccounts: [],
+    impactAccounts: [
+      {
+        accountId: "account-tran-binh",
+        displayName: "Trần Thị Bình",
+        username: "ketoan",
+        zoneLabels: ["Khu Đông", "Khu Nam"],
+      },
+    ],
     name: "Kế toán",
     permissions: [
       { actionKeys: ["VIEW"], dataScopeId: null, featureCode: "EMPLOYEE" },

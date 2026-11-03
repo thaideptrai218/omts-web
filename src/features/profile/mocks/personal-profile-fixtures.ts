@@ -62,11 +62,31 @@ function createSystemAdminProfile(): PersonalProfile {
   };
 }
 
+function createTraderProfile(): PersonalProfile {
+  const identity = mockIdentities.trader;
+
+  return {
+    accountId: identity.accountId,
+    displayName: identity.displayName,
+    email: { isVerified: true, value: "trader@omts.test" },
+    phone: { isVerified: true, value: "0907777888" },
+    recordVersion: "profile-trader-v1",
+    roles: [
+      {
+        roleLabel: identity.primaryRoleLabel,
+        scopeLabel: identity.scopeLabel,
+      },
+    ],
+    username: identity.username,
+  };
+}
+
 export function getMockPersonalProfile(accountId: string): PersonalProfile | null {
   if (accountId === mockIdentities.owner.accountId) return createOwnerProfile();
   if (accountId === mockIdentities.systemAdmin.accountId) {
     return createSystemAdminProfile();
   }
+  if (accountId === mockIdentities.trader.accountId) return createTraderProfile();
   if (accountId.startsWith("account-staff-")) {
     return createStaffProfile(accountId.replace(/^account-/, ""));
   }

@@ -48,6 +48,7 @@ const demoSession = {
         { key: "farming.zones.view", scope: { kind: "all-zones" } },
         { key: "farming.rafts.view", scope: { kind: "all-zones" } },
         { key: "workforce.assign", scope: { kind: "all-zones" } },
+        { key: "purchase.receipts.view", scope: { kind: "all-zones" } },
         { key: "farming.zones.manage", scope: { kind: "all-zones" } },
         {
           key: "access.accounts.manage",
@@ -91,6 +92,21 @@ const systemAdminSession = {
       ],
     },
     ...mockIdentities.systemAdmin,
+  },
+  status: "authenticated",
+} as const;
+
+const traderSession = {
+  account: {
+    access: {
+      permissions: [
+        {
+          key: "workspace.overview.view",
+          scope: { kind: "global" },
+        },
+      ],
+    },
+    ...mockIdentities.trader,
   },
   status: "authenticated",
 } as const;
@@ -181,6 +197,10 @@ const loginResultsByIdentifier: ReadonlyMap<string, LoginResult> =
     ],
     ["owner@omts.test", accessGrantedResult],
     ["owner", accessGrantedResult],
+    [
+      "trader",
+      { session: traderSession, status: "access-granted" },
+    ],
     [
       "sysadmin",
       { session: systemAdminSession, status: "access-granted" },
@@ -363,7 +383,7 @@ export function createMockAuthRepository({
           value: contact.value, isVerified: managed.verifiedIdentifiers.includes(contact.value) })) });
       }
       if (managed && known) accountDirectory?.updateIdentity({ ...managed.account,
-        identifiers: [...managed.verifiedIdentifiers, ...(identifier === "nguyen.an" ? ["staff-verified"] : [])],
+        identifiers: [...managed.verifiedIdentifiers, ...(identifier === "manager" ? ["staff-verified", "nguyen.an"] : [])],
         contacts: managed.contacts.map((contact) => ({ kind: contact.channel === "email" ? "email" : "phone", value: contact.value,
           isVerified: managed.verifiedIdentifiers.includes(contact.value) })) });
       const previousGate = staffOnboardingStates.get(identifier);

@@ -121,7 +121,7 @@ it.each(["saved", "forbidden"] as const)("keeps the account editor open while sa
       account: {
         ...environment.accounts
           .snapshotAccounts()
-          .find((account) => account.username === "nguyen.an")!,
+          .find((account) => account.username === "manager")!,
         displayName: "Nguyễn Văn An kiểm thử",
         recordVersion: "saved-version",
       },

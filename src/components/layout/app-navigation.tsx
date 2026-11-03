@@ -52,6 +52,23 @@ export const navigationGroups: readonly Readonly<{
     ],
   },
   {
+    label: "Vật tư & mua hàng",
+    items: [
+      {
+        href: "/operations/purchase-receipts",
+        icon: "document",
+        label: "Phiếu nhập và yêu cầu thanh toán",
+        requiredPermission: "purchase.receipts.view",
+      },
+      {
+        href: "/operations/supplier-payments",
+        icon: "waves",
+        label: "Thanh toán nhà cung cấp",
+        requiredPermission: "supplier.payments.manage",
+      },
+    ],
+  },
+  {
     label: "Nhân sự & phân quyền",
     items: [
       {

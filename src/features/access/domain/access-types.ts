@@ -9,6 +9,9 @@ export const effectivePermissionKeys = [
   "farming.zones.manage",
   "farming.rafts.view",
   "workforce.assign",
+  "purchase.receipts.view",
+  "purchase.receipts.submit",
+  "supplier.payments.manage",
 ] as const;
 
 export type EffectivePermissionKey = (typeof effectivePermissionKeys)[number];

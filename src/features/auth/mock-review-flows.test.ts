@@ -14,6 +14,25 @@ async function services() {
 }
 
 describe("review-ready mock flows use the same account credentials", () => {
+  it("logs in with the short Manager, Accountant and Trader demo usernames", async () => {
+    const h = await services();
+    for (const [identifier, role, scope] of [
+      ["manager", "Quản lý vùng", "Khu Đông"],
+      ["ketoan", "Kế toán", "Toàn hợp tác xã"],
+      ["trader", "Thương lái", "Tài khoản thương lái"],
+    ] as const) {
+      expect(
+        await finish(
+          h.authService.login({ identifier, password: "demo123" }),
+        ),
+      ).toMatchObject({
+        session: { account: { primaryRoleLabel: role, scopeLabel: scope, username: identifier } },
+        status: "access-granted",
+      });
+      await finish(h.authService.logout());
+    }
+  });
+
   it("uses a changed password on the next login and refuses the old password", async () => {
     const h = await services(); const password = nextPassword();
     await finish(h.authService.login({ identifier: "owner", password: "demo123" }));
@@ -107,7 +126,7 @@ describe("review-ready mock flows use the same account credentials", () => {
     const { accountManagementService } = await import("@/features/account-management/services/account-management-service.instance");
     const created = await finish(accountManagementService.save({ id: null, recordVersion: null,
       fullName: "Nhân viên chạy demo", email: "new.staff@omts.test", phone: "0903111222", deliveryChannel: "email",
-      newGrants: [{ key: "first", roleId: "role-accountant", zoneId: "zone-south", effectiveFrom: "2026-01-01", effectiveTo: "" }] }));
+      newGrants: [{ key: "first", roleId: "role-staff", zoneId: "zone-south", effectiveFrom: "2026-01-01", effectiveTo: "" }] }));
     if (created.status !== "saved") throw new Error("Expected account");
     const username = created.account.username;
     expect(await finish(h.authService.login({ identifier: username, password: "demo123" })))
@@ -122,7 +141,7 @@ describe("review-ready mock flows use the same account credentials", () => {
     const result = await finish(h.authService.completeStaffOnboarding({ verificationToken: proof.token }));
     if (result.status !== "access-granted") throw new Error("Expected access");
     expect(result.session.account).toMatchObject({ accountId: created.account.id, displayName: created.account.displayName,
-      primaryRoleLabel: "Kế toán", scopeLabel: "Khu Nam" });
+      primaryRoleLabel: "Nhân viên", scopeLabel: "Khu Nam" });
     expect(result.session.account.access.permissions.some((entry) => entry.key === "access.accounts.manage")).toBe(false);
     const { getPersonalProfileEnvironment } = await import("@/features/profile/services/personal-profile-service.instance");
     expect(await finish(getPersonalProfileEnvironment(created.account.id)!.profileService.load()))
@@ -136,31 +155,31 @@ describe("review-ready mock flows use the same account credentials", () => {
     const h = await services();
     const { accountManagementService } = await import("@/features/account-management/services/account-management-service.instance");
     const { getAccountSecurityService } = await import("@/features/account-security/services/account-security-service.instance");
-    const first = await finish(h.authService.login({ identifier: "nguyen.an", password: "demo123" }));
+    const first = await finish(h.authService.login({ identifier: "manager", password: "demo123" }));
     if (first.status !== "access-granted") throw new Error("Expected staff");
     const previousPassword = nextPassword();
     await finish(getAccountSecurityService(first.session.account.accountId).changeWithCurrentPassword({ currentPassword: "demo123", newPassword: previousPassword }));
     await finish(accountManagementService.resetPassword({ accountId: first.session.account.accountId, confirmed: true }));
     expect(await finish(h.authService.getSession())).toEqual({ status: "anonymous" });
-    expect(await finish(h.authService.login({ identifier: "nguyen.an", password: previousPassword }))).toMatchObject({ status: "rejected" });
-    expect(await finish(h.authService.login({ identifier: "nguyen.an", password: "demo123" })))
+    expect(await finish(h.authService.login({ identifier: "manager", password: previousPassword }))).toMatchObject({ status: "rejected" });
+    expect(await finish(h.authService.login({ identifier: "manager", password: "demo123" })))
       .toMatchObject({ nextStep: "change-temporary-password", checklist: { contactVerified: true } });
     await finish(h.authService.changeTemporaryPassword({ currentPassword: "demo123", newPassword: nextPassword() }));
-    expect(await finish(h.authService.getSession())).toMatchObject({ status: "authenticated", account: { username: "nguyen.an" } });
+    expect(await finish(h.authService.getSession())).toMatchObject({ status: "authenticated", account: { username: "manager" } });
   });
 
   it("requires contact verification after Owner changes both contacts and refuses the old phone alias", async () => {
     const h = await services();
     const { accountManagementService } = await import("@/features/account-management/services/account-management-service.instance");
-    await finish(h.authService.login({ identifier: "nguyen.an", password: "demo123" }));
+    await finish(h.authService.login({ identifier: "manager", password: "demo123" }));
     await finish(h.authService.logout());
     const workspace = await finish(accountManagementService.load());
     if (workspace.status !== "loaded") throw new Error("Expected workspace");
-    const row = workspace.workspace.accounts.find((account) => account.username === "nguyen.an")!;
+    const row = workspace.workspace.accounts.find((account) => account.username === "manager")!;
     await finish(accountManagementService.save({ id: row.id, fullName: row.displayName, email: "changed@omts.test", phone: "0903555666",
       deliveryChannel: "email", recordVersion: row.recordVersion, newGrants: [] }));
     expect(await finish(h.authService.login({ identifier: "0901234567", password: "demo123" }))).toMatchObject({ status: "rejected" });
-    expect(await finish(h.authService.login({ identifier: "nguyen.an", password: "demo123" })))
+    expect(await finish(h.authService.login({ identifier: "manager", password: "demo123" })))
       .toMatchObject({ nextStep: "verify-contact", checklist: { passwordChanged: true, contactVerified: false } });
   });
 });

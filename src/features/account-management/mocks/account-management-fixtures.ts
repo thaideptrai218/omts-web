@@ -68,14 +68,14 @@ export const mockManagedAccounts = [
     phoneVerified: true,
     recordVersion: "account-v2",
     status: "active",
-    username: "nguyen.an",
+    username: "manager",
   },
   {
     accountType: "internal",
     credentialDeliveryChannel: "phone",
     displayName: "Trần Thị Bình",
-    email: "",
-    emailVerified: false,
+    email: "ketoan@omts.test",
+    emailVerified: true,
     grants: [
       {
         effectiveFrom: "2026-10-01",
@@ -91,10 +91,10 @@ export const mockManagedAccounts = [
     ],
     id: "account-tran-binh",
     phone: "0902222333",
-    phoneVerified: false,
+    phoneVerified: true,
     recordVersion: "account-v3",
-    status: "locked",
-    username: "tran.binh",
+    status: "active",
+    username: "ketoan",
   },
   {
     accountType: "internal",
@@ -120,6 +120,6 @@ export const mockManagedAccounts = [
     phoneVerified: true,
     recordVersion: "account-v4",
     status: "active",
-    username: "pham.cuong",
+    username: "manager2",
   },
 ] as const satisfies readonly ManagedAccount[];

@@ -66,6 +66,16 @@ export function createManagedMockAuth(
       : [];
     const workforceZones = zoneOptions.filter((zone) => zone.status === "in-use" && grants.some((grant) => grant.roleId === "role-zone-manager" && (grant.zoneId === null || grant.zoneId === zone.id)));
     if (workforceZones.length) permissions.push({ key: "workforce.assign", scope: { kind: "zones", zoneIds: workforceZones.map((zone) => zone.id) } });
+    const managerZones = zoneOptions.filter((zone) => zone.status === "in-use" && grants.some((grant) => grant.roleId === "role-zone-manager" && (grant.zoneId === null || grant.zoneId === zone.id)));
+    if (managerZones.length) {
+      const scope = { kind: "zones" as const, zoneIds: managerZones.map((zone) => zone.id) };
+      permissions.push({ key: "purchase.receipts.view", scope });
+      permissions.push({ key: "purchase.receipts.submit", scope });
+    }
+    if (grants.some((grant) => grant.roleId === "role-accountant" && grant.zoneId === null)) {
+      permissions.push({ key: "purchase.receipts.view", scope: { kind: "all-zones" } });
+      permissions.push({ key: "supplier.payments.manage", scope: { kind: "all-zones" } });
+    }
     if (zoneAccess)
       permissions.push({
         key: "farming.zones.view",
@@ -146,7 +156,13 @@ export function createManagedMockAuth(
   }
   return {
     resolve(identifier: string) {
-      const alias = identifier === "staff-verified" ? "nguyen.an" : identifier;
+      const aliases: Readonly<Record<string, string>> = {
+        "staff-verified": "manager",
+        "nguyen.an": "manager",
+        "pham.cuong": "manager2",
+        "tran.binh": "ketoan",
+      };
+      const alias = aliases[identifier] ?? identifier;
       const row = environment.accounts
         .snapshotAccounts()
         .find(

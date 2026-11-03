@@ -113,7 +113,16 @@ export function createMockManagementEnvironment(latencyMs = 350) {
     createAccount: (draft, beforePublish) =>
       accounts.createLinkedAccount(draft, beforePublish),
     getAccountCreationOptions: () => ({
-      roles: roles.snapshotRoles(),
+      roles: roles.snapshotRoles().filter(
+        (role) =>
+          role.name !== "Kế toán" ||
+          !accounts.snapshotAccounts().some((account) =>
+            account.grants.some(
+              (grant) =>
+                grant.status === "effective" && grant.roleId === role.id,
+            ),
+          ),
+      ),
       zones: zoneStore.snapshotOptions(),
       featureCatalog: catalog.map((feature) => ({
         ...feature,

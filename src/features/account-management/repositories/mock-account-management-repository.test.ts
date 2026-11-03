@@ -103,6 +103,60 @@ describe("mock account management repository", () => {
     expect(result).toMatchObject({ field: "grants", status: "invalid-input" });
   });
 
+  it("keeps one cooperative-wide Accountant and rejects another grant", async () => {
+    const repository = createRepository();
+    const result = await repository.save({
+      deliveryChannel: "email",
+      email: "second-accountant@omts.test",
+      fullName: "Kế toán thứ hai",
+      id: null,
+      newGrants: [
+        {
+          effectiveFrom: "2026-11-03",
+          effectiveTo: "",
+          key: "draft-accountant",
+          roleId: "role-accountant",
+          zoneId: "all-zones",
+        },
+      ],
+      phone: "0911999999",
+      recordVersion: null,
+    });
+
+    expect(result).toMatchObject({ field: "grants", status: "invalid-input" });
+  });
+
+  it("requires the Accountant grant to cover all zones", async () => {
+    const repository = createMockAccountManagementRepository({
+      featureCatalog: mockFeatureCatalog,
+      initialAccounts: mockManagedAccounts.filter(
+        (account) => account.id !== "account-tran-binh",
+      ),
+      latencyMs: 0,
+      roles: mockAssignableRoles,
+      zones: mockFarmingZones,
+    });
+    const result = await repository.save({
+      deliveryChannel: "email",
+      email: "accountant@omts.test",
+      fullName: "Kế toán theo khu",
+      id: null,
+      newGrants: [
+        {
+          effectiveFrom: "2026-11-03",
+          effectiveTo: "",
+          key: "draft-accountant-zone",
+          roleId: "role-accountant",
+          zoneId: "zone-east",
+        },
+      ],
+      phone: "0911888888",
+      recordVersion: null,
+    });
+
+    expect(result).toMatchObject({ field: "grants", status: "invalid-input" });
+  });
+
   it("requires reason and confirmation before locking", async () => {
     const repository = createRepository();
     await expect(
@@ -185,7 +239,7 @@ describe("mock account management repository", () => {
       delivery: {
         channel: "email",
         deliveryStatus: "sent",
-        username: "nguyen.an",
+        username: "manager",
       },
       status: "reset",
     });

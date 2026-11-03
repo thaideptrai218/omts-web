@@ -104,6 +104,18 @@ export function AccountEditor({
     (account?.grants.filter((grant) => grant.status === "effective").length ??
       0) + drafts.length;
   const hasChanges = isCreate || isDirty || drafts.length > 0;
+  const accountantRoleIds = workspace.roles
+    .filter((role) => role.name === "Kế toán")
+    .map((role) => role.id);
+  const unavailableRoleIds = accountantRoleIds.filter((roleId) =>
+    workspace.accounts.some(
+      (candidate) =>
+        candidate.id !== account?.id &&
+        candidate.grants.some(
+          (grant) => grant.status === "effective" && grant.roleId === roleId,
+        ),
+    ),
+  );
 
   async function continueToPreview() {
     const valid = await trigger();
@@ -528,6 +540,7 @@ export function AccountEditor({
             tabIndex={-1}
           >
             <AccessGrantEditor
+              allZonesOnlyRoleIds={accountantRoleIds}
               currentGrants={account?.grants ?? []}
               drafts={drafts}
               error={grantError}
@@ -537,6 +550,7 @@ export function AccountEditor({
               }}
               onRevoke={setGrantToRevoke}
               roles={workspace.roles}
+              unavailableRoleIds={unavailableRoleIds}
               zones={workspace.zones}
             />
           </div>

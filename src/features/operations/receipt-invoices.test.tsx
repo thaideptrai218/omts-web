@@ -35,7 +35,7 @@ async function saveWithInvoice() {
 describe("invoice selection survives the real receipt editor remount", () => {
   it("blocks all completion/cancellation entries until the selected files are explicitly uploaded or removed", async () => {
     await saveWithInvoice();
-    for (const name of ["Lưu và hoàn thành", "Hoàn thành phiếu đã lưu", "Hủy phiếu"]) {
+    for (const name of ["Gửi yêu cầu thanh toán", "Gửi cho Kế toán", "Hủy phiếu"]) {
       const button = screen.getByRole("button", { name }) as HTMLButtonElement;
       expect(button.disabled).toBe(true); expect(button.getAttribute("aria-describedby")).toBe("receipt-pending-invoices");
       fireEvent.click(button);
@@ -44,7 +44,7 @@ describe("invoice selection survives the real receipt editor remount", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bỏ chọn tệp" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect((screen.getByRole("button", { name: "Hủy phiếu" }) as HTMLButtonElement).disabled).toBe(false));
-    for (const name of ["Lưu và hoàn thành", "Hoàn thành phiếu đã lưu"]) expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(false);
+    for (const name of ["Gửi yêu cầu thanh toán", "Gửi cho Kế toán"]) expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(false);
     expect(repository.write).toHaveBeenCalledTimes(1);
   });
   it("also guards a cancellation form opened before selecting files and keeps its reason after removing them", async () => {

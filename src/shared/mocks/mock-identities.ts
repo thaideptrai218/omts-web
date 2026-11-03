@@ -25,7 +25,15 @@ export const mockIdentities = {
     organizationName: trungNamCooperativeName,
     primaryRoleLabel: "Quản lý vùng",
     scopeLabel: "Khu Đông",
-    username: "staff-verified",
+    username: "manager",
+  },
+  trader: {
+    accountId: "account-trader-demo",
+    displayName: "Lê Quốc Hải",
+    organizationName: null,
+    primaryRoleLabel: "Thương lái",
+    scopeLabel: "Tài khoản thương lái",
+    username: "trader",
   },
   systemAdmin: {
     accountId: "account-system-admin-demo",

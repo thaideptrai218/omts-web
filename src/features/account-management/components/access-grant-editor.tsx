@@ -12,6 +12,7 @@ import type {
 } from "@/features/account-management/domain/account-management";
 
 type AccessGrantEditorProps = Readonly<{
+  allZonesOnlyRoleIds?: readonly string[];
   currentGrants: readonly AccessGrant[];
   disabled?: boolean;
   drafts: readonly GrantDraft[];
@@ -19,6 +20,7 @@ type AccessGrantEditorProps = Readonly<{
   onChange(drafts: readonly GrantDraft[]): void;
   onRevoke(grant: AccessGrant): void;
   roles: readonly AssignableRole[];
+  unavailableRoleIds?: readonly string[];
   zones: readonly FarmingZoneOption[];
 }>;
 
@@ -31,6 +33,7 @@ function formatDate(value: string | null) {
 }
 
 export function AccessGrantEditor({
+  allZonesOnlyRoleIds = [],
   currentGrants,
   disabled = false,
   drafts,
@@ -38,6 +41,7 @@ export function AccessGrantEditor({
   onChange,
   onRevoke,
   roles,
+  unavailableRoleIds = [],
   zones,
 }: AccessGrantEditorProps) {
   const dateId = useId();
@@ -48,7 +52,9 @@ export function AccessGrantEditor({
   );
   const [effectiveTo, setEffectiveTo] = useState("");
   const [draftError, setDraftError] = useState("");
-  const effectiveRoles = roles.filter((role) => role.status === "in-use");
+  const effectiveRoles = roles.filter(
+    (role) => role.status === "in-use" && !unavailableRoleIds.includes(role.id),
+  );
   const effectiveZones = zones.filter((zone) => zone.status === "in-use");
   const roleMap = useMemo(() => new Map(roles.map((role) => [role.id, role])), [roles]);
   const zoneMap = useMemo(() => new Map(zones.map((zone) => [zone.id, zone])), [zones]);
@@ -64,6 +70,10 @@ export function AccessGrantEditor({
     }
     if (effectiveTo && effectiveTo < effectiveFrom) {
       setDraftError("Ngày kết thúc không được trước ngày bắt đầu.");
+      return;
+    }
+    if (allZonesOnlyRoleIds.includes(roleId) && zoneId !== "all-zones") {
+      setDraftError("Kế toán có phạm vi toàn hợp tác xã; hãy chọn Tất cả vùng.");
       return;
     }
     const key = `${zoneId}:${roleId}`;
@@ -165,7 +175,7 @@ export function AccessGrantEditor({
           <div className="mt-3 grid min-w-0 gap-3 md:grid-cols-2">
             <label className="min-w-0 text-sm font-semibold text-text">
               Vùng <span className="text-danger">*</span>
-              <select className={`mt-2 ${inputStyles}`} onChange={(event) => setZoneId(event.target.value)} value={zoneId}>
+              <select className={`mt-2 ${inputStyles}`} disabled={allZonesOnlyRoleIds.includes(roleId)} onChange={(event) => setZoneId(event.target.value)} value={zoneId}>
                 <option value="">Chọn vùng</option>
                 <option value="all-zones">Tất cả vùng</option>
                 {effectiveZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
@@ -173,10 +183,19 @@ export function AccessGrantEditor({
             </label>
             <label className="min-w-0 text-sm font-semibold text-text">
               Vai trò <span className="text-danger">*</span>
-              <select className={`mt-2 ${inputStyles}`} onChange={(event) => setRoleId(event.target.value)} value={roleId}>
+              <select className={`mt-2 ${inputStyles}`} onChange={(event) => {
+                const nextRoleId = event.target.value;
+                setRoleId(nextRoleId);
+                if (allZonesOnlyRoleIds.includes(nextRoleId)) setZoneId("all-zones");
+              }} value={roleId}>
                 <option value="">Chọn vai trò</option>
                 {effectiveRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
               </select>
+              {unavailableRoleIds.length > 0 && (
+                <span className="mt-2 block font-normal text-text-muted">
+                  HTX đã có Kế toán; không thể cấp thêm vai trò Kế toán.
+                </span>
+              )}
             </label>
             <div className="min-w-0 text-sm font-semibold text-text">
               <label htmlFor={`${dateId}-from`}>Hiệu lực từ <span className="text-danger">*</span></label>

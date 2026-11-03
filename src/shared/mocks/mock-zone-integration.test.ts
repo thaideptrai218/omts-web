@@ -46,7 +46,7 @@ it("propagates one zone rename to employee/account options, role impact and Staf
     ]),
   );
   const auth = createManagedMockAuth(environment);
-  expect(auth.resolve("nguyen.an")?.account.scopeLabel).toBe(
+  expect(auth.resolve("manager")?.account.scopeLabel).toBe(
     "Vùng nuôi được đổi tên",
   );
   expect(auth.profile("account-nguyen-an")?.roles[0].scopeLabel).toBe(

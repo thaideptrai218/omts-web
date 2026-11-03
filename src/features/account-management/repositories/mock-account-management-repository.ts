@@ -252,13 +252,25 @@ export function createMockAccountManagementRepository({
         const invalidDates =
           !grant.effectiveFrom ||
           (grant.effectiveTo.length > 0 && grant.effectiveTo < grant.effectiveFrom);
+        const isAccountant = role?.name === "Kế toán";
+        const accountantAlreadyAssigned = isAccountant && accounts.some(
+          (account) =>
+            account.id !== input.id &&
+            account.grants.some(
+              (existing) =>
+                existing.status === "effective" &&
+                existing.roleId === grant.roleId,
+            ),
+        );
 
         if (
           !role ||
           role.status !== "in-use" ||
           (grant.zoneId !== "all-zones" && (!zone || zone.status !== "in-use")) ||
           effectiveGrantKeys.has(key) ||
-          invalidDates
+          invalidDates ||
+          (isAccountant && grant.zoneId !== "all-zones") ||
+          accountantAlreadyAssigned
         ) {
           return {
             field: "grants",
