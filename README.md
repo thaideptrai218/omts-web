@@ -12,7 +12,7 @@ Team repositories: [Web](https://github.com/thaideptrai218/omts-web) · [Backend
 
 For a presentation without development overlays, use `npm run build` followed by `npm run start`. Use `npm run dev` while editing code.
 
-> Last updated: **October 29, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
+> Last updated: **November 3, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
 
 - **The UI can run with mock data** without a backend, database, Docker, or Redis.
 - Mock review mode and the real API workspace use separate repository adapters. The API workspace now includes cooperative, employee, account, role and personal workflows as described below.
@@ -28,6 +28,8 @@ For a presentation without development overlays, use `npm run build` followed by
 - Approved G2 now connects real Trader registration, password recovery, contact verification/change and email-code password changes. Verification proofs stay encrypted in Redis and bind to the G1 context/session/purpose; browsers receive opaque flow IDs and safe metadata. Verified contacts wait for explicit profile Save. Independent name/contact writes report partial success truthfully and retain remaining drafts. Password changes reuse G1 session rotation. See [G2 validation and limits](docs/reports/WEB_G2_VERIFICATION_API_2026-10-29.md); Staff contact onboarding and other backend contract blockers remain open.
 - The current UI work is on `feature/OMTS-132-web-foundation` and has not been merged into `develop`. Check out the correct branch to review the screens and configuration described below.
 - In API mode, cooperative profiles now support editable industry rows, validation, name/address preview and confirmation, plus separate PNG/JPEG/WebP logo upload/removal. Drafts survive logo changes and conflicts. Receiving-bank integration still awaits the existing BA/backend decision; see the [tester flow and limitations](docs/reports/WEB_COOPERATIVE_API_2026-10-29.md).
+- Docker/API verification is available without changing the older QA databases: the latest isolated runtime uses API `8082` and SQL Server `1436`, while the existing develop/QA runtimes remain on `8080`/`8081`. See the [Docker/API/Vercel runtime report](docs/reports/WEB_DOCKER_API_VERCEL_2026-11-03.md).
+- The production Vercel alias is [omts-web.vercel.app](https://omts-web.vercel.app). It currently runs the safe mock mode; a real Vercel API deployment still requires a stable HTTPS backend and hosted Redis with TLS/authentication.
 
 ## 1. Prerequisites
 
@@ -115,20 +117,24 @@ Then open **[http://localhost:3001/login](http://localhost:3001/login)**. Always
 
 ## 3. Demo accounts
 
-These accounts exist only in the **frontend mock**. They are not backend or QA credentials. The shared demo password is **`demo123`**.
+These accounts exist only in the **frontend mock**. They are not backend or QA credentials. The shared mock password is **`demo123`**.
 
 | Username | Review scenario |
 | --- | --- |
-| `owner` | Cooperative Owner: dashboard, cooperative profile, employees, internal accounts, roles/permissions, farming zones and rafts |
-| `staff-verified` | Verified Staff: restricted navigation and personal profile |
-| `sysadmin` | System Administrator: cooperative provisioning |
-| `staff-first-login` | First-login onboarding: change the temporary password and verify contact information; not intended for a quick management UI review |
+| `owner` | Chủ HTX; tên hiển thị **Ngô Nam Trung**; toàn HTX, quản trị, nhân sự, vùng nuôi và mua hàng |
+| `manager` | Quản lý vùng 1; thao tác trong vùng được phân công, điều hành và gửi yêu cầu thanh toán |
+| `manager2` | Quản lý vùng 2; dùng để kiểm tra phân quyền theo vùng và dữ liệu tách biệt |
+| `ketoan` | Kế toán; phạm vi toàn HTX, xử lý thanh toán và công nợ nhà cung cấp |
+| `trader` | Thương lái; kiểm tra sản phẩm, yêu cầu mua hàng và các màn dành cho đối tác |
+| `sysadmin` | System Administrator; chỉ dùng cho màn cấp HTX/provisioning |
 
-You can also use **`nguyen.an`** (zone manager) or **`pham.cuong`** (zone manager in Khu Nam). `staff-verified` remains a review alias for `nguyen.an`. `tran.binh` is a locked fixture and should be rejected. These fixtures also use `demo123` initially.
+Các tài khoản mock trên dùng chung **`demo123`**. Đây là bộ tài khoản QA đơn giản, không phải credential backend production. Các fixture username cũ như `nguyen.an`, `pham.cuong`, `staff-verified` và `tran.binh` không còn là tài khoản hướng dẫn chính.
 
 For newly created mock staff accounts, use the generated username shown in the delivery receipt and the same **public mock password** `demo123`. The first login requires a new password and one verified contact. In this review mode, OTP codes are `123456` for the initial send, then `654321` and `112233` after resends. No actual email or SMS is sent. These values are not backend credential-generation rules or production secrets.
 
-For a quick management UI review, use **`owner / demo123`**. Account fixtures are defined in [mock-auth-repository.ts](src/features/auth/repositories/mock-auth-repository.ts).
+Để kiểm tra nhanh, dùng **`owner / demo123`**. Fixtures được định nghĩa trong [mock-auth-repository.ts](src/features/auth/repositories/mock-auth-repository.ts).
+
+The API runtime has a separate seeded credential set. Do not assume mock accounts work against the backend. Use the credentials in the current tester runbook or the backend seed configuration; never commit or paste backend passwords, JWT keys, Redis URLs, or `.env` files.
 
 The mock does not send real email or SMS. Mock data is separate from backend data; many changes exist only in the current browser session and may be lost on reload. Mock authentication also does not survive a page reload like a real server session.
 
@@ -214,6 +220,43 @@ CI currently runs `npm ci → lint → typecheck → test → build → test:ses
 The agreed architecture is a **BFF (Backend for Frontend)**: the browser calls the Next.js server, which communicates with the .NET backend. The browser holds a SID in an HttpOnly cookie; access and refresh tokens are managed on the server. Redis is the selected runtime session store; in-memory storage is for tests only.
 
 Use the [local tester guide](docs/REVIEW_GUIDE.md#real-api-workspace--local-tester-run) to start the backend, Redis and API workspace on `http://localhost:3002`. Supported management, purchasing and water screens use dedicated BFF adapters; existing mock screens stay separate. API mode requires the session/coordination configuration generated in the ignored `.env.api.local`, beyond the backend URL. Refresh remains disabled.
+
+### Docker runtime commands (Windows PowerShell)
+
+Start Docker Desktop first, then start the latest isolated API runtime:
+
+```powershell
+docker start omts-latest-qa-sqlserver-1
+docker start omts-latest-qa-api-1
+curl.exe http://127.0.0.1:8082/health/ready
+```
+
+Expected health response: `Healthy`.
+
+Runtime ports:
+
+| Runtime | API | SQL Server | Purpose |
+| --- | ---: | ---: | --- |
+| `omts` | `8080` | `1433` | Backend develop / legacy local environment |
+| `omts-integration` | `8081` | `1435` | Existing QA integration environment |
+| `omts-latest-qa` | `8082` | `1436` | Latest isolated backend contract used by Web API review |
+
+Check container groups with:
+
+```powershell
+docker compose ls
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+```
+
+The `omts-latest-qa` database and file volume are separate from the older QA data. Do not run `docker compose down -v`, remove volumes, or reset databases when tester records must be retained.
+
+To run the Web against the real API, use the isolated API configuration and start:
+
+```powershell
+npm run start:api
+```
+
+The API Web runtime is normally opened at [http://localhost:3002/login](http://localhost:3002/login). The default `npm run dev` mock runtime remains at [http://localhost:3000/login](http://localhost:3000/login).
 
 For scope and remaining contract gaps, read the [INP/ENV integration report](docs/reports/WEB_INP_ENV_API_2026-10-29.md), [real API implementation plan](docs/WEB_REAL_API_IMPLEMENTATION_PLAN.md), [open decisions](docs/decisions/OPEN_QUESTIONS.md), and [example configuration](.env.example). Backend URLs, encryption keys, and Redis configuration are server-only; do not expose them through `NEXT_PUBLIC_*` variables.
 
