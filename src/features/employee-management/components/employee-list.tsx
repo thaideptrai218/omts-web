@@ -50,7 +50,7 @@ export function EmployeeList({
       className="min-w-0 overflow-hidden rounded-card border border-border bg-surface"
       aria-label="Danh sách nhân viên"
     >
-      <div className="border-b border-border p-4 sm:p-6">
+      <div className="border-b border-border bg-[#fafbf9] p-4">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <div className="min-w-0">
             <label
@@ -151,7 +151,7 @@ export function EmployeeList({
       </div>
       <div
         aria-hidden="true"
-        className="hidden grid-cols-[minmax(0,1.4fr)_8rem_minmax(0,1fr)_minmax(0,1fr)_1rem] gap-4 border-b border-border bg-surface-subtle px-6 py-3 text-xs font-medium text-text-muted lg:grid"
+        className="hidden grid-cols-[minmax(0,1.4fr)_8rem_minmax(0,1fr)_minmax(0,1fr)_1rem] gap-4 border-b border-border bg-[#f8f9f7] px-5 py-2 text-[11px] font-medium text-text-muted lg:grid"
       >
         <span>Nhân viên và liên hệ</span>
         <span>Trạng thái</span>

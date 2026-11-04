@@ -75,7 +75,7 @@ export function createMockCooperativeProvisioningRepository({
         return {
           message: {
             code: "MSG03",
-            params: { object_name: "Chủ hợp tác xã đầu tiên" },
+            params: { object_name: "Chủ nhiệm HTX đầu tiên" },
           },
           status: "duplicate-owner",
         };

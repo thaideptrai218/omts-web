@@ -24,14 +24,14 @@ export function PushApiEditor({ initial, onClose }: { initial: PushCatalog; onCl
       const saved = await mutation.run(() => repository.savePush(patch));
       if (saved) { setCatalog(saved); setValues(selections(saved)); setNotice(saved.notice ?? "Đã lưu tùy chọn thông báo."); }
     }}>
-      <p>Mọi thông báo đều được lưu trong hộp thư. Chọn những loại bạn muốn nhận thêm qua Push.</p>
-      {!catalog.pushAllowedOnDevice && <p>Chưa có thiết bị cho phép nhận Push. Bạn vẫn có thể lưu lựa chọn.</p>}
+      <p>Mọi thông báo đều được lưu trong hộp thư. Chọn những loại bạn muốn nhận thêm qua thông báo đẩy.</p>
+      {!catalog.pushAllowedOnDevice && <p>Chưa có thiết bị cho phép nhận thông báo đẩy. Bạn vẫn có thể lưu lựa chọn.</p>}
       <ErrorNotice error={mutation.error} />{notice && <p role="status">{notice}</p>}
       {!catalog.types.length && <p>Chưa có tùy chọn dành cho tài khoản này.</p>}
       {catalog.types.map((row) => <div key={row.type} className="rounded-control border border-border p-3"><label className="flex min-h-12 items-center justify-between gap-3">
         <span>{labels[row.type] ?? row.name}</span><input type="checkbox" className="size-5" checked={values[row.type] ?? row.push} disabled={row.mandatory || blocked || mutation.pending}
           onChange={(event) => { setValues({ ...values, [row.type]: event.target.checked }); setNotice(undefined); }} /></label>
-        {row.mandatory && <p className="text-sm">Thông báo bắt buộc nhận Push.</p>}
+        {row.mandatory && <p className="text-sm">Thông báo bắt buộc nhận thông báo đẩy.</p>}
       </div>)}
       {(mutation.error || blocked) && <div className="space-y-3"><Button variant="secondary" disabled={mutation.pending} onClick={async () => {
         const next = await mutation.run(() => repository.notifications(), true); if (next && !Array.isArray(next)) setLatest(next);

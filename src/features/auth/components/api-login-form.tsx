@@ -11,9 +11,9 @@ export function ApiLoginForm() {
   const [reset, setReset] = useState(false);
   const [pending, setPending] = useState(false);
   return <section className="login-panel">
-    <p className="login-eyebrow">KHÔNG GIAN LÀM VIỆC OMTS</p>
-    <h1 className="login-title">Đăng nhập OMTS</h1>
-    <p className="login-description">Dùng tài khoản của bạn để tiếp tục vào khu vực làm việc.</p>
+    <p className="login-eyebrow">HỢP TÁC XÃ NUÔI TRỒNG THỦY SẢN TRUNG NAM</p>
+    <h1 className="login-title">Đăng nhập hệ thống</h1>
+    <p className="login-description">Đăng nhập để quản lý hoạt động nuôi hàu, mua bán và thông tin truy xuất nguồn gốc.</p>
     <LoginForm formError={error} onSubmit={async (values) => {
       setError(undefined); setReset(false);
       const result = await loginWithApi(values);

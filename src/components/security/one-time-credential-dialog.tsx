@@ -47,7 +47,7 @@ export function OneTimeCredentialDialog({
           <p className="font-semibold text-warning">Mật khẩu chỉ hiển thị một lần</p>
           <p className="mt-1">
             Mật khẩu tạm thời có hiệu lực trong 24 giờ và phải được đổi ở lần đăng
-            nhập đầu tiên. OMTS không gửi mật khẩu này qua email, SMS hay kênh khác.
+            nhập đầu tiên. Hệ thống không gửi mật khẩu này qua email, tin nhắn hay kênh khác.
           </p>
         </div>
 

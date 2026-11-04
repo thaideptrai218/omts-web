@@ -207,7 +207,7 @@ export function ProfileEditor({
           disabled={isSubmitting || Boolean(sendingKind)}
           error={errors.displayName?.message}
           id="profile-display-name"
-          hint="Tên bạn muốn hiển thị trên OMTS, tối đa 200 ký tự."
+          hint="Tên hiển thị trong hệ thống, tối đa 200 ký tự."
           label="Tên hiển thị"
           required
           {...register("displayName")}

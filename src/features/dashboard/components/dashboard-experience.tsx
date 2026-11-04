@@ -15,6 +15,7 @@ import { useAuth } from "@/features/auth/state/auth-provider";
 import { dashboardService } from "../services/dashboard-service.instance";
 import type { DashboardView } from "../domain/dashboard";
 import { DashboardDataSkeleton, DashboardPanels } from "./dashboard-panels";
+import styles from "./dashboard-layout.module.css";
 import { DashboardFarmingSummaryPanel } from "./dashboard-farming-summary";
 import { DashboardShortcuts } from "./dashboard-shortcuts";
 
@@ -106,7 +107,7 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
 
   return (
     <div className="space-y-5">
-      <ManagementHeading title="Bảng điều hành" description="Theo dõi số liệu và hoạt động trong phạm vi bạn được cấp." icon="dashboard">
+      <ManagementHeading title="Tổng quan HTX" description="Tình hình vùng nuôi và công việc cần theo dõi trong phạm vi được cấp." icon="dashboard">
         <Button
           variant="secondary"
           className="sm:w-auto"
@@ -149,33 +150,32 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
       <div
         className={
           hasFarmingPanel && availableShortcuts.length
-            ? "grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(16rem,1fr)]"
+            ? styles.overview
             : "space-y-5"
         }
       >
         {view?.farming ? (
-          <div aria-busy={pending}>
+          <div aria-busy={pending} className={styles.farming}>
             <DashboardFarmingSummaryPanel summary={view.farming} />
           </div>
         ) : waitingForFarming ? (
           <div
             aria-label="Đang tải tình hình bè nuôi"
             aria-busy="true"
-            className="min-h-64 rounded-[14px] border border-[#244e60] bg-[#10243a] motion-safe:animate-pulse"
+            className={`${styles.farming} min-h-60 rounded-card border border-border bg-[#f6f8f3] motion-safe:animate-pulse`}
           />
         ) : null}
-        {availableShortcuts.length > 0 && (
-          <DashboardShortcuts items={availableShortcuts} />
-        )}
-      </div>
-      <div aria-busy={pending}>
+      <div aria-busy={pending} className={styles.panels}>
         {view ? (
           <DashboardPanels view={view} />
         ) : pending ? (
           <DashboardDataSkeleton />
         ) : null}
       </div>
-
+        {availableShortcuts.length > 0 && (
+          <div className={styles.shortcuts}><DashboardShortcuts items={availableShortcuts} /></div>
+        )}
+      </div>
     </div>
   );
 }
@@ -200,7 +200,7 @@ export function DashboardExperience() {
       <section className="rounded-card border border-border bg-surface p-6">
         <h1 className="text-xl font-semibold">Chưa được cấp quyền</h1>
         <p className="mt-2 text-text-muted">
-          Tài khoản của bạn chưa có quyền xem bảng điều hành.
+          Tài khoản của bạn chưa được cấp quyền xem thông tin tổng quan.
         </p>
       </section>
     );

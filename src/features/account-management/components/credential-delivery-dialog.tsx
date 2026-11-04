@@ -62,7 +62,7 @@ export function CredentialDeliveryDialog({
           <p className="mt-1">
             {wasSent
               ? `Người nhận: ${receipt.maskedRecipient}. Mật khẩu tạm có hiệu lực 72 giờ.`
-              : "Không có mật khẩu nào được hiển thị cho Chủ hợp tác xã. Hãy dùng chức năng gửi lại khi kết nối ổn định."}
+              : "Mật khẩu không được hiển thị lại cho Chủ nhiệm HTX. Hãy dùng chức năng gửi lại khi kết nối ổn định."}
           </p>
         </div>
 
@@ -78,13 +78,13 @@ export function CredentialDeliveryDialog({
               onClick={() => void copyUsername()}
               variant="secondary"
             >
-              {copyStatus === "copied" ? "Đã sao chép" : "Sao chép username"}
+              {copyStatus === "copied" ? "Đã sao chép" : "Sao chép tên đăng nhập"}
             </Button>
           </div>
           <p aria-live="polite" className="mt-2 min-h-5 text-sm text-text-muted">
-            {copyStatus === "copied" && "Username đã được sao chép."}
+            {copyStatus === "copied" && "Tên đăng nhập đã được sao chép."}
             {copyStatus === "failed" &&
-              "Không thể sao chép tự động. Hãy chọn username để sao chép thủ công."}
+              "Không thể sao chép tự động. Hãy chọn tên đăng nhập để sao chép thủ công."}
           </p>
         </div>
 

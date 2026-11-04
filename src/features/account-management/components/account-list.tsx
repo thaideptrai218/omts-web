@@ -67,7 +67,7 @@ export function AccountList({
       aria-label="Danh sách tài khoản nội bộ"
       className="min-w-0 overflow-hidden rounded-card border border-border bg-surface"
     >
-      <div className="border-b border-border p-4 sm:p-6">
+      <div className="border-b border-border bg-[#fafbf9] p-4">
         <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_11rem_11rem_10rem]">
           <div className="min-w-0">
             <label
@@ -84,7 +84,7 @@ export function AccountList({
               <input
                 id="account-search"
                 type="search"
-                placeholder="Tên, username, điện thoại hoặc vùng"
+                placeholder="Tên, tên đăng nhập, điện thoại hoặc vùng"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 className={`${fieldStyles} pl-10`}
@@ -182,7 +182,7 @@ export function AccountList({
       </div>
       <div
         aria-hidden="true"
-        className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1.1fr)_8rem_1rem] gap-4 border-b border-border bg-surface-subtle px-6 py-3 text-xs font-medium text-text-muted lg:grid"
+        className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1.1fr)_8rem_1rem] gap-4 border-b border-border bg-[#f8f9f7] px-5 py-2 text-[11px] font-medium text-text-muted lg:grid"
       >
         <span>Thông tin đăng nhập</span>
         <span>Vai trò và vùng phụ trách</span>
@@ -225,7 +225,7 @@ export function AccountList({
                 <span className="col-span-2 row-start-2 flex min-w-0 flex-wrap gap-2 lg:col-auto lg:row-auto">
                   {account.accountType === "cooperative-owner" ? (
                     <span className="text-sm font-medium text-primary">
-                      Chủ hợp tác xã{" "}
+                      Chủ nhiệm HTX{" "}
                       <span className="block text-xs font-normal text-text-muted">
                         Toàn hợp tác xã
                       </span>

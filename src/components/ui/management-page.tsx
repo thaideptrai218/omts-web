@@ -45,20 +45,18 @@ export function ManagementSummary({
   items: readonly SummaryItem[];
 }) {
   return (
-    <dl className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-card bg-[#e8f2f3] shadow-card">
-      {items.map((item, index) => (
+    <dl className="grid max-w-3xl grid-cols-3 gap-4 py-1 sm:gap-8">
+      {items.map((item) => (
         <div
           key={item.label}
-          className={`flex min-w-0 flex-col items-start gap-2 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-5 ${index === 0 ? "bg-[#10243a]" : ""}`}
+          className="min-w-0 border-l border-border pl-3 first:border-l-0 first:pl-0 sm:pl-5"
         >
-          <span className={`hidden size-10 shrink-0 place-items-center rounded-control sm:grid ${index === 0 ? "bg-white/10 text-[#a7e0dc]" : "bg-white text-primary"}`}>
-            <InterfaceIcon name={item.icon} />
-          </span>
           <div className="w-full min-w-0">
-            <dt className={`min-h-10 text-xs leading-5 sm:min-h-0 sm:text-sm ${index === 0 ? "text-[#c5dce1]" : "text-text-muted"}`}>
+            <dt className="flex min-h-10 items-start gap-1.5 text-xs leading-5 text-text-muted sm:min-h-0">
+              <InterfaceIcon name={item.icon} className="mt-0.5 hidden size-3.5 shrink-0 text-text-muted/70 sm:block" />
               {item.label}
             </dt>
-            <dd className={`mt-0.5 font-mono text-xl font-semibold tabular-nums sm:text-2xl ${index === 0 ? "text-white" : "text-text"}`}>
+            <dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-text sm:text-2xl">
               {item.value}
             </dd>
           </div>
@@ -77,7 +75,7 @@ export function PersonAvatar({ name }: { name: string }) {
   return (
     <span
       aria-hidden="true"
-      className="grid size-11 shrink-0 place-items-center rounded-2xl border border-primary/10 bg-primary-soft font-semibold text-primary"
+      className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-[#f1f4f0] text-xs font-medium text-[#526b5b]"
     >
       {initials}
     </span>
@@ -93,15 +91,15 @@ export function StatusPill({
 }) {
   const color =
     tone === "success"
-      ? "border-success/25 bg-success/10 text-success"
+      ? "border-success/10 bg-success/5 text-success"
       : tone === "danger"
-        ? "border-danger/25 bg-danger/10 text-danger"
-        : "border-border bg-surface-subtle text-text-muted";
+        ? "border-danger/10 bg-danger/5 text-danger"
+        : "border-border/60 bg-[#f5f6f5] text-text-muted";
   return (
     <span
-      className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-semibold ${color}`}
+      className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-[5px] border px-1.5 py-0.5 text-[11px] font-medium leading-4 ${color}`}
     >
-      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+      <span aria-hidden="true" className="size-1 rounded-full bg-current" />
       {children}
     </span>
   );
@@ -128,4 +126,4 @@ export function DirectoryEmpty({
 }
 
 export const directoryRowStyles =
-  "group w-full min-w-0 px-4 py-4 text-left transition-colors duration-200 hover:bg-primary-soft/40 sm:px-6";
+  "group w-full min-w-0 px-4 py-3 text-left transition-colors duration-150 hover:bg-[#f7f9f6] sm:px-5";

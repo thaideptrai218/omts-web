@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 
 export const zoneInputStyles =
-  "mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-3 py-2 text-text disabled:bg-surface-subtle";
+  "mt-1.5 min-h-11 lg:min-h-10 w-full min-w-0 rounded-control border border-border bg-surface px-3 py-2 text-sm text-text disabled:bg-surface-subtle";
 
 export function ZoneField({
   label,

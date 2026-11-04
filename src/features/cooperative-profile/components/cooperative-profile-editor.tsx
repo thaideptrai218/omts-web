@@ -379,7 +379,7 @@ export function CooperativeProfileEditor({
             </section>
 
             <section className="rounded-card border border-border bg-surface p-5 shadow-card sm:p-7">
-              <SectionHeading description="Kênh liên hệ của HTX, tách biệt với tài khoản cá nhân của Owner.">
+              <SectionHeading description="Kênh liên hệ của HTX, tách biệt với tài khoản cá nhân của Chủ nhiệm HTX.">
                 Địa chỉ và liên hệ
               </SectionHeading>
               <div className="mt-5 space-y-5">

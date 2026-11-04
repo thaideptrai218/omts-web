@@ -46,7 +46,7 @@ function RaftDenied() {
     <section className="mx-auto max-w-lg rounded-card border border-border bg-surface p-6">
       <h1 className="text-xl font-semibold">Không có quyền xem bè nuôi</h1>
       <p className="mt-3 leading-6 text-text-muted">
-        Vui lòng liên hệ Chủ hợp tác xã để kiểm tra quyền và vùng được phân
+        Vui lòng liên hệ Chủ nhiệm HTX để kiểm tra quyền và vùng được phân
         công.
       </p>
     </section>

@@ -4,7 +4,7 @@ import { ApiPage } from "@/features/api-workspace/api-page";
 import { ApiWorkspaceHome } from "@/features/api-workspace/api-workspace-shell";
 
 export const metadata: Metadata = {
-  title: "Bảng điều hành | OMTS",
+  title: "Tổng quan HTX | HTX Trung Nam",
 };
 
 // Auth is currently restored on the client, so this protected page cannot join

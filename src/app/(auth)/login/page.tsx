@@ -6,7 +6,7 @@ import { ApiLoginEntry } from "@/features/auth/components/api-login-entry";
 import { connection } from "next/server";
 
 export const metadata: Metadata = {
-  title: "Đăng nhập | OMTS",
+  title: "Đăng nhập | HTX Trung Nam",
 };
 
 async function LoginContent() {
@@ -19,12 +19,12 @@ async function LoginContent() {
       aria-labelledby="login-title"
       className="login-panel"
     >
-      <p className="login-eyebrow">KHÔNG GIAN LÀM VIỆC OMTS</p>
+      <p className="login-eyebrow">HỢP TÁC XÃ NUÔI TRỒNG THỦY SẢN TRUNG NAM</p>
       <h1 id="login-title" className="login-title">
-        Đăng nhập OMTS
+        Đăng nhập hệ thống
       </h1>
       <p className="login-description">
-        Dùng tài khoản của bạn để tiếp tục vào khu vực làm việc.
+        Đăng nhập để quản lý hoạt động nuôi hàu, mua bán và thông tin truy xuất nguồn gốc.
       </p>
       <LoginExperience />
     </section>

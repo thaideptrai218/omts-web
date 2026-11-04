@@ -44,7 +44,7 @@ export function createMockManagementEnvironment(latencyMs = 350) {
       ? {
           ...feature,
           description:
-            "Xem trong phạm vi được phân công. Thêm, sửa và đổi trạng thái chỉ dành cho Chủ hợp tác xã.",
+            "Xem trong phạm vi được phân công. Thêm, sửa và đổi trạng thái chỉ dành cho Chủ nhiệm HTX.",
           supportedActions: feature.supportedActions.filter(
             (action) => action.key === "VIEW",
           ),

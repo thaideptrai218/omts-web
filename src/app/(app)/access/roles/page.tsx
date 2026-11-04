@@ -4,7 +4,7 @@ import { ApiPage } from "@/features/api-workspace/api-page";
 import { ApiResourceScreen } from "@/features/api-workspace/api-resource-screen";
 
 export const metadata: Metadata = {
-  title: "Vai trò và quyền hạn | OMTS",
+  title: "Vai trò và quyền hạn | HTX Trung Nam",
 };
 export const instant = false;
 

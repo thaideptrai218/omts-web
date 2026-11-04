@@ -95,8 +95,8 @@ export function AppShell({
             <BrandMark iconOnly compact />
           </span>
           <span className={styles.brandText}>
-            <strong>OMTS</strong>
-            <small>Quản lý nuôi hàu</small>
+            <strong>HTX Trung Nam</strong>
+            <small>Nuôi hàu · Truy xuất nguồn gốc</small>
           </span>
         </div>
         <div className={styles.controls}>
@@ -139,14 +139,14 @@ export function AppShell({
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <InterfaceIcon name="menu" />
-            Menu
+            Mở điều hướng
           </button>
         </header>
         <main className={styles.main}>{children}</main>
       </div>
 
       <dialog
-        aria-label="Menu trên thiết bị di động"
+        aria-label="Điều hướng trên thiết bị di động"
         className={styles.mobileDialog}
         id={mobileNavigationId}
         ref={mobileDialogRef}

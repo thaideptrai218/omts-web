@@ -9,6 +9,7 @@ import { createPersonalRepository } from "./repository";
 import { NotificationApiDialog } from "./notification-dialog";
 import { VerificationPanel, verificationError } from "@/features/verification-api/verification-panel";
 import { createVerificationRepository } from "@/features/verification-api/repository";
+import { subjectLabel } from "@/shared/presentation/actor-label";
 import type { VerificationView } from "@/features/verification-api/contracts";
 
 export function PersonalApiScreen() {
@@ -36,7 +37,7 @@ export function PersonalApiEditor({ initial }: { initial: ProfileViewDto }) {
     const prevent = (event: BeforeUnloadEvent) => event.preventDefault(); window.addEventListener("beforeunload", prevent); return () => window.removeEventListener("beforeunload", prevent);
   }, [dirty]);
   function adopt(next: ProfileViewDto, preserve: boolean) { setRecord(next); if (!preserve) setDisplayName(next.displayName); setLatest(undefined); setFieldError(undefined); setNotice(undefined); mutation.reviewed(); }
-  const typeLabel = { CooperativeOwner: "Chủ hợp tác xã", Staff: "Tài khoản nội bộ", Trader: "Thương lái", SystemAdministrator: "Quản trị hệ thống" }[record.subjectType];
+  const typeLabel = subjectLabel(record.subjectType);
   return <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(17rem,1fr)]">
     <ErrorNotice error={mutation.error || contactError} />{notice && <p role="status" className="rounded-control bg-primary-soft p-3">{notice}</p>}
     <section className="rounded-card border border-border bg-surface p-4 shadow-card sm:p-5" aria-label="Thông tin tài khoản"><h2 className="mb-4 text-base font-semibold">Thông tin tài khoản</h2><dl className="grid gap-4 sm:grid-cols-2">
@@ -63,7 +64,7 @@ export function PersonalApiEditor({ initial }: { initial: ProfileViewDto }) {
           if (result.status === "completed") {
             setContactFlow(undefined);
             if (result.profile) setRecord(result.profile); else setProfileRefreshRequired(true);
-            setNotice(`${nameSaved ? "Đã lưu tên hiển thị và thông tin liên hệ." : "Đã lưu thông tin liên hệ."}${result.oldDocumentsHidden ? " Chứng từ cũ sẽ hiện sau khi Chủ HTX hoàn tất liên kết." : ""}${!result.profile ? " Hãy tải lại hồ sơ để lấy phiên bản mới trước khi sửa tiếp." : ""}`);
+            setNotice(`${nameSaved ? "Đã lưu tên hiển thị và thông tin liên hệ." : "Đã lưu thông tin liên hệ."}${result.oldDocumentsHidden ? " Chứng từ cũ sẽ hiện sau khi Chủ nhiệm HTX hoàn tất liên kết." : ""}${!result.profile ? " Hãy tải lại hồ sơ để lấy phiên bản mới trước khi sửa tiếp." : ""}`);
           } else {
             setContactError(`${nameSaved ? "Tên hiển thị đã được lưu. Phần liên hệ chưa được xác nhận; nháp vẫn được giữ. " : ""}${verificationError(result)}`);
             if (result.uncertain) setContactUncertain(true);
@@ -84,7 +85,7 @@ export function PersonalApiEditor({ initial }: { initial: ProfileViewDto }) {
     </section>
     <section className="space-y-3 rounded-card border border-border bg-surface p-4 shadow-card sm:p-5" aria-label="Vai trò và vùng được cấp"><h2 className="text-base font-semibold">Vai trò và vùng được cấp</h2>
       {record.grants.length ? <ul className="space-y-2">{record.grants.map((grant, index) => <li key={`${grant.role}:${grant.zoneId}:${index}`} className="rounded-control bg-surface-subtle p-3"><p className="font-semibold">{grant.role}</p><p className="mt-1 text-sm">{grant.allZones ? "Tất cả vùng" : grant.zoneName || "Vùng chưa có tên trong danh mục"}</p></li>)}</ul>
-        : <p className="text-text-muted">{record.subjectType === "CooperativeOwner" ? "Chủ HTX quản lý theo loại tài khoản." : "Chưa có cặp vùng – vai trò đang hiệu lực."}</p>}
+        : <p className="text-text-muted">{record.subjectType === "CooperativeOwner" ? "Chủ nhiệm HTX quản lý theo loại tài khoản." : "Chưa có cặp vùng – vai trò đang hiệu lực."}</p>}
     </section>
     <div className="flex flex-wrap gap-3"><Link className="rounded-control border border-border px-4 py-3 font-semibold text-primary" href="/account/security">Đổi mật khẩu</Link><Button className="w-auto" variant="secondary" disabled={pending} onClick={() => setNotifications(true)}>Tùy chọn thông báo</Button></div>
     {(contactUncertain || profileRefreshRequired) && <section className="space-y-3 rounded-card border border-border p-4"><p>Hãy tải hồ sơ và đối chiếu liên hệ đã lưu. Lệnh Lưu không được gửi lại tự động.</p><Button className="w-auto" variant="secondary" disabled={pending} onClick={async () => { const next = await mutation.run(() => repository.profile(), true); if (next && alive.current) setLatest(next); }}>Tải hồ sơ mới để đối chiếu</Button>{latest && <div className="space-y-2 break-words"><p>Tên đã lưu: {latest.displayName}</p><p>Email: {latest.email || "Chưa có"} · {latest.emailVerified ? "Đã xác minh" : "Chưa xác minh"}</p><p>Số điện thoại: {latest.phoneNumber || "Chưa có"} · {latest.phoneVerified ? "Đã xác minh" : "Chưa xác minh"}</p>{!contactUncertain && <Button className="w-auto" variant="secondary" onClick={() => { setRecord(latest); setLatest(undefined); setProfileRefreshRequired(false); }}>Đã đối chiếu phiên bản hồ sơ</Button>}</div>}</section>}

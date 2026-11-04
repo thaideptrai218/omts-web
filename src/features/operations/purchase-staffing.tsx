@@ -14,7 +14,7 @@ type Shift = z.infer<typeof c.myPurchaseShiftSchema>;
 export function StaffingSummary({ value }: { value: Staffing }) {
   return <section className="mt-5 rounded-card border border-border bg-primary-soft/40 p-4"><h3 className="font-semibold">Kế hoạch nhân lực</h3>
     <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">{[["Số lồng kế hoạch", value.cages], ["Ngày làm", value.workDate], ["Ngày nhận", value.pickupDate], ["Lồng/người/ngày", value.cagesPerEmployeePerDay], ["Đã đồng ý / Cần", `${value.approvedEmployees} / ${value.requiredEmployees}`], ["Chờ / Từ chối", `${value.pendingEmployees} / ${value.declinedEmployees}`]].map(([label, text]) => <div key={label}><dt className="text-text-muted">{label}</dt><dd className="mt-1 font-semibold">{text}</dd></div>)}</dl>
-    <p className="mt-3 text-sm">{value.hasEnoughStaff ? "Đã đủ nhân lực xác nhận. Chủ HTX quyết định nhận đơn." : "Chưa đủ nhân lực xác nhận để nhận đơn."}</p>{value.note && <p className="mt-2 whitespace-pre-wrap text-sm">{value.note}</p>}
+    <p className="mt-3 text-sm">{value.hasEnoughStaff ? "Đã đủ nhân lực xác nhận. Chủ nhiệm HTX quyết định nhận đơn." : "Chưa đủ nhân lực xác nhận để nhận đơn."}</p>{value.note && <p className="mt-2 whitespace-pre-wrap text-sm">{value.note}</p>}
   </section>;
 }
 

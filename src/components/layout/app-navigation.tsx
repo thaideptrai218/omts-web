@@ -29,7 +29,7 @@ export const navigationGroups: readonly Readonly<{
       {
         href: "/dashboard",
         icon: "dashboard",
-        label: "Bảng điều hành",
+        label: "Tổng quan HTX",
         requiredPermission: "workspace.overview.view",
       },
     ],

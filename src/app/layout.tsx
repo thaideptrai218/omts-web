@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OMTS",
-  description: "Oyster Management and Traceability System — Trung Nam Aquaculture Cooperative",
+  title: "HTX Nuôi trồng Thủy sản Trung Nam",
+  description: "Quản lý nuôi hàu, hoạt động hợp tác xã và truy xuất nguồn gốc sản phẩm.",
 };
 
 async function RequestAuthProvider({ children }: { children: ReactNode }) {
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ToastProvider>
-          <Suspense fallback={<main className="p-6" role="status">Đang tải OMTS...</main>}>
+          <Suspense fallback={<main className="p-6" role="status">Đang tải hệ thống quản lý HTX...</main>}>
             <RequestAuthProvider>{children}</RequestAuthProvider>
           </Suspense>
         </ToastProvider>

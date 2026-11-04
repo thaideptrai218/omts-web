@@ -15,6 +15,7 @@ import { ManagementHeading } from "@/components/ui/management-page";
 import styles from "@/components/layout/app-shell.module.css";
 import type { ResourceKey } from "./resources";
 import type { OperationArea } from "@/features/operations/permissions";
+import { workspaceRoleLabel } from "@/shared/presentation/actor-label";
 
 const resourceIcons: Record<ResourceKey, InterfaceIconName> = {
   zones: "zone", rafts: "raft", "input-items": "material", suppliers: "supplier",
@@ -58,7 +59,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
     const action = (label: string, icon: InterfaceIconName, run: () => void) => <button className={styles.navigationLink} aria-label={label} title={compact ? label : undefined} onClick={() => { run(); onNavigate?.(); }}><span className={styles.iconSlot}><InterfaceIcon name={icon}/></span><span className={styles.linkLabel}>{label}</span></button>;
     return <nav aria-label="Chức năng" className={styles.navigation}>
       <NavigationGroup label="Điều hành" compact={compact}><div className={styles.navigationItems}>
-        {link("/dashboard", "Khu vực làm việc", "dashboard")}
+        {link("/dashboard", "Tổng quan HTX", "dashboard")}
         {action("Thông báo", "inbox", () => setInboxOpen(true))}
         {context.identity.subjectType === "CooperativeOwner" && action("Yêu cầu thương lái", "request", () => setRequestsOpen(true))}
       </div></NavigationGroup>
@@ -78,7 +79,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
     </nav>;
   };
   return <WorkspaceContext.Provider value={context}>
-    <AppShell navigation={navigation} accountLabel={context.identity.username} accountInitials={context.identity.username.slice(0,2).toUpperCase()} accountRole="Tài khoản đang đăng nhập" isLoggingOut={pending} onLogout={async () => {
+    <AppShell navigation={navigation} accountLabel={context.identity.username} accountInitials={context.identity.username.slice(0,2).toUpperCase()} accountRole={workspaceRoleLabel(context.identity.subjectType, context.permissions.functionPermissions)} isLoggingOut={pending} onLogout={async () => {
       if (pending) return;
       setPending(true); setError(undefined);
       const result = await logoutWithApi();
@@ -96,10 +97,10 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
 export function ApiWorkspaceHome() {
   const context = useApiWorkspace();
   const visible = resourceKeys.filter((key) => resourceAllowed(key, context.identity, context.permissions.functionPermissions));
-  return <section><ManagementHeading title="Khu vực làm việc" description="Chọn công việc trong phạm vi được cấp." icon="dashboard" />
-    <div className="mt-7 grid gap-6 xl:grid-cols-2"><section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Danh mục</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{visible.map((key) => <a key={key} href={`/workspace/${key}`}
+  return <section><ManagementHeading title="Tổng quan hoạt động" description="Chọn công việc trong phạm vi được cấp." icon="dashboard" />
+    <div className="mt-7 grid gap-6 xl:grid-cols-2"><section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Danh mục quản lý</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{visible.map((key) => <a key={key} href={`/workspace/${key}`}
       className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{resources[key].title}<span aria-hidden="true">↗</span></a>)}</div></section>
-    <section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Vận hành</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={`/operations/${entry.key}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{entry.title}<span aria-hidden="true">↗</span></a>)}</div></section></div>
+    <section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Công việc</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={`/operations/${entry.key}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{entry.title}<span aria-hidden="true">↗</span></a>)}</div></section></div>
     {!visible.length && !operationModules.some((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)) && <p className="mt-6 rounded-card border border-border bg-surface p-6">Tài khoản hiện chưa được cấp chức năng nghiệp vụ. Bạn có thể xem hồ sơ cá nhân.</p>}
   </section>;
 }

@@ -13,9 +13,9 @@ export function OneTimeOwnerCredentialDialog({
   return (
     <OneTimeCredentialDialog
       credential={credential}
-      description="Bàn giao trực tiếp thông tin này cho Chủ hợp tác xã. Sau khi đóng, mật khẩu sẽ không được hiển thị lại."
+      description="Bàn giao trực tiếp thông tin này cho Chủ nhiệm HTX. Sau khi đóng, mật khẩu sẽ không được hiển thị lại."
       onAcknowledge={onAcknowledge}
-      title="Tài khoản Chủ hợp tác xã đã được tạo"
+      title="Tài khoản Chủ nhiệm HTX đã được tạo"
     />
   );
 }

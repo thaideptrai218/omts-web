@@ -152,7 +152,7 @@ function NotificationPreferencesSession({
   return (
     <Dialog
       title="Tùy chọn thông báo"
-      description="Chọn nơi nhận những cập nhật quan trọng. Push được quản lý trên ứng dụng di động."
+      description="Chọn nơi nhận những cập nhật quan trọng. Thông báo đẩy được quản lý trên ứng dụng di động."
       open
       size="lg"
       dismissible={!isSaving}

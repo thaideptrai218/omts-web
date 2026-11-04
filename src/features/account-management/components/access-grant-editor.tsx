@@ -193,7 +193,7 @@ export function AccessGrantEditor({
               </select>
               {unavailableRoleIds.length > 0 && (
                 <span className="mt-2 block font-normal text-text-muted">
-                  HTX đã có Kế toán; không thể cấp thêm vai trò Kế toán.
+                  HTX đã có Kế toán đang hoạt động; không thể cấp thêm vai trò này.
                 </span>
               )}
             </label>

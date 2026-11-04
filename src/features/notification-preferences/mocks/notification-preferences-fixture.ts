@@ -12,12 +12,12 @@ export function notificationPreferencesFixture(accountId: string, isManagedStaff
   ] as const : [];
   return {
     channels: [{ id: "in-app", label: "Trong ứng dụng" }, { id: "email", label: "Email" },
-      { id: "push", label: "Push" }, { id: "zalo", label: "Zalo OA" }],
+      { id: "push", label: "Thông báo đẩy" }, { id: "zalo", label: "Zalo OA" }],
     items: categories.map(([id, label, isMandatory]) => ({ id, label, isMandatory, channels: [
       isMandatory ? { channelId: "in-app", enabled: true, isEditable: false, reason: { code: "MSG23" } }
         : { channelId: "in-app", enabled: true, isEditable: true },
       { channelId: "email", enabled: false, isEditable: true },
-      { channelId: "push", enabled: false, isEditable: false, reason: { code: "MSG21", params: { channel_name: "Push" } } },
+      { channelId: "push", enabled: false, isEditable: false, reason: { code: "MSG21", params: { channel_name: "Thông báo đẩy" } } },
       { channelId: "zalo", enabled: false, isEditable: false, reason: { code: "MSG21", params: { channel_name: "Zalo OA" } } },
     ] })),
   };

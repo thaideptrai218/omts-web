@@ -357,7 +357,7 @@ export function RoleEditor({
           <div className="rounded-control border border-border bg-surface-subtle p-4 text-sm leading-6 text-text-muted">
             {fixedName
               ? "Vai trò đã ngừng dùng. Khôi phục sử dụng để tiếp tục cấu hình và cấp quyền mới; các quyền đã thu hồi không tự được cấp lại."
-              : "Vai trò này đã ngừng dùng nên chỉ có thể xem hoặc sao chép. OMTS không xóa vai trò để giữ lịch sử cấp quyền."}
+              : "Vai trò này đã ngừng dùng nên chỉ có thể xem hoặc sao chép. Hệ thống giữ lại vai trò để bảo toàn lịch sử cấp quyền."}
           </div>
         )}
 

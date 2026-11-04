@@ -80,7 +80,7 @@ function ReviewSection({ draft }: { draft: ReviewDraft }) {
       </div>
       <div className="py-4 sm:grid sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4">
         <dt className="text-sm font-semibold text-text-muted">
-          Danh tính / liên hệ Owner
+          Danh tính và liên hệ của Chủ nhiệm HTX
         </dt>
         <dd className="mt-1 whitespace-pre-wrap break-words text-text sm:mt-0">
           {draft.values.ownerIdentityContact}
@@ -211,7 +211,7 @@ export function CooperativeProvisioningForm() {
 
     notify({
       description:
-        "Tài khoản Owner đang ở trạng thái hoạt động và phải đổi mật khẩu khi đăng nhập lần đầu.",
+        "Tài khoản Chủ nhiệm HTX đang hoạt động và phải đổi mật khẩu khi đăng nhập lần đầu.",
       title: `${provisionedCooperativeName ?? "Hợp tác xã"} đã được khởi tạo`,
       tone: "success",
     });
@@ -237,7 +237,7 @@ export function CooperativeProvisioningForm() {
               <FormField
                 autoCapitalize="characters"
                 error={errors.preliminaryCode?.message}
-                hint="Mã nhận diện tạm thời trước khi Owner hoàn thiện hồ sơ."
+                hint="Mã nhận diện tạm thời trước khi Chủ nhiệm HTX hoàn thiện hồ sơ."
                 id="preliminary-code"
                 label="Mã sơ bộ"
                 placeholder="Ví dụ: TN-2026"
@@ -251,7 +251,7 @@ export function CooperativeProvisioningForm() {
                 className="block text-sm font-semibold text-text"
                 htmlFor="owner-identity-contact"
               >
-                Danh tính và thông tin liên hệ của Owner đầu tiên
+                Danh tính và thông tin liên hệ của Chủ nhiệm HTX đầu tiên
                 <span aria-hidden="true" className="ml-1 text-danger">
                   *
                 </span>
@@ -325,7 +325,7 @@ export function CooperativeProvisioningForm() {
                 Xác nhận trước khi tạo
               </h2>
               <p className="mt-2 text-sm leading-6 text-text-muted">
-                Hãy đối chiếu lại hồ sơ giấy. Sau khi xác nhận, hệ thống tạo HTX sơ bộ và tài khoản Owner đầu tiên cùng lúc.
+                Hãy đối chiếu lại hồ sơ giấy. Sau khi xác nhận, hệ thống tạo HTX sơ bộ và tài khoản Chủ nhiệm HTX đầu tiên cùng lúc.
               </p>
             </div>
 

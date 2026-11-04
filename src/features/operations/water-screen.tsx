@@ -33,7 +33,7 @@ export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } =
   const canCreate = !!zoneId && currentZone?.statusId === 101 && operationAllowed("water", context.identity, context.permissions.functionPermissions, "Create", zoneId);
   async function open(id: string) { const result = await mutation.run(() => repository.read("detail", { id }, c.waterSchema), true); if (result) { setSelected(result); setOcr(undefined); setSerial((value) => value + 1); } }
   function saved(record: c.WaterMeasurement, recognized?: Recognition) { setSelected(record); setOcr(recognized); setSerial((value) => value + 1); history.reload(); chart.reload(); setNotice("Đã lưu phép đo."); }
-  return <section><OperationHeading title="Đo nước" description="Theo dõi phép đo, ngưỡng và cảnh báo theo vùng nuôi được cấp." icon="waves"><div className="flex flex-wrap gap-2">
+  return <section><OperationHeading title="Theo dõi chất lượng nước" description="Xem số đo, ngưỡng an toàn và cảnh báo của các vùng nuôi được cấp." icon="waves"><div className="flex flex-wrap gap-2">
     {canCreate && <Button className="w-auto" onClick={() => { setSelected(null); setOcr(undefined); setSerial((value) => value + 1); }}>Ghi phép đo</Button>}
     <Button className="w-auto" variant="secondary" disabled={!zoneId || mutation.pending} onClick={() => setThresholdsOpen(true)}>Ngưỡng nước</Button>
     {zoneId && operationAllowed("water", context.identity, context.permissions.functionPermissions, "Export", zoneId) && <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => void mutation.run(() => repository.download(query), true)}>Xuất Excel</Button>}
@@ -167,7 +167,7 @@ export function MeasurementEditor({ record, ocr, onClose, onSaved, onOpen }: { r
 function ThresholdDialog({ zoneId, owner, onClose, onSaved }: { zoneId: string; owner: boolean; onClose(): void; onSaved(): void }) {
   const thresholds = useRemote(useMemo(() => (signal: AbortSignal) => repository.read("thresholds", { zoneId }, c.zoneThresholdsSchema, signal), [zoneId]));
   if (thresholds.data) return <ThresholdEditor record={thresholds.data} owner={owner} onClose={onClose} onSaved={onSaved} />;
-  return <Dialog open title="Ngưỡng nước" size="lg" onOpenChange={(open) => { if (!open) onClose(); }}><ErrorNotice error={thresholds.error} />{thresholds.loading ? <Skeleton /> : <Button className="w-auto" variant="secondary" onClick={thresholds.reload}>Tải lại ngưỡng</Button>}</Dialog>;
+  return <Dialog open title="Ngưỡng chất lượng nước" size="lg" onOpenChange={(open) => { if (!open) onClose(); }}><ErrorNotice error={thresholds.error} />{thresholds.loading ? <Skeleton /> : <Button className="w-auto" variant="secondary" onClick={thresholds.reload}>Tải lại ngưỡng</Button>}</Dialog>;
 }
 function ThresholdEditor({ record, owner, onClose, onSaved }: { record: ZoneThresholds; owner: boolean; onClose(): void; onSaved(): void }) {
   const confirmation = useActionDialog();

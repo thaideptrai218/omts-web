@@ -8,7 +8,7 @@ import { connection } from "next/server";
 import { PublicVerificationEntry } from "@/features/verification-api/public-entry";
 
 export const metadata: Metadata = {
-  title: "Khôi phục tài khoản | OMTS",
+  title: "Khôi phục tài khoản | HTX Trung Nam",
 };
 
 async function RecoverContent() {

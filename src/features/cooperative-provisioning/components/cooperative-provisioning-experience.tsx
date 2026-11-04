@@ -40,7 +40,7 @@ export function CooperativeProvisioningExperience() {
 
   return (
     <div className="space-y-6">
-      <ManagementHeading title="Khởi tạo hợp tác xã" description="Xác minh hồ sơ, tạo thông tin sơ bộ và cấp tài khoản cho Chủ hợp tác xã đầu tiên." icon="settings" />
+      <ManagementHeading title="Khởi tạo hợp tác xã" description="Xác minh hồ sơ, tạo thông tin sơ bộ và cấp tài khoản cho Chủ nhiệm HTX đầu tiên." icon="settings" />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <section
@@ -66,15 +66,15 @@ export function CooperativeProvisioningExperience() {
             <ol className="mt-3 space-y-3 text-sm leading-6">
               <li className="flex gap-3">
                 <span className="font-bold">1.</span>
-                Bàn giao trực tiếp tài khoản và mật khẩu tạm thời cho Owner.
+                Bàn giao trực tiếp tài khoản và mật khẩu tạm thời cho Chủ nhiệm HTX.
               </li>
               <li className="flex gap-3">
                 <span className="font-bold">2.</span>
-                Owner đăng nhập và đổi mật khẩu trong vòng 24 giờ.
+                Chủ nhiệm HTX đăng nhập và đổi mật khẩu trong vòng 24 giờ.
               </li>
               <li className="flex gap-3">
                 <span className="font-bold">3.</span>
-                Owner tự hoàn thiện hồ sơ HTX trong chức năng hồ sơ.
+                Chủ nhiệm HTX tự hoàn thiện hồ sơ HTX trong chức năng hồ sơ.
               </li>
             </ol>
           </section>

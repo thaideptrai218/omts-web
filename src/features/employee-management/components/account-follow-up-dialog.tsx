@@ -37,7 +37,7 @@ export function AccountFollowUpDialog({
       </div>
       <p className="mt-4 text-sm leading-6 text-text-muted">
         {isLeaving
-          ? "Nếu nhân viên không còn được đăng nhập OMTS, hãy mở tài khoản để kiểm tra và khóa khi cần. Hồ sơ, chấm công và tiền công vẫn được giữ nguyên."
+          ? "Nếu nhân viên không còn sử dụng tài khoản, hãy mở hồ sơ để kiểm tra và khóa khi cần. Hồ sơ, chấm công và tiền công vẫn được giữ nguyên."
           : "Hãy kiểm tra trạng thái tài khoản và phân quyền theo vùng nếu cần. Việc đi làm lại không tự mở khóa hoặc cấp thêm quyền."}
       </p>
       <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

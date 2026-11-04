@@ -311,7 +311,7 @@ export function AccountEditor({
         }
       >
         <p className="text-sm font-semibold text-primary">
-          Tài khoản Chủ hợp tác xã
+          Tài khoản Chủ nhiệm HTX
         </p>
         {!embedded && (
           <h2 className="mt-2 text-2xl font-semibold text-text">
@@ -325,7 +325,7 @@ export function AccountEditor({
           </div>
           <div>
             <dt className="text-sm text-text-muted">Loại tài khoản</dt>
-            <dd className="mt-1 font-semibold">Chủ hợp tác xã</dd>
+            <dd className="mt-1 font-semibold">Chủ nhiệm HTX</dd>
           </div>
           <div>
             <dt className="text-sm text-text-muted">Số điện thoại</dt>
@@ -338,7 +338,7 @@ export function AccountEditor({
         </dl>
         <p className="mt-6 rounded-card border border-info/20 bg-sky-50 p-4 leading-7 text-info">
           Tài khoản này được bảo vệ và không thể chỉnh sửa hoặc khóa tại màn
-          quản lý tài khoản nội bộ. Chủ hợp tác xã tự cập nhật thông tin liên hệ
+          quản lý tài khoản nội bộ. Chủ nhiệm HTX tự cập nhật thông tin liên hệ
           trong hồ sơ cá nhân.
         </p>
       </section>
@@ -464,7 +464,7 @@ export function AccountEditor({
                     @{account.username}
                   </p>
                   <p className="mt-2 font-normal leading-5 text-text-muted">
-                    Username không đổi khi họ tên được cập nhật.
+                    Tên đăng nhập không đổi khi cập nhật họ tên.
                   </p>
                 </div>
               )}
@@ -527,8 +527,8 @@ export function AccountEditor({
                   </p>
                 )}
                 <p className="mt-2 text-sm leading-6 text-text-muted">
-                  Hệ thống tự sinh username và mật khẩu tạm, sau đó gửi trực
-                  tiếp cho nhân viên. Chủ HTX không nhìn thấy mật khẩu.
+                  Hệ thống tự tạo tên đăng nhập và mật khẩu tạm, sau đó gửi trực
+                  tiếp cho nhân viên. Chủ nhiệm HTX không nhìn thấy mật khẩu.
                 </p>
               </fieldset>
             )}

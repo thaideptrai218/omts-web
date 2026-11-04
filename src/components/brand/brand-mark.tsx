@@ -47,11 +47,11 @@ export function BrandMark({
         }
       >
         <span className={`block text-lg font-bold tracking-tight ${styles.name}`}>
-          OMTS
+          HTX Trung Nam
         </span>
         {!compact && (
           <span className={`block text-sm leading-5 ${styles.tagline}`}>
-            Quản lý và truy xuất nuôi hàu
+            Quản lý nuôi hàu · Truy xuất nguồn gốc
           </span>
         )}
       </span>

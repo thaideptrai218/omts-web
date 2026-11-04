@@ -2,7 +2,7 @@ import { FarmingZoneExperience } from "@/features/farming-zones/components/farmi
 import { ApiPage } from "@/features/api-workspace/api-page";
 import { ApiResourceScreen } from "@/features/api-workspace/api-resource-screen";
 
-export const metadata = { title: "Vùng nuôi" };
+export const metadata = { title: "Vùng nuôi | HTX Trung Nam" };
 export const instant = false;
 
 export default function FarmingZonesPage() {

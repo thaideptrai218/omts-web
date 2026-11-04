@@ -19,7 +19,7 @@ export function ApiSecurityGate({ phase, forced = true }: { phase: "password-cha
   return <section className="rounded-card border border-border bg-surface p-6 sm:p-8">
     <h1 className="text-2xl font-semibold">{phase === "password-change-required" ? forced ? "Đổi mật khẩu tạm thời" : "Đổi mật khẩu" : "Xác minh thông tin liên hệ"}</h1>
     {error && <p role="alert" className="mt-4 text-danger">{error}</p>}
-    {phase === "contact-verification-required" ? <p className="mt-4 leading-7">Tài khoản cần hoàn tất xác minh thông tin liên hệ trước khi sử dụng chức năng nghiệp vụ. Vui lòng liên hệ Chủ hợp tác xã hoặc bộ phận hỗ trợ.</p>
+    {phase === "contact-verification-required" ? <p className="mt-4 leading-7">Tài khoản cần hoàn tất xác minh thông tin liên hệ trước khi sử dụng chức năng nghiệp vụ. Vui lòng liên hệ Chủ nhiệm HTX hoặc bộ phận hỗ trợ.</p>
       : emailProof ? <div className="mt-5 space-y-4"><VerificationPanel purpose="password-email" onBusyChange={setEmailPending} /><Button variant="secondary" disabled={emailPending} onClick={() => setEmailProof(false)}>Dùng mật khẩu hiện tại</Button></div> : <form className="mt-5 space-y-4" onSubmit={form.handleSubmit(async (values) => {
         setError(undefined);
         const result = await withAuthLock(() => postAuth("password", values));

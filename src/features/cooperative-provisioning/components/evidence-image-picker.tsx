@@ -96,7 +96,7 @@ export function EvidenceImagePicker({
       <div>
         <p className="font-semibold text-text">Ảnh giấy tờ xác minh</p>
         <p className="mt-1 text-sm leading-6 text-text-muted" id={descriptionId}>
-          Chọn ảnh thể hiện căn cứ xác minh HTX và Chủ hợp tác xã đầu tiên.
+          Chọn ảnh thể hiện căn cứ xác minh HTX và Chủ nhiệm HTX đầu tiên.
         </p>
       </div>
 

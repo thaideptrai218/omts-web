@@ -25,7 +25,7 @@ export function notificationText(code: string | null, parameters: unknown, fallb
   }
   if (code === "MSG-WATER-06") {
     const parsed = z.object({ zone_name: text, last_date: day }).safeParse(parameters);
-    return parsed.success ? { title: "Nhắc đo nước", body: `Vùng ${parsed.data.zone_name} chưa có phép đo nước kể từ ${date(parsed.data.last_date)}. Vui lòng đo nước và ghi kết quả vào OMTS.` } : undefined;
+    return parsed.success ? { title: "Nhắc đo nước", body: `Vùng ${parsed.data.zone_name} chưa có phép đo nước kể từ ${date(parsed.data.last_date)}. Vui lòng đo và ghi kết quả vào sổ theo dõi của HTX.` } : undefined;
   }
   if (code === "MSG-FARM-01" || code === "MSG-FARM-02") {
     const parsed = (code === "MSG-FARM-01" ? license.extend({ days: z.number().int().nonnegative() }) : license).safeParse(parameters);

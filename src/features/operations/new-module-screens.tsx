@@ -17,7 +17,7 @@ export function SalesProductsScreen() {
   const loader = useMemo(() => (signal: AbortSignal) => products.read(all && identity.subjectType === "CooperativeOwner" ? "all" : "list", {}, z.array(c.salesProductSchema), signal), [all, identity.subjectType]);
   const catalog = useRemote(loader);
   const rows = catalog.data?.filter((row) => `${row.code} ${row.name}`.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi")));
-  return <section><OperationHeading title="Sản phẩm bán" description="Xem danh mục sản phẩm và khả năng nhận yêu cầu mua." icon="document">{identity.subjectType === "CooperativeOwner" && <Button className="w-auto" onClick={() => setSelected(null)}>Thêm sản phẩm bán</Button>}</OperationHeading>
+  return <section><OperationHeading title="Danh mục sản phẩm hàu" description="Quản lý sản phẩm và tình trạng tiếp nhận yêu cầu mua." icon="document">{identity.subjectType === "CooperativeOwner" && <Button className="w-auto" onClick={() => setSelected(null)}>Thêm sản phẩm</Button>}</OperationHeading>
     <FilterPanel columns="two"><Field label="Tìm sản phẩm" value={search} onChange={(e) => setSearch(e.target.value)} />
       {identity.subjectType === "CooperativeOwner" && <Select label="Phạm vi sản phẩm" value={all ? "all" : "available"} onChange={(e) => setAll(e.target.value === "all")}><option value="available">Đang nhận yêu cầu mua</option><option value="all">Tất cả sản phẩm</option></Select>}</FilterPanel>
     <Button className="mt-4 w-auto" variant="secondary" disabled={catalog.loading} onClick={catalog.reload}>Tải lại sản phẩm</Button><ErrorNotice error={catalog.error} />
@@ -34,7 +34,7 @@ export function PurchaseRequestsScreen() {
   const rows = useRemote(useMemo(() => (signal: AbortSignal) => requests.read(mine ? "mine" : "list", query, c.purchaseRequestPageSchema, signal), [mine, query]));
   const mutation = useMutation();
   async function open(id: string) { const found = await mutation.run(() => requests.read(mine ? "mine-detail" : "detail", { id }, c.purchaseRequestSchema), true); if (found) setSelected(found); }
-  return <section><OperationHeading title={mine ? "Yêu cầu mua của tôi" : "Yêu cầu mua hàng"} description="Theo dõi số lồng, ngày nhận dự kiến và phản hồi theo từng yêu cầu." icon="document">
+  return <section><OperationHeading title={mine ? "Yêu cầu mua của tôi" : "Yêu cầu mua hàu"} description="Theo dõi số lồng, ngày nhận dự kiến và phản hồi theo từng yêu cầu." icon="document">
     {mine && <Button className="w-auto" onClick={() => setCreating(true)}>Gửi yêu cầu mua</Button>}</OperationHeading>
     <div className="max-w-md"><FilterPanel columns="two"><Select label="Trạng thái yêu cầu" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}><option value="">Tất cả</option>{c.requestStatusSchema.options.map((value) => <option key={value} value={value}>{requestStatusLabel(value)}</option>)}</Select></FilterPanel></div>
     <Button className="mt-4 w-auto" variant="secondary" disabled={rows.loading || mutation.pending} onClick={rows.reload}>Tải lại yêu cầu mua</Button><ErrorNotice error={rows.error || mutation.error} />

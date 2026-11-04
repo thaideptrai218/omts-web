@@ -31,7 +31,7 @@ export function Button({
     <button
       {...buttonProps}
       aria-busy={isPending || undefined}
-      className={`inline-flex min-h-11 ${className.includes("w-auto") ? "" : "w-full"} items-center justify-center gap-2 rounded-control border px-4 py-2.5 text-sm font-semibold transition-[background-color,border-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantStyles[variant]} ${className}`}
+      className={`inline-flex min-h-11 lg:min-h-10 ${className.includes("w-auto") ? "" : "w-full"} items-center justify-center gap-2 rounded-control border px-3.5 py-2 text-[13px] font-medium transition-[background-color,border-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantStyles[variant]} ${className}`}
       disabled={disabled || isPending}
       type={type}
     >

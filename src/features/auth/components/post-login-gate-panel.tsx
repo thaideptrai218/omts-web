@@ -18,7 +18,7 @@ function getGateContent(gate: PostLoginGate) {
         .join(" hoặc ");
 
       return {
-        description: `Mật khẩu mới đã được lưu. Tiếp theo, hãy xác minh ${availableChannels} mà Chủ hợp tác xã đã khai báo.`,
+        description: `Mật khẩu mới đã được lưu. Tiếp theo, hãy xác minh ${availableChannels} mà Chủ nhiệm HTX đã khai báo.`,
         title: "Xác minh thông tin liên hệ",
       };
     }

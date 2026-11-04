@@ -8,11 +8,11 @@ const loginMessages = [
   ["MSG13", "Tài khoản này hiện không thể sử dụng. Vui lòng liên hệ kênh hỗ trợ."],
   [
     "MSG67",
-    "Tài khoản của bạn cần xác minh số điện thoại để tiếp tục sử dụng OMTS. Vui lòng nhập hoặc xác nhận số điện thoại và nhập mã xác minh được gửi qua SMS.",
+    "Tài khoản cần xác minh số điện thoại để tiếp tục sử dụng. Hãy nhập hoặc xác nhận số điện thoại, sau đó nhập mã xác minh trong tin nhắn SMS.",
   ],
   [
     "MSG68",
-    "Mật khẩu tạm thời đã hết hạn. Nhân viên vui lòng liên hệ Chủ hợp tác xã; Chủ hợp tác xã và thương nhân vui lòng liên hệ Quản trị viên hệ thống để được đặt lại.",
+    "Mật khẩu tạm thời đã hết hạn. Nhân viên vui lòng liên hệ Chủ nhiệm HTX; thương lái vui lòng liên hệ Quản trị viên hệ thống để được đặt lại.",
   ],
   [
     "MSG69",
@@ -39,7 +39,7 @@ const profileMessages = [
   ["MSG10", "Hồ sơ cá nhân đã được lưu."],
   [
     "MSG20",
-    "Bạn không thể tự thay đổi tên đăng nhập. Vui lòng liên hệ Chủ hợp tác xã hoặc kênh hỗ trợ.",
+    "Bạn không thể tự thay đổi tên đăng nhập. Vui lòng liên hệ Chủ nhiệm HTX hoặc kênh hỗ trợ.",
   ],
   [
     "MSG62",

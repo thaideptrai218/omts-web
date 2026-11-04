@@ -3,7 +3,7 @@ export { profileViewSchema, updateProfileRequestSchema } from "@/features/profil
 export type { ProfileViewDto } from "@/features/profile/api/profile-contract.schemas";
 
 export const categoryLabels = { ORDERS: "Đơn hàng", WORK: "Công việc", DEADLINE_REMINDERS: "Nhắc hạn", WATER_ALERTS: "Cảnh báo nước", TRACEABILITY_QR_SENT: "Gửi QR truy xuất", SALES_NOTICES: "Thông báo bán hàng" } as const;
-export const channelLabels = { InApp: "Trong ứng dụng", Push: "Push", Email: "Email", Zalo: "Zalo OA" } as const;
+export const channelLabels = { InApp: "Trong ứng dụng", Push: "Thông báo đẩy", Email: "Email", Zalo: "Zalo OA" } as const;
 const categorySchema = z.enum(["ORDERS", "WORK", "DEADLINE_REMINDERS", "WATER_ALERTS", "TRACEABILITY_QR_SENT", "SALES_NOTICES"]);
 const channelSchema = z.enum(["InApp", "Push", "Email", "Zalo"]);
 const channelViewSchema = z.object({ channel: channelSchema, enabled: z.boolean(), eligible: z.boolean(), ineligibleReason: z.enum(["EMAIL_NOT_VERIFIED", "ZALO_NOT_CONFIGURED", "NO_PUSH_DEVICE"]).nullable() })
@@ -33,7 +33,7 @@ export function notificationPatch(catalog: NotificationCatalog, values: Record<s
   }));
 }
 export function notificationReason(row: NotificationCatalog[number], cell: NotificationCatalog[number]["channels"][number]) {
-  if (cell.channel === "Push") return `Push được quản lý trên ứng dụng di động.${row.mandatory ? " Nhóm này bắt buộc nhận Push." : ""}${!cell.eligible ? " Chưa có thiết bị cho phép nhận Push." : ""}`;
+  if (cell.channel === "Push") return `Thông báo đẩy được quản lý trên ứng dụng di động.${row.mandatory ? " Nhóm này bắt buộc nhận thông báo đẩy." : ""}${!cell.eligible ? " Chưa có thiết bị cho phép nhận thông báo đẩy." : ""}`;
   if (row.mandatory && cell.channel === "InApp") return "Thông báo này bắt buộc nhận trong ứng dụng và không thể tắt.";
   if (!cell.eligible) return cell.ineligibleReason === "EMAIL_NOT_VERIFIED" ? "Email cần được xác minh trước khi bật kênh này." : "Kênh Zalo OA chưa được cấu hình hoặc chưa đủ điều kiện.";
 }

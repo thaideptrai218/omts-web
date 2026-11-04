@@ -4,12 +4,12 @@ import styles from "./auth-shell.module.css";
 export function AuthShell({ children }: Readonly<{ children: React.ReactNode }>) {
   return <main className={styles.shell}>
     <div className={styles.entry}>
-      <header className={styles.brand}><BrandMark compact /><span>Quản lý & truy xuất nuôi hàu</span></header>
+      <header className={styles.brand}><BrandMark compact /><span>Hợp tác xã Nuôi trồng Thủy sản Trung Nam</span></header>
       <div className={styles.form}>{children}</div>
-      <footer className={styles.footer}><span>OMTS · Hệ thống quản lý hợp tác xã</span><span>Đồng hành cùng vùng nuôi.</span></footer>
+      <footer className={styles.footer}><span>HTX Trung Nam · Quản lý nuôi hàu</span><span>Đồng hành cùng vùng nuôi.</span></footer>
     </div>
-    <aside className={styles.story} aria-label="Giới thiệu hệ thống OMTS">
-      <div className={styles.storyLabel}><span className={styles.dot} /> KẾT NỐI MỘT HỆ SINH THÁI</div>
+    <aside className={styles.story} aria-label="Giới thiệu Hợp tác xã Nuôi trồng Thủy sản Trung Nam">
+      <div className={styles.storyLabel}><span className={styles.dot} /> HỢP TÁC XÃ NUÔI TRỒNG THỦY SẢN TRUNG NAM</div>
       <div className={styles.art} aria-hidden="true">
         <svg viewBox="0 0 640 650" fill="none">
           <defs>
@@ -28,8 +28,8 @@ export function AuthShell({ children }: Readonly<{ children: React.ReactNode }>)
           <g stroke="#507f77" strokeWidth="1" opacity=".5"><path d="M105 492h52m-26-26v52M503 143h24m-12-12v24"/></g>
         </svg>
       </div>
-      <div className={styles.storyCopy}><span className={styles.index}>01 / CÙNG MỘT TẦM NHÌN</span><h2>Từ vùng nuôi,<br/>đến từng quyết định.</h2><p>Một không gian kết nối con người, vận hành và dữ liệu. Để mỗi ngày làm việc đều rõ ràng hơn.</p></div>
-      <div className={styles.storyFooter}><span>NUÔI TRỒNG · CON NGƯỜI · TRUY XUẤT</span><span>OMTS</span></div>
+      <div className={styles.storyCopy}><span className={styles.index}>NUÔI HÀU · THU MUA · TRUY XUẤT</span><h2>Từ vùng nuôi,<br/>đến từng lô hàu.</h2><p>Quản lý vùng nuôi, mùa vụ và hoạt động của hợp tác xã; theo dõi hành trình mỗi lô hàu từ mặt nước đến nơi giao nhận.</p></div>
+      <div className={styles.storyFooter}><span>HỢP TÁC XÃ NUÔI TRỒNG THỦY SẢN TRUNG NAM</span><span>HTX TRUNG NAM</span></div>
     </aside>
   </main>;
 }

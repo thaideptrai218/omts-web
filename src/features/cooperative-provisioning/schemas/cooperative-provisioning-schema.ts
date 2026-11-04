@@ -8,7 +8,7 @@ export const cooperativeProvisioningSchema = z.object({
   ownerIdentityContact: z
     .string()
     .trim()
-    .min(1, "Hãy nhập thông tin danh tính hoặc liên hệ của Chủ hợp tác xã."),
+    .min(1, "Hãy nhập thông tin danh tính hoặc liên hệ của Chủ nhiệm HTX."),
   preliminaryCode: z
     .string()
     .trim()

@@ -1,0 +1,8 @@
+.overview { display: grid; gap: 20px; align-items: start; }
+.farming, .panels, .shortcuts { min-width: 0; }
+@media (min-width: 80rem) {
+  .overview { grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); grid-template-areas: "farming shortcuts" "panels shortcuts"; }
+  .farming { grid-area: farming; }
+  .panels { grid-area: panels; }
+  .shortcuts { grid-area: shortcuts; }
+}

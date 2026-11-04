@@ -15,26 +15,26 @@ function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "suc
   return result.code && messages[result.code] || workspaceError(result);
 }
 
-export const control = "mt-1.5 min-h-11 w-full rounded-control border border-border-strong bg-surface px-3 py-2 text-sm font-normal transition-colors hover:border-primary/60 focus:border-primary";
+export const control = "mt-1.5 min-h-11 lg:min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm font-normal text-text transition-colors hover:border-primary/60 focus:border-primary";
 export function OperationHeading({ title, description, icon, children }: { title: string; description: string; icon: InterfaceIconName; children?: ReactNode }) {
   return <ManagementHeading title={title} description={description} icon={icon}>{children}</ManagementHeading>;
 }
 export function FilterPanel({ children, columns = "four" }: { children: ReactNode; columns?: "two" | "three" | "four" }) {
   const grid = columns === "two" ? "sm:grid-cols-2" : columns === "three" ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-4";
-  return <div className={`grid gap-3 rounded-card border border-border bg-surface p-4 ${grid}`}>{children}</div>;
+  return <div className={`grid items-end gap-3 rounded-card border border-border bg-[#fafbf9] p-3.5 ${grid}`}>{children}</div>;
 }
 export function Field({ label, ...props }: ComponentProps<"input"> & { label: string }) {
-  return <label className="block text-sm font-semibold">{label}<input {...props} className={control} /></label>;
+  return <label className="block text-xs font-medium text-text-muted">{label}<input {...props} className={control} /></label>;
 }
 export function Select({ label, children, ...props }: ComponentProps<"select"> & { label: string }) {
-  return <label className="block text-sm font-semibold">{label}<select aria-label={label} {...props} className={control}>{children}</select></label>;
+  return <label className="block text-xs font-medium text-text-muted">{label}<select aria-label={label} {...props} className={control}>{children}</select></label>;
 }
 export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: string }) {
-  return <label className="block text-sm font-semibold">{label}<textarea {...props} className={control} rows={3} /></label>;
+  return <label className="block text-xs font-medium text-text-muted">{label}<textarea {...props} className={control} rows={3} /></label>;
 }
 export function ErrorNotice({ error }: { error?: string }) { return error ? <p role="alert" className="my-4 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p> : null; }
 export function Skeleton() { return <div role="status" aria-label="Đang tải dữ liệu" className="my-5 space-y-3">{[1, 2, 3].map((id) => <div key={id} className="h-14 animate-pulse rounded-control bg-slate-200" />)}</div>; }
-export function Money({ value }: { value: number | null | undefined }) { return <>{value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)}{value == null ? "" : " ₫"}</>; }
+export function Money({ value }: { value: number | null | undefined }) { return <span data-currency>{value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)}{value == null ? "" : " ₫"}</span>; }
 export const money = (value: number | null | undefined) => value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value) + " ₫";
 export function businessToday() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 export function businessTime(value: string | Date = new Date()) {

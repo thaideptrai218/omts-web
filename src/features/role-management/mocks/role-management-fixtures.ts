@@ -160,7 +160,7 @@ export const mockFixedRoles: readonly RoleDetails[] = [
     id: "role-staff",
     name: "Nhân viên",
     description:
-      "Quyền công việc do Chủ hợp tác xã cấu hình theo nhu cầu phân công.",
+      "Quyền công việc do Chủ nhiệm HTX cấu hình theo nhu cầu phân công.",
     status: "in-use",
     activeAccountCount: 0,
     activeZoneCount: 0,

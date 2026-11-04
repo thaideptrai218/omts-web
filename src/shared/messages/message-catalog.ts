@@ -10,11 +10,11 @@ export const messageCatalog = {
   "MSG-GEN-10": "Không có dữ liệu phù hợp với khoảng thời gian và bộ lọc đã chọn.",
   "MSG-ACCOUNT-02": "Tài khoản đã được tạo. Chứng từ cũ sẽ hiện sau khi hợp tác xã bổ sung liên kết. Hãy đăng nhập để tiếp tục.",
   "MSG-ACCOUNT-03": "Email hoặc số điện thoại này đã đăng ký. Hãy đăng nhập hoặc dùng Quên mật khẩu.",
-  "MSG-ACCOUNT-04": "Tài khoản cần xác minh số điện thoại trước khi tiếp tục sử dụng OMTS.",
+  "MSG-ACCOUNT-04": "Tài khoản cần xác minh số điện thoại trước khi tiếp tục sử dụng hệ thống.",
   "MSG-ACCOUNT-05": "Thông tin đăng nhập không đúng. Vui lòng kiểm tra và thử lại.",
   "MSG-ACCOUNT-06": "Đã có quá nhiều lần đăng nhập sai. Vui lòng thử lại sau 15 phút.",
-  "MSG-ACCOUNT-07": "Tài khoản hiện không thể sử dụng. Vui lòng liên hệ Chủ HTX.",
-  "MSG-ACCOUNT-08": "Mật khẩu tạm đã hết hạn. Vui lòng liên hệ Chủ HTX để được cấp lại.",
+  "MSG-ACCOUNT-07": "Tài khoản hiện không thể sử dụng. Vui lòng liên hệ Chủ nhiệm HTX.",
+  "MSG-ACCOUNT-08": "Mật khẩu tạm đã hết hạn. Vui lòng liên hệ Chủ nhiệm HTX để được cấp lại.",
   "MSG-ACCOUNT-09": "Thông tin tài khoản hoặc liên hệ này đã được tài khoản khác sử dụng. Vui lòng kiểm tra và nhập lại.",
   "MSG-ACCOUNT-10": "Mật khẩu đã được thay đổi. Hãy đăng nhập bằng mật khẩu mới.",
   "MSG-ACCOUNT-11": "Mật khẩu đã được thay đổi. Các phiên trên thiết bị khác đã đăng xuất.",
@@ -26,11 +26,11 @@ export const messageCatalog = {
   "MSG-ACCOUNT-18": "Bạn đã yêu cầu quá nhiều mã. Hãy chờ hết thời gian giới hạn trước khi thử lại.",
   "MSG-ACCOUNT-19": "Mã xác minh đã được gửi tới liên hệ đã chọn và có hiệu lực trong 5 phút.",
   "MSG-ACCOUNT-20": "Nếu email hoặc số điện thoại thuộc tài khoản hợp lệ, mã xác minh sẽ được gửi tới liên hệ đó.",
-  "MSG-ACCOUNT-21": "Thiết lập thông báo đã được lưu. Thiết bị chưa cho phép nhận thông báo từ OMTS; hãy kiểm tra quyền thông báo trên ứng dụng di động.",
-  "MSG-WATER-01": "OMTS chưa đọc được pH và độ mặn từ ảnh. Hãy xem đồng hồ và nhập các giá trị còn thiếu.",
+  "MSG-ACCOUNT-21": "Thiết lập thông báo đã được lưu. Thiết bị chưa cho phép nhận thông báo; hãy kiểm tra quyền thông báo trên ứng dụng di động.",
+  "MSG-WATER-01": "Chưa đọc được pH và độ mặn từ ảnh. Hãy xem đồng hồ đo và nhập các giá trị còn thiếu.",
   "MSG-WATER-05": "Ngưỡng tối thiểu phải nhỏ hơn ngưỡng tối đa. Ngưỡng chưa được lưu; vui lòng sửa lại.",
   "MSG-PURCHASE-03": "Số lượng trả phải lớn hơn 0 và không vượt số còn được trả. Hãy đối chiếu số lượng của dòng hàng.",
-  "MSG-PURCHASE-09": "Phiếu nhập đã phát sinh lô giống hoặc trả hàng nên không thể hủy. Chủ HTX cần đối chiếu để đính chính.",
+  "MSG-PURCHASE-09": "Phiếu nhập đã phát sinh lô giống hoặc trả hàng nên không thể hủy. Chủ nhiệm HTX cần đối chiếu để đính chính.",
   "MSG-LABOR-03": "Thông tin nhân viên bị trùng. Bản nháp được giữ; hãy đối chiếu hồ sơ hiện có.",
   MSG01: "Vui lòng kiểm tra lại thông tin đã nhập.",
   MSG02: "Bạn không có quyền thực hiện thao tác này.",
@@ -57,7 +57,7 @@ export const messageCatalog = {
   MSG18: "Mật khẩu của bạn đã được thay đổi.",
   MSG19: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   MSG20:
-    "Bạn không thể tự thay đổi tên đăng nhập. Vui lòng liên hệ Chủ hợp tác xã hoặc kênh hỗ trợ.",
+    "Bạn không thể tự thay đổi tên đăng nhập. Vui lòng liên hệ Chủ nhiệm HTX hoặc kênh hỗ trợ.",
   MSG21:
     "Kênh {channel_name} chưa được cấu hình hoặc chưa đủ điều kiện nên chưa thể bật.",
   MSG22:
@@ -78,9 +78,9 @@ export const messageCatalog = {
   MSG62:
     "Mã xác minh đã được gửi tới {masked_email}. Hãy nhập mã để hoàn tất; email cũ vẫn được sử dụng cho đến khi xác minh thành công.",
   MSG67:
-    "Tài khoản của bạn cần xác minh số điện thoại để tiếp tục sử dụng OMTS. Vui lòng nhập hoặc xác nhận số điện thoại và nhập mã xác minh được gửi qua SMS.",
+    "Tài khoản cần xác minh số điện thoại để tiếp tục sử dụng. Hãy nhập hoặc xác nhận số điện thoại, sau đó nhập mã xác minh trong tin nhắn SMS.",
   MSG68:
-    "Mật khẩu tạm thời đã hết hạn. Nhân viên vui lòng liên hệ Chủ hợp tác xã; Chủ hợp tác xã và thương nhân vui lòng liên hệ Quản trị viên hệ thống để được đặt lại.",
+    "Mật khẩu tạm thời đã hết hạn. Nhân viên vui lòng liên hệ Chủ nhiệm HTX; thương lái vui lòng liên hệ Quản trị viên hệ thống để được đặt lại.",
   MSG69:
     "Bạn đã vượt quá số lần thử cho phép. Vui lòng thử đăng nhập lại sau 15 phút.",
 } as const;

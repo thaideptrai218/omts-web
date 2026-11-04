@@ -32,7 +32,7 @@ export function NotificationApiEditor({ initial, onClose }: { initial: Notificat
       const next = await mutation.run(() => repository.saveNotifications(patch));
       if (next) { setCatalog(next.categories); setValues(notificationSelections(next.categories)); setNotice(next.notice ?? "Đã lưu tùy chọn thông báo."); }
     }}>
-      <p className="text-sm text-text-muted">Chọn kênh nhận cho từng nhóm. Push được quản lý trên ứng dụng di động.</p>
+      <p className="text-sm text-text-muted">Chọn kênh nhận cho từng nhóm. Thông báo đẩy được quản lý trên ứng dụng di động.</p>
       <ErrorNotice error={error} />{notice && <p role="status" className="rounded-control bg-primary-soft p-3">{notice}</p>}
       {!catalog.length && <p>Chưa có tùy chọn thông báo dành cho tài khoản này.</p>}
       {catalog.map((row) => <fieldset key={row.category} disabled={mutation.pending} className="min-w-0 rounded-card border border-border p-3 sm:p-4"><legend className="px-1 font-semibold">{categoryLabels[row.category]}</legend>

@@ -13,7 +13,7 @@ import type { OpenedNotification } from "./contracts";
 
 type RecordView = { kind: "water"; record: WaterMeasurement } | { kind: "license"; record: License };
 export function NotificationRecordDialog({ opened, onClose }: { opened: OpenedNotification; onClose(): void }) {
-  if (opened.recordType === "FarmingZone") return <Dialog open title="Đo nước theo thông báo" size="xl" onOpenChange={(open) => { if (!open) onClose(); }}><WaterScreen initialZoneId={opened.recordId} /><Button className="mt-4 w-auto" variant="secondary" onClick={onClose}>Về hộp thư</Button></Dialog>;
+  if (opened.recordType === "FarmingZone") return <Dialog open title="Theo dõi chất lượng nước" size="xl" onOpenChange={(open) => { if (!open) onClose(); }}><WaterScreen initialZoneId={opened.recordId} /><Button className="mt-4 w-auto" variant="secondary" onClick={onClose}>Về hộp thư</Button></Dialog>;
   return <NotificationRecordLoader opened={opened} onClose={onClose} />;
 }
 function NotificationRecordLoader({ opened, onClose }: { opened: OpenedNotification; onClose(): void }) {

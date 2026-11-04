@@ -2,13 +2,13 @@ import type { FunctionPermission } from "@/features/access/domain/function-permi
 export const operationAreas = ["purchase-receipts", "supplier-payments", "water", "sales-products", "purchase-requests", "workforce", "my-work"] as const;
 export type OperationArea = typeof operationAreas[number];
 export const operationModules: readonly { key: OperationArea; title: string; functionCode: string }[] = [
-  { key: "purchase-receipts", title: "Phiếu nhập", functionCode: "PURCHASE_RECEIPTS" },
+  { key: "purchase-receipts", title: "Phiếu nhập vật tư", functionCode: "PURCHASE_RECEIPTS" },
   { key: "supplier-payments", title: "Thanh toán nhà cung cấp", functionCode: "SUPPLIER_PAYMENTS" },
-  { key: "water", title: "Đo nước", functionCode: "WATER_MEASUREMENTS" },
-  { key: "sales-products", title: "Sản phẩm bán", functionCode: "" },
-  { key: "purchase-requests", title: "Yêu cầu mua hàng", functionCode: "PURCHASE_REQUESTS" },
+  { key: "water", title: "Theo dõi chất lượng nước", functionCode: "WATER_MEASUREMENTS" },
+  { key: "sales-products", title: "Danh mục sản phẩm hàu", functionCode: "" },
+  { key: "purchase-requests", title: "Yêu cầu mua hàu", functionCode: "PURCHASE_REQUESTS" },
   { key: "workforce", title: "Phân công và chấm công", functionCode: "WORK_ASSIGNMENTS" },
-  { key: "my-work", title: "Công việc và nghỉ phép của tôi", functionCode: "" },
+  { key: "my-work", title: "Công việc và nghỉ phép", functionCode: "" },
 ];
 export function operationAllowed(area: OperationArea, identity: { subjectType: string }, permissions: readonly FunctionPermission[], action = "View", zoneId?: string) {
   if (area === "my-work") return identity.subjectType === "Staff";

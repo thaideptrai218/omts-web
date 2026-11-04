@@ -68,7 +68,7 @@ export function VerificationPanel({ purpose, onReady, onClose, onBusyChange, ini
   if (!loaded) return <Skeleton />;
   return <section aria-label={titles[purpose]} className="space-y-4"><h2 className="text-xl font-semibold">{titles[purpose]}</h2><ErrorNotice error={error} />
     {completed || flow?.phase === "done" ? <div className="space-y-3"><p role="status">{purpose === "registration" ? "Đã kết thúc lượt đăng ký. Hãy đăng nhập để kiểm tra tài khoản." : "Lượt xác minh đã kết thúc. Hãy kiểm tra thông tin đã lưu hoặc đăng nhập lại."}</p>
-      {completed?.username && <p>Tên đăng nhập: <strong>{completed.username}</strong></p>}{completed?.oldDocumentsHidden && <p>Chứng từ cũ sẽ xuất hiện sau khi Chủ HTX hoàn tất liên kết hồ sơ.</p>}<Link className="font-semibold text-primary underline" href="/login">Về đăng nhập</Link></div>
+      {completed?.username && <p>Tên đăng nhập: <strong>{completed.username}</strong></p>}{completed?.oldDocumentsHidden && <p>Chứng từ cũ sẽ xuất hiện sau khi Chủ nhiệm HTX hoàn tất liên kết hồ sơ.</p>}<Link className="font-semibold text-primary underline" href="/login">Quay lại đăng nhập</Link></div>
       : !flow || flow.phase === "failed" && !uncertain ? <form noValidate className="space-y-4" onSubmit={async (event) => {
         event.preventDefault(); const command = validate({ op: "start", purpose, ...(purpose === "password-email" ? {} : { channel, target, ...(purpose === "contact" ? { currentPassword: password } : {}) }) });
         if (!command) return; const result = run(command); setPassword(""); setCode(""); await result;

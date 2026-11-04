@@ -7,6 +7,7 @@ import { ManagementHeading, StatusPill } from "@/components/ui/management-page";
 import { Dialog } from "@/components/ui/dialog";
 import { FormField } from "@/components/form/form-field";
 import { useApiWorkspace } from "./api-workspace-shell";
+import { knownRoleNameLabel } from "@/shared/presentation/actor-label";
 import { resources, resourceCategoryFilters, resourceAllowed, type ResourceKey } from "./resources";
 import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
 import { ResourceExtras } from "@/features/farming-api/resource-extras";
@@ -143,6 +144,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
       return ({ Active: "Hoạt động", Locked: "Đã khóa", InUse: "Đang dùng", "In Use": "Đang dùng", Discontinued: "Ngừng dùng" } as Record<string, string>)[status] ?? text(row.status);
     }
     if (key === "supplierType" || key === "group") return ({ Seed: "Giống", Material: "Vật tư", Other: "Khác" } as Record<string, string>)[String(row[key])] ?? text(row[key]);
+    if (resource === "roles" && key === "name") return knownRoleNameLabel(String(row.name ?? ""));
     return text(row[key]);
   };
   return <section>

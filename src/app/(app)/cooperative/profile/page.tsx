@@ -4,7 +4,7 @@ import { ApiPage } from "@/features/api-workspace/api-page";
 import { ApiSingletonScreen } from "@/features/api-workspace/api-singleton-screen";
 
 export const metadata: Metadata = {
-  title: "Hồ sơ hợp tác xã | OMTS",
+  title: "Hồ sơ hợp tác xã | HTX Trung Nam",
 };
 export const instant = false;
 
