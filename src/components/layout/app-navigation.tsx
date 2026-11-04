@@ -80,13 +80,13 @@ export const navigationGroups: readonly Readonly<{
       {
         href: "/employees",
         icon: "employee",
-        label: "Nhân viên",
+        label: "Nhân viên ngoài giờ",
         requiredPermission: "cooperative.employees.manage",
       },
       {
         href: "/access/accounts",
         icon: "id-card",
-        label: "Tài khoản nội bộ",
+        label: "Tài khoản nhân viên nội bộ",
         requiredPermission: "access.accounts.manage",
       },
       {

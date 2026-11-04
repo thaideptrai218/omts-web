@@ -27,12 +27,12 @@ describe("shared API navigation shell", () => {
     expect(within(sidebar).getByRole("link", { name: "Phân công và chấm công" }).getAttribute("href")).toBe("/operations/workforce");
     fireEvent.click(within(sidebar).getByRole("button", { name: "Thu gọn menu" }));
     expect(within(sidebar).getByRole("link", { name: "Phân công và chấm công" }).getAttribute("title")).toBe("Phân công và chấm công");
-    expect(within(sidebar).getByRole("link", { name: "Tài khoản" })).toBeTruthy();
+    expect(within(sidebar).getByRole("link", { name: "Tài khoản nhân viên nội bộ" })).toBeTruthy();
   });
   it("does not expose owner administration to a trader", () => {
     const view = setup("Trader");
     const sidebar = within(view.container.querySelector("aside")!);
-    expect(sidebar.queryByRole("link", { name: "Tài khoản" })).toBeNull();
+    expect(sidebar.queryByRole("link", { name: "Tài khoản nhân viên nội bộ" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Phân công và chấm công" })).toBeNull();
     expect(sidebar.queryByRole("button", { name: "Yêu cầu thương lái" })).toBeNull();
     expect(sidebar.getByRole("link", { name: "Yêu cầu mua hàng" })).toBeTruthy();

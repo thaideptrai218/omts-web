@@ -205,7 +205,7 @@ describe("desktop sidebar layout", () => {
     });
     expect(within(sidebar).getByRole("link", { name: "Bè nuôi" })).toBeTruthy();
     expect(
-      within(sidebar).queryByRole("link", { name: "Nhân viên" }),
+      within(sidebar).queryByRole("link", { name: "Nhân viên ngoài giờ" }),
     ).toBeNull();
     expect(
       within(sidebar).queryByRole("link", {
@@ -218,7 +218,7 @@ describe("desktop sidebar layout", () => {
     const view = setup();
     expect(
       within(view.sidebar)
-        .getByRole("link", { name: "Tài khoản nội bộ" })
+        .getByRole("link", { name: "Tài khoản nhân viên nội bộ" })
         .getAttribute("aria-current"),
     ).toBe("page");
     expect(

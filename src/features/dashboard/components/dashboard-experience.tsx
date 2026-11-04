@@ -35,14 +35,14 @@ const shortcuts: readonly {
   },
   {
     href: "/employees",
-    label: "Nhân viên",
+    label: "Nhân viên ngoài giờ",
     description: "Tra cứu và cập nhật hồ sơ",
     icon: "employee",
     permission: "cooperative.employees.manage",
   },
   {
     href: "/access/accounts",
-    label: "Tài khoản nội bộ",
+    label: "Tài khoản nhân viên nội bộ",
     description: "Quản lý đăng nhập và vùng",
     icon: "account",
     permission: "access.accounts.manage",
