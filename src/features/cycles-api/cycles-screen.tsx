@@ -9,12 +9,14 @@ import { readCycles } from "./repository";
 import { zoneCycles, cycleHistory, cycleProgress } from "./contracts";
 import { CycleEditor } from "./cycle-editor";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { CultivationLogsDialog } from "./log-screen";
 const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
 const laneState = (state: string) => ({ NotSeeded: "Chưa thả giống", Growing: "Đang nuôi", BeingHarvested: "Đang thu hoạch", Harvested: "Đã thu hoạch" }[state] ?? state);
 export function CyclesScreen() {
   const context = useApiWorkspace();
   const permitted = (action: string) => context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_CYCLES" && p.action === action);
   const [starting, setStarting] = useState<{ id: string; code: string }>(), [editing, setEditing] = useState(false), [notice, setNotice] = useState("");
+  const [logsOpen, setLogsOpen] = useState(false);
   const zones = useRemote(loadZones), mutation = useMutation();
   const [zoneId, setZoneId] = useState(""), [raft, setRaft] = useState<{ id: string; code: string }>(), [date, setDate] = useState(businessToday()), [cycleId, setCycleId] = useState("");
   const [progress, setProgress] = useState<z.infer<typeof cycleProgress>>();
@@ -32,9 +34,11 @@ export function CyclesScreen() {
     {list.loading ? <Skeleton /> : !zoneId ? <p className="mt-6 text-sm text-text-muted">Chọn vùng để xem các bè và chu kỳ nuôi.</p> : <DataTable headings={["Bè", "Số làn", "Ngày bắt đầu", "Ngày kết thúc", "Chu kỳ", "Chi tiết"]} empty={!list.data?.length}>{list.data?.map(row => <tr key={row.raftId}><td>{row.raftCode}</td><td>{row.laneCount}</td><td>{row.cycle?.startDate ?? "—"}</td><td>{row.cycle?.closeDate ?? "—"}</td><td>{row.cycle ? row.cycle.closeDate ? "Đã kết thúc" : "Đang nuôi" : "Chưa có chu kỳ"}</td><td><Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => { setRaft({ id: row.raftId, code: row.raftCode }); setDate(businessToday()); setCycleId(""); setProgress(undefined); void showProgress(row.raftId); }}>Lịch sử và tiến độ</Button></td></tr>)}</DataTable>}
     {raft && <Dialog open title={`Lịch sử và tiến độ · ${raft.code}`} size="xl" onOpenChange={open => { if (!open) setRaft(undefined); }}><ErrorNotice error={history.error || mutation.error} />
       {progress?.cycle?.canEdit && permitted("Edit") && <Button className="mb-3 w-auto" variant="secondary" onClick={() => setEditing(true)}>Sửa kế hoạch chu kỳ</Button>}
+      {progress?.cycle && (context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_LOGS" && p.action === "View")) && <Button className="mb-3 ml-2 w-auto" variant="secondary" onClick={() => setLogsOpen(true)}>Nhật ký chăm sóc</Button>}
       <div className="flex flex-wrap items-end gap-3"><div className="min-w-52 flex-1"><Select label="Chu kỳ" value={cycleId} onChange={e => setCycleId(e.target.value)}><option value="">Theo ngày</option>{history.data?.map(cycle => <option key={cycle.id} value={cycle.id}>{cycle.startDate} → {cycle.closeDate ?? "Đang nuôi"}</option>)}</Select></div><Field label="Ngày xem" type="date" max={businessToday()} disabled={!!cycleId} value={date} onChange={e => setDate(e.target.value)} /><Button className="w-auto" disabled={mutation.pending || !cycleId && !date} onClick={() => void showProgress(raft.id, cycleId, date)}>Xem tiến độ</Button></div>
       {mutation.pending ? <Skeleton /> : progress && <><p className="my-4 text-sm">Ngày {progress.date} · {progress.cycle ? `${progress.cycle.daysOfFarming} ngày nuôi` : "Chưa có chu kỳ trong ngày này"}</p><DataTable headings={["Làn", "Trạng thái sử dụng", "Tiến độ"]} empty={!progress.lanes.length}>{progress.lanes.map(lane => <tr key={lane.id}><td>Làn {lane.laneNumber}</td><td>{lane.statusId === 2001 ? "Đang sử dụng" : "Đã gỡ"}</td><td>{laneState(lane.state)}</td></tr>)}</DataTable></>}
     </Dialog>}
+    {logsOpen && progress?.cycle && <CultivationLogsDialog cycleId={progress.cycle.id} openCycle={progress.cycle.canEdit} onClose={() => setLogsOpen(false)} />}
     {(starting || editing && progress?.cycle) && <CycleEditor raftId={starting?.id ?? progress!.raftId} raftCode={starting?.code ?? progress!.raftCode} record={starting ? undefined : progress!.cycle!} canCancel={!!progress?.cycle?.canCancel && permitted("Delete")} onClose={() => { setStarting(undefined); setEditing(false); }} onSaved={() => { setStarting(undefined); setEditing(false); setRaft(undefined); setProgress(undefined); list.reload(); setNotice("Đã cập nhật chu kỳ nuôi."); }} />}
   </section>;
 }

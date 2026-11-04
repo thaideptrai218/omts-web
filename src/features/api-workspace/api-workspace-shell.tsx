@@ -61,6 +61,8 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       <NavigationGroup label="Điều hành" compact={compact}><div className={styles.navigationItems}>
         {link("/dashboard", "Tổng quan HTX", "dashboard")}
         {context.identity.subjectType === "CooperativeOwner" && link("/audit", "Nhật ký thao tác", "search")}
+        {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/certifications", "Chứng nhận HTX", "document")}
+        {(context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "SUPPLIER_PAYMENTS" && p.action === "View")) && link("/operations/supplier-debts", "Đối chiếu công nợ", "payment")}
         {(context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_CYCLES" && p.action === "View")) && link("/farming/cycles", "Chu kỳ nuôi", "raft")}
         {action("Thông báo", "inbox", () => setInboxOpen(true))}
         {context.identity.subjectType === "CooperativeOwner" && action("Yêu cầu thương lái", "request", () => setRequestsOpen(true))}
