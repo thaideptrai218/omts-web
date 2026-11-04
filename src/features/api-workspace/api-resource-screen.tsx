@@ -208,6 +208,9 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
         setSeedUnit(result.data.seedUnit); setProposalError(undefined);
         setValues((current) => ({ ...current, code: current.code || result.data.code,
           unit: current.group === "Seed" && result.data.seedUnit ? result.data.seedUnit : current.unit }));
+      } else if (result.httpStatus === 404) {
+        // Older backend contracts have no code proposal; the editable code and unit fields remain available.
+        setProposalError(undefined);
       } else setProposalError(workspaceError(result));
     });
     return () => controller.abort();

@@ -77,7 +77,7 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     if (key === "rafts" && !recordId && !zoneId) return json({ status: "invalid-input" }, 400);
     let path = key === "rafts" && !recordId ? `/api/zones/${zoneId}/rafts` : paths[key] + (recordId ? `/${recordId}` : "");
     if (action === "proposal") path += "/next-code";
-    if (["discontinue", "reactivate", "lock", "unlock"].includes(action)) path += `/${action === "reactivate" && ["suppliers", "input-items"].includes(key) ? "resume" : action}`;
+    if (["discontinue", "reactivate", "lock", "unlock"].includes(action)) path += `/${action}`;
     const upstreamQuery = new URLSearchParams();
     if (action === "list") {
       const allowed = key === "roles" || key === "rafts" ? ["statusId"] : key === "input-items" ? ["search", "statusId"] : ["search", "statusId", "page", "pageSize"];
