@@ -60,6 +60,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
     return <nav aria-label="Chức năng" className={styles.navigation}>
       <NavigationGroup label="Điều hành" compact={compact}><div className={styles.navigationItems}>
         {link("/dashboard", "Tổng quan HTX", "dashboard")}
+        {context.identity.subjectType === "CooperativeOwner" && link("/audit", "Nhật ký thao tác", "search")}
         {action("Thông báo", "inbox", () => setInboxOpen(true))}
         {context.identity.subjectType === "CooperativeOwner" && action("Yêu cầu thương lái", "request", () => setRequestsOpen(true))}
       </div></NavigationGroup>
