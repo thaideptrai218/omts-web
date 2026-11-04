@@ -6,6 +6,23 @@ import { ids } from "@/features/operations/__tests__/fixtures";
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
 const q = (s = "") => new URLSearchParams(s);
 describe("new real modules read contracts", () => {
+  it("keeps staffing employee names Owner-only and invitations session-derived", () => {
+    expect(planOperation("purchase-requests", "GET", q(`action=staffing&id=${ids.receipt}`))).toMatchObject({ path: `/api/purchase-requests/${ids.receipt}/staffing`, permission: "Respond" });
+    expect(planOperation("purchase-requests", "GET", q("action=staffing-employees&day=2026-11-05"))).toMatchObject({ path: "/api/purchase-requests/staffing-employees?day=2026-11-05", permission: "Respond" });
+    expect(operationAllowed("purchase-requests", { subjectType: "Staff" }, [], "Respond")).toBe(false);
+    expect(operationAllowed("purchase-requests", { subjectType: "Trader" }, [], "Respond")).toBe(false);
+    expect(planOperation("my-work", "GET", q("action=purchase-shifts&from=2026-11-01&to=2026-11-30"))).toMatchObject({ path: "/api/me/purchase-shifts?from=2026-11-01&to=2026-11-30", permission: "Mine" });
+    expect(planOperation("my-work", "GET", q(`action=purchase-shifts&from=2026-11-01&to=2026-11-30&employeeId=${ids.item}`))).toBeUndefined();
+  });
+  it("validates staffing writes and rejects duplicate employees and identity injection", () => {
+    const body = { cages: 100, workDate: "2026-11-05", pickupDate: "2026-11-06", cagesPerEmployeePerDay: 20, employeeIds: [ids.item], note: null, rowVersion: "v1" };
+    expect(planOperation("purchase-requests", "POST", q(), { action: "plan-staffing", id: ids.receipt, body })).toMatchObject({ path: `/api/purchase-requests/${ids.receipt}/staffing`, permission: "Respond", method: "POST" });
+    for (const patch of [{ employeeIds: [ids.item, ids.item] }, { cagesPerEmployeePerDay: 0 }, { cages: 1.5 }, { pickupDate: "2026-11-04" }, { employeeIds: [] }]) expect(planOperation("purchase-requests", "POST", q(), { action: "plan-staffing", id: ids.receipt, body: { ...body, ...patch } })).toBeUndefined();
+    const response = { approved: false, reason: "Không thể tham gia", rowVersion: "v1" };
+    expect(planOperation("my-work", "POST", q(), { action: "respond-shift", id: ids.receipt, body: response })).toMatchObject({ path: `/api/me/purchase-shifts/${ids.receipt}/response`, expectedId: ids.receipt });
+    expect(planOperation("my-work", "POST", q(), { action: "respond-shift", id: ids.receipt, body: { ...response, reason: " " } })).toBeUndefined();
+    expect(planOperation("my-work", "POST", q(), { action: "respond-shift", id: ids.receipt, body: { ...response, employeeId: ids.item } })).toBeUndefined();
+  });
   it("uses separate personal and cooperative request paths", () => {
     expect(planOperation("purchase-requests", "GET", q("action=mine&status=ACCEPTED&page=2"))).toMatchObject({ path: "/api/me/purchase-requests?page=2&pageSize=20&status=ACCEPTED", permission: "Mine" });
     expect(planOperation("purchase-requests", "GET", q(`action=detail&id=${ids.receipt}`))).toMatchObject({ path: `/api/purchase-requests/${ids.receipt}`, expectedId: ids.receipt, permission: "Review" });

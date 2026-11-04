@@ -57,7 +57,7 @@ describe("approved sales/workforce writes and draft safety", () => {
   });
   it("adopts a reviewed request version explicitly while retaining the rejection reason", async () => {
     mocks.subjectType = "CooperativeOwner"; mocks.write.mockResolvedValueOnce({ status: "error", httpStatus: 409, code: "MSG06", uncertain: false }).mockResolvedValue({ status: "success", data: record() });
-    mocks.read.mockResolvedValue({ status: "success", data: { ...record(), rowVersion: "version-B" } });
+    mocks.read.mockImplementation(async (action) => ({ status: "success", data: action === "staffing" ? [] : { ...record(), rowVersion: "version-B" } }));
     render(<PurchaseRequestDetails record={record()} onClose={vi.fn()} onSaved={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Phản hồi *"), { target: { value: "decline" } }); fireEvent.change(screen.getByLabelText("Lý do từ chối *"), { target: { value: "QA giữ lý do" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu phản hồi" })); fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
@@ -81,7 +81,7 @@ describe("approved sales/workforce writes and draft safety", () => {
     await waitFor(() => expect(saved).toHaveBeenCalledOnce()); expect(mocks.write.mock.calls[0][0]).toBe("leave"); expect(mocks.write.mock.calls[0][1]).not.toHaveProperty("employeeId"); expect(mocks.write.mock.calls[0][1]).not.toHaveProperty("accountId");
   });
   it("does not offer leave creation when the account has no linked employee", async () => {
-    mocks.read.mockResolvedValue({ status: "success", data: { employeeId: null, name: null, assignments: [], attendance: [], requests: [] } }); render(<MyWorkScreen />);
+    mocks.read.mockImplementation(async (action) => ({ status: "success", data: action === "purchase-shifts" ? [] : { employeeId: null, name: null, assignments: [], attendance: [], requests: [] } })); render(<MyWorkScreen />);
     await screen.findByText("Chưa có hồ sơ nhân viên gắn với tài khoản này."); expect(screen.queryByRole("button", { name: "Gửi yêu cầu nghỉ phép" })).toBeNull();
   });
   it("keeps assignment input and selected employees when lookup recovery runs", async () => {

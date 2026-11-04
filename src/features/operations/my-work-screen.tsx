@@ -6,6 +6,7 @@ import { createOperationsRepository } from "./repository";
 import * as c from "./new-module-contracts";
 import { DataTable, ErrorNotice, Field, FilterPanel, Note, OperationHeading, Skeleton, businessToday, displayTime, useRemote } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
+import { MyPurchaseShifts } from "./purchase-staffing";
 
 const repository = createOperationsRepository("my-work");
 export function MyWorkScreen() {
@@ -23,6 +24,7 @@ export function MyWorkScreen() {
       <h2 className="mt-6 text-xl font-semibold">Ngày công</h2><DataTable headings={["Ngày", "Vào làm", "Ra về", "Công việc và số giờ", "Tình trạng"]} empty={!work.data.attendance.length}>{work.data.attendance.map((r) => <tr key={r.date}><td>{r.date}</td><td>{r.checkedInAt ? displayTime(r.checkedInAt) : "Chưa ghi nhận"}</td><td>{r.checkedOutAt ? displayTime(r.checkedOutAt) : "Chưa ghi nhận"}</td><td>{r.jobs.map((j) => <p key={j.jobTypeId}>{j.job}: {j.hours.toLocaleString("vi-VN")} giờ</p>)}</td><td>{r.complete ? "Đủ lượt vào/ra" : "Thiếu lượt vào/ra"}</td></tr>)}</DataTable>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">Yêu cầu nghỉ phép của tôi</h2><Button className="w-auto" disabled={editor.disabled} onClick={() => setCreating(true)}>Gửi yêu cầu nghỉ phép</Button></div><DataTable headings={["Từ", "Đến", "Lý do", "Trạng thái", "Phản hồi", "Thao tác"]} empty={!work.data.requests.length}>{work.data.requests.map((r) => <tr key={r.id}><td>{r.from}</td><td>{r.to}</td><td className="whitespace-pre-wrap">{r.reason}</td><td>{r.cancelledAt ? "Đã hủy" : r.approved === null ? "Chờ duyệt" : r.approved ? "Đã duyệt" : "Từ chối"}</td><td>{r.response || "—"}</td><td>{r.approved === null && !r.cancelledAt && <Button className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => void cancel(r.id)}>Hủy nghỉ phép</Button>}</td></tr>)}</DataTable>
     </> : <p className="mt-5">Chưa có hồ sơ nhân viên gắn với tài khoản này.</p>)}
+    <MyPurchaseShifts period={period} valid={valid} />
     {editor.mutation.blocked && <p className="mt-3">Chưa rõ kết quả. Hãy đối chiếu trạng thái nghỉ phép hiện tại; hệ thống không tự hủy lại.</p>}
     {creating && <LeaveEditor onClose={() => setCreating(false)} onSaved={() => { setCreating(false); work.reload(); setNotice("Đã gửi yêu cầu nghỉ phép."); }} />}
   </section>;
