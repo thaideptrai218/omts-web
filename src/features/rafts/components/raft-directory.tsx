@@ -151,16 +151,6 @@ export function RaftDirectory({
           </button>
         )}
       </div>
-      <div
-        aria-hidden="true"
-        className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_9rem_1rem] gap-4 border-y border-border bg-surface-subtle px-6 py-3 text-sm font-medium text-text-muted lg:grid"
-      >
-        <span>Bè / vùng</span>
-        <span>Kích thước</span>
-        <span>Số làn</span>
-        <span>Trạng thái</span>
-        <span />
-      </div>
       {!rafts.length && (
         <DirectoryEmpty
           title={
@@ -175,7 +165,7 @@ export function RaftDirectory({
           }
         />
       )}
-      <ul className="divide-y divide-border">
+      <ul className="grid gap-3 border-t border-border bg-surface-subtle/40 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
         {rafts.map((raft) => (
           <RaftRow
             key={raft.id}
@@ -199,33 +189,21 @@ function RaftRow({
 }) {
   const layout = [...raft.layouts].sort((a, b) => b.version - a.version)[0];
   return (
-    <li>
+    <li className="min-w-0">
       <button
         type="button"
         onClick={onSelect}
         aria-label={`Xem bè ${raft.code}, ${zoneName}`}
-        className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-5 text-left transition-colors hover:bg-primary-soft/40 motion-reduce:transition-none sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_9rem_1rem]"
+        className="group relative grid min-h-44 w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] content-between gap-4 rounded-lg border border-border bg-surface px-4 py-4 text-left shadow-[0_1px_2px_rgb(16_36_58_/_0.04)] transition-colors hover:border-primary/40 hover:bg-primary-soft/30 motion-reduce:transition-none sm:px-5"
       >
-        <span className="min-w-0">
-          <strong className="block text-lg font-semibold text-text">
-            {raft.code}
-          </strong>
-          <span className="mt-1 block break-words text-sm text-text-muted">
-            {zoneName}
-          </span>
+        <span className="col-span-2 min-w-0">
+          <span className="flex items-start justify-between gap-3"><strong className="text-lg font-semibold text-text">{raft.code}</strong><StatusPill tone={raft.status === "in-use" ? "success" : "neutral"}>{raft.status === "in-use" ? "Đang sử dụng" : "Đã ngừng"}</StatusPill></span>
+          <span className="mt-1 block break-words text-sm text-text-muted">{zoneName}</span>
         </span>
-        <span className="hidden text-sm text-text-muted lg:block">
-          {raft.size}
-        </span>
-        <span className="hidden text-sm tabular-nums lg:block">
-          {layout?.lanes.length ?? 0} làn
-        </span>
-        <StatusPill tone={raft.status === "in-use" ? "success" : "neutral"}>
-          {raft.status === "in-use" ? "Đang sử dụng" : "Đã ngừng"}
-        </StatusPill>
+        <span className="col-span-2 grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm"><span><span className="block text-xs text-text-muted">Kích thước</span><span className="mt-1 block text-text">{raft.size || "Chưa cập nhật"}</span></span><span><span className="block text-xs text-text-muted">Số làn</span><span className="mt-1 block tabular-nums text-text">{layout?.lanes.length ?? 0} làn</span></span></span>
         <InterfaceIcon
           name="arrow"
-          className="hidden size-4 text-primary lg:block"
+          className="absolute right-4 top-4 size-4 text-primary opacity-60 transition-transform group-hover:translate-x-0.5 sm:right-5 sm:top-5"
         />
       </button>
     </li>
