@@ -19,7 +19,7 @@ const loadItems = (signal: AbortSignal) => loadOptions("input-items", signal);
 type Lines = { key: string; itemId: string; quantity: string; unitPrice: string; supplierLotCode: string; actualSource: string }[];
 const blankLine = () => ({ key: crypto.randomUUID(), itemId: "", quantity: "", unitPrice: "", supplierLotCode: "", actualSource: "" });
 function ReceiptTotals({ record }: { record: Pick<c.Receipt, "payable" | "paid" | "returned" | "outstanding"> }) {
-  return <dl className="my-4 grid gap-4 rounded-control bg-primary-soft p-4 sm:grid-cols-4">{[["Phải trả", record.payable], ["Đã trả", record.paid], ["Hàng trả", record.returned], ["Còn nợ", record.outstanding]].map(([label, value]) => <div key={label}><dt className="text-sm">{label}</dt><dd className="mt-1 font-semibold"><Money value={Number(value)} /></dd></div>)}</dl>;
+  return <dl aria-label="Đối chiếu giá trị phiếu" className="my-4 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-border py-3 sm:grid-cols-4">{[["Phải trả", record.payable], ["Đã trả", record.paid], ["Hàng trả", record.returned], ["Còn nợ", record.outstanding]].map(([label, value]) => <div key={label}><dt className="text-xs font-medium text-text-muted">{label}</dt><dd className={`mt-1 text-sm font-semibold tabular-nums ${label === "Còn nợ" && Number(value) > 0 ? "text-amber-800" : "text-text"}`}><Money value={Number(value)} /></dd></div>)}</dl>;
 }
 export function ReceiptScreen() {
   const context = useApiWorkspace();
@@ -57,7 +57,8 @@ export function ReceiptScreen() {
     <Button className="mt-4 w-auto" variant="secondary" disabled={list.loading} onClick={list.reload}>Tải lại danh sách</Button>
     {notice && <p role="status" className="mt-3 text-primary">{notice}</p>}
     {list.loading ? <Skeleton /> : list.data && <>
-      <ReceiptTotals record={list.data.totals} /><p className="text-sm text-text-muted">Tổng tiền tính trên {list.data.totals.completedCount} phiếu hoàn thành · {list.data.from} — {list.data.to}</p>
+      <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-border pt-4"><h2 className="text-base font-semibold tracking-tight">Danh sách phiếu</h2><p className="text-xs text-text-muted">{list.data.page.total} phiếu trong kỳ · {list.data.from} — {list.data.to}</p></div>
+      <ReceiptTotals record={list.data.totals} /><p className="-mt-2 text-xs text-text-muted">Tổng hợp từ {list.data.totals.completedCount} phiếu đã hoàn thành trong khoảng thời gian đã chọn.</p>
       <DataTable headings={["Mã phiếu", "Ngày nhập", "Nhà cung cấp", "Vùng / bè", "Trạng thái", "Phải trả", "Còn nợ", "Chi tiết"]} empty={!list.data.page.items.length}>{list.data.page.items.map((row) => <tr key={row.id}>
         <td>{row.code}</td><td>{row.receiptDate ?? "—"}</td><td>{row.supplier.name}</td><td>{row.zone.name}{row.raft ? ` / ${row.raft.code}` : ""}</td><td>{statusLabel(row.statusId)}</td><td><Money value={row.payable} /></td><td><Money value={row.outstanding} /></td>
         <td><button className="font-semibold text-primary underline" disabled={mutation.pending} onClick={() => void open(row.id)}>Mở phiếu</button></td></tr>)}</DataTable>

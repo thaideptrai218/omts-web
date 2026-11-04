@@ -24,9 +24,29 @@ export function PaymentScreen() {
   const supplierDebt = useRemote(useMemo(() => (signal: AbortSignal) => filters.supplierId ? repository.read("debt", { supplierId: filters.supplierId }, c.debtSchema, signal)
     : Promise.resolve({ status: "success" as const, data: undefined as Debt | undefined }), [filters.supplierId]));
   const canCreate = operationAllowed("supplier-payments", context.identity, context.permissions.functionPermissions, "Create");
+  const debtScope = (debts.data ?? []).filter((row) => !filters.supplierId || row.supplierId === filters.supplierId);
+  const debtSummary = debtScope.reduce((summary, row) => ({
+    suppliersWithDebt: summary.suppliersWithDebt + Number(row.outstanding > 0),
+    outstanding: summary.outstanding + row.outstanding,
+    unallocated: summary.unallocated + row.unallocated,
+  }), { suppliersWithDebt: 0, outstanding: 0, unallocated: 0 });
+  const hasFilters = Object.values(filters).some(Boolean);
   const filter = (key: keyof typeof filters, value: string) => { setFilters((current) => ({ ...current, [key]: value, ...(key === "supplierId" ? { receiptId: "" } : {}) })); setPage(1); };
+  const clearFilters = () => { setFilters({ supplierId: "", receiptId: "", method: "", statusId: "", from: "", to: "" }); setPage(1); };
   function reload() { history.reload(); debts.reload(); supplierDebt.reload(); }
-  return <section><OperationHeading title="Thanh toán nhà cung cấp" description="Đối chiếu khoản đã trả, số tiền chưa phân bổ và công nợ theo từng phiếu." icon="document">{canCreate && <Button className="w-auto" onClick={() => setEditor(null)}>Ghi nhận thanh toán</Button>}</OperationHeading>
+  return <section><OperationHeading title="Thanh toán nhà cung cấp" description="Đối chiếu khoản đã trả, số tiền chưa phân bổ và công nợ theo từng phiếu." icon="document">
+    {canCreate && <Button className="w-auto" onClick={() => setEditor(null)}>Ghi nhận thanh toán</Button>}
+    <Button className="w-auto" variant="secondary" disabled={history.loading || debts.loading} onClick={reload}>Tải lại dữ liệu</Button>
+  </OperationHeading>
+    {debts.data && <dl aria-label="Tổng quan công nợ nhà cung cấp" className="my-1 grid gap-x-8 gap-y-3 border-y border-border py-3 sm:grid-cols-3">
+      <div><dt className="text-xs font-medium text-text-muted">Nhà cung cấp còn nợ</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{debtSummary.suppliersWithDebt}</dd></div>
+      <div><dt className="text-xs font-medium text-text-muted">Tổng công nợ</dt><dd className="mt-1 text-lg font-semibold tabular-nums text-amber-800"><Money value={debtSummary.outstanding} /></dd></div>
+      <div><dt className="text-xs font-medium text-text-muted">Tiền chưa phân bổ</dt><dd className="mt-1 text-lg font-semibold tabular-nums"><Money value={debtSummary.unallocated} /></dd></div>
+    </dl>}
+    <div className="mb-2 mt-5 flex flex-wrap items-center justify-between gap-2">
+      <h2 className="text-sm font-semibold tracking-tight">Lọc khoản thanh toán</h2>
+      {hasFilters && <Button className="w-auto" variant="secondary" onClick={clearFilters}>Xóa bộ lọc</Button>}
+    </div>
     <FilterPanel columns="three">
       <Select label="Nhà cung cấp" value={filters.supplierId} onChange={(e) => filter("supplierId", e.target.value)}><option value="">Tất cả</option>{debts.data?.map((row) => <option key={row.supplierId} value={row.supplierId}>{row.supplierName}</option>)}</Select>
       <Select label="Phiếu nhập" value={filters.receiptId} disabled={!filters.supplierId} onChange={(e) => filter("receiptId", e.target.value)}><option value="">Tất cả phiếu</option>{supplierDebt.data?.receipts.map((row) => <option key={row.receiptId} value={row.receiptId}>{row.code}</option>)}</Select>
@@ -34,16 +54,24 @@ export function PaymentScreen() {
       <Select label="Trạng thái" value={filters.statusId} onChange={(e) => filter("statusId", e.target.value)}><option value="">Tất cả</option><option value="1801">Đã ghi nhận</option><option value="1802">Đã hủy</option></Select>
       <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => filter("from", e.target.value)} /><Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => filter("to", e.target.value)} />
     </FilterPanel>
-    <ErrorNotice error={history.error || debts.error || supplierDebt.error} /><Button className="mt-4 w-auto" variant="secondary" disabled={history.loading} onClick={reload}>Tải lại dữ liệu</Button>
+    <ErrorNotice error={history.error || debts.error || supplierDebt.error} />
     {notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
-    {history.loading ? <Skeleton /> : history.data && <><p className="mt-5 font-semibold">Tổng thanh toán trong bộ lọc: <Money value={history.data.totalAmount} /></p>
+    <section aria-labelledby="payment-history-heading" className="mt-6 border-t border-border pt-5">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="payment-history-heading" className="text-base font-semibold tracking-tight">Lịch sử thanh toán</h2>
+        {history.data && <p className="text-xs text-text-muted">{history.data.page.total} khoản · Tổng tiền trong bộ lọc <strong className="font-semibold text-text"><Money value={history.data.totalAmount} /></strong></p>}
+      </div>
+    {history.loading ? <Skeleton /> : history.data && <>
       <DataTable headings={["Ngày", "Nhà cung cấp", "Phiếu nhập", "Số tiền", "Hình thức", "Mã tham chiếu", "Trạng thái", "Chi tiết"]} empty={!history.data.page.items.length}>{history.data.page.items.map((row) => <tr key={row.id}>
-        <td>{row.paymentDate}</td><td>{row.supplier.name}</td><td>{row.receiptCode ?? "Chưa phân bổ"}</td><td><Money value={row.amount} /></td><td>{methodLabel(row.method)}</td><td>{row.referenceCode ?? "—"}</td><td>{statusLabel(row.statusId)}</td><td><button className="text-primary underline" onClick={() => setEditor(row)}>Mở khoản tiền</button></td></tr>)}</DataTable>
+        <td>{row.paymentDate}</td><td>{row.supplier.name}</td><td>{row.receiptCode ?? "Chưa phân bổ"}</td><td><Money value={row.amount} /></td><td>{methodLabel(row.method)}</td><td>{row.referenceCode ?? "—"}</td><td>{statusLabel(row.statusId)}</td><td><button className="font-semibold text-primary underline underline-offset-4" onClick={() => setEditor(row)}>Mở khoản tiền</button></td></tr>)}</DataTable>
       <Paging page={page} total={history.data.page.total} onChange={setPage} />
     </>}
-    <h2 className="mt-8 text-xl font-semibold">Công nợ nhà cung cấp</h2>
-    {debts.loading ? <Skeleton /> : <DataTable headings={["Nhà cung cấp", "Phải trả", "Hàng trả", "Đã trả", "Hoàn lại", "Chưa phân bổ", "Còn nợ", "Theo phiếu"]} empty={!debts.data?.length}>{debts.data?.filter((row) => !filters.supplierId || row.supplierId === filters.supplierId).map((row) => <tr key={row.supplierId}><td>{row.supplierName}</td><td><Money value={row.payable} /></td><td><Money value={row.returned} /></td><td><Money value={row.paid} /></td><td><Money value={row.refunded} /></td><td><Money value={row.unallocated} /></td><td><Money value={row.outstanding} /></td><td><button className="text-primary underline" onClick={() => filter("supplierId", row.supplierId)}>Xem theo phiếu</button></td></tr>)}</DataTable>}
-    {supplierDebt.data && <><h3 className="font-semibold">Các phiếu của {supplierDebt.data.totals.supplierName}</h3><DataTable headings={["Phiếu", "Ngày nhập", "Phải trả", "Đã trả", "Hàng trả", "Còn nợ"]} empty={!supplierDebt.data.receipts.length}>{supplierDebt.data.receipts.map((row) => <tr key={row.receiptId}><td>{row.code}</td><td>{row.receiptDate}</td><td><Money value={row.payable} /></td><td><Money value={row.paid} /></td><td><Money value={row.returned} /></td><td><Money value={row.outstanding} /></td></tr>)}</DataTable></>}
+    </section>
+    <section aria-labelledby="supplier-debt-heading" className="mt-7 border-t border-border pt-5">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"><h2 id="supplier-debt-heading" className="text-base font-semibold tracking-tight">Công nợ nhà cung cấp</h2><p className="text-xs text-text-muted">Theo dõi số phải trả, tiền đã trả và khoản còn dư</p></div>
+      {debts.loading ? <Skeleton /> : <DataTable headings={["Nhà cung cấp", "Phải trả", "Hàng trả", "Đã trả", "Hoàn lại", "Chưa phân bổ", "Còn nợ", "Theo phiếu"]} empty={!debtScope.length}>{debtScope.map((row) => <tr key={row.supplierId}><td className="font-semibold">{row.supplierName}</td><td><Money value={row.payable} /></td><td><Money value={row.returned} /></td><td><Money value={row.paid} /></td><td><Money value={row.refunded} /></td><td><Money value={row.unallocated} /></td><td className={row.outstanding > 0 ? "font-semibold text-amber-800" : ""}><Money value={row.outstanding} /></td><td><button className="font-semibold text-primary underline underline-offset-4" onClick={() => filter("supplierId", row.supplierId)}>Xem theo phiếu</button></td></tr>)}</DataTable>}
+      {supplierDebt.data && <div className="mt-5"><div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"><h3 className="text-sm font-semibold">Các phiếu của {supplierDebt.data.totals.supplierName}</h3><p className="text-xs text-text-muted">{supplierDebt.data.receipts.length} phiếu nhập</p></div><DataTable headings={["Phiếu", "Ngày nhập", "Phải trả", "Đã trả", "Hàng trả", "Còn nợ"]} empty={!supplierDebt.data.receipts.length}>{supplierDebt.data.receipts.map((row) => <tr key={row.receiptId}><td>{row.code}</td><td>{row.receiptDate}</td><td><Money value={row.payable} /></td><td><Money value={row.paid} /></td><td><Money value={row.returned} /></td><td className={row.outstanding > 0 ? "font-semibold text-amber-800" : ""}><Money value={row.outstanding} /></td></tr>)}</DataTable></div>}
+    </section>
     {editor !== undefined && <PaymentEditor key={editor?.id ?? "new"} payment={editor} suppliers={debts.data ?? []} canCreate={canCreate} initialSupplierId={filters.supplierId} onClose={() => setEditor(undefined)} onSaved={(saved) => {
       setEditor(undefined); reload(); setNotice(`Đã ghi nhận khoản ${saved.receiptCode ?? "chưa phân bổ"} cho ${saved.supplier.name}.`);
     }} />}

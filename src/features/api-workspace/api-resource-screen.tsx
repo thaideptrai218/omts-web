@@ -27,6 +27,10 @@ const directoryPresentation = {
   accounts: { icon: "account", description: "Xem tài khoản nội bộ, tình trạng và hồ sơ liên quan." },
   roles: { icon: "roles", description: "Đối chiếu vai trò và quyền hiện hành của hệ thống." },
 } as const;
+const directoryActions: Partial<Record<ResourceKey, { create: string; open: string }>> = {
+  suppliers: { create: "Thêm nhà cung cấp", open: "Mở nhà cung cấp" },
+  "input-items": { create: "Thêm vật tư", open: "Mở vật tư" },
+};
 function text(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Có" : "Không";
@@ -133,6 +137,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const statuses = resource === "accounts" ? [["301", "Hoạt động"], ["302", "Đã khóa"]]
     : resource === "employees" ? [["401", "Đang làm việc"], ["402", "Đã nghỉ việc"]] : [["101", "Đang dùng"], ["102", "Ngừng dùng"]];
   const presentation = directoryPresentation[resource as keyof typeof directoryPresentation];
+  const actions = directoryActions[resource];
   const valueLabel = (key: string, row: ApiRecord) => {
     if (key === "status") {
       const id = Number(row.statusId);
@@ -150,10 +155,10 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   return <section>
     <ManagementHeading title={definition.title} description={presentation.description} icon={presentation.icon}>
       {resource === "zones" && <Button className="w-auto" variant="secondary" onClick={() => setMapOpen(true)}>Vị trí vùng và bè</Button>}
-      {canCreate && <Button className="w-auto" disabled={definition.zoneRequired && !zoneId} onClick={() => { setSelected(null); setEditorId((value) => value + 1); }}>Thêm mới</Button>}
+      {canCreate && <Button className="w-auto" disabled={definition.zoneRequired && !zoneId} onClick={() => { setSelected(null); setEditorId((value) => value + 1); }}>{actions?.create ?? "Thêm mới"}</Button>}
     </ManagementHeading>
     {mapOpen && <ZoneMapDialog onClose={() => setMapOpen(false)} />}
-    <div className="grid gap-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className={`grid gap-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 ${resource === "suppliers" || resource === "input-items" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
       <label className="min-w-0 text-sm font-semibold">Tìm kiếm<input type="search" className={inputClass} value={search} onChange={(event) => { setSearch(event.target.value); setPageNumber(1); }} /></label>
       {resource !== "roles" && <label className="min-w-0 text-sm font-semibold">Trạng thái<select className={inputClass} value={filter} onChange={(event) => { setFilter(event.target.value); setPageNumber(1); }}>
         <option value="">Tất cả</option>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
@@ -170,7 +175,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
     {definition.zoneRequired && !zoneId ? <p className="mt-5">Chọn vùng nuôi để xem danh sách bè.</p> : loading ? <div className="mt-5 space-y-3" role="status" aria-label="Đang tải danh sách">{[1, 2, 3, 4].map((value) => <div key={value} className="h-14 animate-pulse rounded-control bg-slate-200" />)}</div>
       : <div className="mt-4"><DataGrid responsive headings={[...definition.columns.map(([, label]) => label), "Hồ sơ"]} empty={!page?.items.length}>
         {page?.items.map((row) => <tr key={row.id}>{definition.columns.map(([key, label]) => <td key={key} data-label={label} className={key === "code" || key === "username" ? "font-mono tabular-nums" : ""}>{key === "status" ? <StatusPill tone={[101, 301].includes(Number(row.statusId)) || row.status === "Active" ? "success" : "neutral"}>{valueLabel(key, row)}</StatusPill> : valueLabel(key, row)}</td>)}
-          <td data-label="Hồ sơ"><button className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover" disabled={opening} onClick={() => void open(row)}>Mở hồ sơ</button></td></tr>)}
+          <td data-label="Hồ sơ"><button className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover" disabled={opening} onClick={() => void open(row)}>{actions?.open ?? "Mở hồ sơ"}</button></td></tr>)}
       </DataGrid></div>}
     {page && <div className="mt-4 flex items-center justify-between gap-3"><p>{page.total} bản ghi · Trang {pageNumber}</p><div className="flex gap-2">
       <Button className="w-auto" variant="secondary" disabled={loading || pageNumber <= 1} onClick={() => setPageNumber((value) => value - 1)}>Trước</Button>
