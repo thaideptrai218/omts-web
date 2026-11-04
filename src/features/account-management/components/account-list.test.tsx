@@ -11,7 +11,7 @@ afterEach(cleanup);
 function page() {
   return render(
     <AccountList
-      accounts={mockManagedAccounts}
+      accounts={mockManagedAccounts.map((account) => account.id === "account-tran-binh" ? { ...account, status: "locked" as const } : account)}
       roles={mockFixedRoles}
       zones={mockFarmingZones}
       onSelect={vi.fn()}

@@ -12,8 +12,8 @@ afterAll(() => { Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"
 it("runs local assignment and attendance without sending requests to a backend", async () => {
   const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
   render(<DemoWorkforceScreen />);
-  await screen.findByText("Không có dữ liệu phù hợp.");
-  fireEvent.click(screen.getByRole("button", { name: "Phân công công việc" }));
+  await screen.findByText("Chưa có phân công cho ngày này");
+  fireEvent.click(screen.getAllByRole("button", { name: "Tạo phân công" })[0]);
   fireEvent.change(screen.getByLabelText("Vùng phân công *"), { target: { value: "zone-east" } });
   const raftSelect = screen.getByLabelText("Bè phân công *") as HTMLSelectElement;
   fireEvent.change(raftSelect, { target: { value: raftSelect.options[1].value } });

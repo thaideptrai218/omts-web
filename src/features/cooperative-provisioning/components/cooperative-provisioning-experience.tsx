@@ -1,6 +1,7 @@
 "use client";
 
 import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
+import { ManagementHeading } from "@/components/ui/management-page";
 import { CooperativeProvisioningForm } from "@/features/cooperative-provisioning/components/cooperative-provisioning-form";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
 import { useAuth } from "@/features/auth/state/auth-provider";
@@ -39,15 +40,7 @@ export function CooperativeProvisioningExperience() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-sm font-semibold text-primary">Quản trị nền tảng</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text sm:text-4xl">
-          Khởi tạo hợp tác xã
-        </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-text-muted">
-          Xác minh hồ sơ, tạo thông tin sơ bộ và cấp tài khoản cho Chủ hợp tác xã đầu tiên.
-        </p>
-      </header>
+      <ManagementHeading title="Khởi tạo hợp tác xã" description="Xác minh hồ sơ, tạo thông tin sơ bộ và cấp tài khoản cho Chủ hợp tác xã đầu tiên." icon="settings" />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <section

@@ -1,96 +1,35 @@
 import { BrandMark } from "@/components/brand/brand-mark";
+import styles from "./auth-shell.module.css";
 
-type AuthShellProps = Readonly<{
-  children: React.ReactNode;
-}>;
-
-const productBenefits = [
-  "Theo dõi vùng nuôi và công việc tập trung",
-  "Phân quyền theo vai trò và phạm vi vùng",
-  "Truy xuất nguồn gốc minh bạch qua mã QR",
-];
-
-export function AuthShell({ children }: AuthShellProps) {
-  return (
-    <main className="flex min-h-dvh flex-1 bg-canvas">
-      <div className="mx-auto grid w-full max-w-[90rem] lg:grid-cols-[minmax(22rem,0.85fr)_minmax(30rem,1.15fr)]">
-        <aside
-          aria-label="Giới thiệu hệ thống OMTS"
-          className="relative hidden overflow-hidden bg-primary px-10 py-12 text-white lg:flex lg:flex-col xl:px-16 xl:py-14"
-        >
-          <div
-            aria-hidden="true"
-            className="absolute -right-28 top-24 size-72 rounded-full border border-white/15"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute -bottom-36 -left-28 size-96 rounded-full border border-white/10"
-          />
-
-          <div className="relative z-10 flex flex-1 flex-col motion-safe:animate-[omts-reveal-from-left_420ms_cubic-bezier(0.22,1,0.36,1)_both]">
-            <BrandMark tone="inverse" />
-
-            <div className="my-auto max-w-lg py-16">
-              <p className="text-sm font-semibold text-sky-100">
-                Hệ thống quản lý hợp tác xã
-              </p>
-              <h2 className="mt-4 text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">
-                Công việc rõ ràng, dữ liệu dễ kiểm soát.
-              </h2>
-              <p className="mt-5 max-w-md text-base leading-7 text-sky-50 xl:text-lg">
-                OMTS giúp các thành viên làm đúng phần việc của mình mà không cần làm quen với giao diện phức tạp.
-              </p>
-
-              <ul className="mt-8 space-y-4" aria-label="Lợi ích chính">
-                {productBenefits.map((benefit) => (
-                  <li
-                    key={benefit}
-                    className="flex items-start gap-3 text-sm leading-6 text-white"
-                  >
-                    <svg
-                      aria-hidden="true"
-                      className="mt-1 size-5 shrink-0 text-sky-100"
-                      fill="none"
-                      viewBox="0 0 20 20"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="m5 10 3 3 7-7"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                      />
-                    </svg>
-                    <span>{benefit}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <p className="text-sm text-sky-100">
-              Hợp tác xã Thủy sản Trung Nam
-            </p>
-          </div>
-
-        </aside>
-
-        <div className="flex min-w-0 flex-col px-4 py-5 sm:px-8 sm:py-8 lg:px-12 lg:py-10 xl:px-20">
-          <header className="motion-safe:animate-[omts-reveal-from-bottom_420ms_cubic-bezier(0.22,1,0.36,1)_both] lg:hidden">
-            <BrandMark />
-          </header>
-
-          <div className="flex flex-1 items-center justify-center py-8 sm:py-12">
-            <div className="w-full max-w-[29rem] motion-safe:animate-[omts-reveal-from-bottom_420ms_cubic-bezier(0.22,1,0.36,1)_both] motion-safe:[animation-delay:80ms]">
-              {children}
-            </div>
-          </div>
-
-          <p className="text-center text-sm leading-6 text-text-muted">
-            Hệ thống quản lý và truy xuất nguồn gốc hàu
-          </p>
-        </div>
+export function AuthShell({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <main className={styles.shell}>
+    <div className={styles.entry}>
+      <header className={styles.brand}><BrandMark compact /><span>Quản lý & truy xuất nuôi hàu</span></header>
+      <div className={styles.form}>{children}</div>
+      <footer className={styles.footer}><span>OMTS · Hệ thống quản lý hợp tác xã</span><span>Đồng hành cùng vùng nuôi.</span></footer>
+    </div>
+    <aside className={styles.story} aria-label="Giới thiệu hệ thống OMTS">
+      <div className={styles.storyLabel}><span className={styles.dot} /> KẾT NỐI MỘT HỆ SINH THÁI</div>
+      <div className={styles.art} aria-hidden="true">
+        <svg viewBox="0 0 640 650" fill="none">
+          <defs>
+            <linearGradient id="coast-shell" x1="180" y1="120" x2="480" y2="560" gradientUnits="userSpaceOnUse"><stop stopColor="#d8efdf"/><stop offset=".5" stopColor="#72b5ad"/><stop offset="1" stopColor="#2f6e70"/></linearGradient>
+            <radialGradient id="coast-pearl" cx=".34" cy=".25" r=".8"><stop stopColor="#fffef5"/><stop offset=".48" stopColor="#eff3df"/><stop offset=".8" stopColor="#a6bfb0"/><stop offset="1" stopColor="#507b76"/></radialGradient>
+            <linearGradient id="coast-line"><stop stopColor="#fff" stopOpacity=".75"/><stop offset="1" stopColor="#fff" stopOpacity=".08"/></linearGradient>
+          </defs>
+          <g stroke="#457d78" strokeOpacity=".16">{Array.from({length:9},(_,i)=><ellipse key={i} cx="330" cy="365" rx={180+i*27} ry={95+i*23} transform="rotate(-30 330 365)"/>)}</g>
+          <g transform="rotate(-24 320 330)">
+            <path d="M158 340C105 262 145 141 229 109c26-10 45 9 65-6 35-27 58 10 82 8 43-5 49 36 73 44 39 13 19 52 42 77 29 32-7 60-1 89 8 41-36 45-44 75-10 36-49 23-72 43-26 23-53 0-84 7-39 9-54-23-86-26-32-4-44-47-46-80Z" fill="url(#coast-shell)" stroke="#d5e9d9" strokeWidth="2"/>
+            {Array.from({length:8},(_,i)=><path key={i} d={`M${178+i*12} ${324+i*7}C${140+i*15} ${235-i*4} ${211+i*22} ${123+i*7} ${250+i*24} ${129+i*15}`} stroke="url(#coast-line)" strokeWidth="1.5"/>)}
+            <path d="M161 340c60-49 112-8 152-46 37-34 64-1 94-20 33-21 45 0 78 6-3 47-33 62-46 91-15 34-51 28-76 47-32 25-69-2-98 4-48 9-89-33-104-82Z" fill="#d8ebe0" stroke="#edf4e9" strokeWidth="2"/>
+            <path d="M177 347c61-27 108 2 147-28 33-24 64-4 96-20 23-11 35-1 46 0-13 30-39 44-45 61-13 29-49 28-67 40-23 15-65-8-91-2-32 7-65-25-86-51Z" fill="#4f8c83"/>
+            <circle cx="321" cy="346" r="49" fill="#214f4d" opacity=".2"/><circle cx="316" cy="333" r="47" fill="url(#coast-pearl)"/>
+          </g>
+          <g stroke="#507f77" strokeWidth="1" opacity=".5"><path d="M105 492h52m-26-26v52M503 143h24m-12-12v24"/></g>
+        </svg>
       </div>
-    </main>
-  );
+      <div className={styles.storyCopy}><span className={styles.index}>01 / CÙNG MỘT TẦM NHÌN</span><h2>Từ vùng nuôi,<br/>đến từng quyết định.</h2><p>Một không gian kết nối con người, vận hành và dữ liệu. Để mỗi ngày làm việc đều rõ ràng hơn.</p></div>
+      <div className={styles.storyFooter}><span>NUÔI TRỒNG · CON NGƯỜI · TRUY XUẤT</span><span>OMTS</span></div>
+    </aside>
+  </main>;
 }

@@ -103,13 +103,11 @@ function Workspace({
         aria-busy="true"
         className="space-y-5"
       >
-        <div className="h-28 rounded-card bg-surface-subtle motion-safe:animate-pulse" />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="h-20 rounded-card bg-surface-subtle motion-safe:animate-pulse" />
+        <div className="h-20 rounded-card bg-surface-subtle motion-safe:animate-pulse" />
+        <div className="overflow-hidden rounded-card border border-border bg-surface">
           {[1, 2, 3].map((id) => (
-            <div
-              key={id}
-              className="h-64 rounded-card bg-surface-subtle motion-safe:animate-pulse"
-            />
+            <div key={id} className="h-20 border-b border-border bg-surface-subtle/60 last:border-b-0 motion-safe:animate-pulse" />
           ))}
         </div>
       </section>

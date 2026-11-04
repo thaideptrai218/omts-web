@@ -13,7 +13,7 @@ it.each([["suppliers", "Loại nhà cung cấp", "Material", "type"], ["input-it
   fireEvent.click(await screen.findByRole("button", { name: "Sau" })); await vi.waitFor(() => expect(state.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: "2" }), expect.any(AbortSignal)));
   fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value } });
   fireEvent.change(screen.getByRole("combobox", { name: "Trạng thái" }), { target: { value: "101" } });
-  fireEvent.change(screen.getByRole("textbox", { name: "Tìm kiếm" }), { target: { value: "qa" } });
+  fireEvent.change(screen.getByRole("searchbox", { name: "Tìm kiếm" }), { target: { value: "qa" } });
   await vi.waitFor(() => expect(state.list).toHaveBeenLastCalledWith(expect.objectContaining({ [key]: value, search: "qa", statusId: "101", page: "1" }), expect.any(AbortSignal)));
   fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value: "" } });
   await vi.waitFor(() => { const query = state.list.mock.calls.at(-1)![0]; expect(query[key]).toBeUndefined(); expect(query.search).toBe("qa"); }); expect(state.mutate).not.toHaveBeenCalled();

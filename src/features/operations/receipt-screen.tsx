@@ -10,7 +10,7 @@ import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import { createOperationsRepository, type Query } from "./repository";
 import { loadOptions } from "./lookups";
-import { control, DataTable, ErrorNotice, Field, MethodOptions, Money, Note, Paging, Select, Skeleton, businessToday, methodLabel, statusLabel, useMutation, useRemote } from "./ui";
+import { control, DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, Note, OperationHeading, Paging, Select, Skeleton, businessToday, methodLabel, statusLabel, useMutation, useRemote } from "./ui";
 
 const repository = createOperationsRepository("purchase-receipts");
 const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
@@ -37,12 +37,12 @@ export function ReceiptScreen() {
   const canCreate = operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Create");
   const filter = (key: keyof typeof filters, value: string) => { setFilters((current) => ({ ...current, [key]: value, ...(key === "zoneId" ? { raftId: "" } : {}) })); setPage(1); };
   async function open(id: string) { const result = await mutation.run(() => repository.read("detail", { id }, c.receiptSchema), true); if (result) { setPendingInvoices(undefined); setSelected(result); setEditorSerial((value) => value + 1); } }
-  return <section><div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-3xl font-semibold">Phiếu nhập</h1><div className="flex flex-wrap gap-2">
+  return <section><OperationHeading title="Phiếu nhập" description="Tra cứu chứng từ nhập vật tư, trạng thái thanh toán và công nợ theo vùng." icon="document"><div className="flex flex-wrap gap-2">
     {canCreate && <Button className="w-auto" disabled={mutation.pending} onClick={() => { setPendingInvoices(undefined); setSelected(null); }}>Tạo phiếu nhập</Button>}
     <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => { const result = await mutation.run(() => repository.read("costs", query, c.raftCostsSchema), true); if (result) setCosts(result); }}>Chi phí vật tư bè</Button>
     {operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "Export", filters.zoneId || undefined) && <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => void mutation.run(() => repository.download(query), true)}>Xuất Excel</Button>}
-  </div></div>
-    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  </div></OperationHeading>
+    <FilterPanel>
       <Field label="Mã phiếu" value={filters.code} onChange={(e) => filter("code", e.target.value)} />
       <Select label="Vùng nuôi" value={filters.zoneId} onChange={(e) => filter("zoneId", e.target.value)}><option value="">Tất cả vùng được cấp</option>{zones.data?.map((row) => <option key={row.id} value={row.id}>{String(row.name)}</option>)}</Select>
       <Select label="Nhà cung cấp" value={filters.supplierId} onChange={(e) => filter("supplierId", e.target.value)}><option value="">Tất cả</option>{suppliers.data?.map((row) => <option key={row.id} value={row.id}>{String(row.name)}</option>)}</Select>
@@ -51,7 +51,7 @@ export function ReceiptScreen() {
       <Select label="Nhóm vật tư" value={filters.itemGroup} onChange={(e) => filter("itemGroup", e.target.value)}><option value="">Tất cả</option><option value="Seed">Giống</option><option value="Material">Vật tư</option><option value="Other">Khác</option></Select>
       <Select label="Vật tư" value={filters.itemId} onChange={(e) => filter("itemId", e.target.value)}><option value="">Tất cả</option>{items.data?.map((row) => <option key={row.id} value={row.id}>{String(row.name)}</option>)}</Select>
       {filters.zoneId && <Select label="Bè" value={filters.raftId} onChange={(e) => filter("raftId", e.target.value)}><option value="">Tất cả bè</option>{rafts.data?.map((row) => <option key={row.id} value={row.id}>{String(row.code)}</option>)}</Select>}
-    </div>
+    </FilterPanel>
     <ErrorNotice error={list.error || mutation.error || zones.error || suppliers.error || items.error || rafts.error} />
     {(zones.error || suppliers.error || items.error || rafts.error) && <Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending || zones.loading || suppliers.loading || items.loading || rafts.loading} onClick={() => { if (zones.error) zones.reload(); if (suppliers.error) suppliers.reload(); if (items.error) items.reload(); if (rafts.error) rafts.reload(); }}>Tải lại danh mục phiếu nhập</Button>}
     <Button className="mt-4 w-auto" variant="secondary" disabled={list.loading} onClick={list.reload}>Tải lại danh sách</Button>

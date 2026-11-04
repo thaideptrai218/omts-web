@@ -56,13 +56,13 @@ export const navigationGroups: readonly Readonly<{
     items: [
       {
         href: "/operations/purchase-receipts",
-        icon: "document",
+        icon: "receipt",
         label: "Phiếu nhập và yêu cầu thanh toán",
         requiredPermission: "purchase.receipts.view",
       },
       {
         href: "/operations/supplier-payments",
-        icon: "waves",
+        icon: "payment",
         label: "Thanh toán nhà cung cấp",
         requiredPermission: "supplier.payments.manage",
       },
@@ -73,13 +73,13 @@ export const navigationGroups: readonly Readonly<{
     items: [
       {
         href: "/operations/workforce",
-        icon: "users",
+        icon: "attendance",
         label: "Phân công và chấm công",
         requiredPermission: "workforce.assign",
       },
       {
         href: "/employees",
-        icon: "users",
+        icon: "employee",
         label: "Nhân viên",
         requiredPermission: "cooperative.employees.manage",
       },
@@ -102,7 +102,7 @@ export const navigationGroups: readonly Readonly<{
     items: [
       {
         href: "/cooperative/profile",
-        icon: "waves",
+        icon: "cooperative",
         label: "Hồ sơ hợp tác xã",
         requiredPermission: "cooperative.profile.manage",
       },

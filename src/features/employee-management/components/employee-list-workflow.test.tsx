@@ -75,7 +75,9 @@ describe("employee directory zones, paging and search", () => {
   });
 
   it("distinguishes employment, account status and employees without an account", () => {
-    render(<EmployeeList employees={mockEmployeeProfiles} zones={mockEmployeeZones} onSelect={vi.fn()} />);
+    const records = mockEmployeeProfiles.map((employee) => employee.id === "employee-tran-binh" && employee.account
+      ? { ...employee, account: { ...employee.account, status: "locked" as const } } : employee);
+    render(<EmployeeList employees={records} zones={mockEmployeeZones} onSelect={vi.fn()} />);
     allStatuses();
     expect(within(screen.getByRole("button", { name: /Nguyễn Văn An/ })).getByText("Tài khoản hoạt động")).toBeTruthy();
     const left = screen.getByRole("button", { name: /Trần Thị Bình/ });

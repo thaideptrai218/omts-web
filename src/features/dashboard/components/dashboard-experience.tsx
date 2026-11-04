@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ManagementHeading } from "@/components/ui/management-page";
 import {
   InterfaceIcon,
   type InterfaceIconName,
@@ -35,7 +36,7 @@ const shortcuts: readonly {
     href: "/employees",
     label: "Nhân viên",
     description: "Tra cứu và cập nhật hồ sơ",
-    icon: "users",
+    icon: "employee",
     permission: "cooperative.employees.manage",
   },
   {
@@ -56,7 +57,7 @@ const shortcuts: readonly {
     href: "/cooperative/profile",
     label: "Hồ sơ hợp tác xã",
     description: "Thông tin và liên hệ chung",
-    icon: "waves",
+    icon: "cooperative",
     permission: "cooperative.profile.manage",
   },
 ];
@@ -104,16 +105,8 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="management-heading flex flex-col gap-4 pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-text">
-            Bảng điều hành
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-text-muted">
-            Theo dõi số liệu và hoạt động trong phạm vi bạn được cấp.
-          </p>
-        </div>
+    <div className="space-y-5">
+      <ManagementHeading title="Bảng điều hành" description="Theo dõi số liệu và hoạt động trong phạm vi bạn được cấp." icon="dashboard">
         <Button
           variant="secondary"
           className="sm:w-auto"
@@ -126,7 +119,7 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
           />
           <span>{pending ? "Đang tải số liệu" : "Làm mới số liệu"}</span>
         </Button>
-      </header>
+      </ManagementHeading>
 
       {hasError && (
         <div
@@ -156,7 +149,7 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
       <div
         className={
           hasFarmingPanel && availableShortcuts.length
-            ? "grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(16rem,1fr)]"
+            ? "grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(16rem,1fr)]"
             : "space-y-5"
         }
       >
@@ -168,7 +161,7 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
           <div
             aria-label="Đang tải tình hình bè nuôi"
             aria-busy="true"
-            className="min-h-64 rounded-card border border-border bg-surface-subtle motion-safe:animate-pulse"
+            className="min-h-64 rounded-[14px] border border-[#244e60] bg-[#10243a] motion-safe:animate-pulse"
           />
         ) : null}
         {availableShortcuts.length > 0 && (
@@ -183,22 +176,6 @@ function DashboardWorkspace({ account }: { account: AuthAccount }) {
         ) : null}
       </div>
 
-      <section
-        className="flex flex-col gap-4 rounded-card border border-dashed border-border-strong bg-surface p-5 sm:flex-row sm:items-center sm:p-6"
-        aria-labelledby="operations-title"
-      >
-        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-surface-subtle text-primary">
-          <InterfaceIcon name="waves" className="size-6" />
-        </span>
-        <div>
-          <h2 id="operations-title" className="font-semibold text-text">
-            Thu chi và vận hành nuôi trồng
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-text-muted">
-            Chưa có số liệu để tổng hợp thu chi và sản lượng thu hoạch.
-          </p>
-        </div>
-      </section>
     </div>
   );
 }

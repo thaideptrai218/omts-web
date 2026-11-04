@@ -17,9 +17,9 @@ it("explains the usage ratio using the supplied counts and preserves access to t
   expect(
     screen.getByRole("img", { name: "3 bè đang sử dụng, 1 bè đã ngừng" }),
   ).toBeTruthy();
-  expect(screen.getByText("3 trong 4 bè đang được sử dụng")).toBeTruthy();
+  expect(screen.getByText("75% đang sử dụng")).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "Xem danh sách bè" }).getAttribute("href"),
+    screen.getByRole("link", { name: "Xem bè nuôi" }).getAttribute("href"),
   ).toBe("/farming/rafts");
 });
 it("renders a real empty registry without division-by-zero or a made-up usage bar", () => {

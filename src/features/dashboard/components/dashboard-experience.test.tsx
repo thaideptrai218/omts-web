@@ -74,13 +74,13 @@ describe("dashboard shell and data boundaries", () => {
     ).toBeTruthy();
     expect(screen.queryByText("0")).toBeNull();
   });
-  it("renders actual counts and charts, then refreshes them in place", async () => {
+  it("renders actual status counts, then refreshes them in place", async () => {
     render(<DashboardExperience />);
-    await screen.findByRole("img", {
+    await screen.findByRole("group", {
       name: "2 nhân viên đang làm việc, 1 đã nghỉ",
     });
     expect(
-      screen.getByRole("img", {
+      screen.getByRole("group", {
         name: "2 tài khoản hoạt động, 1 tài khoản đã khóa",
       }),
     ).toBeTruthy();
@@ -89,7 +89,7 @@ describe("dashboard shell and data boundaries", () => {
       workforce: { employedCount: 4, leftCount: 1 },
     });
     fireEvent.click(screen.getByRole("button", { name: "Làm mới số liệu" }));
-    await screen.findByRole("img", {
+    await screen.findByRole("group", {
       name: "4 nhân viên đang làm việc, 1 đã nghỉ",
     });
   });
@@ -99,7 +99,7 @@ describe("dashboard shell and data boundaries", () => {
     await screen.findByRole("alert");
     expect(screen.getByRole("link", { name: /Nhân viên/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
-    await screen.findByRole("img", {
+    await screen.findByRole("group", {
       name: "2 tài khoản hoạt động, 1 tài khoản đã khóa",
     });
     expect(screen.queryByRole("alert")).toBeNull();

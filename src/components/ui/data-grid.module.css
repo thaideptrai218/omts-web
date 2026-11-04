@@ -1,0 +1,84 @@
+.frame {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--omts-color-border);
+  border-radius: var(--omts-radius-card);
+  background: var(--omts-color-surface);
+  box-shadow: 0 2px 10px rgb(16 36 58 / .025);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: .875rem;
+}
+
+.table thead {
+  border-bottom: 1px solid var(--omts-color-border-strong);
+  background: var(--omts-color-surface);
+  color: var(--omts-color-text-muted);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .065em;
+  text-transform: uppercase;
+}
+
+.table th,
+.table td {
+  padding: .7rem 1rem;
+  vertical-align: top;
+}
+
+.table th { white-space: nowrap; }
+.table td { overflow-wrap: anywhere; }
+.table tbody tr { border-bottom: 1px solid var(--omts-color-border); }
+.table tbody tr:last-child { border-bottom: 0; }
+.table tbody tr:hover { background: #f8fafb; }
+
+.empty {
+  padding: 1.25rem;
+  color: var(--omts-color-text-muted);
+  font-size: .875rem;
+}
+
+@media (max-width: 639px) {
+  .frame:not(.responsive) .table { width: max-content; min-width: 100%; }
+  .frame:not(.responsive) .table th:first-child,
+  .frame:not(.responsive) .table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--omts-color-surface);
+    box-shadow: 1px 0 0 var(--omts-color-border);
+  }
+  .frame:not(.responsive) .table th:first-child { background: var(--omts-color-surface); }
+  .responsive { overflow-x: hidden; }
+  .responsive .table,
+  .responsive .table tbody,
+  .responsive .table tr,
+  .responsive .table td { display: block; width: 100%; }
+  .responsive .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .responsive .table tbody tr { padding: .5rem 0; }
+  .responsive .table tbody td {
+    display: flex;
+    gap: .75rem;
+    justify-content: space-between;
+    padding: .4rem 1rem;
+    text-align: right;
+  }
+  .responsive .table tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 38%;
+    color: var(--omts-color-text-muted);
+    font-weight: 600;
+    text-align: left;
+  }
+}

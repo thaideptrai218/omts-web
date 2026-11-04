@@ -197,7 +197,7 @@ it("does not infer access from a role name or accept locked/expired grants", () 
     ),
   ).toBeNull();
   expect(
-    resolveMockRaftAccess("account-tran-binh", accounts, roles, zones),
+    resolveMockRaftAccess("account-tran-binh", accounts.map((account) => account.id === "account-tran-binh" ? { ...account, status: "locked" as const } : account), roles, zones),
   ).toBeNull();
   expect(
     resolveMockRaftAccess(

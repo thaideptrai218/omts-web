@@ -14,7 +14,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     "border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover",
   secondary:
-    "border-border bg-surface text-text hover:border-primary/40 hover:bg-primary-soft/50",
+    "border-border-strong/50 bg-surface text-text hover:border-primary/50 hover:bg-surface-subtle",
 };
 
 export function Button({
@@ -31,7 +31,7 @@ export function Button({
     <button
       {...buttonProps}
       aria-busy={isPending || undefined}
-      className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border px-5 py-3 text-sm font-semibold transition-[background-color,border-color,transform] duration-150 ease-out enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none motion-reduce:transition-none ${variantStyles[variant]} ${className}`}
+      className={`inline-flex min-h-11 ${className.includes("w-auto") ? "" : "w-full"} items-center justify-center gap-2 rounded-control border px-4 py-2.5 text-sm font-semibold transition-[background-color,border-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantStyles[variant]} ${className}`}
       disabled={disabled || isPending}
       type={type}
     >

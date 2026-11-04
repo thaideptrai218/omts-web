@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { ManagementHeading, StatusPill } from "@/components/ui/management-page";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { Field, ErrorNotice, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import { cooperativeFields, cooperativeInputSchema, cooperativeValues, type CooperativeInput, type CooperativeView } from "./contracts";
@@ -15,7 +16,7 @@ export function CooperativeApiScreen() {
 function CooperativeLoader() {
   const load = useCallback((signal: AbortSignal) => createCooperativeRepository().read(signal), []);
   const remote = useRemote(load);
-  return <section className="max-w-5xl"><h1 className="text-3xl font-semibold">Hồ sơ hợp tác xã</h1>
+  return <section className="max-w-5xl"><ManagementHeading title="Hồ sơ hợp tác xã" description="Cập nhật thông tin pháp lý, liên hệ và logo dùng cho lần công bố tiếp theo." icon="settings" />
     {remote.loading && <Skeleton />}<ErrorNotice error={remote.error} />
     {!remote.loading && !remote.data && <Button className="mt-4 w-auto" onClick={remote.reload}>Tải lại hồ sơ</Button>}
     {remote.data && <CooperativeApiEditor initial={remote.data} />}
@@ -62,7 +63,7 @@ export function CooperativeApiEditor({ initial }: { initial: CooperativeView }) 
     setNotice("Đã cập nhật logo. Các thông tin đang nhập được giữ nguyên.");
   }
   return <div className="mt-6 space-y-5">
-    <p className="text-text-muted">Trạng thái: {record.status === "Preliminary" ? "Sơ bộ" : record.status === "Completed" ? "Đã hoàn thiện" : record.status}</p>
+    <p className="flex items-center gap-2 text-sm text-text-muted">Trạng thái <StatusPill tone={record.status === "Completed" ? "success" : "neutral"}>{record.status === "Preliminary" ? "Sơ bộ" : record.status === "Completed" ? "Đã hoàn thiện" : record.status}</StatusPill></p>
     <ErrorNotice error={mutation.error || (needsReview ? "Bản ghi đã thay đổi. Hãy đối chiếu dữ liệu mới; bản nháp của bạn vẫn được giữ." : undefined)} />
     {notice && <p role="status" className="rounded-control bg-primary-soft p-3">{notice}</p>}
     <form ref={formRef} noValidate className="space-y-5 rounded-card border border-border bg-surface p-4 sm:p-6" onSubmit={(event) => { event.preventDefault(); if (!mutation.busy() && !blocked && valid()) { setNotice(undefined); setDialog("save"); } }}>

@@ -28,6 +28,19 @@ const paths = {
   check: "m5 12 4 4L19 6",
   waves:
     "M2 7c3-4 5 4 10 0s7 4 10 0M2 12c3-4 5 4 10 0s7 4 10 0M2 17c3-4 5 4 10 0s7 4 10 0",
+  attendance: "M4 4h16v16H4V4Zm0 5h16M8 2v4m8-4v4m-8 8 2.5 2.5L16 11",
+  employee: "M7 20v-2a5 5 0 0 1 10 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM3 20h18",
+  receipt: "M5 3h14v18l-3-2-4 2-4-2-3 2V3Zm3 5h8m-8 4h8m-8 4h4",
+  payment: "M3 7h18v11H3V7Zm0 4h18M7 15h4M7 4h10",
+  cooperative: "M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6M7 11h2m6 0h2",
+  supplier: "M3 6h11v11H3V6Zm11 4h4l3 4v3h-7m-8 0a2 2 0 1 0 4 0m8 0a2 2 0 1 0 4 0",
+  material: "M3 7.5 12 3l9 4.5-9 4.5-9-4.5Zm0 0V17l9 4 9-4V7.5M12 12v9",
+  water: "M12 2c3 5 7 9 7 13a7 7 0 0 1-14 0c0-4 4-8 7-13Zm-4 13a4 4 0 0 0 4 4",
+  product: "M4 4h9l7 7-9 9-7-7V4Zm4 4h.01",
+  request: "M7 3h10v3H7V3ZM5 5H3v16h18V5h-2M7 12h10m-10 4h7",
+  inbox: "M4 4h16v12h-5l-2 3h-2l-2-3H4V4Zm4 5h8m-8 3h5",
+  security: "M12 2 4 6v6c0 5 3.3 8.2 8 10 4.7-1.8 8-5 8-10V6l-8-4Zm-3 10 2 2 4-4",
+  work: "M4 5h16v16H4V5Zm4-2v4m8-4v4M7 12h4m-4 4h7m1-4 1 1 2-2",
 } as const;
 
 export type InterfaceIconName = keyof typeof paths;

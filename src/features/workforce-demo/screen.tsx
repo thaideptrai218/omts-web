@@ -7,6 +7,7 @@ import { DataTable, ErrorNotice, Field, Select, Skeleton, businessToday, display
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import { demoWorkforceService as service } from "./service";
 import { demoJobs, type DemoAssignment } from "./repository";
+import { WorkforceEmpty, WorkforceFilterSection, WorkforceFormSection, WorkforceHero, WorkforceListSection } from "@/features/operations/workforce-layout";
 
 type Workspace = Extract<Awaited<ReturnType<typeof service.load>>, { status: "success" }>["data"];
 export function DemoWorkforceScreen() {
@@ -21,15 +22,15 @@ export function DemoWorkforceScreen() {
     const done = await editor.submit(`${verb} cho ${row.employeeName}${action === "check-out" && !row.checkedInAt ? " (chưa có lượt vào làm)" : ""}?`, () => service.act(accountId, row.id, row.version, action));
     if (done) { setNotice("Đã lưu vào dữ liệu thử local."); workspace.reload(); }
   }
-  return <section>{editor.dialog}<h1 className="text-3xl font-semibold">Phân công và chấm công</h1>
-    <p className="mt-3 rounded-control border border-border p-3 text-sm">Chế độ thử local · Dữ liệu mẫu dùng chung với danh sách nhân viên, vùng và bè. Phân công/chấm công sẽ khởi tạo lại khi tải lại trang.</p>
-    <div className="my-4 flex flex-wrap gap-3"><Button className="w-auto" disabled={!data || editor.disabled} onClick={() => setEditing(true)}>Phân công công việc</Button><Button className="w-auto" variant="secondary" disabled={workspace.loading || editor.pending} onClick={workspace.reload}>Tải lại phân công</Button></div>
-    <div className="grid gap-3 sm:grid-cols-3"><Field label="Ngày làm việc" type="date" required value={day} onChange={(event) => setDay(event.target.value)} /><Select label="Vùng làm việc" value={zone} onChange={(event) => setZone(event.target.value)}><option value="">Tất cả vùng được cấp</option>{data?.zones.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</Select><Field label="Tìm nhân viên hoặc công việc" type="search" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
+  return <section>{editor.dialog}
+    <WorkforceHero day={day} total={rows?.length ?? 0} awaiting={rows?.filter((row) => !row.checkedInAt && !row.checkedOutAt).length ?? 0} completed={rows?.filter((row) => !!row.checkedOutAt).length ?? 0} loading={workspace.loading || !!workspace.error} actions={<Button className="w-auto" disabled={!data || editor.disabled} onClick={() => setEditing(true)}>Tạo phân công</Button>} />
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-text-muted">Bản thử local · Phân công được đặt lại khi tải lại trang.</p><Button className="w-auto" variant="secondary" disabled={workspace.loading || editor.pending} onClick={workspace.reload}>Tải lại phân công</Button></div>
+    <WorkforceFilterSection><Field label="Ngày làm việc" type="date" required value={day} onChange={(event) => setDay(event.target.value)} /><Select label="Vùng làm việc" value={zone} onChange={(event) => setZone(event.target.value)}><option value="">Tất cả vùng được cấp</option>{data?.zones.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</Select><Field label="Tìm nhân viên hoặc công việc" type="search" value={search} onChange={(event) => setSearch(event.target.value)} /></WorkforceFilterSection>
     <ErrorNotice error={workspace.error || editor.mutation.error} />{notice && <p role="status" className="mt-3">{notice}</p>}
-    {workspace.loading ? <Skeleton /> : data && <><p className="mt-4">{rows?.length ?? 0} phân công</p><DataTable headings={["Nhân viên", "Vùng", "Bè", "Công việc", "Ngày", "Vào làm", "Ra về", "Thao tác"]} empty={!rows?.length}>{rows?.map((row) => <tr key={row.id}><td>{row.employeeName}</td><td>{data.zones.find((item) => item.id === row.zoneId)?.label}</td><td>{data.rafts.find((item) => item.id === row.raftId)?.code ?? "—"}</td><td>{row.job}</td><td>{row.date}</td><td>{row.checkedInAt ? displayTime(row.checkedInAt) : "Chưa ghi nhận"}</td><td>{row.checkedOutAt ? displayTime(row.checkedOutAt) : "Chưa ghi nhận"}</td><td><div className="flex flex-wrap gap-2">
+    <WorkforceListSection count={data ? rows?.length : undefined}>{workspace.loading ? <Skeleton /> : data && (rows?.length ? <DataTable responsive headings={["Nhân viên", "Vùng", "Bè", "Công việc", "Ngày", "Vào làm", "Ra về", "Thao tác"]}>{rows.map((row) => <tr key={row.id}><td data-label="Nhân viên">{row.employeeName}</td><td data-label="Vùng">{data.zones.find((item) => item.id === row.zoneId)?.label}</td><td data-label="Bè">{data.rafts.find((item) => item.id === row.raftId)?.code ?? "—"}</td><td data-label="Công việc">{row.job}</td><td data-label="Ngày">{row.date}</td><td data-label="Vào làm">{row.checkedInAt ? displayTime(row.checkedInAt) : "Chưa ghi nhận"}</td><td data-label="Ra về">{row.checkedOutAt ? displayTime(row.checkedOutAt) : "Chưa ghi nhận"}</td><td data-label="Thao tác"><div className="flex flex-wrap gap-2">
       {row.date >= businessToday() && !row.checkedInAt && !row.checkedOutAt && <Button className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => void act(row, "remove")}>Gỡ phân công</Button>}
       {row.date === businessToday() && !row.checkedOutAt && <>{!row.checkedInAt && <Button className="w-auto" disabled={editor.disabled} onClick={() => void act(row, "check-in")}>Vào làm</Button>}<Button className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => void act(row, "check-out")}>Ra về</Button></>}
-    </div></td></tr>)}</DataTable></>}
+    </div></td></tr>)}</DataTable> : <WorkforceEmpty filtered={!!zone || !!term} />)}</WorkforceListSection>
     {editing && data && <DemoAssignmentEditor accountId={accountId} data={data} day={day} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setNotice("Đã lưu phân công vào dữ liệu thử local."); workspace.reload(); }} />}
   </section>;
 }
@@ -44,11 +45,15 @@ function DemoAssignmentEditor({ accountId, data, day, onClose, onSaved }: { acco
     const done = await editor.submit(`Phân công ${employeeIds.length} nhân viên làm ${job}, ngày ${date}, bè ${data.rafts.find((raft) => raft.id === raftId)?.code}?`, () => service.assign(accountId, { raftId, job, date, employeeIds }));
     if (done) onSaved();
   }
-  return <Dialog open title="Phân công công việc" size="lg" dismissible={!editor.pending} onOpenChange={(open) => { if (!open) void editor.close(); }}>{editor.dialog}<ErrorNotice error={error || editor.mutation.error} /><form onSubmit={(event) => { event.preventDefault(); void save(); }}><fieldset disabled={editor.disabled} className="space-y-4">
+  return <Dialog open title="Tạo phân công" description="Lập lịch làm việc theo vùng, bè và nhân viên." size="lg" dismissible={!editor.pending} onOpenChange={(open) => { if (!open) void editor.close(); }}>{editor.dialog}<ErrorNotice error={error || editor.mutation.error} /><form onSubmit={(event) => { event.preventDefault(); void save(); }}><fieldset disabled={editor.disabled} className="space-y-4">
+    <WorkforceFormSection number="01" title="Lịch và địa điểm">
     <Field label="Ngày phân công *" type="date" required min={businessToday()} value={date} onChange={(event) => setDate(event.target.value)} />
     <Select label="Vùng phân công *" required value={zoneId} onChange={(event) => { setZoneId(event.target.value); setRaftId(""); setEmployeeIds([]); }}><option value="">Chọn vùng</option>{data.zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}</Select>
     <Select label="Bè phân công *" required value={raftId} onChange={(event) => setRaftId(event.target.value)}><option value="">Chọn bè</option>{data.rafts.filter((raft) => raft.zoneId === zoneId).map((raft) => <option key={raft.id} value={raft.id}>{raft.code}</option>)}</Select>
     <Select label="Công việc *" required value={job} onChange={(event) => setJob(event.target.value)}>{demoJobs.map((value) => <option key={value}>{value}</option>)}</Select>
+    </WorkforceFormSection>
+    <WorkforceFormSection number="02" title="Nhân viên">
     <fieldset className="rounded-control border border-border p-3"><legend>Nhân viên được phân công</legend>{employees.map((employee) => <label key={employee.id} className="flex gap-3 py-2"><input type="checkbox" checked={employeeIds.includes(employee.id)} onChange={(event) => setEmployeeIds((ids) => event.target.checked ? [...ids, employee.id] : ids.filter((id) => id !== employee.id))} />{employee.name}</label>)}{!employees.length && <p>{zoneId ? "Chưa có nhân viên đang làm việc tại vùng này." : "Chọn vùng để xem nhân viên."}</p>}</fieldset>
+    </WorkforceFormSection>
     <Button type="submit">Lưu phân công</Button></fieldset></form><Button className="mt-4" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Đóng</Button></Dialog>;
 }

@@ -17,6 +17,7 @@ type AppShellProps = {
   accountRole?: string;
   accountScope?: string;
   children: ReactNode;
+  navigation?: (options: { compact: boolean; onNavigate?: () => void }) => ReactNode;
   isLoggingOut?: boolean;
   onLogout(): void;
 };
@@ -28,6 +29,7 @@ export function AppShell({
   accountRole = "Người dùng",
   accountScope,
   children,
+  navigation,
   isLoggingOut = false,
   onLogout,
 }: AppShellProps) {
@@ -116,7 +118,7 @@ export function AppShell({
           </button>
         </div>
         <div id={desktopNavigationId} className={styles.scrollArea}>
-          <AppNavigation access={access} compact={!sidebar.expanded} />
+          {navigation ? navigation({ compact: !sidebar.expanded }) : <AppNavigation access={access} compact={!sidebar.expanded} />}
         </div>
         <SidebarAccount
           {...identity}
@@ -169,10 +171,10 @@ export function AppShell({
             </button>
           </div>
           <div className={styles.scrollArea}>
-            <AppNavigation
+            {navigation ? navigation({ compact: false, onNavigate: () => setIsMobileMenuOpen(false) }) : <AppNavigation
               access={access}
               onNavigate={() => setIsMobileMenuOpen(false)}
-            />
+            />}
           </div>
           <SidebarAccount
             {...identity}

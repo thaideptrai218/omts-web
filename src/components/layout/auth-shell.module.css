@@ -1,0 +1,28 @@
+.shell { min-height:100dvh; display:grid; background:#fcfcfa; }
+.entry { display:flex; flex-direction:column; min-width:0; padding:28px 32px 20px; }
+.brand { display:flex; align-items:center; gap:16px; }
+.brand > span { border-left:1px solid #dce3df; padding-left:16px; font-size:11px; color:#697770; }
+.form { width:100%; max-width:380px; margin:auto; padding:64px 0; }
+.form :global(.login-panel) { border:0; padding:0; border-radius:0; background:transparent; box-shadow:none; }
+.form :global(.login-eyebrow) { color:#65766e; font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:600; }
+.form :global(.login-title) { margin-top:12px; color:#1b302e; font-size:34px; line-height:1.2; letter-spacing:-.055em; font-weight:550; }
+.form :global(.login-description) { margin-top:12px; font-size:14px; line-height:1.7; color:#66776e; }
+.form input { background:#fff; border-color:#d9e0dc; box-shadow:0 1px 2px #203e3010; }
+.form input:focus { border-color:#408c80; }
+.footer { display:flex; justify-content:space-between; gap:16px; color:#697970; font-size:10px; }
+.story { display:none; }
+@media(min-width:64rem) {
+ .shell { grid-template-columns:minmax(0,1fr) minmax(0,1fr); padding:12px; gap:12px; }
+ .entry { padding:22px 28px 12px; }
+ .story { position:relative; display:flex; flex-direction:column; overflow:hidden; min-height:calc(100dvh - 24px); border:1px solid #cdded2; border-radius:16px; padding:32px 36px 24px; background:radial-gradient(ellipse at 80% 15%,#f2f1cf 0,transparent 50%),linear-gradient(155deg,#e5eee3,#c4ded5 65%,#accdc5); color:#234c45; }
+ .storyLabel { display:flex; align-items:center; gap:8px; font-size:9px; font-weight:600; letter-spacing:.17em; }
+ .dot { width:5px; height:5px; background:#497d66; border-radius:50%; }
+ .art { position:relative; margin:-24px -48px -75px; flex:1; min-height:320px; display:flex; align-items:center; justify-content:center; }
+ .art svg { width:100%; max-height:53dvh; }
+ .storyCopy { position:relative; max-width:550px; }
+ .index { font-family:var(--font-geist-mono),monospace; font-size:9px; letter-spacing:.12em; color:#466e60; }
+ .storyCopy h2 { margin:16px 0; font-size:clamp(30px,3.4vw,49px); font-weight:450; line-height:1.12; letter-spacing:-.055em; }
+ .storyCopy p { max-width:300px; font-size:12px; line-height:1.8; color:#48685b; }
+ .storyFooter { display:flex; justify-content:space-between; border-top:1px solid #739d8e40; margin-top:30px; padding-top:18px; font-size:8px; letter-spacing:.12em; }
+}
+@media(max-width:28rem) { .entry { padding:24px; } .brand > span { display:none; } .footer { flex-direction:column; gap:4px; } .form { padding:56px 0; } }

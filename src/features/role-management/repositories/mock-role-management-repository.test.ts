@@ -98,7 +98,8 @@ describe("mock role management repository", () => {
   });
 
   it("discontinues an unused role without deleting it", async () => {
-    const repository = createRepository();
+    const repository = createMockRoleManagementRepository({ catalog: mockFeatureCatalog, latencyMs: 0,
+      initialRoles: mockRoles.map((role) => role.id === mockRoles[1].id ? { ...role, activeAccountCount: 0, activeZoneCount: 0, impactAccounts: [] } : role) });
     const result = await repository.discontinue({
       id: mockRoles[1].id,
       recordVersion: mockRoles[1].recordVersion,

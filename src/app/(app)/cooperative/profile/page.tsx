@@ -6,6 +6,7 @@ import { ApiSingletonScreen } from "@/features/api-workspace/api-singleton-scree
 export const metadata: Metadata = {
   title: "Hồ sơ hợp tác xã | OMTS",
 };
+export const instant = false;
 
 export default function CooperativeProfilePage() {
   return <ApiPage api={<ApiSingletonScreen kind="cooperative" />}><CooperativeProfileExperience /></ApiPage>;

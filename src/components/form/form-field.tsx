@@ -46,17 +46,17 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
           </p>
         )}
 
-        <div className="relative mt-2">
+        <div className="relative mt-1.5">
           <input
             {...inputProps}
             aria-describedby={describedBy || undefined}
             aria-invalid={error ? true : undefined}
-            className={`min-h-12 w-full rounded-control border bg-surface px-3.5 py-2.5 text-base text-text shadow-sm outline-none transition duration-200 placeholder:text-slate-400 ${
+            className={`min-h-11 w-full rounded-control border bg-surface px-3.5 py-2 text-sm text-text outline-none transition-colors duration-150 placeholder:text-text-muted/70 ${
               endAdornment ? "pr-20" : ""
             } ${
               error
                 ? "border-danger focus-visible:border-danger"
-                : "border-border-strong hover:border-slate-500 focus-visible:border-primary"
+                : "border-border-strong hover:border-primary/60 focus-visible:border-primary"
             }`}
             id={id}
             ref={ref}

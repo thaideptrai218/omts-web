@@ -8,7 +8,7 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import { createOperationsRepository, type Query } from "./repository";
-import { DataTable, ErrorNotice, Field, MethodOptions, Money, Paging, Select, Skeleton, businessToday, methodLabel, statusLabel, useMutation, useRemote } from "./ui";
+import { DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, OperationHeading, Paging, Select, Skeleton, businessToday, methodLabel, statusLabel, useMutation, useRemote } from "./ui";
 
 const repository = createOperationsRepository("supplier-payments");
 const loadDebts = (signal: AbortSignal) => repository.read("debts", {}, c.debtsSchema, signal);
@@ -26,14 +26,14 @@ export function PaymentScreen() {
   const canCreate = operationAllowed("supplier-payments", context.identity, context.permissions.functionPermissions, "Create");
   const filter = (key: keyof typeof filters, value: string) => { setFilters((current) => ({ ...current, [key]: value, ...(key === "supplierId" ? { receiptId: "" } : {}) })); setPage(1); };
   function reload() { history.reload(); debts.reload(); supplierDebt.reload(); }
-  return <section><div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-3xl font-semibold">Thanh toán nhà cung cấp</h1>{canCreate && <Button className="w-auto" onClick={() => setEditor(null)}>Ghi nhận thanh toán</Button>}</div>
-    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+  return <section><OperationHeading title="Thanh toán nhà cung cấp" description="Đối chiếu khoản đã trả, số tiền chưa phân bổ và công nợ theo từng phiếu." icon="document">{canCreate && <Button className="w-auto" onClick={() => setEditor(null)}>Ghi nhận thanh toán</Button>}</OperationHeading>
+    <FilterPanel columns="three">
       <Select label="Nhà cung cấp" value={filters.supplierId} onChange={(e) => filter("supplierId", e.target.value)}><option value="">Tất cả</option>{debts.data?.map((row) => <option key={row.supplierId} value={row.supplierId}>{row.supplierName}</option>)}</Select>
       <Select label="Phiếu nhập" value={filters.receiptId} disabled={!filters.supplierId} onChange={(e) => filter("receiptId", e.target.value)}><option value="">Tất cả phiếu</option>{supplierDebt.data?.receipts.map((row) => <option key={row.receiptId} value={row.receiptId}>{row.code}</option>)}</Select>
       <Select label="Hình thức" value={filters.method} onChange={(e) => filter("method", e.target.value)}><option value="">Tất cả</option><MethodOptions /></Select>
       <Select label="Trạng thái" value={filters.statusId} onChange={(e) => filter("statusId", e.target.value)}><option value="">Tất cả</option><option value="1801">Đã ghi nhận</option><option value="1802">Đã hủy</option></Select>
       <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => filter("from", e.target.value)} /><Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => filter("to", e.target.value)} />
-    </div>
+    </FilterPanel>
     <ErrorNotice error={history.error || debts.error || supplierDebt.error} /><Button className="mt-4 w-auto" variant="secondary" disabled={history.loading} onClick={reload}>Tải lại dữ liệu</Button>
     {notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
     {history.loading ? <Skeleton /> : history.data && <><p className="mt-5 font-semibold">Tổng thanh toán trong bộ lọc: <Money value={history.data.totalAmount} /></p>

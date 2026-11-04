@@ -5,6 +5,7 @@ import { ApiPage } from "@/features/api-workspace/api-page";
 export const metadata: Metadata = {
   title: "Khởi tạo hợp tác xã | OMTS",
 };
+export const instant = false;
 
 export default function NewCooperativePage() {
   return <ApiPage api={<p role="alert">Bạn không có quyền thực hiện chức năng này.</p>}><CooperativeProvisioningExperience /></ApiPage>;

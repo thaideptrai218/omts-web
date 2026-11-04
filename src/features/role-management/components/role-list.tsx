@@ -73,25 +73,31 @@ export function RoleList({
           ))}
         </div>
       </div>
+      <div className="overflow-hidden rounded-card border border-border bg-surface">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+          <h2 className="text-sm font-semibold text-text">Danh mục vai trò</h2>
+          <span className="text-xs font-medium text-text-muted" aria-live="polite">{visible.length} vai trò</span>
+        </div>
+        <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)_7rem_7rem_8rem_1rem] gap-4 border-b border-border bg-surface-subtle px-5 py-3 text-[.7rem] font-bold uppercase tracking-[.08em] text-text-muted lg:grid">
+          <span>Vai trò</span><span>Phạm vi</span><span className="text-right">Tài khoản</span><span className="text-right">Chức năng</span><span>Trạng thái</span><span />
+        </div>
       {visible.length === 0 ? (
-        <div className="rounded-card border border-border bg-surface">
           <DirectoryEmpty
             title="Không tìm thấy vai trò"
             description="Thử tên khác hoặc chuyển sang trạng thái Tất cả."
           />
-        </div>
       ) : (
-        <ul className="grid gap-4 lg:grid-cols-3">
+        <ul className="divide-y divide-border">
           {visible.map((role) => (
-            <li key={role.id} className="min-w-0">
+            <li key={role.id}>
               <button
                 type="button"
                 onClick={() => onSelect(role.id)}
                 aria-current={selectedRoleId === role.id ? "true" : undefined}
-                className={`group flex h-full w-full min-w-0 flex-col rounded-card border bg-surface p-5 text-left transition-colors sm:p-6 ${selectedRoleId === role.id ? "border-primary" : "border-border hover:border-primary/50"}`}
+                className={`group grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-4 text-left transition-colors hover:bg-primary-soft/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:px-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)_7rem_7rem_8rem_1rem] ${selectedRoleId === role.id ? "bg-primary-soft/50" : ""}`}
               >
-                <span className="flex w-full items-center justify-between gap-3">
-                  <span className="grid size-12 place-items-center rounded-2xl bg-primary-soft text-primary">
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-control bg-primary-soft text-primary">
                     <InterfaceIcon
                       name={
                         role.id === "role-staff"
@@ -100,59 +106,30 @@ export function RoleList({
                             ? "roles"
                             : "zone"
                       }
-                      className="size-6"
+                      className="size-5"
                     />
                   </span>
-                  <StatusPill
-                    tone={role.status === "in-use" ? "success" : "neutral"}
-                  >
-                    {role.status === "in-use" ? "Đang dùng" : "Đã ngừng"}
-                  </StatusPill>
+                  <span className="min-w-0 break-words font-semibold text-text group-hover:text-primary">{role.name}</span>
                 </span>
-                <span className="mt-5 block text-xl font-semibold text-text">
-                  {role.name}
-                </span>
-                <span className="mt-2 block flex-1 text-sm leading-6 text-text-muted">
+                <span className="lg:hidden"><StatusPill tone={role.status === "in-use" ? "success" : "neutral"}>{role.status === "in-use" ? "Đang dùng" : "Đã ngừng"}</StatusPill></span>
+                <span className="col-span-2 min-w-0 break-words text-sm leading-5 text-text-muted lg:col-auto">
                   {role.description || "Chưa có mô tả vai trò."}
                 </span>
-                <span className="mt-5 grid w-full grid-cols-2 gap-3 border-t border-border pt-4">
-                  <span>
-                    <strong className="block text-2xl font-semibold tabular-nums text-text">
-                      {role.activeAccountCount}
-                    </strong>
-                    <span className="text-xs text-text-muted">
-                      tài khoản đang giữ
-                    </span>
-                  </span>
-                  <span>
-                    <strong className="block text-2xl font-semibold tabular-nums text-text">
-                      {
-                        role.permissions.filter(
-                          (permission) => permission.actionKeys.length,
-                        ).length
-                      }
-                    </strong>
-                    <span className="text-xs text-text-muted">
-                      chức năng đã cấp
-                    </span>
-                  </span>
+                <span className="text-sm text-text-muted lg:text-right">
+                  <span className="lg:hidden">Tài khoản · </span><strong className="font-mono text-base font-semibold tabular-nums text-text">{role.activeAccountCount}</strong>
                 </span>
-                <span className="mt-5 flex w-full items-center justify-between gap-2 text-sm font-semibold text-primary">
-                  <span>
-                    {role.status === "in-use"
-                      ? "Xem và điều chỉnh quyền"
-                      : "Xem quyền và khôi phục"}
-                  </span>
-                  <InterfaceIcon
-                    name="arrow"
-                    className="size-4 shrink-0 transition-transform motion-safe:group-hover:translate-x-1"
-                  />
+                <span className="text-right text-sm text-text-muted lg:text-right">
+                  <span className="lg:hidden">Chức năng · </span><strong className="font-mono text-base font-semibold tabular-nums text-text">{role.permissions.filter((permission) => permission.actionKeys.length).length}</strong>
                 </span>
+                <span className="hidden lg:block"><StatusPill tone={role.status === "in-use" ? "success" : "neutral"}>{role.status === "in-use" ? "Đang dùng" : "Đã ngừng"}</StatusPill></span>
+                <InterfaceIcon name="arrow" className="hidden size-4 text-text-muted lg:block" />
+                <span className="sr-only">{role.status === "in-use" ? "Xem và điều chỉnh quyền" : "Xem quyền và khôi phục"}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
+      </div>
     </section>
   );
 }

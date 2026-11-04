@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { DataGrid } from "@/components/ui/data-grid";
+import { ManagementHeading } from "@/components/ui/management-page";
+import type { InterfaceIconName } from "@/components/ui/interface-icon";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { workspaceError } from "@/features/api-workspace/workspace-error";
 
@@ -12,7 +15,14 @@ function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "suc
   return result.code && messages[result.code] || workspaceError(result);
 }
 
-export const control = "mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-3 py-2 font-normal";
+export const control = "mt-1.5 min-h-11 w-full rounded-control border border-border-strong bg-surface px-3 py-2 text-sm font-normal transition-colors hover:border-primary/60 focus:border-primary";
+export function OperationHeading({ title, description, icon, children }: { title: string; description: string; icon: InterfaceIconName; children?: ReactNode }) {
+  return <ManagementHeading title={title} description={description} icon={icon}>{children}</ManagementHeading>;
+}
+export function FilterPanel({ children, columns = "four" }: { children: ReactNode; columns?: "two" | "three" | "four" }) {
+  const grid = columns === "two" ? "sm:grid-cols-2" : columns === "three" ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-4";
+  return <div className={`grid gap-3 rounded-card border border-border bg-surface p-4 ${grid}`}>{children}</div>;
+}
 export function Field({ label, ...props }: ComponentProps<"input"> & { label: string }) {
   return <label className="block text-sm font-semibold">{label}<input {...props} className={control} /></label>;
 }
@@ -22,7 +32,7 @@ export function Select({ label, children, ...props }: ComponentProps<"select"> &
 export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: string }) {
   return <label className="block text-sm font-semibold">{label}<textarea {...props} className={control} rows={3} /></label>;
 }
-export function ErrorNotice({ error }: { error?: string }) { return error ? <p role="alert" className="my-4 rounded-control border border-danger bg-surface p-4 text-danger">{error}</p> : null; }
+export function ErrorNotice({ error }: { error?: string }) { return error ? <p role="alert" className="my-4 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p> : null; }
 export function Skeleton() { return <div role="status" aria-label="Đang tải dữ liệu" className="my-5 space-y-3">{[1, 2, 3].map((id) => <div key={id} className="h-14 animate-pulse rounded-control bg-slate-200" />)}</div>; }
 export function Money({ value }: { value: number | null | undefined }) { return <>{value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)}{value == null ? "" : " ₫"}</>; }
 export const money = (value: number | null | undefined) => value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value) + " ₫";
@@ -36,9 +46,8 @@ export const displayTime = (value: string) => new Intl.DateTimeFormat("vi-VN", {
 export const statusLabel = (value: string | number) => ({ "1701": "Nháp", "1702": "Hoàn thành", "1703": "Đã hủy", "1801": "Đã ghi nhận", "1802": "Đã hủy", DRAFT: "Nháp", CONFIRMED: "Đã xác nhận", SUPERSEDED: "Đã hiệu chỉnh", CORRECTED: "Đã hiệu chỉnh", VOIDED: "Đã hủy", Active: "Đang cảnh báo", None: "Không", Corrected: "Đã hiệu chỉnh", Voided: "Đã hủy" }[String(value)] ?? String(value));
 export const methodLabel = (value: string) => ({ Cash: "Tiền mặt", BankTransfer: "Chuyển khoản", Other: "Khác" }[value] ?? value);
 export function MethodOptions() { return <><option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản</option><option value="Other">Khác</option></>; }
-export function DataTable({ headings, children, empty }: { headings: string[]; children: ReactNode; empty?: boolean }) {
-  return <div className="my-5 overflow-x-auto rounded-card border border-border bg-surface"><table className="w-full text-left text-sm"><thead className="border-b border-border bg-primary-soft"><tr>{headings.map((title) => <th key={title} className="whitespace-nowrap p-3">{title}</th>)}</tr></thead>
-    <tbody className="[&_td]:p-3 [&_tr]:border-b [&_tr]:border-border">{children}</tbody></table>{empty && <p className="p-5 text-text-muted">Không có dữ liệu phù hợp.</p>}</div>;
+export function DataTable({ headings, children, empty, responsive }: { headings: string[]; children: ReactNode; empty?: boolean; responsive?: boolean }) {
+  return <div className="my-4"><DataGrid headings={headings} empty={empty} responsive={responsive}>{children}</DataGrid></div>;
 }
 export function Paging({ page, total, pageSize = 20, disabled, onChange }: { page: number; total: number; pageSize?: number; disabled?: boolean; onChange(page: number): void }) {
   return <div className="flex flex-wrap items-center justify-between gap-3"><p>{total} bản ghi · Trang {page}</p><div className="flex gap-2"><Button className="w-auto" variant="secondary" disabled={disabled || page <= 1} onClick={() => onChange(page - 1)}>Trước</Button>

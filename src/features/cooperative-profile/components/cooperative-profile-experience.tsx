@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { RestrictedAccessIcon } from "@/components/feedback/restricted-access-icon";
 import { Button } from "@/components/ui/button";
+import { ManagementHeading, StatusPill } from "@/components/ui/management-page";
 import { hasEffectivePermission } from "@/features/access/lib/has-effective-permission";
 import { useAuth } from "@/features/auth/state/auth-provider";
 import { CooperativeProfileEditor } from "@/features/cooperative-profile/components/cooperative-profile-editor";
@@ -103,24 +104,11 @@ function CooperativeProfileWorkspace() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-primary">Thiết lập hợp tác xã</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text sm:text-4xl">
-            Hồ sơ hợp tác xã
-          </h1>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-text-muted">
-            Hoàn thiện thông tin pháp lý, liên hệ và tài khoản nhận chuyển khoản của HTX.
-          </p>
-        </div>
-        <span className={`w-fit rounded-full px-3 py-1.5 text-sm font-semibold ${
-          data.profile.status === "completed"
-            ? "bg-emerald-50 text-success"
-            : "bg-warning-soft text-warning"
-        }`}>
+      <ManagementHeading title="Hồ sơ hợp tác xã" description="Hoàn thiện thông tin pháp lý, liên hệ và tài khoản nhận chuyển khoản của HTX." icon="settings">
+        <StatusPill tone={data.profile.status === "completed" ? "success" : "neutral"}>
           {data.profile.status === "completed" ? "Đã hoàn thiện" : "Chưa hoàn thiện"}
-        </span>
-      </header>
+        </StatusPill>
+      </ManagementHeading>
 
       <CooperativeProfileEditor
         banks={data.banks}

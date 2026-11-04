@@ -1,3 +1,5 @@
+import { OysterMark } from "./oyster-mark";
+
 type BrandMarkProps = {
   autoReveal?: boolean;
   compact?: boolean;
@@ -7,12 +9,12 @@ type BrandMarkProps = {
 
 const toneStyles = {
   default: {
-    icon: "bg-primary text-white shadow-sm",
+    icon: "bg-[#10243a] text-[#a7e0dc] shadow-[0_5px_14px_rgb(16_36_58_/_0.18)]",
     name: "text-text",
     tagline: "text-text-muted",
   },
   inverse: {
-    icon: "bg-white text-primary",
+    icon: "border border-white/20 bg-white/10 text-[#a7e0dc]",
     name: "text-white",
     tagline: "text-sky-50",
   },
@@ -30,33 +32,9 @@ export function BrandMark({
     <div className="flex items-center gap-3">
       <span
         aria-hidden="true"
-        className={`grid size-11 shrink-0 place-items-center rounded-xl ${styles.icon}`}
+        className={`grid ${compact ? "size-8 rounded-lg" : "size-11 rounded-[.7rem]"} shrink-0 place-items-center ${styles.icon}`}
       >
-        <svg
-          className="size-7"
-          fill="none"
-          viewBox="0 0 32 32"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M5 18.5c3.5-3 7-3 10.5 0s7 3 11 0"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="2.5"
-          />
-          <path
-            d="M7 23.5c3-2.25 6-2.25 9 0s6 2.25 9 0"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="2.5"
-          />
-          <path
-            d="M11 14c0-3.2 2.2-6 5-6s5 2.8 5 6"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="2.5"
-          />
-        </svg>
+        <OysterMark className={compact ? "size-6" : "size-8"} />
       </span>
 
       <span

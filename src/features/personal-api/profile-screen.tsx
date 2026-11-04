@@ -14,7 +14,7 @@ import type { VerificationView } from "@/features/verification-api/contracts";
 export function PersonalApiScreen() {
   const load = useCallback((signal: AbortSignal) => createPersonalRepository().profile(signal), []);
   const remote = useRemote(load);
-  return <section className="max-w-4xl"><h1 className="text-3xl font-semibold">Hồ sơ cá nhân</h1>
+  return <section className="max-w-5xl"><header className="border-b border-border pb-5"><p className="text-xs font-semibold uppercase tracking-[.14em] text-accent">Tài khoản</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">Hồ sơ cá nhân</h1><p className="mt-2 text-sm text-text-muted">Thông tin, liên hệ và quyền truy cập của bạn.</p></header>
     {remote.loading && <Skeleton />}<ErrorNotice error={remote.error} />
     {!remote.loading && !remote.data && <Button className="mt-4 w-auto" onClick={remote.reload}>Tải lại hồ sơ</Button>}
     {remote.data && <PersonalApiEditor initial={remote.data} />}
@@ -37,13 +37,13 @@ export function PersonalApiEditor({ initial }: { initial: ProfileViewDto }) {
   }, [dirty]);
   function adopt(next: ProfileViewDto, preserve: boolean) { setRecord(next); if (!preserve) setDisplayName(next.displayName); setLatest(undefined); setFieldError(undefined); setNotice(undefined); mutation.reviewed(); }
   const typeLabel = { CooperativeOwner: "Chủ hợp tác xã", Staff: "Tài khoản nội bộ", Trader: "Thương lái", SystemAdministrator: "Quản trị hệ thống" }[record.subjectType];
-  return <div className="mt-6 space-y-5">
+  return <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(17rem,1fr)]">
     <ErrorNotice error={mutation.error || contactError} />{notice && <p role="status" className="rounded-control bg-primary-soft p-3">{notice}</p>}
-    <section className="rounded-card border border-border bg-surface p-4 sm:p-6" aria-label="Thông tin tài khoản"><dl className="grid gap-4 sm:grid-cols-2">
+    <section className="rounded-card border border-border bg-surface p-4 shadow-card sm:p-5" aria-label="Thông tin tài khoản"><h2 className="mb-4 text-base font-semibold">Thông tin tài khoản</h2><dl className="grid gap-4 sm:grid-cols-2">
       <div><dt className="text-sm text-text-muted">Tên đăng nhập</dt><dd className="mt-1 break-words font-semibold">{record.username}</dd></div><div><dt className="text-sm text-text-muted">Loại tài khoản</dt><dd className="mt-1">{typeLabel}</dd></div>
       <div className="sm:col-span-2"><dt className="text-sm text-text-muted">ID tài khoản</dt><dd className="mt-1 break-all text-sm">{record.accountId}</dd></div>
     </dl></section>
-    <form noValidate className="space-y-4 rounded-card border border-border bg-surface p-4 sm:p-6" onSubmit={async (event) => {
+    <form noValidate className="space-y-4 rounded-card border border-border bg-surface p-4 shadow-card sm:p-5 xl:row-span-2" onSubmit={async (event) => {
       event.preventDefault(); if (saveLock.current || pending || mutation.busy() || mutation.blocked || contactUncertain || profileRefreshRequired || !dirty) return;
       if (contactFlow && (contactFlow.phase !== "verified" || Date.parse(contactFlow.expiresAt) <= Date.now())) { setContactError("Liên hệ cần được xác minh lại trước khi lưu. Bản nháp vẫn được giữ."); return; }
       const values = updateProfileRequestSchema.safeParse({ displayName: displayName.trim(), rowVersion: record.rowVersion });
@@ -72,17 +72,17 @@ export function PersonalApiEditor({ initial }: { initial: ProfileViewDto }) {
         }
       } finally { saveLock.current = false; if (alive.current) setContactSaving(false); }
     }}>
-      <Field ref={input} label="Tên hiển thị" required autoComplete="name" disabled={pending || profileRefreshRequired} value={displayName} aria-invalid={!!fieldError} aria-describedby={fieldError ? "personal-name-error" : undefined} onChange={(event) => setDisplayName(event.target.value)} />
+      <h2 className="text-base font-semibold">Tên hiển thị</h2><Field ref={input} label="Tên hiển thị" required autoComplete="name" disabled={pending || profileRefreshRequired} value={displayName} aria-invalid={!!fieldError} aria-describedby={fieldError ? "personal-name-error" : undefined} onChange={(event) => setDisplayName(event.target.value)} />
       {fieldError && <p className="text-sm text-danger" id="personal-name-error">{fieldError}</p>}
       {contactFlow && <p className="break-words rounded-control border border-border p-3">{contactFlow.channel === "Email" ? "Email" : "Số điện thoại"}: {contactFlow.maskedTarget} · {contactFlow.phase === "verified" ? "Đã xác minh, chờ Lưu thay đổi" : "Cần xác minh lại, bản nháp được giữ"}</p>}
       <div className="flex flex-wrap gap-3"><Button type="submit" className="w-auto" isPending={pending} disabled={!dirty || mutation.blocked || contactUncertain || profileRefreshRequired || !!contactFlow && contactFlow.phase !== "verified"}>Lưu thay đổi</Button><Button className="w-auto" variant="secondary" disabled={pending || !dirty} onClick={() => setDiscard(true)}>Hủy thay đổi</Button></div>
     </form>
-    <section className="space-y-4 rounded-card border border-border bg-surface p-4 sm:p-6" aria-label="Thông tin liên hệ"><h2 className="text-xl font-semibold">Thông tin liên hệ</h2>
+    <section className="space-y-4 rounded-card border border-border bg-surface p-4 shadow-card sm:p-5" aria-label="Thông tin liên hệ"><h2 className="text-base font-semibold">Thông tin liên hệ</h2>
       <dl className="grid gap-4 sm:grid-cols-2">{[["Email", record.email, record.emailVerified], ["Số điện thoại", record.phoneNumber, record.phoneVerified]].map(([label, value, verified]) => <div key={String(label)}><dt className="text-sm text-text-muted">{label}</dt><dd className="mt-1 break-all">{value || "Chưa có"}</dd><dd className="mt-1 text-sm text-text-muted">{value ? verified ? "Đã xác minh" : "Chưa xác minh" : "Chưa có thông tin xác minh"}</dd></div>)}</dl>
       <div className="flex flex-wrap gap-3"><Button className="w-auto" variant="secondary" disabled={pending || contactUncertain || profileRefreshRequired} onClick={() => setContactDialog({ channel: "Email", target: record.emailVerified ? "" : record.email ?? "" })}>{record.email && !record.emailVerified ? "Xác minh email hiện có" : record.email ? "Đổi email" : "Thêm email"}</Button>
         <Button className="w-auto" variant="secondary" disabled={pending || contactUncertain || profileRefreshRequired} onClick={() => setContactDialog({ channel: "Sms", target: record.phoneVerified ? "" : record.phoneNumber ?? "" })}>{record.phoneNumber && !record.phoneVerified ? "Xác minh số điện thoại hiện có" : record.phoneNumber ? "Đổi số điện thoại" : "Thêm số điện thoại"}</Button></div>
     </section>
-    <section className="space-y-3 rounded-card border border-border bg-surface p-4 sm:p-6" aria-label="Vai trò và vùng được cấp"><h2 className="text-xl font-semibold">Vai trò và vùng được cấp</h2>
+    <section className="space-y-3 rounded-card border border-border bg-surface p-4 shadow-card sm:p-5" aria-label="Vai trò và vùng được cấp"><h2 className="text-base font-semibold">Vai trò và vùng được cấp</h2>
       {record.grants.length ? <ul className="space-y-2">{record.grants.map((grant, index) => <li key={`${grant.role}:${grant.zoneId}:${index}`} className="rounded-control bg-surface-subtle p-3"><p className="font-semibold">{grant.role}</p><p className="mt-1 text-sm">{grant.allZones ? "Tất cả vùng" : grant.zoneName || "Vùng chưa có tên trong danh mục"}</p></li>)}</ul>
         : <p className="text-text-muted">{record.subjectType === "CooperativeOwner" ? "Chủ HTX quản lý theo loại tài khoản." : "Chưa có cặp vùng – vai trò đang hiệu lực."}</p>}
     </section>

@@ -2,13 +2,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DataGrid } from "@/components/ui/data-grid";
+import { ManagementHeading, StatusPill } from "@/components/ui/management-page";
 import { Dialog } from "@/components/ui/dialog";
 import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { loadOptions } from "@/features/operations/lookups";
-import { businessToday, control, DataTable, ErrorNotice, Field, Note, Paging, Select, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
+import { businessToday, control, ErrorNotice, Field, Note, Paging, Select, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import { employeeEditorSchema } from "@/features/employee-management/schemas/employee-editor-schema";
 import { employeeBankFields, toEmployeeBankAccount } from "@/features/employee-management/schemas/employee-bank-schema";
 import { normalizeEmployeePhone } from "@/features/employee-management/schemas/employee-phone";
@@ -39,13 +41,13 @@ function EmployeeDirectory() {
   const accounts = useRemote(useCallback((signal: AbortSignal) => repository.read("linkable-accounts", {}, linkableEmployeeAccountsSchema, signal), [repository]));
   async function open(id: string) { const result = await opening.run(() => repository.read("detail", { id }, employeeViewSchema), true); if (result) { setSelected(result); setSerial((value) => value + 1); } }
   function refresh() { list.reload(); accounts.reload(); }
-  return <section><div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-3xl font-semibold">Nhân viên</h1><Button className="sm:w-auto" disabled={opening.pending || zones.loading || accounts.loading || !zones.data || !accounts.data} onClick={() => { setSelected(null); setSerial((value) => value + 1); }}>Thêm nhân viên</Button></div>
-    <div className="mt-5 grid gap-3 sm:grid-cols-3"><Field label="Tìm theo tên hoặc số điện thoại" value={search} maxLength={200} onChange={(event) => setSearch(event.target.value)} />
+  return <section><ManagementHeading title="Nhân viên" description="Tra cứu hồ sơ, vùng làm việc và tài khoản liên kết." icon="users"><Button className="sm:w-auto" disabled={opening.pending || zones.loading || accounts.loading || !zones.data || !accounts.data} onClick={() => { setSelected(null); setSerial((value) => value + 1); }}>Thêm nhân viên</Button></ManagementHeading>
+    <div className="grid gap-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-3"><Field label="Tìm theo tên hoặc số điện thoại" value={search} maxLength={200} onChange={(event) => setSearch(event.target.value)} />
       <Select label="Tình trạng làm việc" value={statusId} onChange={(event) => { setStatusId(event.target.value); setPage(1); }}><option value="401">Đang làm việc</option><option value="402">Đã nghỉ việc</option><option value="">Tất cả</option></Select>
       <Select label="Vùng làm việc" value={zoneId} onChange={(event) => { setZoneId(event.target.value); setPage(1); }}><option value="">Tất cả vùng</option>{zones.data?.map((zone) => <option key={zone.id} value={zone.id}>{String(zone.code)} · {String(zone.name)}</option>)}</Select></div>
     {notice && <p role="status" className="mt-4 text-primary">{notice}</p>}<ErrorNotice error={list.error || zones.error || accounts.error || opening.error} />
     {(list.error || zones.error || accounts.error) && <Button className="w-auto" variant="secondary" onClick={() => { refresh(); zones.reload(); }}>Tải lại danh mục</Button>}
-    {list.loading ? <Skeleton /> : list.data && <><DataTable headings={["Họ và tên", "Số điện thoại", "Vùng làm việc", "Tài khoản", "Tình trạng", "Hồ sơ"]} empty={!list.data.items.length}>{list.data.items.map((row) => <tr key={row.id}><td>{row.fullName}</td><td>{row.phoneNumber ?? "—"}</td><td>{row.workingZones.map((zone) => zone.code).join(", ") || "—"}</td><td>{row.account ? `@${row.account.username} · ${accountLabel(row.account.status)}` : "Chưa liên kết"}</td><td>{employmentLabel(row.status)}</td><td><button className="text-primary underline" disabled={opening.pending} onClick={() => void open(row.id)}>Mở {row.fullName}</button></td></tr>)}</DataTable>
+    {list.loading ? <Skeleton /> : list.data && <><div className="my-4"><DataGrid responsive headings={["Họ và tên", "Số điện thoại", "Vùng làm việc", "Tài khoản", "Tình trạng", "Hồ sơ"]} empty={!list.data.items.length}>{list.data.items.map((row) => <tr key={row.id}><td data-label="Họ và tên" className="font-semibold">{row.fullName}</td><td data-label="Số điện thoại">{row.phoneNumber ?? "—"}</td><td data-label="Vùng làm việc">{row.workingZones.map((zone) => zone.code).join(", ") || "—"}</td><td data-label="Tài khoản">{row.account ? `@${row.account.username} · ${accountLabel(row.account.status)}` : "Chưa liên kết"}</td><td data-label="Tình trạng"><StatusPill tone={row.status === "Employed" ? "success" : "neutral"}>{employmentLabel(row.status)}</StatusPill></td><td data-label="Hồ sơ"><button className="font-semibold text-primary underline underline-offset-4" disabled={opening.pending} onClick={() => void open(row.id)}>Mở {row.fullName}</button></td></tr>)}</DataGrid></div>
       <Paging page={page} total={list.data.total} disabled={list.loading} onChange={setPage} /></>}
     {selected !== undefined && <EmployeeApiEditor key={serial} record={selected} zones={zones.data ?? []} accounts={accounts.data ?? []} lookupsReady={!!zones.data && !!accounts.data && !accounts.loading}
       onClose={() => setSelected(undefined)} onReloadAccounts={accounts.reload} onAdopt={(employee) => { setSelected(employee); setSerial((value) => value + 1); refresh(); setNotice(undefined); }} onSaved={(employee, follow) => { setSelected(employee); setSerial((value) => value + 1); refresh(); setNotice("Đã lưu hồ sơ nhân viên."); if (follow?.followUp) setFollowUp(follow); }}

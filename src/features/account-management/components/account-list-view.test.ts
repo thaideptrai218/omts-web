@@ -18,7 +18,7 @@ function account(username: string) {
 describe("account list derived assignments", () => {
   it("shows only effective role-zone grants", () => {
     const assignments = getEffectiveAssignments(
-      account("nguyen.an"),
+      account("manager"),
       mockAssignableRoles,
       mockFarmingZones,
     );
@@ -32,7 +32,7 @@ describe("account list derived assignments", () => {
   });
 
   it("treats an all-zone grant as applicable to each zone filter", () => {
-    const managedAccount = account("tran.binh");
+    const managedAccount = account("ketoan");
     const assignments = getEffectiveAssignments(
       managedAccount,
       mockAssignableRoles,
@@ -56,7 +56,7 @@ describe("account list derived assignments", () => {
   });
 
   it("searches by current role and zone labels", () => {
-    const managedAccount = account("nguyen.an");
+    const managedAccount = account("manager");
     const assignments = getEffectiveAssignments(
       managedAccount,
       mockAssignableRoles,

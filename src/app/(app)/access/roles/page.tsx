@@ -6,6 +6,7 @@ import { ApiResourceScreen } from "@/features/api-workspace/api-resource-screen"
 export const metadata: Metadata = {
   title: "Vai trò và quyền hạn | OMTS",
 };
+export const instant = false;
 
 export default function RoleManagementPage() {
   return <ApiPage api={<ApiResourceScreen resource="roles" />}><RoleManagementExperience /></ApiPage>;

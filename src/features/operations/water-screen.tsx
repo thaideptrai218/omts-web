@@ -10,7 +10,7 @@ import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import { createOperationsRepository, type Query } from "./repository";
 import { loadOptions } from "./lookups";
-import { DataTable, ErrorNotice, Field, Note, Paging, Select, Skeleton, businessTime, displayTime, statusLabel, toApiTime, useMutation, useRemote } from "./ui";
+import { DataTable, ErrorNotice, Field, FilterPanel, Note, OperationHeading, Paging, Select, Skeleton, businessTime, displayTime, statusLabel, toApiTime, useMutation, useRemote } from "./ui";
 
 const repository = createOperationsRepository("water");
 const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
@@ -33,15 +33,15 @@ export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } =
   const canCreate = !!zoneId && currentZone?.statusId === 101 && operationAllowed("water", context.identity, context.permissions.functionPermissions, "Create", zoneId);
   async function open(id: string) { const result = await mutation.run(() => repository.read("detail", { id }, c.waterSchema), true); if (result) { setSelected(result); setOcr(undefined); setSerial((value) => value + 1); } }
   function saved(record: c.WaterMeasurement, recognized?: Recognition) { setSelected(record); setOcr(recognized); setSerial((value) => value + 1); history.reload(); chart.reload(); setNotice("Đã lưu phép đo."); }
-  return <section><div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-3xl font-semibold">Đo nước</h1><div className="flex flex-wrap gap-2">
+  return <section><OperationHeading title="Đo nước" description="Theo dõi phép đo, ngưỡng và cảnh báo theo vùng nuôi được cấp." icon="waves"><div className="flex flex-wrap gap-2">
     {canCreate && <Button className="w-auto" onClick={() => { setSelected(null); setOcr(undefined); setSerial((value) => value + 1); }}>Ghi phép đo</Button>}
     <Button className="w-auto" variant="secondary" disabled={!zoneId || mutation.pending} onClick={() => setThresholdsOpen(true)}>Ngưỡng nước</Button>
     {zoneId && operationAllowed("water", context.identity, context.permissions.functionPermissions, "Export", zoneId) && <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => void mutation.run(() => repository.download(query), true)}>Xuất Excel</Button>}
-  </div></div>
-    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Select label="Vùng nuôi *" value={zoneId} onChange={(e) => { setZoneId(e.target.value); setPage(1); }}><option value="">Chọn vùng được cấp</option>{availableZones.map((row) => <option key={row.id} value={row.id}>{String(row.name)}{row.statusId === 102 ? " (ngừng dùng)" : ""}</option>)}</Select>
+  </div></OperationHeading>
+    <FilterPanel><Select label="Vùng nuôi *" value={zoneId} onChange={(e) => { setZoneId(e.target.value); setPage(1); }}><option value="">Chọn vùng được cấp</option>{availableZones.map((row) => <option key={row.id} value={row.id}>{String(row.name)}{row.statusId === 102 ? " (ngừng dùng)" : ""}</option>)}</Select>
       <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => { setFilters((value) => ({ ...value, from: e.target.value })); setPage(1); }} /><Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => { setFilters((value) => ({ ...value, to: e.target.value })); setPage(1); }} />
       <Select label="Trạng thái" value={filters.status} onChange={(e) => { setFilters((value) => ({ ...value, status: e.target.value })); setPage(1); }}>{[["Confirmed", "Đã xác nhận"], ["Draft", "Nháp"], ["Corrected", "Đã hiệu chỉnh"], ["Voided", "Đã hủy"], ["All", "Tất cả"]].map(([key, title]) => <option key={key} value={key}>{title}</option>)}</Select>
-    </div>
+    </FilterPanel>
     <ErrorNotice error={zones.error || history.error || mutation.error} />{notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
     {zones.error && <Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending || zones.loading} onClick={zones.reload}>Tải lại danh sách vùng</Button>}
     {!zoneId ? <p className="mt-6 rounded-card border border-border bg-surface p-6">Chọn vùng để xem lịch sử đo nước.</p> : <>

@@ -17,13 +17,13 @@ async function LoginContent() {
   return (
     <section
       aria-labelledby="login-title"
-      className="rounded-card border border-border bg-surface p-6 shadow-card sm:p-8"
+      className="login-panel"
     >
-      <p className="text-sm font-semibold text-primary">Chào mừng trở lại</p>
-      <h1 id="login-title" className="mt-2 text-3xl font-semibold tracking-tight text-text">
+      <p className="login-eyebrow">KHÔNG GIAN LÀM VIỆC OMTS</p>
+      <h1 id="login-title" className="login-title">
         Đăng nhập OMTS
       </h1>
-      <p className="mt-3 text-base leading-7 text-text-muted">
+      <p className="login-description">
         Dùng tài khoản của bạn để tiếp tục vào khu vực làm việc.
       </p>
       <LoginExperience />

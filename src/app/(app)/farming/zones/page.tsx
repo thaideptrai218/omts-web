@@ -3,6 +3,7 @@ import { ApiPage } from "@/features/api-workspace/api-page";
 import { ApiResourceScreen } from "@/features/api-workspace/api-resource-screen";
 
 export const metadata = { title: "Vùng nuôi" };
+export const instant = false;
 
 export default function FarmingZonesPage() {
   return <ApiPage api={<ApiResourceScreen resource="zones" />}><FarmingZoneExperience /></ApiPage>;

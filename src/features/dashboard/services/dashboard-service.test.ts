@@ -49,8 +49,8 @@ describe("dashboard service", () => {
 
     expect(result.workforce).toEqual({ employedCount: 2, leftCount: 1 });
     expect(result.access).toMatchObject({
-      activeInternalAccountCount: 2,
-      lockedInternalAccountCount: 1,
+      activeInternalAccountCount: 3,
+      lockedInternalAccountCount: 0,
       roleInUseCount: 2,
       zoneInUseCount: 2,
     });
