@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "tests/fixtures/server-boundary/.next", "tests/fixtures/serialization/.next", "tests/fixtures/web-config-boundary/.next", "tests/fixtures/expiry-boundary/.next", "tests/fixtures/cookie-browser/.next", "tests/fixtures/session-runtime-boundary/.next", "tests/fixtures/session-access-boundary/.next", "tests/fixtures/session-routes-boundary/.next"]
 }

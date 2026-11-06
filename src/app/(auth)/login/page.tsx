@@ -1,22 +1,36 @@
 import type { Metadata } from "next";
+import { LoginExperience } from "@/features/auth/components/login-experience";
+import { Suspense } from "react";
+import { getSessionGateway } from "@/server/auth/session-gateway.instance";
+import { ApiLoginEntry } from "@/features/auth/components/api-login-entry";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
-  title: "Đăng nhập | OMTS",
+  title: "Đăng nhập | HTX Trung Nam",
 };
 
-export default function LoginPage() {
+async function LoginContent() {
+  await connection();
+  if (getSessionGateway().mode !== "mock") {
+    return <Suspense fallback={<p role="status">Đang kiểm tra phiên đăng nhập...</p>}><ApiLoginEntry /></Suspense>;
+  }
   return (
     <section
       aria-labelledby="login-title"
-      className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+      className="login-panel"
     >
-      <p className="text-sm font-semibold tracking-wide text-sky-700">OMTS</p>
-      <h1 id="login-title" className="mt-2 text-2xl font-semibold text-zinc-950">
-        Đăng nhập
+      <p className="login-eyebrow">HỢP TÁC XÃ NUÔI TRỒNG THỦY SẢN TRUNG NAM</p>
+      <h1 id="login-title" className="login-title">
+        Đăng nhập hệ thống
       </h1>
-      <p className="mt-2 text-sm leading-6 text-zinc-600">
-        Khung xác thực đã sẵn sàng. Biểu mẫu đăng nhập sẽ được triển khai sau khi đối chiếu SRS và Figma.
+      <p className="login-description">
+        Đăng nhập để quản lý hoạt động nuôi hàu, mua bán và thông tin truy xuất nguồn gốc.
       </p>
+      <LoginExperience />
     </section>
   );
+}
+
+export default function LoginPage() {
+  return <Suspense fallback={<p role="status">Đang tải trang đăng nhập...</p>}><LoginContent /></Suspense>;
 }

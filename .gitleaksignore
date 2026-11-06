@@ -1,0 +1,4 @@
+# Reviewed false positive: a public character alphabet used by the old mock
+# temporary-password generator, not a password or API key. Ignore only this
+# historical commit/path/rule/line; future findings remain enabled.
+79066edc8c276076f772aae5cb85f6c7c26870f4:src/features/account-management/repositories/mock-account-management-repository.ts:generic-api-key:31
