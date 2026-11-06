@@ -117,7 +117,7 @@ Then open **[http://localhost:3001/login](http://localhost:3001/login)**. Always
 
 ## 3. Demo accounts
 
-These accounts exist only in the **frontend mock**. They are not backend or QA credentials. The shared mock password is **`demo123`**.
+These accounts exist only in the **frontend mock**. They are not backend or QA credentials. The shared mock password is **`Demo@1234`**.
 
 | Username | Review scenario |
 | --- | --- |
@@ -128,13 +128,28 @@ These accounts exist only in the **frontend mock**. They are not backend or QA c
 | `trader` | Thương lái; kiểm tra sản phẩm, yêu cầu mua hàng và các màn dành cho đối tác |
 | `sysadmin` | System Administrator; chỉ dùng cho màn cấp HTX/provisioning |
 
-Các tài khoản mock trên dùng chung **`demo123`**. Đây là bộ tài khoản QA đơn giản, không phải credential backend production. Các fixture username cũ như `nguyen.an`, `pham.cuong`, `staff-verified` và `tran.binh` không còn là tài khoản hướng dẫn chính.
+Các tài khoản mock trên dùng chung **`Demo@1234`**. Đây là bộ tài khoản QA đơn giản, không phải credential backend production. Các fixture username cũ như `nguyen.an`, `pham.cuong`, `staff-verified` và `tran.binh` không còn là tài khoản hướng dẫn chính.
 
-For newly created mock staff accounts, use the generated username shown in the delivery receipt and the same **public mock password** `demo123`. The first login requires a new password and one verified contact. In this review mode, OTP codes are `123456` for the initial send, then `654321` and `112233` after resends. No actual email or SMS is sent. These values are not backend credential-generation rules or production secrets.
+For newly created mock staff accounts, use the generated username shown in the delivery receipt and the same **public mock password** `Demo@1234`. The first login requires a new password and one verified contact. In this review mode, OTP codes are `123456` for the initial send, then `654321` and `112233` after resends. No actual email or SMS is sent. These values are not backend credential-generation rules or production secrets.
 
-Để kiểm tra nhanh, dùng **`owner / demo123`**. Fixtures được định nghĩa trong [mock-auth-repository.ts](src/features/auth/repositories/mock-auth-repository.ts).
+Để kiểm tra nhanh, dùng **`owner / Demo@1234`**. Fixtures được định nghĩa trong [mock-auth-repository.ts](src/features/auth/repositories/mock-auth-repository.ts).
 
-The API runtime has a separate seeded credential set. Do not assume mock accounts work against the backend. Use the credentials in the current tester runbook or the backend seed configuration; never commit or paste backend passwords, JWT keys, Redis URLs, or `.env` files.
+The API runtime has separate seeded accounts. For local API testing at `http://localhost:3002/login`, every active account below uses `Demo@1234` unless its password was changed later:
+
+| Username | Role and test scope |
+| --- | --- |
+| `owner` | Cooperative Owner, all zones |
+| `quanlyvung1` | Zone Manager, DEMO-01 |
+| `quanlyvung2` | Zone Manager, DEMO-02 |
+| `ketoan` | Accountant, all zones |
+| `sysadmin` | System Administrator in the isolated meeting API runtime; account directory, detail, lock/unlock and administration history at `/system/accounts` |
+| `thuonglai1` | Active Trader |
+| `thuonglai2` | Locked Trader; login should be rejected |
+| `nhanvien.doimk` | Staff; first-login password change |
+| `nhanvien.chuaxacthuc` | Staff; phone verification required |
+| `nhanvien.hethan` | Staff with revoked zone grant; access should be rejected |
+
+The mock usernames `manager`, `manager2`, and `trader` do not identify the corresponding backend accounts. The backend seed preserves changed passwords. Never commit JWT keys, Redis URLs, or `.env` files.
 
 The mock does not send real email or SMS. Mock data is separate from backend data; many changes exist only in the current browser session and may be lost on reload. Mock authentication also does not survive a page reload like a real server session.
 
@@ -267,7 +282,7 @@ For scope and remaining contract gaps, read the [INP/ENV integration report](doc
 | `package.json` cannot be found | Your terminal is not in `omts-web`. Change to the repository directory and retry. |
 | Port 3000 is already in use | Run `npm run dev -- --port 3001` and open the address printed in the terminal. Do not stop unrelated applications. |
 | PowerShell refuses to run `npm.ps1` | Use `npm.cmd ci`, `npm.cmd run dev`, or Command Prompt. You do not need to change the machine's execution policy. |
-| Demo login is rejected | Check that the source is mock and try `owner / demo123`. Backend accounts are not automatically available in the mock. |
+| Demo login is rejected | Check that the source is mock and try `owner / Demo@1234`. Backend accounts are not automatically available in the mock. |
 | Configuration/session unavailable after changing environment settings | Check `OMTS_DATA_SOURCE=mock` and leave unused API/Redis variables disabled. Restart the server after editing `.env.local`. |
 | A build cannot download fonts | Check Internet/proxy connectivity: the layout uses `next/font/google`. Then retry the build. |
 

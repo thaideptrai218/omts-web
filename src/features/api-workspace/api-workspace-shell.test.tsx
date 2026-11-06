@@ -6,7 +6,7 @@ import { ApiWorkspaceShell } from "./api-workspace-shell";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 vi.mock("@/features/auth/api/api-auth-client", () => ({ logoutWithApi: vi.fn() }));
-vi.mock("@/features/inbox-api/inbox-dialog", () => ({ InboxDialog: () => null }));
+vi.mock("@/features/inbox-api/inbox-bell", () => ({ InboxBell: () => null }));
 vi.mock("@/features/trader-requests-api/requests-dialog", () => ({ TraderRequestsDialog: () => null }));
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
@@ -35,15 +35,15 @@ describe("shared API navigation shell", () => {
     expect(sidebar.queryByRole("link", { name: "Tài khoản nhân viên nội bộ" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Phân công và chấm công" })).toBeNull();
     expect(sidebar.queryByRole("button", { name: "Yêu cầu thương lái" })).toBeNull();
-    expect(sidebar.getByRole("link", { name: "Yêu cầu mua hàng" })).toBeTruthy();
+    expect(sidebar.getByRole("link", { name: "Yêu cầu mua hàu" })).toBeTruthy();
   });
   it("closes the mobile drawer after selecting an API destination", () => {
     const view = setup("Trader");
-    fireEvent.click(within(view.container).getByRole("button", { name: /^Menu$/ }));
+    fireEvent.click(within(view.container).getByRole("button", { name: "Mở điều hướng" }));
     const dialog = view.container.querySelector("dialog")!;
     expect(dialog.open).toBe(true);
     dialog.addEventListener("click", (event) => event.preventDefault());
-    fireEvent.click(within(dialog).getByRole("link", { name: "Sản phẩm bán" }));
+    fireEvent.click(within(dialog).getByRole("link", { name: "Danh mục sản phẩm hàu" }));
     expect(dialog.open).toBe(false);
   });
 });

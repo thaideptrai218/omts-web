@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as c from "@/features/operations/new-module-contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
+import { salesV2Plan } from "./sales-v2-plan";
 
 const productQuery = z.strictObject({ action: z.enum(["list", "all"]).default("list") });
 const staffingQuery = z.strictObject({ action: z.literal("staffing"), id: z.guid() });
@@ -15,6 +16,7 @@ const mutation = z.strictObject({ action: z.string(), id: z.guid().optional(), z
 const done = z.object({ done: z.literal(true) }), empty = z.strictObject({});
 
 export function planNewModule(area: OperationArea, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
+  if (["sales-products"].includes(area)) return salesV2Plan(area as "sales-products", method, query, input);
   if (new Set(query.keys()).size !== [...query.keys()].length) return undefined;
   if (method === "POST") {
     const parsed = mutation.safeParse(input);

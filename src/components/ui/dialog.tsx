@@ -17,6 +17,7 @@ type DialogProps = Readonly<{
   dismissible?: boolean;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onOpenChange(open: boolean): void;
+  onCloseRequest?(): void;
   open: boolean;
   mobileLayout?: "fullscreen" | "compact";
   size?: "md" | "lg" | "xl";
@@ -24,8 +25,8 @@ type DialogProps = Readonly<{
 }>;
 
 const dialogWidthStyles = {
-  md: "max-w-lg",
-  lg: "max-w-3xl",
+  md: "max-w-2xl",
+  lg: "max-w-4xl",
   xl: "max-w-6xl",
 } as const;
 
@@ -64,6 +65,7 @@ export function Dialog({
   dismissible = true,
   initialFocusRef,
   onOpenChange,
+  onCloseRequest,
   open,
   mobileLayout = "fullscreen",
   size = "md",
@@ -114,7 +116,8 @@ export function Dialog({
         // React also propagates cancel to ancestor dialogs. Escape belongs only
         // to the topmost dialog; closing its parent would discard the editor.
         event.stopPropagation();
-        if (dismissible) onOpenChange(false);
+        if (onCloseRequest) onCloseRequest();
+        else if (dismissible) onOpenChange(false);
       }}
       onClick={(event) => {
         if (dismissible && event.target === event.currentTarget) {
@@ -125,7 +128,7 @@ export function Dialog({
       ref={dialogRef}
     >
       <div className="p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 bg-surface pb-3">
           <div>
             <h2 className="text-xl font-semibold tracking-tight" id={titleId}>
               {title}
@@ -137,11 +140,11 @@ export function Dialog({
             )}
           </div>
 
-          {dismissible && (
+          {(dismissible || onCloseRequest) && (
             <button
               aria-label="Đóng hộp thoại"
               className="grid size-11 shrink-0 place-items-center rounded-control text-xl text-text-muted transition hover:bg-surface-subtle hover:text-text"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onCloseRequest ? onCloseRequest() : onOpenChange(false)}
               type="button"
             >
               <span aria-hidden="true">×</span>

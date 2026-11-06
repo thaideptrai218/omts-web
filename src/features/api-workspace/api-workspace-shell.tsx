@@ -5,10 +5,10 @@ import type { BrowserIdentityDto } from "@/server/backend/browser-dto";
 import { logoutWithApi } from "@/features/auth/api/api-auth-client";
 import { resources, resourceKeys, resourceAllowed } from "./resources";
 import { operationModules, operationAllowed } from "@/features/operations/permissions";
-import { InboxDialog } from "@/features/inbox-api/inbox-dialog";
-import { TraderRequestsDialog } from "@/features/trader-requests-api/requests-dialog";
+import { InboxBell } from "@/features/inbox-api/inbox-bell";
 import { NavigationGroup } from "@/components/layout/navigation-group";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { InterfaceIcon, type InterfaceIconName } from "@/components/ui/interface-icon";
 import { ManagementHeading } from "@/components/ui/management-page";
@@ -20,17 +20,21 @@ import { workspaceRoleLabel } from "@/shared/presentation/actor-label";
 const resourceIcons: Record<ResourceKey, InterfaceIconName> = {
   zones: "zone", rafts: "raft", "input-items": "material", suppliers: "supplier",
   employees: "employee", accounts: "id-card", roles: "roles",
+  customers: "users",
 };
 const operationIcons: Record<OperationArea, InterfaceIconName> = {
+  "job-types": "work",
+  seeding: "product", "material-usages": "material", harvest: "work",
+  "cultivation-cycles": "raft",
   "purchase-receipts": "receipt", "supplier-payments": "payment", water: "water",
   "sales-products": "product", "purchase-requests": "request", workforce: "attendance", "my-work": "work",
 };
 
 const workspaceGroups = [
-  { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["water"] },
+  { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["cultivation-cycles", "seeding", "material-usages", "harvest", "water"] },
   { label: "Vật tư & mua hàng", resources: ["input-items", "suppliers"], operations: ["purchase-receipts", "supplier-payments"] },
-  { label: "Nhân sự & phân quyền", resources: ["employees", "accounts", "roles"], operations: ["workforce", "my-work"] },
-  { label: "Kinh doanh", resources: [], operations: ["sales-products", "purchase-requests"] },
+  { label: "Nhân sự & phân quyền", resources: ["employees", "accounts", "roles"], operations: ["workforce", "job-types", "my-work"] },
+  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-products", "purchase-requests"] },
 ];
 
 type Context = Readonly<{ identity: BrowserIdentityDto; permissions: PermissionProjection }>;
@@ -44,8 +48,6 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const pathname = usePathname();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
-  const [inboxOpen, setInboxOpen] = useState(false);
-  const [requestsOpen, setRequestsOpen] = useState(false);
   useEffect(() => {
     if (!globalThis.BroadcastChannel) return;
     const channel = new BroadcastChannel("omts-auth-lifecycle-v1");
@@ -53,21 +55,22 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
     return () => channel.close();
   }, []);
   const visible = resourceKeys.filter((key) => resourceAllowed(key, context.identity, context.permissions.functionPermissions));
+  const financeWorkspace = context.identity.subjectType === "Staff" && context.permissions.functionPermissions.some(p => p.functionCode === "SUPPLIER_PAYMENTS" && p.action === "Create") && !context.permissions.functionPermissions.some(p => ["CULTIVATION_CYCLES", "WATER_MEASUREMENTS", "HARVESTS"].includes(p.functionCode) && ["Create", "Edit"].includes(p.action));
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const navigation = ({ compact, onNavigate }: { compact: boolean; onNavigate?: () => void }) => {
-    const link = (href: string, label: string, icon: InterfaceIconName) => <a key={href} className={styles.navigationLink} href={href} aria-current={active(href) ? "page" : undefined} aria-label={label} title={compact ? label : undefined} onClick={onNavigate}><span className={styles.iconSlot}><InterfaceIcon name={icon}/></span><span className={styles.linkLabel}>{label}</span></a>;
-    const action = (label: string, icon: InterfaceIconName, run: () => void) => <button className={styles.navigationLink} aria-label={label} title={compact ? label : undefined} onClick={() => { run(); onNavigate?.(); }}><span className={styles.iconSlot}><InterfaceIcon name={icon}/></span><span className={styles.linkLabel}>{label}</span></button>;
+    const link = (href: string, label: string, icon: InterfaceIconName) => <Link key={href} className={styles.navigationLink} href={href} aria-current={active(href) ? "page" : undefined} aria-label={label} title={compact ? label : undefined} onClick={onNavigate}><span className={styles.iconSlot}><InterfaceIcon name={icon}/></span><span className={styles.linkLabel}>{label}</span></Link>;
     return <nav aria-label="Chức năng" className={styles.navigation}>
+      {context.identity.subjectType === "SystemAdministrator" && <NavigationGroup label="Quản trị hệ thống" compact={compact}><div className={styles.navigationItems}>{link("/system/accounts", "Tài khoản & nhật ký", "roles")}</div></NavigationGroup>}
       <NavigationGroup label="Điều hành" compact={compact}><div className={styles.navigationItems}>
         {link("/dashboard", "Tổng quan HTX", "dashboard")}
         {context.identity.subjectType === "CooperativeOwner" && link("/audit", "Nhật ký thao tác", "search")}
         {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/certifications", "Chứng nhận HTX", "document")}
         {(context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "SUPPLIER_PAYMENTS" && p.action === "View")) && link("/operations/supplier-debts", "Đối chiếu công nợ", "payment")}
-        {(context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_CYCLES" && p.action === "View")) && link("/farming/cycles", "Chu kỳ nuôi", "raft")}
-        {action("Thông báo", "inbox", () => setInboxOpen(true))}
-        {context.identity.subjectType === "CooperativeOwner" && action("Yêu cầu thương lái", "request", () => setRequestsOpen(true))}
+        {!financeWorkspace && (context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_CYCLES" && p.action === "View")) && link("/farming/cycles", "Chu kỳ nuôi", "raft")}
+        {context.identity.subjectType === "CooperativeOwner" && link("/trader-requests", "Yêu cầu đăng ký thương lái", "request")}
       </div></NavigationGroup>
       {workspaceGroups.map((group) => {
+        if (financeWorkspace && group.label === "Nuôi trồng") return null;
         const rows = visible.filter((key) => group.resources.includes(key));
         const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions));
         return rows.length || modules.length ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
@@ -77,13 +80,13 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       })}
       <NavigationGroup label="Tài khoản" compact={compact}><div className={styles.navigationItems}>
         {link("/account", "Hồ sơ cá nhân", "account")}
-        {link("/account/security", "Đổi mật khẩu", "security")}
         {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/profile", "Hồ sơ hợp tác xã", "cooperative")}
+        {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/receiving-bank-account", "Ngân hàng nhận tiền", "payment")}
       </div></NavigationGroup>
     </nav>;
   };
   return <WorkspaceContext.Provider value={context}>
-    <AppShell navigation={navigation} accountLabel={context.identity.username} accountInitials={context.identity.username.slice(0,2).toUpperCase()} accountRole={workspaceRoleLabel(context.identity.subjectType, context.permissions.functionPermissions)} isLoggingOut={pending} onLogout={async () => {
+    <AppShell navigation={navigation} topAction={() => <InboxBell />} accountLabel={context.identity.username} accountInitials={context.identity.username.slice(0,2).toUpperCase()} accountRole={workspaceRoleLabel(context.identity.subjectType, context.permissions.functionPermissions)} isLoggingOut={pending} onLogout={async () => {
       if (pending) return;
       setPending(true); setError(undefined);
       const result = await logoutWithApi();
@@ -91,8 +94,6 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       else { setError("Chưa thể đăng xuất. Kiểm tra kết nối rồi thử lại."); setPending(false); }
     }}>
       {error && <p role="alert" className="mb-4 rounded-control border border-danger/30 bg-surface p-4 text-danger">{error}</p>}
-      {inboxOpen && <InboxDialog onClose={() => setInboxOpen(false)} />}
-      {requestsOpen && context.identity.subjectType === "CooperativeOwner" && <TraderRequestsDialog onClose={() => setRequestsOpen(false)} />}
       {children}
     </AppShell>
   </WorkspaceContext.Provider>;
@@ -100,6 +101,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
 
 export function ApiWorkspaceHome() {
   const context = useApiWorkspace();
+  if (context.identity.subjectType === "SystemAdministrator") return <section><ManagementHeading title="Quản trị hệ thống" description="Quản lý truy cập của các tài khoản trên hệ thống." icon="roles" /><Link href="/system/accounts" className="mt-6 flex items-center justify-between rounded-card border border-border bg-surface p-5 font-semibold hover:border-primary">Tài khoản và nhật ký quản trị<span aria-hidden="true">→</span></Link></section>;
   const visible = resourceKeys.filter((key) => resourceAllowed(key, context.identity, context.permissions.functionPermissions));
   return <section><ManagementHeading title="Tổng quan hoạt động" description="Chọn công việc trong phạm vi được cấp." icon="dashboard" />
     <div className="mt-7 grid gap-6 xl:grid-cols-2"><section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Danh mục quản lý</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{visible.map((key) => <a key={key} href={`/workspace/${key}`}

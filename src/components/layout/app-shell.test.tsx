@@ -178,10 +178,10 @@ describe("desktop sidebar layout", () => {
       within(view.sidebar).getByRole("button", { name: "Thu gọn menu" }),
     );
     const dashboard = within(view.sidebar).getByRole("link", {
-      name: "Bảng điều hành",
+      name: "Tổng quan HTX",
     });
     expect(dashboard.getAttribute("aria-current")).toBe("page");
-    expect(dashboard.getAttribute("title")).toBe("Bảng điều hành");
+    expect(dashboard.getAttribute("title")).toBe("Tổng quan HTX");
   });
   it("filters menu entries by capability and does not infer authority from a role label", () => {
     render(
@@ -252,9 +252,9 @@ describe("mobile menu account navigation", () => {
       })),
     );
     const view = render(<AppShell onLogout={vi.fn()}>Nội dung</AppShell>);
-    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mở điều hướng" }));
     const drawer = screen.getByRole("dialog", {
-      name: "Menu trên thiết bị di động",
+      name: "Điều hướng trên thiết bị di động",
     });
     expect(
       document.documentElement.hasAttribute("data-omts-scroll-locked"),
@@ -307,10 +307,10 @@ describe("mobile menu account navigation", () => {
       );
     }
     const view = render(<Shell />);
-    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mở điều hướng" }));
     fireEvent.click(
       within(
-        screen.getByRole("dialog", { name: "Menu trên thiết bị di động" }),
+        screen.getByRole("dialog", { name: "Điều hướng trên thiết bị di động" }),
       ).getByRole("button", { name: "Đóng" }),
     );
     expect(
@@ -320,7 +320,7 @@ describe("mobile menu account navigation", () => {
     expect(
       document.documentElement.hasAttribute("data-omts-scroll-locked"),
     ).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mở điều hướng" }));
     expect(
       document.documentElement.hasAttribute("data-omts-scroll-locked"),
     ).toBe(true);
@@ -336,9 +336,9 @@ describe("mobile menu account navigation", () => {
         <p>Nội dung</p>
       </AppShell>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mở điều hướng" }));
     const dialog = screen.getByRole("dialog", {
-      name: "Menu trên thiết bị di động",
+      name: "Điều hướng trên thiết bị di động",
     });
     fireEvent.click(
       within(dialog).getByRole("link", { name: /Người kiểm thử/ }),
@@ -346,7 +346,7 @@ describe("mobile menu account navigation", () => {
     expect(dialog.hasAttribute("open")).toBe(false);
     expect(
       screen
-        .getByRole("button", { name: "Menu" })
+        .getByRole("button", { name: "Mở điều hướng" })
         .getAttribute("aria-expanded"),
     ).toBe("false");
   });

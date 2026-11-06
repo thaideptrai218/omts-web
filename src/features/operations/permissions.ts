@@ -1,7 +1,12 @@
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
-export const operationAreas = ["purchase-receipts", "supplier-payments", "water", "sales-products", "purchase-requests", "workforce", "my-work"] as const;
+export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "purchase-requests", "workforce", "my-work"] as const;
 export type OperationArea = typeof operationAreas[number];
 export const operationModules: readonly { key: OperationArea; title: string; functionCode: string }[] = [
+  { key: "job-types", title: "Loại công việc và đơn giá", functionCode: "PAY_RULES" },
+  { key: "seeding", title: "Thả giống", functionCode: "CULTIVATION_CYCLES" },
+  { key: "material-usages", title: "Sử dụng vật tư", functionCode: "CULTIVATION_CYCLES" },
+  { key: "harvest", title: "Thu hoạch", functionCode: "HARVESTS" },
+  { key: "cultivation-cycles", title: "Chu kỳ nuôi", functionCode: "CULTIVATION_CYCLES" },
   { key: "purchase-receipts", title: "Phiếu nhập vật tư", functionCode: "PURCHASE_RECEIPTS" },
   { key: "supplier-payments", title: "Thanh toán nhà cung cấp", functionCode: "SUPPLIER_PAYMENTS" },
   { key: "water", title: "Theo dõi chất lượng nước", functionCode: "WATER_MEASUREMENTS" },
@@ -12,7 +17,7 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
 ];
 export function operationAllowed(area: OperationArea, identity: { subjectType: string }, permissions: readonly FunctionPermission[], action = "View", zoneId?: string) {
   if (area === "my-work") return identity.subjectType === "Staff";
-  if (area === "sales-products") return identity.subjectType === "CooperativeOwner" || identity.subjectType === "Trader" && action === "View";
+  if (area === "sales-products") return identity.subjectType === "CooperativeOwner" || action === "View" && (identity.subjectType === "Trader" || identity.subjectType === "Staff" && permissions.some(p => p.functionCode === "SALES_INVOICES" && p.action === "Create"));
   if (area === "purchase-requests") {
     if (["Mine", "Submit", "CancelMine"].includes(action)) return identity.subjectType === "Trader";
     if (identity.subjectType === "Trader") return action === "View";
@@ -29,8 +34,11 @@ export function operationAllowed(area: OperationArea, identity: { subjectType: s
   }
   if (identity.subjectType === "CooperativeOwner") return true;
   if (identity.subjectType !== "Staff" || action === "Thresholds") return false;
-  const code = operationModules.find((entry) => entry.key === area)!.functionCode;
-  const grants = permissions.filter((entry) => entry.functionCode === code && entry.action === action);
+  if (process.env.NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT === "v2" && ["purchase-receipts", "supplier-payments"].includes(area)) return permissions.some(p => p.functionCode === (area === "purchase-receipts" ? "PURCHASE_RECEIPTS" : "SUPPLIER_PAYMENTS") && p.action === action && (p.scope.kind === "all-zones" || p.scope.zoneIds.length > 0));
+  const logAction = area === "cultivation-cycles" && ["LogsView", "LogsCreate", "LogsEdit", "LogsDelete"].includes(action);
+  const code = logAction ? "CULTIVATION_LOGS" : operationModules.find((entry) => entry.key === area)!.functionCode;
+  const requiredAction = logAction ? action.slice(4) : action;
+  const grants = permissions.filter((entry) => entry.functionCode === code && entry.action === requiredAction);
   const assigned = grants.filter((entry) => entry.dataScope === "AssignedZone");
   const coversZone = (zone: string) => assigned.some((entry) => entry.scope.kind === "all-zones" || entry.scope.zoneIds.includes(zone));
   // The current backend INP/ENV guards limit zones, but do not filter OwnRecords.
@@ -38,7 +46,7 @@ export function operationAllowed(area: OperationArea, identity: { subjectType: s
   // An AssignedZone grant covering the same scope legitimately supplies access.
   if (grants.some((entry) => entry.dataScope === "OwnRecords" && (entry.scope.kind === "all-zones"
     ? !assigned.some((grant) => grant.scope.kind === "all-zones") : entry.scope.zoneIds.some((zone) => !coversZone(zone))))) return false;
-  return assigned.some((entry) => entry.functionCode === code && entry.action === action
+  return assigned.some((entry) => entry.functionCode === code && entry.action === requiredAction
     && (area !== "supplier-payments" || entry.scope.kind === "all-zones")
     && (!zoneId || entry.scope.kind === "all-zones" || entry.scope.kind === "zones" && entry.scope.zoneIds.includes(zoneId)));
 }

@@ -3,7 +3,7 @@ import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
 import { farmingZoneListItemSchema, farmingZoneViewSchema } from "@/features/farming-zones/api/farming-zone-contract.schemas";
 import { employeeListItemSchema, employeeViewSchema } from "@/features/employee-management/api/employee-contract.schemas";
 
-export const resourceKeys = ["zones", "suppliers", "input-items", "employees", "rafts", "accounts", "roles"] as const;
+export const resourceKeys = ["zones", "suppliers", "input-items", "employees", "rafts", "accounts", "roles", "customers"] as const;
 export type ResourceKey = typeof resourceKeys[number];
 const supplierTypes = [["Seed", "Giống"], ["Material", "Vật tư"], ["Other", "Khác"]] as const;
 const inputGroups = [["Seed", "Giống"], ["Material", "Vật tư"], ["Other", "Khác"]] as const;
@@ -16,6 +16,9 @@ export type ResourceField = Readonly<{ key: string; label: string; type?: "text"
 type ResourceDefinition = Readonly<{ title: string; functionCode?: string; ownerOnly?: boolean; editable: boolean; creatable?: boolean; zoneRequired?: boolean;
   columns: readonly (readonly [string, string])[]; fields: readonly ResourceField[] }>;
 export const resources: Record<ResourceKey, ResourceDefinition> = {
+  customers: { title: "Khách hàng và thương lái", functionCode: "CUSTOMERS", editable: true,
+    columns: [["name", "Tên khách hàng"], ["phoneNumber", "Số điện thoại"], ["address", "Địa chỉ"], ["hasTraderAccount", "Tài khoản thương lái"]],
+    fields: [{ key: "name", label: "Tên khách hàng", required: true }, { key: "phoneNumber", label: "Số điện thoại" }, { key: "address", label: "Địa chỉ", type: "textarea" }, { key: "note", label: "Ghi chú", type: "textarea" }] },
   zones: { title: "Vùng nuôi", editable: true,
     columns: [["code", "Mã vùng"], ["name", "Tên vùng"], ["status", "Trạng thái"], ["inUseRaftCount", "Bè đang dùng"]],
     fields: [{ key: "code", label: "Mã vùng", required: true }, { key: "name", label: "Tên vùng", required: true },
@@ -52,6 +55,9 @@ const text = z.string();
 const nullableText = text.nullable();
 const usage = { statusId: z.number().int(), status: text };
 const version = { rowVersion: text.min(1) };
+const customerRow = z.object({ id: apiIdSchema, name: text, phoneNumber: nullableText, address: nullableText, hasTraderAccount: z.boolean(), ...version });
+const customerView = z.object({ id: apiIdSchema, name: text, phoneNumber: nullableText, email: nullableText, address: nullableText, note: nullableText,
+  phoneLocked: z.boolean(), traderAccount: z.object({ accountId: apiIdSchema, username: nullableText, displayName: text }).nullable(), mergedIntoCustomerId: apiIdSchema.nullable(), currentDebt: z.number(), ...version });
 const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, phoneNumber: text, ...usage });
 const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: z.enum(["Seed", "Material", "Other"]), unit: text, ...usage });
 const raftRow = z.object({ id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
@@ -59,22 +65,25 @@ const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), s
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
   subjectType: text.optional(), mustChangePassword: z.boolean().optional(), ...version });
 const listSchemas = { zones: farmingZoneListItemSchema, suppliers: supplierRow, "input-items": itemRow,
-  employees: employeeListItemSchema, rafts: raftRow, accounts: accountRow, roles: roleRow };
+  employees: employeeListItemSchema, rafts: raftRow, accounts: accountRow, roles: roleRow, customers: customerRow };
 const detailSchemas = {
+  customers: customerView,
   zones: farmingZoneViewSchema,
   suppliers: supplierRow.extend({ address: nullableText, email: nullableText, ...version }),
   "input-items": itemRow.extend({ description: nullableText, isUsed: z.boolean(), ...version }),
   employees: employeeViewSchema,
   rafts: raftRow.extend({ location: nullableText, size: nullableText, conditionNotes: nullableText,
-    lanes: z.array(z.object({ laneNumber: z.number().int(), length: z.number().nullable(), markerA: nullableText, markerB: nullableText })),
-    layoutDrawing: z.json().nullable(), ...version }),
+    lanes: z.array(z.object({ id: apiIdSchema, laneNumber: z.number().int(), statusId: z.number().int(), status: text })),
+    ...version }),
   accounts: accountRow,
   roles: roleRow.extend({ description: nullableText.optional(), permissions: z.array(z.object({ functionCode: text, actions: z.array(text), dataScope: text.optional() })), rowVersion: text.optional() }),
 };
 export function projectResource(resource: ResourceKey, data: unknown, detail: boolean,
   query?: { page: number; pageSize: number; search?: string }): unknown | undefined {
   if (detail) {
-    const value = resource === "employees" && data && typeof data === "object" && "employee" in data ? data.employee : data;
+    const value = data && typeof data === "object" && resource === "employees" && "employee" in data ? data.employee
+      : data && typeof data === "object" && resource === "rafts" && "raft" in data ? data.raft
+      : data && typeof data === "object" && resource === "customers" && "customer" in data ? data.customer : data;
     const parsed = detailSchemas[resource].safeParse(value);
     return parsed.success ? parsed.data : undefined;
   }

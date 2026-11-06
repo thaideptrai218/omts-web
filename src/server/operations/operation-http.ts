@@ -12,17 +12,21 @@ import { readBoundedBytes, readOperationUpload } from "./bounded-body";
 import { localFileTarget } from "./evidence-target";
 import { handleFarmingRequest } from "../farming/farming-http";
 import { handleEmployeeApi } from "../employees/employee-api-http";
+import { harvestValues, harvestCorrection, harvestDetail } from "@/features/cultivation-api/records-contracts";
+import { cultivationLog, logValues, logCorrection } from "@/features/cultivation-api/logs-contracts";
 export { localFileTarget } from "./evidence-target";
 
 const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: responseHeaders });
-const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", "record-photo"]), id: z.guid().optional(), zoneId: z.guid().optional() });
+const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", "record-photo", "harvest-record", "harvest-correct", "log-record", "log-correct"]), id: z.guid().optional(), zoneId: z.guid().optional() });
 
 function browserFiles(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   const record = value as Record<string, unknown>;
+  if (record.lot) return { ...record, lot: browserFiles(record.lot) };
   if (record.measurement) return { ...record, measurement: browserFiles(record.measurement) };
   if (typeof record.id !== "string") return value;
+  if (Array.isArray(record.photos) && typeof record.zoneId === "string") return { ...record, photos: record.photos.map((photo, index) => ({ ...(photo as object), url: `/api/operations/harvest?action=photo&id=${record.id}&zoneId=${record.zoneId}&index=${index}` })) };
   if (Array.isArray(record.invoicePhotoUrls)) return { ...record, invoicePhotoUrls: record.invoicePhotoUrls.map((_, index) => `/api/operations/purchase-receipts?action=invoice&id=${record.id}&index=${index}`) };
   if ("photoUrl" in record) return { ...record, photoUrl: record.photoUrl ? `/api/operations/water?action=photo&id=${record.id}` : null };
   return value;
@@ -49,6 +53,16 @@ export async function handleOperationRequest(request: Request, areaName: string)
         const checked = uploadQuery.safeParse(Object.fromEntries(query));
         if (!checked.success || [...query.keys()].length !== new Set(query.keys()).size) return json({ status: "invalid-input" }, 400);
         upload = checked.data;
+        if (area.data === "cultivation-cycles" && ["log-record", "log-correct"].includes(upload.action) && upload.id && upload.zoneId) {
+          const zone = upload.zoneId;
+          plan = { area: area.data, action: upload.action, zoneId: zone, path: upload.action === "log-record" ? `/api/cultivation-cycles/${upload.id}/cultivation-logs` : `/api/cultivation-logs/${upload.id}`, method: upload.action === "log-record" ? "POST" : "PUT", permission: upload.action === "log-record" ? "LogsCreate" : "LogsEdit", schema: z.object({ log: cultivationLog }).transform(({ log }) => ({ log: { ...log, photos: log.photos.map((photo,index) => ({ ...photo, url: `/api/operations/cultivation-cycles?action=log-photo&id=${log.id}&zoneId=${zone}&index=${index}` })) } })) };
+        }
+        if (area.data === "harvest" && upload.action === "harvest-record" && upload.id && upload.zoneId) {
+          plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/rafts/${upload.id}/harvest-lots`, method: "POST", permission: "Create", schema: z.object({ lot: z.object({ id: z.guid(), lotCode: z.string() }) }) };
+        }
+        if (area.data === "harvest" && upload.action === "harvest-correct" && upload.id && upload.zoneId) {
+          plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/harvest-lots/${upload.id}`, method: "PUT", permission: "Edit", schema: z.object({ lot: harvestDetail }) };
+        }
         if (area.data === "purchase-receipts" && upload.action === "invoice-photos" && upload.id) {
           plan = { area: area.data, action: upload.action, path: `/api/purchase-receipts/${upload.id}/invoice-photos`, method: "POST", permission: "Edit", schema: c.receiptSchema };
         } else if (area.data === "water" && ["recognize", "record-photo"].includes(upload.action) && upload.zoneId) {
@@ -71,16 +85,36 @@ export async function handleOperationRequest(request: Request, areaName: string)
       || plan.file === "export" && !operationAllowed(area.data, context.context.identity, context.context.permissions.functionPermissions, "View", plan.zoneId)) return json({ status: "forbidden", code: "MSG02" }, 403);
     if (request.signal.aborted) return json({ status: "unavailable" }, 503);
     let payload: string | FormData | undefined = plan.body === undefined ? undefined : JSON.stringify(plan.body);
+    if (plan.multipartFields) {
+      payload = new FormData();
+      for (const [key, value] of Object.entries(plan.body as Record<string, unknown>)) {
+        if (value == null) continue;
+        for (const item of Array.isArray(value) ? value : [value]) payload.append(key, String(item));
+      }
+    }
     if (upload) {
-      const input = await readOperationUpload(request, area.data === "water");
+      const logUpload = upload.action === "log-record" || upload.action === "log-correct";
+      const input = await readOperationUpload(request, area.data === "water", area.data === "harvest" || logUpload ? { optionalFile: upload.action !== "log-record", maxFiles: 10 } : {});
       if (!input) return json({ status: "invalid-input", code: "MSG01" }, 400);
       const validator = upload.action === "recognize" ? z.strictObject({ clientOperationId: z.uuid() })
-        : upload.action === "record-photo" ? c.recordWaterSchema : z.strictObject({});
+        : upload.action === "record-photo" ? c.recordWaterSchema : upload.action === "harvest-record" ? harvestValues : upload.action === "harvest-correct" ? harvestCorrection : upload.action === "log-record" ? logValues : upload.action === "log-correct" ? logCorrection : z.strictObject({});
       const values = validator.safeParse(input.payload);
       if (!values.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      if ((area.data === "harvest" || logUpload) && input.files.some(file => !["image/jpeg", "image/png"].includes(file.type))) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      if (upload.action === "log-correct") {
+        const correction = logCorrection.safeParse(input.payload);
+        const total = correction.success ? input.files.length + correction.data.keepPhotoKeys.length : 0;
+        if (!correction.success || total < 1 || total > 10) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      }
+      if (upload.action === "harvest-correct") {
+        const correction = harvestCorrection.safeParse(input.payload);
+        if (!correction.success || input.files.length + correction.data.keepPhotoKeys.length > 10) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      }
       payload = new FormData();
-      for (const file of input.files) payload.append(area.data === "water" ? "photo" : "files", file, file.name);
-      for (const [key, value] of Object.entries(values.data)) if (value !== null) payload.set(key, String(value));
+      for (const file of input.files) payload.append(area.data === "water" ? "photo" : area.data === "harvest" || logUpload ? "photos" : "files", file, file.name);
+      for (const [key, value] of Object.entries(values.data)) if (value != null) {
+        for (const part of Array.isArray(value) ? value : [value]) payload.append(key, String(part));
+      }
     }
     const controller = new AbortController();
     const abort = () => controller.abort();
@@ -115,7 +149,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
       }
       if (plan.file === "invoice" || plan.file === "photo") {
         const record = data as Record<string, unknown>;
-        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : record.photoUrl;
+        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : area.data === "harvest" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
         const target = localFileTarget(raw, backend.config.origin);
         if (!target) return json({ status: "not-found" }, 404);
         const file = await fetch(target, { cache: "no-store", redirect: "error", credentials: "omit", signal: controller.signal });

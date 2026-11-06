@@ -24,7 +24,7 @@ function CertificationDirectory() {
     {editor !== undefined && <CertificationEditor record={editor} onClose={() => setEditor(undefined)} onSaved={() => { setEditor(undefined); remote.reload(); setNotice("Đã lưu chứng nhận hợp tác xã."); }} />}
   </section>;
 }
-function CertificationEditor({ record, onClose, onSaved }: { record: Certification | null; onClose(): void; onSaved(): void }) {
+export function CertificationEditor({ record, onClose, onSaved }: { record: Certification | null; onClose(): void; onSaved(): void }) {
   const initial = { name: record?.name ?? "", number: record?.number ?? "", issuer: record?.issuer ?? "", expiryDate: record?.expiryDate ?? "" };
   const [values, setValues] = useState(initial), [file, setFile] = useState<File>(), [error, setError] = useState<string>();
   const mutation = useMutation(), confirmation = useActionDialog(), dirty = !!file || JSON.stringify(initial) !== JSON.stringify(values);

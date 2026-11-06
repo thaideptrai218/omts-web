@@ -39,7 +39,7 @@ type MockAuthOptions = Readonly<{
   verificationService?: VerificationService;
 }>;
 
-const demoPassword = "demo123";
+const demoPassword = "Demo@1234";
 
 const demoSession = {
   account: {

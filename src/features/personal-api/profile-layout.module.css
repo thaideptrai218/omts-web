@@ -1,0 +1,9 @@
+.profile { display:grid; align-items:start; gap:20px; padding:20px; margin-top:16px; min-width:0; border:1px solid var(--omts-color-border); border-radius:10px; background:var(--omts-color-surface); }
+.edit { order:1; min-width:0; }
+.readOnly { order:2; min-width:0; padding:16px; background:var(--omts-color-surface-subtle); border-radius:6px; }
+.contacts { order:3; min-width:0; }
+.grants { order:4; min-width:0; padding:16px; background:var(--omts-color-surface-subtle); border-radius:6px; }
+.actions { order:5; display:flex; flex-wrap:wrap; gap:12px; }
+.profile > [role="alert"], .profile > [role="status"] { grid-column:1/-1; }
+@media(min-width:1024px) { .profile { grid-template-columns:minmax(0,1.25fr) minmax(260px,1fr); column-gap:32px; } .edit { grid-column:1; grid-row:1; } .contacts { grid-column:1; grid-row:2; } .readOnly { grid-column:2; grid-row:1; } .grants { grid-column:2; grid-row:2; } .actions { grid-column:1/-1; } }
+@media(max-width:639px) { .profile { padding:16px; } }

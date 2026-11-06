@@ -63,7 +63,7 @@ describe("operations BFF authorization and evidence boundary", () => {
   it("does not release new-module data after the session changes", async () => {
     configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([]));
-    expect((await handleOperationRequest(get(""), "sales-products")).status).toBe(401);
+    expect((await handleOperationRequest(get("action=list"), "sales-products")).status).toBe(401);
   });
   it("blocks wrong-origin multipart uploads before consuming the body or calling backend", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch");

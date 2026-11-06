@@ -12,7 +12,7 @@ export function getAccountSecurityService(accountId: string): AccountSecuritySer
   if (existing) return existing;
 
   const service = createAccountSecurityService(
-    createMockAccountSecurityRepository({ initialPassword: "demo123", credentials: {
+    createMockAccountSecurityRepository({ initialPassword: "Demo@1234", credentials: {
       verify: (password) => mockAccountDirectory.verifyPassword(accountId, password),
       replace: (password) => { mockAccountDirectory.replacePassword(accountId, password); },
     } }),

@@ -23,7 +23,7 @@ describe("review-ready mock flows use the same account credentials", () => {
     ] as const) {
       expect(
         await finish(
-          h.authService.login({ identifier, password: "demo123" }),
+          h.authService.login({ identifier, password: "Demo@1234" }),
         ),
       ).toMatchObject({
         session: { account: { primaryRoleLabel: role, scopeLabel: scope, username: identifier } },
@@ -35,10 +35,10 @@ describe("review-ready mock flows use the same account credentials", () => {
 
   it("uses a changed password on the next login and refuses the old password", async () => {
     const h = await services(); const password = nextPassword();
-    await finish(h.authService.login({ identifier: "owner", password: "demo123" }));
-    expect(await finish(h.security.changeWithCurrentPassword({ currentPassword: "demo123", newPassword: password }))).toMatchObject({ status: "changed" });
+    await finish(h.authService.login({ identifier: "owner", password: "Demo@1234" }));
+    expect(await finish(h.security.changeWithCurrentPassword({ currentPassword: "Demo@1234", newPassword: password }))).toMatchObject({ status: "changed" });
     await finish(h.authService.logout());
-    expect(await finish(h.authService.login({ identifier: "owner", password: "demo123" }))).toMatchObject({ status: "rejected" });
+    expect(await finish(h.authService.login({ identifier: "owner", password: "Demo@1234" }))).toMatchObject({ status: "rejected" });
     expect(await finish(h.authService.login({ identifier: "owner", password }))).toMatchObject({ status: "access-granted" });
     expect(await finish(h.authService.login({ identifier: "owner@omts.test", password }))).toMatchObject({ status: "access-granted" });
   });
@@ -50,7 +50,7 @@ describe("review-ready mock flows use the same account credentials", () => {
     if (proof.status !== "verified") throw new Error("Expected proof");
     expect(await finish(h.recovery.accountRecoveryService.resetPassword({ verificationToken: proof.token, newPassword: password }))).toMatchObject({ status: "password-reset" });
     expect(await finish(h.authService.login({ identifier: "owner", password }))).toMatchObject({ status: "access-granted" });
-    expect(await finish(h.security.changeWithCurrentPassword({ currentPassword: "demo123", newPassword: nextPassword() }))).toMatchObject({ reason: "invalid-current-password" });
+    expect(await finish(h.security.changeWithCurrentPassword({ currentPassword: "Demo@1234", newPassword: nextPassword() }))).toMatchObject({ reason: "invalid-current-password" });
     expect(await finish(h.security.changeWithCurrentPassword({ currentPassword: password, newPassword: nextPassword() }))).toMatchObject({ status: "changed" });
   });
 
@@ -60,7 +60,7 @@ describe("review-ready mock flows use the same account credentials", () => {
     const proof = await finish(h.recovery.verificationService.verify({ code: "123456", requestId: start.challenge.requestId }));
     if (proof.status !== "verified") throw new Error("Expected mock proof");
     await finish(h.recovery.accountRecoveryService.resetPassword({ verificationToken: proof.token, newPassword: nextPassword() }));
-    expect(await finish(h.authService.login({ identifier: "owner", password: "demo123" }))).toMatchObject({ status: "access-granted" });
+    expect(await finish(h.authService.login({ identifier: "owner", password: "Demo@1234" }))).toMatchObject({ status: "access-granted" });
   });
 
   it("keeps the saved personal name after logout/login", async () => {
@@ -71,7 +71,7 @@ describe("review-ready mock flows use the same account credentials", () => {
     if (loaded.status !== "loaded") throw new Error("Expected profile");
     await finish(environment.profileService.save({ displayName: "Lê Minh Hải cập nhật", recordVersion: loaded.profile.recordVersion }));
     await finish(h.authService.logout());
-    expect(await finish(h.authService.login({ identifier: "owner", password: "demo123" })))
+    expect(await finish(h.authService.login({ identifier: "owner", password: "Demo@1234" })))
       .toMatchObject({ session: { account: { displayName: "Lê Minh Hải cập nhật" } } });
   });
 
@@ -84,13 +84,13 @@ describe("review-ready mock flows use the same account credentials", () => {
     const value = "owner.review@omts.test";
     const start = await finish(environment.profileService.startIdentifierChange({ kind: "email", value }));
     if (start.status !== "verification-started") throw new Error("Expected challenge");
-    expect(await finish(h.authService.login({ identifier: value, password: "demo123" }))).toMatchObject({ status: "rejected" });
+    expect(await finish(h.authService.login({ identifier: value, password: "Demo@1234" }))).toMatchObject({ status: "rejected" });
     const proof = await finish(environment.verificationService.verify({ code: "123456", requestId: start.challenge.requestId }));
     if (proof.status !== "verified") throw new Error("Expected proof");
     await finish(environment.profileService.save({ displayName: loaded.profile.displayName, recordVersion: loaded.profile.recordVersion,
       emailChange: { value, token: proof.token } }));
-    expect(await finish(h.authService.login({ identifier: "owner@omts.test", password: "demo123" }))).toMatchObject({ status: "rejected" });
-    expect(await finish(h.authService.login({ identifier: value, password: "demo123" }))).toMatchObject({ status: "access-granted" });
+    expect(await finish(h.authService.login({ identifier: "owner@omts.test", password: "Demo@1234" }))).toMatchObject({ status: "rejected" });
+    expect(await finish(h.authService.login({ identifier: value, password: "Demo@1234" }))).toMatchObject({ status: "access-granted" });
   });
 
   it("does not let a profile take another demo account's verified contact", async () => {
@@ -104,9 +104,9 @@ describe("review-ready mock flows use the same account credentials", () => {
   it.each(["email", "phone"] as const)("completes Staff onboarding with %s only and keeps its password coherent", async (channel) => {
     const h = await services(); const password = nextPassword();
     const { staffOnboardingVerificationService } = await import("./services/auth-service.instance");
-    expect(await finish(h.authService.login({ identifier: "staff-first-login", password: "demo123" })))
+    expect(await finish(h.authService.login({ identifier: "staff-first-login", password: "Demo@1234" })))
       .toMatchObject({ nextStep: "change-temporary-password" });
-    await finish(h.authService.changeTemporaryPassword({ currentPassword: "demo123", newPassword: password }));
+    await finish(h.authService.changeTemporaryPassword({ currentPassword: "Demo@1234", newPassword: password }));
     const start = await finish(h.authService.startStaffContactVerification(channel));
     if (start.status !== "started") throw new Error("Expected challenge");
     const proof = await finish(staffOnboardingVerificationService.verify({ code: "123456", requestId: start.challenge.requestId }));
@@ -129,10 +129,10 @@ describe("review-ready mock flows use the same account credentials", () => {
       newGrants: [{ key: "first", roleId: "role-staff", zoneId: "zone-south", effectiveFrom: "2026-01-01", effectiveTo: "" }] }));
     if (created.status !== "saved") throw new Error("Expected account");
     const username = created.account.username;
-    expect(await finish(h.authService.login({ identifier: username, password: "demo123" })))
+    expect(await finish(h.authService.login({ identifier: username, password: "Demo@1234" })))
       .toMatchObject({ status: "staff-onboarding-required", nextStep: "change-temporary-password" });
     const password = nextPassword();
-    await finish(h.authService.changeTemporaryPassword({ currentPassword: "demo123", newPassword: password }));
+    await finish(h.authService.changeTemporaryPassword({ currentPassword: "Demo@1234", newPassword: password }));
     const start = await finish(h.authService.startStaffContactVerification("email"));
     if (start.status !== "started") throw new Error("Expected challenge");
     const { staffOnboardingVerificationService } = await import("./services/auth-service.instance");
@@ -155,31 +155,31 @@ describe("review-ready mock flows use the same account credentials", () => {
     const h = await services();
     const { accountManagementService } = await import("@/features/account-management/services/account-management-service.instance");
     const { getAccountSecurityService } = await import("@/features/account-security/services/account-security-service.instance");
-    const first = await finish(h.authService.login({ identifier: "manager", password: "demo123" }));
+    const first = await finish(h.authService.login({ identifier: "manager", password: "Demo@1234" }));
     if (first.status !== "access-granted") throw new Error("Expected staff");
     const previousPassword = nextPassword();
-    await finish(getAccountSecurityService(first.session.account.accountId).changeWithCurrentPassword({ currentPassword: "demo123", newPassword: previousPassword }));
+    await finish(getAccountSecurityService(first.session.account.accountId).changeWithCurrentPassword({ currentPassword: "Demo@1234", newPassword: previousPassword }));
     await finish(accountManagementService.resetPassword({ accountId: first.session.account.accountId, confirmed: true }));
     expect(await finish(h.authService.getSession())).toEqual({ status: "anonymous" });
     expect(await finish(h.authService.login({ identifier: "manager", password: previousPassword }))).toMatchObject({ status: "rejected" });
-    expect(await finish(h.authService.login({ identifier: "manager", password: "demo123" })))
+    expect(await finish(h.authService.login({ identifier: "manager", password: "Demo@1234" })))
       .toMatchObject({ nextStep: "change-temporary-password", checklist: { contactVerified: true } });
-    await finish(h.authService.changeTemporaryPassword({ currentPassword: "demo123", newPassword: nextPassword() }));
+    await finish(h.authService.changeTemporaryPassword({ currentPassword: "Demo@1234", newPassword: nextPassword() }));
     expect(await finish(h.authService.getSession())).toMatchObject({ status: "authenticated", account: { username: "manager" } });
   });
 
   it("requires contact verification after Owner changes both contacts and refuses the old phone alias", async () => {
     const h = await services();
     const { accountManagementService } = await import("@/features/account-management/services/account-management-service.instance");
-    await finish(h.authService.login({ identifier: "manager", password: "demo123" }));
+    await finish(h.authService.login({ identifier: "manager", password: "Demo@1234" }));
     await finish(h.authService.logout());
     const workspace = await finish(accountManagementService.load());
     if (workspace.status !== "loaded") throw new Error("Expected workspace");
     const row = workspace.workspace.accounts.find((account) => account.username === "manager")!;
     await finish(accountManagementService.save({ id: row.id, fullName: row.displayName, email: "changed@omts.test", phone: "0903555666",
       deliveryChannel: "email", recordVersion: row.recordVersion, newGrants: [] }));
-    expect(await finish(h.authService.login({ identifier: "0901234567", password: "demo123" }))).toMatchObject({ status: "rejected" });
-    expect(await finish(h.authService.login({ identifier: "manager", password: "demo123" })))
+    expect(await finish(h.authService.login({ identifier: "0901234567", password: "Demo@1234" }))).toMatchObject({ status: "rejected" });
+    expect(await finish(h.authService.login({ identifier: "manager", password: "Demo@1234" })))
       .toMatchObject({ nextStep: "verify-contact", checklist: { passwordChanged: true, contactVerified: false } });
   });
 });

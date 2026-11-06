@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMockAuthRepository } from "@/features/auth/repositories/mock-auth-repository";
 
-const demoPassword = "demo123";
+const demoPassword = "Demo@1234";
 
 async function loginAs(identifier: string, password = demoPassword) {
   const repository = createMockAuthRepository({ latencyMs: 0 });

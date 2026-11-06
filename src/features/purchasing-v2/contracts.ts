@@ -1,0 +1,15 @@
+import { z } from "zod";
+const id=z.guid(), text=z.string(), n=z.number(), date=z.iso.date();
+const supplier=z.object({id,name:text,phoneNumber:text});
+const paged=<T extends z.ZodType>(row:T)=>z.object({items:z.array(row),page:n,pageSize:n,total:n});
+export const row=z.object({id,code:text,receiptDate:date,supplier,statusId:n,status:text,total:n,linesTotal:n,recordedByAccountId:id});
+export const search=z.object({page:paged(row),totals:z.object({count:n,completedCount:n,receiptsTotal:n,returnsTotal:n,netTotal:n,raftMaterialCost:n.nullable()}),from:date,to:date});
+export const receipt=z.object({id,code:text,supplier,receiptDate:date,total:n,returned:n,notes:text.nullable(),statusId:n,status:text,recordedBy:z.object({id,name:text}),cancelReason:text.nullable(),lines:z.array(z.object({id,lineNumber:n,itemId:id.nullable(),itemCode:text.nullable(),itemName:text.nullable(),group:text.nullable(),unit:text,quantity:n.nullable(),unitPrice:n.nullable(),lineAmount:n.nullable(),supplierLotCode:text.nullable(),raft:z.object({id,code:text,zoneId:id,zoneCode:text}).nullable(),seedLotCode:text.nullable(),seeded:n,returnedQuantity:n,returnable:n})),returns:z.array(z.object({id,code:text,returnDate:date,reason:text,returnValue:n,statusId:n,status:text,rowVersion:text})),rowVersion:text});
+export const receiptValues=z.strictObject({supplierId:id,receiptDate:date.nullable(),notes:text.max(2000).nullable(),lines:z.array(z.strictObject({itemId:id.nullable(),quantity:n.positive().nullable(),unitPrice:n.int().nonnegative().nullable(),supplierLotCode:text.nullable(),raftId:id.nullable()})),complete:z.boolean(),rowVersion:text.nullable()});
+export const cancelPreview=z.object({canCancel:z.boolean(),blocked:z.object({kind:text,code:text}).nullable(),debtBefore:n,debtAfter:n,advanceAfter:n});
+export const payment=z.object({id,code:text,supplier,kind:z.enum(["Payment","PaidBack"]),amount:n,paymentDate:date,method:z.enum(["Cash","BankTransfer"]),bankReference:text.nullable(),note:text.nullable(),statusId:n,status:text,cancelReason:text.nullable(),rowVersion:text});
+export const paymentPage=z.object({page:paged(payment),totalPaid:n,totalPaidBack:n});
+export const paymentValues=z.strictObject({supplierId:id,kind:z.enum(["Payment","PaidBack"]),paymentDate:date,amount:n.int().positive(),method:z.enum(["Cash","BankTransfer"]),bankReference:text.nullable(),note:text.nullable(),confirmAdvance:z.boolean(),confirmDuplicateBankReference:z.boolean(),deduplicationKey:text.min(1)});
+const debtSupplier=supplier.extend({statusId:n,status:text});
+export const debts=z.object({page:paged(z.object({supplier:debtSupplier,debt:n,debtAgeDays:n.nullable(),oldestUnpaidDate:date.nullable()})),totalOwed:n,totalAdvance:n});
+export const debt=z.object({supplier:debtSupplier,debtToday:n,debtAgeDays:n.nullable(),oldestUnpaidDate:date.nullable(),unpaidReceipts:z.array(z.object({id,code:text,receiptDate:date,total:n,returned:n,covered:n,remaining:n,ageDays:n}))});

@@ -44,4 +44,16 @@ export function PurchaseRequestsScreen() {
   </section>;
 }
 
+export function PurchaseRequestDetailPage({ id }: { id: string }) {
+  const { identity } = useApiWorkspace();
+  const mine = identity.subjectType === "Trader";
+  const loaded = useRemote(useMemo(() => (signal: AbortSignal) => requests.read(mine ? "mine-detail" : "detail", { id }, c.purchaseRequestSchema, signal), [id, mine]));
+  const [record, setRecord] = useState<c.PurchaseRequest>();
+  const current = record ?? loaded.data;
+  if (loaded.loading) return <Skeleton />;
+  if (loaded.error) return <ErrorNotice error={loaded.error} />;
+  if (!current) return <p role="alert" className="rounded-card border border-border p-5">Không tìm thấy yêu cầu mua.</p>;
+  return <PurchaseRequestDetails record={current} onClose={() => window.history.back()} onSaved={(saved) => setRecord(saved)} />;
+}
+
 export { WorkforceScreen } from "./workforce-screen";

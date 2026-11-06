@@ -10,7 +10,7 @@ import type { SessionPhase } from "./session-store";
 function request(change: RequestInit = {}) {
   return new Request(environment.OMTS_WEB_ORIGIN + "/fixture-login", {
     method: "POST", headers: { Origin: environment.OMTS_WEB_ORIGIN, "X-OMTS-Request": "web", "Content-Type": "application/json" },
-    body: JSON.stringify({ identifier: "fixture.user", password: "demo123" }), ...change,
+    body: JSON.stringify({ identifier: "fixture.user", password: "Demo@1234" }), ...change,
   });
 }
 
@@ -56,9 +56,9 @@ describe("unmounted login HTTP factory", () => {
   });
 
   it.each([
-    {}, { identifier: " ", password: "demo123" }, { identifier: "fixture.user", password: "" },
-    { identifier: "fixture.user", password: "demo123", clientType: "Mobile" },
-    { identifier: "fixture.user", password: "demo123", sid: "untrusted-session" },
+    {}, { identifier: " ", password: "Demo@1234" }, { identifier: "fixture.user", password: "" },
+    { identifier: "fixture.user", password: "Demo@1234", clientType: "Mobile" },
+    { identifier: "fixture.user", password: "Demo@1234", sid: "untrusted-session" },
   ])("validates only the two browser-owned input fields %#", async (body) => {
     const h = harness();
     const response = await h.handler(request({ body: JSON.stringify(body) }));
@@ -104,7 +104,7 @@ describe("unmounted login HTTP factory", () => {
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(await response.json()).toEqual({ status: "created", phase, destination });
     expect(h.cleanup).not.toHaveBeenCalled();
-    expect(h.source.login).toHaveBeenCalledWith({ identifier: "fixture.user", password: "demo123" }, { signal: expect.any(AbortSignal) });
+    expect(h.source.login).toHaveBeenCalledWith({ identifier: "fixture.user", password: "Demo@1234" }, { signal: expect.any(AbortSignal) });
   });
 
   it.each([

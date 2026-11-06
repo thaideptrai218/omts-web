@@ -31,7 +31,7 @@ describe("new real modules read contracts", () => {
     expect(planOperation("purchase-requests", "GET", q(query))).toBeUndefined();
   });
   it("keeps product availability and workforce date explicit", () => {
-    expect(planOperation("sales-products", "GET", q("action=all"))).toMatchObject({ permission: "CatalogueAll", path: "/api/sales-products?includeUnavailable=true" });
+    expect(planOperation("sales-products", "GET", q("action=all"))).toMatchObject({ permission: "CatalogueAll", path: "/api/products" });
     expect(planOperation("workforce", "GET", q("day=2026-10-31"))).toMatchObject({ path: "/api/workforce/assignments?day=2026-10-31" });
     expect(planOperation("workforce", "GET", q("day=2026-02-30"))).toBeUndefined();
     expect(planOperation("workforce", "GET", q("day=2026-10-31&employeeId=x"))).toBeUndefined();

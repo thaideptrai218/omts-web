@@ -18,6 +18,7 @@ type AppShellProps = {
   accountScope?: string;
   children: ReactNode;
   navigation?: (options: { compact: boolean; onNavigate?: () => void }) => ReactNode;
+  topAction?: (compact: boolean) => ReactNode;
   isLoggingOut?: boolean;
   onLogout(): void;
 };
@@ -30,12 +31,22 @@ export function AppShell({
   accountScope,
   children,
   navigation,
+  topAction,
   isLoggingOut = false,
   onLogout,
 }: AppShellProps) {
   const sidebar = useSidebarExpansion();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const desktopNavigationId = useId();
+  const navigationScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = navigationScrollRef.current;
+    if (!node) return;
+    try { node.scrollTop = Number(sessionStorage.getItem("omts-sidebar-scroll") ?? 0); } catch { /* Storage may be unavailable. */ }
+    const save = () => { try { sessionStorage.setItem("omts-sidebar-scroll", String(node.scrollTop)); } catch { /* Navigation still works without storage. */ } };
+    node.addEventListener("scroll", save, { passive: true });
+    return () => { node.removeEventListener("scroll", save); };
+  }, []);
   const mobileNavigationId = useId();
   const mobileDialogRef = useRef<HTMLDialogElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -117,7 +128,7 @@ export function AppShell({
             <span className={styles.linkLabel}>{sidebar.toggleLabel}</span>
           </button>
         </div>
-        <div id={desktopNavigationId} className={styles.scrollArea}>
+        <div id={desktopNavigationId} ref={navigationScrollRef} className={styles.scrollArea}>
           {navigation ? navigation({ compact: !sidebar.expanded }) : <AppNavigation access={access} compact={!sidebar.expanded} />}
         </div>
         <SidebarAccount
@@ -128,8 +139,10 @@ export function AppShell({
       </aside>
 
       <div className={styles.content}>
+        {topAction && <header className={styles.desktopHeader}><span>Hợp tác xã Thủy sản Trung Nam</span>{topAction(false)}</header>}
         <header className={styles.mobileHeader}>
           <BrandMark compact />
+          {topAction?.(true)}
           <button
             type="button"
             className={styles.mobileMenuButton}

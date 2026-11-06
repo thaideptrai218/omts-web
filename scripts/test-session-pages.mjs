@@ -93,7 +93,7 @@ try {
   checks += 2;
   const login = await get("/login");
   const loginBody = await login.text();
-  assert.ok(loginBody.includes("Đăng nhập OMTS"));
+  assert.ok(loginBody.includes("Đăng nhập hệ thống"));
   assert.ok(loginBody.includes('name="password"'), "API credential form is missing");
   privateFree(loginBody);
   checks += 2;

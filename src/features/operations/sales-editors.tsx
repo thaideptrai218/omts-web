@@ -9,6 +9,7 @@ import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, Note, Select, businessToday, displayTime, useRemote } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
 import { PurchaseStaffingPanel, StaffingSummary } from "./purchase-staffing";
+import { product as currentProduct } from "@/features/sales-api/contracts";
 
 const products = createOperationsRepository("sales-products"), requests = createOperationsRepository("purchase-requests");
 export const requestStatusLabel = (status: string) => ({ AWAITING_RESPONSE: "Chờ phản hồi", AWAITING_STAFF: "Chờ nhân viên xác nhận", ACCEPTED: "Đã chấp nhận", DECLINED: "Đã từ chối", CANCELLED: "Đã hủy" }[status] ?? status);
@@ -39,7 +40,7 @@ export function ProductEditor({ record, onClose, onSaved }: { record: Product | 
 export function CreatePurchaseRequest({ onClose, onSaved }: { onClose(): void; onSaved(): void }) {
   const [values, setValues] = useState({ productId: "", requestedCages: "", pickupDate: businessToday(), note: "" });
   const [initial] = useState(() => JSON.stringify(values)), [clientOperationId] = useState(() => crypto.randomUUID()), [error, setError] = useState<string>();
-  const catalog = useRemote(useMemo(() => (signal: AbortSignal) => products.read("list", {}, z.array(c.salesProductSchema), signal), []));
+  const catalog = useRemote(useMemo(() => (signal: AbortSignal) => products.read("list", {}, z.array(currentProduct).transform(rows => rows.map(row => ({ ...row, code: "", availableForPurchase: row.statusId === 101 }))), signal), []));
   const editor = useOperationEditor(onClose, JSON.stringify(values) !== initial);
   async function save() {
     const payload = c.createRequestSchema.safeParse({ ...values, requestedCages: Number(values.requestedCages), note: values.note || null, clientOperationId });

@@ -53,7 +53,7 @@ describe("isolated read/write session runtime", () => {
     const [first, second] = await Promise.all([owner.get(), owner.get()]);
     if (first.status !== "ready" || second.status !== "ready") throw new Error("Expected runtime");
     expect(first.runtime).toBe(second.runtime);
-    const result = await first.runtime.login({ identifier: "fixture.user", password: "demo123" });
+    const result = await first.runtime.login({ identifier: "fixture.user", password: "Demo@1234" });
     if (result.status !== "created") throw new Error("Expected candidate");
     const cookie = result.cookie.readForResponseHeader().split(";")[0];
     const resolved = await second.runtime.resolve(cookie);
@@ -106,7 +106,7 @@ describe("isolated read/write session runtime", () => {
     const result = await opening;
     expect(result.status).toBe("ready");
     if (result.status !== "ready") throw new Error("Expected runtime");
-    const login = await result.runtime.login({ identifier: "fixture.user", password: "demo123" });
+    const login = await result.runtime.login({ identifier: "fixture.user", password: "Demo@1234" });
     if (login.status !== "created") throw new Error("Expected candidate");
     expect(login.cookie.readForResponseHeader()).toContain("__Host-omts_web_sid=");
     expect(login.cookie.readForResponseHeader()).toContain("; Secure;");
@@ -119,12 +119,12 @@ describe("isolated read/write session runtime", () => {
     const owner = createServerSessionRuntimeOwner(h.open);
     const result = await owner.get();
     if (result.status !== "ready") throw new Error("Expected runtime");
-    const candidate = await result.runtime.login({ identifier: "fixture.user", password: "demo123" });
+    const candidate = await result.runtime.login({ identifier: "fixture.user", password: "Demo@1234" });
     if (candidate.status !== "created") throw new Error("Expected candidate");
     owner.dispose();
     expect(() => candidate.cookie.readForResponseHeader()).toThrow("LOGIN_DELIVERY_UNAVAILABLE");
     h.request.mockClear();
-    expect(await result.runtime.login({ identifier: "fixture.user", password: "demo123" })).toEqual({ status: "unavailable" });
+    expect(await result.runtime.login({ identifier: "fixture.user", password: "Demo@1234" })).toEqual({ status: "unavailable" });
     expect(h.request).not.toHaveBeenCalled();
     await candidate.abandon();
   });
@@ -145,7 +145,7 @@ describe("isolated read/write session runtime", () => {
       const headers = new Headers({ Origin: origin, "X-OMTS-Request": "web", "Content-Type": "application/json" });
       if (cookie) headers.set("Cookie", cookie);
       return new Request(origin + "/fixture-login", {
-        method: "POST", headers, body: JSON.stringify({ identifier, password: "demo123" }),
+        method: "POST", headers, body: JSON.stringify({ identifier, password: "Demo@1234" }),
       });
     }
     try {
@@ -177,7 +177,7 @@ describe("isolated read/write session runtime", () => {
     const opened = await h.open();
     if (opened.status !== "ready") throw new Error("Expected runtime");
     const runtime = opened.runtime;
-    const candidate = await runtime.login({ identifier: "fixture.user", password: "demo123" });
+    const candidate = await runtime.login({ identifier: "fixture.user", password: "Demo@1234" });
     if (candidate.status !== "created") throw new Error("Expected candidate");
     const cookie = candidate.cookie.readForResponseHeader().split(";")[0];
     const original = h.store.read.bind(h.store);
@@ -211,7 +211,7 @@ describe("isolated read/write session runtime", () => {
     const origin = String(h.environment.OMTS_WEB_ORIGIN);
     const response = await handler(new Request(origin + "/fixture-login", {
       method: "POST", headers: { Origin: origin, "X-OMTS-Request": "web", "Content-Type": "application/json" },
-      body: JSON.stringify({ identifier: "fixture.user", password: "demo123" }),
+      body: JSON.stringify({ identifier: "fixture.user", password: "Demo@1234" }),
     }));
     expect(response.status).toBe(503);
     expect(response.headers.get("set-cookie")).toBeNull();

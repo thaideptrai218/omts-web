@@ -64,7 +64,7 @@ describe("dashboard shell and data boundaries", () => {
     service.load.mockReturnValue(new Promise(() => {}));
     render(<DashboardExperience />);
     expect(
-      screen.getByRole("heading", { name: "Bảng điều hành" }),
+      screen.getByRole("heading", { name: "Tổng quan HTX" }),
     ).toBeTruthy();
     expect(
       screen.getByRole("navigation", { name: "Lối tắt quản trị" }),

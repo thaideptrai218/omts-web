@@ -26,6 +26,16 @@ describe("API workspace data and actor boundaries", () => {
       page: 1, pageSize: 20, total: 1, items: [rows[24]],
     });
   });
+  it("reads the current raft detail and unwraps the saved raft without leaking photo URLs", () => {
+    const raft = { id, code: "NV-B01", statusId: 101, status: "In Use", latitude: null, longitude: null,
+      location: null, size: "20 m", conditionNotes: null, laneCount: 2, rowVersion: "v1",
+      lanes: [{ id, laneNumber: 1, statusId: 101, status: "In Use" }],
+      photos: [{ id, url: "https://signed.example/secret", sortOrder: 1 }] };
+    const projected = projectResource("rafts", raft, true);
+    expect(projected).toMatchObject({ id, laneCount: 2, lanes: [{ laneNumber: 1 }] });
+    expect(projectResource("rafts", { raft, message: "Saved", messageCode: "MSG-GEN-05" }, true)).toEqual(projected);
+    expect(JSON.stringify(projected)).not.toContain("signed.example");
+  });
   it("keeps owner administration and staff grant permissions distinct", () => {
     const owner = { subjectType: "CooperativeOwner" }, staff = { subjectType: "Staff" };
     expect(resourceAllowed("accounts", owner, [], "Edit")).toBe(true);

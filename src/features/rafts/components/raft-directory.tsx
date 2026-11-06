@@ -4,6 +4,7 @@ import { useEffect, useId, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DirectoryEmpty, StatusPill } from "@/components/ui/management-page";
+import { useDirectoryView } from "@/components/ui/use-directory-view";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import type { RaftProfile, RaftWorkspace } from "../domain/raft";
 
@@ -25,6 +26,7 @@ export function RaftDirectory({
   const router = useRouter();
   const pathname = usePathname();
   const id = useId();
+  const [view, setView] = useDirectoryView("rafts", "grid", ["grid", "list"] as const);
   const zoneId = search.get("zoneId") ?? "";
   const status = search.get("status") ?? "";
   const query = search.get("q") ?? "";
@@ -141,7 +143,7 @@ export function RaftDirectory({
         >
           {rafts.length} / {workspace.rafts.length} bè nuôi
         </p>
-        {searchKey && (
+        <div className="flex flex-wrap items-center gap-2"><div role="group" aria-label="Cách hiển thị bè nuôi" className="flex gap-1 rounded-control border border-border bg-surface-subtle p-1"><button type="button" title="Dạng lưới" aria-label="Dạng lưới" aria-pressed={view === "grid"} className="grid size-8 place-items-center rounded-control aria-pressed:bg-primary aria-pressed:text-white" onClick={() => setView("grid")}><InterfaceIcon name="grid" /></button><button type="button" title="Dạng danh sách" aria-label="Dạng danh sách" aria-pressed={view === "list"} className="grid size-8 place-items-center rounded-control aria-pressed:bg-primary aria-pressed:text-white" onClick={() => setView("list")}><InterfaceIcon name="list" /></button></div>{searchKey && (
           <button
             type="button"
             className="min-h-11 rounded-control px-3 text-sm font-semibold text-primary hover:bg-primary-soft"
@@ -149,7 +151,7 @@ export function RaftDirectory({
           >
             Xóa bộ lọc
           </button>
-        )}
+        )}</div>
       </div>
       {!rafts.length && (
         <DirectoryEmpty
@@ -165,13 +167,14 @@ export function RaftDirectory({
           }
         />
       )}
-      <ul className="grid gap-3 border-t border-border bg-surface-subtle/40 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+      <ul className={`grid gap-3 border-t border-border bg-surface-subtle/40 p-4 sm:p-5 ${view === "grid" ? "sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"}`}>
         {rafts.map((raft) => (
           <RaftRow
             key={raft.id}
             raft={raft}
             zoneName={zoneNames.get(raft.zoneId) ?? "Chưa có tên vùng"}
             onSelect={() => onSelect(raft.id)}
+            compact={view === "list"}
           />
         ))}
       </ul>
@@ -182,10 +185,12 @@ function RaftRow({
   raft,
   zoneName,
   onSelect,
+  compact,
 }: {
   raft: RaftProfile;
   zoneName: string;
   onSelect(): void;
+  compact: boolean;
 }) {
   const layout = [...raft.layouts].sort((a, b) => b.version - a.version)[0];
   return (
@@ -194,7 +199,7 @@ function RaftRow({
         type="button"
         onClick={onSelect}
         aria-label={`Xem bè ${raft.code}, ${zoneName}`}
-        className="group relative grid min-h-44 w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] content-between gap-4 rounded-lg border border-border bg-surface px-4 py-4 text-left shadow-[0_1px_2px_rgb(16_36_58_/_0.04)] transition-colors hover:border-primary/40 hover:bg-primary-soft/30 motion-reduce:transition-none sm:px-5"
+        className={`group relative grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] content-between gap-4 rounded-lg border border-border bg-surface px-4 py-4 text-left shadow-[0_1px_2px_rgb(16_36_58_/_0.04)] transition-colors hover:border-primary/40 hover:bg-primary-soft/30 motion-reduce:transition-none sm:px-5 ${compact ? "min-h-28 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "min-h-44"}`}
       >
         <span className="col-span-2 min-w-0">
           <span className="flex items-start justify-between gap-3"><strong className="text-lg font-semibold text-text">{raft.code}</strong><StatusPill tone={raft.status === "in-use" ? "success" : "neutral"}>{raft.status === "in-use" ? "Đang sử dụng" : "Đã ngừng"}</StatusPill></span>

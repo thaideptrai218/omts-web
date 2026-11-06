@@ -1,6 +1,11 @@
 import { expect, it } from "vitest";
 import { notificationText } from "./notification-text";
 const fallback = { title: "Historical", body: "Original text" };
+it("accepts certification expiry with the same FARM code as zone licences", () => {
+  const result = notificationText("MSG-FARM-01", { certification_name: "An toàn thực phẩm", certification_number: "ATTP01", expiry_date: "2026-11-26", days: 20 }, fallback);
+  expect(result?.title).toBe("Chứng nhận HTX sắp hết hạn");
+  expect(result?.body).toContain("ATTP01");
+});
 it("formats an atomic water alert in Vietnamese and Vietnam time", () => {
   const result = notificationText("MSG-WATER-03", { corrected: true, zone_name: "Vùng A", raft_code: null, measurement_time: "2026-10-20T23:30:00Z",
     values_outside: [{ indicator: "SALINITY", value: 12, unit: "‰", direction: "Low", min: 15, max: 30 }] }, fallback);

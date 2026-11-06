@@ -3,6 +3,10 @@ import { z } from "zod";
 import * as c from "@/features/operations/contracts";
 import { operationAreas, type OperationArea } from "@/features/operations/permissions";
 import { planNewModule } from "./new-module-plan";
+import { cultivationPlan } from "./cultivation-plan";
+import { cultivationRecordsPlan } from "./cultivation-records-plan";
+import { jobTypesPlan } from "./job-types-plan";
+import { purchasingV2Plan } from "./purchasing-v2-plan";
 
 const id = z.guid(), empty = z.strictObject({});
 const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
@@ -13,11 +17,15 @@ const querySchema = z.strictObject({ action: z.string().default("list"), id: id.
   index: z.string().regex(/^\d{1,3}$/).optional() });
 const mutationSchema = z.strictObject({ action: z.string(), id: id.optional(), zoneId: id.optional(), body: z.unknown().default({}) });
 export type OperationPlan = { area: OperationArea; action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE";
-  permission: string; zoneId?: string; body?: unknown; schema: z.ZodType; file?: "export" | "invoice" | "photo"; index?: number; expectedId?: string; noContent?: boolean };
+  permission: string; zoneId?: string; body?: unknown; multipartFields?: boolean; schema: z.ZodType; file?: "export" | "invoice" | "photo"; index?: number; expectedId?: string; noContent?: boolean };
 
 export function planOperation(areaName: string, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   const area = z.enum(operationAreas).safeParse(areaName);
   if (!area.success) return undefined;
+  if (process.env.NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT === "v2" && ["purchase-receipts", "supplier-payments"].includes(area.data)) return purchasingV2Plan(area.data, method, query, input);
+  if (area.data === "job-types") return jobTypesPlan(method, query, input);
+  if (area.data === "cultivation-cycles") return cultivationPlan(method, query, input);
+  if (["seeding", "material-usages", "harvest"].includes(area.data)) return cultivationRecordsPlan(area.data, method, query, input);
   if (["sales-products", "purchase-requests", "workforce", "my-work"].includes(area.data)) return planNewModule(area.data, method, query, input);
   const names = [...query.keys()];
   if (new Set(names).size !== names.length) return undefined;

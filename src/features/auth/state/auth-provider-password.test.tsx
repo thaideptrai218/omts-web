@@ -24,7 +24,7 @@ afterEach(cleanup);
 function Host() {
   const auth = useAuth();
   return <><p role="status">{auth.state.status}</p>
-    <button onClick={() => void auth.changeTemporaryPassword({ currentPassword: "demo123", newPassword: `${randomUUID()}a1` })}>Đổi mật khẩu</button>
+    <button onClick={() => void auth.changeTemporaryPassword({ currentPassword: "Demo@1234", newPassword: `${randomUUID()}a1` })}>Đổi mật khẩu</button>
     <button onClick={() => void auth.completeStaffOnboarding({ verificationToken: "fixture-proof" })}>Hoàn tất xác minh</button>
     <button onClick={() => void auth.logout()}>Đăng xuất</button></>;
 }

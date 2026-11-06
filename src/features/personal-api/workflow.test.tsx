@@ -18,9 +18,9 @@ describe("notification API workflow", () => {
   });
   it("shows the actor's Orders category, locks mandatory InApp, all Push and ineligible Zalo with reasons", () => {
     render(<NotificationApiEditor initial={notificationFixture()} onClose={vi.fn()} />);
-    for (const name of ["Đơn hàng · Trong ứng dụng", "Đơn hàng · Push", "Công việc · Push", "Công việc · Zalo OA"]) expect((screen.getByRole("checkbox", { name }) as HTMLInputElement).disabled).toBe(true);
+    for (const name of ["Đơn hàng · Trong ứng dụng", "Đơn hàng · Thông báo đẩy", "Công việc · Thông báo đẩy", "Công việc · Zalo OA"]) expect((screen.getByRole("checkbox", { name }) as HTMLInputElement).disabled).toBe(true);
     expect((screen.getByRole("checkbox", { name: "Công việc · Email" }) as HTMLInputElement).disabled).toBe(false);
-    expect(screen.getByRole("checkbox", { name: "Công việc · Push" }).getAttribute("aria-describedby")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "Công việc · Thông báo đẩy" }).getAttribute("aria-describedby")).toBeTruthy();
   });
   it("sends only changed eligible cells and adopts the saved matrix", async () => {
     const next = notificationFixture(); next[1].channels[0].enabled = false; repository.saveNotifications.mockResolvedValue({ status: "success", data: notificationSavedFixture(next) });

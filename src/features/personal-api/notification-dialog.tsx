@@ -8,11 +8,12 @@ import { formatMessage } from "@/shared/messages/message-catalog";
 import { categoryLabels, channelLabels, notificationCellKey, notificationPatch, notificationReason, notificationSelections, type NotificationCatalog } from "./contracts";
 import { createPersonalRepository } from "./repository";
 
-export function NotificationApiDialog({ onClose }: { onClose(): void }) {
+export function NotificationApiDialog({ onClose, inline = false }: { onClose(): void; inline?: boolean }) {
   const load = useCallback((signal: AbortSignal) => createPersonalRepository().notifications(signal), []);
   const remote = useRemote(load);
-  if (remote.data && !Array.isArray(remote.data)) return <PushApiEditor initial={remote.data} onClose={onClose} />;
+  if (remote.data && !Array.isArray(remote.data)) return <PushApiEditor inline={inline} initial={remote.data} onClose={onClose} />;
   if (remote.data && Array.isArray(remote.data)) return <NotificationApiEditor initial={remote.data} onClose={onClose} />;
+  if (inline) return <section aria-label="Tùy chọn thông báo">{remote.loading && <Skeleton />}<ErrorNotice error={remote.error} />{!remote.loading && <Button className="w-auto" onClick={remote.reload}>Tải lại tùy chọn</Button>}</section>;
   return <Dialog open title="Tùy chọn thông báo" onOpenChange={(open) => { if (!open) onClose(); }}>
     {remote.loading && <Skeleton />}<ErrorNotice error={remote.error} />
     {!remote.loading && <Button className="w-auto" onClick={remote.reload}>Tải lại tùy chọn</Button>}

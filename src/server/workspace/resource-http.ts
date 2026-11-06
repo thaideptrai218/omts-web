@@ -12,7 +12,7 @@ const resourceSchema = z.enum(resourceKeys);
 const mutationSchema = z.strictObject({ action: z.enum(["create", "update", "discontinue", "reactivate", "lock", "unlock"]),
   id: id.optional(), zoneId: id.optional(), body: z.record(z.string(), z.json()) });
 const paths: Record<ResourceKey, string> = { zones: "/api/zones", suppliers: "/api/suppliers", "input-items": "/api/farming-input-items",
-  employees: "/api/employees", rafts: "/api/rafts", accounts: "/api/accounts", roles: "/api/roles" };
+  employees: "/api/employees", rafts: "/api/rafts", accounts: "/api/accounts", roles: "/api/roles", customers: "/api/customers" };
 
 export async function handleResourceRequest(request: Request, resourceName: string) {
   const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
@@ -61,9 +61,10 @@ export async function handleResourceRequest(request: Request, resourceName: stri
       if (!input.success) return json({ status: "invalid-input" }, 400);
       ({ action, zoneId, body } = input.data); recordId = input.data.id;
       if (!resources[key].editable || (action === "create" && resources[key].creatable === false) || (action !== "create" && !recordId)
+        || (key === "customers" && !["create", "update"].includes(action))
         || (["lock", "unlock"].includes(action) && key !== "accounts")) return json({ status: "invalid-input" }, 400);
       const allowed = [...resources[key].fields.map((field) => field.key), "rowVersion", "reason",
-        ...(key === "employees" ? ["workingZoneIds", "bankAccount", "accountId"] : []), ...(key === "rafts" ? ["lanes", "layoutDrawing"] : [])];
+        ...(key === "employees" ? ["workingZoneIds", "bankAccount", "accountId"] : []), ...(key === "rafts" ? ["laneCount"] : [])];
       if (Object.keys(body).some((field) => !allowed.includes(field))) return json({ status: "invalid-input" }, 400);
     }
     const initial = await gateway.resolve(request.headers.get("cookie"));

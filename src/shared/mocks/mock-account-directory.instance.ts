@@ -3,7 +3,7 @@ import { createMockAccountDirectory } from "./mock-account-directory";
 import { mockIdentities } from "./mock-identities";
 
 // Public mock credential already documented in README; never a backend secret.
-const publicReviewPassword = "demo123";
+const publicReviewPassword = "Demo@1234";
 export const mockAccountDirectory = createMockAccountDirectory([mockIdentities.owner, mockIdentities.systemAdmin, mockIdentities.trader].map((identity) => {
   const profile = getMockPersonalProfile(identity.accountId);
   return { ...identity, password: publicReviewPassword,

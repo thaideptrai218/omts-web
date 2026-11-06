@@ -9,6 +9,10 @@ export function workspaceError(result: Exclude<WorkspaceResult<unknown>, { statu
   if (result.code === "MSG03") return "Thông tin này đã tồn tại. Hãy kiểm tra bản ghi hiện có.";
   if (result.code === "MSG11") return "Bản ghi đang được sử dụng nên chưa thể đổi trạng thái.";
   if (result.code === "MSG01" || result.httpStatus === 400) return "Vui lòng kiểm tra lại thông tin đã nhập.";
-  return result.uncertain ? "Chưa xác nhận được kết quả. Hãy tải lại dữ liệu để đối chiếu trước khi thực hiện tiếp."
-    : "Chưa thể thực hiện thao tác. Hãy kiểm tra dữ liệu rồi thử lại.";
+  if (result.uncertain) return "Chưa xác nhận được kết quả. Hãy tải lại dữ liệu để đối chiếu trước khi thực hiện tiếp.";
+  if (result.httpStatus === 404) return "Không tìm thấy hồ sơ trên hệ thống. Hãy tải lại danh sách để đối chiếu.";
+  if (result.httpStatus === 409) return "Dữ liệu đã thay đổi. Hãy tải lại để đối chiếu trước khi thao tác tiếp.";
+  if (result.httpStatus === 502) return "Dữ liệu API trả về chưa khớp phiên bản Web. Hãy báo nhóm kỹ thuật kiểm tra contract.";
+  if (result.httpStatus >= 500 || result.httpStatus === 0) return "Chưa kết nối được dịch vụ. Hãy kiểm tra backend và thử tải lại.";
+  return "Chưa thể thực hiện thao tác. Hãy kiểm tra dữ liệu rồi thử lại.";
 }

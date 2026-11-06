@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { StaffRoleSummary } from "@/features/personal-api/staff-role-summary";
 import { Dialog } from "@/components/ui/dialog";
 import {
   ManagementHeading,
@@ -101,9 +102,10 @@ export function RoleManagementExperience() {
     <div className="space-y-6">
       <ManagementHeading
         title="Vai trò & quyền"
-        description="Ba vai trò cố định của hợp tác xã. Chọn một vai trò để xem và điều chỉnh quyền theo chức năng."
+        description="Đối chiếu vai trò, quyền theo chức năng và phạm vi dữ liệu của nhân sự hợp tác xã."
         icon="roles"
       />
+      <StaffRoleSummary />
       {loading ? (
         <RoleManagementPageSkeleton />
       ) : hasError || !workspace ? (

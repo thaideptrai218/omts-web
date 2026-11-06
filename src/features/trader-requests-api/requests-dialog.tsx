@@ -5,7 +5,13 @@ import { Dialog } from "@/components/ui/dialog";
 import { displayTime, ErrorNotice, Note, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import { readTraderRequests, decideTraderRequest } from "./repository";
 import type { TraderRequest } from "./contracts";
-export function TraderRequestsDialog({ onClose }: { onClose(): void }) {
+import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { ManagementHeading } from "@/components/ui/management-page";
+export function TraderRequestsPage() {
+  const { identity } = useApiWorkspace();
+  return identity.subjectType === "CooperativeOwner" ? <section><ManagementHeading title="Yêu cầu đăng ký thương lái" description="Xem và xử lý yêu cầu mở tài khoản thương lái." icon="request" /><TraderRequestsDialog asPage onClose={() => undefined} /></section> : <p role="alert">Bạn không có quyền xử lý yêu cầu đăng ký thương lái.</p>;
+}
+export function TraderRequestsDialog({ onClose, asPage = false }: { onClose(): void; asPage?: boolean }) {
   const [rejected, setRejected] = useState(false), [search, setSearch] = useState("");
   const [selection, setSelection] = useState<{ row: TraderRequest; action: "approve" | "reject" }>();
   const [reason, setReason] = useState(""), [notice, setNotice] = useState<string>();
@@ -19,7 +25,7 @@ export function TraderRequestsDialog({ onClose }: { onClose(): void }) {
     if (result) { setSelection(undefined); setReason(""); setNotice(result.status === "ACTIVE" ? `Đã duyệt yêu cầu của ${result.displayName}.` : `Đã từ chối yêu cầu của ${result.displayName}.`); list.reload(); }
   }
   const rows = list.data?.filter((row) => `${row.displayName} ${row.phoneNumber ?? ""}`.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi")));
-  return <Dialog open title="Yêu cầu thương lái" size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open && !mutation.busy()) onClose(); }}>
+  const content = <>
     <div className="flex flex-wrap gap-3"><label>Trạng thái<select className="ml-2 rounded-control border border-border-strong p-3" disabled={mutation.pending || !!selection} value={String(rejected)} onChange={(event) => setRejected(event.target.value === "true")}><option value="false">Chờ duyệt</option><option value="true">Đã từ chối</option></select></label>
       <Button className="w-auto" variant="secondary" disabled={list.loading || mutation.pending} onClick={list.reload}>Tải lại danh sách</Button></div>
     <label className="mt-4 block">Tìm tên hoặc số điện thoại<input className="mt-2 min-h-12 w-full rounded-control border border-border-strong p-3" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
@@ -41,6 +47,7 @@ export function TraderRequestsDialog({ onClose }: { onClose(): void }) {
       {row.status === "PENDING_APPROVAL" && <div className="mt-3 flex flex-wrap gap-3"><Button className="w-auto" disabled={mutation.pending || mutation.blocked || !!selection} onClick={() => choose(row, "approve")}>Duyệt yêu cầu</Button><Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked || !!selection} onClick={() => choose(row, "reject")}>Từ chối yêu cầu</Button></div>}
     </li>)}</ul>}
     {rows && !rows.length && <p className="my-4">Không có yêu cầu phù hợp.</p>}
-    <Button className="mt-4 w-auto" variant="secondary" disabled={mutation.pending} onClick={onClose}>Đóng</Button>
-  </Dialog>;
+    {!asPage && <Button className="mt-4 w-auto" variant="secondary" disabled={mutation.pending} onClick={onClose}>Đóng</Button>}
+  </>;
+  return asPage ? <div className="mt-5">{content}</div> : <Dialog open title="Yêu cầu thương lái" size="lg" dismissible={!mutation.pending} onOpenChange={open => { if (!open && !mutation.busy()) onClose(); }}>{content}</Dialog>;
 }

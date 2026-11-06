@@ -71,7 +71,7 @@ describe("create a login account after saving the employee profile", () => {
     const receipt = await screen.findByRole("dialog", { name: "Đã tạo tài khoản" });
     expect(service.createLoginAccount).toHaveBeenCalledTimes(1);
     expect(within(receipt).queryByRole("textbox")).toBeNull();
-    expect(within(receipt).getByRole("button", { name: "Sao chép username" })).toBeTruthy();
+    expect(within(receipt).getByRole("button", { name: "Sao chép tên đăng nhập" })).toBeTruthy();
     expect(environment.employees.snapshotEmployees()[1].account?.username).toMatch(/^le\.thi\.lan\./);
     await view.user.click(within(receipt).getByRole("button", { name: "Đã hiểu" }));
     await view.user.click(screen.getByRole("button", { name: /Lê Thị Lan/ }));

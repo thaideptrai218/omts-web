@@ -15,11 +15,11 @@ export async function handleInbox(request: Request) {
   if (backend.status !== "valid" || backend.config.source !== "api") return json({ status: "unavailable" }, 503);
   if (!["GET", "POST"].includes(request.method)) return json({ status: "rejected" }, 405);
   const query = new URL(request.url).searchParams;
-  if ([...query.keys()].some((key) => key !== "page" && key !== "open") || query.getAll("page").length > 1 || query.has("page") && !/^[1-9]\d{0,5}$/.test(query.get("page")!)) return json({ status: "invalid-input" }, 400);
+  if ([...query.keys()].some((key) => !["page", "open", "unreadOnly"].includes(key)) || query.getAll("page").length > 1 || query.getAll("unreadOnly").length > 1 || query.has("page") && !/^[1-9]\d{0,5}$/.test(query.get("page")!) || query.has("unreadOnly") && !["true", "false"].includes(query.get("unreadOnly")!)) return json({ status: "invalid-input" }, 400);
   const opening = query.has("open") ? z.guid().safeParse(query.get("open")) : undefined;
   if (query.has("open") && (request.method !== "GET" || query.size !== 1 || !opening?.success)) return json({ status: "invalid-input" }, 400);
   try {
-    let path = `/api/me/notifications?page=${query.get("page") ?? "1"}&pageSize=20`;
+    let path = `/api/me/notifications?page=${query.get("page") ?? "1"}&pageSize=20${query.get("unreadOnly") === "true" ? "&unreadOnly=true" : ""}`;
     if (opening?.success) path = `/api/me/notifications/${opening.data}/open`;
     let commandId: string | undefined;
     if (request.method === "POST") {

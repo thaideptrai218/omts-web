@@ -14,7 +14,7 @@ afterEach(cleanup);
 describe("employee account follow-up navigation", () => {
   it("opens the specifically requested account for review without running a mutation", async () => {
     state.query = `accountId=${id}`; render(<ApiResourceScreen resource="accounts" />);
-    await screen.findByRole("dialog", { name: "Hồ sơ · Tài khoản" }); expect(state.detail).toHaveBeenCalledWith(id, expect.any(AbortSignal)); expect(state.mutate).not.toHaveBeenCalled();
+    await screen.findByRole("dialog", { name: "Hồ sơ · Tài khoản nhân viên nội bộ" }); expect(state.detail).toHaveBeenCalledWith(id, expect.any(AbortSignal)); expect(state.mutate).not.toHaveBeenCalled();
   });
   it("does not turn duplicate or malformed account IDs in the URL into a backend read", async () => {
     state.query = `accountId=${id}&accountId=bad`; render(<ApiResourceScreen resource="accounts" />);

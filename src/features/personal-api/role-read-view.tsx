@@ -15,10 +15,9 @@ export function RolePermissionReadView({ record }: { record: ApiRecord }) {
     {catalog.loading && <Skeleton />}<ErrorNotice error={catalog.error} />
     {catalog.error && <Button className="w-auto" variant="secondary" onClick={catalog.reload}>Tải lại danh mục quyền</Button>}
     {!parsed.success && <ErrorNotice error="Chưa thể đọc ma trận quyền của vai trò." />}
-    {catalog.data && parsed.success && <><DataTable headings={["Chức năng", ...Object.values(actions), "Khác", "Phạm vi"]} empty={catalog.data.length === 0}>
+    {catalog.data && parsed.success && <><DataTable headings={["Chức năng", "Thao tác được phép", "Phạm vi dữ liệu"]} empty={catalog.data.length === 0}>
       {catalog.data.map((fn) => { const permission = parsed.data.find((value) => value.functionCode === fn.code); return <tr key={fn.code}>
-        <td className="min-w-48 font-semibold">{names[fn.code] || fn.name}</td>{Object.keys(actions).map((action) => <td key={action}>{fn.supportedActions.includes(action) ? permission?.actions.includes(action) ? "Có" : "Không" : "Không áp dụng"}</td>)}
-        <td>{permission?.actions.filter((action) => !Object.hasOwn(actions, action)).join(", ") || "—"}</td><td>{!permission?.actions.length ? "Chưa cấp" : fn.cooperativeWide ? "Toàn HTX" : permission.dataScope === "OwnRecords" ? "Bản ghi của mình" : permission.dataScope === "AssignedZone" ? "Trong vùng được cấp" : "Trong vùng được cấp"}</td>
+        <td className="min-w-48 font-semibold">{names[fn.code] || fn.name}</td><td><div className="flex flex-wrap gap-1.5">{permission?.actions.length ? permission.actions.map(action => <span key={action} className="rounded-control bg-primary/10 px-2 py-1 text-xs font-medium text-primary">{actions[action as keyof typeof actions] || action}</span>) : <span className="text-sm text-text-muted">Không có quyền</span>}</div></td><td className="text-sm text-text-muted">{!permission?.actions.length ? "—" : fn.cooperativeWide ? "Toàn HTX" : permission.dataScope === "OwnRecords" ? "Bản ghi của mình" : "Trong vùng được cấp"}</td>
       </tr>; })}
     </DataTable>{parsed.data.filter((row) => !catalog.data!.some((fn) => fn.code === row.functionCode)).map((row) => <p key={row.functionCode}>{row.functionCode}: {row.actions.join(", ") || "Chưa cấp"}</p>)}</>}
   </section>;

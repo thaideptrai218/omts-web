@@ -1,0 +1,19 @@
+.board { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:10px; }
+.lane { min-height:78px; display:flex; flex-direction:column; gap:4px; padding:10px; border:1px solid #d7e1e5; border-top:3px solid #9aabb4; border-radius:8px; text-align:left; background:#fff; transition:box-shadow 120ms,border-color 120ms; }
+.lane strong { font-size:14px; }
+.lane span { font-size:12px; }
+.lane small { font-size:10px; color:var(--omts-color-text-muted); }
+.lane[data-state="NotSeeded"] { border-style:dashed; }
+.lane[data-state="Growing"] { background:#edf7f3; border-top-color:#43886c; }
+.lane[data-state="BeingHarvested"] { background:#fff7e8; border-top-color:#bd862a; }
+.lane[data-state="Harvested"] { background:#e9edf1; border-top-color:#778899; }
+.lane[aria-pressed="true"] { outline:2px solid var(--omts-color-primary); outline-offset:2px; }
+.lane:focus-visible { outline:3px solid var(--omts-color-primary); outline-offset:3px; }
+.lane:hover { box-shadow:0 3px 10px #10243a10; }
+.action { margin-top:auto; }
+.legend { display:flex; flex-wrap:wrap; gap:10px 16px; margin-bottom:14px; font-size:11px; color:var(--omts-color-text-muted); }
+.legend span { display:inline-flex; align-items:center; gap:6px; }
+.legend i { width:8px; height:8px; border:1px solid #9aabb4; border-radius:2px; }
+.legend i[data-state="Growing"] { background:#43886c; border-color:#43886c; }
+.legend i[data-state="BeingHarvested"] { background:#bd862a; border-color:#bd862a; }
+.legend i[data-state="Harvested"] { background:#778899; border-color:#778899; }

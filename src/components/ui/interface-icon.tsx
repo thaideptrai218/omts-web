@@ -1,9 +1,12 @@
 import type { SVGProps } from "react";
 
 const paths = {
+  bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4",
   "panel-close": "M3 4h18v16H3V4ZM9 4v16m8-12-4 4 4 4",
   "panel-open": "M3 4h18v16H3V4ZM9 4v16m4-12 4 4-4 4",
   menu: "M4 6h16M4 12h16M4 18h16",
+  grid: "M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z",
+  list: "M5 6h1m4 0h9M5 12h1m4 0h9M5 18h1m4 0h9",
   logout: "M9 4H4v16h5m6-12 4 4-4 4M8 12h11",
   raft: "M3 5h18M3 10h18M3 15h18M6 3v14M12 3v14M18 3v14M2 21c3-3 5 3 10 0s7 3 10 0",
   dashboard: "M3 3h7v7H3V3ZM14 3h7v7h-7V3ZM3 14h7v7H3v-7ZM14 14h7v7h-7v-7Z",

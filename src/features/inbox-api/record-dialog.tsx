@@ -10,11 +10,27 @@ import { LicenseEditor } from "@/features/farming-api/license-screen";
 import { businessToday, ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OpenedNotification } from "./contracts";
+import { ReceiptDialog, PaymentRecordDialog } from "@/features/purchasing-v2/screens";
+import { HarvestLotDetail } from "@/features/cultivation-api/harvest-detail";
+import { CertificationEditor } from "@/features/certifications-api/certifications-screen";
+import { certificationRequest } from "@/features/certifications-api/repository";
+import { certificationSchema } from "@/features/certifications-api/contracts";
+import { z } from "zod";
 
 type RecordView = { kind: "water"; record: WaterMeasurement } | { kind: "license"; record: License };
 export function NotificationRecordDialog({ opened, onClose }: { opened: OpenedNotification; onClose(): void }) {
+  if (opened.recordType === "PurchaseReceipt") return <ReceiptDialog id={opened.recordId} onClose={onClose} onSaved={onClose} />;
+  if (opened.recordType === "SupplierPayment") return <PaymentRecordDialog id={opened.recordId} onClose={onClose} />;
+  if (opened.recordType === "HarvestLot" && opened.zoneId) return <HarvestLotDetail id={opened.recordId} zoneId={opened.zoneId} onClose={onClose} onSaved={onClose} />;
+  if (opened.recordType === "CooperativeCertification") return <CertificationRecord id={opened.recordId} onClose={onClose} />;
   if (opened.recordType === "FarmingZone") return <Dialog open title="Theo dõi chất lượng nước" size="xl" onOpenChange={(open) => { if (!open) onClose(); }}><WaterScreen initialZoneId={opened.recordId} /><Button className="mt-4 w-auto" variant="secondary" onClick={onClose}>Về hộp thư</Button></Dialog>;
   return <NotificationRecordLoader opened={opened} onClose={onClose} />;
+}
+function CertificationRecord({ id, onClose }: { id: string; onClose(): void }) {
+  const load = useCallback((signal: AbortSignal) => certificationRequest("list", z.array(certificationSchema), undefined, undefined, undefined, signal), []);
+  const remote = useRemote(load), record = remote.data?.find(row => row.id === id);
+  if (record) return <CertificationEditor record={record} onClose={onClose} onSaved={onClose} />;
+  return <Dialog open title="Chứng nhận hợp tác xã" onOpenChange={open => { if (!open) onClose(); }}><ErrorNotice error={remote.error} />{remote.loading ? <Skeleton /> : <p>Chứng nhận không còn trong danh sách được phép xem.</p>}<Button className="mt-4" variant="secondary" onClick={onClose}>Đóng</Button></Dialog>;
 }
 function NotificationRecordLoader({ opened, onClose }: { opened: OpenedNotification; onClose(): void }) {
   const load = useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<RecordView>> => {

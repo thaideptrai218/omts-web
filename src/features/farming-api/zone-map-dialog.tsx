@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { workspaceError } from "@/features/api-workspace/workspace-error";
 import { mapPointUrl, type MapZone } from "./zone-map-contract";
 import { readZoneMap } from "./zone-map-repository";
+import dynamic from "next/dynamic";
+const VietMapView = dynamic(() => import("./vietmap-view"), { ssr: false, loading: () => <p role="status" className="my-4 text-sm">Đang mở bản đồ…</p> });
 
 function Point({ point }: { point: { latitude: number | null; longitude: number | null } }) {
   const href = mapPointUrl(point);
   return href ? <span className="flex flex-wrap gap-3"><span>{point.latitude}, {point.longitude}</span><a className="text-primary underline" href={href} target="_blank" rel="noopener noreferrer">Mở Google Maps</a></span> : <span>Chưa đủ tọa độ</span>;
 }
-export function ZoneMapDialog({ onClose }: { onClose(): void }) {
-  const [include, setInclude] = useState(false), [search, setSearch] = useState(""), [serial, setSerial] = useState(0);
+export function ZoneMapDialog({ onClose, zoneId, raftId, label }: { onClose(): void; zoneId?: string; raftId?: string; label?: string }) {
+  const [include, setInclude] = useState(Boolean(zoneId || raftId)), [search, setSearch] = useState(""), [serial, setSerial] = useState(0);
   const [zones, setZones] = useState<MapZone[]>(), [error, setError] = useState<string>(), [loading, setLoading] = useState(true);
   useEffect(() => {
     const controller = new AbortController();
@@ -27,15 +29,18 @@ export function ZoneMapDialog({ onClose }: { onClose(): void }) {
   }, [include, serial]);
   const term = search.trim().toLocaleLowerCase("vi");
   const visible = zones?.flatMap((zone) => {
+    if (zoneId && zone.id !== zoneId) return [];
+    if (raftId) { const rafts = zone.rafts.filter(raft => raft.id === raftId); return rafts.length ? [{ ...zone, latitude: null, longitude: null, rafts }] : []; }
     const matchesZone = `${zone.code} ${zone.name}`.toLocaleLowerCase("vi").includes(term);
     const rafts = matchesZone ? zone.rafts : zone.rafts.filter((raft) => raft.code.toLocaleLowerCase("vi").includes(term));
     return matchesZone || rafts.length ? [{ ...zone, rafts }] : [];
   });
-  return <Dialog open title="Vị trí vùng và bè" size="lg" onOpenChange={(open) => { if (!open) onClose(); }}>
+  return <Dialog open title={label ? `Vị trí ${label}` : "Vị trí vùng và bè"} size="lg" onOpenChange={(open) => { if (!open) onClose(); }}>
     <div className="flex flex-wrap items-end gap-4"><label className="flex-1">Tìm mã vùng, tên vùng hoặc mã bè<input className="mt-2 min-h-12 w-full rounded-control border border-border-strong p-3" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
       <label className="py-3"><input type="checkbox" checked={include} onChange={(event) => setInclude(event.target.checked)} /> Bao gồm vùng ngừng dùng</label>
       <Button className="w-auto" variant="secondary" disabled={loading} onClick={() => setSerial((value) => value + 1)}>Tải lại</Button></div>
-    <p className="mt-3 text-sm text-text-muted">Danh sách bè đang dùng. Liên kết Google Maps mở trong tab mới.</p>
+    <p className="mt-3 text-sm text-text-muted">Chọn vị trí trên bản đồ để mở hồ sơ. Danh sách bên dưới gồm các bè đang dùng.</p>
+    {!loading && visible && <VietMapView zones={visible} />}
     {loading && <div role="status" className="mt-4 animate-pulse space-y-3"><span className="sr-only">Đang tải vị trí</span>{[1, 2, 3].map((key) => <div key={key} className="h-16 rounded-control bg-border" />)}</div>}
     {error && <p role="alert" className="mt-4 text-danger">{error}</p>}
     {visible && !visible.length && <p className="mt-4">Không có vị trí phù hợp.</p>}

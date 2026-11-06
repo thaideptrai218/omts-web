@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { z } from "zod";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
@@ -33,7 +34,8 @@ export function WorkforceScreen() {
     <WorkforceHero day={day} total={filteredRows?.length ?? 0} awaiting={filteredRows?.filter((row) => !row.checkedInAt && !row.checkedOutAt).length ?? 0} completed={filteredRows?.filter((row) => !!row.checkedOutAt).length ?? 0} loading={rows.loading || !!rows.error} actions={allowed("Create") && <Button className="w-auto" disabled={editor.disabled} onClick={() => setForm("assign")}>Tạo phân công</Button>} />
     <div className="mt-4 flex flex-wrap gap-2">
     {allowed("Edit") && <Button className="w-auto" disabled={editor.disabled} onClick={() => setForm("crew")}>Đổi việc trong ngày</Button>}
-    {context.identity.subjectType === "CooperativeOwner" && <>{(["job", "settings", "leaves"] as const).map((key) => <Button key={key} className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => setForm(key)}>{key === "job" ? "Thêm loại công việc" : key === "settings" ? "Thiết lập chấm công" : "Duyệt nghỉ phép"}</Button>)}</>}
+    {operationAllowed("job-types", context.identity, context.permissions.functionPermissions) && <Link href="/operations/job-types" className="inline-flex min-h-10 items-center rounded-control border border-border px-3 text-sm font-medium">Loại công việc và đơn giá</Link>}
+    {context.identity.subjectType === "CooperativeOwner" && <>{(["settings", "leaves"] as const).map((key) => <Button key={key} className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => setForm(key)}>{key === "settings" ? "Thiết lập chấm công" : "Duyệt nghỉ phép"}</Button>)}</>}
     </div><WorkforceFilterSection><Field label="Ngày làm việc" type="date" required value={day} onChange={(e) => setDay(e.target.value)} />
       <Select label="Vùng làm việc" value={zoneId} onChange={(e) => setZoneId(e.target.value)}><option value="">Tất cả vùng được cấp</option>{[...new Set([...(zones.data?.filter((zone) => operationAllowed("workforce", context.identity, context.permissions.functionPermissions, "View", zone.id)).map((zone) => zone.id) ?? []), ...(rows.data?.map((row) => row.zoneId) ?? [])])].map((id) => <option key={id} value={id}>{zoneName(id)}</option>)}</Select>
       <Field label="Tìm nhân viên, bè hoặc công việc" type="search" value={search} onChange={(e) => setSearch(e.target.value)} />

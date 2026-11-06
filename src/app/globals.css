@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Keep scrolling and keyboard navigation, without a persistent visual gutter. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+
 :root {
   color-scheme: light;
 

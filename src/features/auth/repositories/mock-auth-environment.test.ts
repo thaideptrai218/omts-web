@@ -8,12 +8,12 @@ async function preparePasswordChangedStaff() {
   });
   const login = await environment.authRepository.login({
     identifier: "staff-first-login",
-    password: "demo123",
+    password: "Demo@1234",
   });
   expect(login).toMatchObject({ nextStep: "change-temporary-password" });
 
   await environment.authRepository.changeTemporaryPassword({
-    currentPassword: "demo123",
+    currentPassword: "Demo@1234",
     newPassword: "newpass8",
   });
 
@@ -74,7 +74,7 @@ describe("mock auth environment", () => {
     });
     await environment.authRepository.login({
       identifier: "staff-first-login",
-      password: "demo123",
+      password: "Demo@1234",
     });
 
     await expect(

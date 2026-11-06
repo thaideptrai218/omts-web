@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid } from "@/components/ui/data-grid";
+import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
 import { ManagementHeading } from "@/components/ui/management-page";
 import type { InterfaceIconName } from "@/components/ui/interface-icon";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
@@ -10,6 +11,9 @@ import { workspaceError } from "@/features/api-workspace/workspace-error";
 function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
   if (result.httpStatus === 401 && result.uncertain) return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại và đối chiếu kết quả trước khi lập lượt mới.";
   const messages: Record<string, string> = { MSG41: "Số tiền phải là bội số của 1.000 đồng.", MSG45: "Số tiền hoặc số lượng vượt mức cho phép. Hãy đối chiếu số còn nợ hoặc số còn được trả.",
+    "MSG-PURCHASE-05": "Khoản chi vượt công nợ hiện tại. Hãy đối chiếu và xác nhận phần trả trước nếu muốn tiếp tục.",
+    "MSG-PURCHASE-06": "Mã giao dịch ngân hàng đã được ghi nhận. Hãy đối chiếu trước khi xác nhận dùng lại mã này.",
+    "MSG-GEN-09": "Trạng thái hiện tại không cho phép thao tác. Hãy đọc dữ liệu mới để đối chiếu.",
     MSG59: "Số lượng phải lớn hơn 0, tối đa 3 chữ số thập phân; đơn giá phải là số nguyên không âm.", MSG61: "Trạng thái hiện tại không cho phép thao tác này. Hãy tải dữ liệu mới để kiểm tra.",
     MSG28: "Ngưỡng tối thiểu phải nhỏ hơn ngưỡng tối đa.", MSG05: "Chưa thể xử lý tệp. Hãy kiểm tra kết quả trước khi tải lại.", MSG04: "Dịch vụ chưa phản hồi. Hãy kiểm tra bản ghi đã lưu trước khi thử lại." };
   return result.code && messages[result.code] || workspaceError(result);
@@ -24,6 +28,11 @@ export function FilterPanel({ children, columns = "four" }: { children: ReactNod
   return <div className={`grid items-end gap-3 rounded-card border border-border bg-[#fafbf9] p-3.5 ${grid}`}>{children}</div>;
 }
 export function Field({ label, ...props }: ComponentProps<"input"> & { label: string }) {
+  if (props.type === "date") {
+    const { type: _type, value, min, max, onChange, ref, ...input } = props;
+    void _type;
+    return <div className="block text-xs font-medium text-text-muted"><span>{label}</span><VietnameseDateInput {...input} aria-label={label} value={String(value ?? "")} min={min == null ? undefined : String(min)} max={max == null ? undefined : String(max)} inputRef={ref} className={control} calendarLabel={`Chọn ${label.toLocaleLowerCase("vi")}`} onValueChange={value => onChange?.({ target: { value }, currentTarget: { value } } as React.ChangeEvent<HTMLInputElement>)} /></div>;
+  }
   return <label className="block text-xs font-medium text-text-muted">{label}<input {...props} className={control} /></label>;
 }
 export function Select({ label, children, ...props }: ComponentProps<"select"> & { label: string }) {
@@ -86,7 +95,7 @@ export function useMutation() {
     setPending(false);
     if (result.status === "success") return result.data;
     setError(operationError(result)); setFailure(result);
-    if (!readOnly) { setBlocked(result.uncertain || result.code === "MSG06"); if (result.uncertain) setUncertain(true); }
+    if (!readOnly) { setBlocked(result.uncertain || result.code === "MSG06" || result.code === "MSG-GEN-06"); if (result.uncertain) setUncertain(true); }
     return undefined;
   }
   return { pending, error, failure, blocked, uncertain, run, busy: () => active.current, reviewed: () => { if (!active.current) { setBlocked(false); setError(undefined); setFailure(undefined); } } };
