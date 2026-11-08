@@ -1,16 +1,7 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { NavigationGroup } from "./navigation-group";
+import {afterEach,expect,it,vi} from "vitest";
+import {cleanup,fireEvent,render,screen} from "@testing-library/react";
+import {NavigationGroup} from "./navigation-group";
+vi.mock("next/navigation",()=>({usePathname:()=>"/dashboard"}));
 afterEach(cleanup);
-it("keeps collapsed groups independent and preserves access to icon actions in compact mode", () => {
-  const view = render(<><NavigationGroup label="Nuôi trồng"><button>Bè nuôi</button></NavigationGroup><NavigationGroup label="Nhân sự & phân quyền"><button>Phân công và chấm công</button></NavigationGroup></>);
-  const toggle = screen.getByRole("button", { name: "Nuôi trồng" });
-  fireEvent.click(toggle);
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  expect(screen.queryByRole("button", { name: "Bè nuôi" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Phân công và chấm công" })).toBeTruthy();
-  view.rerender(<><NavigationGroup label="Nuôi trồng" compact><button>Bè nuôi</button></NavigationGroup><NavigationGroup label="Nhân sự & phân quyền"><button>Phân công và chấm công</button></NavigationGroup></>);
-  expect(screen.getByRole("button", { name: "Bè nuôi" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Nuôi trồng" })).toBeNull();
-});
+it("opens a topnav group and closes it on Escape, outside pointer and destination selection",()=>{render(<><NavigationGroup label="Nuôi trồng"><a href="/farming/rafts" onClick={e=>e.preventDefault()}>Bè nuôi</a></NavigationGroup><button>Bên ngoài</button></>);const summary=screen.getByText("Nuôi trồng"),details=summary.closest("details")!;fireEvent.click(summary);expect(details.open).toBe(true);fireEvent.keyDown(summary,{key:"Escape"});expect(details.open).toBe(false);fireEvent.click(summary);fireEvent.pointerDown(screen.getByRole("button",{name:"Bên ngoài"}));expect(details.open).toBe(false);fireEvent.click(summary);fireEvent.click(screen.getByRole("link",{name:"Bè nuôi"}));expect(details.open).toBe(false);});

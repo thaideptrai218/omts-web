@@ -35,7 +35,7 @@ describe("approved sales/workforce writes and draft safety", () => {
     expect(screen.queryByText("Nhân viên Bình")).toBeNull();
     fireEvent.change(screen.getByLabelText("Tìm nhân viên, bè hoặc công việc"), { target: { value: "không khớp" } });
     expect(screen.queryByText("Nhân viên An")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Xóa bộ lọc phân công" }));
+    fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
     expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
     expect((screen.getByLabelText("Ngày làm việc") as HTMLInputElement).value).toBe(businessToday().split("-").reverse().join("/"));
     expect(mocks.write).not.toHaveBeenCalled();

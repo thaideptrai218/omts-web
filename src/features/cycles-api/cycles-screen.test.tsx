@@ -17,7 +17,7 @@ it("opens the inline detail immediately and ignores late progress after returnin
   fireEvent.click(await screen.findByRole("button", { name: "Xem bè B1-01" }));
   expect(screen.getByRole("heading", { name: "Lịch sử và tiến độ · B1-01" })).toBeTruthy();
   expect(screen.queryByRole("dialog")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "← Quay lại danh sách bè" }));
+  fireEvent.click(screen.getByRole("button", { name: "Thu gọn hồ sơ" }));
   await act(async () => { finish({ status: "success", data: { raftId: "raft-a", raftCode: "B1-01", cycle: null, lanes: [], date: "2026-11-06" } }); });
   expect(screen.queryByRole("heading", { name: "Lịch sử và tiến độ · B1-01" })).toBeNull();
   expect((screen.getByRole("combobox", { name: "Vùng nuôi" }) as HTMLSelectElement).value).toBe("zone-a");

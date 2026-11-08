@@ -27,3 +27,7 @@ Backend develop đã pull fast-forward 559640dc → 629e481d, working tree sạc
 ## CI Web
 
 PR3 check CI run42184193418 thất bại hai assertion ngày: UI dd/MM/yyyy nhưng test kỳ vọng ISO. Sửa expectation, giữ dữ liệu ISO ở contract. GitGuardian riêng vẫn fail; finding lịch sử chủ repo đã nhận xử lý, không bỏ/bypass check.
+
+## Push và sửa CI
+
+Draft PR4 trên nhánh experiment/wireframe-cycle-redesign-20261107. Full test phát hiện 17 lỗi thuộc test sidebar/nhãn thao tác cũ; thay bộ kiểm tra shell sang topnav và cập nhật nhãn Đặt lại/Thu gọn hồ sơ. 29 test tại 5 file liên quan PASS. Build63routes PASS. GitGuardian PR4 vẫn fail; Gitleaks và PR title PASS. Không khẳng định GitGuardian đã được xử lý; giữ phân công finding lịch sử cho chủ repo.
