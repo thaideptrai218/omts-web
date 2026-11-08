@@ -1,0 +1,9 @@
+"use client";
+import { useState } from "react";
+import Image from "next/image";
+export function EvidenceGallery({ images, title = "Hình ảnh ghi nhận" }: { images: readonly { id: string; url: string; label: string }[]; title?: string }) {
+  const [selected, setSelected] = useState<string>();
+  const current = images.find(image => image.id === selected) ?? images[0];
+  if (!current) return <section className="border-t border-border py-5"><h3 className="text-sm font-semibold">{title}</h3><p className="mt-2 text-sm text-text-muted">Chưa có ảnh được ghi nhận.</p></section>;
+  return <section aria-label={title} className="min-w-0 space-y-3"><div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">{title}</h3><span className="text-xs text-text-muted">{images.length} ảnh</span></div><a href={current.url} target="_blank" rel="noreferrer" className="group relative block overflow-hidden rounded-card bg-surface-subtle"><Image src={current.url} alt={current.label} width={1000} height={650} unoptimized className="aspect-[16/10] w-full object-contain" /><span className="absolute bottom-3 right-3 rounded-control bg-surface px-3 py-1.5 text-xs font-medium shadow-sm">Mở ảnh gốc ↗</span></a><p className="text-xs text-text-muted">{current.label}</p>{images.length > 1 && <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Chọn ảnh để xem">{images.map(image => <button type="button" key={image.id} title={image.label} aria-label={`Xem ${image.label}`} aria-pressed={image.id === current.id} onClick={() => setSelected(image.id)} className="w-20 shrink-0 overflow-hidden rounded-control border-2 border-transparent p-0.5 aria-pressed:border-primary"><Image src={image.url} alt="" width={100} height={75} unoptimized className="aspect-[4/3] w-full rounded object-cover" /></button>)}</div>}</section>;
+}

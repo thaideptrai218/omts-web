@@ -1,0 +1,9 @@
+# Nhật ký dễ đọc và chi tiết chu kỳ — 06/11/2026
+
+- Nhật ký: bỏ popup JSON trước/sau. Mở nội dung chi tiết toàn vùng làm việc với nút Quay lại, giữ danh sách và vị trí cuộn. Hiển thị người thực hiện, giờ Việt Nam, loại hồ sơ/mã nghiệp vụ, lý do và các trường nghiệp vụ thay đổi thực sự. Không hiện SupplierId, RowVersion hoặc JSON kỹ thuật. Chưa có dữ liệu không in null; chỉ có các trường không được hiểu thì báo không có chi tiết thay vì tự suy diễn.
+- Ví dụ TT000025: Nhà cung cấp hoàn tiền;1.000đồng;06/11/2026;Tiền mặt;ghi chú. Bản ghi mới chỉ hiện thông tin được ghi nhận, không dựng cột trước là null. Danh sách cũng Việt hóa tên loại hồ sơ và action có tiền tố như SupplierPayment.Recorded.
+- Cả `/farming/cycles` và `/operations/cultivation-cycles`: đổi phần đọc chi tiết thành nội dung inline có Quay lại. Không chờ fetch xong mới có giao diện chi tiết. Route cũ hủy request tiến độ khi quay lại/unmount và bỏ kết quả đến muộn. Form chỉnh sửa vẫn giữ luồng xác nhận/nháp, không tự đổi nghiệp vụ.
+- Dialog: md rộng hơn từ32rem lên42rem, lg từ48rem lên56rem; header giữ trên cùng khi cuộn. Thêm onCloseRequest cho form có draft guard để có nút× mà không bypass xác nhận. Áp dụng các editor nhật ký nuôi, thả giống/vật tư/thu hoạch và loại công việc sở hữu useOperationEditor. Không mở tất cả dialog dismissible=false một cách máy móc.
+- Ẩn scrollbar bằng CSS, giữ overflow/scroll thao tác; không khóa cuộn hoặc gỡ bảng rộng.
+- Kiểm tra: lint/typecheck/build đạt;8test liên quan đạt, gồm regression kết quả tiến độ về muộn không tự mở lại chi tiết và bảng hoàn tiền không lộ mã nội bộ.63assertion built session pages đạt. Browser đã đọc được chi tiết TT000025 bằng tiếng Việt, không có raw JSON; chưa browser-test hết mọi modal hoặc luồng ghi dữ liệu sau sửa.
+- Chưa commit/push. Chưa chuyển tất cả module sang URL trang chi tiết riêng; hai phần đọc trên dùng nội dung toàn màn trong route hiện hữu.
