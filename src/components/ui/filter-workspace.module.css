@@ -4,5 +4,5 @@
 .heading h2 { font-size:13px; font-weight:650; }
 .fields { display:grid; gap:12px; }
 .results { min-width:0; }
-@media(min-width:640px) and (max-width:1199px) { .fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(min-width:1200px) { .layout { grid-template-columns:208px minmax(0,1fr); gap:20px; } .rail { position:sticky; top:72px; } .fields { max-height:calc(100dvh - 180px); overflow:auto; } }
+@media(min-width:640px) and (max-width:959px) { .fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(min-width:960px) { .layout { grid-template-columns:208px minmax(0,1fr); gap:20px; } .rail { position:sticky; top:154px; } .fields { max-height:calc(100dvh - 216px); overflow:auto; } }

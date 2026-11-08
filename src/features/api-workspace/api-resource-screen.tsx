@@ -1,9 +1,14 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { OpenableTableRow } from "@/components/ui/openable-table-row";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StaffRoleSummary } from "@/features/personal-api/staff-role-summary";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { FilterChecks } from "@/components/ui/filter-checks";
+import { readSelectionPages } from "@/features/operations/selection-pages";
+import { FilterWorkspace } from "@/components/ui/filter-workspace";
+import catalogStyles from "./catalog.module.css";
 import { DataGrid } from "@/components/ui/data-grid";
 import { ManagementHeading, StatusPill } from "@/components/ui/management-page";
 import { Dialog } from "@/components/ui/dialog";
@@ -13,10 +18,10 @@ import { knownRoleNameLabel } from "@/shared/presentation/actor-label";
 import { resources, resourceCategoryFilters, resourceAllowed, type ResourceKey } from "./resources";
 import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
 import { ResourceExtras } from "@/features/farming-api/resource-extras";
-import { RecordMap } from "@/features/farming-api/record-map";
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
 import { workspaceError } from "./workspace-error";
-import { ZoneMapDialog } from "@/features/farming-api/zone-map-dialog";
+import { GlobalZoneMap } from "@/features/farming-api/global-zone-map";
+import { useRemote } from "@/features/operations/ui";
 import { loadOptions } from "@/features/operations/lookups";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { useDirectoryView } from "@/components/ui/use-directory-view";
@@ -47,6 +52,19 @@ function text(value: unknown): string {
 export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
   return resource === "employees" ? <EmployeeApiScreen /> : <GenericResourceScreen resource={resource} />;
 }
+function SupplierInlineProfile({ id, canEdit, onEdit, onSaved }: { id: string; canEdit: boolean; onEdit(record: ApiRecord): void; onSaved(): void }) {
+  const repository = useMemo(() => createWorkspaceRepository("suppliers"), []);
+  const remote = useRemote(useMemo(() => (signal: AbortSignal) => repository.detail(id, signal), [repository, id]));
+  return <section className={catalogStyles.expanded} aria-label="Chi tiết nhà cung cấp" aria-busy={remote.loading}>
+    {remote.loading && <p role="status">Đang tải hồ sơ nhà cung cấp…</p>}
+    {remote.error && <div role="alert"><p>{remote.error}</p><Button variant="secondary" onClick={remote.reload}>Tải lại hồ sơ</Button></div>}
+    {remote.data && <><header><h3>{text(remote.data.name)}</h3><StatusPill tone={remote.data.statusId === 101 ? "success" : "neutral"}>{remote.data.statusId === 101 ? "Đang dùng" : "Ngừng dùng"}</StatusPill></header>
+      <dl className={catalogStyles.supplierFacts}>{[["Loại nhà cung cấp", ({Seed:"Giống",Material:"Vật tư",Other:"Khác"} as Record<string,string>)[String(remote.data.supplierType)]], ["Số điện thoại", remote.data.phoneNumber], ["Địa chỉ", remote.data.address], ["Email", remote.data.email]].map(([label,value]) => <div key={String(label)}><dt>{String(label)}</dt><dd>{text(value)}</dd></div>)}</dl>
+      <ResourceExtras resource="suppliers" record={remote.data} busy={false} dirty={false} blocked={false} onSaved={onSaved} />
+      {canEdit && <footer><Button className="w-auto" onClick={() => onEdit(remote.data!)}>{remote.data.statusId === 102 ? "Mở hồ sơ / sử dụng lại" : "Sửa hồ sơ"}</Button></footer>}
+    </>}
+  </section>;
+}
 function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const context = useApiWorkspace();
   const params = useSearchParams();
@@ -70,12 +88,13 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const [zoneLoading, setZoneLoading] = useState(false);
   const [zoneRefresh, setZoneRefresh] = useState(0);
   const [zoneId, setZoneId] = useState("");
+  const [expandedSupplier, setExpandedSupplier] = useState<string>();
   const [selected, setSelected] = useState<ApiRecord | null>();
   const [editorId, setEditorId] = useState(0);
   const [opening, setOpening] = useState(false);
   const openGeneration = useRef(0);
   const [notice, setNotice] = useState<string>();
-  const [mapOpen, setMapOpen] = useState(false);
+
   const canView = resourceAllowed(resource, context.identity, context.permissions.functionPermissions);
   const canCreate = definition.editable && definition.creatable !== false && resourceAllowed(resource, context.identity, context.permissions.functionPermissions, "Create");
   const canEdit = definition.editable && resourceAllowed(resource, context.identity, context.permissions.functionPermissions, "Edit");
@@ -118,8 +137,8 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
     if (!canView || (definition.zoneRequired && !zoneId)) return () => controller.abort();
     const timer = setTimeout(() => {
       setLoading(true); setError(undefined);
-      void repository.list({ page: String(pageNumber), pageSize: String(pageSize), ...(search ? { search } : {}),
-        ...(filter ? { statusId: filter } : {}), ...(category && categoryFilter ? { [categoryFilter.key]: category } : {}), ...(zoneId ? { zoneId } : {}) }, controller.signal).then((result) => {
+      void readSelectionPages((query, signal) => repository.list(Object.fromEntries(Object.entries(query).filter((entry): entry is [string,string] => entry[1] !== undefined)), signal), { page: String(pageNumber), pageSize: String(pageSize), ...(search ? { search } : {}),
+        ...(zoneId ? { zoneId } : {}) }, { statusId: filter, ...(categoryFilter ? { [categoryFilter.key]: category } : {}) }, controller.signal).then((result) => {
         if (controller.signal.aborted) return;
         setLoading(false);
         if (result.status === "success") {
@@ -143,7 +162,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
     else setError(workspaceError(result));
   }
   if (!canView) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
-  const statuses = resource === "accounts" ? [["301", "Hoạt động"], ["302", "Đã khóa"]]
+  const statuses: [string,string][] = resource === "accounts" ? [["301", "Hoạt động"], ["302", "Đã khóa"]]
     : resource === "employees" ? [["401", "Đang làm việc"], ["402", "Đã nghỉ việc"]] : [["101", "Đang dùng"], ["102", "Ngừng dùng"]];
   const presentation = directoryPresentation[resource as keyof typeof directoryPresentation];
   const actions = directoryActions[resource];
@@ -162,37 +181,52 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
     if (resource === "roles" && key === "name") return knownRoleNameLabel(String(row.name ?? ""));
     return text(row[key]);
   };
-  return <section>
-    <ManagementHeading title={definition.title} description={presentation.description} icon={presentation.icon}>
-      {resource === "zones" && <Button className="w-auto" variant="secondary" onClick={() => setMapOpen(true)}>Vị trí vùng và bè</Button>}
-      {canCreate && <Button className="w-auto" disabled={definition.zoneRequired && !zoneId} onClick={() => { setSelected(null); setEditorId((value) => value + 1); }}>{actions?.create ?? "Thêm mới"}</Button>}
-    </ManagementHeading>
-    {resource === "roles" && <StaffRoleSummary />}
-    {mapOpen && <ZoneMapDialog onClose={() => setMapOpen(false)} />}
-    <div className={`grid gap-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 ${resource === "suppliers" || resource === "input-items" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
-      <label className="min-w-0 text-sm font-semibold">Tìm kiếm<input type="search" className={inputClass} value={search} onChange={(event) => { setSearch(event.target.value); setPageNumber(1); }} /></label>
-      {resource !== "roles" && resource !== "customers" && <label className="min-w-0 text-sm font-semibold">Trạng thái<select className={inputClass} value={filter} onChange={(event) => { setFilter(event.target.value); setPageNumber(1); }}>
-        <option value="">Tất cả</option>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
-      {categoryFilter && <label className="min-w-0 text-sm font-semibold">{categoryFilter.label}<select className={inputClass} value={category} onChange={(event) => { setCategory(event.target.value); setPageNumber(1); }}>
-        <option value="">Tất cả</option>{categoryFilter.options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
+  const isCatalog = resource === "suppliers" || resource === "input-items";
+  const customerDirectory = resource === "customers", accessDirectory = resource === "accounts" || resource === "roles";
+  const usesFilterRail = resource !== "customers" && resource !== "roles";
+  const resultTitle = resource === "zones" ? "Danh sách vùng nuôi" : resource === "rafts" ? "Danh sách bè nuôi" : resource === "accounts" ? "Danh sách nhân viên nội bộ" : resource === "roles" ? "Danh sách vai trò" : customerDirectory ? "Danh sách khách hàng và thương lái" : resource === "suppliers" ? "Danh sách nhà cung cấp" : "Danh sách vật tư";
+  const filters = <div className={usesFilterRail ? catalogStyles.filters : "grid gap-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4"}>
+      {resource !== "roles" && resource !== "customers" && <FilterChecks label="Trạng thái" value={filter} options={statuses} onChange={value => { setFilter(value); setPageNumber(1); }} />}
+      {categoryFilter && <FilterChecks label={categoryFilter.label} value={category} options={categoryFilter.options} onChange={value => { setCategory(value); setPageNumber(1); }} />}
       {definition.zoneRequired && <label className="min-w-0 text-sm font-semibold">Vùng nuôi<select className={inputClass} disabled={zoneLoading || !!zoneError} value={zoneId} onChange={(event) => { setZoneId(event.target.value); setPageNumber(1); }}>
         <option value="">Chọn vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{text(zone.name)}</option>)}</select></label>}
-    </div>
+    </div>;
+  const searchControl = <label className={catalogStyles.search}>Tìm kiếm<input type="search" placeholder={resource === "suppliers" ? "Theo tên nhà cung cấp" : resource === "input-items" ? "Theo mã hoặc tên vật tư" : resource === "rafts" ? "Theo mã bè" : "Nhập từ khóa tìm kiếm"} className={inputClass} value={search} onChange={event => { setSearch(event.target.value); setPageNumber(1); }} /></label>;
+  const results = <>
+    {!usesFilterRail && searchControl}
     {zoneError && <div role="alert" className="mt-4 rounded-control border border-danger p-4"><p>{zoneError}</p><Button className="mt-3 w-auto" variant="secondary" disabled={zoneLoading} onClick={() => setZoneRefresh((value) => value + 1)}>Tải lại danh mục vùng</Button></div>}
     {zoneLoading && <p role="status" className="mt-3">Đang tải danh mục vùng...</p>}
     {(resource === "zones" || resource === "rafts") && <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-text-muted">{page?.total ?? 0} {resource === "zones" ? "vùng nuôi" : "bè nuôi"}</p><div className="flex gap-1 rounded-control border border-border bg-surface-subtle p-1" role="group" aria-label="Cách hiển thị danh sách"><Button className="size-9 w-auto p-0" title="Dạng lưới" aria-label="Dạng lưới" variant={view === "grid" ? "primary" : "secondary"} aria-pressed={view === "grid"} onClick={() => setView("grid")}><InterfaceIcon name="grid" /></Button><Button className="size-9 w-auto p-0" title="Dạng bảng" aria-label="Dạng bảng" variant={view === "table" ? "primary" : "secondary"} aria-pressed={view === "table"} onClick={() => setView("table")}><InterfaceIcon name="list" /></Button></div></div>}
+    {!usesFilterRail && error && <p className="text-sm text-text-muted">Chưa tải được dữ liệu</p>}
     {notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
     {error && <div role="alert" className="mt-4 rounded-control border border-danger p-4"><p>{error}</p>
       <Button className="mt-3 w-auto" variant="secondary" onClick={() => setRefresh((value) => value + 1)}>Tải lại</Button></div>}
     {definition.zoneRequired && !zoneId ? <p className="mt-5">Chọn vùng nuôi để xem danh sách bè.</p> : loading ? <div className="mt-5 space-y-3" role="status" aria-label="Đang tải danh sách">{[1, 2, 3, 4].map((value) => <div key={value} className="h-14 animate-pulse rounded-control bg-slate-200" />)}</div>
-      : (resource === "zones" || resource === "rafts") && view === "grid" ? <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{page?.items.length ? page.items.map((row) => <article key={row.id} className="relative min-w-0 rounded-card border border-border bg-surface p-4 transition hover:border-primary/50 hover:shadow-sm"><div className="flex items-start justify-between gap-3"><h2 className="break-words font-semibold">{text(row.name ?? row.code)}</h2><StatusPill tone={Number(row.statusId) === 101 ? "success" : "neutral"}>{valueLabel("status", row)}</StatusPill></div><dl className="mt-4 grid gap-2 text-sm">{definition.columns.filter(([key]) => key !== "status" && (key !== "name" || resource !== "zones")).map(([key, label]) => <div key={key} className="flex justify-between gap-3"><dt className="text-text-muted">{label}</dt><dd className="text-right font-medium">{valueLabel(key, row)}</dd></div>)}</dl><button type="button" className="absolute inset-0 rounded-card focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-wait" aria-label={`Xem ${text(row.name ?? row.code)}`} disabled={opening} onClick={() => void open(row)}><span className="sr-only">Mở hồ sơ</span></button></article>) : <p className="rounded-card border border-border p-5 text-text-muted md:col-span-2 xl:col-span-3">Không có bản ghi phù hợp bộ lọc.</p>}</div>
+      : (customerDirectory || accessDirectory) && error ? null : (resource === "zones" || resource === "rafts") && view === "grid" ? <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{page?.items.length ? page.items.map((row) => <article key={row.id} className="relative min-w-0 rounded-card border border-border bg-surface p-4 transition hover:border-primary/50 hover:shadow-sm"><div className="flex items-start justify-between gap-3"><h2 className="break-words font-semibold">{text(row.name ?? row.code)}</h2><StatusPill tone={Number(row.statusId) === 101 ? "success" : "neutral"}>{valueLabel("status", row)}</StatusPill></div><dl className="mt-4 grid gap-2 text-sm">{definition.columns.filter(([key]) => key !== "status" && (key !== "name" || resource !== "zones")).map(([key, label]) => <div key={key} className="flex justify-between gap-3"><dt className="text-text-muted">{label}</dt><dd className="text-right font-medium">{valueLabel(key, row)}</dd></div>)}</dl><button type="button" className="absolute inset-0 rounded-card focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-wait" aria-label={`Xem ${text(row.name ?? row.code)}`} disabled={opening} onClick={() => void open(row)}><span className="sr-only">Mở hồ sơ</span></button></article>) : <p className="rounded-card border border-border p-5 text-text-muted md:col-span-2 xl:col-span-3">Không có bản ghi phù hợp bộ lọc.</p>}</div>
       : <div className="mt-4"><DataGrid responsive headings={[...definition.columns.map(([, label]) => label), "Hồ sơ"]} empty={!page?.items.length}>
-        {page?.items.map((row) => <tr key={row.id}>{definition.columns.map(([key, label]) => <td key={key} data-label={label} className={key === "code" || key === "username" ? "font-mono tabular-nums" : ""}>{key === "status" ? <StatusPill tone={[101, 301].includes(Number(row.statusId)) || row.status === "Active" ? "success" : "neutral"}>{valueLabel(key, row)}</StatusPill> : valueLabel(key, row)}</td>)}
-          <td data-label="Hồ sơ"><button className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover" disabled={opening} onClick={() => void open(row)}>{actions?.open ?? "Mở hồ sơ"}</button></td></tr>)}
+        {page?.items.map((row) => <Fragment key={row.id}><OpenableTableRow disabled={opening} data-selected={expandedSupplier === row.id || undefined} onOpen={() => { if(resource === "suppliers") setExpandedSupplier(value=>value===row.id?undefined:row.id); else void open(row); }}>{definition.columns.map(([key, label]) => <td key={key} data-label={label} className={key === "code" || key === "username" ? "font-mono tabular-nums" : usesFilterRail && key === "name" ? catalogStyles.name : ""}>{key === "status" ? <StatusPill tone={[101, 301].includes(Number(row.statusId)) || row.status === "Active" ? "success" : "neutral"}>{valueLabel(key, row)}</StatusPill> : customerDirectory && key === "hasTraderAccount" ? <StatusPill tone={row.hasTraderAccount === true ? "success" : "neutral"}>{row.hasTraderAccount === true ? "Đã liên kết" : "Chưa liên kết"}</StatusPill> : valueLabel(key, row)}</td>)}
+          <td data-label="Hồ sơ"><button className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover" aria-label={isCatalog ? `Xem hồ sơ ${text(row.name ?? row.code)}` : undefined} aria-expanded={resource === "suppliers" ? expandedSupplier === row.id : undefined} disabled={opening} onClick={() => resource === "suppliers" ? setExpandedSupplier(value => value === row.id ? undefined : row.id) : void open(row)}>{resource === "suppliers" && expandedSupplier === row.id ? "Thu gọn" : isCatalog ? "Xem chi tiết" : actions?.open ?? "Mở hồ sơ"}</button></td></OpenableTableRow>{resource === "suppliers" && expandedSupplier === row.id && <tr><td colSpan={definition.columns.length + 1} className={catalogStyles.expandedCell}><SupplierInlineProfile key={`${row.id}-${refresh}`} id={row.id} canEdit={canEdit} onEdit={record => { setSelected(record); setEditorId(value => value + 1); }} onSaved={() => setRefresh(value => value + 1)} /></td></tr>}</Fragment>)}
       </DataGrid></div>}
-    {page && <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p>{page.total} bản ghi · Trang {page.page}/{Math.max(1, Math.ceil(page.total / page.pageSize))}</p><div className="flex flex-wrap items-center gap-2"><label className="text-sm">Số dòng/trang <select className="ml-2 rounded-control border border-border px-2 py-2" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPageNumber(1); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label>
+    {page && <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p>{page.total} {accessDirectory ? resource === "roles" ? "vai trò" : "tài khoản" : customerDirectory ? "khách hàng" : isCatalog ? resource === "suppliers" ? "nhà cung cấp" : "vật tư" : "bản ghi"} · Trang {page.page}/{Math.max(1, Math.ceil(page.total / page.pageSize))}</p><div className="flex flex-wrap items-center gap-2"><label className="text-sm">Số dòng/trang <select className="ml-2 rounded-control border border-border px-2 py-2" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPageNumber(1); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label>
       <Button className="w-auto" variant="secondary" disabled={loading || pageNumber <= 1} onClick={() => setPageNumber((value) => value - 1)}>Trước</Button>
       <Button className="w-auto" variant="secondary" disabled={loading || pageNumber * page.pageSize >= page.total} onClick={() => setPageNumber((value) => value + 1)}>Sau</Button></div></div>}
+  </>;
+  return <section>
+    <ManagementHeading title={definition.title} description={presentation.description} icon={presentation.icon}>
+
+      {canCreate && <Button className="w-auto" disabled={definition.zoneRequired && !zoneId} onClick={() => { setSelected(null); setEditorId((value) => value + 1); }}>{actions?.create ?? "Thêm mới"}</Button>}
+    </ManagementHeading>
+    {resource === "roles" && <StaffRoleSummary />}
+    {resource === "zones" && <GlobalZoneMap />}
+    {!usesFilterRail && resource !== "customers" && resource !== "roles" && filters}
+    {usesFilterRail ? <FilterWorkspace label={accessDirectory ? "Lọc tài khoản" : "Bộ lọc danh sách"} filters={filters} reset={<button type="button" className={catalogStyles.reset} disabled={!search && !filter && !category} onClick={() => { setSearch(""); setFilter(""); setCategory(""); setPageNumber(1); }}>Đặt lại</button>}>
+      <div className={catalogStyles.results} aria-busy={loading}>
+        {searchControl}
+
+        <div className={catalogStyles.resultHeading}><div><h2>{resultTitle}</h2><p>{accessDirectory ? statuses.find(([value]) => value === filter)?.[1] ?? "Tất cả trạng thái tài khoản" : customerDirectory ? search ? `Kết quả tìm kiếm: ${search}` : "Thông tin liên hệ và tài khoản thương lái" : [filter === "-" ? "Chưa chọn trạng thái" : filter ? "Theo trạng thái đã chọn" : "Tất cả trạng thái", category === "-" ? "Chưa chọn nhóm" : category ? "Theo nhóm đã chọn" : "Tất cả nhóm"].join(" · ")}</p></div><span>{loading ? "Đang tải…" : page ? `${page.total} kết quả` : "Chưa tải được dữ liệu"}</span></div>
+        {results}
+      </div>
+    </FilterWorkspace> : results}
     {selected !== undefined && <ResourceEditor key={editorId} resource={resource} record={selected} canEdit={canEdit} zones={zones} zoneId={zoneId}
       onClose={() => { openGeneration.current++; setSelected(undefined); }} onSaved={(saved) => {
         setSelected(saved); setEditorId((value) => value + 1); setRefresh((value) => value + 1); setNotice("Đã lưu dữ liệu.");
@@ -277,7 +311,11 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
   return <Dialog open title={`${record ? "Hồ sơ" : "Thêm mới"} · ${definition.title}`} size="lg" dismissible={!pending} onOpenChange={async (open) => {
     if (!open && !pendingRef.current && (!dirty || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose();
   }}>{confirmation.dialog}
-    <form onSubmit={(event) => { event.preventDefault(); void mutate(record ? "update" : "create"); }}>
+    <form className={["suppliers", "input-items", "customers", "accounts", "roles"].includes(resource) ? catalogStyles.editor : undefined} onSubmit={(event) => { event.preventDefault(); void mutate(record ? "update" : "create"); }}>
+      {(resource === "suppliers" || resource === "input-items") && <div className={catalogStyles.identity}><div><p>{resource === "suppliers" ? "Thông tin đối tác" : "Thông tin vật tư"}</p><h2>{record ? text(record.name) : resource === "suppliers" ? "Nhà cung cấp mới" : "Vật tư mới"}</h2>{typeof record?.code === "string" && <span>{record.code}</span>}</div>{record && <StatusPill tone={record.statusId === 101 ? "success" : "neutral"}>{record.statusId === 101 ? "Đang dùng" : "Ngừng dùng"}</StatusPill>}</div>}
+      {(resource === "accounts" || resource === "roles") && <div className={catalogStyles.identity}><div><p>{resource === "accounts" ? "Nhân viên nội bộ" : "Thông tin vai trò"}</p><h2>{record ? resource === "roles" ? knownRoleNameLabel(String(record.name ?? "")) : text(record.displayName ?? record.username) : definition.title}</h2>{record && <span>{text(resource === "accounts" ? record.username : record.code)}</span>}</div>{resource === "accounts" && record && <StatusPill tone={record.status === "Active" ? "success" : "neutral"}>{record.status === "Locked" ? "Đã khóa" : "Hoạt động"}</StatusPill>}</div>}
+      {resource === "customers" && <div className={catalogStyles.identity}><div><p>Hồ sơ khách hàng</p><h2>{record ? text(record.name) : "Khách hàng mới"}</h2></div>{record && <StatusPill tone={record.traderAccount ? "success" : "neutral"}>{record.traderAccount ? "Đã liên kết thương lái" : "Chưa liên kết thương lái"}</StatusPill>}</div>}
+      {resource === "customers" && record && <dl className={catalogStyles.profileFacts}><div><dt>Công nợ hiện tại</dt><dd className={catalogStyles.amount}>{typeof record.currentDebt === "number" ? `${record.currentDebt.toLocaleString("vi-VN")} ₫` : "—"}</dd></div><div><dt>Tài khoản thương lái</dt><dd>{record.traderAccount && typeof record.traderAccount === "object" && "displayName" in record.traderAccount ? text(record.traderAccount.displayName) : "Chưa liên kết"}</dd></div>{typeof record.email === "string" && record.email && <div><dt>Email</dt><dd>{record.email}</dd></div>}</dl>}
       {discontinued && <p className="mb-4">Khôi phục sử dụng trước khi chỉnh sửa hồ sơ.</p>}
       {resource === "customers" && record?.phoneLocked === true && <p className="mb-4 text-sm text-text-muted">Số điện thoại được đồng bộ từ tài khoản thương lái và không chỉnh sửa tại hồ sơ khách hàng.</p>}
       {resource === "customers" && !!record?.mergedIntoCustomerId && <p className="mb-4">Hồ sơ đã được gộp vào khách hàng khác, chỉ được xem.</p>}
@@ -306,8 +344,8 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
         </>}
         {resource === "rafts" && <div className="sm:col-span-2"><FormField id="api-lane-count" label="Số làn đang dùng" type="number" min="1" step="1" required value={laneCount} onChange={(event) => setLaneCount(event.target.value)} /></div>}
       </fieldset>
-      {record && <div className="mt-5 rounded-control border border-border p-4"><dl className="grid gap-3 sm:grid-cols-2">{definition.columns.map(([key, label]) => <div key={key}><dt className="text-sm text-text-muted">{label}</dt><dd>{text(resource === "rafts" && key === "laneCount" && record[key] == null && Array.isArray(record.lanes) ? record.lanes.length : record[key])}</dd></div>)}
-        {resource === "customers" && <><div><dt className="text-sm text-text-muted">Công nợ hiện tại</dt><dd>{typeof record.currentDebt === "number" ? `${record.currentDebt.toLocaleString("vi-VN")} ₫` : "—"}</dd></div><div><dt className="text-sm text-text-muted">Tài khoản thương lái</dt><dd>{record.traderAccount && typeof record.traderAccount === "object" && "displayName" in record.traderAccount ? String(record.traderAccount.displayName) : "Chưa liên kết"}</dd></div></>}
+      {record && resource !== "suppliers" && resource !== "input-items" && resource !== "customers" && resource !== "accounts" && resource !== "roles" && <div className="mt-5 rounded-control border border-border p-4"><dl className="grid gap-3 sm:grid-cols-2">{definition.columns.map(([key, label]) => <div key={key}><dt className="text-sm text-text-muted">{label}</dt><dd>{text(resource === "rafts" && key === "laneCount" && record[key] == null && Array.isArray(record.lanes) ? record.lanes.length : record[key])}</dd></div>)}
+
         {resource === "employees" && <div><dt className="text-sm text-text-muted">Tài khoản đăng nhập</dt><dd>{record.account && typeof record.account === "object" && "username" in record.account ? String(record.account.username) : "Chưa liên kết"}</dd></div>}</dl>
         {Array.isArray(record.lanes) && <ul className="mt-3">{record.lanes.map((lane) => <li key={lane.laneNumber}>Làn {lane.laneNumber}: {lane.statusId === 101 ? "Đang dùng" : "Đã ngừng"}</li>)}</ul>}
         {Array.isArray(record.permissions) && <ul className="mt-3 space-y-2">{record.permissions.map((permission) => <li key={permission.functionCode}>{permission.functionCode}: {permission.actions?.join(", ")}</li>)}</ul>}
@@ -335,6 +373,6 @@ function ResourceEditor({ resource, record, canEdit, zones, zoneId, onClose, onS
         }}>{record.status === "Locked" ? "Mở khóa" : "Khóa tài khoản"}</Button>}
       </div>
     </form>
-    {record && <><RecordMap resource={resource} record={record} /><ResourceExtras resource={resource} record={record} busy={pending} dirty={dirty} blocked={blocked} onSaved={onSaved} /></>}
+    {record && <><ResourceExtras resource={resource} record={record} busy={pending} dirty={dirty} blocked={blocked} onSaved={onSaved} /></>}
   </Dialog>;
 }

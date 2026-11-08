@@ -80,7 +80,7 @@ export const navigationGroups: readonly Readonly<{
       {
         href: "/employees",
         icon: "employee",
-        label: "Nhân viên ngoài giờ",
+        label: "Nhân viên thời vụ",
         requiredPermission: "cooperative.employees.manage",
       },
       {

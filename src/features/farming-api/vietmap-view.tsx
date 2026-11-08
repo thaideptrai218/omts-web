@@ -5,7 +5,7 @@ import "@vietmap/vietmap-gl-js/dist/vietmap-gl.css";
 import { Button } from "@/components/ui/button";
 import type { MapZone } from "./zone-map-contract";
 const apiKey = process.env.NEXT_PUBLIC_VIETMAP_API_KEY?.trim();
-type Selection = { kind: "zones" | "rafts"; id: string; zoneId: string; label: string };
+export type MapSelection = { kind: "zones" | "rafts"; id: string; zoneId: string; label: string };
 function coordinate(point: { latitude: number | null; longitude: number | null }): [number, number] | undefined {
   return typeof point.latitude === "number" && typeof point.longitude === "number" && Number.isFinite(point.latitude) && Number.isFinite(point.longitude) && Math.abs(point.latitude) <= 90 && Math.abs(point.longitude) <= 180 ? [point.longitude, point.latitude] : undefined;
 }
@@ -16,10 +16,12 @@ function failure(cause: unknown) {
   if (status === 401 || status === 403) return "Dịch vụ bản đồ chưa cấp quyền cho trang này. Vui lòng liên hệ quản trị viên.";
   return "Chưa tải được bản đồ. Bạn vẫn có thể xem danh sách vị trí bên dưới.";
 }
-export default function VietMapView({ zones }: { zones: MapZone[] }) {
-  const container = useRef<HTMLDivElement>(null), [attempt, setAttempt] = useState(0), [ready, setReady] = useState(false), [error, setError] = useState<string>(), [selected, setSelected] = useState<Selection>();
+export default function VietMapView({ zones, onSelect }: { zones: MapZone[]; onSelect?(selection: MapSelection): void }) {
+  const container = useRef<HTMLDivElement>(null), [attempt, setAttempt] = useState(0), [ready, setReady] = useState(false), [error, setError] = useState<string>(), [selected, setSelected] = useState<MapSelection>();
+  const selectRef = useRef(onSelect);
+  useEffect(() => { selectRef.current = onSelect; }, [onSelect]);
   const points = useMemo(() => zones.flatMap(zone => {
-    const result: { position: [number, number]; selection: Selection; active: boolean }[] = [];
+    const result: { position: [number, number]; selection: MapSelection; active: boolean }[] = [];
     const position = coordinate(zone);
     if (position) result.push({ position, selection: { kind: "zones", id: zone.id, zoneId: zone.id, label: `${zone.code} · ${zone.name}` }, active: zone.statusId === 101 });
     for (const raft of zone.rafts) { const pos = coordinate(raft); if (pos) result.push({ position: pos, selection: { kind: "rafts", id: raft.id, zoneId: zone.id, label: `Bè ${raft.code} · ${zone.name}` }, active: true }); }
@@ -46,7 +48,8 @@ export default function VietMapView({ zones }: { zones: MapZone[] }) {
             pin.type = "button"; pin.textContent = point.selection.kind === "zones" ? `Vùng ${point.selection.label.split(" · ")[0]}` : point.selection.label.split(" · ")[0];
             pin.setAttribute("aria-label", `Xem ${point.selection.label}`);
             pin.style.cssText = `max-width:180px;padding:7px 10px;border:2px solid white;border-radius:8px;background:${point.selection.kind === "zones" ? point.active ? "#10243A" : "#64748b" : "#086F78"};color:white;font:600 12px system-ui;box-shadow:0 3px 10px #10243a40;cursor:pointer;overflow-wrap:anywhere`;
-            pin.addEventListener("click", () => setSelected(point.selection), { signal: events.signal });
+            pin.style.zIndex = point.selection.kind === "zones" ? "2" : "1";
+            pin.addEventListener("click", () => { setSelected(point.selection); selectRef.current?.(point.selection); }, { signal: events.signal });
             new sdk.Marker({ element: pin, anchor: "bottom" }).setLngLat(point.position).addTo(map);
             bounds.extend(point.position);
           }
@@ -70,5 +73,5 @@ export default function VietMapView({ zones }: { zones: MapZone[] }) {
   }, [points, attempt]);
   if (!apiKey) return <p className="my-4 rounded-control bg-surface-subtle p-4 text-sm">Bản đồ chưa được cấu hình. Bạn vẫn có thể xem tọa độ và mở vị trí bên dưới.</p>;
   if (!points.length) return <p className="my-4 text-sm text-text-muted">Các vùng và bè phù hợp bộ lọc chưa có tọa độ hợp lệ để hiển thị trên bản đồ.</p>;
-  return <section className="my-4 min-w-0"><div className="mb-2 flex flex-wrap gap-4 text-xs text-text-muted"><span>● Vùng nuôi</span><span className="text-primary">● Bè đang dùng</span><span>{points.length} vị trí có tọa độ</span></div><div ref={container} role="region" aria-label="Bản đồ vùng và bè nuôi" className="h-[360px] w-full overflow-hidden rounded-card border border-border sm:h-[460px]" />{!ready && !error && <p role="status" className="mt-2 text-sm">Đang tải bản đồ…</p>}{error && <div className="mt-3 space-y-2"><p role="alert" className="text-sm text-danger">{error}</p><Button className="w-auto" variant="secondary" onClick={() => setAttempt(v => v+1)}>Thử tải bản đồ lại</Button></div>}{selected && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-control border border-border bg-surface-subtle p-3"><p className="text-sm font-medium">{selected.label}</p><a className="text-sm font-semibold text-primary underline" href={`/workspace/${selected.kind}?recordId=${encodeURIComponent(selected.id)}`}>Mở hồ sơ</a></div>}</section>;
+  return <section className="my-4 min-w-0"><div className="mb-2 flex flex-wrap gap-4 text-xs text-text-muted"><span>● Vùng nuôi</span><span className="text-primary">● Bè đang dùng</span><span>{points.length} vị trí có tọa độ</span></div><div ref={container} role="region" aria-label="Bản đồ vùng và bè nuôi" className="h-[360px] w-full overflow-hidden rounded-card border border-border sm:h-[460px]" />{!ready && !error && <p role="status" className="mt-2 text-sm">Đang tải bản đồ…</p>}{error && <div className="mt-3 space-y-2"><p role="alert" className="text-sm text-danger">{error}</p><Button className="w-auto" variant="secondary" onClick={() => setAttempt(v => v+1)}>Thử tải bản đồ lại</Button></div>}{selected && !onSelect && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-control border border-border bg-surface-subtle p-3"><p className="text-sm font-medium">{selected.label}</p><a className="text-sm font-semibold text-primary underline" href={`/workspace/${selected.kind}?recordId=${encodeURIComponent(selected.id)}`}>Mở hồ sơ</a></div>}</section>;
 }

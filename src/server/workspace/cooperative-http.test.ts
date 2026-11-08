@@ -5,7 +5,7 @@ vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => ga
 import { resolved } from "../employees/__tests__/employee-fixture";
 import { cooperativeFixture } from "@/features/cooperative-api/fixtures";
 import { cooperativeValues } from "@/features/cooperative-api/contracts";
-import { handleCooperativeRequest, cooperativeLogoPath } from "./cooperative-http";
+import { handleCooperativeRequest, cooperativeLogoPath, cooperativeCoverPath } from "./cooperative-http";
 const base = "http://localhost:3002/api/cooperative/profile";
 function configure() {
   vi.stubEnv("NODE_ENV", "test"); vi.stubEnv("OMTS_DATA_SOURCE", "api"); vi.stubEnv("OMTS_API_BASE_URL", "http://127.0.0.1:8080"); vi.stubEnv("OMTS_API_TIMEOUT_MS", "1000"); vi.stubEnv("OMTS_WEB_ORIGIN", "http://localhost:3002"); vi.stubEnv("OMTS_WEB_COOKIE_PROFILE", "http-loopback-dev");
@@ -14,6 +14,39 @@ function configure() {
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 function write(body: unknown, origin = "http://localhost:3002") { return new Request(base, { method: "PUT", headers: { Origin: origin, "X-OMTS-Request": "web", "Content-Type": "application/json" }, body: JSON.stringify(body) }); }
 const logoPath = "/api/public/cooperative/logos/2026/10/" + "a".repeat(32) + ".webp";
+const coverPath = "/api/public/cooperative/cover-photos/2026/11/" + "b".repeat(32) + ".jpg";
+
+describe("cooperative v2 cover and optional fields", () => {
+  it("reads a v2 profile without status and proxies the cover URL", async () => {
+    configure(); const { status: _status, ...profile } = cooperativeFixture(); void _status;
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...profile, coverPhotoUrl: coverPath }));
+    const response = await handleCooperativeRequest(new Request(base));
+    expect(response.status).toBe(200);
+    const result = await response.json(); expect(result.data.status).toBeUndefined();
+    expect(result.data.coverPhotoUrl).toBe("/api/cooperative/profile/cover-photo?version=AQID");
+  });
+  it("saves the required short name while allowing no representative or business lines", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ profile: cooperativeFixture() }));
+    const response = await handleCooperativeRequest(write({ ...cooperativeValues(cooperativeFixture()), legalRepresentative: "", businessLines: [] }));
+    expect(response.status).toBe(200); expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body)).shortName).toBe("HTX Kiểm thử");
+  });
+  it("accepts a cover larger than the logo limit and unwraps the saved envelope", async () => {
+    configure(); const form = new FormData(); form.set("file", new File([new Uint8Array(2*1024*1024+1)], "cover.jpg", { type: "image/jpeg" }));
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ profile: { ...cooperativeFixture(), coverPhotoUrl: coverPath }, message: "saved" }));
+    const response = await handleCooperativeRequest(new Request(base + "/cover-photo", { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form }), "cover-photo");
+    expect(response.status).toBe(200); expect(String(fetcher.mock.calls[0][0])).toBe("http://127.0.0.1:8080/api/cooperative/profile/cover-photo");
+    expect((await response.json()).data.coverPhotoUrl).toContain("/api/cooperative/profile/cover-photo?version=");
+  });
+  it("never accepts a logo path or an external URL as a cover", () => {
+    expect(cooperativeCoverPath(logoPath)).toBeUndefined(); expect(cooperativeCoverPath("https://evil.test/a.jpg")).toBeUndefined();
+    expect(cooperativeCoverPath(coverPath)).toBe(coverPath);
+  });
+  it("does not send an access token when reading the approved public cover", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ ...cooperativeFixture(), coverPhotoUrl: coverPath })).mockResolvedValueOnce(new Response("image", { headers: { "Content-Type": "image/jpeg" } }));
+    const response = await handleCooperativeRequest(new Request(base + "/cover-photo?version=AQID"), "cover-photo");
+    expect(response.status).toBe(200); expect(fetcher.mock.calls[1][1]?.headers).toBeUndefined();
+  });
+});
 describe("cooperative API boundaries", () => {
   it.each(["Staff", "Trader", "SystemAdministrator"] as const)("denies %s before reading private data or forwarding writes", async (subjectType) => {
     configure(); const owner = resolved(); gateway.resolve.mockResolvedValue(resolved({ identity: { ...owner.session.identity, subjectType } })); const fetcher = vi.spyOn(globalThis, "fetch");
@@ -24,14 +57,14 @@ describe("cooperative API boundaries", () => {
     expect((await handleCooperativeRequest(new Request(base))).status).toBe(401); expect((await handleCooperativeRequest(new Request(base))).status).toBe(403);
   });
   it("accepts nullable preliminary fields and strips unrelated response fields", async () => {
-    configure(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...cooperativeFixture(), taxCode: null, officeAddress: null, phoneNumber: null, legalRepresentative: null, status: "Preliminary", accessToken: "never-return", publicPreview: { bank: "never-return" } }));
+    configure(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...cooperativeFixture(), taxCode: null, officeAddress: null, phoneNumber: null, legalRepresentative: null, status: "Preliminary", accessToken: "never-return", publicPreview: { fullName: "HTX", shortName: null, yearEstablished: null, officeAddress: null, phoneNumber: null, email: null, website: null, socialLink: null, logoUrl: null, coverPhotoUrl: null, introductionVi: null, introductionEn: null, certifications: [], bank: "never-return" } }));
     const response = await handleCooperativeRequest(new Request(base)); expect(response.status).toBe(200); const text = await response.text(); expect(text).toContain('"taxCode":null'); expect(text).not.toContain("never-return");
   });
   it("unwraps the backend save envelope and retains only the profile", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ profile: { ...cooperativeFixture(), logoUrl: logoPath }, message: "private raw", credential: "never-return" }));
     const response = await handleCooperativeRequest(write(cooperativeValues(cooperativeFixture()))); expect(response.status).toBe(200); const result = await response.json(); expect(result.data.logoUrl).toBe("/api/cooperative/profile/logo?version=AQID"); expect(JSON.stringify(result)).not.toContain("private raw"); expect(JSON.stringify(result)).not.toContain(logoPath); expect(fetcher.mock.calls[0][1]?.method).toBe("PUT");
   });
-  it.each([{ bankId: "unapproved" }, { status: "Completed" }, { target: "https://evil.test" }, { businessLines: [] }, { rowVersion: "" }, { phoneNumber: "bad" }])("rejects invalid fields and contract bypass %j", async (patch) => {
+  it.each([{ bankId: "unapproved" }, { status: "Completed" }, { target: "https://evil.test" }, { shortName: "" }, { rowVersion: "" }, { phoneNumber: "bad" }])("rejects invalid fields and contract bypass %j", async (patch) => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch"); expect((await handleCooperativeRequest(write({ ...cooperativeValues(cooperativeFixture()), ...patch }))).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
   });
   it("checks CSRF before consuming the request body", async () => {

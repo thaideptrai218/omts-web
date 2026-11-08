@@ -1,3 +1,4 @@
+import { zipStoredFiles } from "@/shared/downloads/zip-store";
 import { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OperationArea } from "./permissions";
@@ -32,6 +33,22 @@ export function createOperationsRepository(area: RepositoryArea) {
       const form = new FormData(); form.set("payload", JSON.stringify(body));
       for (const file of files) form.append(area === "water" || area === "raft-details" ? "photo" : "files", file, file.name);
       return send(area, { action, id, zoneId }, schema, form);
+    },
+    async downloadMany(queries: Query[]): Promise<WorkspaceResult<true>> {
+      if (!queries.length || queries.length > 16) return { status:"error", httpStatus:400, uncertain:false };
+      if (queries.length === 1) return createOperationsRepository(area).download(queries[0]);
+      try {
+        const files: {name:string;bytes:Uint8Array}[]=[]; let size=0;
+        for (const [index,query] of queries.entries()) {
+          const response=await fetch(`/api/operations/${area}?${queryString({...query,action:"export"})}`,{credentials:"same-origin",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(60_000)});
+          if (!response.ok) {const data=await response.json();return {status:"error",httpStatus:response.status,code:data.code,uncertain:false};}
+          if (!response.headers.get("content-type")?.startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) throw new Error("Unexpected file");
+          const bytes=new Uint8Array(await response.arrayBuffer());size+=bytes.length;if(size>63*1024*1024)throw new Error("Export too large");
+          files.push({name:`${area}-${query.itemGroup??"all"}-${query.statusId??query.status??"all"}-${index+1}.xlsx`,bytes});
+        }
+        const url=URL.createObjectURL(zipStoredFiles(files)),link=document.createElement("a");link.href=url;link.download=`${area}.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),30_000);
+        return {status:"success",data:true};
+      } catch {return {status:"error",httpStatus:0,uncertain:false};}
     },
     async download(query: Query): Promise<WorkspaceResult<true>> {
       try {

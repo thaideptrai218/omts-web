@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { createOperationsRepository } from "./repository";
 import * as c from "./new-module-contracts";
-import { DataTable, ErrorNotice, Field, Note, Select, Skeleton, businessToday, displayTime, useRemote } from "./ui";
+import { DataTable, ErrorNotice, Field, Note, Select, Skeleton, Paging, businessToday, displayTime, useRemote } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
 
 const requests = createOperationsRepository("purchase-requests"), mine = createOperationsRepository("my-work");
@@ -62,10 +62,12 @@ export function PlanStaffingEditor({ record, invitedIds, onClose, onSaved }: { r
 }
 
 export function MyPurchaseShifts({ period, valid }: { period: { from: string; to: string }; valid: boolean }) {
-  const [selected, setSelected] = useState<Shift>();
+  const [selected, setSelected] = useState<Shift>(), [page, setPage] = useState(1);
   const shifts = useRemote(useMemo(() => (signal: AbortSignal) => valid ? mine.read("purchase-shifts", period, z.array(c.myPurchaseShiftSchema), signal) : Promise.resolve({ status: "error" as const, httpStatus: 400, uncertain: false }), [valid, period]));
-  return <section className="mt-6"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">Lời mời ca theo yêu cầu mua</h2><Button className="w-auto" variant="secondary" disabled={!valid || shifts.loading} onClick={shifts.reload}>Tải lại lời mời ca</Button></div><ErrorNotice error={valid ? shifts.error : undefined} />
-    {shifts.loading ? <Skeleton /> : shifts.data && <DataTable headings={["Yêu cầu / Sản phẩm", "Ngày làm / Ngày nhận", "Số lồng", "Nhân lực", "Phản hồi của tôi", "Thao tác"]} empty={!shifts.data.length}>{shifts.data.map((row) => <tr key={row.id}><td>{row.requestCode}<p className="text-text-muted">{row.productName}</p></td><td>{row.workDate}<p className="text-text-muted">Nhận: {row.pickupDate}</p></td><td>{row.cages}</td><td>{row.approvedEmployees}/{row.requiredEmployees}</td><td>{row.approved === null ? "Chưa phản hồi" : row.approved ? "Đồng ý" : "Từ chối"}</td><td><Button className="w-auto" variant="secondary" onClick={() => setSelected(row)}>{row.canRespond ? "Phản hồi ca" : "Xem ca"}</Button></td></tr>)}</DataTable>}
+  const currentPage = Math.min(page, Math.max(1, Math.ceil((shifts.data?.length ?? 0) / 10)));
+  const dayLabel = (value: string) => value.split("-").reverse().join("/");
+  return <section><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold">Lời mời ca theo yêu cầu mua</h2><Button className="w-auto" variant="secondary" disabled={!valid || shifts.loading} onClick={shifts.reload}>Tải lại lời mời ca</Button></div><ErrorNotice error={valid ? shifts.error : undefined} />
+    {shifts.loading ? <Skeleton /> : shifts.data && <><DataTable responsive headings={["Yêu cầu / Sản phẩm", "Ngày làm / Ngày nhận", "Số lồng", "Nhân lực", "Phản hồi của tôi", "Thao tác"]} empty={!shifts.data.length}>{shifts.data.slice((currentPage - 1) * 10, currentPage * 10).map((row) => <tr key={row.id}><td data-label="Yêu cầu / Sản phẩm">{row.requestCode}<p className="text-text-muted">{row.productName}</p></td><td data-label="Ngày làm / Ngày nhận">{dayLabel(row.workDate)}<p className="text-text-muted">Nhận: {dayLabel(row.pickupDate)}</p></td><td data-label="Số lồng">{row.cages.toLocaleString("vi-VN")}</td><td data-label="Nhân lực">{row.approvedEmployees}/{row.requiredEmployees}</td><td data-label="Phản hồi của tôi">{row.approved === null ? "Chưa phản hồi" : row.approved ? "Đồng ý" : "Từ chối"}</td><td data-label="Thao tác"><Button className="w-auto" variant="secondary" onClick={() => setSelected(row)}>{row.canRespond ? "Phản hồi ca" : "Xem ca"}</Button></td></tr>)}</DataTable>{shifts.data.length > 10 && <Paging page={currentPage} total={shifts.data.length} pageSize={10} onChange={setPage} />}</>}
     {selected && <ShiftResponseEditor key={selected.id} record={selected} period={period} onClose={() => setSelected(undefined)} onSaved={() => { setSelected(undefined); shifts.reload(); }} />}
   </section>;
 }

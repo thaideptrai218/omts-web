@@ -35,7 +35,7 @@ export function ProfileOverview({
     .join("");
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6">
       <header className="flex flex-col gap-5 rounded-card border border-primary/15 bg-gradient-to-br from-white to-primary-soft/35 p-5 shadow-card sm:flex-row sm:items-center sm:p-7">
         <span
           aria-hidden="true"

@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-const repository = vi.hoisted(() => ({ read: vi.fn(), save: vi.fn(), upload: vi.fn(), remove: vi.fn() }));
+const repository = vi.hoisted(() => ({ read: vi.fn(), save: vi.fn(), upload: vi.fn(), remove: vi.fn(), uploadCover: vi.fn(), removeCover: vi.fn() }));
 vi.mock("./repository", () => ({ createCooperativeRepository: () => repository }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
 import { CooperativeApiEditor } from "./cooperative-screen";
@@ -12,14 +12,24 @@ function edit() { fireEvent.change(screen.getByLabelText("Tên hợp tác xã"),
 async function save() { fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" })); fireEvent.click(await screen.findByRole("button", { name: "Xác nhận lưu" })); }
 function selectLogo() { fireEvent.change(screen.getByLabelText("Chọn logo"), { target: { files: [new File(["png"], "logo.png", { type: "image/png" })] } }); }
 describe("cooperative API workflow", () => {
+  it("keeps the name draft and a separately selected logo after saving a cover", async () => {
+    repository.uploadCover.mockResolvedValue({ status: "success", data: { ...cooperativeFixture(), coverPhotoUrl: "/api/cooperative/profile/cover-photo?version=new", rowVersion: "new" } });
+    render(<CooperativeApiEditor initial={cooperativeFixture()} />); edit(); selectLogo();
+    fireEvent.change(screen.getByLabelText("Chọn ảnh bìa"), { target: { files: [new File(["cover"], "cover.jpg", { type: "image/jpeg" })] } });
+    fireEvent.click(screen.getByRole("button", { name: "Tải ảnh bìa lên" }));
+    await screen.findByText("Đã cập nhật ảnh bìa. Các thông tin đang nhập được giữ nguyên.");
+    expect((screen.getByLabelText("Tên hợp tác xã") as HTMLInputElement).value).toBe("Tên nháp của tôi");
+    expect((screen.getByRole("button", { name: "Tải logo lên" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(repository.upload).not.toHaveBeenCalled(); expect(repository.save).not.toHaveBeenCalled();
+  });
   it("validates preliminary fields and industry rows before confirmation", async () => {
     render(<CooperativeApiEditor initial={{ ...cooperativeFixture(), taxCode: null, officeAddress: null, businessLines: [] }} />); edit(); fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
     expect(screen.queryByRole("dialog")).toBeNull(); expect(screen.getByLabelText("Mã số thuế").getAttribute("aria-invalid")).toBe("true"); expect(repository.save).not.toHaveBeenCalled();
   });
-  it("previews only name/address, confirms once and sends editable business lines", async () => {
+  it("previews public contact data without tax data, confirms once and sends editable business lines", async () => {
     repository.save.mockResolvedValue({ status: "success", data: { ...cooperativeFixture(), fullName: "Tên nháp của tôi", rowVersion: "new" } }); render(<CooperativeApiEditor initial={cooperativeFixture()} />); edit();
     fireEvent.click(screen.getByRole("button", { name: "Thêm ngành nghề" })); fireEvent.change(screen.getByLabelText("Ngành nghề 2"), { target: { value: "  Chế biến hàu  " } });
-    const preview = screen.getByRole("region", { name: "Xem trước thông tin truy xuất" }); expect(preview.textContent).not.toContain(cooperativeFixture().phoneNumber); expect(preview.textContent).not.toContain(cooperativeFixture().taxCode);
+    const preview = screen.getByRole("region", { name: "Xem trước thông tin truy xuất" }); expect(preview.textContent).toContain(cooperativeFixture().phoneNumber); expect(preview.textContent).not.toContain(cooperativeFixture().taxCode);
     fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" })); expect(repository.save).not.toHaveBeenCalled(); fireEvent.click(await screen.findByRole("button", { name: "Xác nhận lưu" }));
     await screen.findByText("Đã lưu hồ sơ hợp tác xã."); expect(repository.save).toHaveBeenCalledTimes(1); expect(repository.save.mock.calls[0][0].businessLines).toEqual(["Nuôi hàu", "Chế biến hàu"]);
   });

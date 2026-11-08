@@ -1,0 +1,12 @@
+"use client";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Field, Select } from "@/features/operations/ui";
+import styles from "./cycles-screen.module.css";
+type Task={id:number;name:string;date:string;status:string;note:string};
+const initial:Task[]=["Chuẩn bị bè và giống","Thả giống","Chăm sóc và theo dõi nước","Thu hoạch"].map((name,index)=>({id:index,name,date:"",status:"planned",note:""}));
+export function CycleWorkPlanPreview(){
+ const [tasks,setTasks]=useState<Task[]>(initial);const [nextId,setNextId]=useState(4);
+ const update=(id:number,key:keyof Omit<Task,"id">,value:string)=>setTasks(rows=>rows.map(row=>row.id===id?{...row,[key]:value}:row));
+ return <details className={styles.workPlan}><summary>Kế hoạch công việc theo chu kỳ <span>Bản mẫu</span></summary><p className={styles.detailHint}>Mẫu thao tác để nhóm duyệt luồng. Công việc bên dưới chưa lưu vào hệ thống và sẽ mất khi đổi chu kỳ hoặc rời trang; không thay đổi dữ liệu nuôi thực tế.</p><div className={styles.sectionHeading}><h3>Lập việc → thực hiện → hoàn tất</h3><span>{tasks.filter(task=>task.status==="done").length}/{tasks.length} việc hoàn tất trong bản mẫu</span></div><div className={styles.workTasks}>{tasks.map((task,index)=><section key={task.id} className={styles.workTask}><div className={styles.sectionHeading}><strong>Công việc {index+1}</strong><button type="button" className={styles.textAction} onClick={()=>setTasks(rows=>rows.filter(row=>row.id!==task.id))}>Bỏ khỏi mẫu</button></div><div className={styles.workTaskFields}><Field label={`Nội dung công việc ${index+1}`} value={task.name} onChange={e=>update(task.id,"name",e.target.value)}/><Field label={`Ngày dự kiến việc ${index+1}`} type="date" value={task.date} onChange={e=>update(task.id,"date",e.target.value)}/><Select label={`Tiến độ việc ${index+1}`} value={task.status} onChange={e=>update(task.id,"status",e.target.value)}><option value="planned">Chưa thực hiện</option><option value="doing">Đang thực hiện</option><option value="done">Đã hoàn tất</option></Select></div><Field label={`Ghi chú thực hiện việc ${index+1}`} value={task.note} onChange={e=>update(task.id,"note",e.target.value)}/></section>)}</div><Button className="mt-4 w-auto" variant="secondary" onClick={()=>{setTasks(rows=>[...rows,{id:nextId,name:"",date:"",status:"planned",note:""}]);setNextId(value=>value+1);}}>Thêm công việc vào mẫu</Button></details>;
+}

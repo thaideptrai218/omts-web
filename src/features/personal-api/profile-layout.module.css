@@ -1,3 +1,4 @@
+.page { width:100%; max-width:1024px; margin-inline:auto; min-width:0; }
 .profile { display:grid; align-items:start; gap:20px; padding:20px; margin-top:16px; min-width:0; border:1px solid var(--omts-color-border); border-radius:10px; background:var(--omts-color-surface); }
 .edit { order:1; min-width:0; }
 .readOnly { order:2; min-width:0; padding:16px; background:var(--omts-color-surface-subtle); border-radius:6px; }

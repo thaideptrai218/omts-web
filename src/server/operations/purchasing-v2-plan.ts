@@ -7,9 +7,10 @@ export function purchasingV2Plan(area:OperationArea,method:string,query:URLSearc
  if(new Set(query.keys()).size!==query.size)return;
  const receipts=area==="purchase-receipts";
  if(method==="GET"){
-  const q=z.strictObject({action:z.enum(["list","detail","debts","debt","cancel-preview","rafts"]),id:z.guid().optional(),supplierId:z.guid().optional(),page:z.string().regex(/^[1-9]\d{0,6}$/).optional(),pageSize:z.enum(["10","20","50","100"]).optional(),from:z.iso.date().optional(),to:z.iso.date().optional(),code:z.string().optional(),statusId:z.string().regex(/^\d{3,4}$/).optional()}).safeParse(Object.fromEntries(query));if(!q.success)return;
-  const v=q.data,params=new URLSearchParams();for(const key of ["page","pageSize","from","to","code","statusId","supplierId"])if(query.has(key))params.set(key,query.get(key)!);
+  const q=z.strictObject({action:z.enum(["list","detail","debts","debt","cancel-preview","rafts","export"]),id:z.guid().optional(),supplierId:z.guid().optional(),raftId:z.guid().optional(),itemGroup:z.enum(["Seed","Material","Other"]).optional(),page:z.string().regex(/^[1-9]\d{0,6}$/).optional(),pageSize:z.enum(["10","20","50","100"]).optional(),from:z.iso.date().optional(),to:z.iso.date().optional(),code:z.string().optional(),statusId:z.string().regex(/^\d{3,4}$/).optional()}).safeParse(Object.fromEntries(query));if(!q.success||q.data.from&&q.data.to&&q.data.from>q.data.to)return;
+  const v=q.data,params=new URLSearchParams();for(const key of ["page","pageSize","from","to","code","statusId","supplierId","raftId","itemGroup"])if(query.has(key))params.set(key,query.get(key)!);
   const base={area,action:v.action,method:"GET" as const,permission:"View"};
+  if(receipts&&v.action==="export")return {...base,permission:"Export",path:`/api/purchase-receipts/export?${params}`,schema:z.strictObject({}),file:"export"};
   if(v.action==="list")return {...base,path:`/api/${receipts?"purchase-receipts":"supplier-payments"}?${params}`,schema:receipts?c.search:c.paymentPage};
   if(v.action==="detail"&&v.id)return {...base,path:`/api/${receipts?"purchase-receipts":"supplier-payments"}/${v.id}`,schema:receipts?c.receipt:c.payment,expectedId:v.id};
   if(receipts&&v.action==="rafts")return {...base,path:"/api/purchase-receipts/raft-lookup",schema:z.array(z.object({id:z.guid(),code:z.string(),zoneCode:z.string()}))};

@@ -14,20 +14,24 @@ const types = ["image/png", "image/jpeg", "image/webp"];
 export function cooperativeLogoPath(value: string | null) {
   return value && /^\/api\/public\/cooperative\/logos\/[0-9]{4}\/[0-9]{2}\/[a-f0-9]{32}\.(png|jpg|webp)$/.test(value) ? value : undefined;
 }
-async function logoUpload(request: Request) {
+export function cooperativeCoverPath(value: string | null) {
+  return value && /^\/api\/public\/cooperative\/cover-photos\/[0-9]{4}\/[0-9]{2}\/[a-f0-9]{32}\.(png|jpg|webp)$/.test(value) ? value : undefined;
+}
+async function logoUpload(request: Request, limit: number) {
   const contentType = request.headers.get("content-type") ?? "", length = request.headers.get("content-length");
-  if (!/^multipart\/form-data;\s*boundary=/i.test(contentType) || request.headers.has("content-encoding") || length !== null && (!/^\d{1,12}$/.test(length) || Number(length) > 3 * 1024 * 1024)) return undefined;
+  if (!/^multipart\/form-data;\s*boundary=/i.test(contentType) || request.headers.has("content-encoding") || length !== null && (!/^\d{1,12}$/.test(length) || Number(length) > (limit + 1024 * 1024))) return undefined;
   try {
-    const bytes = await readBoundedBytes(request.body, request.signal, 3 * 1024 * 1024, 20_000);
+    const bytes = await readBoundedBytes(request.body, request.signal, (limit + 1024 * 1024), 20_000);
     const form = await new Response(bytes as BodyInit, { headers: { "Content-Type": contentType } }).formData();
     const files = form.getAll("file");
     if ([...form.keys()].some((key) => key !== "file") || files.length !== 1) return undefined;
     const file = files[0];
-    if (typeof file === "string" || file.size === 0 || file.size > 2 * 1024 * 1024 || !types.includes(file.type)) return undefined;
+    if (typeof file === "string" || file.size === 0 || file.size > limit || !types.includes(file.type)) return undefined;
     const result = new FormData(); result.set("file", file, file.name); return result;
   } catch { return undefined; }
 }
-export async function handleCooperativeRequest(request: Request, logo = false): Promise<Response> {
+export async function handleCooperativeRequest(request: Request, logo: boolean | "cover-photo" = false): Promise<Response> {
+  const cover = logo === "cover-photo", limit = (cover ? 5 : 2) * 1024 * 1024;
   const gateway = getSessionGateway();
   if (gateway.mode !== "api") return json({ status: "disabled" }, 404);
   const backend = parseServerBackendConfig(process.env);
@@ -46,10 +50,10 @@ export async function handleCooperativeRequest(request: Request, logo = false): 
       if (method === "POST") {
         const checked = guard.guard.checkHeaders(request, "POST");
         if (checked.status !== "allowed") return json({ status: "rejected" }, checked.status === "rejected" ? checked.httpStatus : 503);
-        body = await logoUpload(request);
+        body = await logoUpload(request, limit);
         if (!body) return json({ status: "invalid-input", code: "MSG01" }, 400);
       } else {
-        const checked = await guard.guard.check(request, method === "PUT" ? { method: "PUT", body: "json", maxBytes: 16_384, timeoutMs: 5000 } : { method: "DELETE", body: "none", timeoutMs: 5000 });
+        const checked = await guard.guard.check(request, method === "PUT" ? { method: "PUT", body: "json", maxBytes: 65_536, timeoutMs: 5000 } : { method: "DELETE", body: "none", timeoutMs: 5000 });
         if (checked.status !== "allowed") return json({ status: "rejected" }, checked.status === "rejected" ? checked.httpStatus : 503);
         if (method === "PUT") {
           const values = cooperativeInputSchema.safeParse(checked.body.readForValidation());
@@ -59,30 +63,30 @@ export async function handleCooperativeRequest(request: Request, logo = false): 
       }
     }
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(Math.max(15_000, backend.config.timeoutMs))]);
-    const response = await fetch(new URL(`/api/cooperative/profile${logo && writing ? "/logo" : ""}`, backend.config.origin), { method: logo && !writing ? "GET" : method, body,
+    const response = await fetch(new URL(`/api/cooperative/profile${logo && writing ? cover ? "/cover-photo" : "/logo" : ""}`, backend.config.origin), { method: logo && !writing ? "GET" : method, body,
       cache: "no-store", credentials: "omit", redirect: "error", signal, headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(typeof body === "string" ? { "Content-Type": "application/json" } : {}) } });
     const result = await readBackendResponse(response, "profileRead");
     const current = await gateway.resolve(request.headers.get("cookie"));
     if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
     if (result.status === "http-error") return json({ status: "rejected", code: result.code }, result.httpStatus);
     if (result.status !== "success" || result.httpStatus !== 200) return json({ status: "unavailable" }, 503);
-    const raw = method === "PUT" && result.data && typeof result.data === "object" && "profile" in result.data ? result.data.profile : result.data;
+    const raw = (method === "PUT" || cover && writing) && result.data && typeof result.data === "object" && "profile" in result.data ? result.data.profile : result.data;
     const parsed = cooperativeWireSchema.safeParse(raw);
     if (!parsed.success) return json({ status: "invalid-response" }, 502);
-    const record = parsed.data, target = cooperativeLogoPath(record.logoUrl);
-    if (record.logoUrl && !target) return json({ status: "invalid-response" }, 502);
+    const record = parsed.data, logoTarget = cooperativeLogoPath(record.logoUrl), coverTarget = cooperativeCoverPath(record.coverPhotoUrl), target = cover ? coverTarget : logoTarget;
+    if (record.logoUrl && !logoTarget || record.coverPhotoUrl && !coverTarget) return json({ status: "invalid-response" }, 502);
     if (logo && !writing) {
       if (!target || params.has("version") && params.get("version") !== record.rowVersion) return json({ status: "not-found" }, 404);
       const file = await fetch(new URL(target, backend.config.origin), { cache: "no-store", credentials: "omit", redirect: "error", signal });
       const contentType = file.headers.get("content-type")?.split(";")[0];
       if (!file.ok || !types.includes(contentType ?? "")) return json({ status: "unavailable" }, 503);
-      const bytes = await readBoundedBytes(file.body, signal, 2 * 1024 * 1024, 15_000);
+      const bytes = await readBoundedBytes(file.body, signal, limit, 15_000);
       const after = await gateway.resolve(request.headers.get("cookie"));
       if (after.status !== "resolved" || !sameEmployeeSession(initial.session, after.session)) return json({ status: "session-expired" }, 401);
       if (signal.aborted || bytes.length === 0) return json({ status: "unavailable" }, 503);
       return new Response(bytes as BodyInit, { headers: { ...headers, "Content-Type": contentType!, "Content-Security-Policy": "sandbox; default-src 'none'" } });
     }
     if (signal.aborted) return json({ status: "unavailable" }, 503);
-    return json({ status: "success", data: { ...record, logoUrl: target ? `/api/cooperative/profile/logo?version=${encodeURIComponent(record.rowVersion)}` : null } });
+    return json({ status: "success", data: { ...record, logoUrl: logoTarget ? `/api/cooperative/profile/logo?version=${encodeURIComponent(record.rowVersion)}` : null, coverPhotoUrl: coverTarget ? `/api/cooperative/profile/cover-photo?version=${encodeURIComponent(record.rowVersion)}` : null, publicPreview: record.publicPreview ? { ...record.publicPreview, logoUrl: logoTarget ? `/api/cooperative/profile/logo?version=${encodeURIComponent(record.rowVersion)}` : null, coverPhotoUrl: coverTarget ? `/api/cooperative/profile/cover-photo?version=${encodeURIComponent(record.rowVersion)}` : null } : undefined } });
   } catch { return json({ status: "unavailable" }, 503); }
 }

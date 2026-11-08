@@ -11,7 +11,7 @@ export function ApiLoginForm() {
   const [reset, setReset] = useState(false);
   const [pending, setPending] = useState(false);
   return <section className="login-panel">
-    <p className="login-eyebrow">HỢP TÁC XÃ NUÔI TRỒNG THỦY SẢN TRUNG NAM</p>
+    <p className="login-eyebrow">CHÀO MỪNG TRỞ LẠI</p>
     <h1 className="login-title">Đăng nhập hệ thống</h1>
     <p className="login-description">Đăng nhập để quản lý hoạt động nuôi hàu, mua bán và thông tin truy xuất nguồn gốc.</p>
     <LoginForm formError={error} onSubmit={async (values) => {
@@ -31,7 +31,7 @@ export function ApiLoginForm() {
       }
       return result.status === "waited";
     }} />
-    <div className="mt-5 flex flex-wrap gap-4 text-sm font-semibold text-primary"><Link href="/recover">Quên mật khẩu</Link><Link href="/register">Đăng ký thương lái</Link></div>
+    <div className="login-links mt-5 flex flex-wrap gap-4 text-sm font-semibold text-primary"><Link href="/recover">Quên mật khẩu</Link><Link href="/register">Đăng ký thương lái</Link></div>
     {reset && <div className="mt-4 grid gap-3">
       <Button variant="secondary" onClick={() => window.location.reload()}>Kiểm tra lại phiên</Button>
       <Button variant="secondary" isPending={pending} onClick={async () => {

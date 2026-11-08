@@ -153,3 +153,7 @@ html[data-omts-scroll-locked] body {
     transform: translateY(0) scale(1);
   }
 }
+
+/* The shared password field provides a text-only reveal control. Hide Edge's duplicate eye. */
+input[data-password-field]::-ms-reveal,
+input[data-password-field]::-ms-clear { display:none; }

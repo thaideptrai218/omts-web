@@ -205,7 +205,7 @@ describe("desktop sidebar layout", () => {
     });
     expect(within(sidebar).getByRole("link", { name: "Bè nuôi" })).toBeTruthy();
     expect(
-      within(sidebar).queryByRole("link", { name: "Nhân viên ngoài giờ" }),
+      within(sidebar).queryByRole("link", { name: "Nhân viên thời vụ" }),
     ).toBeNull();
     expect(
       within(sidebar).queryByRole("link", {

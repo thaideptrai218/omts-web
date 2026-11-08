@@ -19,7 +19,7 @@ async function LoginContent() {
       aria-labelledby="login-title"
       className="login-panel"
     >
-      <p className="login-eyebrow">HỢP TÁC XÃ NUÔI TRỒNG THỦY SẢN TRUNG NAM</p>
+      <p className="login-eyebrow">CHÀO MỪNG TRỞ LẠI</p>
       <h1 id="login-title" className="login-title">
         Đăng nhập hệ thống
       </h1>

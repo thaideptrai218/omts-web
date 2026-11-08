@@ -5,6 +5,8 @@ import type { BrowserIdentityDto } from "@/server/backend/browser-dto";
 import { logoutWithApi } from "@/features/auth/api/api-auth-client";
 import { resources, resourceKeys, resourceAllowed } from "./resources";
 import { operationModules, operationAllowed } from "@/features/operations/permissions";
+import { customerDebtAllowed } from "@/features/customer-debts-api/access";
+import { OwnerOverview } from "./owner-overview";
 import { InboxBell } from "@/features/inbox-api/inbox-bell";
 import { NavigationGroup } from "@/components/layout/navigation-group";
 import { usePathname } from "next/navigation";
@@ -13,6 +15,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { InterfaceIcon, type InterfaceIconName } from "@/components/ui/interface-icon";
 import { ManagementHeading } from "@/components/ui/management-page";
 import styles from "@/components/layout/app-shell.module.css";
+import topStyles from "@/components/layout/top-shell.module.css";
 import type { ResourceKey } from "./resources";
 import type { OperationArea } from "@/features/operations/permissions";
 import { workspaceRoleLabel } from "@/shared/presentation/actor-label";
@@ -66,16 +69,16 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
         {context.identity.subjectType === "CooperativeOwner" && link("/audit", "Nhật ký thao tác", "search")}
         {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/certifications", "Chứng nhận HTX", "document")}
         {(context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "SUPPLIER_PAYMENTS" && p.action === "View")) && link("/operations/supplier-debts", "Đối chiếu công nợ", "payment")}
-        {!financeWorkspace && (context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_CYCLES" && p.action === "View")) && link("/farming/cycles", "Chu kỳ nuôi", "raft")}
+        {customerDebtAllowed(context.identity, context.permissions.functionPermissions) && link("/operations/customer-debts", "Công nợ khách hàng", "payment")}
         {context.identity.subjectType === "CooperativeOwner" && link("/trader-requests", "Yêu cầu đăng ký thương lái", "request")}
       </div></NavigationGroup>
       {workspaceGroups.map((group) => {
         if (financeWorkspace && group.label === "Nuôi trồng") return null;
         const rows = visible.filter((key) => group.resources.includes(key));
-        const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions));
+        const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).sort((a, b) => group.operations.indexOf(a.key) - group.operations.indexOf(b.key));
         return rows.length || modules.length ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
-          {modules.map((entry) => link(`/operations/${entry.key}`, entry.title, operationIcons[entry.key]))}
+          {modules.map((entry) => link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]))}
         </div></NavigationGroup> : null;
       })}
       <NavigationGroup label="Tài khoản" compact={compact}><div className={styles.navigationItems}>
@@ -94,6 +97,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       else { setError("Chưa thể đăng xuất. Kiểm tra kết nối rồi thử lại."); setPending(false); }
     }}>
       {error && <p role="alert" className="mb-4 rounded-control border border-danger/30 bg-surface p-4 text-danger">{error}</p>}
+      {!financeWorkspace && (pathname.startsWith("/farming/cycles") || ["cultivation-cycles","seeding","material-usages","harvest","water"].some(key => pathname.startsWith(`/operations/${key}`))) && <nav className={topStyles.contextNav} aria-label="Các bước nuôi trồng">{([...operationModules].sort((a,b) => ["cultivation-cycles","seeding","material-usages","harvest","water"].indexOf(a.key) - ["cultivation-cycles","seeding","material-usages","harvest","water"].indexOf(b.key))).filter(entry => ["cultivation-cycles","seeding","material-usages","harvest","water"].includes(entry.key) && operationAllowed(entry.key,context.identity,context.permissions.functionPermissions)).map(entry => {const href=entry.key==="cultivation-cycles"?"/farming/cycles":`/operations/${entry.key}`;return <Link key={entry.key} href={href} aria-current={active(href)?"page":undefined}>{entry.title}</Link>;})}</nav>}
       {children}
     </AppShell>
   </WorkspaceContext.Provider>;
@@ -102,11 +106,12 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
 export function ApiWorkspaceHome() {
   const context = useApiWorkspace();
   if (context.identity.subjectType === "SystemAdministrator") return <section><ManagementHeading title="Quản trị hệ thống" description="Quản lý truy cập của các tài khoản trên hệ thống." icon="roles" /><Link href="/system/accounts" className="mt-6 flex items-center justify-between rounded-card border border-border bg-surface p-5 font-semibold hover:border-primary">Tài khoản và nhật ký quản trị<span aria-hidden="true">→</span></Link></section>;
+  if (context.identity.subjectType === "CooperativeOwner") return <OwnerOverview />;
   const visible = resourceKeys.filter((key) => resourceAllowed(key, context.identity, context.permissions.functionPermissions));
   return <section><ManagementHeading title="Tổng quan hoạt động" description="Chọn công việc trong phạm vi được cấp." icon="dashboard" />
     <div className="mt-7 grid gap-6 xl:grid-cols-2"><section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Danh mục quản lý</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{visible.map((key) => <a key={key} href={`/workspace/${key}`}
       className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{resources[key].title}<span aria-hidden="true">↗</span></a>)}</div></section>
-    <section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Công việc</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={`/operations/${entry.key}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{entry.title}<span aria-hidden="true">↗</span></a>)}</div></section></div>
+    <section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Công việc</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{entry.title}<span aria-hidden="true">↗</span></a>)}</div></section></div>
     {!visible.length && !operationModules.some((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)) && <p className="mt-6 rounded-card border border-border bg-surface p-6">Tài khoản hiện chưa được cấp chức năng nghiệp vụ. Bạn có thể xem hồ sơ cá nhân.</p>}
   </section>;
 }

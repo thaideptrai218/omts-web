@@ -1,6 +1,13 @@
 "use client";
+import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { useMemo, useState } from "react";
 import { z } from "zod";
+import { FilterChecks } from "@/components/ui/filter-checks";
+import { readSelectionPages } from "./selection-pages";
+import { FilterWorkspace } from "@/components/ui/filter-workspace";
+import { DataGrid } from "@/components/ui/data-grid";
+import { StatusPill } from "@/components/ui/management-page";
+import styles from "@/features/sales-api/sales-workspace.module.css";
 import { Button } from "@/components/ui/button";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { createOperationsRepository } from "./repository";
@@ -31,14 +38,20 @@ export function PurchaseRequestsScreen() {
   const [status, setStatus] = useState(""), [page, setPage] = useState(1), [selected, setSelected] = useState<c.PurchaseRequest>();
   const [creating, setCreating] = useState(false);
   const query = useMemo(() => ({ status, page: String(page), pageSize: "20" }), [status, page]);
-  const rows = useRemote(useMemo(() => (signal: AbortSignal) => requests.read(mine ? "mine" : "list", query, c.purchaseRequestPageSchema, signal), [mine, query]));
+  const rows = useRemote(useMemo(() => (signal: AbortSignal) => readSelectionPages((params,signal)=>requests.read(mine ? "mine" : "list",params,c.purchaseRequestPageSchema,signal),{page:query.page,pageSize:query.pageSize},{status},signal), [mine, query, status]));
   const mutation = useMutation();
   async function open(id: string) { const found = await mutation.run(() => requests.read(mine ? "mine-detail" : "detail", { id }, c.purchaseRequestSchema), true); if (found) setSelected(found); }
   return <section><OperationHeading title={mine ? "Yêu cầu mua của tôi" : "Yêu cầu mua hàu"} description="Theo dõi số lồng, ngày nhận dự kiến và phản hồi theo từng yêu cầu." icon="document">
     {mine && <Button className="w-auto" onClick={() => setCreating(true)}>Gửi yêu cầu mua</Button>}</OperationHeading>
-    <div className="max-w-md"><FilterPanel columns="two"><Select label="Trạng thái yêu cầu" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}><option value="">Tất cả</option>{c.requestStatusSchema.options.map((value) => <option key={value} value={value}>{requestStatusLabel(value)}</option>)}</Select></FilterPanel></div>
-    <Button className="mt-4 w-auto" variant="secondary" disabled={rows.loading || mutation.pending} onClick={rows.reload}>Tải lại yêu cầu mua</Button><ErrorNotice error={rows.error || mutation.error} />
-    {rows.loading ? <Skeleton /> : rows.data && <><DataTable headings={["Mã", "Thương lái", "Sản phẩm", "Số lồng yêu cầu", "Ngày nhận dự kiến", "Trạng thái", "Chi tiết"]} empty={!rows.data.items.length}>{rows.data.items.map((row) => <tr key={row.id}><td>{row.code}</td><td>{row.customerName}</td><td>{row.productName}</td><td>{row.requestedCages}</td><td>{row.requestedPickupDate}</td><td>{requestStatusLabel(row.status)}</td><td><button className="text-primary underline" disabled={mutation.pending} onClick={() => void open(row.id)}>Mở yêu cầu</button></td></tr>)}</DataTable><Paging page={page} total={rows.data.total} disabled={mutation.pending} onChange={setPage} /></>}
+    <FilterWorkspace label="Lọc yêu cầu mua" reset={<button type="button" className={styles.reset} disabled={!status} onClick={() => { setStatus(""); setPage(1); }}>Đặt lại</button>} filters={<FilterChecks label="Trạng thái yêu cầu" value={status} options={c.requestStatusSchema.options.map(value=>[value,requestStatusLabel(value)] as const)} onChange={value=>{setStatus(value);setPage(1);}}/>}>
+
+      <div className={styles.results}><div className={styles.toolbar}><div><h2>{status === "-" ? "Chưa chọn trạng thái" : status ? "Yêu cầu theo trạng thái đã chọn" : "Tất cả yêu cầu mua"}</h2><p>{rows.loading ? "Đang tải…" : rows.data ? `${rows.data.total} yêu cầu · ${rows.data.pageSize} dòng/trang` : "Chưa tải được dữ liệu"}</p></div><Button className="w-auto" variant="secondary" disabled={rows.loading || mutation.pending} onClick={rows.reload}>Tải lại yêu cầu mua</Button></div><ErrorNotice error={rows.error || mutation.error} />
+      {rows.loading ? <Skeleton /> : rows.data && <><DataGrid responsive headings={["Yêu cầu / thương lái", "Sản phẩm", "Số lồng", "Ngày nhận dự kiến", "Trạng thái", "Phản hồi của HTX", "Chi tiết"]} empty={!rows.data.items.length}>{rows.data.items.map((row) => <OpenableTableRow key={row.id} disabled={mutation.pending} onOpen={()=>void open(row.id)}>
+        <td data-label="Yêu cầu / thương lái"><span className={styles.code}>{row.code}</span><small className={styles.meta}>{row.customerName}</small></td><td data-label="Sản phẩm" className={styles.name}>{row.productName}</td><td data-label="Số lồng" className={styles.number}>{row.requestedCages.toLocaleString("vi-VN")}</td><td data-label="Ngày nhận dự kiến" className={styles.date}>{row.requestedPickupDate.split("-").reverse().join("/")}</td><td data-label="Trạng thái"><StatusPill tone={row.status === "ACCEPTED" ? "success" : "neutral"}>{requestStatusLabel(row.status)}</StatusPill></td>
+        <td data-label="Phản hồi của HTX" className={styles.response}>{row.acceptedCages !== null && <strong>{row.acceptedCages.toLocaleString("vi-VN")} lồng{row.acceptedPickupDate ? ` · ${row.acceptedPickupDate.split("-").reverse().join("/")}` : ""}</strong>}<span>{row.status === "CANCELLED" ? row.cancellationReason || "—" : row.responseNote || (row.acceptedCages !== null ? row.allowPayLater ? "Cho trả sau" : "Không trả sau" : "Chưa có phản hồi")}</span></td>
+        <td data-label="Chi tiết"><button className={styles.open} disabled={mutation.pending} onClick={() => void open(row.id)}>Mở yêu cầu</button></td></OpenableTableRow>)}</DataGrid><div className={styles.requestPaging}><Paging page={rows.data.page} pageSize={rows.data.pageSize} total={rows.data.total} disabled={mutation.pending || rows.loading} onChange={setPage} /></div></>}
+      </div>
+    </FilterWorkspace>
     {creating && <CreatePurchaseRequest onClose={() => setCreating(false)} onSaved={() => { setCreating(false); rows.reload(); }} />}
     {selected && <PurchaseRequestDetails key={`${selected.id}:${selected.rowVersion}`} record={selected} onClose={() => setSelected(undefined)} onSaved={(saved) => { setSelected(saved); rows.reload(); }} />}
   </section>;

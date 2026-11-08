@@ -1,0 +1,4 @@
+.row:not([data-disabled]) { cursor:pointer; }
+.row:not([data-disabled]):hover,.row:focus-within { background:var(--omts-color-primary-soft)!important; }
+.row[data-disabled] { cursor:wait; }
+@media(prefers-reduced-motion:no-preference) { .row { transition:background-color 140ms ease; } }

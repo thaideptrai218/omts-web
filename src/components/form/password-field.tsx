@@ -16,6 +16,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
     return (
       <FormField
         {...props}
+        data-password-field="true"
         endAdornment={
           <button
             aria-controls={props.id}

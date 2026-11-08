@@ -66,7 +66,7 @@ describe("tester workflow safeguards", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
-    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(value);
+    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(label === "Ngày trả *" ? value.split("-").reverse().join("/") : value);
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
@@ -85,7 +85,7 @@ describe("tester workflow safeguards", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
-    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(value);
+    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(label === "Ngày trả *" ? value.split("-").reverse().join("/") : value);
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());

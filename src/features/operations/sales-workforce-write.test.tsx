@@ -37,7 +37,7 @@ describe("approved sales/workforce writes and draft safety", () => {
     expect(screen.queryByText("Nhân viên An")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Xóa bộ lọc phân công" }));
     expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
-    expect((screen.getByLabelText("Ngày làm việc") as HTMLInputElement).value).toBe(businessToday());
+    expect((screen.getByLabelText("Ngày làm việc") as HTMLInputElement).value).toBe(businessToday().split("-").reverse().join("/"));
     expect(mocks.write).not.toHaveBeenCalled();
   });
   it("does not send a cage request until confirmation and cancels a late confirmation on unmount", async () => {

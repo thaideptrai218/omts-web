@@ -1,4 +1,4 @@
-import { OysterMark } from "./oyster-mark";
+import Image from "next/image";
 
 type BrandMarkProps = {
   autoReveal?: boolean;
@@ -9,12 +9,12 @@ type BrandMarkProps = {
 
 const toneStyles = {
   default: {
-    icon: "bg-[#10243a] text-[#a7e0dc] shadow-[0_5px_14px_rgb(16_36_58_/_0.18)]",
+    icon: "border border-border bg-white",
     name: "text-text",
     tagline: "text-text-muted",
   },
   inverse: {
-    icon: "border border-white/20 bg-white/10 text-[#a7e0dc]",
+    icon: "border border-white/20 bg-white",
     name: "text-white",
     tagline: "text-sky-50",
   },
@@ -34,7 +34,7 @@ export function BrandMark({
         aria-hidden="true"
         className={`grid ${compact ? "size-8 rounded-lg" : "size-11 rounded-[.7rem]"} shrink-0 place-items-center ${styles.icon}`}
       >
-        <OysterMark className={compact ? "size-6" : "size-8"} />
+        <Image src="/brand/trung-nam-oyster.webp" alt="" width={450} height={450} sizes={compact ? "32px" : "44px"} className="size-full rounded-[inherit] object-contain p-0.5" />
       </span>
 
       <span

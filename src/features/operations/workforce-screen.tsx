@@ -1,4 +1,10 @@
 "use client";
+import styles from "./workforce-screen.module.css";
+import { FilterChecks } from "@/components/ui/filter-checks";
+import { matchesSelection } from "@/shared/presentation/filter-selection";
+import { FilterWorkspace } from "@/components/ui/filter-workspace";
+import { ManagementHeading } from "@/components/ui/management-page";
+import { formatVietnameseDate } from "@/shared/format/date-only";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import Link from "next/link";
@@ -9,46 +15,51 @@ import { createOperationsRepository } from "./repository";
 import { loadOptions } from "./lookups";
 import { operationAllowed } from "./permissions";
 import * as c from "./new-module-contracts";
-import { DataTable, ErrorNotice, Field, Note, Select, businessToday, displayTime, useRemote, Skeleton } from "./ui";
+import { DataTable, ErrorNotice, Field, Note, Select, businessToday, displayTime, useRemote, Skeleton, Paging } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
-import { WorkforceEmpty, WorkforceFilterSection, WorkforceFormSection, WorkforceHero, WorkforceListSection } from "./workforce-layout";
+import { WorkforceEmpty, WorkforceFormSection } from "./workforce-layout";
 
 const repository = createOperationsRepository("workforce");
 type Assignment = z.infer<typeof c.assignmentSchema>;
+const attendanceState=(row:Assignment)=>row.checkedOutAt?(row.checkedInAt?"finished":"missing"):(row.checkedInAt?"working":"planned");
+const attendanceLabel={planned:"Chưa vào làm",working:"Đang làm",finished:"Đã ra về",missing:"Thiếu lượt vào"};
 export function WorkforceScreen() {
   const context = useApiWorkspace(), [day, setDay] = useState(businessToday), [form, setForm] = useState<"assign" | "crew" | "job" | "settings" | "leaves">(), [notice, setNotice] = useState<string>();
   const [zoneId, setZoneId] = useState(""), [search, setSearch] = useState("");
   const zones = useRemote(useMemo(() => (signal: AbortSignal) => loadOptions("zones", signal), []));
   const rows = useRemote(useMemo(() => (signal: AbortSignal) => day ? repository.read("list", { day }, z.array(c.assignmentSchema), signal) : Promise.resolve({ status: "success" as const, data: [] }), [day]));
+  const [tab,setTab]=useState<"assignments"|"attendance">("assignments"),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(20),[status,setStatus]=useState("");
   const term = search.trim().toLocaleLowerCase("vi-VN");
-  const filteredRows = rows.data?.filter((row) => (!zoneId || row.zoneId === zoneId) && (!term || [row.employeeName, row.raftCode ?? "", row.job].some((value) => value.toLocaleLowerCase("vi-VN").includes(term))));
+  const scopedRows = rows.data?.filter((row) => (!zoneId || row.zoneId === zoneId) && (!term || [row.employeeName, row.raftCode ?? "", row.job].some((value) => value.toLocaleLowerCase("vi-VN").includes(term))));
+  const filteredRows=scopedRows?.filter(row=>matchesSelection(status,attendanceState(row)));
+  const currentPage=Math.min(page,Math.max(1,Math.ceil((filteredRows?.length??0)/pageSize)));
+  const visibleRows=filteredRows?.slice((currentPage-1)*pageSize,currentPage*pageSize);
   const zoneName = (id: string) => String(zones.data?.find((zone) => zone.id === id)?.name ?? id);
   const editor = useOperationEditor(() => {}, false);
   const allowed = (action: string, zoneId?: string) => operationAllowed("workforce", context.identity, context.permissions.functionPermissions, action, zoneId);
   async function act(row: Assignment, action: "remove" | "check-in" | "check-out") {
-    const result = await editor.submit(action === "remove" ? `Gỡ phân công của ${row.employeeName} ngày ${row.date}?` : `Ghi ${action === "check-in" ? "vào làm" : "ra về"} cho ${row.employeeName} lúc hiện tại${action === "check-out" && !row.checkedInAt ? "; chưa có lượt vào làm, ngày công sẽ thiếu lượt" : ""}?`,
+    const result = await editor.submit(action === "remove" ? `Gỡ phân công của ${row.employeeName} ngày ${formatVietnameseDate(row.date)}?` : `Ghi ${action === "check-in" ? "vào làm" : "ra về"} cho ${row.employeeName} lúc hiện tại${action === "check-out" && !row.checkedInAt ? "; chưa có lượt vào làm, ngày công sẽ thiếu lượt" : ""}?`,
       () => repository.write<unknown>(action, action === "remove" ? {} : { qrCode: null }, action === "remove" ? z.object({ done: z.literal(true) }) : c.assignmentSchema, row.id, row.zoneId));
     if (result) { setNotice("Đã ghi nhận thao tác."); rows.reload(); }
   }
-  return <section>{editor.dialog}
-    <WorkforceHero day={day} total={filteredRows?.length ?? 0} awaiting={filteredRows?.filter((row) => !row.checkedInAt && !row.checkedOutAt).length ?? 0} completed={filteredRows?.filter((row) => !!row.checkedOutAt).length ?? 0} loading={rows.loading || !!rows.error} actions={allowed("Create") && <Button className="w-auto" disabled={editor.disabled} onClick={() => setForm("assign")}>Tạo phân công</Button>} />
-    <div className="mt-4 flex flex-wrap gap-2">
-    {allowed("Edit") && <Button className="w-auto" disabled={editor.disabled} onClick={() => setForm("crew")}>Đổi việc trong ngày</Button>}
-    {operationAllowed("job-types", context.identity, context.permissions.functionPermissions) && <Link href="/operations/job-types" className="inline-flex min-h-10 items-center rounded-control border border-border px-3 text-sm font-medium">Loại công việc và đơn giá</Link>}
-    {context.identity.subjectType === "CooperativeOwner" && <>{(["settings", "leaves"] as const).map((key) => <Button key={key} className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => setForm(key)}>{key === "settings" ? "Thiết lập chấm công" : "Duyệt nghỉ phép"}</Button>)}</>}
-    </div><WorkforceFilterSection><Field label="Ngày làm việc" type="date" required value={day} onChange={(e) => setDay(e.target.value)} />
-      <Select label="Vùng làm việc" value={zoneId} onChange={(e) => setZoneId(e.target.value)}><option value="">Tất cả vùng được cấp</option>{[...new Set([...(zones.data?.filter((zone) => operationAllowed("workforce", context.identity, context.permissions.functionPermissions, "View", zone.id)).map((zone) => zone.id) ?? []), ...(rows.data?.map((row) => row.zoneId) ?? [])])].map((id) => <option key={id} value={id}>{zoneName(id)}</option>)}</Select>
-      <Field label="Tìm nhân viên, bè hoặc công việc" type="search" value={search} onChange={(e) => setSearch(e.target.value)} />
-    </WorkforceFilterSection>
-    {(zoneId || search) && <Button className="mt-3 w-auto" variant="secondary" onClick={() => { setZoneId(""); setSearch(""); }}>Xóa bộ lọc phân công</Button>}
-    <ErrorNotice error={zones.error} />{zones.error && <Button className="mt-3 w-auto" variant="secondary" onClick={zones.reload}>Tải lại danh mục vùng</Button>}
-    <Button className="mt-4 w-auto" variant="secondary" disabled={rows.loading || !day || editor.pending} onClick={rows.reload}>Tải lại phân công</Button><ErrorNotice error={rows.error || editor.mutation.error} />{notice && <p role="status" className="mt-3">{notice}</p>}
-    {editor.mutation.blocked && <p className="mt-3">Chưa thể gửi tiếp. Hãy đối chiếu phân công và chấm công hiện tại trước khi lập lượt mới; tải lại không tự gửi lại thao tác.</p>}
-    {!rows.loading && filteredRows && <p className="sr-only" role="status">{filteredRows.length} phân công · {new Set(filteredRows.map((row) => row.employeeId)).size} nhân viên{rows.data && filteredRows.length !== rows.data.length ? ` (trong ${rows.data.length} phân công của ngày)` : ""}</p>}
-    <WorkforceListSection count={filteredRows?.length}>{rows.loading ? <Skeleton /> : filteredRows && (filteredRows.length ? <DataTable responsive headings={["Nhân viên", "Vùng", "Bè", "Công việc", "Ngày", "Vào làm", "Ra về", "Thao tác"]}>{filteredRows.map((row) => <tr key={row.id}><td data-label="Nhân viên">{row.employeeName}</td><td data-label="Vùng">{zoneName(row.zoneId)}</td><td data-label="Bè" className="whitespace-nowrap">{row.raftCode || "—"}</td><td data-label="Công việc">{row.job}</td><td data-label="Ngày" className="whitespace-nowrap tabular-nums">{row.date}</td><td data-label="Vào làm">{row.checkedInAt ? displayTime(row.checkedInAt) : "Chưa ghi nhận"}</td><td data-label="Ra về">{row.checkedOutAt ? displayTime(row.checkedOutAt) : "Chưa ghi nhận"}</td><td data-label="Thao tác"><div className="flex flex-wrap gap-2">
-      {row.date >= businessToday() && !row.checkedInAt && !row.checkedOutAt && allowed("Delete", row.zoneId) && <Button className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => void act(row, "remove")}>Gỡ phân công</Button>}
-      {row.date === businessToday() && allowed("AttendanceCreate", row.zoneId) && <>{!row.checkedInAt && !row.checkedOutAt && row.jobTypeId && row.raftId && <Button className="w-auto" disabled={editor.disabled} onClick={() => void act(row, "check-in")}>Vào làm</Button>}{!row.checkedOutAt && <Button className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => void act(row, "check-out")}>Ra về</Button>}</>}
-    </div></td></tr>)}</DataTable> : <WorkforceEmpty filtered={!!zoneId || !!search} />)}</WorkforceListSection>
+  return <section className={styles.page}>{editor.dialog}
+    <ManagementHeading title="Phân công và chấm công" description="Lập lịch theo ngày, theo dõi nhân viên và các lượt vào/ra trong vùng được cấp." icon="attendance">{allowed("Create")&&<Button className="w-auto" disabled={editor.disabled} onClick={()=>setForm("assign")}>Tạo phân công</Button>}</ManagementHeading>
+    <div className={styles.tools}>{allowed("Edit")&&<Button variant="secondary" disabled={editor.disabled} onClick={()=>setForm("crew")}>Đổi việc trong ngày</Button>}{operationAllowed("job-types",context.identity,context.permissions.functionPermissions)&&<Link href="/operations/job-types">Loại công việc & đơn giá →</Link>}{context.identity.subjectType==="CooperativeOwner"&&<>{(["settings","leaves"] as const).map(key=><Button key={key} variant="secondary" disabled={editor.disabled} onClick={()=>setForm(key)}>{key==="settings"?"Thiết lập chấm công":"Duyệt nghỉ phép"}</Button>)}</>}</div>
+    <FilterWorkspace label="Lịch và phạm vi" filters={<><Field label="Ngày làm việc" type="date" required value={day} onChange={e=>{setDay(e.target.value);setPage(1);}}/><Select label="Vùng làm việc" value={zoneId} onChange={e=>{setZoneId(e.target.value);setPage(1);}}><option value="">Tất cả vùng được cấp</option>{[...new Set([...(zones.data?.filter(zone=>operationAllowed("workforce",context.identity,context.permissions.functionPermissions,"View",zone.id)).map(zone=>zone.id)??[]),...(rows.data?.map(row=>row.zoneId)??[])])].map(id=><option key={id} value={id}>{zoneName(id)}</option>)}</Select><FilterChecks label="Trạng thái chấm công" value={status} options={Object.entries(attendanceLabel)} onChange={value=>{setStatus(value);setPage(1);}}/></>} reset={<button className={styles.textAction} type="button" onClick={()=>{setZoneId("");setSearch("");setStatus("");setPage(1);}}>Đặt lại</button>}>
+    <div className="mb-5 max-w-xl"><Field label="Tìm nhân viên, bè hoặc công việc" type="search" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/></div>
+    <ErrorNotice error={zones.error||rows.error||editor.mutation.error}/>{zones.error&&<Button variant="secondary" onClick={zones.reload}>Tải lại danh mục vùng</Button>}{notice&&<p role="status" className={styles.notice}>{notice}</p>}{editor.mutation.blocked&&<p className={styles.blocked}>Chưa thể gửi tiếp. Đối chiếu phân công và chấm công trước khi lập lượt mới; tải lại không tự gửi lại thao tác.</p>}
+    <div className={styles.dayHeading}><div><span>LỊCH LÀM VIỆC</span><h2>{day?formatVietnameseDate(day):"Chọn ngày làm việc"}</h2><p>{zoneId?zoneName(zoneId):"Tất cả vùng được cấp"}</p></div><Button variant="secondary" disabled={rows.loading||!day||editor.pending} onClick={rows.reload}>Tải lại phân công</Button></div>
+    <dl className={styles.summary} aria-busy={rows.loading||!!rows.error}>{[["Phân công",scopedRows?.length],["Nhân viên",scopedRows?new Set(scopedRows.map(row=>row.employeeId)).size:undefined],["Đang làm",scopedRows?.filter(row=>attendanceState(row)==="working").length],["Thiếu lượt vào",scopedRows?.filter(row=>attendanceState(row)==="missing").length]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{rows.loading||rows.error?"—":value??0}</dd></div>)}</dl>
+    <div className={styles.tabs} role="group" aria-label="Cách xem lịch làm việc"><button type="button" aria-pressed={tab==="assignments"} onClick={()=>setTab("assignments")}>Phân công</button><button type="button" aria-pressed={tab==="attendance"} onClick={()=>setTab("attendance")}>Chấm công</button><span>{filteredRows?.length??0} phân công phù hợp</span></div>
+    {rows.loading?<Skeleton/>:filteredRows&&(filteredRows.length?<DataTable responsive headings={tab==="assignments"?["Nhân viên","Vùng / bè","Công việc","Trạng thái","Thao tác"]:["Nhân viên","Vùng / bè","Vào làm","Ra về","Trạng thái","Thao tác"]}>{visibleRows?.map(row=>{
+      const canRemove=row.date>=businessToday()&&!row.checkedInAt&&!row.checkedOutAt&&allowed("Delete",row.zoneId);
+      const canAttend=row.date===businessToday()&&allowed("AttendanceCreate",row.zoneId);
+      const canCheckIn=canAttend&&!row.checkedInAt&&!row.checkedOutAt&&!!row.jobTypeId&&!!row.raftId;
+      const canCheckOut=canAttend&&!row.checkedOutAt;
+      return <tr key={row.id}><td data-label="Nhân viên"><strong>{row.employeeName}</strong>{tab==="attendance"&&<span className={styles.secondary}>{row.job}</span>}</td><td data-label="Vùng / bè">{zoneName(row.zoneId)}<span className={styles.secondary}>Bè {row.raftCode||"chưa xác định"}</span></td>{tab==="assignments"?<td data-label="Công việc">{row.job}</td>:<><td data-label="Vào làm" className="whitespace-nowrap tabular-nums">{row.checkedInAt?displayTime(row.checkedInAt):"Chưa ghi nhận"}</td><td data-label="Ra về" className="whitespace-nowrap tabular-nums">{row.checkedOutAt?displayTime(row.checkedOutAt):"Chưa ghi nhận"}</td></>}<td data-label="Trạng thái"><span className={styles.status} data-state={attendanceState(row)}>{attendanceLabel[attendanceState(row)]}</span></td><td data-label="Thao tác">{canRemove||canCheckIn||canCheckOut?<details className={styles.rowActions}><summary>Thao tác</summary><div>{tab==="assignments"&&<p>Vào: {row.checkedInAt?displayTime(row.checkedInAt):"Chưa ghi"}<br/>Ra: {row.checkedOutAt?displayTime(row.checkedOutAt):"Chưa ghi"}</p>}{canCheckIn&&<Button disabled={editor.disabled} onClick={()=>void act(row,"check-in")}>Vào làm</Button>}{canCheckOut&&<Button variant="secondary" disabled={editor.disabled} onClick={()=>void act(row,"check-out")}>Ra về</Button>}{canRemove&&<Button variant="secondary" disabled={editor.disabled} onClick={()=>void act(row,"remove")}>Gỡ phân công</Button>}</div></details>:<span className={styles.secondary}>Chỉ xem</span>}</td></tr>;
+    })}</DataTable>:<WorkforceEmpty filtered={!!zoneId||!!search||!!status}/>)}
+    {filteredRows&&<div className={styles.paging}><Select label="Số phân công mỗi trang" value={String(pageSize)} onChange={e=>{setPageSize(Number(e.target.value));setPage(1);}}>{[10,20,50].map(size=><option key={size} value={size}>{size} phân công</option>)}</Select><Paging page={currentPage} total={filteredRows.length} pageSize={pageSize} disabled={rows.loading||editor.pending} onChange={setPage}/></div>}
+    </FilterWorkspace>
     {(form === "assign" || form === "crew") && <AssignmentEditor mode={form} initialDay={day || businessToday()} onClose={() => setForm(undefined)} onSaved={() => { setForm(undefined); rows.reload(); setNotice("Đã lưu phân công."); }} />}
     {(form === "job" || form === "settings") && <WorkforceSetup mode={form} onClose={() => setForm(undefined)} />}
     {form === "leaves" && <OwnerLeaves onClose={() => setForm(undefined)} />}
@@ -108,9 +119,11 @@ function WorkforceSetup({ mode, onClose }: { mode: "job" | "settings"; onClose()
 
 function OwnerLeaves({ onClose }: { onClose(): void }) {
   const rows = useRemote(useMemo(() => (signal: AbortSignal) => repository.read("leaves", {}, z.array(c.leaveSchema), signal), []));
-  const [selected, setSelected] = useState<z.infer<typeof c.leaveSchema>>();
+  const [selected, setSelected] = useState<z.infer<typeof c.leaveSchema>>(),[page,setPage]=useState(1);
+  const currentPage=Math.min(page,Math.max(1,Math.ceil((rows.data?.length??0)/10)));
   return <Dialog open size="lg" title="Duyệt nghỉ phép" onOpenChange={(open) => { if (!open) onClose(); }}><ErrorNotice error={rows.error} /><Button variant="secondary" disabled={rows.loading} onClick={rows.reload}>Tải lại yêu cầu nghỉ</Button>
-    {rows.loading ? <Skeleton /> : rows.data && <DataTable headings={["Nhân viên", "Từ", "Đến", "Lý do", "Trạng thái", "Phản hồi", "Thao tác"]} empty={!rows.data.length}>{rows.data.map((r) => <tr key={r.id}><td>{r.employeeName}</td><td>{r.from}</td><td>{r.to}</td><td>{r.reason}</td><td>{r.cancelledAt ? "Đã hủy" : r.approved === null ? "Chờ duyệt" : r.approved ? "Đã duyệt" : "Từ chối"}</td><td>{r.response || "—"}</td><td>{r.approved === null && !r.cancelledAt && <button className="text-primary underline" onClick={() => setSelected(r)}>Phản hồi nghỉ phép</button>}</td></tr>)}</DataTable>}
+    {rows.loading ? <Skeleton /> : rows.data && <DataTable headings={["Nhân viên", "Từ", "Đến", "Lý do", "Trạng thái", "Phản hồi", "Thao tác"]} empty={!rows.data.length}>{rows.data.slice((currentPage-1)*10,currentPage*10).map((r) => <tr key={r.id}><td>{r.employeeName}</td><td>{formatVietnameseDate(r.from)}</td><td>{formatVietnameseDate(r.to)}</td><td>{r.reason}</td><td>{r.cancelledAt ? "Đã hủy" : r.approved === null ? "Chờ duyệt" : r.approved ? "Đã duyệt" : "Từ chối"}</td><td>{r.response || "—"}</td><td>{r.approved === null && !r.cancelledAt && <button className="text-primary underline" onClick={() => setSelected(r)}>Phản hồi nghỉ phép</button>}</td></tr>)}</DataTable>}
+    {rows.data&&<div className={styles.paging}><Paging page={currentPage} total={rows.data.length} pageSize={10} disabled={rows.loading} onChange={setPage}/></div>}
     {selected && <ReviewLeave key={selected.id} record={selected} onClose={() => setSelected(undefined)} onSaved={() => { setSelected(undefined); rows.reload(); }} />}<Button className="mt-4" variant="secondary" onClick={onClose}>Đóng</Button>
   </Dialog>;
 }

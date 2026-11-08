@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), subjectType: "Trader" }));
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mocks.read }) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType }, permissions: { functionPermissions: [] } }) }));
@@ -17,13 +17,13 @@ describe("new API read screens", () => {
   it("uses only the Trader's own request feed and preserves status when manually reloading", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: { items: [], page: 1, pageSize: 20, total: 0 } });
     render(<PurchaseRequestsScreen />); await screen.findByText("Không có dữ liệu phù hợp.");
-    fireEvent.change(screen.getByLabelText("Trạng thái yêu cầu"), { target: { value: "ACCEPTED" } });
+    const status = within(screen.getByRole("group",{name:"Trạng thái yêu cầu"})); fireEvent.click(status.getByRole("checkbox",{name:"Tất cả"})); fireEvent.click(status.getByRole("checkbox",{name:"Đã chấp nhận"}));
     await waitFor(() => expect(mocks.read.mock.calls.at(-1)?.[1]).toMatchObject({ status: "ACCEPTED", page: "1" }));
     await waitFor(() => expect((screen.getByRole("button", { name: "Tải lại yêu cầu mua" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "Tải lại yêu cầu mua" }));
     await waitFor(() => expect(mocks.read).toHaveBeenCalledTimes(3));
     expect(mocks.read.mock.calls.every((args) => args[0] === "mine")).toBe(true);
-    expect((screen.getByLabelText("Trạng thái yêu cầu") as HTMLSelectElement).value).toBe("ACCEPTED");
+    expect((status.getByRole("checkbox",{name:"Đã chấp nhận"}) as HTMLInputElement).checked).toBe(true);
   });
   it("offers all products only to Owner and renders product content as text", async () => {
     mocks.subjectType = "CooperativeOwner";
@@ -47,15 +47,15 @@ describe("new API read screens", () => {
       responseNote: "Đã đối chiếu", respondedAt: "2026-10-31T02:00:00+07:00", cancelledAt: null, cancellationReason: null, createdAt: "2026-10-31T01:00:00+07:00", customerName: "QA trader", rowVersion: "opaque" };
     mocks.read.mockImplementation(async (action) => ({ status: "success", data: action === "mine-detail" ? record : { items: [record], page: 1, pageSize: 20, total: 1 } }));
     render(<PurchaseRequestsScreen />); fireEvent.click(await screen.findByRole("button", { name: "Mở yêu cầu" }));
-    await screen.findByRole("dialog", { name: "Yêu cầu YC-QA" });
+    const details = await screen.findByRole("dialog", { name: "Yêu cầu YC-QA" });
     expect(mocks.read.mock.calls.at(-1)?.slice(0, 2)).toEqual(["mine-detail", { id: ids.receipt }]);
-    expect(screen.getByText("Đã đối chiếu")).toBeTruthy(); expect(screen.getByText("3")).toBeTruthy();
+    expect(within(details).getByText("Đã đối chiếu")).toBeTruthy(); expect(within(details).getByText("3")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
   it("requires a selected workforce day and renders absent attendance truthfully", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: [{ id: ids.receipt, employeeId: ids.item, employeeName: "QA nhân viên", zoneId: ids.zone, raftId: null, raftCode: null, jobTypeId: null, job: "Chăm sóc", date: "2026-10-31", checkedInAt: null, checkedOutAt: null }] });
-    render(<WorkforceScreen />); await screen.findByText("QA nhân viên"); expect(screen.getAllByText("Chưa ghi nhận")).toHaveLength(2);
+    render(<WorkforceScreen />); await screen.findByText("QA nhân viên"); fireEvent.click(screen.getByRole("button",{name:"Chấm công"})); expect(screen.getAllByText("Chưa ghi nhận")).toHaveLength(2);
     fireEvent.change(screen.getByLabelText("Ngày làm việc"), { target: { value: "" } });
     await waitFor(() => expect((screen.getByRole("button", { name: "Tải lại phân công" }) as HTMLButtonElement).disabled).toBe(true));
     expect(mocks.read).toHaveBeenCalledTimes(1);
