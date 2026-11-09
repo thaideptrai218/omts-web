@@ -1,28 +1,29 @@
 import { z } from "zod";
+import { ownerResponseSchema } from "@/features/trader-purchases/contracts";
+
+/** Trạng thái yêu cầu mua (StatusIds.PurchaseRequest): bộ lọc `statusId` của GET /api/purchase-requests. "Hoàn thành" chỉ là cờ `fulfilled`, không có mã riêng. */
+export const REQUEST_STATUS_FILTERS = ["3201", "3202", "3203", "3204"] as const;
+export const requestStatusFilterSchema = z.enum(REQUEST_STATUS_FILTERS);
+const customerSchema = z.object({ id: z.guid(), name: z.string(), phoneNumber: z.string().nullable(), currentDebt: z.number() });
+export const requestSendingSchema = z.object({ channel: z.string(), phoneNumber: z.string().nullable(), deliveryStatusId: z.number().int().nullable(), deliveryStatus: z.string().nullable(), deliveryStatusAt: z.iso.datetime({ offset: true }).nullable() });
+/** PurchaseRequestView của backend (kg, không có lồng/nhân lực). */
+export const purchaseRequestSchema = z.object({ id: z.guid(), customer: customerSchema, productId: z.guid(), productName: z.string(), requestedKg: z.number(), pickupDate: z.iso.date(), note: z.string().nullable(),
+  sentAt: z.iso.datetime({ offset: true }), statusId: z.number().int(), status: z.string(), fulfilled: z.boolean(), response: ownerResponseSchema.nullable(), cancelReason: z.string().nullable(),
+  cancelledAt: z.iso.datetime({ offset: true }).nullable(), sendings: z.array(requestSendingSchema), rowVersion: z.string() });
+export const purchaseRequestPageSchema = z.object({ items: z.array(purchaseRequestSchema), page: z.number().int().positive(), pageSize: z.number().int().positive(), total: z.number().int().nonnegative() });
+const requestText = z.string().max(1000);
+const acceptedKg = z.number().positive().max(999_999_999_999_999).refine((v) => Math.abs(v * 1000 - Math.round(v * 1000)) < 1e-6);
+/** POST /api/purchase-requests/{id}/accept (AcceptPurchaseRequest): chỉ Chủ HTX. */
+export const acceptRequestSchema = z.strictObject({ acceptedKg, pickupDate: z.iso.date(), payLaterAgreed: z.boolean(), note: requestText.nullable(), rowVersion: z.string().min(1) });
+/** POST /api/purchase-requests/{id}/decline (DeclinePurchaseRequest): lý do bắt buộc. */
+export const declineRequestSchema = z.strictObject({ note: requestText.refine((v) => v.trim().length > 0), rowVersion: z.string().min(1) });
 
 export const salesProductSchema = z.object({ id: z.guid(), code: z.string(), name: z.string(), description: z.string().nullable(), inUse: z.boolean(), availableForPurchase: z.boolean(), rowVersion: z.string() });
-export const requestStatusSchema = z.enum(["AWAITING_RESPONSE", "AWAITING_STAFF", "ACCEPTED", "DECLINED", "CANCELLED"]);
-export const purchaseStaffingSchema = z.object({ cages: z.number().int().positive(), workDate: z.iso.date(), pickupDate: z.iso.date(), cagesPerEmployeePerDay: z.number().int().positive(),
-  requiredEmployees: z.number().int().positive(), invitedEmployees: z.number().int().nonnegative(), approvedEmployees: z.number().int().nonnegative(), declinedEmployees: z.number().int().nonnegative(), pendingEmployees: z.number().int().nonnegative(), hasEnoughStaff: z.boolean(), note: z.string().nullable() });
-export const shiftInvitationSchema = z.object({ id: z.guid(), employeeId: z.guid(), employeeName: z.string(), approved: z.boolean().nullable(), reason: z.string().nullable(), respondedAt: z.iso.datetime({ offset: true }).nullable() });
-export const staffingEmployeeSchema = z.object({ id: z.guid(), name: z.string(), available: z.boolean(), unavailableReason: z.string().nullable() });
-export const myPurchaseShiftSchema = z.object({ id: z.guid(), purchaseRequestId: z.guid(), requestCode: z.string(), productName: z.string(), cages: z.number().int().positive(), workDate: z.iso.date(), pickupDate: z.iso.date(), requiredEmployees: z.number().int().positive(), approvedEmployees: z.number().int().nonnegative(), approved: z.boolean().nullable(), reason: z.string().nullable(), note: z.string().nullable(), requestStatus: requestStatusSchema, canRespond: z.boolean(), rowVersion: z.string().min(1) });
-export const planStaffingSchema = z.strictObject({ cages: z.number().int().positive().max(2147483647), workDate: z.iso.date(), pickupDate: z.iso.date(), cagesPerEmployeePerDay: z.number().int().positive().max(2147483647), employeeIds: z.array(z.guid()).min(1).max(100).refine((v) => new Set(v).size === v.length), note: z.string().max(500).nullable(), rowVersion: z.string().min(1) }).refine((v) => v.pickupDate >= v.workDate);
-export const respondShiftSchema = z.strictObject({ approved: z.boolean(), reason: z.string().max(500).nullable(), rowVersion: z.string().min(1) }).refine((v) => v.approved || !!v.reason?.trim());
-export const purchaseRequestSchema = z.object({ id: z.guid(), code: z.string(), productId: z.guid(), productName: z.string(), quantityUnit: z.literal("Cage"),
-  requestedCages: z.number().int().positive(), requestedPickupDate: z.iso.date(), note: z.string().nullable(), status: requestStatusSchema,
-  acceptedCages: z.number().int().positive().nullable(), acceptedPickupDate: z.iso.date().nullable(), allowPayLater: z.boolean(), responseNote: z.string().nullable(),
-  respondedAt: z.iso.datetime({ offset: true }).nullable(), cancelledAt: z.iso.datetime({ offset: true }).nullable(), cancellationReason: z.string().nullable(),
-  createdAt: z.iso.datetime({ offset: true }), customerName: z.string(), rowVersion: z.string(), staffing: purchaseStaffingSchema.nullable().optional() });
-export const purchaseRequestPageSchema = z.object({ items: z.array(purchaseRequestSchema), page: z.number().int().positive(), pageSize: z.number().int().positive(), total: z.number().int().nonnegative() });
+
 export const assignmentSchema = z.object({ id: z.guid(), employeeId: z.guid(), employeeName: z.string(), zoneId: z.guid(), raftId: z.guid().nullable(), raftCode: z.string().nullable(),
   jobTypeId: z.guid().nullable(), job: z.string(), date: z.iso.date(), checkedInAt: z.iso.datetime({ offset: true }).nullable(), checkedOutAt: z.iso.datetime({ offset: true }).nullable() });
 export type PurchaseRequest = z.infer<typeof purchaseRequestSchema>;
 export const saveProductSchema = z.strictObject({ code: z.string().trim().min(1).max(50), name: z.string().trim().min(1).max(200), description: z.string().max(2000).nullable(), inUse: z.boolean(), rowVersion: z.string().min(1).nullable() });
-export const createRequestSchema = z.strictObject({ productId: z.guid(), requestedCages: z.number().int().positive().max(2147483647), pickupDate: z.iso.date(), note: z.string().max(500).nullable(), clientOperationId: z.uuid() });
-export const respondRequestSchema = z.strictObject({ accept: z.boolean(), acceptedCages: z.number().int().positive().max(2147483647).nullable(), pickupDate: z.iso.date().nullable(), allowPayLater: z.boolean(), note: z.string().max(500).nullable(), rowVersion: z.string().min(1) })
-  .refine((v) => v.accept ? v.acceptedCages !== null && v.pickupDate !== null : !!v.note?.trim());
-export const cancelRequestSchema = z.strictObject({ reason: z.string().max(500).nullable(), rowVersion: z.string().min(1) });
 export const leaveSchema = z.object({ id: z.guid(), employeeName: z.string(), from: z.iso.date(), to: z.iso.date(), reason: z.string(), approved: z.boolean().nullable(), response: z.string().nullable(), rowVersion: z.string(), cancelledAt: z.iso.datetime({ offset: true }).nullable() });
 const periodSchema = z.object({ jobTypeId: z.guid(), job: z.string(), raft: z.string().nullable(), startsAt: z.iso.datetime({ offset: true }), endsAt: z.iso.datetime({ offset: true }), minutes: z.number() });
 const attendanceDaySchema = z.object({ date: z.iso.date(), checkedInAt: z.iso.datetime({ offset: true }).nullable(), checkedOutAt: z.iso.datetime({ offset: true }).nullable(), periods: z.array(periodSchema), jobs: z.array(z.object({ jobTypeId: z.guid(), job: z.string(), hours: z.number() })), complete: z.boolean() });

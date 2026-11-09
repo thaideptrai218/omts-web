@@ -1,0 +1,36 @@
+/* Khung dùng chung cho các màn khiếu nại / trả hàng / hóa đơn bán: thẻ, bảng trống, ô tổng hợp, nhóm lọc, tab. Chỉ dùng token màu chung. */
+.card { background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); padding: 1.25rem; box-shadow: var(--omts-shadow-card); min-width: 0; }
+.cardTitle { font-size: 1rem; font-weight: 700; margin: 0 0 .875rem; }
+.muted { color: var(--omts-color-text-muted); font-size: .8125rem; }
+.hint { color: var(--omts-color-text-muted); font-size: .8125rem; margin: .625rem 0 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .75rem; margin: 1rem 0; }
+.stats > div { padding: .75rem; background: var(--omts-color-surface-subtle); border-radius: var(--omts-radius-control); }
+.stats dt { font-size: .75rem; color: var(--omts-color-text-muted); }
+.stats dd { margin: .125rem 0 0; font-size: 1.0625rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tableWrap { overflow-x: auto; margin-top: .5rem; }
+.table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.table th { text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--omts-color-text-muted); padding: .625rem .75rem; border-bottom: 1px solid var(--omts-color-border-strong); white-space: nowrap; }
+.table th.num { text-align: right; }
+.table td { padding: .75rem; border-bottom: 1px solid var(--omts-color-border); font-variant-numeric: tabular-nums; }
+.table td.num { text-align: right; }
+.empty { color: var(--omts-color-text-muted); text-align: center; padding: 2rem .75rem !important; }
+.group { border: 0; margin: 0; padding: 0; min-width: 0; }
+.group legend { font-size: .75rem; font-weight: 600; color: var(--omts-color-text); padding: 0; margin-bottom: .375rem; }
+.option { display: flex; align-items: center; gap: .5rem; min-height: 2.25rem; font-size: .875rem; }
+.option input { width: 1.0625rem; height: 1.0625rem; accent-color: var(--omts-color-primary); }
+.tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 1px solid var(--omts-color-border); margin-bottom: 1rem; }
+.tabs button { min-height: 2.75rem; padding: 0 1.125rem; font-weight: 600; color: var(--omts-color-text-muted); border-bottom: 3px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; }
+.tabs button[aria-selected="true"] { color: var(--omts-color-primary); border-bottom-color: var(--omts-color-primary); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem 0; }
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); gap: .75rem; }
+.photo { min-height: 5.5rem; display: grid; place-items: center; border: 1px dashed var(--omts-color-border-strong); border-radius: var(--omts-radius-control); background: var(--omts-color-surface-subtle); color: var(--omts-color-text-muted); font-size: .8125rem; }
+.twoCol { display: grid; gap: 1.25rem; align-items: start; margin-top: 1.25rem; }
+.stack { display: grid; gap: 1.25rem; min-width: 0; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .75rem 1.25rem; margin: 0 0 1rem; }
+.kv dt { font-size: .75rem; color: var(--omts-color-text-muted); }
+.kv dd { margin: .125rem 0 0; font-weight: 600; }
+.footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; margin-top: 1.25rem; }
+.form { display: grid; gap: .875rem; }
+@media (min-width: 1024px) { .twoCol { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (min-width: 1024px) { .twoCol.asideRight { grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .tabs button { transition: none; } }

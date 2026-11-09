@@ -30,14 +30,15 @@ const operationIcons: Record<OperationArea, InterfaceIconName> = {
   seeding: "product", "material-usages": "material", harvest: "work",
   "cultivation-cycles": "raft",
   "purchase-receipts": "receipt", "supplier-payments": "payment", water: "water",
-  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "payroll-settings": "settings", "purchase-requests": "request", workforce: "attendance", "my-work": "work",
+  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "payroll-settings": "settings", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "purchase-requests": "request", workforce: "attendance", "my-work": "work",
 };
 
 const workspaceGroups = [
   { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["cultivation-cycles", "seeding", "material-usages", "harvest", "harvest-yield", "lot-tracing", "water"] },
   { label: "Vật tư & mua hàng", resources: ["input-items", "suppliers"], operations: ["purchase-receipts", "supplier-payments"] },
-  { label: "Nhân sự & phân quyền", resources: ["employees", "accounts", "roles"], operations: ["workforce", "job-types", "payroll-settings", "my-work"] },
-  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoices", "customer-payments", "sales-products", "purchase-requests"] },
+  { label: "Nhân sự & phân quyền", resources: ["employees", "accounts", "roles"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "payroll-settings", "my-work"] },
+  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoices", "sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "customer-payments", "sales-products", "purchase-requests"] },
+  { label: "Báo cáo", resources: [], operations: ["sales-report", "price-trend-report", "after-sales-report"] },
 ];
 
 type Context = Readonly<{ identity: BrowserIdentityDto; permissions: PermissionProjection }>;

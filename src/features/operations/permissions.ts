@@ -1,5 +1,5 @@
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
-export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "payroll-settings", "purchase-requests", "workforce", "my-work"] as const;
+export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "payroll-settings", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "purchase-requests", "workforce", "my-work"] as const;
 export type OperationArea = typeof operationAreas[number];
 export const operationModules: readonly { key: OperationArea; title: string; functionCode: string }[] = [
   { key: "job-types", title: "Loại công việc và đơn giá", functionCode: "PAY_RULES" },
@@ -16,6 +16,15 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "lot-tracing", title: "Truy xuất lô hàng", functionCode: "LOT_TRACING" },
   { key: "harvest-yield", title: "Sản lượng nuôi", functionCode: "HARVEST_LOTS" },
   { key: "payroll-settings", title: "Thiết lập kỳ lương", functionCode: "" },
+  { key: "claim-reports", title: "Báo vấn đề chất lượng", functionCode: "QUALITY_CLAIMS" },
+  { key: "quality-claims", title: "Khiếu nại chất lượng", functionCode: "QUALITY_CLAIMS" },
+  { key: "sales-returns", title: "Phiếu trả hàng bán", functionCode: "SALES_RETURNS" },
+  { key: "sales-invoice-list", title: "Hóa đơn bán", functionCode: "SALES_INVOICES" },
+  { key: "payroll", title: "Bảng lương", functionCode: "PAYROLL" },
+  { key: "payroll-payments", title: "Thanh toán lương", functionCode: "PAYROLL" },
+  { key: "sales-report", title: "Hiệu quả bán hàng", functionCode: "SALES_REPORTS" },
+  { key: "price-trend-report", title: "Xu hướng giá", functionCode: "SALES_REPORTS" },
+  { key: "after-sales-report", title: "Vấn đề sau bán", functionCode: "SALES_REPORTS" },
   { key: "purchase-requests", title: "Yêu cầu mua hàu", functionCode: "PURCHASE_REQUESTS" },
   { key: "workforce", title: "Phân công và chấm công", functionCode: "WORK_ASSIGNMENTS" },
   { key: "my-work", title: "Công việc và nghỉ phép", functionCode: "" },
@@ -24,6 +33,8 @@ export function operationAllowed(area: OperationArea, identity: { subjectType: s
   if (area === "my-work") return identity.subjectType === "Staff";
   // Thiết lập kỳ lương: backend chỉ cho Chủ hợp tác xã (không có chức năng phân quyền cho nhân viên).
   if (area === "payroll-settings") return identity.subjectType === "CooperativeOwner";
+  // Báo vấn đề chất lượng là việc của thương lái (và Chủ HTX theo dõi).
+  if (area === "claim-reports") return identity.subjectType === "Trader" || identity.subjectType === "CooperativeOwner";
   // Thanh toán của khách là chức năng toàn HTX (không theo vùng): Chủ HTX hoặc nhân viên có quyền CUSTOMER_PAYMENTS đúng hành động.
   if (area === "customer-payments") return identity.subjectType === "CooperativeOwner" || identity.subjectType === "Staff" && permissions.some((p) => p.functionCode === "CUSTOMER_PAYMENTS" && p.action === action && (p.scope.kind === "all-zones" || p.scope.zoneIds.length > 0));
   if (area === "sales-products") return identity.subjectType === "CooperativeOwner" || action === "View" && (identity.subjectType === "Trader" || identity.subjectType === "Staff" && permissions.some(p => p.functionCode === "SALES_INVOICES" && p.action === "Create"));
