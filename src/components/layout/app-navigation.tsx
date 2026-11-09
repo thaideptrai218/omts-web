@@ -15,6 +15,7 @@ import { NavigationGroup } from "./navigation-group";
 
 type NavigationItem = Readonly<{
   href: string;
+  description?: string;
   icon: InterfaceIconName;
   label: string;
   requiredPermission: EffectivePermissionKey;
@@ -69,7 +70,7 @@ export const navigationGroups: readonly Readonly<{
     ],
   },
   {
-    label: "Nhân sự & phân quyền",
+    label: "Nhân sự",
     items: [
       {
         href: "/operations/workforce",
@@ -83,16 +84,30 @@ export const navigationGroups: readonly Readonly<{
         label: "Nhân viên thời vụ",
         requiredPermission: "cooperative.employees.manage",
       },
+    ],
+  },
+];
+
+/** Configuration and administration destinations, opened from the header settings menu instead of the tab bar. */
+export const settingsGroups: readonly Readonly<{
+  label: string;
+  items: readonly NavigationItem[];
+}>[] = [
+  {
+    label: "Phân quyền",
+    items: [
       {
         href: "/access/accounts",
         icon: "id-card",
         label: "Tài khoản nhân viên nội bộ",
+        description: "Tài khoản nội bộ, trạng thái truy cập và vai trò được phân công theo vùng.",
         requiredPermission: "access.accounts.manage",
       },
       {
         href: "/access/roles",
         icon: "roles",
         label: "Vai trò & quyền",
+        description: "Đối chiếu vai trò và quyền hiện hành của hệ thống.",
         requiredPermission: "access.roles.manage",
       },
     ],
@@ -104,6 +119,7 @@ export const navigationGroups: readonly Readonly<{
         href: "/cooperative/profile",
         icon: "cooperative",
         label: "Hồ sơ hợp tác xã",
+        description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã.",
         requiredPermission: "cooperative.profile.manage",
       },
     ],
@@ -115,11 +131,26 @@ export const navigationGroups: readonly Readonly<{
         href: "/system/cooperatives/new",
         icon: "settings",
         label: "Khởi tạo hợp tác xã",
+        description: "Xác minh hồ sơ và cấp tài khoản cho Chủ nhiệm hợp tác xã đầu tiên.",
         requiredPermission: "platform.cooperative.provision",
       },
     ],
   },
 ];
+
+export function permittedGroups(
+  groups: typeof navigationGroups,
+  access?: EffectiveAccess,
+) {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        hasEffectivePermission(access, item.requiredPermission),
+      ),
+    }))
+    .filter((group) => group.items.length);
+}
 
 export function AppNavigation({
   access,
@@ -131,14 +162,7 @@ export function AppNavigation({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const groups = navigationGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) =>
-        hasEffectivePermission(access, item.requiredPermission),
-      ),
-    }))
-    .filter((group) => group.items.length);
+  const groups = permittedGroups(navigationGroups, access);
   if (!groups.length)
     return (
       <p className={styles.emptyNavigation}>

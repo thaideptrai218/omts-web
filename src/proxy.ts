@@ -78,7 +78,7 @@ export const config = {
   matcher: [
     "/api/:path*",
     {
-      source: "/(dashboard|access|account|audit|cooperative|employees|farming|notifications|operations|system|trader-requests|workspace|onboarding)/:path*",
+      source: "/(dashboard|access|account|audit|cooperative|employees|farming|notifications|operations|settings|system|trader-requests|workspace|onboarding)/:path*",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

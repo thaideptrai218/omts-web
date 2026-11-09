@@ -1,0 +1,22 @@
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; max-width: 240px; padding: 0 10px; border: 1px solid #dce3ed; border-radius: 16px; background: #fff; color: #3d526a; font-size: 13px; font-weight: 500; }
+.chip svg { flex-shrink: 0; width: 16px; height: 16px; color: #305eb1; }
+.button { cursor: pointer; }
+.button:hover, .button[aria-expanded="true"] { background: #edf3fc; border-color: #b9cdee; color: #2858a5; }
+.button:focus-visible, .retry:focus-visible { outline: 2px solid #8db4ff; outline-offset: 2px; }
+.retry { cursor: pointer; color: #9a3412; border-color: #f0c9a8; }
+.retry svg { color: #9a3412; }
+.label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.caret { color: #738297 !important; }
+div.panel { width: min(280px, calc(100vw - 24px)); padding: 8px; }
+.options { margin: 0; padding: 0; border: 0; min-width: 0; }
+.options legend { padding: 6px 8px 8px; color: #738297; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.option { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 5px; font-size: 13px; color: #182f47; cursor: pointer; }
+.option:hover { background: #edf3fc; }
+.option:first-of-type { border-bottom: 1px solid #e8edf4; border-radius: 5px 5px 0 0; margin-bottom: 4px; }
+.option input { flex-shrink: 0; width: 16px; height: 16px; accent-color: #305eb1; }
+.option input:disabled { cursor: not-allowed; }
+.option span { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 540px) {
+  .chip { max-width: 140px; }
+  div.panel { position: fixed; top: auto; left: 12px; right: 12px; width: auto; }
+}
