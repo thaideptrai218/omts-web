@@ -5,11 +5,13 @@ import { z } from "zod";
  * kèm cờ có tên trong `confirmationField`. Chỉ cho qua tên trường nằm trong danh sách cho phép và các con số;
  * câu chữ hiển thị do web tự dựng (không chuyển chuỗi lạ từ backend ra giao diện).
  */
-const fieldPattern = /^(lines\[\d{1,3}\]\.priceDecidedByOwner|discountDecidedByOwner|payment\.payLaterOwnerAgreed|payment\.subtractExtraFromDebt|wantsQrCode|confirmAboveDebt|confirmDuplicateBankReference)$/;
+const fieldPattern = /^(lines\[\d{1,3}\]\.priceDecidedByOwner|discountDecidedByOwner|payment\.payLaterOwnerAgreed|payment\.subtractExtraFromDebt|wantsQrCode|confirmAboveDebt|confirmDuplicateBankReference|confirmOwedBack|customerId|cashGivenBack)$/;
+// Sửa / hủy hóa đơn (SALE-07, SALE-08) thêm confirmOwedBack (MSG-SALE-17), customerId (MSG-SALE-19) và cashGivenBack (MSG-SALE-23, kèm paymentId):
+// các tên này thuộc nhánh backend chưa gộp feature/OMTS-224-correct-cancel.
 const amount = z.number().finite().nonnegative().optional();
 const details = {
   lineNumber: z.number().int().positive().optional(), laterAmount: amount, debtAmount: amount, excessAmount: amount, subtractAmount: amount, changeAmount: amount,
-  amount, owedBackAmount: amount, paymentCode: z.string().regex(/^[A-Za-z0-9-]{1,40}$/).optional(), paymentDate: z.iso.date().optional(),
+  amount, owedBackAmount: amount, paymentCode: z.string().regex(/^[A-Za-z0-9-]{1,40}$/).optional(), paymentDate: z.iso.date().optional(), paymentId: z.guid().optional(),
 };
 
 export const invoiceConfirmationSchema = z.object({ field: z.string().regex(fieldPattern), ...details });

@@ -4,7 +4,7 @@
   --pearl: #f4f1ea; --sand: #e8b04a; --ink: #10243a; --ink-soft: #46596a; --line: #d9d4c6; --card: #fff;
   --amber-ink: #7a4300; --amber-soft: #fff4dc; --amber-line: #e2b25a; --danger-ink: #8f1f33; --danger-soft: #fdecef;
   min-height: 100vh; display: flex; flex-direction: column; background: var(--pearl); color: var(--ink); line-height: 1.6;
-  font-family: var(--font-origin), var(--font-geist-sans), system-ui, sans-serif; -webkit-text-size-adjust: 100%;
+  font-family: var(--font-origin), var(--font-app-sans), system-ui, sans-serif; -webkit-text-size-adjust: 100%;
 }
 .wrap { width: min(100% - 2rem, 62rem); margin-inline: auto; }
 .skip { position: absolute; left: 1rem; top: -4rem; z-index: 100; background: #fff; color: var(--ink); padding: .75rem 1rem; border-radius: .5rem; }

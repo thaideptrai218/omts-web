@@ -152,7 +152,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
       } else if (plan.noContent && upstream.status === 204) data = { done: true };
       else if (plan.action === "stop-editing" && upstream.status === 204) data = { stopped: true };
       else {
-        const result = await readBackendResponse(upstream, "profileRead", false, area.data === "sales-invoices" || area.data === "customer-payments");
+        const result = await readBackendResponse(upstream, "profileRead", false, ["sales-invoices", "customer-payments", "sales-invoice-list"].includes(area.data));
         if (result.status === "http-error") return json({ status: "rejected", code: result.code, ...(result.invoiceConfirmation ? { invoiceConfirmation: result.invoiceConfirmation } : {}) }, result.httpStatus);
         if (result.status !== "success" || ![200, 201, 202].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
         const parsed = plan.schema.safeParse(result.data);

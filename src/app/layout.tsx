@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
 import { BootScreen } from "@/components/feedback/boot-screen";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { AuthProvider } from "@/features/auth/state/auth-provider";
@@ -8,9 +8,12 @@ import { Suspense, type ReactNode } from "react";
 import { connection } from "next/server";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Phông có bộ dấu tiếng Việt đầy đủ cho toàn ứng dụng (Geist không có tập con tiếng Việt nên chữ có dấu bị ghép từ phông hệ thống).
+const appSans = Be_Vietnam_Pro({
+  variable: "--font-app-sans",
+  subsets: ["vietnamese", "latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -32,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="vi"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${appSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <ToastProvider>

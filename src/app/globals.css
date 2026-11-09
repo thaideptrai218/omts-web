@@ -68,7 +68,7 @@
   --color-warning-soft: var(--omts-color-warning-soft);
   --color-danger: var(--omts-color-danger);
   --color-focus-ring: var(--omts-color-focus-ring);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-app-sans);
   --font-mono: var(--font-geist-mono);
   --radius-control: var(--omts-radius-control);
   --radius-card: var(--omts-radius-card);
@@ -85,7 +85,7 @@ html {
 body {
   background: var(--omts-color-canvas);
   color: var(--omts-color-text);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-app-sans), system-ui, Arial, Helvetica, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
 }
