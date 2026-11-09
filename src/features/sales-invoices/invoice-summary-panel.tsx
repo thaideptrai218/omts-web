@@ -16,7 +16,7 @@ type Props = { draft: Draft; sums: Totals; problem?: string; error?: string; sav
 /** Cột phải (dính khi cuộn): khách hàng, yêu cầu mua, tổng tiền, thanh toán và nút lập hóa đơn. */
 export function InvoiceSummaryPanel({ draft, sums, problem, error, saving, savingMode, canVietQr, onChange, onSubmit }: Props) {
   return (
-    <aside className={s.summary} aria-label="Tổng tiền và thanh toán">
+    <aside id="invoice-summary" className={s.summary} aria-label="Tổng tiền và thanh toán">
       <section className={s.card}>
         <h2 className={s.h2}>Khách hàng</h2>
         <div className={s.seg} role="group" aria-label="Loại khách">

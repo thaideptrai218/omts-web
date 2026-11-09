@@ -1,43 +1,55 @@
 "use client";
-// FRAME ONLY: no data source yet. Wire to the trader quality-claim endpoints (load the trader's invoice, submit claim with description + photos) once available.
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Note, OperationHeading } from "@/features/operations/ui";
-import { FrameCard, FrameTable, KeyValues } from "./frame-kit";
-import s from "./frame-kit.module.css";
+import { useCallback, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { z } from "zod";
+import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { OperationHeading, useRemote } from "@/features/operations/ui";
+import { CLAIM_STATUS, claimsPage } from "./claim-contracts";
+import { reportRepository } from "./claim-repositories";
+import { ClaimReportForm } from "./claim-report-form";
+import { MyClaimsList, MY_CLAIMS_PAGE_SIZE } from "./my-claims-list";
+import s from "./claims.module.css";
 
-const LINE_HEADINGS = ["Sản phẩm", "Lô thu hoạch", "kg", "Đơn giá", "Thành tiền"] as const;
-const PHOTO_SLOTS = ["Ảnh 1", "Ảnh 2"] as const;
+const heading = <OperationHeading title="Báo vấn đề chất lượng" description="Mô tả vấn đề và đính kèm ảnh cho hóa đơn của bạn để hợp tác xã xem xét; theo dõi phản hồi ngay bên dưới." icon="request" />;
 
-/** SCR-CLAIM-01 Báo vấn đề chất lượng: thương lái mô tả vấn đề và đính kèm ảnh cho một hóa đơn của mình. */
+/**
+ * SCR-CLAIM-01 Báo vấn đề chất lượng (CLAIM-01): thương lái gửi mô tả + ảnh cho một hóa đơn của mình và xem báo cáo cũ cùng phản hồi.
+ * Backend chưa có danh sách hóa đơn của thương lái, nên hóa đơn được chọn bằng `?invoiceId=` trên đường dẫn hoặc nút "Báo thêm cho hóa đơn này" ở một báo cáo cũ.
+ */
 export function ClaimReportScreen() {
-  // Local UI state only: nothing is sent anywhere.
-  const [description, setDescription] = useState("");
+  const { identity } = useApiWorkspace();
+  if (identity.subjectType !== "Trader") {
+    return <section>{heading}<p role="alert" className={s.warning}>Chỉ tài khoản thương lái mới báo được vấn đề chất lượng của hóa đơn mình đã mua.</p></section>;
+  }
+  return <ReportWorkspace />;
+}
+
+function ReportWorkspace() {
+  const fromLink = z.guid().safeParse(useSearchParams().get("invoiceId"));
+  const [invoiceId, setInvoiceId] = useState<string | undefined>(fromLink.success ? fromLink.data : undefined);
+  const [page, setPage] = useState(1), [notice, setNotice] = useState<string>();
+  const list = useRemote(useCallback((signal: AbortSignal) => reportRepository.read("mine", { page: String(page), pageSize: String(MY_CLAIMS_PAGE_SIZE) }, claimsPage, signal), [page]));
+  const known = invoiceId ? list.data?.items.find((claim) => claim.invoice.id === invoiceId) : undefined;
+  const waiting = invoiceId ? list.data?.items.find((claim) => claim.invoice.id === invoiceId && claim.statusId === CLAIM_STATUS.awaiting) : undefined;
+
   return (
     <section>
-      <OperationHeading title="Báo vấn đề chất lượng" description="Mô tả vấn đề và đính kèm ảnh cho hóa đơn của bạn để hợp tác xã xem xét." icon="request" />
-      <div className={s.twoCol}>
-        <FrameCard title="Hóa đơn">
-          {/* TODO(api): load the selected invoice (code, time, product lines) for this trader. */}
-          <KeyValues items={["Mã hóa đơn", "Thời gian"]} />
-          <FrameTable label="Dòng hàng của hóa đơn" headings={LINE_HEADINGS} numeric={[2, 3, 4]} />
-          <p className={s.hint}>Khiếu nại áp dụng cho cả hóa đơn, không ghi số kg riêng từng dòng.</p>
-        </FrameCard>
-        <FrameCard title="Nội dung báo cáo">
-          <form className={s.form} onSubmit={(event) => event.preventDefault()}>
-            <Note label="Mô tả vấn đề *" required aria-required="true" value={description} onChange={(event) => setDescription(event.target.value)} />
-            <fieldset className={s.group}>
-              <legend>Ảnh chụp (ít nhất một ảnh) *</legend>
-              {/* TODO(api): upload claim photos and attach them to the claim. */}
-              <div className={s.photos}>
-                {PHOTO_SLOTS.map((slot) => <div key={slot} className={s.photo}>{slot}</div>)}
-                <Button variant="secondary" disabled aria-disabled="true" className="min-h-[5.5rem]">+ Thêm ảnh</Button>
-              </div>
-            </fieldset>
-            {/* TODO(api): submit the claim; show validation messages MSG-GEN-01 when description or photo is missing. */}
-            <Button type="submit" disabled aria-disabled="true">Gửi</Button>
-          </form>
-        </FrameCard>
+      {heading}
+      {notice && <p role="status" className={s.notice}>{notice}</p>}
+      <div className={s.grid}>
+        <section className={s.panel} aria-labelledby="claim-form-title">
+          <h2 id="claim-form-title">Báo cáo mới</h2>
+          {invoiceId ? (
+            <ClaimReportForm key={invoiceId} invoiceId={invoiceId} invoiceCode={known?.invoice.code}
+              blockedReason={waiting ? `Hóa đơn ${waiting.invoice.code} đang có báo cáo ${waiting.code} chờ hợp tác xã phản hồi. Hãy đợi phản hồi trước khi báo thêm.` : undefined}
+              onReview={() => { setPage(1); list.reload(); }}
+              onSent={(claim, message) => { setInvoiceId(undefined); setNotice(`${message} Mã báo cáo ${claim.code}; hợp tác xã sẽ phản hồi cho bạn.`); setPage(1); list.reload(); }} />
+          ) : (
+            <div className={s.state}><h2>Chưa chọn hóa đơn</h2><p>Hãy mở báo cáo từ hóa đơn bạn muốn phản ánh, hoặc chọn &quot;Báo thêm cho hóa đơn này&quot; ở một báo cáo cũ.</p></div>
+          )}
+        </section>
+        <MyClaimsList data={list.data} loading={list.loading} error={list.error} page={page} onPage={setPage} onReload={list.reload}
+          onClaimAgain={(id) => { setNotice(undefined); setInvoiceId(id); window.scrollTo?.({ top: 0 }); }} />
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { OperationHeading, ErrorNotice } from "@/features/operations/ui";
+import { OperationHeading, ErrorNotice, money } from "@/features/operations/ui";
 import { InvoiceFinishPanel } from "./invoice-finish-panel";
 import { InvoiceLinesPanel } from "./invoice-lines-panel";
 import { InvoiceQuestionDialog } from "./invoice-question-dialog";
@@ -34,6 +34,10 @@ export function SalesInvoiceScreen() {
           <InvoiceLinesPanel lots={e.lots} draft={e.draft} active={e.active} listPrice={e.listPrice} disabled={locked} onAdd={e.addLot} onChange={e.setDraft} />
           <InvoiceSummaryPanel draft={e.draft} sums={e.sums} problem={e.problem} error={e.error} saving={locked} savingMode={e.savingMode} canVietQr={e.canVietQr} onChange={e.setDraft} onSubmit={(mode) => void e.submit(mode)} />
         </div>
+      )}
+      {/* Màn nhỏ: tổng tiền luôn trong tầm mắt, một chạm tới phần thanh toán. */}
+      {!e.saved && !e.pending && e.draft.lines.length > 0 && (
+        <a className={s.stickyBar} href="#invoice-summary"><span>Tổng cộng<strong>{money(e.sums.total)}</strong></span><span className={s.stickyGo}>Thanh toán ↓</span></a>
       )}
       {e.pending && <VietQrDialog key={e.pending.code} sale={e.pending} ask={e.ask} onInvoice={e.finishPending} onLeave={e.leavePending} />}
       {e.question && <InvoiceQuestionDialog question={e.question} />}

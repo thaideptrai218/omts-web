@@ -33,8 +33,8 @@ export function operationAllowed(area: OperationArea, identity: { subjectType: s
   if (area === "my-work") return identity.subjectType === "Staff";
   // Thiết lập kỳ lương: backend chỉ cho Chủ hợp tác xã (không có chức năng phân quyền cho nhân viên).
   if (area === "payroll-settings") return identity.subjectType === "CooperativeOwner";
-  // Báo vấn đề chất lượng là việc của thương lái (và Chủ HTX theo dõi).
-  if (area === "claim-reports") return identity.subjectType === "Trader" || identity.subjectType === "CooperativeOwner";
+  // Báo vấn đề chất lượng chỉ dành cho thương lái: Chủ HTX không có hồ sơ khách hàng nên backend trả 403.
+  if (area === "claim-reports") return identity.subjectType === "Trader";
   // Thanh toán của khách là chức năng toàn HTX (không theo vùng): Chủ HTX hoặc nhân viên có quyền CUSTOMER_PAYMENTS đúng hành động.
   if (area === "customer-payments") return identity.subjectType === "CooperativeOwner" || identity.subjectType === "Staff" && permissions.some((p) => p.functionCode === "CUSTOMER_PAYMENTS" && p.action === action && (p.scope.kind === "all-zones" || p.scope.zoneIds.length > 0));
   if (area === "sales-products") return identity.subjectType === "CooperativeOwner" || action === "View" && (identity.subjectType === "Trader" || identity.subjectType === "Staff" && permissions.some(p => p.functionCode === "SALES_INVOICES" && p.action === "Create"));

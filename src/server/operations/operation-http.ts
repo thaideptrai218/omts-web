@@ -11,6 +11,7 @@ import { planOperation, type OperationPlan } from "./operation-plan";
 import { readBoundedBytes, readOperationUpload } from "./bounded-body";
 import { localFileTarget } from "./evidence-target";
 import { lotTracingUpload, lotTracingUploadActions } from "./lot-tracing-upload-plan";
+import { claimUpload, claimUploadActions } from "./claim-upload-plan";
 import { handleFarmingRequest } from "../farming/farming-http";
 import { handleEmployeeApi } from "../employees/employee-api-http";
 import { harvestValues, harvestCorrection, harvestDetail } from "@/features/cultivation-api/records-contracts";
@@ -19,12 +20,15 @@ export { localFileTarget } from "./evidence-target";
 
 const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: responseHeaders });
-const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", "record-photo", "harvest-record", "harvest-correct", "log-record", "log-correct", ...lotTracingUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
+const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", "record-photo", "harvest-record", "harvest-correct", "log-record", "log-correct", ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
 
 function browserFiles(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   const record = value as Record<string, unknown>;
+  if (record.claim) return { ...record, claim: browserFiles(record.claim) };
   if (record.lot) return { ...record, lot: browserFiles(record.lot) };
+  // Khiếu nại chất lượng: ảnh chỉ được xem qua BFF (action=photo), không đưa địa chỉ ký của backend xuống trình duyệt.
+  if (Array.isArray(record.photos) && typeof record.code === "string" && (record.invoice || record.invoiceDate) && typeof record.zoneId !== "string") return { ...record, photos: record.photos.map((photo) => ({ ...(photo as object), url: "" })) };
   if (record.measurement) return { ...record, measurement: browserFiles(record.measurement) };
   if (typeof record.id !== "string") return value;
   if (Array.isArray(record.photos) && typeof record.zoneId === "string") return { ...record, photos: record.photos.map((photo, index) => ({ ...(photo as object), url: `/api/operations/harvest?action=photo&id=${record.id}&zoneId=${record.zoneId}&index=${index}` })) };
@@ -59,6 +63,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
           plan = { area: area.data, action: upload.action, zoneId: zone, path: upload.action === "log-record" ? `/api/cultivation-cycles/${upload.id}/cultivation-logs` : `/api/cultivation-logs/${upload.id}`, method: upload.action === "log-record" ? "POST" : "PUT", permission: upload.action === "log-record" ? "LogsCreate" : "LogsEdit", schema: z.object({ log: cultivationLog }).transform(({ log }) => ({ log: { ...log, photos: log.photos.map((photo,index) => ({ ...photo, url: `/api/operations/cultivation-cycles?action=log-photo&id=${log.id}&zoneId=${zone}&index=${index}` })) } })) };
         }
         if (area.data === "lot-tracing" && upload.id) plan = lotTracingUpload(upload.action, upload.id)?.plan;
+        if (area.data === "claim-reports" && upload.id) plan = claimUpload(upload.action, upload.id)?.plan;
         if (area.data === "harvest" && upload.action === "harvest-record" && upload.id && upload.zoneId) {
           plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/rafts/${upload.id}/harvest-lots`, method: "POST", permission: "Create", schema: z.object({ lot: z.object({ id: z.guid(), lotCode: z.string() }) }) };
         }
@@ -95,6 +100,17 @@ export async function handleOperationRequest(request: Request, areaName: string)
       }
     }
 
+    if (upload && area.data === "claim-reports") {
+      // Trader gửi khiếu nại chất lượng kèm ảnh: multipart POST; 1-10 ảnh JPEG/PNG, trường tệp và phần JSON do kế hoạch tải lên quy định.
+      const target = upload.id ? claimUpload(upload.action, upload.id) : undefined;
+      const input = target && await readOperationUpload(request, false, { maxFiles: 10 });
+      if (!target || !input || input.files.length < 1 || input.files.some((file) => !["image/jpeg", "image/png"].includes(file.type))) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      const values = target.validator.safeParse(input.payload);
+      if (!values.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      payload = new FormData();
+      for (const file of input.files) payload.append(target.fileField, file, file.name);
+      for (const [key, value] of Object.entries(values.data as Record<string, unknown>)) if (value != null) payload.append(key, String(value));
+    } else
     if (upload && area.data === "lot-tracing") {
       // Sửa dữ liệu truy xuất (TRACE-03): PUT multipart; ảnh giữ lại + ảnh mới phải nằm trong giới hạn của từng loại bản ghi.
       const target = upload.id ? lotTracingUpload(upload.action, upload.id) : undefined;
@@ -166,7 +182,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
       }
       if (plan.file === "invoice" || plan.file === "photo") {
         const record = data as Record<string, unknown>;
-        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : area.data === "harvest" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
+        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : area.data === "harvest" || area.data === "claim-reports" || area.data === "quality-claims" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
         const target = localFileTarget(raw, backend.config.origin);
         if (!target) return json({ status: "not-found" }, 404);
         const file = await fetch(target, { cache: "no-store", redirect: "error", credentials: "omit", signal: controller.signal });
