@@ -3,9 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { fixtureTokens, tokenContext } from "./__tests__/token-protection-fixture";
 import { parseServerSessionKeyring } from "./session-keyring-config";
-import { createSessionTokenProtector } from "./session-token-protector";
 
 function encodedKey(fill?: number): string {
   return (fill === undefined ? randomBytes(32) : Buffer.alloc(32, fill)).toString(
@@ -38,25 +36,6 @@ describe("server session keyring configuration", () => {
       symmetricKeySize: 32,
     });
     await expect(result.provider.byId("missing-key")).resolves.toBeUndefined();
-  });
-
-  it("uses only the active key for new envelopes and opens retained-key envelopes", async () => {
-    const oldResult = parseServerSessionKeyring(environment("key-2026-09"));
-    const currentResult = parseServerSessionKeyring(environment());
-    if (oldResult.status !== "valid" || currentResult.status !== "valid") {
-      throw new Error("Expected valid keyrings");
-    }
-
-    const oldProtector = createSessionTokenProtector(oldResult.provider);
-    const currentProtector = createSessionTokenProtector(currentResult.provider);
-    const sealed = await oldProtector.protect(fixtureTokens, tokenContext());
-    expect(sealed.status).toBe("protected");
-    if (sealed.status !== "protected") throw new Error("Expected protected tokens");
-
-    expect(sealed.protectedTokens.keyId).toBe("key-2026-09");
-    await expect(
-      currentProtector.open(sealed.protectedTokens, tokenContext()),
-    ).resolves.toEqual({ status: "opened", tokens: fixtureTokens });
   });
 
   it.each([

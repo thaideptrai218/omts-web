@@ -37,9 +37,10 @@ export function LoginForm({ formError, onSubmit }: LoginFormProps) {
         autoComplete="username"
         autoCapitalize="none"
         error={errors.identifier?.message}
-        hint="Số điện thoại hoặc email phải được xác minh. Nhân viên đăng nhập lần đầu bằng tên đăng nhập."
+        hint="Nhập số điện thoại đã đăng ký với hợp tác xã."
         id="identifier"
-        label="Tên đăng nhập, số điện thoại hoặc email"
+        inputMode="tel"
+        label="Số điện thoại"
         required
         spellCheck={false}
         {...register("identifier")}

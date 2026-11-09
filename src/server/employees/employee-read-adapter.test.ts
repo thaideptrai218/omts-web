@@ -31,7 +31,7 @@ describe("unmounted employee read adapter", () => {
 
   it.each([
     { status: "anonymous" } as const, { status: "unavailable" } as const,
-    { status: "invalid-session", reason: "revoked", clearCookie: true } as const,
+    { status: "invalid-session", reason: "invalid-session", clearCookie: true } as const,
     resolved({ phase: "password-change-required" }), resolved({ phase: "contact-verification-required" }),
     ...(["Staff", "Trader", "SystemAdministrator"] as const).map((subjectType) => resolved({ identity: { ...resolved().session.identity, subjectType } })),
   ])("never sends read requests for a denied/gated session case %#", async (session) => {

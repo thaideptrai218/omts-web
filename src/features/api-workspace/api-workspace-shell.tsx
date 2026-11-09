@@ -1,8 +1,9 @@
 "use client";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import type { PermissionProjection } from "@/features/access/domain/function-permission";
 import type { BrowserIdentityDto } from "@/server/backend/browser-dto";
-import { logoutWithApi } from "@/features/auth/api/api-auth-client";
+import { LOCAL_SIGN_OUT_MESSAGE, logoutWithApi } from "@/features/auth/api/api-auth-client";
+import { setDisplayedAccount } from "@/features/auth/api/displayed-account";
 import { resources, resourceKeys, resourceAllowed } from "./resources";
 import { operationModules, operationAllowed } from "@/features/operations/permissions";
 import { customerDebtAllowed } from "@/features/customer-debts-api/access";
@@ -51,6 +52,12 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const pathname = usePathname();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
+  // A layout effect runs before any child data fetch, so every request carries the account this page shows.
+  const accountId = context.identity.accountId;
+  useLayoutEffect(() => {
+    setDisplayedAccount(accountId);
+    return () => setDisplayedAccount(undefined);
+  }, [accountId]);
   useEffect(() => {
     if (!globalThis.BroadcastChannel) return;
     const channel = new BroadcastChannel("omts-auth-lifecycle-v1");
@@ -93,7 +100,8 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       if (pending) return;
       setPending(true); setError(undefined);
       const result = await logoutWithApi();
-      if (result.destination) window.location.replace(result.destination);
+      if (result.status === "signed-out-local") setError(`${LOCAL_SIGN_OUT_MESSAGE} Hãy đăng nhập lại để tiếp tục.`);
+      else if (result.destination) window.location.replace(result.destination);
       else { setError("Chưa thể đăng xuất. Kiểm tra kết nối rồi thử lại."); setPending(false); }
     }}>
       {error && <p role="alert" className="mb-4 rounded-control border border-danger/30 bg-surface p-4 text-danger">{error}</p>}

@@ -1,3 +1,4 @@
+import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { catalogueProblemSchema, type CatalogueProblem } from "./catalogue-problem";
 import type { ResourceKey } from "./resources";
 import type { EmployeeProblemMetadata } from "@/features/employee-management/api/employee-problem-metadata";
@@ -7,7 +8,7 @@ export type ApiPage = { items: ApiRecord[]; page: number; pageSize: number; tota
 export type WorkspaceResult<T> = { status: "success"; data: T } | { status: "error"; httpStatus: number; code?: string; uncertain: boolean; catalogueProblem?: CatalogueProblem; employeeProblem?: EmployeeProblemMetadata };
 async function send<T>(resource: ResourceKey, query: URLSearchParams, body?: unknown, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
   try {
-    const response = await fetch(`/api/workspace/${resource}?${query}`, { method: body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", redirect: "error",
+    const response = await bffFetch(`/api/workspace/${resource}?${query}`, { method: body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", redirect: "error",
       headers: { Accept: "application/json", ...(body ? { "Content-Type": "application/json", "X-OMTS-Request": "web" } : {}) },
       body: body ? JSON.stringify(body) : undefined, signal: signal ?? AbortSignal.timeout(30_000) });
     const value = await response.json();

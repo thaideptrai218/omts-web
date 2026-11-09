@@ -1,27 +1,20 @@
 import "server-only";
 import { createSessionGateway } from "./session-gateway";
-import { createServerSessionRuntimeOwner } from "./server-session-runtime-owner";
-import { openApiSessionRuntime, type ApiSessionRuntime, type AuthActionResult } from "./api-session-runtime";
+import { createAuthActions } from "./auth-actions";
 import { createBackendTransport } from "../backend/backend-transport";
+import { parseBffClientConfig } from "../config/bff-client-config";
+import { readClientMeta } from "../backend/client-meta";
 
 export function createApiSessionGateway(environment: Readonly<Record<string, unknown>>) {
   const transport = createBackendTransport(environment);
-  const owner = createServerSessionRuntimeOwner(() => openApiSessionRuntime(environment, transport));
-  const reads = createSessionGateway(environment, () => owner.get(), transport);
-  async function action(run: (runtime: ApiSessionRuntime) => Promise<AuthActionResult>) {
-    if (reads.mode !== "api") return { status: "unavailable" as const };
-    try {
-      const opened = await owner.get();
-      return opened.status === "ready" ? await run(opened.runtime) : { status: "unavailable" as const };
-    } catch { return { status: "unavailable" as const }; }
-  }
+  const reads = createSessionGateway(environment, transport);
+  const actions = createAuthActions({ environment, backend: transport, clock: Date.now });
+  const bff = parseBffClientConfig(environment);
+  const ipSource = bff.status === "valid" ? bff.config.ipSource : { kind: "none" } as const;
   return Object.freeze({
     ...reads,
-    bootstrap: (header: string | null) => action((runtime) => runtime.bootstrap(header)),
-    login: (header: string | null, input: unknown, signal: AbortSignal) => action((runtime) => runtime.login(header, input, signal)),
-    logout: (header: string | null, expectedRevision?: string) => action((runtime) => runtime.logout(header, expectedRevision)),
-    changePassword: (header: string | null, input: unknown, signal: AbortSignal) => action((runtime) => runtime.changePassword(header, input, signal)),
-    changePasswordFromVerification: (header: string | null, input: unknown, signal: AbortSignal, proof: string) => action((runtime) => runtime.changePassword(header, input, signal, proof)),
-    dispose() { reads.dispose(); owner.dispose(); },
+    ...actions,
+    // End-user address and browser of this request, from headers the deployment controls.
+    clientMeta: (headers: Headers) => readClientMeta(headers, ipSource),
   });
 }

@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { LoginForm } from "./login-form";
 import { Button } from "@/components/ui/button";
-import { loginWithApi, logoutWithApi } from "../api/api-auth-client";
+import { LOCAL_SIGN_OUT_MESSAGE, loginWithApi, logoutWithApi } from "../api/api-auth-client";
 import { formatMessage, messageCatalog, type MessageCode } from "@/shared/messages/message-catalog";
 
 export function ApiLoginForm() {
@@ -25,20 +25,20 @@ export function ApiLoginForm() {
       } else if (result.status === "waited") {
         setError("Thao tác ở tab khác đã kết thúc. Hãy bấm Đăng nhập để tiếp tục.");
       } else {
-        setError(result.status === "pending" ? "Một lượt đăng nhập đang được xử lý. Hãy kiểm tra lại phiên."
-          : "Chưa thể xác nhận phiên đăng nhập. Hãy kiểm tra lại trước khi tiếp tục.");
+        setError("Chưa thể xác nhận phiên đăng nhập. Hãy kiểm tra lại trước khi tiếp tục.");
         setReset(true);
       }
       return result.status === "waited";
     }} />
-    <div className="login-links mt-5 flex flex-wrap gap-4 text-sm font-semibold text-primary"><Link href="/recover">Quên mật khẩu</Link><Link href="/register">Đăng ký thương lái</Link></div>
+    <div className="login-links mt-5 flex flex-wrap gap-4 text-sm font-semibold text-primary"><Link href="/recover">Quên mật khẩu</Link></div>
     {reset && <div className="mt-4 grid gap-3">
       <Button variant="secondary" onClick={() => window.location.reload()}>Kiểm tra lại phiên</Button>
       <Button variant="secondary" isPending={pending} onClick={async () => {
         setPending(true);
         const result = await logoutWithApi();
         setPending(false);
-        if (result.destination) window.location.replace(result.destination);
+        if (result.status === "signed-out-local") { setReset(false); setError(LOCAL_SIGN_OUT_MESSAGE); }
+        else if (result.destination) window.location.replace(result.destination);
         else setError("Chưa thể kết thúc lượt đăng nhập. Hãy thử lại khi có kết nối.");
       }}>Kết thúc lượt đăng nhập này</Button>
     </div>}

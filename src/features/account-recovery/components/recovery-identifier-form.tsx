@@ -1,11 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 import { FormField } from "@/components/form/form-field";
 import { Button } from "@/components/ui/button";
-import { RecoveryChannelSelector } from "@/features/account-recovery/components/recovery-channel-selector";
 import {
   recoveryIdentifierSchema,
   type RecoveryIdentifierFormValues,
@@ -18,7 +17,7 @@ type RecoveryIdentifierFormProps = Readonly<{
 }>;
 
 const defaultValues: RecoveryIdentifierFormValues = {
-  channel: "email",
+  channel: "sms",
   identifier: "",
 };
 
@@ -28,45 +27,27 @@ export function RecoveryIdentifierForm({
   onSubmit,
 }: RecoveryIdentifierFormProps) {
   const {
-    control,
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-    setValue,
   } = useForm<RecoveryIdentifierFormValues>({
     defaultValues: initialValues,
     resolver: zodResolver(recoveryIdentifierSchema),
   });
-  const channel = useWatch({ control, name: "channel" });
-  const isEmail = channel === "email";
 
   return (
     <form className="space-y-5" noValidate onSubmit={handleSubmit(onSubmit)}>
-      <RecoveryChannelSelector
-        disabled={isSubmitting}
-        onChange={(nextChannel) => {
-          setValue("channel", nextChannel, { shouldValidate: false });
-          setValue("identifier", "", { shouldValidate: false });
-        }}
-        value={channel}
-      />
-
       <FormField
         autoCapitalize="none"
-        autoComplete={isEmail ? "email" : "tel"}
+        autoComplete="tel"
         error={errors.identifier?.message}
-        hint={
-          isEmail
-            ? "Nhập email đã được xác minh trên tài khoản."
-            : "Nhập số điện thoại đã được xác minh trên tài khoản."
-        }
+        hint="Nhập số điện thoại đã được xác minh trên tài khoản. Mã được gửi qua tin nhắn SMS."
         id="recovery-identifier"
-        inputMode={isEmail ? "email" : "tel"}
-        key={channel}
-        label={isEmail ? "Email" : "Số điện thoại"}
+        inputMode="tel"
+        label="Số điện thoại"
         required
         spellCheck={false}
-        type={isEmail ? "email" : "tel"}
+        type="tel"
         {...register("identifier")}
       />
 

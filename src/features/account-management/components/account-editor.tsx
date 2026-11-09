@@ -527,8 +527,9 @@ export function AccountEditor({
                   </p>
                 )}
                 <p className="mt-2 text-sm leading-6 text-text-muted">
-                  Hệ thống tự tạo tên đăng nhập và mật khẩu tạm, sau đó gửi trực
-                  tiếp cho nhân viên. Chủ nhiệm HTX không nhìn thấy mật khẩu.
+                  Nhân viên đăng nhập bằng số điện thoại. Hệ thống tự tạo mật khẩu
+                  tạm, sau đó gửi trực tiếp cho nhân viên. Chủ nhiệm HTX không
+                  nhìn thấy mật khẩu.
                 </p>
               </fieldset>
             )}

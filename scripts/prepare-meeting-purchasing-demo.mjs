@@ -4,10 +4,10 @@ const cookies=new Map();
 async function send(path,body){
  const r=await fetch(new URL(path,origin),{method:body===undefined?"GET":"POST",signal:AbortSignal.timeout(60000),headers:{Cookie:[...cookies].map(([k,v])=>`${k}=${v}`).join("; "),...(body===undefined?{}:{Origin:origin,"X-OMTS-Request":"web",...(body===null?{}:{"Content-Type":"application/json"})})},body:body==null?undefined:JSON.stringify(body)});
  for(const cookie of r.headers.getSetCookie()){const pair=cookie.split(";",1)[0],i=pair.indexOf("=");if(/Max-Age=0/i.test(cookie))cookies.delete(pair.slice(0,i));else cookies.set(pair.slice(0,i),pair.slice(i+1));}
- const v=await r.json();if(!r.ok&&!(path==="/api/auth/bootstrap"&&r.status===409&&v.status==="reset-required"))throw new Error(`${path.split("?")[0]} HTTP ${r.status} ${v.code??v.status}`);return v.data??v;
+ const v=await r.json();if(!r.ok)throw new Error(`${path.split("?")[0]} HTTP ${r.status} ${v.code??v.status}`);return v.data??v;
 }
-async function login(identifier){await send("/api/auth/bootstrap",null);await send("/api/auth/login",{identifier,password:process.env.OMTS_QA_PASSWORD||"Demo@1234"});}
-async function logout(){const state=await send("/api/auth/bootstrap",null);await send("/api/auth/logout",{expectedRevision:state.revision});}
+async function login(identifier){await send("/api/auth/login",{identifier,password:process.env.OMTS_QA_PASSWORD||"Demo@1234"});}
+async function logout(){await send("/api/auth/logout",null);}
 const write=(area,action,id,body)=>send(`/api/operations/${area}`,{action,id,body});
 try{
  await login("owner");

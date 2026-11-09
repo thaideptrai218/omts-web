@@ -1,22 +1,27 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { VerificationCommand, VerificationResult, VerificationView } from "@/features/verification-api/contracts";
 import { profileViewSchema } from "@/features/profile/api/profile-contract.schemas";
 import type { BackendTransportResult } from "@/server/backend/backend-result";
-import type { AuthActionResult } from "@/server/auth/api-session-runtime";
 import { startedSchema, type FlowBinding, type FlowPayload, type OpenFlow, type VerificationFlowStore } from "./flow-store";
-export type VerificationReply = { body: VerificationResult; httpStatus: number; auth?: AuthActionResult };
+
+// What the Route Handler must do with the flow cookie. No change when absent.
+export type FlowCookieChange = { action: "set"; value: string; maxAgeSeconds: number } | { action: "clear" };
+export type VerificationReply = { body: VerificationResult; httpStatus: number; flowCookie?: FlowCookieChange };
 export type VerificationDependencies = {
   store: VerificationFlowStore; binding: FlowBinding; signal: AbortSignal;
+  // The raw flow cookie value of this request, if any.
+  cookie: string | undefined;
   current(): Promise<boolean>;
   call(path: string, body?: unknown): Promise<BackendTransportResult>;
-  rotate(input: { newPassword: string; confirmPassword: string }, proof: string): Promise<AuthActionResult>;
   account?: { id: string; subjectType: string };
 };
+const START_TTL_MS = 300_000, PROOF_TTL_MS = 600_000, RESEND_DELAY_MS = 60_000;
 const fail = (httpStatus = 503, code?: string, uncertain = true): VerificationReply => ({ body: { status: "error", code, uncertain }, httpStatus });
 function view(flow: OpenFlow): VerificationView {
-  const { record: r, payload: p } = flow;
-  return { id: r.id, purpose: r.purpose, phase: r.phase, channel: p.channel ?? null, maskedTarget: p.maskedTarget, expiresAt: new Date(r.expiresAt).toISOString(),
+  const p = flow.payload;
+  return { id: flow.id, purpose: flow.purpose, phase: flow.phase, channel: p.channel ?? null, maskedTarget: p.maskedTarget, expiresAt: new Date(flow.expiresAt).toISOString(),
     nextResendAt: p.nextResendAt === null ? null : new Date(p.nextResendAt).toISOString(), sendsLeft: p.sendsLeft };
 }
 function mask(target = "") {
@@ -24,111 +29,91 @@ function mask(target = "") {
 }
 export async function runVerification(command: VerificationCommand, deps: VerificationDependencies): Promise<VerificationReply> {
   const { store, binding, signal } = deps;
-  let reserved: OpenFlow | undefined;
-  async function publish(phase: OpenFlow["record"]["phase"], payload: FlowPayload, expiresAt?: number) {
-    if (!reserved) return undefined;
-    const result = await store.settle(binding, reserved, phase, payload, expiresAt);
-    return result.status === "found" ? result.flow : undefined;
+  const purpose = binding.purpose;
+  // A sealed copy of the flow for the response. Without one the new state cannot be kept, which is an unknown outcome.
+  async function publish(flow: OpenFlow): Promise<FlowCookieChange | undefined> {
+    const value = await store.seal(binding, flow);
+    return value ? { action: "set", value, maxAgeSeconds: Math.max(1, Math.ceil((flow.expiresAt - Date.now()) / 1000)) } : undefined;
   }
-  async function unknown() {
-    if (reserved) await publish("unknown", { ...reserved.payload, proof: undefined });
-    return fail();
-  }
+  const clear: FlowCookieChange = { action: "clear" };
   try {
     if (signal.aborted || !await deps.current()) return fail(409, undefined, false);
-    if (command.op === "start") {
-      const begun = await store.start(binding, { target: command.target, channel: command.channel, maskedTarget: mask(command.target), nextResendAt: null, sendsLeft: null });
-      if (begun.status !== "found") return fail(begun.status === "conflict" ? 409 : 503, undefined, begun.status !== "conflict");
-      reserved = begun.flow;
-    } else {
-      const existing = await store.read(binding);
-      if (existing.status === "missing") return command.op === "read" ? { body: { status: "empty" }, httpStatus: 200 } : fail(410, "MSG16", false);
-      if (existing.status !== "found") return fail();
-      const flow = existing.flow;
+    let flow: OpenFlow | undefined;
+    if (command.op !== "start") {
+      const existing = await store.open(binding, deps.cookie);
+      if (existing.status !== "found") return command.op === "read" ? { body: { status: "empty" }, httpStatus: 200 } : fail(410, "MSG16", false);
+      flow = existing.flow;
       if (command.op === "read") return await deps.current() && !signal.aborted ? { body: { status: "success", flow: view(flow) }, httpStatus: 200 } : fail(409, undefined, false);
-      if (flow.record.id !== command.id) return fail(409, undefined, false);
-      if (command.op === "cancel") {
-        const cancelled = await store.cancel(binding, flow);
-        return cancelled.status === "cancelled" ? { body: { status: "cancelled" }, httpStatus: 200 } : fail(409, undefined, false);
-      }
+      if (flow.id !== command.id) return fail(409, undefined, false);
+      if (command.op === "cancel") return { body: { status: "cancelled" }, httpStatus: 200, flowCookie: clear };
       if (command.op === "resend" && flow.payload.nextResendAt && flow.payload.nextResendAt > Date.now()) return { body: { status: "error", code: "TOO_MANY_REQUESTS", uncertain: false, retryAfterMs: Math.min(3_600_000, flow.payload.nextResendAt - Date.now()) }, httpStatus: 429 };
-      const leased = await store.reserve(binding, flow, command.op === "complete" ? ["verified"] : ["code"]);
-      if (leased.status !== "found") return fail(leased.status === "conflict" ? 409 : 503, undefined, leased.status !== "conflict");
-      reserved = leased.flow;
+      if ((command.op === "complete") !== (flow.phase === "verified")) return fail(409, undefined, false);
     }
-    if (signal.aborted || !await deps.current()) return unknown();
-    const payload = reserved.payload, purpose = binding.purpose;
+    const payload: FlowPayload = flow?.payload ?? { target: command.op === "start" ? command.target : undefined, channel: command.op === "start" ? (purpose === "phone" ? "Sms" : command.channel) : undefined,
+      maskedTarget: mask(command.op === "start" ? command.target : ""), nextResendAt: null, sendsLeft: null };
     let response: BackendTransportResult;
     if (command.op === "complete") {
-      if (!payload.proof) return unknown();
-      if (purpose === "password-email") {
-        const auth = await deps.rotate({ newPassword: command.newPassword!, confirmPassword: command.confirmPassword! }, payload.proof);
-        const settled = await publish(auth.status === "created" ? "done" : auth.status === "rejected" ? "failed" : "unknown", { ...payload, proof: undefined });
-        if (!settled || signal.aborted) return fail();
-        if (auth.status === "created") return { body: { status: "completed", destination: auth.destination as VerificationResult["destination"] }, httpStatus: 200, auth };
-        return auth.status === "rejected" ? fail(auth.httpStatus, auth.code, false) : fail();
-      }
-      const path = purpose === "registration" ? "/api/auth/register" : purpose === "recovery" ? "/api/auth/recovery/reset" : "/api/me/contact-changes/confirm";
-      const body = purpose === "registration" ? { channel: payload.channel, identifier: payload.target, password: command.newPassword, passwordConfirmation: command.confirmPassword, verificationToken: payload.proof }
-        : purpose === "recovery" ? { verificationToken: payload.proof, newPassword: command.newPassword, passwordConfirmation: command.confirmPassword } : { verificationToken: payload.proof };
+      if (!payload.proof) return fail(409, undefined, false);
+      const path = purpose === "recovery" ? "/api/auth/recovery/reset" : purpose === "phone" ? "/api/me/phone-verification/confirm" : "/api/me/contact-changes/confirm";
+      const body = purpose === "recovery" ? { verificationToken: payload.proof, newPassword: command.newPassword, passwordConfirmation: command.confirmPassword } : { verificationToken: payload.proof };
       response = await deps.call(path, body);
-      if (!await deps.current() || signal.aborted) return unknown();
-      if (response.status === "http-error" && response.httpStatus < 500) {
-        if (!await publish("failed", { ...payload, proof: undefined })) return fail();
-        return fail(response.httpStatus, response.code, false);
-      }
-      if (response.status !== "success" || response.httpStatus !== (purpose === "registration" ? 201 : 200)) return unknown();
+      if (!await deps.current() || signal.aborted) return fail();
+      // A refusal ends the flow: the proof is single use, so the user starts again.
+      if (response.status === "http-error" && response.httpStatus < 500) return { ...fail(response.httpStatus, response.code, false), flowCookie: clear };
+      if (response.status !== "success" || response.httpStatus !== 200) return fail();
       let result: VerificationResult = { status: "completed" };
-      if (purpose === "registration") {
-        const account = z.object({ accountId: z.guid(), username: z.string().min(1).max(254), oldDocumentsHidden: z.boolean() }).safeParse(response.data);
-        if (!account.success) return unknown(); result = { ...result, username: account.data.username, oldDocumentsHidden: account.data.oldDocumentsHidden };
-      } else if (purpose === "contact") {
+      if (purpose === "contact") {
         const contact = z.object({ contact: z.string().min(1).max(254), oldDocumentsHidden: z.boolean() }).safeParse(response.data);
-        if (!contact.success) return unknown();
+        if (!contact.success) return fail();
         let profileResponse: BackendTransportResult;
         try { profileResponse = await deps.call("/api/me/profile"); } catch { profileResponse = { status: "unavailable" }; }
-        if (!await deps.current() || signal.aborted) return unknown();
+        if (!await deps.current() || signal.aborted) return fail();
         const profile = profileResponse.status === "success" && profileResponse.httpStatus === 200 ? profileViewSchema.safeParse(profileResponse.data) : undefined;
         const matching = profile?.success && profile.data.accountId === deps.account?.id && profile.data.subjectType === deps.account.subjectType
           && (payload.channel === "Email" ? profile.data.email === contact.data.contact && profile.data.emailVerified : profile.data.phoneNumber === contact.data.contact && profile.data.phoneVerified);
         result = { ...result, oldDocumentsHidden: contact.data.oldDocumentsHidden, profile: matching ? profile.data : null };
-      } else if (!z.object({}).safeParse(response.data).success) return unknown();
-      if (!await publish("done", { ...payload, proof: undefined })) return fail();
-      if (!await deps.current() || signal.aborted) return fail();
-      return { body: result, httpStatus: 200 };
+      } else if (purpose === "phone") {
+        // The number is now verified on the account; the caller re-reads the session phase to move on.
+        const confirmed = z.object({ contact: z.string().min(1).max(254), notice: z.string().max(1000).nullish(), noticeCode: z.string().max(64).nullish() }).safeParse(response.data);
+        if (!confirmed.success) return fail();
+      } else if (!z.object({}).safeParse(response.data).success) return fail();
+      return { body: result, httpStatus: 200, flowCookie: clear };
     }
     if (command.op === "verify") {
-      if (!payload.backendId) return unknown();
+      if (!payload.backendId) return fail();
       response = await deps.call(`/api/verifications/${payload.backendId}/verify`, { code: command.code });
     } else if (purpose === "recovery") response = await deps.call("/api/auth/recovery", { identifier: payload.target });
     else if (command.op === "resend") {
-      if (!payload.backendId) return unknown(); response = await deps.call(`/api/verifications/${payload.backendId}/resend`, {});
-    } else response = await deps.call(purpose === "registration" ? "/api/verifications" : purpose === "contact" ? "/api/me/contact-changes" : "/api/me/password/code",
-      purpose === "password-email" ? {} : { channel: payload.channel, target: payload.target, ...(purpose === "contact" && command.op === "start" ? { currentPassword: command.currentPassword } : {}) });
-    if (!await deps.current() || signal.aborted) return unknown();
-    if (response.status === "http-error" && response.httpStatus < 500) {
-      if (!await publish(command.op === "start" ? "failed" : "code", payload)) return fail();
+      if (!payload.backendId) return fail(); response = await deps.call(`/api/verifications/${payload.backendId}/resend`, {});
+    } else if (purpose === "phone") response = await deps.call("/api/me/phone-verification", { phoneNumber: null });
+    else response = await deps.call("/api/me/contact-changes", { channel: payload.channel, target: payload.target, currentPassword: command.op === "start" ? command.currentPassword : undefined });
+    if (!await deps.current() || signal.aborted) return fail();
+    // A 503 that carries an API message is a definite answer (the code could not be sent, nothing changed), so the user sees it.
+    if (response.status === "http-error" && (response.httpStatus < 500 || (response.httpStatus === 503 && response.code))) {
+      // The flow keeps its state: a wrong code or an early resend does not end it.
       return { ...fail(response.httpStatus, response.code, false), body: { status: "error", code: response.code, uncertain: false, retryAfterMs: response.retryAfterMs === undefined ? undefined : Math.min(3_600_000, response.retryAfterMs) } };
     }
-    if (response.status !== "success") return unknown();
-    let nextPayload: FlowPayload, expiresAt: number, phase: "code" | "verified" = "code";
+    if (response.status !== "success") return fail();
+    let next: OpenFlow;
     if (command.op === "verify") {
       const token = z.object({ verificationToken: z.string().min(1).max(1024), expiresAt: z.iso.datetime({ offset: true }) }).safeParse(response.data);
-      if (response.httpStatus !== 200 || !token.success) return unknown();
-      phase = "verified"; expiresAt = Math.min(Date.parse(token.data.expiresAt), Date.now() + 600_000); nextPayload = { ...payload, proof: token.data.verificationToken };
+      if (response.httpStatus !== 200 || !token.success || !flow) return fail();
+      next = { ...flow, phase: "verified", expiresAt: Math.min(Date.parse(token.data.expiresAt), Date.now() + PROOF_TTL_MS), payload: { ...payload, proof: token.data.verificationToken } };
     } else if (purpose === "recovery") {
       const recovery = z.object({ requestId: z.guid() }).safeParse(response.data);
-      if (response.httpStatus !== 202 || !recovery.success) return unknown();
-      // Uniform timing/metadata for real and dummy IDs; recovery resend starts afresh.
-      expiresAt = Date.now() + 300_000; nextPayload = { ...payload, backendId: recovery.data.requestId, nextResendAt: Date.now() + 60_000, sendsLeft: null };
+      if (response.httpStatus !== 202 || !recovery.success) return fail();
+      // The answer is the same for real and unknown accounts, so timing and metadata are uniform; a resend starts afresh.
+      next = { id: flow?.id ?? randomUUID(), purpose, phase: "code", expiresAt: Date.now() + START_TTL_MS,
+        payload: { ...payload, backendId: recovery.data.requestId, nextResendAt: Date.now() + RESEND_DELAY_MS, sendsLeft: null } };
     } else {
-      const started = startedSchema.safeParse(purpose === "contact" && command.op === "start" ? z.object({ verification: startedSchema }).safeParse(response.data).data?.verification : response.data);
-      if (response.httpStatus !== (command.op === "resend" ? 200 : 201) || !started.success) return unknown();
-      expiresAt = Math.min(Date.parse(started.data.expiresAt), Date.now() + 300_000);
-      nextPayload = { ...payload, backendId: started.data.verificationId, maskedTarget: started.data.maskedTarget, nextResendAt: Date.parse(started.data.nextResendAt), sendsLeft: started.data.sendsLeft };
+      // Contact changes wrap the started verification; the phone verification returns it at the top level.
+      const started = startedSchema.safeParse(command.op === "start" && purpose !== "phone" ? z.object({ verification: startedSchema }).safeParse(response.data).data?.verification : response.data);
+      if (response.httpStatus !== (command.op === "resend" ? 200 : 201) || !started.success) return fail();
+      next = { id: flow?.id ?? randomUUID(), purpose, phase: "code", expiresAt: Math.min(Date.parse(started.data.expiresAt), Date.now() + START_TTL_MS),
+        payload: { ...payload, backendId: started.data.verificationId, maskedTarget: started.data.maskedTarget, nextResendAt: Date.parse(started.data.nextResendAt), sendsLeft: started.data.sendsLeft } };
     }
-    if (expiresAt <= Date.now()) return unknown();
-    const settled = await publish(phase, nextPayload, expiresAt);
-    return settled && await deps.current() && !signal.aborted ? { body: { status: "success", flow: view(settled) }, httpStatus: 200 } : fail();
-  } catch { return unknown(); }
+    if (next.expiresAt <= Date.now()) return fail();
+    const flowCookie = await publish(next);
+    return flowCookie ? { body: { status: "success", flow: view(next) }, httpStatus: 200, flowCookie } : fail();
+  } catch { return fail(); }
 }

@@ -9,20 +9,16 @@
     "setup:api": "node scripts/setup-api-local.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src scripts tests/fixtures/cookie-browser --max-warnings=0",
+    "lint": "eslint src scripts --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:api-roles": "node scripts/test-api-role-matrix.mjs",
-    "test:redis": "node scripts/test-session-redis.mjs",
     "test:session-pages": "node scripts/test-session-pages.mjs",
     "test:boundary": "node scripts/test-server-boundary.mjs",
-    "test:serialization": "node scripts/test-server-serialization.mjs",
-    "test:cookies": "node scripts/test-cookie-fixture.mjs",
-    "test:cookies:serve": "node scripts/test-cookie-fixture.mjs --serve"
+    "test:serialization": "node scripts/test-server-serialization.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
-    "@redis/client": "6.3.0",
     "@vietmap/vietmap-gl-js": "6.0.1",
     "next": "16.4.3",
     "react": "19.3.0",

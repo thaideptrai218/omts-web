@@ -10,23 +10,23 @@ describe("server Web origin and approved C1A cookie profiles, no runtime wiring"
     const result = parseServerWebSessionConfig(secure);
     expect(result).toEqual({ status: "valid", config: {
       origin: "https://web.example.test", cookieProfile: "https",
-      cookie: { name: "__Host-omts_web_sid", httpOnly: true, secure: true, sameSite: "lax", path: "/" },
+      cookies: { access: "__Host-omts_at", refresh: "__Secure-omts_rt", refreshPath: "/api/auth", marker: "__Host-omts_rf", flow: "__Secure-omts_vf", flowPath: "/api/verifications", device: "__Secure-omts_dv", httpOnly: true, secure: true, sameSite: "lax" },
     } });
     if (result.status !== "valid") return;
-    expect(Object.keys(result.config.cookie).sort()).toEqual(["httpOnly", "name", "path", "sameSite", "secure"]);
+    expect(Object.keys(result.config.cookies).sort()).toEqual(["access", "flow", "httpOnly", "marker", "refresh", "refreshPath", "sameSite", "secure"]);
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result.config)).toBe(true);
-    expect(Object.isFrozen(result.config.cookie)).toBe(true);
+    expect(Object.isFrozen(result.config.cookies)).toBe(true);
   });
   it.each(["development", "test", "production"])("keeps Secure even in %s when HTTPS is explicitly selected", (NODE_ENV) => {
-    expect(parseServerWebSessionConfig({ ...secure, NODE_ENV })).toMatchObject({ status: "valid", config: { cookie: { secure: true } } });
+    expect(parseServerWebSessionConfig({ ...secure, NODE_ENV })).toMatchObject({ status: "valid", config: { cookies: { secure: true } } });
   });
   it.each(["http://localhost:3000", "http://127.0.0.1:3000", "http://[::1]:3000", "HTTP://LOCALHOST:3000/"])(
     "permits explicit loopback dev origin %s", (OMTS_WEB_ORIGIN) => {
       const result = parseServerWebSessionConfig({ ...local, OMTS_WEB_ORIGIN });
       expect(result).toEqual({ status: "valid", config: {
         origin: new URL(OMTS_WEB_ORIGIN).origin, cookieProfile: "http-loopback-dev",
-        cookie: { name: "omts_web_sid_dev", httpOnly: true, secure: false, sameSite: "lax", path: "/" },
+        cookies: { access: "omts_at_dev", refresh: "omts_rt_dev", refreshPath: "/api/auth", marker: "omts_rf_dev", flow: "omts_vf_dev", flowPath: "/api/verifications", device: "omts_dv_dev", httpOnly: true, secure: false, sameSite: "lax" },
       } });
     },
   );

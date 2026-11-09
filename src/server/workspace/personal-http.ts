@@ -24,7 +24,6 @@ export async function handlePersonalRequest(request: Request, area: "profile" | 
   try {
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: initial.status === "unavailable" ? "unavailable" : "session-expired" }, initial.status === "unavailable" ? 503 : 401);
-    if (initial.session.phase !== "application") return json({ status: "onboarding-required" }, 403);
     const session = initial.session;
     let body: unknown;
     if (request.method === "PUT") {

@@ -45,7 +45,7 @@ describe("review-ready mock flows use the same account credentials", () => {
 
   it("resets the verified recipient's password and shares it with normal password change", async () => {
     const h = await services(); const password = nextPassword();
-    const start = await finish(h.recovery.accountRecoveryService.start({ channel: "email", identifier: "owner@omts.test" }));
+    const start = await finish(h.recovery.accountRecoveryService.start({ channel: "sms", identifier: "0900000000" }));
     const proof = await finish(h.recovery.verificationService.verify({ code: "123456", requestId: start.challenge.requestId }));
     if (proof.status !== "verified") throw new Error("Expected proof");
     expect(await finish(h.recovery.accountRecoveryService.resetPassword({ verificationToken: proof.token, newPassword: password }))).toMatchObject({ status: "password-reset" });
@@ -56,7 +56,7 @@ describe("review-ready mock flows use the same account credentials", () => {
 
   it("does not reset Owner through a proof issued for another recipient", async () => {
     const h = await services();
-    const start = await finish(h.recovery.accountRecoveryService.start({ channel: "email", identifier: "unknown@omts.test" }));
+    const start = await finish(h.recovery.accountRecoveryService.start({ channel: "sms", identifier: "0911111111" }));
     const proof = await finish(h.recovery.verificationService.verify({ code: "123456", requestId: start.challenge.requestId }));
     if (proof.status !== "verified") throw new Error("Expected mock proof");
     await finish(h.recovery.accountRecoveryService.resetPassword({ verificationToken: proof.token, newPassword: nextPassword() }));

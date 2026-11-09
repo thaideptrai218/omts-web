@@ -67,7 +67,8 @@ export function CredentialDeliveryDialog({
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-text-muted">Tên đăng nhập</p>
+          <p className="text-sm font-semibold text-text-muted">Tên tài khoản</p>
+          <p className="mt-1 text-sm text-text-muted">Nhân viên đăng nhập bằng số điện thoại, không dùng tên tài khoản này.</p>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row">
             <output className="min-h-12 min-w-0 flex-1 rounded-control border border-border-strong bg-surface px-3 py-3 font-semibold text-text">
               {receipt.username}
@@ -78,13 +79,13 @@ export function CredentialDeliveryDialog({
               onClick={() => void copyUsername()}
               variant="secondary"
             >
-              {copyStatus === "copied" ? "Đã sao chép" : "Sao chép tên đăng nhập"}
+              {copyStatus === "copied" ? "Đã sao chép" : "Sao chép tên tài khoản"}
             </Button>
           </div>
           <p aria-live="polite" className="mt-2 min-h-5 text-sm text-text-muted">
-            {copyStatus === "copied" && "Tên đăng nhập đã được sao chép."}
+            {copyStatus === "copied" && "Tên tài khoản đã được sao chép."}
             {copyStatus === "failed" &&
-              "Không thể sao chép tự động. Hãy chọn tên đăng nhập để sao chép thủ công."}
+              "Không thể sao chép tự động. Hãy chọn tên tài khoản để sao chép thủ công."}
           </p>
         </div>
 

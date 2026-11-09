@@ -13,7 +13,7 @@ export async function handleAdmin(request: Request) {
   try {
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: "session-expired" }, 401);
-    if (initial.session.phase !== "application" || initial.session.identity.subjectType !== "SystemAdministrator") return json({ status: "forbidden" }, 403);
+    if (initial.session.identity.subjectType !== "SystemAdministrator") return json({ status: "forbidden" }, 403);
     const query = new URL(request.url).searchParams;
     let path = "/api/admin/accounts", body;
     let schema: z.ZodType = adminPage;

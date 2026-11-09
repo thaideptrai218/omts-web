@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ApiSecurityGate } from "@/features/auth/components/api-security-gate";
+import { DevicesPanel } from "@/features/device-sessions-api/devices-panel";
 import styles from "./profile-layout.module.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,16 +15,16 @@ import { createVerificationRepository } from "@/features/verification-api/reposi
 import { subjectLabel, knownRoleNameLabel } from "@/shared/presentation/actor-label";
 import type { VerificationView } from "@/features/verification-api/contracts";
 
-export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: "profile" | "security" | "notifications" } = {}) {
+export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: "profile" | "security" | "devices" | "notifications" } = {}) {
   const load = useCallback((signal: AbortSignal) => createPersonalRepository().profile(signal), []);
   const remote = useRemote(load);
-  const [tab, setTab] = useState<"profile" | "security" | "notifications">(initialTab), [preferencesVisited, setPreferencesVisited] = useState(initialTab === "notifications");
-  const [securityVisited, setSecurityVisited] = useState(initialTab === "security");
+  const [tab, setTab] = useState<"profile" | "security" | "devices" | "notifications">(initialTab), [preferencesVisited, setPreferencesVisited] = useState(initialTab === "notifications");
+  const [securityVisited, setSecurityVisited] = useState(initialTab === "security"), [devicesVisited, setDevicesVisited] = useState(initialTab === "devices");
   function showPreferences() { setPreferencesVisited(true); setTab("notifications"); }
-  return <section className={styles.page}><header className="border-b border-border pb-5"><p className="text-xs font-semibold uppercase tracking-[.14em] text-accent">Tài khoản</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">Tài khoản của tôi</h1><p className="mt-2 text-sm text-text-muted">Thông tin, liên hệ và quyền truy cập của bạn.</p></header><nav aria-label="Thiết lập tài khoản" className="mb-6 flex gap-6 border-b border-border text-sm"><button type="button" aria-current={tab === "profile" ? "page" : undefined} onClick={() => setTab("profile")} className="border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary">Hồ sơ</button><button type="button" aria-current={tab === "security" ? "page" : undefined} onClick={() => { setSecurityVisited(true); setTab("security"); }} className="border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary">Đổi mật khẩu</button><button type="button" aria-current={tab === "notifications" ? "page" : undefined} onClick={showPreferences} className="border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary">Thông báo</button></nav><div hidden={tab !== "profile"}>
+  return <section className={styles.page}><header className="border-b border-border pb-5"><p className="text-xs font-semibold uppercase tracking-[.14em] text-accent">Tài khoản</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">Tài khoản của tôi</h1><p className="mt-2 text-sm text-text-muted">Thông tin, liên hệ và quyền truy cập của bạn.</p></header><nav aria-label="Thiết lập tài khoản" className="mb-6 flex gap-6 border-b border-border text-sm"><button type="button" aria-current={tab === "profile" ? "page" : undefined} onClick={() => setTab("profile")} className="border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary">Hồ sơ</button><button type="button" aria-current={tab === "security" ? "page" : undefined} onClick={() => { setSecurityVisited(true); setTab("security"); }} className="border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary">Đổi mật khẩu</button><button type="button" aria-current={tab === "devices" ? "page" : undefined} onClick={() => { setDevicesVisited(true); setTab("devices"); }} className="border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary">Thiết bị đăng nhập</button><button type="button" aria-current={tab === "notifications" ? "page" : undefined} onClick={showPreferences} className="border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary">Thông báo</button></nav><div hidden={tab !== "profile"}>
     {remote.loading && <Skeleton />}<ErrorNotice error={remote.error} />
     {!remote.loading && !remote.data && <Button className="mt-4 w-auto" onClick={remote.reload}>Tải lại hồ sơ</Button>}
-    {remote.data && <PersonalApiEditor initial={remote.data} onShowNotifications={showPreferences} onShowSecurity={() => { setSecurityVisited(true); setTab("security"); }} />}</div>{securityVisited && <div hidden={tab !== "security"} className="mx-auto w-full max-w-2xl"><ApiSecurityGate phase="password-change-required" forced={false} /></div>}{preferencesVisited && <div hidden={tab !== "notifications"}><NotificationApiDialog inline onClose={() => setTab("profile")} /></div>}
+    {remote.data && <PersonalApiEditor initial={remote.data} onShowNotifications={showPreferences} onShowSecurity={() => { setSecurityVisited(true); setTab("security"); }} />}</div>{securityVisited && <div hidden={tab !== "security"} className="mx-auto w-full max-w-2xl"><ApiSecurityGate phase="password-change-required" forced={false} /></div>}{devicesVisited && <div hidden={tab !== "devices"} className="mx-auto w-full max-w-2xl"><DevicesPanel /></div>}{preferencesVisited && <div hidden={tab !== "notifications"}><NotificationApiDialog inline onClose={() => setTab("profile")} /></div>}
   </section>;
 }
 export function PersonalApiEditor({ initial, onShowNotifications, onShowSecurity }: { initial: ProfileViewDto; onShowNotifications?(): void; onShowSecurity?(): void }) {
@@ -72,7 +73,7 @@ export function PersonalApiEditor({ initial, onShowNotifications, onShowSecurity
           } else {
             setContactError(`${nameSaved ? "Tên hiển thị đã được lưu. Phần liên hệ chưa được xác nhận; nháp vẫn được giữ. " : ""}${verificationError(result)}`);
             if (result.uncertain) setContactUncertain(true);
-            else if (!["VERIFICATION_BUSY", "VERIFICATION_UNSUPPORTED", "VERIFICATION_SESSION"].includes(result.code ?? "")) setContactFlow({ ...contactFlow, phase: "failed" });
+            else if (!["VERIFICATION_BUSY", "VERIFICATION_UNSUPPORTED", "VERIFICATION_SESSION"].includes(result.code ?? "")) setContactFlow({ ...contactFlow, phase: "code" });
           }
         }
       } finally { saveLock.current = false; if (alive.current) setContactSaving(false); }

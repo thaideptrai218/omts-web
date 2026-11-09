@@ -7,7 +7,7 @@ import { accessCanary, backend, employeeDetailFixture, employeeId, environment, 
 describe("employee mutation lifecycle and redacted failure", () => {
   it.each([
     { status: "anonymous" } as const,
-    { status: "invalid-session", reason: "revoked", clearCookie: true } as const,
+    { status: "invalid-session", reason: "invalid-session", clearCookie: true } as const,
     resolved({ revision: "revision-2" }), resolved({ idHash: "b".repeat(64) }),
     resolved({ identity: { ...resolved().session.identity, accountId: employeeId } }),
     resolved({ identity: { ...resolved().session.identity, backendSessionId: employeeId } }),

@@ -18,7 +18,6 @@ export async function handleZoneMap(request: Request) {
   try {
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: initial.status === "unavailable" ? "unavailable" : "session-expired" }, initial.status === "unavailable" ? 503 : 401);
-    if (initial.session.phase !== "application") return json({ status: "onboarding-required" }, 403);
     if (!["CooperativeOwner", "Staff"].includes(initial.session.identity.subjectType)) return json({ status: "forbidden", code: "MSG02" }, 403);
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(backend.config.timeoutMs)]);
     const url = new URL("/api/zones/map", backend.config.origin);

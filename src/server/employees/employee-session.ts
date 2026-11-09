@@ -16,9 +16,7 @@ export async function resolveEmployeeSession(dependencies: Pick<EmployeeAdapterD
 }
 
 export function sameEmployeeSession(first: ResolvedServerSession, current: ResolvedServerSession) {
-  return current.phase === "application" && current.revision === first.revision
-    && current.readIdHashForSessionStore() === first.readIdHashForSessionStore()
-    && current.identity.accountId === first.identity.accountId
+  return current.identity.accountId === first.identity.accountId
     && current.identity.backendSessionId === first.identity.backendSessionId
     && current.identity.subjectType === first.identity.subjectType;
 }

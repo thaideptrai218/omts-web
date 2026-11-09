@@ -97,8 +97,8 @@ focus-ring    cyan-500
 **Thứ tự thông tin:**
 
 1. Tiêu đề “Đăng nhập OMTS” và câu hướng dẫn ngắn.
-2. Identifier với label “Tên đăng nhập, số điện thoại hoặc email”.
-3. Helper: số điện thoại/email phải được xác minh; Staff lần đầu dùng username.
+2. Identifier với label “Số điện thoại”.
+3. Helper: nhập số điện thoại đã đăng ký với hợp tác xã; email không dùng để đăng nhập.
 4. Password + nút hiện/ẩn có nhãn cho screen reader.
 5. Nút “Đăng nhập”.
 6. Link “Quên mật khẩu”.

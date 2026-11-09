@@ -17,6 +17,7 @@ const tokens = {
   subjectType: "Staff",
   mustChangePassword: true,
   phoneVerificationRequired: true,
+  refreshTokenRotated: true,
 };
 
 describe("auth wire contract at backend 48ae1e0", () => {

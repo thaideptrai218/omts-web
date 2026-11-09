@@ -12,7 +12,6 @@ for (const username of ["owner", "quanlyvung1", "quanlyvung2", "ketoan"]) {
   }
   const check = (label,result,allowed = [200]) => { const ok = allowed.includes(result.http); if (!ok) failed = true; console.log(`${username} ${label}: ${ok ? "OK" : "FAIL"} HTTP ${result.http} ${result.status ?? ""}${result.code ? ` ${result.code}` : ""}`); };
   try {
-    check("bootstrap", await request("/api/auth/bootstrap", null));
     const login = await request("/api/auth/login", { identifier: username, password }); check("login",login);
     if (!["created", "active"].includes(login.status)) { failed = true; continue; }
     check("session",await request("/api/auth/session"));
@@ -58,6 +57,6 @@ for (const username of ["owner", "quanlyvung1", "quanlyvung2", "ketoan"]) {
       }
     }
   } catch { failed = true; console.log(`${username}: FAIL request unavailable`); }
-  finally { try { const state=await request("/api/auth/bootstrap",null); await request("/api/auth/logout",{expectedRevision:state.revision}); } catch { /* no token or cookie output */ } }
+  finally { try { await request("/api/auth/logout",null); } catch { /* no token or cookie output */ } }
 }
 process.exitCode = failed ? 1 : 0;
