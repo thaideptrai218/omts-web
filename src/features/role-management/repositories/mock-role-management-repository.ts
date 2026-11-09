@@ -4,13 +4,19 @@ import type {
   FeatureCatalogItem,
   RoleDetails,
   RoleMutationResult,
-  RolePermission,
   SaveRoleInput,
   ReactivateRoleResult,
 } from "@/features/role-management/domain/role-management";
-import { validatePermissionMatrix } from "@/features/role-management/lib/role-permission-rules";
 import type { RoleManagementRepository } from "@/features/role-management/repositories/role-management-repository";
-import { roleEditorSchema } from "@/features/role-management/schemas/role-editor-schema";
+import {
+  cloneCatalog,
+  cloneImpactAccounts,
+  clonePermissions,
+  cloneRole,
+  createRoleConflictResult,
+  wait,
+} from "@/features/role-management/repositories/mock-role-management-helpers";
+import { validateMockRoleSave } from "@/features/role-management/repositories/mock-role-save-validation";
 
 type MockRoleManagementOptions = Readonly<{
   fixedNames?: Readonly<Record<string, string>>;
@@ -27,30 +33,7 @@ type MockRoleManagementOptions = Readonly<{
   latencyMs?: number;
 }>;
 
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function clonePermissions(
-  permissions: readonly RolePermission[],
-): readonly RolePermission[] {
-  return permissions.map((permission) => ({
-    ...permission,
-    actionKeys: [...permission.actionKeys],
-  }));
-}
-
-function cloneRole(role: RoleDetails): RoleDetails {
-  return {
-    ...role,
-    impactAccounts: role.impactAccounts.map((account) => ({
-      ...account,
-      zoneLabels: [...account.zoneLabels],
-    })),
-    permissions: clonePermissions(role.permissions),
-  };
-}
-
+/** In-memory role store used by tests and mock mode. */
 export function createMockRoleManagementRepository({
   fixedNames,
   getUsage,
@@ -94,13 +77,7 @@ export function createMockRoleManagementRepository({
       return {
         status: "loaded",
         workspace: {
-          catalog: catalog.map((feature) => ({
-            ...feature,
-            scope: feature.scope
-              ? { ...feature.scope, options: [...feature.scope.options] }
-              : undefined,
-            supportedActions: [...feature.supportedActions],
-          })),
+          catalog: cloneCatalog(catalog),
           roles: roles.map((role) => cloneRole(withUsage(role))),
         },
       };
@@ -110,57 +87,8 @@ export function createMockRoleManagementRepository({
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;
 
-      if (fixedNames && (!input.id || !Object.hasOwn(fixedNames, input.id))) {
-        return { status: "forbidden", message: { code: "MSG02" } };
-      }
-
-      const metadata = roleEditorSchema.safeParse({
-        description: input.description,
-        name: input.name,
-      });
-      if (!metadata.success) {
-        return {
-          field: "name",
-          message: { code: "MSG01" },
-          status: "invalid-input",
-        };
-      }
-
-      if (
-        fixedNames &&
-        input.id &&
-        metadata.data.name !== fixedNames[input.id]
-      ) {
-        return {
-          status: "invalid-input",
-          field: "name",
-          message: { code: "MSG01" },
-        };
-      }
-
-      const matrixErrors = validatePermissionMatrix(input.permissions, catalog);
-      if (matrixErrors.length > 0) {
-        return {
-          field: `permission:${matrixErrors[0].featureCode}` as const,
-          message: { code: "MSG01" },
-          status: "invalid-input",
-        };
-      }
-
-      const duplicate = roles.find(
-        (role) =>
-          role.id !== input.id &&
-          role.name.localeCompare(metadata.data.name, "vi", {
-            sensitivity: "base",
-          }) === 0,
-      );
-      if (duplicate) {
-        return {
-          existingRoleId: duplicate.id,
-          message: { code: "MSG03", params: { object_name: "Tên vai trò" } },
-          status: "duplicate-name",
-        };
-      }
+      const validation = validateMockRoleSave(input, { catalog, fixedNames, roles });
+      if (validation.rejection) return validation.rejection;
 
       const currentRole = input.id ? findRole(input.id) : undefined;
       if (fixedNames && currentRole?.status === "discontinued") {
@@ -170,13 +98,7 @@ export function createMockRoleManagementRepository({
         input.id &&
         (!currentRole || currentRole.recordVersion !== input.recordVersion)
       ) {
-        return {
-          message: {
-            code: "MSG06",
-            params: { time: "vừa xong", user_name: "một người dùng khác" },
-          },
-          status: "conflict",
-        };
+        return createRoleConflictResult();
       }
 
       if (
@@ -185,10 +107,7 @@ export function createMockRoleManagementRepository({
         !input.confirmImpact
       ) {
         return {
-          impactAccounts: currentRole.impactAccounts.map((account) => ({
-            ...account,
-            zoneLabels: [...account.zoneLabels],
-          })),
+          impactAccounts: cloneImpactAccounts(currentRole.impactAccounts),
           message: {
             code: "MSG09",
             params: { action: `cập nhật vai trò ${currentRole.name}` },
@@ -202,7 +121,7 @@ export function createMockRoleManagementRepository({
         ? {
             ...currentRole,
             description: input.description,
-            name: metadata.data.name,
+            name: validation.name,
             permissions: clonePermissions(input.permissions),
             recordVersion: `role-v${nextVersion}`,
           }
@@ -212,7 +131,7 @@ export function createMockRoleManagementRepository({
             description: input.description,
             id: `role-${nextRoleNumber++}`,
             impactAccounts: [],
-            name: metadata.data.name,
+            name: validation.name,
             permissions: clonePermissions(input.permissions),
             recordVersion: `role-v${nextVersion}`,
             status: "in-use",
@@ -237,21 +156,12 @@ export function createMockRoleManagementRepository({
 
       const currentRole = findRole(input.id);
       if (!currentRole || currentRole.recordVersion !== input.recordVersion) {
-        return {
-          message: {
-            code: "MSG06",
-            params: { time: "vừa xong", user_name: "một người dùng khác" },
-          },
-          status: "conflict",
-        };
+        return createRoleConflictResult();
       }
 
       if (currentRole.activeAccountCount > 0) {
         return {
-          impactAccounts: currentRole.impactAccounts.map((account) => ({
-            ...account,
-            zoneLabels: [...account.zoneLabels],
-          })),
+          impactAccounts: cloneImpactAccounts(currentRole.impactAccounts),
           message: {
             code: "MSG11",
             params: {
@@ -292,13 +202,7 @@ export function createMockRoleManagementRepository({
       }
       const currentRole = findRole(input.id);
       if (!currentRole || currentRole.recordVersion !== input.recordVersion) {
-        return {
-          status: "conflict",
-          message: {
-            code: "MSG06",
-            params: { time: "vừa xong", user_name: "một người dùng khác" },
-          },
-        };
+        return createRoleConflictResult();
       }
       const restored: RoleDetails =
         currentRole.status === "in-use"
