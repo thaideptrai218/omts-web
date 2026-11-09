@@ -1,3 +1,4 @@
+import { BootScreen } from "@/components/feedback/boot-screen";
 import type { Metadata } from "next";
 
 import { RecoveryExperience } from "@/features/account-recovery/components/recovery-experience";
@@ -19,5 +20,5 @@ async function RecoverContent() {
 }
 
 export default function RecoverPage() {
-  return <Suspense fallback={<p role="status">Đang tải trang khôi phục...</p>}><RecoverContent /></Suspense>;
+  return <Suspense fallback={<BootScreen message="Đang tải trang khôi phục..." />}><RecoverContent /></Suspense>;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { BootScreen } from "@/components/feedback/boot-screen";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
@@ -42,16 +43,9 @@ export function AppSessionShell({ children }: { children: ReactNode }) {
 
   if (state.status !== "authenticated") {
     return (
-      <main
-        className="grid min-h-dvh place-items-center bg-canvas px-4 text-center"
-        role="status"
-      >
-        <p className="text-sm font-medium text-text-muted">
-          {state.status === "loading"
-            ? "Đang kiểm tra phiên đăng nhập..."
-            : "Đang chuyển về trang đăng nhập..."}
-        </p>
-      </main>
+      <BootScreen
+        message={state.status === "loading" ? "Đang kiểm tra phiên đăng nhập..." : "Đang chuyển về trang đăng nhập..."}
+      />
     );
   }
 

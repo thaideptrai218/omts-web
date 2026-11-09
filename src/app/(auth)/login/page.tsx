@@ -1,3 +1,4 @@
+import { BootScreen } from "@/components/feedback/boot-screen";
 import type { Metadata } from "next";
 import { LoginExperience } from "@/features/auth/components/login-experience";
 import { Suspense } from "react";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 async function LoginContent() {
   await connection();
   if (getSessionGateway().mode !== "mock") {
-    return <Suspense fallback={<p role="status">Đang kiểm tra phiên đăng nhập...</p>}><ApiLoginEntry /></Suspense>;
+    return <Suspense fallback={<BootScreen message="Đang kiểm tra phiên đăng nhập..." />}><ApiLoginEntry /></Suspense>;
   }
   return (
     <section
@@ -32,5 +33,5 @@ async function LoginContent() {
 }
 
 export default function LoginPage() {
-  return <Suspense fallback={<p role="status">Đang tải trang đăng nhập...</p>}><LoginContent /></Suspense>;
+  return <Suspense fallback={<BootScreen message="Đang tải trang đăng nhập..." />}><LoginContent /></Suspense>;
 }

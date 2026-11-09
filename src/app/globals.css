@@ -157,3 +157,37 @@ html[data-omts-scroll-locked] body {
 /* The shared password field provides a text-only reveal control. Hide Edge's duplicate eye. */
 input[data-password-field]::-ms-reveal,
 input[data-password-field]::-ms-clear { display:none; }
+
+/* Màn tải toàn trang (BootScreen): thanh chạy và logo thở nhẹ; tắt khi giảm chuyển động. */
+.omts-boot-track { width: 100%; height: 0.25rem; overflow: hidden; border-radius: 999px; background: var(--omts-color-border); }
+.omts-boot-bar { display: block; height: 100%; width: 40%; border-radius: inherit; background: var(--omts-color-primary); animation: omts-boot-slide 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.omts-boot-mark { animation: omts-boot-breathe 2.4s ease-in-out infinite; }
+@keyframes omts-boot-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@keyframes omts-boot-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+@media (prefers-reduced-motion: reduce) {
+  .omts-boot-bar, .omts-boot-mark { animation: none; }
+  .omts-boot-bar { width: 100%; opacity: 0.5; }
+}
+
+/* ---- Đánh bóng chung: chuyển động mượt, chữ số thẳng cột, khung tải dạng ánh sáng quét ---- */
+html { scroll-behavior: smooth; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+/* Số tiền, số lượng luôn thẳng hàng giữa các dòng. */
+[data-currency], td, th, dd { font-variant-numeric: tabular-nums; }
+/* Phản hồi nhấn nút trong 100ms, không làm xê dịch bố cục xung quanh. */
+button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { touch-action: manipulation; }
+button:not(:disabled):active { transform: scale(0.985); }
+/* Nội dung vào trang nhẹ nhàng khi chuyển màn. */
+#workspace-main > section { animation: omts-page-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes omts-page-enter { from { transform: translateY(0.5rem); opacity: 0.001; } to { transform: none; opacity: 1; } }
+/* Khung tải: dải sáng chạy ngang thay cho nhấp nháy. */
+.omts-skeleton { background: linear-gradient(100deg, var(--omts-color-surface-subtle) 30%, #f9fbfb 50%, var(--omts-color-surface-subtle) 70%); background-size: 200% 100%; animation: omts-shimmer 1.4s linear infinite; }
+@keyframes omts-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+/* Hàng bảng và thẻ có thể bấm: đổi màu nền êm khi rê chuột hoặc focus bàn phím. */
+tbody tr { transition: background-color 0.15s ease; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  #workspace-main > section { animation: none; }
+  .omts-skeleton { animation: none; }
+  button:not(:disabled):active { transform: none; }
+  tbody tr { transition: none; }
+}

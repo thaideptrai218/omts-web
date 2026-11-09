@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { BootScreen } from "@/components/feedback/boot-screen";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { AuthProvider } from "@/features/auth/state/auth-provider";
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
@@ -35,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ToastProvider>
-          <Suspense fallback={<main className="p-6" role="status">Đang tải hệ thống quản lý HTX...</main>}>
+          <Suspense fallback={<BootScreen message="Đang tải hệ thống quản lý HTX..." />}>
             <RequestAuthProvider>{children}</RequestAuthProvider>
           </Suspense>
         </ToastProvider>

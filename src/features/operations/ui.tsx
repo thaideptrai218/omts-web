@@ -8,7 +8,7 @@ import type { InterfaceIconName } from "@/components/ui/interface-icon";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { workspaceError } from "@/features/api-workspace/workspace-error";
 
-function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
+export function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
   if (result.httpStatus === 401 && result.uncertain) return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại và đối chiếu kết quả trước khi lập lượt mới.";
   const messages: Record<string, string> = { MSG41: "Số tiền phải là bội số của 1.000 đồng.", MSG45: "Số tiền hoặc số lượng vượt mức cho phép. Hãy đối chiếu số còn nợ hoặc số còn được trả.",
     "MSG-PURCHASE-05": "Khoản chi vượt công nợ hiện tại. Hãy đối chiếu và xác nhận phần trả trước nếu muốn tiếp tục.",
@@ -42,7 +42,7 @@ export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: 
   return <label className="block text-xs font-medium text-text-muted">{label}<textarea {...props} className={control} rows={3} /></label>;
 }
 export function ErrorNotice({ error }: { error?: string }) { return error ? <p role="alert" className="my-4 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p> : null; }
-export function Skeleton() { return <div role="status" aria-label="Đang tải dữ liệu" className="my-5 space-y-3">{[1, 2, 3].map((id) => <div key={id} className="h-14 animate-pulse rounded-control bg-slate-200" />)}</div>; }
+export function Skeleton() { return <div role="status" aria-label="Đang tải dữ liệu" className="my-5 space-y-3">{[1, 2, 3].map((id) => <div key={id} className="omts-skeleton h-14 rounded-control" />)}</div>; }
 export function Money({ value }: { value: number | null | undefined }) { return <span data-currency>{value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)}{value == null ? "" : " ₫"}</span>; }
 export const money = (value: number | null | undefined) => value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value) + " ₫";
 export function businessToday() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
