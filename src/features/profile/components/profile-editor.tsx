@@ -12,6 +12,7 @@ import {
   useProfileContactVerification,
   type ProfileEditorLifetime,
 } from "@/features/profile/components/use-profile-contact-verification";
+import { useProfileSave } from "@/features/profile/components/use-profile-save";
 import type {
   PersonalProfile,
   ProfileIdentifierKind,
@@ -22,8 +23,6 @@ import {
 } from "@/features/profile/schemas/profile-schema";
 import type { PersonalProfileService } from "@/features/profile/services/personal-profile-service";
 import type { VerificationService } from "@/features/verification/services/verification-service";
-import { formatMessage } from "@/shared/messages/message-catalog";
-import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 import { ContactEditor } from "./profile-contact-card";
 
 const CONTACT_KINDS: readonly ProfileIdentifierKind[] = ["email", "phone"];
@@ -74,62 +73,18 @@ export function ProfileEditor({
     if (!isSubmitting && errors.displayName) setFocus("displayName");
   }, [errors.displayName, isSubmitting, setFocus]);
 
-  async function saveProfile(values: ProfileDetailsFormValues, scope: ProfileEditorLifetime) {
-    if (!scope.active || scope.pending) return;
-    scope.pending = true;
-    setFormError(undefined);
-
-    try {
-      const result = await profileService.save({
-        displayName: values.displayName,
-        emailChange: verifiedChanges.email,
-        phoneChange: verifiedChanges.phone,
-        recordVersion: profile.recordVersion,
-      });
-      if (!scope.active) return;
-
-      if (result.status === "session-expired") {
-        sessionExpiryChannel.publish(result.message);
-        return;
-      }
-      if (result.status === "conflict") {
-        setFormError(formatMessage(result.message));
-        return;
-      }
-      if (result.status === "invalid-change") {
-        const message = formatMessage(result.message);
-        if (result.field === "displayName") {
-          setError("displayName", { message }, { shouldFocus: true });
-        } else {
-          setVerifiedChanges((current) => ({ ...current, [result.field]: undefined }));
-          setFormError(message);
-        }
-        return;
-      }
-
-      // Never apply a response that belongs to a different account.
-      if (result.profile.accountId !== profile.accountId) {
-        setFormError(formatMessage({ code: "MSG04" }));
-        return;
-      }
-      setVerifiedChanges({});
-      onProfileChange(result.profile);
-      updateDisplayName(result.profile.displayName);
-      reset({ displayName: result.profile.displayName });
-      notify({ title: formatMessage(result.message), tone: "success" });
-      if (result.notice) {
-        notify({
-          description: formatMessage(result.notice),
-          title: "Cần kiểm tra liên kết lịch sử",
-          tone: "info",
-        });
-      }
-    } catch {
-      if (scope.active) setFormError(formatMessage({ code: "MSG04" }));
-    } finally {
-      scope.pending = false;
-    }
-  }
+  const { saveProfile } = useProfileSave({
+    notify,
+    onProfileChange,
+    profile,
+    profileService,
+    reset,
+    setError,
+    setFormError,
+    setVerifiedChanges,
+    updateDisplayName,
+    verifiedChanges,
+  });
 
   function cancelChanges() {
     validation.current++;

@@ -1,6 +1,5 @@
 "use client";
 import { WaterZoneOverview } from "@/features/water-overview/water-zone-overview";
-import { FilterChecks } from "@/components/ui/filter-checks";
 import { readSelectionPages } from "./selection-pages";
 import { selectionQueries } from "@/shared/presentation/filter-selection";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
@@ -12,8 +11,9 @@ import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import type { Query } from "./repository";
 import { loadOptions } from "./lookups";
-import { ErrorNotice, Field, OperationHeading, Select, Skeleton, useMutation, useRemote } from "./ui";
-import { WaterHistoryTable } from "./water-history-table";
+import { ErrorNotice, OperationHeading, useMutation, useRemote } from "./ui";
+import { WaterChartSection } from "./water-chart-section";
+import { WaterHistorySection } from "./water-history-section";
 import { MeasurementEditor } from "./water-measurement-editor";
 import {
   waterRepository as repository,
@@ -21,21 +21,14 @@ import {
   type WaterRecognition,
 } from "./water-measurement-shared";
 import { NewMeasurement } from "./water-new-measurement-dialog";
-import { WaterQualityChart } from "./water-quality-chart";
 import { ThresholdDialog } from "./water-threshold-dialog";
+import { WaterZoneFilters } from "./water-zone-filters";
 
 // Re-exported so existing imports from "./water-screen" keep working.
 export { MeasurementEditor } from "./water-measurement-editor";
 export { NewMeasurement } from "./water-new-measurement-dialog";
 
 const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
-
-const STATUS_FILTER_OPTIONS: [string, string][] = [
-  ["Confirmed", "Đã xác nhận"],
-  ["Draft", "Nháp"],
-  ["Corrected", "Đã hiệu chỉnh"],
-  ["Voided", "Đã hủy"],
-];
 
 /** The API expects an empty status for "all"; the UI keeps "All" as its own sentinel. */
 function toStatusSelection(status: string) {
@@ -111,22 +104,14 @@ export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } =
     setSelected(undefined);
   }
 
-  const zoneFilters = <>
-    <Select label="Vùng nuôi *" value={zoneId} onChange={(e) => { setZoneId(e.target.value); setPage(1); setSelected(undefined); setFullDetail(false); }}>
-      <option value="">Chọn vùng được cấp</option>
-      {availableZones.map((row) => (
-        <option key={row.id} value={row.id}>{String(row.name)}{row.statusId === 102 ? " (ngừng dùng)" : ""}</option>
-      ))}
-    </Select>
-    <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => updateDateFilter("from", e.target.value)} />
-    <Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => updateDateFilter("to", e.target.value)} />
-    <FilterChecks
-      label="Trạng thái"
-      value={filters.status === "All" ? "" : filters.status}
-      options={STATUS_FILTER_OPTIONS}
-      onChange={(value) => { setFilters((current) => ({ ...current, status: value })); setPage(1); setSelected(undefined); }}
-    />
-  </>;
+  const zoneFilters = <WaterZoneFilters
+    availableZones={availableZones}
+    filters={filters}
+    zoneId={zoneId}
+    onZoneChange={(value) => { setZoneId(value); setPage(1); setSelected(undefined); setFullDetail(false); }}
+    onDateChange={updateDateFilter}
+    onStatusChange={(value) => { setFilters((current) => ({ ...current, status: value })); setPage(1); setSelected(undefined); }}
+  />;
 
   return <section className={styles.page}>
     <OperationHeading
@@ -156,41 +141,18 @@ export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } =
           </div>
           <Button variant="secondary" disabled={history.loading} onClick={() => { history.reload(); chart.reload(); }}>Tải lại dữ liệu</Button>
         </div>
-        <section aria-labelledby="water-chart-heading" className="mt-7 border-t border-border pt-4">
-          <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 id="water-chart-heading" className="text-base font-semibold tracking-tight">Xu hướng chất lượng nước</h2>
-              <p className="mt-1 text-xs text-text-muted">Chỉ số đã xác nhận, so với ngưỡng hiện hành</p>
-            </div>
-            <div className="w-full sm:w-44">
-              <Select label="Khoảng gộp" value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
-                <option value="month">Theo tháng</option>
-                <option value="day">Theo ngày</option>
-              </Select>
-            </div>
-          </div>
-          <ErrorNotice error={chart.error} />
-          {chart.loading ? <Skeleton /> : chart.data && <WaterQualityChart data={chart.data} />}
-        </section>
-        <section aria-labelledby="water-history-heading" className="mt-5 border-t border-border pt-4">
-          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h2 id="water-history-heading" className="text-base font-semibold tracking-tight">Lịch sử phép đo</h2>
-            {history.data && <p className="text-xs text-text-muted">{history.data.total} bản ghi</p>}
-          </div>
-          {history.loading ? <Skeleton /> : history.data && (
-            <WaterHistoryTable
-              history={history.data}
-              selected={selected}
-              disabled={mutation.pending}
-              page={page}
-              pageSize={pageSize}
-              onToggleRow={toggleRow}
-              onFullDetail={() => setFullDetail(true)}
-              onPageChange={(next) => { setPage(next); setSelected(undefined); }}
-              onPageSizeChange={(size) => { setPageSize(size); setPage(1); setSelected(undefined); }}
-            />
-          )}
-        </section>
+        <WaterChartSection chart={chart} groupBy={groupBy} onGroupByChange={setGroupBy} />
+        <WaterHistorySection
+          history={history}
+          selected={selected}
+          disabled={mutation.pending}
+          page={page}
+          pageSize={pageSize}
+          onToggleRow={toggleRow}
+          onFullDetail={() => setFullDetail(true)}
+          onPageChange={(next) => { setPage(next); setSelected(undefined); }}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); setSelected(undefined); }}
+        />
       </>}
     </FilterWorkspace>
     {selected !== undefined && (selected

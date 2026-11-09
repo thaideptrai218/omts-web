@@ -27,6 +27,11 @@ async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>,
       uncertain: body !== undefined && (response.status >= 500 || response.ok || response.status === 401) };
   } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
 }
+/** Tên tệp do BFF đặt trong Content-Disposition (chỉ nhận ký tự an toàn); không có thì dùng tên mặc định theo màn. */
+export function suggestedFileName(header: string | null): string | undefined {
+  const name = /filename="([A-Za-z0-9._-]{1,80})"/.exec(header ?? "")?.[1];
+  return name && /.(xlsx|zip|pdf)$/.test(name) ? name : undefined;
+}
 export function createOperationsRepository(area: RepositoryArea) {
   return {
     read<T>(action: string, query: Query, schema: z.ZodType<T>, signal?: AbortSignal) { return send(area, { ...query, action }, schema, undefined, signal); },
@@ -60,7 +65,7 @@ export function createOperationsRepository(area: RepositoryArea) {
         }
         if (!response.headers.get("content-type")?.startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) throw new Error("Unexpected file");
         const url = URL.createObjectURL(await response.blob());
-        const link = document.createElement("a"); link.href = url; link.download = `${area}.xlsx`; link.click();
+        const link = document.createElement("a"); link.href = url; link.download = suggestedFileName(response.headers.get("content-disposition")) ?? `${area}.xlsx`; link.click();
         setTimeout(() => URL.revokeObjectURL(url), 30_000);
         return { status: "success", data: true };
       } catch { return { status: "error", httpStatus: 0, uncertain: false }; }

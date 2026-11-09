@@ -12,8 +12,6 @@ import {
   CooperativeProfileFormErrorAlert,
 } from "@/features/cooperative-profile/components/cooperative-profile-details-panels";
 import {
-  getFieldElementId,
-  serverFieldToFormField,
   toFormValues,
   toSaveInput,
 } from "@/features/cooperative-profile/components/cooperative-profile-form-mapping";
@@ -30,7 +28,6 @@ import {
 import type {
   BankOption,
   CooperativeProfile,
-  CooperativeProfileField,
   SaveCooperativeProfileInput,
 } from "@/features/cooperative-profile/domain/cooperative-profile";
 import {
@@ -38,9 +35,10 @@ import {
   type CooperativeProfileFormValues,
 } from "@/features/cooperative-profile/schemas/cooperative-profile-schema";
 import { useBusinessActivityRows } from "@/features/cooperative-profile/components/use-business-activity-rows";
-import { cooperativeProfileService } from "@/features/cooperative-profile/services/cooperative-profile-service.instance";
-import { formatMessage } from "@/shared/messages/message-catalog";
-import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
+import {
+  useCooperativeProfileSave,
+  type CooperativeProfileLifetime,
+} from "@/features/cooperative-profile/components/use-cooperative-profile-save";
 
 type CooperativeProfileEditorProps = Readonly<{
   banks: readonly BankOption[];
@@ -57,7 +55,7 @@ export function CooperativeProfileEditor({
 }: CooperativeProfileEditorProps) {
   const { notify } = useToast();
   // Guards async work: ignore results after unmount, block double saves, and drop stale validations.
-  const lifetime = useRef<{ active: boolean; saving: boolean; validation: number } | null>(null);
+  const lifetime = useRef<CooperativeProfileLifetime | null>(null);
   useEffect(() => {
     const scope = { active: true, saving: false, validation: 0 };
     lifetime.current = scope;
@@ -107,61 +105,18 @@ export function CooperativeProfileEditor({
     setHasConflict(false);
   }
 
-  function showServerFieldError(field: CooperativeProfileField, message: string) {
-    setError(serverFieldToFormField(field), { message });
-    setStep("details");
-    const elementId = getFieldElementId(field, activityRows[0]?.id);
-    requestAnimationFrame(() => document.getElementById(elementId)?.focus());
-  }
-
-  async function confirmSave() {
-    const scope = lifetime.current;
-    if (!scope?.active || scope.saving || !draft) return;
-    scope.saving = true;
-
-    setFormError(undefined);
-    setHasConflict(false);
-    setIsSaving(true);
-
-    try {
-      const result = await cooperativeProfileService.save(draft);
-      if (!scope.active) return;
-
-      if (result.status === "session-expired") {
-        sessionExpiryChannel.publish(result.message);
-        return;
-      }
-
-      if (result.status === "forbidden") {
-        setFormError(formatMessage(result.message));
-        setStep("details");
-        return;
-      }
-
-      if (result.status === "invalid-input" || result.status === "duplicate-tax-id") {
-        showServerFieldError(result.field, formatMessage(result.message));
-        return;
-      }
-
-      if (result.status === "conflict") {
-        setFormError(formatMessage(result.message));
-        setHasConflict(true);
-        setStep("details");
-        return;
-      }
-
-      onProfileChange(result.profile);
-      notify({ title: formatMessage(result.message), tone: "success" });
-    } catch {
-      if (scope.active) {
-        setFormError(formatMessage({ code: "MSG04" }));
-        setStep("details");
-      }
-    } finally {
-      scope.saving = false;
-      if (scope.active) setIsSaving(false);
-    }
-  }
+  const { confirmSave } = useCooperativeProfileSave({
+    draft,
+    firstActivityRowId: activityRows[0]?.id,
+    lifetime,
+    notify,
+    onProfileChange,
+    setError,
+    setFormError,
+    setHasConflict,
+    setIsSaving,
+    setStep,
+  });
 
   if (step === "preview" && draft) {
     return (

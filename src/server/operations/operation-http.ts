@@ -36,6 +36,12 @@ function browserFiles(value: unknown): unknown {
   if ("photoUrl" in record) return { ...record, photoUrl: record.photoUrl ? `/api/operations/water?action=photo&id=${record.id}` : null };
   return value;
 }
+/** Tên tệp tải về dễ nhận biết: theo màn và ngày (xuất danh sách), hoặc theo hóa đơn khi in một hóa đơn. Chỉ gồm ký tự an toàn. */
+function exportFileName(area: string, query: URLSearchParams, exporting: boolean): string {
+  const id = query.get("id");
+  if (exporting && area === "sales-invoice-list" && id && /^[0-9a-f-]{36}$/i.test(id)) return `hoa-don-${id.slice(0, 8)}`;
+  return `${area}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
+}
 export async function handleOperationRequest(request: Request, areaName: string): Promise<Response> {
   if (areaName === "employees") return handleEmployeeApi(request);
   if (areaName === "zone-licenses" || areaName === "raft-details") return handleFarmingRequest(request, areaName);
@@ -195,7 +201,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
       if (request.signal.aborted || controller.signal.aborted) return json({ status: "unavailable" }, 503);
       if (bytes) {
         const extension = plan.file === "export" ? "xlsx" : contentType === "application/pdf" ? "pdf" : contentType === "image/png" ? "png" : "jpg";
-        return new Response(bytes as BodyInit, { headers: { ...responseHeaders, "Content-Type": contentType!, "Content-Disposition": `${plan.file === "photo" ? "inline" : "attachment"}; filename="${area.data}.${extension}"`,
+        return new Response(bytes as BodyInit, { headers: { ...responseHeaders, "Content-Type": contentType!, "Content-Disposition": `${plan.file === "photo" ? "inline" : "attachment"}; filename="${exportFileName(area.data, query, plan.file === "export")}.${extension}"`,
           "Content-Security-Policy": "sandbox; default-src 'none'" } });
       }
       return json({ status: "success", data: browserFiles(data) });

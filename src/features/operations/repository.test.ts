@@ -32,3 +32,13 @@ describe("operation response outcomes", () => {
     expect(await createOperationsRepository("water").write("record", {}, z.object({}))).toEqual({ status: "error", httpStatus: 403, code: "MSG02", uncertain: false });
   });
 });
+
+import { suggestedFileName } from "./repository";
+describe("tên tệp tải về", () => {
+  it("dùng tên do BFF đặt khi an toàn, bỏ qua tên lạ", () => {
+    expect(suggestedFileName('attachment; filename="hoa-don-1a2b3c4d.xlsx"')).toBe("hoa-don-1a2b3c4d.xlsx");
+    expect(suggestedFileName('attachment; filename="sales-invoice-list-20261109.xlsx"')).toBe("sales-invoice-list-20261109.xlsx");
+    expect(suggestedFileName('attachment; filename="../x.exe"')).toBeUndefined();
+    expect(suggestedFileName(null)).toBeUndefined();
+  });
+});

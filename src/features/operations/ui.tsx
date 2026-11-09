@@ -11,6 +11,11 @@ import { workspaceError } from "@/features/api-workspace/workspace-error";
 export function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
   if (result.httpStatus === 401 && result.uncertain) return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại và đối chiếu kết quả trước khi lập lượt mới.";
   const messages: Record<string, string> = { MSG41: "Số tiền phải là bội số của 1.000 đồng.", MSG45: "Số tiền hoặc số lượng vượt mức cho phép. Hãy đối chiếu số còn nợ hoặc số còn được trả.",
+    "MSG-SALE-13": "Chưa dùng được VietQR vì hợp tác xã chưa có tài khoản nhận tiền. Hãy chọn cách thanh toán khác và nhờ Chủ hợp tác xã thiết lập tài khoản.",
+    "MSG-SALE-14": "Chuyển khoản chưa về. Dừng giao dịch này? Hóa đơn không được lưu, mã chỉ giữ trong nhật ký. Hãy trả lại tiền mặt đã nhận (nếu có) và giữ nguyên hàng.",
+    "MSG-SALE-20": "Hóa đơn đã có phiếu trả hàng nên không thể sửa hoặc hủy.",
+    "MSG-SALE-21": "Hóa đơn khách lẻ không có hồ sơ khách hàng nên không thể tăng tổng tiền. Hãy lập hóa đơn mới cho phần hàng thêm.",
+    "MSG-CLAIM-03": "Hóa đơn đã bị hủy hoặc đã trả hàng nên chưa thể chấp nhận khiếu nại này.",
     "MSG-PURCHASE-05": "Khoản chi vượt công nợ hiện tại. Hãy đối chiếu và xác nhận phần trả trước nếu muốn tiếp tục.",
     "MSG-PURCHASE-06": "Mã giao dịch ngân hàng đã được ghi nhận. Hãy đối chiếu trước khi xác nhận dùng lại mã này.",
     "MSG-GEN-09": "Trạng thái hiện tại không cho phép thao tác. Hãy đọc dữ liệu mới để đối chiếu.",

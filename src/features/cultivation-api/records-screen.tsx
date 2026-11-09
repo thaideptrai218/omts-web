@@ -1,161 +1,212 @@
 "use client";
 import flowStyles from "./cultivation-flow.module.css";
 import { useSearchParams } from "next/navigation";
-import { Fragment, Suspense, useMemo, useState, type ReactNode } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { z } from "zod";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { OpenableTableRow } from "@/components/ui/openable-table-row";
-import { FilterChecks } from "@/components/ui/filter-checks";
-import { matchesSelection } from "@/shared/presentation/filter-selection";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
 import { CultivationProgress } from "./cultivation-progress";
 import { ManagementHeading } from "@/components/ui/management-page";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { loadOptions } from "@/features/operations/lookups";
-import { createOperationsRepository } from "@/features/operations/repository";
-import { operationAllowed, type OperationArea } from "@/features/operations/permissions";
-import { DataTable, ErrorNotice, Field, Note, Paging, Select, Skeleton, businessToday, displayTime, useRemote } from "@/features/operations/ui";
-import { useOperationEditor } from "@/features/operations/use-operation-editor";
+import { operationAllowed } from "@/features/operations/permissions";
+import { ErrorNotice, Field, Select, Skeleton, useRemote } from "@/features/operations/ui";
 import { zoneCycle } from "./contracts";
-import * as c from "./records-contracts";
-import { HarvestSettings } from "./harvest-settings";
-import { HarvestLotPreview } from "./harvest-lot-preview";
-type Area = "seeding" | "material-usages" | "harvest";
-const cycleRepo = createOperationsRepository("cultivation-cycles");
-const seedRepo = createOperationsRepository("seeding"), materialRepo = createOperationsRepository("material-usages"), harvestRepo = createOperationsRepository("harvest");
+import { HarvestPanel } from "./records-harvest-panel";
+import { MaterialsPanel } from "./records-materials-panel";
+import { SeedingPanel } from "./records-seeding-panel";
+import { cycleRepo, type RecordsArea as Area } from "./records-shared";
+
 const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
-export function CultivationRecordsScreen({ area }: { area: Area }) { return <Suspense fallback={<Skeleton />}><CultivationRecordsContent area={area} /></Suspense>; }
+
+/** Seeding, material-usage or harvest records for one raft, chosen from a paged raft rail. */
+export function CultivationRecordsScreen({ area }: { area: Area }) {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <CultivationRecordsContent area={area} />
+    </Suspense>
+  );
+}
+
+// useSearchParams needs a Suspense boundary, hence the wrapper above.
 function CultivationRecordsContent({ area }: { area: Area }) {
   const query = useSearchParams();
-  const context = useApiWorkspace(), zones = useRemote(loadZones);
-  const [zone, setZone] = useState(query.get("zoneId") ?? ""), [raft, setRaft] = useState(query.get("raftId") ?? ""), [search, setSearch] = useState("");
-  const available = zones.data?.filter(v => operationAllowed(area, context.identity, context.permissions.functionPermissions, "View", v.id)) ?? [];
-  const zoneId = String(zone || available[0]?.id || "");
-  const rafts = useRemote(useMemo(() => (signal: AbortSignal) => zoneId ? cycleRepo.read("list", { zoneId }, z.array(zoneCycle), signal) : Promise.resolve({ status: "success" as const, data: [] }), [zoneId]));
-  const [raftPage,setRaftPage]=useState(1);
-  const matchingRafts=rafts.data?.filter(v=>v.raftCode.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi"))) ?? [];
-  const currentPage=Math.min(raftPage,Math.max(1,Math.ceil(matchingRafts.length/8)));
-  const visibleRafts=matchingRafts.slice((currentPage-1)*8,currentPage*8);
-  const selected = rafts.data?.find(v => v.raftId === raft) ?? visibleRafts[0];
-  const title = area === "seeding" ? "Thả giống" : area === "material-usages" ? "Sử dụng vật tư" : "Thu hoạch";
-  return <section className={flowStyles.page}>
-    <ManagementHeading title={title} description={area === "seeding" ? "Theo dõi lô giống, các lần thả và tiến độ từng làn nuôi." : area === "material-usages" ? "Tra cứu vật tư đã dùng theo bè, chu kỳ và công việc bảo dưỡng." : "Ghi nhận chuyến thu hoạch, số lồng và sản lượng ước tính."} icon={area === "material-usages" ? "material" : "raft"} />
-    <div className="mb-5 max-w-xl"><Field label="Tìm bè" type="search" value={search} onChange={e=>{setSearch(e.target.value);setRaft("");setRaftPage(1);}}/></div>
-    <FilterWorkspace label="Vùng và bè nuôi" filters={<>
-      <Select label="Vùng nuôi" value={zoneId} onChange={e=>{setZone(e.target.value);setRaft("");setSearch("");setRaftPage(1);}}><option value="">Chọn vùng nuôi</option>{available.map(v=><option key={v.id} value={v.id}>{String(v.name ?? v.code)}</option>)}</Select>
-
-      <div className={flowStyles.raftList} role="group" aria-label="Chọn bè nuôi">{visibleRafts.map(v=><button type="button" key={v.raftId} aria-pressed={selected?.raftId===v.raftId} onClick={()=>setRaft(v.raftId)}><span><strong>{v.raftCode}</strong><small>{v.laneCount} làn nuôi</small></span><span className={flowStyles.raftState}>{v.cycle?v.cycle.closeDate?"Đã đóng":"Đang nuôi":"Chưa có chu kỳ"}</span></button>)}{!rafts.loading&&!visibleRafts.length&&<p className="text-sm text-text-muted">Không có bè phù hợp.</p>}</div>
-      <div className={flowStyles.railPaging}><span>{matchingRafts.length} bè · {currentPage}/{Math.max(1,Math.ceil(matchingRafts.length/8))}</span><div><button type="button" aria-label="Trang bè trước" disabled={currentPage<=1} onClick={()=>{setRaftPage(currentPage-1);setRaft("");}}>←</button><button type="button" aria-label="Trang bè sau" disabled={currentPage*8>=matchingRafts.length} onClick={()=>{setRaftPage(currentPage+1);setRaft("");}}>→</button></div></div>
-    </>}>
-      <ErrorNotice error={zones.error||rafts.error}/>{(zones.error||rafts.error)&&<Button variant="secondary" onClick={()=>{zones.reload();rafts.reload();}}>Tải lại danh mục</Button>}
-      {rafts.loading?<Skeleton/>:selected?<div key={`${area}:${zoneId}:${selected.raftId}`}>
-        <div className={flowStyles.raftHeading}><div><span className={flowStyles.eyebrow}>HỒ SƠ VẬN HÀNH</span><h2>Bè {selected.raftCode}</h2><p>{selected.laneCount} làn nuôi · {selected.cycle?`Chu kỳ từ ${formatVietnameseDate(selected.cycle.startDate)}`:"Chưa có chu kỳ nuôi"}</p></div><span className={flowStyles.state}>{selected.cycle?selected.cycle.closeDate?"Chu kỳ đã đóng":"Chu kỳ đang mở":"Chưa bắt đầu"}</span></div>
-        {area!=="material-usages"&&<CultivationProgress raftId={selected.raftId} zoneId={zoneId}/>}
-        {area==="seeding"?selected.cycle?<SeedingPanel zoneId={zoneId} raftId={selected.raftId} cycleId={selected.cycle.id}/>:<p className={flowStyles.empty}>Bè chưa có chu kỳ nuôi. Mở chu kỳ trước khi ghi nhận thả giống.</p>:area==="material-usages"?<MaterialsPanel zoneId={zoneId} raftId={selected.raftId}/>:<HarvestPanel zoneId={zoneId} raftId={selected.raftId}/>}
-      </div>:<p className={flowStyles.empty}>Chọn vùng và bè để xem dữ liệu.</p>}
-    </FilterWorkspace>
-  </section>;
-}
-function useAllowed(area: OperationArea, zoneId: string) {
   const context = useApiWorkspace();
-  return (action: string) => operationAllowed(area, context.identity, context.permissions.functionPermissions, action, zoneId);
-}
-function EditorFrame({ title, editor, error, children }: { title: string; editor: ReturnType<typeof useOperationEditor>; error?: string; children: ReactNode }) {
-  return <Dialog open size="lg" dismissible={false} onCloseRequest={() => void editor.close()} title={title} onOpenChange={() => {}}>{editor.dialog}<ErrorNotice error={error || editor.mutation.error} />{children}{editor.mutation.blocked && <p role="alert" className="mt-3 text-sm">Kết quả cần được đối chiếu. Bản nháp vẫn được giữ; hãy đọc dữ liệu mới trước khi gửi lệnh tiếp.</p>}<Button className="mt-4" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Đóng</Button></Dialog>;
-}
-function LaneChoices({ lanes, values, onChange, label = "Làn nuôi" }: { lanes: number[]; values: number[]; onChange(values: number[]): void; label?: string }) {
-  return <fieldset className="space-y-2"><legend className="text-sm font-medium">{label}</legend><div className="flex flex-wrap gap-2">{lanes.map(n => <label key={n} className="flex items-center gap-2 rounded-control border border-border px-3 py-2 text-sm"><input type="checkbox" checked={values.includes(n)} onChange={e => onChange(e.target.checked ? [...values, n].sort((a,b) => a-b) : values.filter(v => v !== n))} />Làn {n}</label>)}</div>{!lanes.length && <p className="text-sm text-text-muted">Không có làn đủ điều kiện.</p>}</fieldset>;
-}
-function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raftId: string; cycleId: string }) {
-  const [expanded,setExpanded]=useState<string>();
-  const allowed = useAllowed("seeding", zoneId);
-  const remote = useRemote(useMemo(() => (signal: AbortSignal) => seedRepo.read("list", { id: cycleId, zoneId }, c.seedingList, signal), [cycleId, zoneId]));
-  const [selected, setSelected] = useState<z.infer<typeof c.seedingRecord> | null>(), [completing, setCompleting] = useState(false);
-  const data = remote.data;
-  const [page,setPage]=useState(1);
-  const currentPage=Math.min(page,Math.max(1,Math.ceil((data?.records.length ?? 0)/10)));
-  const visible=data?.records.slice((currentPage-1)*10,currentPage*10) ?? [];
-  return <section className={flowStyles.recordsPanel}><ErrorNotice error={remote.error}/><div className={flowStyles.panelHeading}><div><h3>Các lần thả giống</h3><p>{data?`${data.records.length} lần ghi nhận · ${data.seededCount}/${data.laneCount} làn đã thả giống`:"Theo dõi giống trong chu kỳ đang chọn"}</p></div><div className={flowStyles.actions}><Button variant="secondary" disabled={remote.loading} onClick={remote.reload}>Tải lại</Button>{data?.canRecord&&allowed("Create")&&<Button onClick={()=>setSelected(null)}>Ghi nhận thả giống</Button>}</div></div>
-  {remote.loading?<Skeleton/>:data&&<><div className={flowStyles.completion}><span>{data.seedingCompletedOn?`Hoàn tất thả giống ngày ${formatVietnameseDate(data.seedingCompletedOn)}`:"Chưa đánh dấu hoàn tất thả giống"}</span>{data.canMarkComplete&&allowed("Create")&&<Button variant="secondary" onClick={()=>setCompleting(true)}>Đánh dấu hoàn tất</Button>}</div>
-  <DataTable responsive headings={["Ngày thả","Lô giống / nhà cung cấp","Làn","Số lượng","Người ghi nhận"]} empty={!data.records.length}>{visible.map(v=><Fragment key={v.id}><OpenableTableRow data-selected={expanded===v.id||undefined} onOpen={()=>setExpanded(current=>current===v.id?undefined:v.id)}><td data-label="Ngày thả"><button type="button" className={flowStyles.recordLink} aria-label={`Chi tiết thả giống ngày ${formatVietnameseDate(v.seedingDate)}`} aria-expanded={expanded===v.id} onClick={()=>setExpanded(current=>current===v.id?undefined:v.id)}>{formatVietnameseDate(v.seedingDate)}</button></td><td data-label="Lô giống / nhà cung cấp"><strong>{v.seedLot.code}</strong><span className="block text-xs text-text-muted">{v.seedLot.supplierName}</span></td><td data-label="Làn">{v.laneNumbers.join(", ")}</td><td data-label="Số lượng" className="whitespace-nowrap text-right tabular-nums">{v.quantity.toLocaleString("vi-VN")} {v.seedLot.unit}</td><td data-label="Người ghi nhận">{v.recordedByName??"—"}</td></OpenableTableRow>{expanded===v.id&&<tr><td colSpan={5} className={flowStyles.recordDetailCell}><section className={flowStyles.recordDetail} aria-label="Chi tiết lần thả giống"><h4>Thả giống · {formatVietnameseDate(v.seedingDate)}</h4><dl><div><dt>Lô giống</dt><dd>{v.seedLot.code} · {v.seedLot.itemName??"Giống"}</dd></div><div><dt>Phiếu nhập</dt><dd>{v.seedLot.receiptCode}</dd></div><div><dt>Nhà cung cấp</dt><dd>{v.seedLot.supplierName}</dd></div><div><dt>Làn đã thả</dt><dd>{v.laneNumbers.join(", ")}</dd></div><div><dt>Số lượng cả lần thả</dt><dd>{v.quantity.toLocaleString("vi-VN")} {v.seedLot.unit}</dd></div><div><dt>Người ghi nhận / thời điểm</dt><dd>{v.recordedByName??"—"} · {displayTime(v.recordedAt)}</dd></div></dl><p>Số lượng thuộc cả lần thả giống, không chia đều cho từng làn.</p>{!v.canCorrect&&<p>Bản ghi đã khóa theo trạng thái chu kỳ hoặc lô thu hoạch; hiện chỉ được xem.</p>}<footer>{v.canCorrect&&(allowed("Edit")||allowed("Delete"))&&<Button className="w-auto" onClick={()=>setSelected(v)}>{allowed("Edit")?"Chỉnh sửa lần thả giống":"Xử lý lần thả giống"}</Button>}<Button className="w-auto" variant="secondary" onClick={()=>setExpanded(undefined)}>Thu gọn</Button></footer></section></td></tr>}</Fragment>)}</DataTable>
-  <div className={flowStyles.tablePaging}><Paging page={currentPage} total={data.records.length} pageSize={10} onChange={setPage}/></div>
-  <details className={flowStyles.lotSummary}><summary>Tổng giống theo lô · {data.lots.length} lô</summary><DataTable headings={["Lô giống","Số lượng đã thả"]} empty={!data.lots.length}>{data.lots.map(v=><tr key={v.seedLotId}><td>{v.code}</td><td className="text-right tabular-nums">{v.quantity.toLocaleString("vi-VN")} {v.unit}</td></tr>)}</DataTable></details>
-  {selected!==undefined&&<SeedingForm zoneId={zoneId} raftId={raftId} cycleId={cycleId} data={data} record={selected} allowed={allowed} onClose={()=>setSelected(undefined)} onSaved={()=>{setSelected(undefined);remote.reload();}}/>}{completing&&<CompleteSeeding cycleId={cycleId} zoneId={zoneId} onClose={()=>setCompleting(false)} onSaved={()=>{setCompleting(false);remote.reload();}}/>}</>}
-  </section>;
-}
-function SeedingForm({ zoneId, raftId, cycleId, data, record, allowed, onClose, onSaved }: { zoneId: string; raftId: string; cycleId: string; data: z.infer<typeof c.seedingList>; record: z.infer<typeof c.seedingRecord> | null; allowed(action: string): boolean; onClose(): void; onSaved(): void }) {
-  const lots = useRemote(useMemo(() => (signal: AbortSignal) => seedRepo.read("seed-lots", { id: raftId, zoneId }, c.seedLots, signal), [raftId, zoneId]));
-  const [date, setDate] = useState(record?.seedingDate ?? businessToday()), [lot, setLot] = useState(record?.seedLot.id ?? ""), [quantity, setQuantity] = useState(String(record?.quantity ?? "")), [lanes, setLanes] = useState(record?.laneNumbers ?? []), [reason, setReason] = useState(""), [error, setError] = useState<string>();
-  const dirty = date !== (record?.seedingDate ?? businessToday()) || lot !== (record?.seedLot.id ?? "") || quantity !== String(record?.quantity ?? "") || JSON.stringify(lanes) !== JSON.stringify(record?.laneNumbers ?? []) || !!reason;
-  const editor = useOperationEditor(onClose, dirty), editable = record ? record.canCorrect && allowed("Edit") : data.canRecord && allowed("Create");
-  const choices = Array.from(new Set([...data.lanes.filter(v => v.canSeed).map(v => v.laneNumber), ...(record?.laneNumbers ?? [])])).sort((a,b) => a-b);
-  async function save() {
-    const parsed = c.seedValues.safeParse({ seedingDate: date, seedLotId: lot, quantity: Number(quantity), laneNumbers: lanes });
-    if (!parsed.success) { const labels: Record<string, string> = { seedingDate: "Ngày thả giống phải đúng ngày/tháng/năm", seedLotId: "Chọn lô giống", laneNumbers: "Chọn ít nhất một làn", quantity: "Số lượng giống phải lớn hơn 0" }; setError([...new Set(parsed.error.issues.map(issue => labels[String(issue.path[0])] ?? "Kiểm tra thông tin thả giống"))].join(". ") + "."); return; }
-    if (record && !reason.trim()) { setError("Nhập lý do điều chỉnh hoặc xóa bản ghi."); return; }
-    setError(undefined);
-    if (await editor.submit(record ? "Lưu điều chỉnh thả giống?" : "Ghi nhận lần thả giống này?", () => seedRepo.write(record ? "correct" : "record", { ...parsed.data, ...(record ? { reason, rowVersion: record.rowVersion } : {}) }, z.object({ record: c.seedingRecord }), record?.id ?? cycleId, zoneId))) onSaved();
-  }
-  return <EditorFrame title={record ? "Bản ghi thả giống" : "Ghi nhận thả giống"} editor={editor} error={error || lots.error}>{record && !record.canCorrect && <p className="mb-4 text-sm text-text-muted">Bản ghi đang được khóa theo trạng thái chu kỳ hoặc lô thu hoạch. Không thể sửa hoặc xóa ở trạng thái này.</p>}<form onSubmit={e => { e.preventDefault(); void save(); }}><fieldset disabled={!editable || editor.disabled} className="space-y-4"><Field label="Ngày thả giống *" type="date" required value={date} onChange={e => setDate(e.target.value)} /><Select label="Lô giống *" required value={lot} onChange={e => setLot(e.target.value)}><option value="">Chọn lô giống</option>{record && !lots.data?.lots.some(v => v.id === record.seedLot.id) && <option value={record.seedLot.id}>{record.seedLot.code}</option>}{lots.data?.lots.map(v => <option key={v.id} value={v.id}>{v.code} · {v.itemName ?? "Giống"} · {v.supplierName} · {v.unit}</option>)}</Select><Field label="Số lượng giống *" type="number" required min="0.001" step="0.001" value={quantity} onChange={e => setQuantity(e.target.value)} /><LaneChoices lanes={choices} values={lanes} onChange={setLanes} />{record && <Note label="Lý do điều chỉnh *" required value={reason} onChange={e => setReason(e.target.value)} />}{editable && <Button type="submit" disabled={lots.loading || !!lots.error}>Lưu thả giống</Button>}</fieldset></form>{lots.error && <Button variant="secondary" onClick={lots.reload}>Tải lại lô giống</Button>}{record?.canCorrect && allowed("Delete") && <Button className="mt-3" variant="secondary" disabled={editor.disabled || !reason.trim()} onClick={async () => { if (await editor.submit("Gỡ bản ghi thả giống? Lý do sẽ được lưu trong nhật ký.", () => seedRepo.write("remove", { reason, rowVersion: record.rowVersion }, z.object({ done: z.literal(true) }), record.id, zoneId))) onSaved(); }}>Xóa bản ghi thả giống</Button>}</EditorFrame>;
-}
-function CompleteSeeding({ cycleId, zoneId, onClose, onSaved }: { cycleId: string; zoneId: string; onClose(): void; onSaved(): void }) {
-  const preview = useRemote(useMemo(() => (signal: AbortSignal) => seedRepo.read("preview", { id: cycleId, zoneId }, c.seedingPreview, signal), [cycleId, zoneId]));
-  const editor = useOperationEditor(onClose, false);
-  return <EditorFrame title="Hoàn tất thả giống" editor={editor} error={preview.error}>{preview.loading ? <Skeleton /> : preview.data && <><p>Đã thả giống {preview.data.seededCount}/{preview.data.laneCount} làn.</p><p className="my-3">{preview.data.notSeededLanes.length ? `Các làn chưa thả giống: ${preview.data.notSeededLanes.join(", ")}.` : "Tất cả làn đã được thả giống."}</p><Button disabled={editor.disabled} onClick={async () => { if (await editor.submit("Đánh dấu hoàn tất thả giống và thông báo cho chủ hợp tác xã?", () => seedRepo.write("complete", { rowVersion: preview.data!.cycleRowVersion }, z.object({ cycle: z.object({ id: z.guid() }) }), cycleId, zoneId))) onSaved(); }}>Xác nhận hoàn tất</Button></>}{preview.error && <Button variant="secondary" onClick={preview.reload}>Tải lại thông tin</Button>}</EditorFrame>;
-}
-function MaterialsPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {
-  const allowed = useAllowed("material-usages", zoneId), [selected, setSelected] = useState<z.infer<typeof c.materialRecord> | null>();
-  const remote = useRemote(useMemo(() => (signal: AbortSignal) => materialRepo.read("list", { id: raftId, zoneId }, c.materialList, signal), [raftId, zoneId]));
-  return <section className={flowStyles.recordsPanel}><ErrorNotice error={remote.error}/><div className={flowStyles.panelHeading}><div><h3>Nhật ký sử dụng vật tư</h3><p>Nhóm theo chu kỳ; mỗi dòng là một vật tư đã ghi nhận.</p></div><div className={flowStyles.actions}><Button variant="secondary" disabled={remote.loading} onClick={remote.reload}>Tải lại</Button>{remote.data?.canRecord&&allowed("Create")&&<Button onClick={()=>setSelected(null)}>Ghi nhận vật tư</Button>}</div></div>{remote.loading?<Skeleton/>:remote.data&&<>{!remote.data.groups.length&&<p className={flowStyles.empty}>Chưa có ghi nhận sử dụng vật tư cho bè này.</p>}{remote.data.groups.map((group,index)=><MaterialGroup key={group.cycle?.id??index} group={group} canEdit={allowed("Edit")} onSelect={setSelected}/>)}</>}{selected!==undefined&&<MaterialForm zoneId={zoneId} raftId={raftId} record={selected} allowed={allowed} onClose={()=>setSelected(undefined)} onSaved={()=>{setSelected(undefined);remote.reload();}}/>}</section>;
-}
-function MaterialGroup({group,canEdit,onSelect}:{group:z.infer<typeof c.materialList>["groups"][number];canEdit:boolean;onSelect(record:z.infer<typeof c.materialRecord>):void}){
- const [page,setPage]=useState(1),[expanded,setExpanded]=useState<string>();
- const rows=group.repairs.flatMap(repair=>repair.records);
- const current=Math.min(page,Math.max(1,Math.ceil(rows.length/10)));
- return <section className={flowStyles.materialGroup}><div className={flowStyles.groupHeading}><div><h4>{group.cycle?`Chu kỳ từ ${formatVietnameseDate(group.cycle.startDate)}`:"Ngoài chu kỳ nuôi"}</h4><p>{group.repairs.length} công việc · {rows.length} dòng vật tư</p></div><span className={flowStyles.state}>{group.locked?"Đã khóa":"Theo dõi"}</span></div><DataTable responsive headings={["Ngày","Vật tư","Số lượng","Nội dung sửa chữa","Người ghi nhận"]} empty={!rows.length}>{rows.slice((current-1)*10,current*10).map(row=><Fragment key={row.id}><OpenableTableRow data-selected={expanded===row.id||undefined} onOpen={()=>setExpanded(value=>value===row.id?undefined:row.id)}><td data-label="Ngày" className="whitespace-nowrap">{formatVietnameseDate(row.usageDate)}</td><td data-label="Vật tư"><button type="button" className={flowStyles.recordLink} aria-label={`Chi tiết sử dụng ${row.itemCode} ngày ${formatVietnameseDate(row.usageDate)}`} aria-expanded={expanded===row.id} onClick={()=>setExpanded(value=>value===row.id?undefined:row.id)}>{row.itemCode}</button><span className="block text-xs text-text-muted">{row.itemName}</span></td><td data-label="Số lượng" className="whitespace-nowrap text-right tabular-nums">{row.quantity.toLocaleString("vi-VN")} {row.unit}</td><td data-label="Nội dung sửa chữa">{row.repairReason}</td><td data-label="Người ghi nhận">{row.recordedByName??"—"}</td></OpenableTableRow>{expanded===row.id&&<tr><td colSpan={5} className={flowStyles.recordDetailCell}><section className={flowStyles.recordDetail} aria-label="Chi tiết sử dụng vật tư"><h4>{row.itemCode} · {row.itemName}</h4><dl><div><dt>Ngày sử dụng</dt><dd>{formatVietnameseDate(row.usageDate)}</dd></div><div><dt>Bè sử dụng</dt><dd>{row.raftCode}</dd></div><div><dt>Số lượng</dt><dd>{row.quantity.toLocaleString("vi-VN")} {row.unit}</dd></div><div><dt>Người ghi nhận</dt><dd>{row.recordedByName??"—"}</dd></div><div><dt>Thời điểm ghi nhận</dt><dd>{displayTime(row.recordedAt)}</dd></div><div><dt>Nội dung sửa chữa / bảo dưỡng</dt><dd>{row.repairReason}</dd></div></dl>{!row.canEdit&&<p>Bản ghi này hiện chỉ được xem.</p>}<footer>{canEdit&&row.canEdit&&<Button className="w-auto" onClick={()=>onSelect(row)}>Chỉnh sửa ghi nhận</Button>}<Button className="w-auto" variant="secondary" onClick={()=>setExpanded(undefined)}>Thu gọn</Button></footer></section></td></tr>}</Fragment>)}</DataTable><div className={flowStyles.tablePaging}><Paging page={current} total={rows.length} pageSize={10} onChange={setPage}/></div></section>;
-}
-function MaterialForm({ zoneId, raftId, record, allowed, onClose, onSaved }: { zoneId: string; raftId: string; record: z.infer<typeof c.materialRecord> | null; allowed(action: string): boolean; onClose(): void; onSaved(): void }) {
-  const items = useRemote(useMemo(() => (signal: AbortSignal) => loadOptions("input-items", signal, { group: "Material", statusId: "101" }), []));
-  const [date, setDate] = useState(record?.usageDate ?? businessToday()), [repair, setRepair] = useState(record?.repairReason ?? ""), [reason, setReason] = useState(""), [lines, setLines] = useState(record ? [{ itemId: record.itemId, quantity: String(record.quantity) }] : [{ itemId: "", quantity: "" }]), [error, setError] = useState<string>();
-  const dirty = !!reason || date !== (record?.usageDate ?? businessToday()) || repair !== (record?.repairReason ?? "") || JSON.stringify(lines) !== JSON.stringify(record ? [{ itemId: record.itemId, quantity: String(record.quantity) }] : [{ itemId: "", quantity: "" }]);
-  const editor = useOperationEditor(onClose, dirty), editable = record ? record.canEdit && allowed("Edit") : allowed("Create");
-  async function save() {
-    const parsed = c.materialValues.safeParse({ usageDate: date, repairReason: repair, items: lines.map(v => ({ itemId: v.itemId, quantity: Number(v.quantity) })) });
-    if (!parsed.success || new Set(lines.map(v => v.itemId)).size !== lines.length || record && !reason.trim()) { setError("Nhập ngày, nội dung sửa chữa, vật tư không trùng, số lượng lớn hơn 0 và lý do khi điều chỉnh."); return; }
-    setError(undefined);
-    const body = record ? { raftId, usageDate: date, repairReason: repair, ...parsed.data.items[0], reason, rowVersion: record.rowVersion } : parsed.data;
-    if (await editor.submit("Lưu ghi nhận sử dụng vật tư?", () => materialRepo.write<unknown>(record ? "correct" : "record", body, record ? z.object({ record: c.materialRecord }) : z.object({ records: z.array(c.materialRecord) }), record?.id ?? raftId, zoneId))) onSaved();
-  }
-  return <EditorFrame title={record ? "Bản ghi sử dụng vật tư" : "Ghi nhận sử dụng vật tư"} editor={editor} error={error || items.error}><form onSubmit={e => { e.preventDefault(); void save(); }}><fieldset disabled={!editable || editor.disabled} className="space-y-4"><Field label="Ngày sử dụng *" type="date" required value={date} onChange={e => setDate(e.target.value)} /><Note label="Nội dung sửa chữa / bảo dưỡng *" required value={repair} onChange={e => setRepair(e.target.value)} />{lines.map((line, index) => <div key={index} className="grid gap-3 sm:grid-cols-2"><Select label="Vật tư *" required value={line.itemId} onChange={e => setLines(v => v.map((r,i) => i === index ? { ...r, itemId: e.target.value } : r))}><option value="">Chọn vật tư</option>{record && !items.data?.some(v => v.id === record.itemId) && <option value={record.itemId}>{record.itemCode} · {record.itemName}</option>}{items.data?.map(v => <option key={v.id} value={v.id}>{String(v.code)} · {String(v.name)} · {String(v.unit)}</option>)}</Select><Field label="Số lượng *" type="number" min="0.001" step="0.001" required value={line.quantity} onChange={e => setLines(v => v.map((r,i) => i === index ? { ...r, quantity: e.target.value } : r))} />{!record && lines.length > 1 && <Button variant="secondary" type="button" onClick={() => setLines(v => v.filter((_,i) => i !== index))}>Bỏ dòng {index+1}</Button>}</div>)}{!record && <Button type="button" variant="secondary" onClick={() => setLines(v => [...v, { itemId: "", quantity: "" }])}>Thêm vật tư</Button>}{record && <Note label="Lý do điều chỉnh *" required value={reason} onChange={e => setReason(e.target.value)} />}{editable && <Button type="submit" disabled={items.loading || !!items.error}>Lưu sử dụng vật tư</Button>}</fieldset></form>{items.error && <Button variant="secondary" onClick={items.reload}>Tải lại vật tư</Button>}</EditorFrame>;
-}
-function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {
-  const allowed = useAllowed("harvest", zoneId), [adding, setAdding] = useState(false), [settingsOpen, setSettingsOpen] = useState(false);
-  const remote = useRemote(useMemo(() => (signal: AbortSignal) => harvestRepo.read("list", { id: raftId, zoneId }, c.harvestList, signal), [raftId, zoneId]));
-  const [search,setSearch]=useState(""),[status,setStatus]=useState(""),[page,setPage]=useState(1),[selectedLot,setSelectedLot]=useState<string>();
-  const statusLabel=(value:string)=>({Open:"Đang mở",Closed:"Đã đóng",Reopened:"Mở lại",OPEN:"Đang mở",CLOSED:"Đã đóng",REOPENED:"Mở lại"}[value]??value);
-  const rows=remote.data?.lots.filter(lot=>matchesSelection(status,String(lot.statusId))&&lot.lotCode.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi")))??[];
-  const currentPage=Math.min(page,Math.max(1,Math.ceil(rows.length/10)));
-  const totals=rows.reduce((sum,lot)=>({cages:sum.cages+lot.cageCount,estimated:sum.estimated+lot.estimatedKg,invoiced:sum.invoiced+lot.invoicedKg,remaining:sum.remaining+lot.remainingKg}),{cages:0,estimated:0,invoiced:0,remaining:0});
-  return <section className={flowStyles.recordsPanel}><ErrorNotice error={remote.error}/><div className={flowStyles.panelHeading}><div><h3>Các lô thu hoạch</h3><p>Chọn mã lô để xem sản lượng, ảnh và lịch sử ghi nhận.</p></div><div className={flowStyles.actions}><Button variant="secondary" disabled={remote.loading} onClick={remote.reload}>Tải lại</Button>{allowed("Owner")&&<Button variant="secondary" onClick={()=>setSettingsOpen(true)}>Quy đổi & tự đóng lô</Button>}{remote.data?.canRecordHarvest&&allowed("Create")&&<Button onClick={()=>setAdding(true)}>Ghi nhận thu hoạch</Button>}</div></div>
-  {settingsOpen&&<HarvestSettings onClose={()=>{setSettingsOpen(false);remote.reload();}}/>}
-  {remote.loading?<Skeleton/>:remote.data&&<><p className={flowStyles.harvestContext}>{remote.data.cycle?`Chu kỳ từ ${formatVietnameseDate(remote.data.cycle.startDate)}`:"Bè chưa có chu kỳ đang nuôi"}<span>Quy đổi cho lượt ghi mới: <strong>{remote.data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng</strong></span></p>
-  <div className={flowStyles.harvestFilters}><Field label="Tìm mã lô" type="search" placeholder="Nhập mã lô thu hoạch…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/><FilterChecks label="Trạng thái lô" value={status} options={[...new Map(remote.data.lots.map(lot=>[String(lot.statusId),statusLabel(lot.status)])).entries()]} onChange={value=>{setStatus(value);setPage(1);}}/><span>{rows.length}/{remote.data.lots.length} lô</span></div>
-  <div className={flowStyles.harvestTable}><DataTable responsive headings={["Mã lô / thời điểm","Làn thu hoạch","Lồng","Ước tính (kg)","Đã lập hóa đơn (kg)","Còn lại (kg)","Trạng thái"]} empty={!rows.length}>{rows.slice((currentPage-1)*10,currentPage*10).map(lot=><Fragment key={lot.id}><OpenableTableRow data-selected={selectedLot===lot.id||undefined} onOpen={()=>setSelectedLot(value=>value===lot.id?undefined:lot.id)}><td data-label="Mã lô / thời điểm"><button type="button" className={flowStyles.recordLink} aria-expanded={selectedLot===lot.id} onClick={()=>setSelectedLot(value=>value===lot.id?undefined:lot.id)}>{lot.lotCode}</button><span className="mt-1 block whitespace-nowrap text-xs text-text-muted">{displayTime(lot.harvestedAt)}</span></td><td data-label="Làn thu hoạch">{lot.laneNumbers.join(", ")}<span className="mt-1 block text-xs text-text-muted">Đã thu hết: {lot.finishedLaneNumbers.join(", ")||"Chưa có"}</span></td><td data-label="Lồng" className="text-right tabular-nums">{lot.cageCount.toLocaleString("vi-VN")}</td><td data-label="Ước tính (kg)" className="text-right tabular-nums">{lot.estimatedKg.toLocaleString("vi-VN")}</td><td data-label="Đã lập hóa đơn (kg)" className="text-right tabular-nums">{lot.invoicedKg.toLocaleString("vi-VN")}</td><td data-label="Còn lại (kg)" className="text-right font-semibold tabular-nums">{lot.remainingKg.toLocaleString("vi-VN")}</td><td data-label="Trạng thái"><span className={flowStyles.state}>{statusLabel(lot.status)}</span></td></OpenableTableRow>{selectedLot===lot.id&&<tr><td colSpan={7} className={flowStyles.recordDetailCell}><HarvestLotPreview id={lot.id} zoneId={zoneId} onClose={()=>setSelectedLot(undefined)} onSaved={()=>{setSelectedLot(undefined);remote.reload();}}/></td></tr>}</Fragment>)}</DataTable></div>
-  <div className={flowStyles.harvestTotals}><span>Tổng các lô phù hợp bộ lọc</span><dl>{[["Lồng",totals.cages],["Ước tính (kg)",totals.estimated],["Đã lập hóa đơn (kg)",totals.invoiced],["Còn lại (kg)",totals.remaining]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{Number(value).toLocaleString("vi-VN")}</dd></div>)}</dl></div><div className={flowStyles.tablePaging}><Paging page={currentPage} total={rows.length} pageSize={10} onChange={setPage}/></div><p className={flowStyles.harvestHint}>Sản lượng ước tính và số lượng đã lập hóa đơn là các chỉ số riêng. Mở hồ sơ lô để xem lượng đã bán, trả lại, hao hụt và chênh lệch.</p>
-  {adding&&<HarvestForm zoneId={zoneId} raftId={raftId} data={remote.data} onClose={()=>setAdding(false)} onSaved={()=>{setAdding(false);remote.reload();}}/>}</>}
-  </section>;
-}
-function HarvestForm({ zoneId, raftId, data, onClose, onSaved }: { zoneId: string; raftId: string; data: z.infer<typeof c.harvestList>; onClose(): void; onSaved(): void }) {
-  const [lanes, setLanes] = useState<number[]>([]), [finished, setFinished] = useState<number[]>([]), [cages, setCages] = useState(""), [kg, setKg] = useState(""), [error, setError] = useState<string>(), [photos, setPhotos] = useState<File[]>([]);
-  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length);
-  async function save() {
-    const parsed = c.harvestValues.safeParse({ laneNumbers: lanes, finishedLaneNumbers: finished, cageCount: Number(cages), estimatedKg: kg ? Number(kg) : null });
-    if (!parsed.success) { setError("Chọn làn thu hoạch, số lồng nguyên dương và sản lượng lớn hơn 0 nếu nhập."); return; }
-    if (photos.length > 10 || photos.some(file => !["image/jpeg", "image/png"].includes(file.type) || file.size < 1 || file.size > 10 * 1024 * 1024)) { setError("Chọn tối đa 10 ảnh JPEG hoặc PNG, mỗi ảnh tối đa 10 MB."); return; }
-    setError(undefined);
-    if (await editor.submit(`Ghi nhận ${cages} lồng từ làn ${lanes.join(", ")}${finished.length ? `; đã thu hết làn ${finished.join(", ")}` : ""}?`, () => harvestRepo.upload("harvest-record", photos, parsed.data, z.object({ lot: z.object({ id: z.guid(), lotCode: z.string() }) }), raftId, zoneId))) onSaved();
-  }
-  return <EditorFrame title="Ghi nhận chuyến thu hoạch" editor={editor} error={error}><form onSubmit={e=>{e.preventDefault();void save();}}><fieldset disabled={editor.disabled} className={flowStyles.harvestFormGrid}><div className={flowStyles.harvestFormSection}><h3>Phạm vi thu hoạch</h3><LaneChoices lanes={data.lanes.filter(v=>v.canHarvest).map(v=>v.laneNumber)} values={lanes} onChange={v=>{setLanes(v);setFinished(f=>f.filter(n=>v.includes(n)));}} label="Làn thu hoạch *"/><LaneChoices lanes={lanes} values={finished} onChange={setFinished} label="Làn đã thu hết hàu trong chuyến này"/></div><div className={flowStyles.harvestFormSection}><h3>Sản lượng và ảnh</h3><Field label="Số lồng thu hoạch *" type="number" min={1} step={1} required value={cages} onChange={e=>setCages(e.target.value)}/><Field label="Sản lượng ước tính (kg)" type="number" min="0.01" step="0.01" value={kg} onChange={e=>setKg(e.target.value)}/><p className={flowStyles.harvestHint}>Để trống sản lượng để quy đổi theo {data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng. Thời điểm thu hoạch được hệ thống ghi khi lưu.</p><Field label="Ảnh chuyến thu hoạch (tối đa 10 ảnh JPEG/PNG, 10 MB/ảnh)" type="file" multiple accept="image/jpeg,image/png" onChange={e=>setPhotos(Array.from(e.target.files??[]))}/>{!!photos.length&&<ul className="text-sm">{photos.map((file,i)=><li key={i}>{file.name}</li>)}</ul>}</div><div className={flowStyles.harvestFormFooter}><Button type="submit">Lưu chuyến thu hoạch</Button></div></fieldset></form></EditorFrame>;
+  const zones = useRemote(loadZones);
+  // Zone and raft can be preselected through ?zoneId=&raftId= links.
+  const [zone, setZone] = useState(query.get("zoneId") ?? "");
+  const [raft, setRaft] = useState(query.get("raftId") ?? "");
+  const [search, setSearch] = useState("");
+  const available =
+    zones.data?.filter((v) =>
+      operationAllowed(area, context.identity, context.permissions.functionPermissions, "View", v.id),
+    ) ?? [];
+  // Without an explicit choice, fall back to the first zone the user may view.
+  const zoneId = String(zone || available[0]?.id || "");
+  const rafts = useRemote(
+    useMemo(
+      () => (signal: AbortSignal) =>
+        zoneId
+          ? cycleRepo.read("list", { zoneId }, z.array(zoneCycle), signal)
+          : Promise.resolve({ status: "success" as const, data: [] }),
+      [zoneId],
+    ),
+  );
+  // The raft rail shows 8 rafts per page; the selection falls back to the first visible raft.
+  const [raftPage, setRaftPage] = useState(1);
+  const matchingRafts =
+    rafts.data?.filter((v) => v.raftCode.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi"))) ?? [];
+  const currentPage = Math.min(raftPage, Math.max(1, Math.ceil(matchingRafts.length / 8)));
+  const visibleRafts = matchingRafts.slice((currentPage - 1) * 8, currentPage * 8);
+  const selected = rafts.data?.find((v) => v.raftId === raft) ?? visibleRafts[0];
+  const title = area === "seeding" ? "Thả giống" : area === "material-usages" ? "Sử dụng vật tư" : "Thu hoạch";
+  return (
+    <section className={flowStyles.page}>
+      <ManagementHeading
+        title={title}
+        description={
+          area === "seeding"
+            ? "Theo dõi lô giống, các lần thả và tiến độ từng làn nuôi."
+            : area === "material-usages"
+              ? "Tra cứu vật tư đã dùng theo bè, chu kỳ và công việc bảo dưỡng."
+              : "Ghi nhận chuyến thu hoạch, số lồng và sản lượng ước tính."
+        }
+        icon={area === "material-usages" ? "material" : "raft"}
+      />
+      <FilterWorkspace
+        label="Vùng và bè nuôi"
+        filters={
+          <>
+            <Select
+              label="Vùng nuôi"
+              value={zoneId}
+              onChange={(e) => {
+                setZone(e.target.value);
+                setRaft("");
+                setSearch("");
+                setRaftPage(1);
+              }}
+            >
+              <option value="">Chọn vùng nuôi</option>
+              {available.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {String(v.name ?? v.code)}
+                </option>
+              ))}
+            </Select>
+            <Field
+              label="Tìm bè"
+              type="search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setRaft("");
+                setRaftPage(1);
+              }}
+            />
+
+            <div className={flowStyles.raftList} role="group" aria-label="Chọn bè nuôi">
+              {visibleRafts.map((v) => (
+                <button
+                  type="button"
+                  key={v.raftId}
+                  aria-pressed={selected?.raftId === v.raftId}
+                  onClick={() => setRaft(v.raftId)}
+                >
+                  <span>
+                    <strong>{v.raftCode}</strong>
+                    <small>{v.laneCount} làn nuôi</small>
+                  </span>
+                  <span className={flowStyles.raftState}>
+                    {v.cycle ? (v.cycle.closeDate ? "Đã đóng" : "Đang nuôi") : "Chưa có chu kỳ"}
+                  </span>
+                </button>
+              ))}
+              {!rafts.loading && !visibleRafts.length && (
+                <p className="text-sm text-text-muted">Không có bè phù hợp.</p>
+              )}
+            </div>
+            <div className={flowStyles.railPaging}>
+              <span>
+                {matchingRafts.length} bè · {currentPage}/{Math.max(1, Math.ceil(matchingRafts.length / 8))}
+              </span>
+              <div>
+                <button
+                  type="button"
+                  aria-label="Trang bè trước"
+                  disabled={currentPage <= 1}
+                  onClick={() => {
+                    setRaftPage(currentPage - 1);
+                    setRaft("");
+                  }}
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  aria-label="Trang bè sau"
+                  disabled={currentPage * 8 >= matchingRafts.length}
+                  onClick={() => {
+                    setRaftPage(currentPage + 1);
+                    setRaft("");
+                  }}
+                >
+                  →
+                </button>
+              </div>
+            </div>
+          </>
+        }
+      >
+        <ErrorNotice error={zones.error || rafts.error} />
+        {(zones.error || rafts.error) && (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              zones.reload();
+              rafts.reload();
+            }}
+          >
+            Tải lại danh mục
+          </Button>
+        )}
+        {rafts.loading ? (
+          <Skeleton />
+        ) : selected ? (
+          <div key={`${area}:${zoneId}:${selected.raftId}`}>
+            <div className={flowStyles.raftHeading}>
+              <div>
+                <span className={flowStyles.eyebrow}>HỒ SƠ VẬN HÀNH</span>
+                <h2>Bè {selected.raftCode}</h2>
+                <p>
+                  {selected.laneCount} làn nuôi ·{" "}
+                  {selected.cycle
+                    ? `Chu kỳ từ ${formatVietnameseDate(selected.cycle.startDate)}`
+                    : "Chưa có chu kỳ nuôi"}
+                </p>
+              </div>
+              <span className={flowStyles.state}>
+                {selected.cycle ? (selected.cycle.closeDate ? "Chu kỳ đã đóng" : "Chu kỳ đang mở") : "Chưa bắt đầu"}
+              </span>
+            </div>
+            {area !== "material-usages" && <CultivationProgress raftId={selected.raftId} zoneId={zoneId} />}
+            {area === "seeding" ? (
+              selected.cycle ? (
+                <SeedingPanel zoneId={zoneId} raftId={selected.raftId} cycleId={selected.cycle.id} />
+              ) : (
+                <p className={flowStyles.empty}>Bè chưa có chu kỳ nuôi. Mở chu kỳ trước khi ghi nhận thả giống.</p>
+              )
+            ) : area === "material-usages" ? (
+              <MaterialsPanel zoneId={zoneId} raftId={selected.raftId} />
+            ) : (
+              <HarvestPanel zoneId={zoneId} raftId={selected.raftId} />
+            )}
+          </div>
+        ) : (
+          <p className={flowStyles.empty}>Chọn vùng và bè để xem dữ liệu.</p>
+        )}
+      </FilterWorkspace>
+    </section>
+  );
 }

@@ -17,15 +17,13 @@ import {
 import { EvidenceImagePicker } from "@/features/cooperative-provisioning/components/evidence-image-picker";
 import { OneTimeOwnerCredentialDialog } from "@/features/cooperative-provisioning/components/one-time-owner-credential-dialog";
 import { OwnerIdentityContactField } from "@/features/cooperative-provisioning/components/owner-identity-contact-field";
+import { useCooperativeProvisioningSubmit } from "@/features/cooperative-provisioning/components/use-cooperative-provisioning-submit";
 import type { ProvisionedOwnerCredential } from "@/features/cooperative-provisioning/domain/provisioned-owner-credential";
 import {
   cooperativeProvisioningSchema,
   type CooperativeProvisioningFormValues,
   validateEvidenceImage,
 } from "@/features/cooperative-provisioning/schemas/cooperative-provisioning-schema";
-import { cooperativeProvisioningService } from "@/features/cooperative-provisioning/services/cooperative-provisioning-service.instance";
-import { formatMessage } from "@/shared/messages/message-catalog";
-import { sessionExpiryChannel } from "@/shared/session/session-expiry-channel";
 
 export function CooperativeProvisioningForm() {
   const { notify } = useToast();
@@ -75,52 +73,17 @@ export function CooperativeProvisioningForm() {
     setStep("details");
   }
 
-  async function confirmProvisioning() {
-    if (!reviewDraft || isProvisioning) return;
-
-    setFormError(undefined);
-    setIsProvisioning(true);
-
-    try {
-      const result = await cooperativeProvisioningService.provision({
-        ...reviewDraft.values,
-        evidenceImages: reviewDraft.evidenceImages,
-      });
-
-      if (result.status === "session-expired") {
-        sessionExpiryChannel.publish(result.message);
-        return;
-      }
-
-      if (result.status === "invalid-input") {
-        const message = formatMessage(result.message);
-        setStep("details");
-        if (result.field === "evidenceImages") {
-          setEvidenceError(message);
-        } else {
-          setError(result.field, { message });
-        }
-        return;
-      }
-
-      if (
-        result.status === "duplicate-owner" ||
-        result.status === "verification-failed"
-      ) {
-        setFormError(formatMessage(result.message));
-        setStep("details");
-        return;
-      }
-
-      setSuccessName(result.summary.cooperativeName);
-      setCredential(result.credential);
-    } catch {
-      setFormError(formatMessage({ code: "MSG04" }));
-      setStep("details");
-    } finally {
-      setIsProvisioning(false);
-    }
-  }
+  const { confirmProvisioning } = useCooperativeProvisioningSubmit({
+    isProvisioning,
+    reviewDraft,
+    setCredential,
+    setError,
+    setEvidenceError,
+    setFormError,
+    setIsProvisioning,
+    setStep,
+    setSuccessName,
+  });
 
   function acknowledgeCredential() {
     const provisionedCooperativeName = successName;
