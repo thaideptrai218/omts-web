@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorNotice } from "@/features/operations/ui";
 import type { ZoneOverviewItem } from "./contracts";
 import { useWaterZoneOverview } from "./use-water-zone-overview";
-import { absoluteTimeText, describeValueOutside, isMeasurementStale, relativeTimeText, RECENT_MEASUREMENT_HOURS } from "./water-overview-logic";
+import { absoluteTimeText, describeValueOutside, isMeasurementStale, relativeTimeText, RECENT_MEASUREMENT_HOURS, zoneStatusLabel } from "./water-overview-logic";
 import s from "./water-zone-overview.module.css";
 
 function SkeletonGrid() {
@@ -32,7 +32,7 @@ function ZoneCard({ item, now, onSelect }: { item: ZoneOverviewItem; now: number
           <AlertBadge alert={item.hasWaterAlert} />
         </span>
         <span className={s.name}>{item.zoneName}</span>
-        <span className={s.status}>{item.zoneStatus}</span>
+        <span className={s.status}>{zoneStatusLabel(item)}</span>
         <span className={s.time}>
           <span className={stale ? s.stale : undefined}>
             {stale && item.latestMeasuredAt && <span aria-hidden="true">◷ </span>}{relativeTimeText(item.latestMeasuredAt, now)}

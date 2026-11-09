@@ -14,7 +14,7 @@ export function YieldTotalsStrip({ report }: { report: HarvestYieldReport }) {
       <dl className={s.totals} aria-label="Tổng của báo cáo">
         {items.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
       </dl>
-      {report.notFinalNotice && <p className={s.notice} role="note">{report.notFinalNotice}</p>}
+      {report.notFinalNotice && <p className={s.notice} role="note">Một số lô vẫn đang được bán nên số liệu có thể còn thay đổi.</p>}
       <p className={s.muted}>Chênh lệch = kg ước tính − kg đã bán − kg hao hụt; số âm là đã bán nhiều hơn ước tính. Bấm tên nhóm để xem các lô.</p>
     </div>
   );

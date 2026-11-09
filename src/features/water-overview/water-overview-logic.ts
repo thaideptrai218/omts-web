@@ -51,3 +51,11 @@ export function describeValueOutside(v: ValueOutside): string {
     : v.max !== null ? `cho phép tối đa ${num(v.max)}${unit}` : "chưa đặt khoảng cho phép";
   return `${indicatorNames[v.indicator] ?? v.indicator} ${num(v.value)}${unit} quá ${v.direction === "High" ? "cao" : "thấp"} (${range})`;
 }
+
+/** Nhãn tiếng Việt của trạng thái vùng. Backend trả tên trạng thái bằng tiếng Anh ("In Use", "Discontinued"), không đưa ra giao diện nguyên văn. */
+export function zoneStatusLabel(item: { zoneStatus: string; zoneStatusCode: string }): string {
+  const key = `${item.zoneStatus} ${item.zoneStatusCode}`;
+  if (/discontinu|inactive|stopp|ngừng/i.test(key)) return "Ngừng sử dụng";
+  if (/in.?use|active|đang/i.test(key)) return "Đang sử dụng";
+  return "Chưa rõ trạng thái";
+}

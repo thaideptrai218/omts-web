@@ -52,3 +52,12 @@ describe("hợp đồng dữ liệu", () => {
     expect(zoneOverviewSchema.safeParse({}).success).toBe(false);
   });
 });
+
+import { zoneStatusLabel } from "./water-overview-logic";
+describe("nhãn trạng thái vùng bằng tiếng Việt", () => {
+  it("không để chữ tiếng Anh của backend lọt ra giao diện", () => {
+    expect(zoneStatusLabel({ zoneStatus: "In Use", zoneStatusCode: "ZONE_IN_USE" })).toBe("Đang sử dụng");
+    expect(zoneStatusLabel({ zoneStatus: "Discontinued", zoneStatusCode: "ZONE_DISCONTINUED" })).toBe("Ngừng sử dụng");
+    expect(zoneStatusLabel({ zoneStatus: "???", zoneStatusCode: "X" })).toBe("Chưa rõ trạng thái");
+  });
+});

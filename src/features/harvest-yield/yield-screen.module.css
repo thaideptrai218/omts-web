@@ -17,7 +17,7 @@
 .totals dd { margin: .125rem 0 0; font-size: 1.375rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--omts-color-text); }
 .notice { margin: 0 0 .75rem; padding: .625rem .875rem; border: 1px dashed var(--omts-color-border-strong); border-radius: var(--omts-radius-control); background: var(--omts-color-warning-soft); font-size: .875rem; }
 
-.tableFrame { margin: 1rem 0; overflow-x: auto; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); }
+.tableFrame { position: relative; margin: 1rem 0; overflow-x: auto; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); }
 .table, .lots { width: 100%; border-collapse: collapse; font-size: .875rem; }
 .table th, .table td { padding: .625rem .875rem; text-align: left; border-bottom: 1px solid var(--omts-color-border); vertical-align: middle; }
 .table thead th { background: var(--omts-color-surface-subtle); font-size: .75rem; font-weight: 600; color: var(--omts-color-text-muted); white-space: nowrap; }

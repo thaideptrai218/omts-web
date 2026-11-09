@@ -41,3 +41,6 @@
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
 @media (min-width: 1024px) { .twoCol { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .tabs button, .seg button { transition: none; } }
+
+/* Nút hành động chính cách ô nhập phía trên một khoảng rõ ràng. */
+.card > button:last-child { margin-top: 1rem; }
