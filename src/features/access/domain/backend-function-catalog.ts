@@ -21,7 +21,7 @@ export const backendFunctionCatalog = {
   LOT_TRACING: definition(["View"]),
   SALES_RETURNS: definition(["View", "Create", "Delete"]),
   PROVENANCE: definition([...readWrite, "Publish"]),
-  SUPPLIERS: definition(readWrite, { cooperativeWide: true }),
+  SUPPLIERS: definition(["View", "Create", "Edit", "Export"], { cooperativeWide: true }),
   PURCHASE_RECEIPTS: definition([...crud, "Export"]),
   SUPPLIER_PAYMENTS: definition(["View", "Create", "Export"], { cooperativeWide: true }),
   CUSTOMERS: definition(readWrite, { cooperativeWide: true }),

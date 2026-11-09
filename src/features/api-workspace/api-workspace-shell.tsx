@@ -9,10 +9,13 @@ import { operationModules, operationAllowed } from "@/features/operations/permis
 import { customerDebtAllowed } from "@/features/customer-debts-api/access";
 import { OwnerOverview } from "./owner-overview";
 import { InboxBell } from "@/features/inbox-api/inbox-bell";
+import { SelectedZonesProvider } from "./selected-zones";
+import { ZonePicker } from "./zone-picker";
 import { NavigationGroup } from "@/components/layout/navigation-group";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
+import type { SettingsSection } from "@/components/layout/header-menu";
 import { InterfaceIcon, type InterfaceIconName } from "@/components/ui/interface-icon";
 import { ManagementHeading } from "@/components/ui/management-page";
 import styles from "@/components/layout/app-shell.module.css";
@@ -34,10 +37,16 @@ const operationIcons: Record<OperationArea, InterfaceIconName> = {
   "sales-products": "product", "purchase-requests": "request", workforce: "attendance", "my-work": "work",
 };
 
+const settingsDescriptions: Partial<Record<ResourceKey, string>> = {
+  accounts: "Tài khoản nội bộ, trạng thái truy cập và vai trò được phân công theo vùng.",
+  roles: "Đối chiếu vai trò và quyền hiện hành của hệ thống.",
+};
+
 const workspaceGroups = [
   { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["cultivation-cycles", "seeding", "material-usages", "harvest", "water"] },
-  { label: "Vật tư & mua hàng", resources: ["input-items", "suppliers"], operations: ["purchase-receipts", "supplier-payments"] },
-  { label: "Nhân sự & phân quyền", resources: ["employees", "accounts", "roles"], operations: ["workforce", "job-types", "my-work"] },
+  { label: "Vật tư", resources: ["input-items"], operations: [] },
+  { label: "Mua hàng", resources: ["suppliers"], operations: [] },
+  { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "my-work"] },
   { label: "Kinh doanh", resources: ["customers"], operations: ["sales-products", "purchase-requests"] },
 ];
 
@@ -67,10 +76,15 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const visible = resourceKeys.filter((key) => resourceAllowed(key, context.identity, context.permissions.functionPermissions));
   const financeWorkspace = context.identity.subjectType === "Staff" && context.permissions.functionPermissions.some(p => p.functionCode === "SUPPLIER_PAYMENTS" && p.action === "Create") && !context.permissions.functionPermissions.some(p => ["CULTIVATION_CYCLES", "WATER_MEASUREMENTS", "HARVESTS"].includes(p.functionCode) && ["Create", "Edit"].includes(p.action));
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isOwner = context.identity.subjectType === "CooperativeOwner";
+  const settingsSections: SettingsSection[] = [
+    { label: "Phân quyền", items: (["accounts", "roles"] as const).filter((key) => visible.includes(key)).map((key) => ({ href: `/workspace/${key}`, label: resources[key].title, icon: resourceIcons[key], description: settingsDescriptions[key] })) },
+    { label: "Hợp tác xã", items: isOwner ? [{ href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã." }, { href: "/cooperative/receiving-bank-account", label: "Ngân hàng nhận tiền", icon: "payment", description: "Tài khoản dùng để nhận chuyển khoản và tạo mã VietQR." }] : [] },
+    { label: "Cấu hình nghiệp vụ", items: operationModules.filter((entry) => entry.key === "job-types" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => ({ href: `/operations/${entry.key}`, label: entry.title, icon: operationIcons[entry.key], description: "Đơn giá theo giờ và lịch sử ngày hiệu lực của từng loại công việc." })) },
+  ];
   const navigation = ({ compact, onNavigate }: { compact: boolean; onNavigate?: () => void }) => {
     const link = (href: string, label: string, icon: InterfaceIconName) => <Link key={href} className={styles.navigationLink} href={href} aria-current={active(href) ? "page" : undefined} aria-label={label} title={compact ? label : undefined} onClick={onNavigate}><span className={styles.iconSlot}><InterfaceIcon name={icon}/></span><span className={styles.linkLabel}>{label}</span></Link>;
     return <nav aria-label="Chức năng" className={styles.navigation}>
-      {context.identity.subjectType === "SystemAdministrator" && <NavigationGroup label="Quản trị hệ thống" compact={compact}><div className={styles.navigationItems}>{link("/system/accounts", "Tài khoản & nhật ký", "roles")}</div></NavigationGroup>}
       <NavigationGroup label="Điều hành" compact={compact}><div className={styles.navigationItems}>
         {link("/dashboard", "Tổng quan HTX", "dashboard")}
         {context.identity.subjectType === "CooperativeOwner" && link("/audit", "Nhật ký thao tác", "search")}
@@ -79,24 +93,22 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
         {customerDebtAllowed(context.identity, context.permissions.functionPermissions) && link("/operations/customer-debts", "Công nợ khách hàng", "payment")}
         {context.identity.subjectType === "CooperativeOwner" && link("/trader-requests", "Yêu cầu đăng ký thương lái", "request")}
       </div></NavigationGroup>
+      {context.identity.subjectType === "SystemAdministrator" && <NavigationGroup label="Quản trị hệ thống" compact={compact}><div className={styles.navigationItems}>{link("/system/accounts", "Tài khoản & nhật ký", "roles")}</div></NavigationGroup>}
       {workspaceGroups.map((group) => {
         if (financeWorkspace && group.label === "Nuôi trồng") return null;
         const rows = visible.filter((key) => group.resources.includes(key));
         const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).sort((a, b) => group.operations.indexOf(a.key) - group.operations.indexOf(b.key));
-        return rows.length || modules.length ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
+        const purchasing = operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions);
+        return rows.length || modules.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
           {modules.map((entry) => link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]))}
+          {group.label === "Mua hàng" && purchasing && <>{link("/operations/purchase-receipts", "Nhập hàng", "receipt")}{link("/operations/purchase-returns", "Trả hàng nhập", "upload")}</>}
         </div></NavigationGroup> : null;
       })}
-      <NavigationGroup label="Tài khoản" compact={compact}><div className={styles.navigationItems}>
-        {link("/account", "Hồ sơ cá nhân", "account")}
-        {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/profile", "Hồ sơ hợp tác xã", "cooperative")}
-        {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/receiving-bank-account", "Ngân hàng nhận tiền", "payment")}
-      </div></NavigationGroup>
     </nav>;
   };
-  return <WorkspaceContext.Provider value={context}>
-    <AppShell navigation={navigation} topAction={() => <InboxBell />} accountLabel={context.identity.username} accountInitials={context.identity.username.slice(0,2).toUpperCase()} accountRole={workspaceRoleLabel(context.identity.subjectType, context.permissions.functionPermissions)} isLoggingOut={pending} onLogout={async () => {
+  return <WorkspaceContext.Provider value={context}><SelectedZonesProvider accountId={context.identity.accountId} enabled={resourceAllowed("zones", context.identity, context.permissions.functionPermissions)}>
+    <AppShell navigation={navigation} settingsSections={settingsSections} topAction={() => <><ZonePicker /><InboxBell /></>} accountLabel={context.identity.username} accountInitials={context.identity.username.slice(0,2).toUpperCase()} accountRole={workspaceRoleLabel(context.identity.subjectType, context.permissions.functionPermissions)} isLoggingOut={pending} onLogout={async () => {
       if (pending) return;
       setPending(true); setError(undefined);
       const result = await logoutWithApi();
@@ -108,7 +120,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       {!financeWorkspace && (pathname.startsWith("/farming/cycles") || ["cultivation-cycles","seeding","material-usages","harvest","water"].some(key => pathname.startsWith(`/operations/${key}`))) && <nav className={topStyles.contextNav} aria-label="Các bước nuôi trồng">{([...operationModules].sort((a,b) => ["cultivation-cycles","seeding","material-usages","harvest","water"].indexOf(a.key) - ["cultivation-cycles","seeding","material-usages","harvest","water"].indexOf(b.key))).filter(entry => ["cultivation-cycles","seeding","material-usages","harvest","water"].includes(entry.key) && operationAllowed(entry.key,context.identity,context.permissions.functionPermissions)).map(entry => {const href=entry.key==="cultivation-cycles"?"/farming/cycles":`/operations/${entry.key}`;return <Link key={entry.key} href={href} aria-current={active(href)?"page":undefined}>{entry.title}</Link>;})}</nav>}
       {children}
     </AppShell>
-  </WorkspaceContext.Provider>;
+  </SelectedZonesProvider></WorkspaceContext.Provider>;
 }
 
 export function ApiWorkspaceHome() {

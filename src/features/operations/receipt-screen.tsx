@@ -10,6 +10,7 @@ import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import { createOperationsRepository, type Query } from "./repository";
 import { loadOptions } from "./lookups";
+import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { control, DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, Note, OperationHeading, Paging, Select, Skeleton, businessToday, methodLabel, statusLabel, useMutation, useRemote } from "./ui";
 
 const repository = createOperationsRepository("purchase-receipts");
@@ -23,12 +24,14 @@ function ReceiptTotals({ record }: { record: Pick<c.Receipt, "payable" | "paid" 
 }
 export function ReceiptScreen() {
   const context = useApiWorkspace();
-  const [filters, setFilters] = useState({ code: "", zoneId: "", supplierId: "", raftId: "", itemId: "", itemGroup: "", statusId: "", from: businessToday().slice(0, 4) + "-01-01", to: businessToday() });
+  const [chosen, setFilters] = useState({ code: "", zoneId: "", supplierId: "", raftId: "", itemId: "", itemGroup: "", statusId: "", from: businessToday().slice(0, 4) + "-01-01", to: businessToday() });
   const [page, setPage] = useState(1), [selected, setSelected] = useState<c.Receipt | null>(), [costs, setCosts] = useState<z.infer<typeof c.raftCostsSchema>>();
   const [editorSerial, setEditorSerial] = useState(0);
   const [pendingInvoices, setPendingInvoices] = useState<{ receiptId: string; files: File[] }>();
   const [notice, setNotice] = useState<string>();
   const zones = useRemote(loadZones), suppliers = useRemote(loadSuppliers), items = useRemote(loadItems);
+  const { zones: offeredZones, zoneId: zoneFilter, narrowed } = useScopedZones(zones.data ?? [], chosen.zoneId);
+  const filters = useMemo(() => ({ ...chosen, zoneId: zoneFilter }), [chosen, zoneFilter]);
   const query = useMemo<Query>(() => ({ ...filters, page: String(page), pageSize: "20" }), [filters, page]);
   const list = useRemote(useMemo(() => (signal: AbortSignal) => repository.read("list", query, c.receiptSearchSchema, signal), [query]));
   const rafts = useRemote(useMemo(() => (signal: AbortSignal) => filters.zoneId ? loadOptions("rafts", signal, { zoneId: filters.zoneId })
@@ -44,7 +47,7 @@ export function ReceiptScreen() {
   </div></OperationHeading>
     <FilterPanel>
       <Field label="Mã phiếu" value={filters.code} onChange={(e) => filter("code", e.target.value)} />
-      <Select label="Vùng nuôi" value={filters.zoneId} onChange={(e) => filter("zoneId", e.target.value)}><option value="">Tất cả vùng được cấp</option>{zones.data?.map((row) => <option key={row.id} value={row.id}>{String(row.name)}</option>)}</Select>
+      <Select label="Vùng nuôi" value={filters.zoneId} onChange={(e) => filter("zoneId", e.target.value)}>{!narrowed && <option value="">Tất cả vùng được cấp</option>}{offeredZones.map((row) => <option key={row.id} value={row.id}>{String(row.name)}</option>)}</Select>
       <Select label="Nhà cung cấp" value={filters.supplierId} onChange={(e) => filter("supplierId", e.target.value)}><option value="">Tất cả</option>{suppliers.data?.map((row) => <option key={row.id} value={row.id}>{String(row.name)}</option>)}</Select>
       <Select label="Trạng thái" value={filters.statusId} onChange={(e) => filter("statusId", e.target.value)}><option value="">Tất cả</option>{[1701, 1702, 1703].map((id) => <option key={id} value={id}>{statusLabel(id)}</option>)}</Select>
       <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => filter("from", e.target.value)} /><Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => filter("to", e.target.value)} />

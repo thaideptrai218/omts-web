@@ -17,6 +17,7 @@ import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import { createOperationsRepository, type Query } from "./repository";
 import { loadOptions } from "./lookups";
+import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { DataTable, ErrorNotice, Field, Note, OperationHeading, Paging, Select, Skeleton, businessTime, displayTime, statusLabel, toApiTime, useMutation, useRemote } from "./ui";
 
 const repository = createOperationsRepository("water");
@@ -27,16 +28,16 @@ type ZoneThresholds = z.infer<typeof c.zoneThresholdsSchema>;
 
 export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } = {}) {
   const context = useApiWorkspace(), zones = useRemote(loadZones);
-  const [zoneId, setZoneId] = useState(initialZoneId), [filters, setFilters] = useState({ from: "", to: "", status: "Confirmed" }), [page, setPage] = useState(1), [groupBy, setGroupBy] = useState("month");
+  const [zoneChoice, setZoneId] = useState(initialZoneId), [filters, setFilters] = useState({ from: "", to: "", status: "Confirmed" }), [page, setPage] = useState(1), [groupBy, setGroupBy] = useState("month");
   const [selected, setSelected] = useState<c.WaterMeasurement | null>(), [serial, setSerial] = useState(0), [ocr, setOcr] = useState<Recognition>(), [thresholdsOpen, setThresholdsOpen] = useState(false), [notice, setNotice] = useState<string>();
   const [fullDetail,setFullDetail]=useState(false),[pageSize,setPageSize]=useState(20);
+  const { zones: availableZones, zoneId } = useScopedZones(zones.data?.filter((row) => operationAllowed("water", context.identity, context.permissions.functionPermissions, "View", row.id)) ?? [], zoneChoice, initialZoneId || undefined);
   const query = useMemo<Query>(() => ({ ...filters, zoneId, page: String(page), pageSize: String(pageSize) }), [filters, zoneId, page, pageSize]);
   const history = useRemote(useMemo(() => (signal: AbortSignal) => zoneId ? readSelectionPages((params,signal)=>repository.read("list",{...params,status:params.status??"All"},c.waterHistorySchema,signal),query,{status:filters.status==="All"?"":filters.status},signal,(a,b)=>String(b.measuredAt).localeCompare(String(a.measuredAt)))
     : Promise.resolve({ status: "success" as const, data: undefined as c.WaterHistory | undefined }), [query, zoneId, filters.status]));
   const chart = useRemote(useMemo(() => (signal: AbortSignal) => zoneId ? repository.read("chart", { zoneId, from: filters.from, to: filters.to, groupBy }, c.waterChartSchema, signal)
     : Promise.resolve({ status: "success" as const, data: undefined as Chart | undefined }), [zoneId, filters.from, filters.to, groupBy]));
   const mutation = useMutation();
-  const availableZones = zones.data?.filter((row) => operationAllowed("water", context.identity, context.permissions.functionPermissions, "View", row.id)) ?? [];
   const currentZone = availableZones.find((row) => row.id === zoneId);
 
   async function open(id: string) { const result = await mutation.run(() => repository.read("detail", { id }, c.waterSchema), true); if (result) { setSelected(result); setOcr(undefined); setSerial((value) => value + 1); } }

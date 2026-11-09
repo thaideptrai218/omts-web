@@ -10,7 +10,8 @@ import { LicenseEditor } from "@/features/farming-api/license-screen";
 import { businessToday, ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OpenedNotification } from "./contracts";
-import { ReceiptDialog, PaymentRecordDialog } from "@/features/purchasing-v2/screens";
+import { PaymentRecordDialog } from "@/features/purchasing-v2/screens";
+import { ReceiptViewDialog } from "@/features/purchase-documents/document-dialogs";
 import { HarvestLotDetail } from "@/features/cultivation-api/harvest-detail";
 import { CertificationEditor } from "@/features/certifications-api/certifications-screen";
 import { certificationRequest } from "@/features/certifications-api/repository";
@@ -19,7 +20,7 @@ import { z } from "zod";
 
 type RecordView = { kind: "water"; record: WaterMeasurement } | { kind: "license"; record: License };
 export function NotificationRecordDialog({ opened, onClose }: { opened: OpenedNotification; onClose(): void }) {
-  if (opened.recordType === "PurchaseReceipt") return <ReceiptDialog id={opened.recordId} onClose={onClose} onSaved={onClose} />;
+  if (opened.recordType === "PurchaseReceipt") return <ReceiptViewDialog id={opened.recordId} onClose={onClose} />;
   if (opened.recordType === "SupplierPayment") return <PaymentRecordDialog id={opened.recordId} onClose={onClose} />;
   if (opened.recordType === "HarvestLot" && opened.zoneId) return <HarvestLotDetail id={opened.recordId} zoneId={opened.zoneId} onClose={onClose} onSaved={onClose} />;
   if (opened.recordType === "CooperativeCertification") return <CertificationRecord id={opened.recordId} onClose={onClose} />;

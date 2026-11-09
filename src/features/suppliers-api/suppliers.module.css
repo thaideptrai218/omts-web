@@ -1,0 +1,31 @@
+.table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+.table thead th { position:sticky; top:0; z-index:4; padding:8px 12px; background:var(--omts-color-primary-soft); border-bottom:1px solid var(--omts-color-border); font-size:12px; font-weight:650; text-align:left; white-space:nowrap; }
+.table tbody td { padding:8px 12px; border-bottom:1px solid var(--omts-color-border); vertical-align:middle; white-space:nowrap; }
+.table tbody tr[data-selected] > td { background:var(--omts-color-primary-soft); }
+.checkCell { width:36px; padding-right:0!important; }
+.expandCell { width:28px; padding-inline:4px!important; }
+.expandCell button { display:grid; place-items:center; width:26px; height:26px; color:var(--omts-color-text-muted); }
+.expandCell svg { width:15px; height:15px; }
+.name { font-weight:600; }
+.detailCell { padding:0!important; white-space:normal!important; background:var(--omts-color-surface); }
+.detail { min-width:0; padding:4px 16px 16px; border-left:3px solid var(--omts-color-primary); }
+.tabBody { padding-top:14px; min-width:0; }
+.tabFooter { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid var(--omts-color-border); }
+.tabFooter > div { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.tabFooter > div:last-child { margin-left:auto; }
+.infoHead { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.infoHead h3 { font-size:16px; font-weight:650; overflow-wrap:anywhere; }
+.facts { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px 20px; }
+.facts dt { font-size:12px; color:var(--omts-color-text-muted); margin-bottom:2px; }
+.facts dd { font-size:14px; overflow-wrap:anywhere; }
+.debtHead { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:12px; margin-bottom:12px; font-size:13px; }
+.debtHead label { min-width:220px; }
+.muted { color:var(--omts-color-text-muted); }
+.feedback { flex:none; padding:8px 12px; border-bottom:1px solid var(--omts-color-border); font-size:13px; }
+.feedback ul { margin:4px 0 0 18px; list-style:disc; }
+.railHead { display:flex; align-items:center; justify-content:space-between; font-size:13px; }
+.rangeError { font-size:12px; color:var(--omts-color-danger, #b42318); }
+.skeleton { display:grid; gap:8px; padding:12px; }
+.skeleton > div { height:40px; border-radius:6px; background:var(--omts-color-surface-subtle); animation:pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.5; } }
+@media (prefers-reduced-motion:reduce) { .skeleton > div { animation:none; } }

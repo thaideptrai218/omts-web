@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 const repository = vi.hoisted(() => ({ read: vi.fn(), upload: vi.fn() }));
+const raftCosts = vi.hoisted(() => vi.fn());
+vi.mock("@/features/purchase-documents/repository", () => ({ getRaftCosts: raftCosts }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" }, permissions: { functionPermissions: [] } }) }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children, dismissible, onOpenChange }: { title: string; children: ReactNode; dismissible?: boolean; onOpenChange(open: boolean): void }) => <div role="dialog" aria-label={title}><button disabled={!dismissible} onClick={() => onOpenChange(false)}>Fermer test dialog</button>{children}</div> }));
@@ -91,15 +93,16 @@ describe("license editor draft and history behavior", () => {
   });
 });
 describe("raft cost evidence", () => {
-  it("shows unknown when no completed receipt provides a cost", async () => {
-    repository.read.mockResolvedValue({ status: "success", data: [] });
+  it("shows no figure when the raft has no material usage", async () => {
+    raftCosts.mockResolvedValue({ status: "success", data: { materialCost: 0, rafts: [] } });
     render(<RaftMaterialCosts raftId={ids.raft} zoneId={ids.zone} />);
-    expect(await screen.findByText("Chưa có số liệu chi phí.")).toBeTruthy(); expect(screen.queryByText(/Tổng chi phí/)).toBeNull();
+    expect(await screen.findByText("Chưa có lần sử dụng vật tư nào trong tháng này.")).toBeTruthy(); expect(screen.queryByText(/Tổng chi phí/)).toBeNull();
   });
-  it("shows a real zero when there is a completed receipt with a zero cost", async () => {
-    repository.read.mockResolvedValue({ status: "success", data: [{ raft: { id: ids.raft, code: "QA-R" }, materialCost: 0, receipts: [{ receiptId: ids.license, code: "QA-PN", receiptDate: "2026-10-29", materialCost: 0 }] }] });
+  it("shows a real zero and the usage behind it when the latest purchase price is zero", async () => {
+    raftCosts.mockResolvedValue({ status: "success", data: { materialCost: 0, rafts: [{ raft: { id: ids.raft, code: "QA-R" }, materialCost: 0, unpricedCount: 0,
+      usages: [{ usageId: ids.license, date: "2026-10-29", itemCode: "VT-QA", itemName: "Phao QA", unit: "cái", quantity: 2, unitPrice: 0, amount: 0, unpriced: false }] }] } });
     render(<RaftMaterialCosts raftId={ids.raft} zoneId={ids.zone} />);
-    expect(await screen.findByText(/Tổng chi phí: 0/)).toBeTruthy(); expect(screen.queryByText("Chưa có số liệu chi phí.")).toBeNull(); expect(screen.getByText(/QA-PN/)).toBeTruthy();
+    expect(await screen.findByText(/Tổng chi phí tháng này: 0/)).toBeTruthy(); expect(screen.getByText(/Phao QA/)).toBeTruthy();
   });
 });
 describe("raft condition sources", () => {

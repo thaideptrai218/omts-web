@@ -14,6 +14,7 @@ import { CultivationProgress } from "./cultivation-progress";
 import { ManagementHeading } from "@/components/ui/management-page";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { loadOptions } from "@/features/operations/lookups";
+import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { operationAllowed, type OperationArea } from "@/features/operations/permissions";
 import { DataTable, ErrorNotice, Field, Note, Paging, Select, Skeleton, businessToday, displayTime, useRemote } from "@/features/operations/ui";
@@ -31,8 +32,8 @@ function CultivationRecordsContent({ area }: { area: Area }) {
   const query = useSearchParams();
   const context = useApiWorkspace(), zones = useRemote(loadZones);
   const [zone, setZone] = useState(query.get("zoneId") ?? ""), [raft, setRaft] = useState(query.get("raftId") ?? ""), [search, setSearch] = useState("");
-  const available = zones.data?.filter(v => operationAllowed(area, context.identity, context.permissions.functionPermissions, "View", v.id)) ?? [];
-  const zoneId = String(zone || available[0]?.id || "");
+  const { zones: available, zoneId: scopedZone } = useScopedZones(zones.data?.filter(v => operationAllowed(area, context.identity, context.permissions.functionPermissions, "View", v.id)) ?? [], zone, query.get("zoneId") ?? undefined);
+  const zoneId = String(scopedZone || available[0]?.id || "");
   const rafts = useRemote(useMemo(() => (signal: AbortSignal) => zoneId ? cycleRepo.read("list", { zoneId }, z.array(zoneCycle), signal) : Promise.resolve({ status: "success" as const, data: [] }), [zoneId]));
   const [raftPage,setRaftPage]=useState(1);
   const matchingRafts=rafts.data?.filter(v=>v.raftCode.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi"))) ?? [];

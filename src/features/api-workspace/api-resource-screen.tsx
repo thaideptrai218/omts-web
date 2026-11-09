@@ -19,10 +19,11 @@ import { resources, resourceCategoryFilters, resourceAllowed, type ResourceKey }
 import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
 import { ResourceExtras } from "@/features/farming-api/resource-extras";
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
+import { SupplierScreen } from "@/features/suppliers-api/supplier-screen";
 import { workspaceError } from "./workspace-error";
 import { GlobalZoneMap } from "@/features/farming-api/global-zone-map";
-import { useRemote } from "@/features/operations/ui";
 import { loadOptions } from "@/features/operations/lookups";
+import { useScopedZones } from "./selected-zones";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { useDirectoryView } from "@/components/ui/use-directory-view";
 export { workspaceError } from "./workspace-error";
@@ -32,14 +33,12 @@ const directoryPresentation = {
   customers: { icon: "users", description: "Quản lý hồ sơ khách hàng, thông tin liên hệ và tài khoản thương lái liên kết." },
   zones: { icon: "zone", description: "Tìm vùng nuôi và mở hồ sơ để xem vị trí, bè và thông tin chi tiết." },
   rafts: { icon: "raft", description: "Tra cứu bè trong vùng được cấp và mở hồ sơ làn, vị trí, giấy tờ." },
-  suppliers: { icon: "users", description: "Tra cứu nhà cung cấp, liên hệ và trạng thái sử dụng." },
   "input-items": { icon: "document", description: "Tra cứu vật tư, nhóm và đơn vị tính trước khi lập chứng từ." },
   accounts: { icon: "account", description: "Xem tài khoản nội bộ, tình trạng và hồ sơ liên quan." },
   roles: { icon: "roles", description: "Đối chiếu vai trò và quyền hiện hành của hệ thống." },
 } as const;
 const directoryActions: Partial<Record<ResourceKey, { create: string; open: string }>> = {
   customers: { create: "Thêm khách hàng", open: "Mở khách hàng" },
-  suppliers: { create: "Thêm nhà cung cấp", open: "Mở nhà cung cấp" },
   "input-items": { create: "Thêm vật tư", open: "Mở vật tư" },
 };
 function text(value: unknown): string {
@@ -50,26 +49,14 @@ function text(value: unknown): string {
 }
 
 export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
+  if (resource === "suppliers") return <SupplierScreen />;
   return resource === "employees" ? <EmployeeApiScreen /> : <GenericResourceScreen resource={resource} />;
-}
-function SupplierInlineProfile({ id, canEdit, onEdit, onSaved }: { id: string; canEdit: boolean; onEdit(record: ApiRecord): void; onSaved(): void }) {
-  const repository = useMemo(() => createWorkspaceRepository("suppliers"), []);
-  const remote = useRemote(useMemo(() => (signal: AbortSignal) => repository.detail(id, signal), [repository, id]));
-  return <section className={catalogStyles.expanded} aria-label="Chi tiết nhà cung cấp" aria-busy={remote.loading}>
-    {remote.loading && <p role="status">Đang tải hồ sơ nhà cung cấp…</p>}
-    {remote.error && <div role="alert"><p>{remote.error}</p><Button variant="secondary" onClick={remote.reload}>Tải lại hồ sơ</Button></div>}
-    {remote.data && <><header><h3>{text(remote.data.name)}</h3><StatusPill tone={remote.data.statusId === 101 ? "success" : "neutral"}>{remote.data.statusId === 101 ? "Đang dùng" : "Ngừng dùng"}</StatusPill></header>
-      <dl className={catalogStyles.supplierFacts}>{[["Loại nhà cung cấp", ({Seed:"Giống",Material:"Vật tư",Other:"Khác"} as Record<string,string>)[String(remote.data.supplierType)]], ["Số điện thoại", remote.data.phoneNumber], ["Địa chỉ", remote.data.address], ["Email", remote.data.email]].map(([label,value]) => <div key={String(label)}><dt>{String(label)}</dt><dd>{text(value)}</dd></div>)}</dl>
-      <ResourceExtras resource="suppliers" record={remote.data} busy={false} dirty={false} blocked={false} onSaved={onSaved} />
-      {canEdit && <footer><Button className="w-auto" onClick={() => onEdit(remote.data!)}>{remote.data.statusId === 102 ? "Mở hồ sơ / sử dụng lại" : "Sửa hồ sơ"}</Button></footer>}
-    </>}
-  </section>;
 }
 function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const context = useApiWorkspace();
   const params = useSearchParams();
   const accountQuery = params.getAll(resource === "accounts" ? "accountId" : "recordId");
-  const initialAccountId = ["accounts", "zones", "rafts"].includes(resource) && accountQuery.length === 1 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountQuery[0]) ? accountQuery[0] : undefined;
+  const initialAccountId = ["accounts", "zones", "rafts", "input-items"].includes(resource) && accountQuery.length === 1 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountQuery[0]) ? accountQuery[0] : undefined;
   const definition = resources[resource];
   const categoryFilter = resourceCategoryFilters[resource];
   const repository = useMemo(() => createWorkspaceRepository(resource), [resource]);
@@ -87,9 +74,9 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const [zoneError, setZoneError] = useState<string>();
   const [zoneLoading, setZoneLoading] = useState(false);
   const [zoneRefresh, setZoneRefresh] = useState(0);
-  const [zoneId, setZoneId] = useState("");
-  const [expandedSupplier, setExpandedSupplier] = useState<string>();
+  const [zoneChoice, setZoneId] = useState("");
   const [selected, setSelected] = useState<ApiRecord | null>();
+  const { zones: offeredZones, zoneId } = useScopedZones(zones, zoneChoice, typeof selected?.zoneId === "string" ? selected.zoneId : undefined);
   const [editorId, setEditorId] = useState(0);
   const [opening, setOpening] = useState(false);
   const openGeneration = useRef(0);
@@ -181,7 +168,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
     if (resource === "roles" && key === "name") return knownRoleNameLabel(String(row.name ?? ""));
     return text(row[key]);
   };
-  const isCatalog = resource === "suppliers" || resource === "input-items";
+  const isCatalog = resource === "input-items";
   const customerDirectory = resource === "customers", accessDirectory = resource === "accounts" || resource === "roles";
   const usesFilterRail = resource !== "customers" && resource !== "roles";
   const resultTitle = resource === "zones" ? "Danh sách vùng nuôi" : resource === "rafts" ? "Danh sách bè nuôi" : resource === "accounts" ? "Danh sách nhân viên nội bộ" : resource === "roles" ? "Danh sách vai trò" : customerDirectory ? "Danh sách khách hàng và thương lái" : resource === "suppliers" ? "Danh sách nhà cung cấp" : "Danh sách vật tư";
@@ -189,7 +176,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
       {resource !== "roles" && resource !== "customers" && <FilterChecks label="Trạng thái" value={filter} options={statuses} onChange={value => { setFilter(value); setPageNumber(1); }} />}
       {categoryFilter && <FilterChecks label={categoryFilter.label} value={category} options={categoryFilter.options} onChange={value => { setCategory(value); setPageNumber(1); }} />}
       {definition.zoneRequired && <label className="min-w-0 text-sm font-semibold">Vùng nuôi<select className={inputClass} disabled={zoneLoading || !!zoneError} value={zoneId} onChange={(event) => { setZoneId(event.target.value); setPageNumber(1); }}>
-        <option value="">Chọn vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{text(zone.name)}</option>)}</select></label>}
+        <option value="">Chọn vùng</option>{offeredZones.map((zone) => <option key={zone.id} value={zone.id}>{text(zone.name)}</option>)}</select></label>}
     </div>;
   const searchControl = <label className={catalogStyles.search}>Tìm kiếm<input type="search" placeholder={resource === "suppliers" ? "Theo tên nhà cung cấp" : resource === "input-items" ? "Theo mã hoặc tên vật tư" : resource === "rafts" ? "Theo mã bè" : "Nhập từ khóa tìm kiếm"} className={inputClass} value={search} onChange={event => { setSearch(event.target.value); setPageNumber(1); }} /></label>;
   const results = <>
@@ -204,10 +191,10 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
     {definition.zoneRequired && !zoneId ? <p className="mt-5">Chọn vùng nuôi để xem danh sách bè.</p> : loading ? <div className="mt-5 space-y-3" role="status" aria-label="Đang tải danh sách">{[1, 2, 3, 4].map((value) => <div key={value} className="h-14 animate-pulse rounded-control bg-slate-200" />)}</div>
       : (customerDirectory || accessDirectory) && error ? null : (resource === "zones" || resource === "rafts") && view === "grid" ? <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{page?.items.length ? page.items.map((row) => <article key={row.id} className="relative min-w-0 rounded-card border border-border bg-surface p-4 transition hover:border-primary/50 hover:shadow-sm"><div className="flex items-start justify-between gap-3"><h2 className="break-words font-semibold">{text(row.name ?? row.code)}</h2><StatusPill tone={Number(row.statusId) === 101 ? "success" : "neutral"}>{valueLabel("status", row)}</StatusPill></div><dl className="mt-4 grid gap-2 text-sm">{definition.columns.filter(([key]) => key !== "status" && (key !== "name" || resource !== "zones")).map(([key, label]) => <div key={key} className="flex justify-between gap-3"><dt className="text-text-muted">{label}</dt><dd className="text-right font-medium">{valueLabel(key, row)}</dd></div>)}</dl><button type="button" className="absolute inset-0 rounded-card focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-wait" aria-label={`Xem ${text(row.name ?? row.code)}`} disabled={opening} onClick={() => void open(row)}><span className="sr-only">Mở hồ sơ</span></button></article>) : <p className="rounded-card border border-border p-5 text-text-muted md:col-span-2 xl:col-span-3">Không có bản ghi phù hợp bộ lọc.</p>}</div>
       : <div className="mt-4"><DataGrid responsive headings={[...definition.columns.map(([, label]) => label), "Hồ sơ"]} empty={!page?.items.length}>
-        {page?.items.map((row) => <Fragment key={row.id}><OpenableTableRow disabled={opening} data-selected={expandedSupplier === row.id || undefined} onOpen={() => { if(resource === "suppliers") setExpandedSupplier(value=>value===row.id?undefined:row.id); else void open(row); }}>{definition.columns.map(([key, label]) => <td key={key} data-label={label} className={key === "code" || key === "username" ? "font-mono tabular-nums" : usesFilterRail && key === "name" ? catalogStyles.name : ""}>{key === "status" ? <StatusPill tone={[101, 301].includes(Number(row.statusId)) || row.status === "Active" ? "success" : "neutral"}>{valueLabel(key, row)}</StatusPill> : customerDirectory && key === "hasTraderAccount" ? <StatusPill tone={row.hasTraderAccount === true ? "success" : "neutral"}>{row.hasTraderAccount === true ? "Đã liên kết" : "Chưa liên kết"}</StatusPill> : valueLabel(key, row)}</td>)}
-          <td data-label="Hồ sơ"><button className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover" aria-label={isCatalog ? `Xem hồ sơ ${text(row.name ?? row.code)}` : undefined} aria-expanded={resource === "suppliers" ? expandedSupplier === row.id : undefined} disabled={opening} onClick={() => resource === "suppliers" ? setExpandedSupplier(value => value === row.id ? undefined : row.id) : void open(row)}>{resource === "suppliers" && expandedSupplier === row.id ? "Thu gọn" : isCatalog ? "Xem chi tiết" : actions?.open ?? "Mở hồ sơ"}</button></td></OpenableTableRow>{resource === "suppliers" && expandedSupplier === row.id && <tr><td colSpan={definition.columns.length + 1} className={catalogStyles.expandedCell}><SupplierInlineProfile key={`${row.id}-${refresh}`} id={row.id} canEdit={canEdit} onEdit={record => { setSelected(record); setEditorId(value => value + 1); }} onSaved={() => setRefresh(value => value + 1)} /></td></tr>}</Fragment>)}
+        {page?.items.map((row) => <Fragment key={row.id}><OpenableTableRow disabled={opening} onOpen={() => void open(row)}>{definition.columns.map(([key, label]) => <td key={key} data-label={label} className={key === "code" || key === "username" ? "font-mono tabular-nums" : usesFilterRail && key === "name" ? catalogStyles.name : ""}>{key === "status" ? <StatusPill tone={[101, 301].includes(Number(row.statusId)) || row.status === "Active" ? "success" : "neutral"}>{valueLabel(key, row)}</StatusPill> : customerDirectory && key === "hasTraderAccount" ? <StatusPill tone={row.hasTraderAccount === true ? "success" : "neutral"}>{row.hasTraderAccount === true ? "Đã liên kết" : "Chưa liên kết"}</StatusPill> : valueLabel(key, row)}</td>)}
+          <td data-label="Hồ sơ"><button className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover" aria-label={isCatalog ? `Xem hồ sơ ${text(row.name ?? row.code)}` : undefined} disabled={opening} onClick={() => void open(row)}>{isCatalog ? "Xem chi tiết" : actions?.open ?? "Mở hồ sơ"}</button></td></OpenableTableRow></Fragment>)}
       </DataGrid></div>}
-    {page && <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p>{page.total} {accessDirectory ? resource === "roles" ? "vai trò" : "tài khoản" : customerDirectory ? "khách hàng" : isCatalog ? resource === "suppliers" ? "nhà cung cấp" : "vật tư" : "bản ghi"} · Trang {page.page}/{Math.max(1, Math.ceil(page.total / page.pageSize))}</p><div className="flex flex-wrap items-center gap-2"><label className="text-sm">Số dòng/trang <select className="ml-2 rounded-control border border-border px-2 py-2" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPageNumber(1); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label>
+    {page && <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p>{page.total} {accessDirectory ? resource === "roles" ? "vai trò" : "tài khoản" : customerDirectory ? "khách hàng" : isCatalog ? "vật tư" : "bản ghi"} · Trang {page.page}/{Math.max(1, Math.ceil(page.total / page.pageSize))}</p><div className="flex flex-wrap items-center gap-2"><label className="text-sm">Số dòng/trang <select className="ml-2 rounded-control border border-border px-2 py-2" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPageNumber(1); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label>
       <Button className="w-auto" variant="secondary" disabled={loading || pageNumber <= 1} onClick={() => setPageNumber((value) => value - 1)}>Trước</Button>
       <Button className="w-auto" variant="secondary" disabled={loading || pageNumber * page.pageSize >= page.total} onClick={() => setPageNumber((value) => value + 1)}>Sau</Button></div></div>}
   </>;
