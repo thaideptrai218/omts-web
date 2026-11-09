@@ -24,7 +24,9 @@ const debt = { totals: { supplierId: ids.supplier, supplierName: record.supplier
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.options.mockResolvedValue({ status: "success", data: [] });
-  mocks.read.mockResolvedValue({ status: "success", data: { page: { items: [], total: 0 }, totals: { payable: 0, paid: 0, returned: 0, outstanding: 0, completedCount: 0 }, from: "2026-10-01", to: "2026-10-30" } });
+  const history = { status: "success", data: { page: { items: [], total: 0 }, totals: { payable: 0, paid: 0, returned: 0, outstanding: 0, completedCount: 0 }, from: "2026-10-01", to: "2026-10-30" } };
+  // Tổng quan vùng nước (mảng rỗng) khác hợp đồng lịch sử đo; các lần đọc khác giữ nguyên.
+  mocks.read.mockImplementation((action: string) => Promise.resolve(action === "zones-overview" ? { status: "success", data: [] } : history));
 });
 afterEach(cleanup);
 

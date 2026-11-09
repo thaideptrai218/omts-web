@@ -1,0 +1,34 @@
+/* Tổng quan chất lượng nước theo vùng: lưới thẻ vùng, dải tóm tắt. Dùng token màu chung. */
+.wrap { min-width: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+.title { font-size: 1.0625rem; font-weight: 700; margin: 0; }
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 0 0 1.25rem; }
+.summary > div { padding: .75rem 1rem; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-control); }
+.summary dt { font-size: .75rem; color: var(--omts-color-text-muted); }
+.summary dd { margin: .125rem 0 0; font-size: 1.375rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.summaryAlert { background: var(--omts-color-danger-soft) !important; border-color: var(--omts-color-danger) !important; }
+.summaryAlert dd { color: var(--omts-color-danger); }
+.grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr)); }
+.skeleton { height: 10rem; border-radius: var(--omts-radius-card); background: var(--omts-color-surface-subtle); animation: pulse 1.4s ease-in-out infinite; }
+.card { display: flex; flex-direction: column; align-items: flex-start; gap: .375rem; width: 100%; height: 100%; min-height: 9rem; padding: 1rem 1.125rem; text-align: left;
+  background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); box-shadow: var(--omts-shadow-card);
+  cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .2s; }
+.card:hover { border-color: var(--omts-color-primary); transform: translateY(-1px); }
+.card:focus-visible { outline: 3px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.cardAlert { border-color: var(--omts-color-danger); border-left-width: 4px; }
+.cardHead { display: flex; align-items: center; justify-content: space-between; gap: .5rem; width: 100%; }
+.code { font-size: .8125rem; font-weight: 700; letter-spacing: .03em; color: var(--omts-color-text-muted); }
+.name { font-size: 1.0625rem; font-weight: 700; color: var(--omts-color-text); overflow-wrap: anywhere; }
+.status { font-size: .8125rem; color: var(--omts-color-text-muted); }
+.time { display: flex; flex-direction: column; gap: .125rem; margin-top: auto; padding-top: .5rem; font-size: .875rem; font-weight: 600; color: var(--omts-color-text); }
+.time small { font-size: .75rem; font-weight: 400; color: var(--omts-color-text-muted); font-variant-numeric: tabular-nums; }
+.stale { color: var(--omts-color-warning) !important; font-weight: 600; }
+.badge { display: inline-flex; align-items: center; gap: .3rem; padding: .125rem .5rem; border-radius: 999px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.badgeAlert { background: var(--omts-color-danger-soft); color: var(--omts-color-danger); border: 1px solid var(--omts-color-danger); }
+.badgeOk { background: var(--omts-color-surface-subtle); color: var(--omts-color-text-muted); border: 1px solid var(--omts-color-border); }
+.outside { margin: .25rem 0 0; padding-left: 1.125rem; font-size: .8125rem; font-weight: 500; color: var(--omts-color-danger); }
+.empty { padding: 2.5rem 0; text-align: center; color: var(--omts-color-text-muted); }
+.note { margin: 1rem 0 0; font-size: .75rem; color: var(--omts-color-text-muted); }
+@keyframes pulse { 50% { opacity: .5; } }
+@media (max-width: 640px) { .summary { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } .skeleton { animation: none; } }

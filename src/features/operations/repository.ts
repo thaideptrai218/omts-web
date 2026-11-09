@@ -1,5 +1,6 @@
 import { zipStoredFiles } from "@/shared/downloads/zip-store";
 import { z } from "zod";
+import { invoiceConfirmationSchema } from "@/features/sales-invoices/confirmation-problem";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OperationArea } from "./permissions";
 import { employeeProblemMetadataSchema } from "@/features/employee-management/api/employee-problem-metadata";
@@ -21,7 +22,8 @@ async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>,
     // Expiry may be detected by the BFF's recheck after the backend wrote.
     // A write returning 401 therefore also needs reconciliation, never replay.
     const employeeProblem = area === "employees" ? employeeProblemMetadataSchema.safeParse(result.employeeProblem) : undefined;
-    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}),
+    const invoiceConfirmation = area === "sales-invoices" || area === "customer-payments" ? invoiceConfirmationSchema.safeParse(result.invoiceConfirmation) : undefined;
+    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}), ...(invoiceConfirmation?.success ? { invoiceConfirmation: invoiceConfirmation.data } : {}),
       uncertain: body !== undefined && (response.status >= 500 || response.ok || response.status === 401) };
   } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
 }

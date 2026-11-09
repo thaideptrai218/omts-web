@@ -1,4 +1,5 @@
 "use client";
+import { WaterZoneOverview } from "@/features/water-overview/water-zone-overview";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { EvidenceGallery } from "@/components/ui/evidence-gallery";
 import { FilterChecks } from "@/components/ui/filter-checks";
@@ -53,7 +54,7 @@ export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } =
     </>}>
     <ErrorNotice error={zones.error || history.error || mutation.error} />{notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
     {zones.error && <Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending || zones.loading} onClick={zones.reload}>Tải lại danh sách vùng</Button>}
-    {!zoneId ? <div className={styles.empty}><h2>Chọn vùng nuôi để theo dõi</h2><p>Biểu đồ, cảnh báo và lịch sử phép đo sẽ xuất hiện tại đây.</p></div> : <>
+    {!zoneId ? <WaterZoneOverview onSelectZone={(id) => { setZoneId(id); setPage(1); setSelected(undefined); }} /> : <>
       <div className={styles.zoneHeading}><div><span>VÙNG ĐANG THEO DÕI</span><h2>{String(currentZone?.name ?? "Vùng nuôi")}</h2><p>Mặc định: lịch sử 3 tháng gần đây, biểu đồ 12 tháng · giờ Việt Nam</p></div><Button variant="secondary" disabled={history.loading} onClick={()=>{history.reload();chart.reload();}}>Tải lại dữ liệu</Button></div>
       <section aria-labelledby="water-chart-heading" className="mt-7 border-t border-border pt-4">
       <div className="mb-2 flex flex-wrap items-end justify-between gap-3"><div><h2 id="water-chart-heading" className="text-base font-semibold tracking-tight">Xu hướng chất lượng nước</h2><p className="mt-1 text-xs text-text-muted">Chỉ số đã xác nhận, so với ngưỡng hiện hành</p></div><div className="w-full sm:w-44"><Select label="Khoảng gộp" value={groupBy} onChange={(e) => setGroupBy(e.target.value)}><option value="month">Theo tháng</option><option value="day">Theo ngày</option></Select></div></div>

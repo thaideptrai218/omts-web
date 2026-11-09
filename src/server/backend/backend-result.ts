@@ -6,7 +6,7 @@ import type { EmployeeProblemMetadata } from "../../features/employee-management
 // this union directly into a Route Handler/RSC/client prop; W2.2e supplies DTO projection.
 export type BackendTransportResult =
   | Readonly<{ status: "success"; httpStatus: number; data: unknown }>
-  | Readonly<{ status: "http-error"; httpStatus: number; code?: MessageCode; retryAfterMs?: number; catalogueProblem?: import("@/features/api-workspace/catalogue-problem").CatalogueProblem; employeeProblem?: EmployeeProblemMetadata }>
+  | Readonly<{ status: "http-error"; httpStatus: number; code?: MessageCode; retryAfterMs?: number; catalogueProblem?: import("@/features/api-workspace/catalogue-problem").CatalogueProblem; invoiceConfirmation?: import("@/features/sales-invoices/confirmation-problem").InvoiceConfirmation; employeeProblem?: EmployeeProblemMetadata }>
   | Readonly<{ status: "disabled" | "invalid-config" | "invalid-request" | "invalid-response" | "timeout" | "unavailable" }>;
 
 // A failed mutation may already have committed upstream. This result is not a
