@@ -2,7 +2,6 @@ import "server-only";
 import { z } from "zod";
 import type { ServerBackendConfig } from "@/server/config/backend-config";
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
-import { prepareEmployeeUnlinkRequest } from "@/features/employee-management/api/employee-mutation-request";
 import { employeeListQuerySchema, prepareEmployeeReadRequest } from "@/features/employee-management/api/employee-read-request";
 import { farmingZoneListQuerySchema, prepareFarmingZoneListRequest } from "@/features/farming-zones/api/farming-zone-read-request";
 
@@ -48,10 +47,8 @@ function routeFor(endpoint: Endpoint, parameters: unknown) {
     const parsed = employeeIdParameters.safeParse(parameters);
     return parsed.success ? { path: `/api/employees/${parsed.data.employeeId}`, method: endpoint === "employeeUpdate" ? "PUT" as const : "GET" as const } : undefined;
   }
-  if (endpoint === "employeeUnlink") {
-    const prepared = prepareEmployeeUnlinkRequest(parameters);
-    return prepared.status === "prepared" ? prepared.request : undefined;
-  }
+  // The API has no unlink endpoint any more: the identifier stays only so a stale caller is refused.
+  if (endpoint === "employeeUnlink") return undefined;
   return parameters === undefined ? routes[endpoint] : undefined;
 }
 
