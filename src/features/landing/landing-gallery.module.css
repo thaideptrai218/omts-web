@@ -1,0 +1,13 @@
+/* Bộ ảnh thực tế: ảnh đầu tiên chiếm hai cột, ảnh nằm trong khung vuông góc, phóng nhẹ khi rê chuột. */
+.gallery { background: var(--bone); padding-block: clamp(4rem, 9vw, 8rem); }
+.head { margin-bottom: clamp(2rem, 5vw, 3.5rem); }
+.grid { display: grid; gap: 1rem; }
+.shot { position: relative; margin: 0; overflow: hidden; aspect-ratio: 4 / 3; background: var(--ink); border-radius: var(--omts-radius-control, .375rem); }
+.img { object-fit: cover; transition: transform 1.2s var(--ease); }
+.shot:hover .img { transform: scale(1.05); }
+.shot figcaption { position: absolute; inset: auto 0 0 0; padding: 2.5rem 1.25rem 1rem; color: #fff; font-size: .9375rem; background: linear-gradient(180deg, transparent, rgb(16 36 58 / .85)); }
+@media (min-width: 900px) {
+  .grid { grid-template-columns: repeat(3, 1fr); }
+  .lead { grid-column: span 2; grid-row: span 2; aspect-ratio: auto; min-height: 28rem; }
+}
+@media (prefers-reduced-motion: reduce) { .img { transition: none; } .shot:hover .img { transform: none; } }

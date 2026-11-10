@@ -1,0 +1,78 @@
+/* Hero: tối, chiếm trọn màn hình đầu, chữ hoa cỡ lớn đè lên mặt bằng vùng nuôi. */
+.hero { position: relative; overflow: hidden; background: var(--ink); color: var(--bone); display: grid; grid-template-rows: 1fr auto; min-height: min(100svh - 4.25rem, 58rem); }
+.plan { position: absolute; inset: 0; width: 100%; height: 100%; }
+.shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(11 19 21 / .55) 0%, transparent 35%, rgb(11 19 21 / .92) 100%); pointer-events: none; }
+.body { position: relative; padding-block: clamp(3rem, 9vh, 6rem) 2.5rem; display: flex; flex-direction: column; justify-content: flex-end; }
+.eyebrow { display: inline-flex; align-items: center; gap: .75rem; font-family: var(--mono); font-size: .75rem; letter-spacing: .16em; color: var(--mute-d); margin: 0; }
+.eyebrow::before { content: ""; width: .625rem; height: .625rem; background: var(--fire); }
+.h1 { font-family: var(--display); font-weight: 700; font-size: clamp(2.5rem, 6.6vw, 6.25rem); line-height: 1.04; letter-spacing: -.03em; margin: 1.25rem 0 0; text-wrap: balance; }
+.h1 > span { display: block; }
+.h1 .fire { color: var(--fire); }
+.row { display: grid; gap: 2rem; margin-top: clamp(2rem, 5vh, 3.5rem); align-items: end; }
+.lead { margin: 0; max-width: 34rem; font-size: clamp(1rem, 1.5vw, 1.1875rem); color: #c3cdcd; }
+.cta { display: flex; flex-wrap: wrap; gap: .75rem; }
+
+/* Dải bốn chặng ở chân hero, đồng thời là lối nhảy tới phần quy trình */
+.strip { position: relative; display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid var(--line-d); margin-block: 0; padding: 0; list-style: none; }
+.strip li { border-right: 1px solid var(--line-d); border-bottom: 1px solid var(--line-d); }
+.strip li:nth-child(2n) { border-right: 0; }
+.strip a { display: flex; gap: .75rem; align-items: baseline; padding: 1rem 1.25rem; color: var(--bone); text-decoration: none; font-weight: 600; transition: background-color .2s, color .2s; }
+.strip a:hover { background: var(--fire); color: var(--ink); }
+.strip a:hover span { color: var(--ink); }
+.strip span { font-family: var(--mono); font-size: .75rem; letter-spacing: .1em; color: var(--fire); transition: color .2s; }
+
+/* Chuyển động vào trang: tiêu đề quét từ trái sang, mặt bằng bè được vẽ dần, phao bè B03 phát tín hiệu */
+@keyframes wipe { from { clip-path: inset(-.3em 100% -.3em 0); translate: -1.5rem 0; } to { clip-path: inset(-.3em -.3em -.3em 0); translate: 0 0; } }
+@keyframes rise { from { opacity: 0; translate: 0 1.25rem; } to { opacity: 1; translate: 0 0; } }
+.h1 > span { animation: wipe 1s var(--ease) both; }
+.h1 > span:nth-child(2) { animation-delay: .18s; }
+.eyebrow { animation: rise .8s .05s var(--ease) both; }
+.lead { animation: rise .8s .55s var(--ease) both; }
+.cta { animation: rise .8s .7s var(--ease) both; }
+.strip li { animation: rise .7s var(--ease) both; }
+.strip li:nth-child(1) { animation-delay: .85s; } .strip li:nth-child(2) { animation-delay: .95s; }
+.strip li:nth-child(3) { animation-delay: 1.05s; } .strip li:nth-child(4) { animation-delay: 1.15s; }
+
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drift { from { transform: translate3d(0, 0, 0) scale(1.02); } to { transform: translate3d(-1.5%, 1.2%, 0) scale(1.06); } }
+@keyframes ring { 0% { opacity: .85; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes sight { to { stroke-dashoffset: -100; } }
+.planDrift { animation: drift 28s ease-in-out infinite alternate; will-change: transform; }
+.raft { animation: fadeIn .8s both; }
+.outline { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.6s var(--ease) forwards; }
+.ring { fill: none; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: ring 2.8s 1.8s ease-out infinite; opacity: 0; }
+.sight { animation: sight 14s linear infinite; }
+
+@media (min-width: 900px) {
+  .row { grid-template-columns: 1fr auto; }
+  .strip { grid-template-columns: repeat(4, 1fr); }
+  .strip li { border-bottom: 0; }
+  .strip li:nth-child(2n) { border-right: 1px solid var(--line-d); }
+  .strip li:last-child { border-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .h1 > span, .eyebrow, .lead, .cta, .strip li, .planDrift, .raft, .ring, .sight { animation: none; }
+  .outline { animation: none; stroke-dashoffset: 0; }
+  .ring { display: none; }
+  .strip a, .strip span { transition: none; }
+}
+
+/* Ánh sáng theo con trỏ: bản nét sáng của mặt bằng chỉ lộ ra quanh chuột */
+.hero { --mx: -999px; --my: -999px; }
+.lens { position: absolute; inset: 0; pointer-events: none; -webkit-mask-image: radial-gradient(260px circle at var(--mx) var(--my), #000 0%, transparent 100%); mask-image: radial-gradient(260px circle at var(--mx) var(--my), #000 0%, transparent 100%); }
+.glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(420px circle at var(--mx) var(--my), rgb(60 198 207 / .14), transparent 65%); }
+.plan, .shade { pointer-events: none; }
+
+/* Sóng biển hai lớp ở chân hero, chạy ngược chiều nhau */
+.sea { position: absolute; inset-inline: 0; bottom: 3.5rem; height: 6.5rem; overflow: hidden; pointer-events: none; }
+.sea svg { position: absolute; bottom: 0; left: 0; width: 200%; height: 100%; }
+.wave1 { fill: rgb(60 198 207 / .07); animation: waveL 22s linear infinite; }
+.wave2 { fill: rgb(60 198 207 / .12); height: 72%; animation: waveR 15s linear infinite; }
+@keyframes waveL { to { transform: translateX(-50%); } }
+@keyframes waveR { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+
+/* Hạt phim mịn phủ toàn hero cho cảm giác in ấn, không phải màu phẳng */
+.hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .07; mix-blend-mode: overlay; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.body, .strip { z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .wave1, .wave2 { animation: none; } .lens, .glow { display: none; } }

@@ -1,0 +1,39 @@
+/* Truy xuất: nền tối, bên phải là tem lô hàng có đường xé. */
+.trace { background: var(--ink); color: var(--bone); padding-block: clamp(4rem, 9vw, 8rem); }
+.trace .kicker { color: var(--fire); }
+.trace .sub { color: var(--mute-d); }
+.grid { display: grid; gap: 3.5rem; align-items: center; }
+.grid > * { min-width: 0; }
+.rows { margin: 2.5rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line-d); }
+.rows li { display: grid; gap: .25rem 2rem; padding: 1rem 0; border-bottom: 1px solid var(--line-d); }
+.rows strong { font-family: var(--mono); font-size: .75rem; letter-spacing: .14em; color: var(--fire); font-weight: 500; }
+.rows span { color: #c3cdcd; }
+
+/* Tem lô */
+.tag { position: relative; max-width: 24rem; width: 100%; margin-inline: auto; background: var(--bone); color: var(--ink); border-radius: .625rem; box-shadow: 0 2rem 4rem -1.5rem rgb(0 0 0 / .6); }
+.tagTop { display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: 1.25rem 1.5rem 0; font-family: var(--mono); font-size: .6875rem; letter-spacing: .14em; }
+.badge::before { content: ""; display: inline-block; width: .4rem; height: .4rem; margin-right: .4rem; border-radius: 50%; background: var(--fire-ink); animation: blink 1.6s ease-in-out infinite; }
+.badge { border: 1.5px solid var(--fire-ink); color: var(--fire-ink); padding: .125rem .5rem; font-weight: 700; }
+.qr { position: relative; overflow: hidden; width: 62%; margin: 1.25rem auto 1.5rem; color: var(--ink); }
+.scan { position: absolute; inset-inline: 0; top: 0; height: 3px; background: var(--fire-ink); box-shadow: 0 0 14px 3px rgb(8 111 120 / .55); animation: scan 2.8s ease-in-out infinite alternate; }
+.qr svg { display: block; width: 100%; height: auto; }
+.cut { position: relative; border-top: 2px dashed var(--line-l); }
+.cut::before, .cut::after { content: ""; position: absolute; top: -.8125rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--ink); }
+.cut::before { left: -.75rem; }
+.cut::after { right: -.75rem; }
+.lot { font-family: var(--mono); font-size: clamp(1.5rem, 6vw, 2rem); font-weight: 700; letter-spacing: -.02em; padding: 1.25rem 1.5rem 0; margin: 0; font-variant-numeric: tabular-nums; }
+.tag dl { margin: 0; padding: .75rem 1.5rem 0; display: grid; gap: .5rem; }
+.tag dt { font-family: var(--mono); font-size: .6875rem; letter-spacing: .14em; color: var(--mute-l); }
+.tag dd { margin: 0; font-weight: 600; }
+.note { margin: 0; padding: 1rem 1.5rem 1.25rem; font-size: .75rem; color: var(--mute-l); }
+
+@keyframes scan { from { top: 0; } to { top: calc(100% - 3px); } }
+@keyframes blink { 50% { opacity: .25; } }
+@keyframes float { from { translate: 0 -.4rem; } to { translate: 0 .4rem; } }
+.tag { animation: float 6s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .tag, .scan, .badge::before { animation: none; } }
+@media (min-width: 640px) { .rows li { grid-template-columns: 11rem 1fr; align-items: baseline; } }
+@media (min-width: 960px) {
+  .grid { grid-template-columns: 1.15fr .85fr; gap: 5rem; }
+  .tag { transform: rotate(2.5deg); }
+}
