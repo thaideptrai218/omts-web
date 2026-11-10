@@ -46,7 +46,8 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
       const data = parsed.data as Record<string, unknown>, employee = (data.employee ?? data) as Record<string, unknown>;
       if (plan.id && employee.id !== plan.id) return json({ status: "invalid-response" }, 502);
       if ("employee" in data) { delete data.message; delete data.messageCode; }
-      return json({ status: "success", data: "employee" in data && !["end-employment", "resume", "issue-account"].includes(plan.action) ? employee : data });
+      // Receipts (issue-account, create with account) keep the credential fields; everything else returns the bare employee.
+      return json({ status: "success", data: "employee" in data && !plan.receipt && !["end-employment", "resume", "issue-account"].includes(plan.action) ? employee : data });
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); }
   } catch { return json({ status: "unavailable" }, 503); }
 }

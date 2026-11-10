@@ -1,175 +1,130 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
-import type {
-  EmployeeListItemDto,
-} from "@/features/employee-management/api/employee-contract.schemas";
-import { createEmployeeEndDateSchema } from "@/features/employee-management/schemas/employee-employment-schema";
+import type { EmployeeListItemDto } from "@/features/employee-management/api/employee-contract.schemas";
 import { createOperationsRepository } from "@/features/operations/repository";
-import { businessToday, useMutation } from "@/features/operations/ui";
-import { employeeViewSchema, employmentChangedSchema, type Employee, type EmploymentChange } from "./contracts";
-import {
-  employeeApiEditorSchema,
-  buildEmployeeSaveBody,
-  fieldLabels,
-  valuesOf,
-} from "./employee-editor-model";
-import type { EmployeeStatusAction } from "./employee-status-action-dialog";
-import type { EmployeeTabKey } from "./employee-tabs";
-import { employeeFieldTab, focusEmployeeField } from "./employee-editor-validation";
-
-type Issue = { path: string; message: string };
+import { useMutation } from "@/features/operations/ui";
+import { employeeViewSchema, type Employee } from "./contracts";
+import { employeeCreateReceiptSchema } from "./employee-create-contract";
+import { blankCreateValues, groupsWithIssues, parseEmployeeCreate, type EmployeeCreateIssue } from "./employee-create-model";
+import { defaultOpenGroups, focusEmployeeField, type EmployeeCreateGroup } from "./employee-editor-validation";
+import { fieldLabels } from "./employee-editor-model";
 
 export type EmployeeEditorProps = {
-  record: Employee | null;
+  /** The dialog only creates; editing an opened row happens in place. */
+  record?: null;
   zones: ApiRecord[];
   jobTypes: { id: string; name: string }[];
   lookupsReady: boolean;
   onClose(): void;
   onAdopt(employee: Employee): void;
-  onSaved(employee: Employee, followUp?: EmploymentChange): void;
+  onSaved(employee: Employee): void;
 };
 
-export function useEmployeeEditor({ record, zones, lookupsReady, onClose, onSaved }: EmployeeEditorProps) {
+type Credential = { username: string; password: string; expiresAt: string };
+
+/** State and save flow of the "Thêm nhân viên" dialog. */
+export function useEmployeeEditor({ zones, lookupsReady, onClose, onSaved }: EmployeeEditorProps) {
   const repository = useMemo(() => createOperationsRepository("employees"), []);
   const mutation = useMutation();
-  // Server copy the draft is based on; replaced after an accepted conflict review.
-  const [baseline, setBaseline] = useState(record);
-  const [values, setValues] = useState(() => valuesOf(record));
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [activeTab, setActiveTab] = useState<EmployeeTabKey>("information");
-  const [latest, setLatest] = useState<Employee>();
+  const [values, setValues] = useState(blankCreateValues);
+  const [issues, setIssues] = useState<EmployeeCreateIssue[]>([]);
+  const [open, setOpen] = useState<ReadonlySet<EmployeeCreateGroup>>(() => new Set(defaultOpenGroups));
+  const [focusRequest, setFocusRequest] = useState<{ path: string }>();
   const [compared, setCompared] = useState<Employee>();
-  const [comparisonTarget, setComparisonTarget] = useState<{ id: string; linked: boolean }>();
-  const [action, setAction] = useState<EmployeeStatusAction>();
-  const [endDate, setEndDate] = useState(businessToday);
-  const [actionError, setActionError] = useState<string>();
-  const [discard, setDiscard] = useState(false);
+  const [comparisonTarget, setComparisonTarget] = useState<string>();
   const [reconciledRows, setReconciledRows] = useState<EmployeeListItemDto[]>();
+  const [discard, setDiscard] = useState(false);
+  // One-time password: component state only, cleared on acknowledgement, never logged or cached.
+  const [credential, setCredential] = useState<Credential>();
+  const savedEmployee = useRef<Employee | undefined>(undefined);
   const formRef = useRef<HTMLFormElement>(null);
-  // Guards state updates after an awaited status action when the dialog has unmounted.
-  const alive = useRef(true);
+  useEffect(() => () => { savedEmployee.current = undefined; }, []);
+
+  const dirty = JSON.stringify(values) !== JSON.stringify(blankCreateValues());
+  const inactiveZoneIds = values.workingZoneIds.filter(id => zones.find(zone => zone.id === id)?.statusId !== 101);
+
+  const failure = mutation.failure;
+  const problem = failure?.employeeProblem;
+  // Server-reported fields and a taken username/email, shown next to the same inputs as local issues.
+  const serverIssues = useMemo<EmployeeCreateIssue[]>(() => {
+    if (problem?.kind === "invalid-fields") {
+      return problem.fields.map(field => ({ path: fieldLabels[field][0] === "accountId" ? "username" : fieldLabels[field][0], message: "Kiểm tra lại mục này." }));
+    }
+    return failure?.code === "MSG-ACCOUNT-09" ? [{ path: "username", message: "Tên đăng nhập hoặc email đã được sử dụng." }] : [];
+  }, [failure, problem]);
+  const allIssues = useMemo(() => [...issues, ...serverIssues], [issues, serverIssues]);
+  const errorGroups = useMemo(() => groupsWithIssues(allIssues), [allIssues]);
+
+  /** Opens the groups holding errors and asks the focus effect to move to the first invalid field. */
+  const reveal = (next: readonly EmployeeCreateIssue[]) => {
+    if (!next.length) return;
+    setOpen(current => new Set([...current, ...groupsWithIssues(next)]));
+    setFocusRequest({ path: next[0].path });
+  };
+  // A server rejection reveals its groups once the failure arrives.
   useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-    };
-  }, []);
-
-  const dirty = JSON.stringify(values) !== JSON.stringify(valuesOf(baseline));
-  // Catalogue zones plus saved zones that are no longer in the catalogue.
-  const zoneOptions: ApiRecord[] = [
-    ...zones,
-    ...(baseline?.workingZones ?? []).filter((zone) => !zones.some((entry) => entry.id === zone.id)),
-  ];
-  const inactiveZones = values.workingZoneIds.filter((id) => zones.find((zone) => zone.id === id)?.statusId !== 101);
-  const availableZones = zoneOptions.filter((zone) => zone.statusId === 101 || values.workingZoneIds.includes(zone.id));
-
-  function close() {
-    if (mutation.busy()) return;
-    if (dirty) setDiscard(true);
-    else onClose();
-  }
-
-  const problem = mutation.failure?.employeeProblem;
-  const invalidServerFields =
-    problem?.kind === "invalid-fields" ? problem.fields.map((field) => fieldLabels[field][0]) : [];
-  const errorTabs = [...new Set([...issues.map(issue => issue.path), ...invalidServerFields].map(employeeFieldTab))];
-  const firstServerField = invalidServerFields[0];
-  useEffect(() => {
-    if (!firstServerField) return;
+    if (!serverIssues.length) return;
     const frame = requestAnimationFrame(() => {
-      setActiveTab(employeeFieldTab(firstServerField));
-      requestAnimationFrame(() => focusEmployeeField(formRef.current, firstServerField));
+      setOpen(current => new Set([...current, ...groupsWithIssues(serverIssues)]));
+      setFocusRequest({ path: serverIssues[0].path });
     });
     return () => cancelAnimationFrame(frame);
-  }, [firstServerField, mutation.failure]);
+  }, [serverIssues]);
+  // Runs after the group is visible, so the focus call can reach the control.
+  useEffect(() => { if (focusRequest) focusEmployeeField(formRef.current, focusRequest.path); }, [focusRequest]);
 
+  function fieldError(path: string) {
+    return allIssues.find(issue => issue.path === path || (path === "bankAccount.bankName" && issue.path === "bankAccount"))?.message;
+  }
   function errorProps(name: string) {
     return {
       name,
-      "aria-invalid":
-        issues.some((issue) => issue.path === name) ||
-        invalidServerFields.some((field) => field === name || name.startsWith(field + ".")),
-      "aria-describedby":
-        [
-          name.startsWith("bankAccount.") ? "employee-api-bank-help" : undefined,
-          issues.length ? "employee-api-errors" : invalidServerFields.length ? "employee-api-server-errors" : undefined,
-        ]
-          .filter(Boolean)
-          .join(" ") || undefined,
+      "aria-invalid": allIssues.some(issue => issue.path === name || name.startsWith(issue.path + ".")),
+      "aria-describedby": [name.startsWith("bankAccount.") ? "employee-create-bank-help" : undefined, fieldError(name) ? `employee-create-error-${name}` : undefined].filter(Boolean).join(" ") || undefined,
     };
   }
-
-  /** Shows validation issues and moves focus to the first invalid field. */
-  function showIssues(next: Issue[]) {
-    setIssues(next);
-    if (!next[0]) return;
-    setActiveTab(employeeFieldTab(next[0].path));
-    requestAnimationFrame(() => focusEmployeeField(formRef.current, next[0].path));
+  function toggleGroup(key: EmployeeCreateGroup) {
+    setOpen(current => { const next = new Set(current); if (!next.delete(key)) next.add(key); return next; });
+  }
+  function close() {
+    if (mutation.busy()) return;
+    if (dirty) setDiscard(true); else onClose();
   }
 
   async function save() {
-    if (mutation.busy() || mutation.blocked || !lookupsReady || (baseline && !baseline.canMaintain)) return;
-    const checked = employeeApiEditorSchema.safeParse({
-      ...values,
-      status: baseline?.status === "Left" ? "left" : "employed",
-    });
-    if (!checked.success) {
-      showIssues(checked.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })));
+    if (mutation.busy() || mutation.blocked || !lookupsReady) return;
+    const parsed = parseEmployeeCreate(values, inactiveZoneIds);
+    if (!parsed.ok) { setIssues(parsed.issues); reveal(parsed.issues); return; }
+    setIssues([]); setComparisonTarget(undefined); setCompared(undefined); setDiscard(false);
+    const account = parsed.body.account;
+    if (account) {
+      const receipt = await mutation.run(() => repository.write("create", parsed.body, employeeCreateReceiptSchema));
+      if (!receipt) return;
+      savedEmployee.current = receipt.employee;
+      setCredential({ username: receipt.employee.account?.username ?? account.username, password: receipt.temporaryPassword, expiresAt: receipt.temporaryPasswordExpiresAt });
       return;
     }
-    if (!values.employeeType && (!baseline || baseline.employeeType)) {
-      showIssues([{ path: "employeeType", message: "Chọn loại nhân viên." }]); return;
-    }
-    if (baseline && values.employeeType && values.employeeType !== baseline.employeeType && !values.employeeTypeFrom) {
-      showIssues([{ path: "employeeTypeFrom", message: "Chọn ngày áp dụng loại nhân viên." }]); return;
-    }
-    if (!baseline && !values.workingZoneIds.length) {
-      showIssues([{ path: "workingZoneIds", message: "Chọn ít nhất một vùng làm việc." }]); return;
-    }
-    if (inactiveZones.length) {
-      showIssues([
-        { path: "workingZoneIds", message: "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu." },
-      ]);
-      return;
-    }
-    setIssues([]);
-    setComparisonTarget(undefined);
-    setCompared(undefined);
-    const body = buildEmployeeSaveBody(checked.data, baseline);
-    const result = await mutation.run(() =>
-      repository.write(baseline ? "update" : "create", body, employeeViewSchema, baseline?.id),
-    );
-    if (result) onSaved(result);
+    const created = await mutation.run(() => repository.write("create", parsed.body, employeeViewSchema));
+    if (created) onSaved(created);
   }
 
-  async function confirmAction() {
-    if (!baseline || !action || mutation.busy() || mutation.blocked || dirty || !baseline.canMaintain) return;
-    if (action === "end-employment" && !createEmployeeEndDateSchema().safeParse({ endDate }).success) {
-      setActionError("Ngày nghỉ việc phải hợp lệ và không sau hôm nay."); return;
-    }
-    setIssues([]);
-    const next = await mutation.run(() => repository.write(action,
-      { rowVersion: baseline.rowVersion, ...(action === "end-employment" ? { lastWorkingDay: endDate } : {}) },
-      employmentChangedSchema, baseline.id));
-    if (!alive.current) return;
-    setAction(undefined);
-    if (next) onSaved(next.employee, next);
+  /** The one-time credential is destroyed here; the list is told about the new employee afterwards. */
+  function acknowledgeCredential() {
+    setCredential(undefined);
+    const saved = savedEmployee.current;
+    savedEmployee.current = undefined;
+    if (saved) onSaved(saved);
   }
 
-  /** Loads the existing profile named by the last comparison target or by the server's duplicate problem. */
+  /** Loads the existing profile named by the duplicate problem so the user can compare. */
   async function openComparison() {
-    const target =
-      comparisonTarget ??
-      (problem && problem.kind !== "invalid-fields"
-        ? { id: problem.existingEmployeeId, linked: problem.kind === "account-already-linked" }
-        : undefined);
+    const target = comparisonTarget ?? (problem?.kind === "duplicate-employee" ? problem.existingEmployeeId : undefined);
     if (!target || mutation.busy()) return;
     setComparisonTarget(target);
-    const next = await mutation.run(() => repository.read("detail", { id: target.id }, employeeViewSchema), true);
+    const next = await mutation.run(() => repository.read("detail", { id: target }, employeeViewSchema), true);
     if (next) setCompared(next);
   }
 
- return { repository, mutation, baseline, setBaseline, values, setValues, issues, setIssues, activeTab, setActiveTab, errorTabs, latest, setLatest, compared, setCompared, comparisonTarget, action, setAction, endDate, setEndDate, actionError, setActionError, discard, setDiscard, reconciledRows, setReconciledRows, formRef, dirty, zoneOptions, availableZones, close, problem, errorProps, save, confirmAction, openComparison };
+  return { repository, mutation, values, setValues, issues: allIssues, open, errorGroups, toggleGroup, compared, setCompared, comparisonTarget, reconciledRows, setReconciledRows, discard, setDiscard, credential, formRef, dirty, problem, fieldError, errorProps, close, save, acknowledgeCredential, openComparison };
 }

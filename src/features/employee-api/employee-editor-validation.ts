@@ -1,15 +1,28 @@
-import type { EmployeeTabKey } from "./employee-tabs";
+/** Collapsible groups of the "Thêm nhân viên" dialog and the mapping from a field path to its group. */
+export type EmployeeCreateGroup = "basic" | "work" | "personal" | "bank" | "account";
 
-/** Map both local field paths and normalized backend field paths to their group. */
-export function employeeFieldTab(path: string): EmployeeTabKey {
+export const employeeCreateGroups: readonly { key: EmployeeCreateGroup; title: string }[] = [
+  { key: "basic", title: "Thông tin cơ bản" },
+  { key: "work", title: "Công việc" },
+  { key: "personal", title: "Thông tin cá nhân" },
+  { key: "bank", title: "Thông tin ngân hàng" },
+  { key: "account", title: "Tài khoản đăng nhập" },
+];
+
+/** Groups that are expanded when the dialog opens. */
+export const defaultOpenGroups: readonly EmployeeCreateGroup[] = ["basic", "work"];
+
+/** Maps both local field paths and normalized backend field paths to their group. */
+export function employeeFieldGroup(path: string): EmployeeCreateGroup {
   if (path.startsWith("bankAccount")) return "bank";
-  if (["employeeType", "employeeTypeFrom", "jobTypeIds", "workingZoneIds", "rowVersion"].includes(path)) return "work";
-  if (path === "accountId") return "account";
-  return "information";
+  if (["workingZoneIds", "jobTypeIds"].includes(path)) return "work";
+  if (["address", "area", "wardCommune", "otherInformation", "notes"].includes(path)) return "personal";
+  if (["createAccount", "username", "email", "accountId"].includes(path)) return "account";
+  return "basic";
 }
 
+/** Focuses the control named by `path`; a grouped bank error points to its first real input. */
 export function focusEmployeeField(form: HTMLFormElement | null, path: string) {
-  // A grouped bank error points to its first real input, rather than an absent group control.
   const target = path === "bankAccount" ? "bankAccount.bankName" : path;
   const field = Array.from(form?.querySelectorAll<HTMLElement>("[name]") ?? []).find(node => node.getAttribute("name") === target);
   field?.focus();

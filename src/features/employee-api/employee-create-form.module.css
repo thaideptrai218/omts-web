@@ -1,0 +1,24 @@
+.form { display:flex; flex-direction:column; gap:12px; min-width:0; }
+.required { font-size:12px; color:var(--omts-color-text-muted); }
+.group { border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); min-width:0; }
+.heading { margin:0; font-size:14px; }
+.toggle { display:flex; align-items:center; gap:8px; width:100%; min-height:44px; padding:10px 14px; border-radius:8px; text-align:left; font-weight:650; color:var(--omts-color-text); }
+.toggle:hover { background:var(--omts-color-surface-subtle); }
+.toggle:focus-visible { outline:2px solid var(--omts-color-focus-ring); outline-offset:-2px; }
+.chevron { flex:none; width:18px; height:18px; color:var(--omts-color-text-muted); }
+.badge { margin-inline-start:auto; padding:2px 10px; border-radius:999px; background:var(--omts-color-danger-soft); color:var(--omts-color-danger); font-size:12px; font-weight:600; }
+.body { display:grid; gap:14px; min-width:0; margin:0; border:0; padding:4px 14px 16px; }
+.body[hidden] { display:none; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.choices { display:grid; gap:2px; max-height:196px; overflow:auto; margin:0; padding:8px 12px; border:1px solid var(--omts-color-border); border-radius:6px; }
+.choices legend { padding:0 4px; font-size:12px; font-weight:600; color:var(--omts-color-text-muted); }
+.choices[aria-invalid="true"] { border-color:var(--omts-color-danger); }
+.choice { display:flex; align-items:center; gap:10px; min-height:40px; font-size:14px; }
+.hint { font-size:12px; line-height:1.6; color:var(--omts-color-text-muted); }
+.error { margin-top:4px; font-size:12px; color:var(--omts-color-danger); }
+.switch { display:flex; align-items:center; gap:10px; min-height:44px; font-size:14px; font-weight:600; }
+.summary { margin:0; padding:10px 14px; border:1px solid var(--omts-color-danger); border-radius:6px; background:var(--omts-color-danger-soft); color:var(--omts-color-danger); font-size:13px; }
+.panel { padding:14px; border:1px solid var(--omts-color-border); border-radius:6px; }
+.footer { position:sticky; bottom:0; z-index:5; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; margin:8px -20px -20px; padding:12px 20px; border-top:1px solid var(--omts-color-border); background:var(--omts-color-surface); }
+@media (min-width:640px) { .footer { margin:8px -24px -24px; padding:12px 24px; } }
+@media (max-width:639px) { .grid { grid-template-columns:minmax(0,1fr); } .footer > * { flex:1 1 0; } }

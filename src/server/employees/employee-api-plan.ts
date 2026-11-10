@@ -4,7 +4,8 @@ import * as c from "@/features/employee-api/contracts";
 import { employeeSavedSchema } from "@/features/employee-management/api/employee-contract.schemas";
 import { parseEmployeeListSearchParams } from "@/features/employee-management/api/employee-read-request";
 import { issueEmployeeAccountRequestSchema, issueEmployeeAccountSavedSchema } from "@/features/employee-api/employee-account-contract";
-type Plan = { path: string; method: "GET" | "POST" | "PUT"; action: string; schema: z.ZodType; body?: unknown; id?: string };
+import { createEmployeeRequestSchema, employeeCreatedWithAccountSchema } from "@/features/employee-api/employee-create-contract";
+type Plan = { path: string; method: "GET" | "POST" | "PUT"; action: string; schema: z.ZodType; body?: unknown; id?: string; receipt?: boolean };
 const id = z.guid();
 const mutation = z.strictObject({ action: z.enum(["create", "update", "end-employment", "resume", "issue-account"]), id: id.optional(), body: z.unknown() });
 export function planEmployeeApi(method: string, query: URLSearchParams, input?: unknown): Plan | undefined {
@@ -31,7 +32,13 @@ export function planEmployeeApi(method: string, query: URLSearchParams, input?: 
     const checked = schema.safeParse(body);
     return checked.success ? { action, id: employeeId, path: path + suffix, method: verb, body: checked.data, schema: output } : undefined;
   };
-  if (action === "create" && !employeeId) return make(c.createProfileInputSchema, employeeSavedSchema, "POST");
+  if (action === "create" && !employeeId) {
+    const checked = createEmployeeRequestSchema.safeParse(body);
+    if (!checked.success) return;
+    // With an account the answer carries a one-time password and must pass the stricter receipt schema.
+    const receipt = !!checked.data.account;
+    return { action, path, method: "POST", body: checked.data, schema: receipt ? employeeCreatedWithAccountSchema : employeeSavedSchema, receipt };
+  }
   if (!employeeId) return;
   if (action === "issue-account") return make(issueEmployeeAccountRequestSchema, issueEmployeeAccountSavedSchema, "POST", "/account");
   if (action === "update") return make(c.updateProfileInputSchema, employeeSavedSchema, "PUT");
