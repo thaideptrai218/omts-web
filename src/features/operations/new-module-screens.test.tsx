@@ -48,11 +48,9 @@ describe("new API read screens", () => {
     expect((screen.getByLabelText("Tìm sản phẩm") as HTMLInputElement).value).toBe("hàu");
     expect(screen.queryByLabelText("Phạm vi sản phẩm")).toBeNull();
   });
-  it("requires a selected workforce day and renders absent attendance truthfully", async () => {
+  it("renders absent attendance truthfully in the attendance view of the workforce day", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: [{ id: ids.receipt, employeeId: ids.item, employeeName: "QA nhân viên", zoneId: ids.zone, raftId: null, raftCode: null, jobTypeId: null, job: "Chăm sóc", date: "2026-10-31", checkedInAt: null, checkedOutAt: null }] });
-    render(<WorkforceScreen />); await screen.findByText("QA nhân viên"); fireEvent.click(screen.getByRole("button",{name:"Chấm công"})); expect(screen.getAllByText("Chưa ghi nhận")).toHaveLength(2);
-    fireEvent.change(screen.getByLabelText("Ngày làm việc"), { target: { value: "" } });
-    await waitFor(() => expect((screen.getByRole("button", { name: "Tải lại phân công" }) as HTMLButtonElement).disabled).toBe(true));
+    render(<WorkforceScreen />); await screen.findByText("QA nhân viên"); fireEvent.click(screen.getByRole("tab",{name:"Chấm công"})); expect(screen.getAllByText("Chưa ghi nhận")).toHaveLength(2);
     expect(mocks.read).toHaveBeenCalledTimes(1);
   });
 });

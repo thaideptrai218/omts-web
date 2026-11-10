@@ -33,7 +33,7 @@ describe("approved sales/workforce writes and draft safety", () => {
     expect(screen.queryByText("Nhân viên An")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
     expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
-    expect((screen.getByLabelText("Ngày làm việc") as HTMLInputElement).value).toBe(businessToday().split("-").reverse().join("/"));
+    expect(screen.getByRole("button", { name: `Ngày làm việc: ${businessToday().split("-").reverse().join("/")}` })).toBeTruthy();
     expect(mocks.write).not.toHaveBeenCalled();
   });
   it("sends leave only for the current session without client-chosen employee identity", async () => {
@@ -43,7 +43,7 @@ describe("approved sales/workforce writes and draft safety", () => {
   });
   it("does not offer leave creation when the account has no linked employee", async () => {
     mocks.read.mockImplementation(async () => ({ status: "success", data: { employeeId: null, name: null, assignments: [], attendance: [], requests: [] } })); render(<MyWorkScreen />);
-    await screen.findByText("Chưa có hồ sơ nhân viên gắn với tài khoản này."); expect(screen.queryByRole("button", { name: "Gửi yêu cầu nghỉ phép" })).toBeNull();
+    await screen.findByText("Chưa có hồ sơ nhân viên gắn với tài khoản này."); expect(screen.queryByRole("button", { name: "Xin nghỉ phép" })).toBeNull();
     // Develop không có api/me/purchase-shifts: màn không được đọc hay hiển thị lời mời ca.
     expect(mocks.read.mock.calls.every((args) => args[0] === "list")).toBe(true); expect(screen.queryByText("Lời mời ca theo yêu cầu mua")).toBeNull();
   });
