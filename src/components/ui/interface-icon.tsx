@@ -1,6 +1,7 @@
 import type { SVGProps } from "react";
 
 const paths = {
+  palette: "M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.4-1.8-.3-1 .4-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10ZM7.5 11.5h.01M10 7.5h.01M14.5 7.5h.01M17 11h.01",
   bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4",
   "panel-close": "M3 4h18v16H3V4ZM9 4v16m8-12-4 4 4 4",
   "panel-open": "M3 4h18v16H3V4ZM9 4v16m4-12 4 4-4 4",

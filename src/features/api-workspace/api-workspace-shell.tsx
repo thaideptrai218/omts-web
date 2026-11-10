@@ -23,6 +23,7 @@ import topStyles from "@/components/layout/top-shell.module.css";
 import type { ResourceKey } from "./resources";
 import type { OperationArea } from "@/features/operations/permissions";
 import { workspaceRoleLabel } from "@/shared/presentation/actor-label";
+import { createPersonalRepository } from "@/features/personal-api/repository";
 
 const resourceIcons: Record<ResourceKey, InterfaceIconName> = {
   zones: "zone", rafts: "raft", "input-items": "material", suppliers: "supplier",
@@ -112,8 +113,9 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       {cashBook && <NavigationGroup label="Sổ quỹ" compact={compact}><div className={styles.navigationItems}>{link("/operations/cash-book", "Sổ quỹ", "payment")}</div></NavigationGroup>}
     </nav>;
   };
+  const accountPhone = useAccountPhone(context.identity.accountId);
   return <WorkspaceContext.Provider value={context}><SelectedZonesProvider accountId={context.identity.accountId} enabled={resourceAllowed("zones", context.identity, context.permissions.functionPermissions)}>
-    <AppShell navigation={navigation} settingsSections={settingsSections} topAction={() => <><ZonePicker /><InboxBell /></>} accountLabel={context.identity.username} accountInitials={context.identity.username.slice(0,2).toUpperCase()} accountRole={workspaceRoleLabel(context.identity.subjectType, context.permissions.functionPermissions)} isLoggingOut={pending} onLogout={async () => {
+    <AppShell navigation={navigation} settingsSections={settingsSections} topAction={() => <><ZonePicker /><InboxBell /></>} accountLabel={context.identity.username} accountPhone={accountPhone} accountInitials={context.identity.username.slice(0,2).toUpperCase()} accountRole={workspaceRoleLabel(context.identity.subjectType, context.permissions.functionPermissions)} isLoggingOut={pending} onLogout={async () => {
       if (pending) return;
       setPending(true); setError(undefined);
       const result = await logoutWithApi();
@@ -139,4 +141,17 @@ export function ApiWorkspaceHome() {
     <section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Công việc</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{entry.title}<span aria-hidden="true">↗</span></a>)}</div></section></div>
     {!visible.length && !operationModules.some((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)) && <p className="mt-6 rounded-card border border-border bg-surface p-6">Tài khoản hiện chưa được cấp chức năng nghiệp vụ. Bạn có thể xem hồ sơ cá nhân.</p>}
   </section>;
+}
+
+/** The phone number of the signed-in account for the account menu; null until loaded or when it has none. */
+function useAccountPhone(accountId: string) {
+  const [phone, setPhone] = useState<{ accountId: string; value: string | null }>();
+  useEffect(() => {
+    const controller = new AbortController();
+    void createPersonalRepository().profile(controller.signal).then((result) => {
+      if (result.status === "success") setPhone({ accountId, value: result.data.phoneNumber ?? null });
+    });
+    return () => controller.abort();
+  }, [accountId]);
+  return phone?.accountId === accountId ? phone.value : null;
 }

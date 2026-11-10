@@ -1,4 +1,4 @@
-.page { --cycle-blue:#305eb1; --cycle-blue-soft:#edf3fc; --cycle-ink:#172d45; --cycle-line:#dbe3ed; color:var(--cycle-ink); min-width:0; }
+.page { --cycle-blue:var(--omts-brand, #305eb1); --cycle-blue-soft:#edf3fc; --cycle-ink:#172d45; --cycle-line:#dbe3ed; color:var(--cycle-ink); min-width:0; }
 .heading { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:0 0 24px; margin-bottom:24px; border-bottom:1px solid var(--cycle-line); }
 .eyebrow { display:block; color:#5b6e82; font-size:10px; font-weight:650; letter-spacing:.09em; margin-bottom:8px; }
 .heading h1 { margin:0; font-size:28px; line-height:1.2; font-weight:650; letter-spacing:-.025em; }

@@ -61,8 +61,9 @@ describe("shared API navigation shell", () => {
     const avatar = within(view.container).getByRole("button", { name: /Menu tài khoản: fixture, Thương lái/ });
     expect(within(view.container).queryByText("Đăng xuất")).toBeNull();
     fireEvent.click(avatar);
-    expect(within(view.container).getByRole("link", { name: "Hồ sơ cá nhân" }).getAttribute("href")).toBe("/account");
+    expect(within(view.container).getByRole("link", { name: /^Hồ sơ cá nhân: fixture, Thương lái/ }).getAttribute("href")).toBe("/account");
     expect(within(view.container).getByRole("button", { name: "Đăng xuất" })).toBeTruthy();
+    expect(within(view.container).getByRole("button", { name: "Chủ đề" })).toBeTruthy();
     fireEvent.pointerDown(document.body);
     expect(avatar.getAttribute("aria-expanded")).toBe("false");
   });
