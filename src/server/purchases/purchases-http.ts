@@ -47,9 +47,9 @@ const write = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("remove-return"), id: z.guid() }),
   z.strictObject({ action: z.literal("cancel-return"), id: z.guid(), body: reason }),
   z.strictObject({ action: z.literal("create-payment"), body: z.strictObject({ code: documentCode, supplierId: z.guid(), kind: z.literal("Payment"), paidAt: z.iso.datetime({ offset: true }), paidById: z.guid().nullable(), amount: money, discountAmount: money,
-    method: c.paymentMethods, bankReference: z.string().max(100).nullable(), note: z.string().max(2000).nullable(), confirmAdvance: z.boolean(), confirmDuplicateBankReference: z.boolean(), deduplicationKey: z.string().min(1).max(100),
+    method: c.paymentMethods, cashAccountId: z.guid().nullable(), bankReference: z.string().max(100).nullable(), note: z.string().max(2000).nullable(), confirmAdvance: z.boolean(), confirmDuplicateBankReference: z.boolean(), deduplicationKey: z.string().min(1).max(100),
     allocations: z.array(z.strictObject({ receiptId: z.guid(), amount: money.positive() })).max(200).nullable() }) }),
-  z.strictObject({ action: z.literal("edit-payment"), id: z.guid(), body: z.strictObject({ rowVersion: z.string().min(1).max(200), paidAt: z.iso.datetime({ offset: true }), paidById: z.guid().nullable(), method: c.paymentMethods,
+  z.strictObject({ action: z.literal("edit-payment"), id: z.guid(), body: z.strictObject({ rowVersion: z.string().min(1).max(200), paidAt: z.iso.datetime({ offset: true }), paidById: z.guid().nullable(), method: c.paymentMethods, cashAccountId: z.guid().nullable(),
     bankReference: z.string().max(100).nullable(), note: z.string().max(2000).nullable(), confirmDuplicateBankReference: z.boolean() }) }),
   z.strictObject({ action: z.literal("cancel-payment"), id: z.guid(), body: reason }),
 ]);

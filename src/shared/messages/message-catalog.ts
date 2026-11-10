@@ -32,6 +32,8 @@ export const messageCatalog = {
   "MSG-PURCHASE-02": "Cần xác nhận chủ hợp tác xã đã đồng ý trực tiếp việc trả hàng này.",
   "MSG-PURCHASE-05": "Khoản chi vượt công nợ hiện tại. Hãy xác nhận ghi phần vượt là tiền trả trước cho nhà cung cấp.",
   "MSG-PURCHASE-06": "Mã giao dịch ngân hàng này đã được ghi trước đó. Hãy đối chiếu rồi xác nhận nếu vẫn ghi.",
+  "MSG-CASH-01": "Tài khoản đang dùng để nhận VietQR, không thể xóa hoặc ngừng dùng.",
+  "MSG-CASH-02": "Loại thu chi của hệ thống không thể sửa hoặc xóa.",
   "MSG-PURCHASE-10": "Số lượng không được nhỏ hơn phần đã gieo và đã trả hàng của dòng.",
   "MSG-PURCHASE-03":"Số lượng trả phải lớn hơn 0 và không vượt số còn được trả. Hãy đối chiếu số lượng của dòng hàng.",
   "MSG-PURCHASE-09": "Phiếu nhập đã phát sinh lô giống hoặc trả hàng nên không thể hủy. Chủ nhiệm HTX cần đối chiếu để đính chính.",

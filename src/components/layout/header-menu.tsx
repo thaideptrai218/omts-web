@@ -32,7 +32,8 @@ export function HeaderMenu({ label, trigger, triggerClassName = styles.iconButto
 
 export type SettingsSection = Readonly<{
   label: string;
-  items: readonly Readonly<{ href: string; label: string; icon: InterfaceIconName; description?: string }>[];
+  /** `panel` names a settings panel shown in place on the settings page; `href` then opens that page at it. */
+  items: readonly Readonly<{ href: string; label: string; icon: InterfaceIconName; description?: string; panel?: string }>[];
 }>;
 
 export function SettingsMenu({ sections }: Readonly<{ sections: readonly SettingsSection[] }>) {

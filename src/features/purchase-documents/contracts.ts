@@ -49,7 +49,7 @@ export const receivers = z.array(account);
 const editableMethod = z.enum(["Cash", "BankTransfer"]);
 /** A supplier payment voucher (Phiếu chi) or money paid back, with its allocation to receipts on the detail. */
 export const paymentView = z.object({
-  id, code: text, supplier, kind: z.enum(["Payment", "PaidBack"]), amount: n, discountAmount: opt(n), paymentDate: date, paidAt: opt(stamp), method, bankReference: opt(text), note: opt(text),
+  id, code: text, supplier, kind: z.enum(["Payment", "PaidBack"]), amount: n, discountAmount: opt(n), paymentDate: date, paidAt: opt(stamp), method, cashAccount: opt(z.object({ id, providerName: text, accountNumber: text })), bankReference: opt(text), note: opt(text),
   statusId: n, status: text, cancelReason: opt(text), rowVersion: text, recordedBy: opt(account), paidBy: opt(account),
   allocations: opt(z.array(z.object({ receiptId: id, receiptCode: text, receivedAt: opt(stamp), receiptPayable: n, paidBefore: n, amount: n, receiptRemaining: n }))),
 });

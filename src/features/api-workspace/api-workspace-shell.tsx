@@ -77,7 +77,10 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const financeWorkspace = context.identity.subjectType === "Staff" && context.permissions.functionPermissions.some(p => p.functionCode === "SUPPLIER_PAYMENTS" && p.action === "Create") && !context.permissions.functionPermissions.some(p => ["CULTIVATION_CYCLES", "WATER_MEASUREMENTS", "HARVESTS"].includes(p.functionCode) && ["Create", "Edit"].includes(p.action));
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const isOwner = context.identity.subjectType === "CooperativeOwner";
+  const holds = (fn: string, action: string) => isOwner || context.identity.subjectType === "Staff" && context.permissions.functionPermissions.some((p) => p.functionCode === fn && p.action === action);
+  const cashSettings = holds("CASH_BOOK_SETTINGS", "View"), cashBook = holds("CASH_BOOK", "View");
   const settingsSections: SettingsSection[] = [
+    { label: "Quản lý", items: cashSettings ? [{ href: "/settings?section=cash-book", panel: "cash-book", label: "Sổ quỹ", icon: "payment", description: "Tài khoản ngân hàng, ví điện tử và loại thu chi dùng cho phiếu thu chi." }] : [] },
     { label: "Phân quyền", items: (["accounts", "roles"] as const).filter((key) => visible.includes(key)).map((key) => ({ href: `/workspace/${key}`, label: resources[key].title, icon: resourceIcons[key], description: settingsDescriptions[key] })) },
     { label: "Hợp tác xã", items: isOwner ? [{ href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã." }, { href: "/cooperative/receiving-bank-account", label: "Ngân hàng nhận tiền", icon: "payment", description: "Tài khoản dùng để nhận chuyển khoản và tạo mã VietQR." }] : [] },
     { label: "Cấu hình nghiệp vụ", items: operationModules.filter((entry) => entry.key === "job-types" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => ({ href: `/operations/${entry.key}`, label: entry.title, icon: operationIcons[entry.key], description: "Đơn giá theo giờ và lịch sử ngày hiệu lực của từng loại công việc." })) },
@@ -105,6 +108,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
           {group.label === "Mua hàng" && purchasing && <>{link("/operations/purchase-receipts", "Nhập hàng", "receipt")}{link("/operations/purchase-returns", "Trả hàng nhập", "upload")}</>}
         </div></NavigationGroup> : null;
       })}
+      {cashBook && <NavigationGroup label="Sổ quỹ" compact={compact}><div className={styles.navigationItems}>{link("/operations/cash-book", "Sổ quỹ", "payment")}</div></NavigationGroup>}
     </nav>;
   };
   return <WorkspaceContext.Provider value={context}><SelectedZonesProvider accountId={context.identity.accountId} enabled={resourceAllowed("zones", context.identity, context.permissions.functionPermissions)}>
