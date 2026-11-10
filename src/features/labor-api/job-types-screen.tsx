@@ -1,33 +1,95 @@
 "use client";
-import { useMemo, useState } from "react";
-import { z } from "zod";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { ManagementHeading } from "@/components/ui/management-page";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { FilterPills, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
+import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, managementStyles } from "@/components/ui/management-screen/management-table";
+import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
+import { StatusPill } from "@/components/ui/management-page";
+import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "@/features/operations/permissions";
-import { createOperationsRepository } from "@/features/operations/repository";
-import { DataTable, ErrorNotice, Field, Money, Paging, Select, Skeleton, businessToday, useMutation, useRemote } from "@/features/operations/ui";
-import { useOperationEditor } from "@/features/operations/use-operation-editor";
-import { addJob, jobType, jobsPage, rateValues } from "./contracts";
-const repo = createOperationsRepository("job-types");
-type Job = z.infer<typeof jobType>;
-export function JobTypesScreen() {
-  const context = useApiWorkspace(), [search, setSearch] = useState(""), [status, setStatus] = useState(""), [page, setPage] = useState(1), [size, setSize] = useState(20), [selected, setSelected] = useState<Job | null>();
+import { Money, useRemote } from "@/features/operations/ui";
+import { formatVietnameseDate } from "@/shared/format/date-only";
+import { jobsPage } from "./contracts";
+import { JobTypeCreateDialog } from "./job-types-create-dialog";
+import { JobTypeDetailPanel } from "./job-types-detail";
+import { IN_USE, NO_RATE, statusLabel, type Job } from "./job-types-model";
+import { jobTypesRepository } from "./job-types-write";
+import styles from "./job-types-screen.module.css";
+
+type Column = { key: string; label: string; render(job: Job): ReactNode };
+const columns: readonly Column[] = [
+  { key: "name", label: "Loại công việc", render: job => <span className={styles.name}>{job.name}</span> },
+  { key: "rate", label: "Đơn giá hiện tại / giờ", render: job => job.currentRate ? <Money value={job.currentRate.hourlyRate} /> : "—" },
+  { key: "from", label: "Hiệu lực từ", render: job => job.currentRate ? formatVietnameseDate(job.currentRate.effectiveFrom) : NO_RATE },
+  { key: "status", label: "Trạng thái", render: job => <StatusPill tone={job.statusId === IN_USE ? "success" : "neutral"}>{statusLabel(job.statusId)}</StatusPill> },
+];
+const defaultColumns = columns.map(column => column.key).join(",");
+const pageSizes = [10, 20, 50] as const;
+
+/** Loại công việc và đơn giá: the management list, with the rate history and in-place edits inside the open row. */
+export function JobTypesScreen({ helpHref }: { helpHref?: string }) {
+  const context = useApiWorkspace();
   const allowed = (action: string) => operationAllowed("job-types", context.identity, context.permissions.functionPermissions, action);
-  const remote = useRemote(useMemo(() => (signal: AbortSignal) => repo.read("list", { search, statusId: status || undefined, page: String(page), pageSize: String(size) }, jobsPage, signal), [search, status, page, size]));
-  return <section><ManagementHeading title="Loại công việc và đơn giá" description="Quản lý đơn giá theo giờ và lịch sử ngày hiệu lực." icon="work">{allowed("Create") && <Button className="w-auto" onClick={() => setSelected(null)}>Thêm loại công việc</Button>}</ManagementHeading><div className="my-4 grid gap-3 sm:grid-cols-3"><Field label="Tìm loại công việc" type="search" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /><Select label="Trạng thái" value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}><option value="">Tất cả</option><option value="101">Đang dùng</option><option value="102">Ngừng dùng</option></Select><Select label="Số dòng mỗi trang" value={size} onChange={e => { setSize(Number(e.target.value)); setPage(1); }}>{[10,20,50,100].map(n => <option key={n} value={n}>{n} dòng</option>)}</Select></div><ErrorNotice error={remote.error} /><Button className="w-auto" variant="secondary" disabled={remote.loading} onClick={remote.reload}>Tải lại danh sách</Button>{remote.loading ? <Skeleton /> : <DataTable headings={["Loại công việc", "Đơn giá hiện tại / giờ", "Hiệu lực từ", "Trạng thái", "Chi tiết"]} empty={!remote.data?.items.length}>{remote.data?.items.map(v => <tr key={v.id}><td>{v.name}</td><td><Money value={v.currentRate?.hourlyRate} /></td><td>{v.currentRate?.effectiveFrom ?? "Chưa có đơn giá hiệu lực"}</td><td>{v.statusId === 101 ? "Đang dùng" : "Ngừng dùng"}</td><td><Button variant="secondary" onClick={() => setSelected(v)}>Mở hồ sơ</Button></td></tr>)}</DataTable>}{remote.data && <Paging page={page} pageSize={size} total={remote.data.total} disabled={remote.loading} onChange={setPage} />}{selected !== undefined && <JobEditor key={selected?.rowVersion ?? "new"} record={selected} canEdit={allowed("Edit")} onClose={() => setSelected(undefined)} onSaved={() => { setSelected(undefined); remote.reload(); }} />}</section>;
-}
-function JobEditor({ record, canEdit, onClose, onSaved }: { record: Job | null; canEdit: boolean; onClose(): void; onSaved(): void }) {
-  const [name, setName] = useState(record?.name ?? ""), [rate, setRate] = useState(""), [date, setDate] = useState(businessToday()), [error, setError] = useState<string>(), [latest, setLatest] = useState<Job>();
-  const editor = useOperationEditor(onClose, name !== (record?.name ?? "") || !!rate || date !== businessToday()), read = useMutation();
-  async function save(action: "create" | "rename" | "rate") {
-    const values = action === "create" ? addJob.safeParse({ name, hourlyRate: Number(rate), effectiveFrom: date }) : action === "rate" ? rateValues.safeParse({ hourlyRate: Number(rate), effectiveFrom: date }) : z.object({ name: z.string().trim().min(1) }).safeParse({ name });
-    if (!values.success) { setError("Nhập tên công việc, đơn giá nguyên dương và ngày hiệu lực hợp lệ."); return; }
-    setError(undefined);
-    const replacement = action === "rate" && record && [record.currentRate, ...record.otherRates].some(v => v?.effectiveFrom === date);
-    const message = action === "rate" ? `${replacement ? "Thay thế đơn giá đã có" : "Áp dụng đơn giá mới"} từ ${date}: ${Number(rate).toLocaleString("vi-VN")} đồng/giờ? Đơn giá có thể ảnh hưởng kết quả tính công từ ngày này.` : action === "rename" ? `Đổi tên loại công việc thành ${name}?` : `Thêm loại công việc ${name} với đơn giá ${Number(rate).toLocaleString("vi-VN")} đồng/giờ từ ${date}?`;
-    if (await editor.submit(message, () => repo.write(action, { ...values.data, ...(record ? { rowVersion: record.rowVersion } : {}) }, jobType, record?.id))) onSaved();
+  const canCreate = allowed("Create"), canEdit = allowed("Edit");
+  const [search, setSearch] = useState(""), [term, setTerm] = useState(""), [status, setStatus] = useState("");
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(20);
+  const [expanded, setExpanded] = useState<string>(), [creating, setCreating] = useState(false), [notice, setNotice] = useState<string>();
+  const [storedColumns, storeColumns] = useStoredValue("omts-columns-job-types", defaultColumns);
+  const visible = useMemo(() => { const keys = storedColumns.split(","), shown = columns.filter(column => keys.includes(column.key)); return shown.length ? shown : columns; }, [storedColumns]);
+
+  useEffect(() => {
+    if (search.trim() === term) return;
+    const timer = setTimeout(() => { setTerm(search.trim()); setPage(1); setExpanded(undefined); }, 300);
+    return () => clearTimeout(timer);
+  }, [search, term]);
+  const remote = useRemote(useMemo(() => (signal: AbortSignal) => jobTypesRepository.read("list", { search: term, statusId: status || undefined, page: String(page), pageSize: String(pageSize) }, jobsPage, signal), [term, status, page, pageSize]));
+  // A saved job replaces its row until the next list load, so the open row keeps its subtab and draft after a write.
+  const [saved, setSaved] = useState<{ base?: unknown; byId: Record<string, Job> }>({ byId: {} });
+  const overrides = saved.base === remote.data ? saved.byId : {};
+  const rows = remote.data?.items.map(job => overrides[job.id] ?? job) ?? [];
+  const sync = (job: Job) => setSaved({ base: remote.data, byId: { ...overrides, [job.id]: job } });
+
+  const changed = <T,>(apply: (value: T) => void) => (value: T) => { apply(value); setPage(1); setExpanded(undefined); setNotice(undefined); };
+  const hasFilter = !!status || !!search;
+  function afterStateChange() {
+    setExpanded(undefined); setNotice("Đã cập nhật trạng thái loại công việc.");
+    if (rows.length === 1 && page > 1) setPage(page - 1); else remote.reload();
   }
-  return <Dialog open dismissible={false} onCloseRequest={() => void editor.close()} title={record ? record.name : "Thêm loại công việc"} onOpenChange={() => {}}>{editor.dialog}<ErrorNotice error={error || editor.mutation.error || read.error} /><fieldset disabled={editor.disabled || !!record && !canEdit} className="space-y-4"><Field label="Tên loại công việc *" required value={name} onChange={e => setName(e.target.value)} />{record && canEdit && <Button variant="secondary" disabled={name.trim() === record.name} onClick={() => void save("rename")}>Lưu tên công việc</Button>}<Field label={record ? "Đơn giá mới (đồng/giờ) *" : "Đơn giá (đồng/giờ) *"} type="number" min={1} step={1} required value={rate} onChange={e => setRate(e.target.value)} /><Field label="Ngày hiệu lực *" type="date" required value={date} onChange={e => setDate(e.target.value)} />{(!record || canEdit) && <Button onClick={() => void save(record ? "rate" : "create")}>{record ? "Lưu đơn giá" : "Tạo loại công việc"}</Button>}{record && canEdit && <Button variant="secondary" onClick={async () => { const resume = record.statusId === 102; if (await editor.submit(`${resume ? "Khôi phục" : "Ngừng dùng"} loại công việc ${record.name}?`, () => repo.write(resume ? "resume" : "discontinue", { rowVersion: record.rowVersion }, jobType, record.id))) onSaved(); }}>{record.statusId === 102 ? "Khôi phục sử dụng" : "Ngừng sử dụng"}</Button>}</fieldset>{record && <><h3 className="mt-6 font-semibold">Các mốc đơn giá</h3><DataTable headings={["Hiệu lực từ", "Đơn giá / giờ"]} empty={!record.currentRate && !record.otherRates.length}>{[...(record.currentRate ? [record.currentRate] : []), ...record.otherRates].sort((a,b) => b.effectiveFrom.localeCompare(a.effectiveFrom)).map(v => <tr key={v.effectiveFrom}><td>{v.effectiveFrom}</td><td><Money value={v.hourlyRate} /></td></tr>)}</DataTable></>}{editor.mutation.blocked && record && <div className="my-3 space-y-3"><p className="text-sm">Bản nháp được giữ. Đối chiếu hồ sơ hiện tại trước khi lập lượt mới.</p><Button variant="secondary" disabled={read.pending} onClick={async () => { const value = await read.run(() => repo.read("detail", { id: record.id }, jobType), true); if (value) setLatest(value); }}>Đọc hồ sơ hiện tại</Button>{latest && <p className="text-sm">{latest.name} · {latest.currentRate?.hourlyRate.toLocaleString("vi-VN") ?? "Chưa có đơn giá"} đồng/giờ · {latest.statusId === 101 ? "Đang dùng" : "Ngừng dùng"}</p>}</div>}<Button className="mt-4" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Đóng</Button></Dialog>;
+  const filters = <>
+    <div className={styles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => { changed<void>(() => { setSearch(""); setTerm(""); setStatus(""); })(); }}>Đặt lại</button></div>
+    <FilterPills legend="Trạng thái" name="job-type-status" value={status} options={[[String(IN_USE), "Đang dùng"], ["102", "Ngừng dùng"]]} onChange={changed<string>(setStatus)} />
+  </>;
+
+  return <ManagementLayout storageKey="job-types" icon="work" title="Loại công việc & đơn giá" filters={filters} filterLabel="Bộ lọc loại công việc"
+    footer={<ManagementPagination page={remote.data?.page ?? page} pageSize={pageSize} total={remote.data?.total ?? 0} pageSizes={pageSizes} unit="loại công việc" disabled={remote.loading}
+      onPage={next => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
+    search={<input type="search" aria-label="Tìm loại công việc" placeholder="Theo tên loại công việc" maxLength={200} value={search} onChange={event => { setSearch(event.target.value); setNotice(undefined); }} />}
+    actions={<>
+      {canCreate && <Button className="w-auto" onClick={() => setCreating(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm loại công việc</Button>}
+      <ColumnPicker columns={columns} visible={visible.map(column => column.key)} onChange={keys => storeColumns(keys.join(","))} />
+      <HelpLink helpHref={helpHref} />
+    </>}>
+    {notice && <p role="status" className={styles.feedback}>{notice} <button type="button" className={managementStyles.linkButton} onClick={() => setNotice(undefined)}>Đóng</button></p>}
+    <ManagementScroller busy={remote.loading}>
+      {remote.error ? <ListStateMessage error={remote.error} onRetry={remote.reload} retryLabel="Tải lại" />
+        : remote.loading || !remote.data ? <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3, 4, 5].map(key => <div key={key} />)}</div>
+        : !rows.length ? <ListStateMessage>{hasFilter ? "Không có loại công việc phù hợp bộ lọc." : "Chưa có loại công việc."}</ListStateMessage>
+        : <table className={styles.table}><thead><tr>
+          <th scope="col" className={styles.expandCell}><span className="sr-only">Mở dòng</span></th>
+          {visible.map(column => <th key={column.key} scope="col">{column.label}</th>)}
+        </tr></thead><tbody>{rows.map(job => {
+          const open = expanded === job.id, toggle = () => setExpanded(value => value === job.id ? undefined : job.id);
+          return <Fragment key={job.id}>
+            <OpenableTableRow data-selected={open || undefined} onOpen={toggle}>
+              <td className={styles.expandCell}><button type="button" aria-expanded={open} aria-label={`${open ? "Thu gọn" : "Mở"} ${job.name}`} onClick={toggle}><InterfaceIcon name={open ? "chevron-down" : "chevron-right"} /></button></td>
+              {visible.map(column => <td key={column.key}>{column.render(job)}</td>)}
+            </OpenableTableRow>
+            {open && <tr><td colSpan={visible.length + 1} className={styles.detailCell}><div className={managementStyles.viewWidth}><JobTypeDetailPanel record={job} canEdit={canEdit} onSynced={sync} onStateChanged={afterStateChange} /></div></td></tr>}
+          </Fragment>;
+        })}</tbody></table>}
+    </ManagementScroller>
+    {creating && <JobTypeCreateDialog onClose={() => setCreating(false)} onCreated={() => { setCreating(false); setExpanded(undefined); setNotice("Đã thêm loại công việc."); remote.reload(); }} />}
+  </ManagementLayout>;
 }
