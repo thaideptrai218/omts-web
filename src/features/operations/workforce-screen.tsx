@@ -4,7 +4,7 @@ import { FilterChecks } from "@/components/ui/filter-checks";
 import { matchesSelection } from "@/shared/presentation/filter-selection";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
 import { ManagementHeading } from "@/components/ui/management-page";
-import { formatVietnameseDate } from "@/shared/format/date-only";
+import { formatVietnameseDate, isDateOnly } from "@/shared/format/date-only";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import Link from "next/link";
@@ -85,6 +85,16 @@ export function WorkforceScreen() {
     const missingCheckIn =
       action === "check-out" && !row.checkedInAt ? "; chưa có lượt vào làm, ngày công sẽ thiếu lượt" : "";
     return `Ghi ${verb} cho ${row.employeeName} lúc hiện tại${missingCheckIn}?`;
+  }
+
+  function moveDay(offset: number) {
+    if (!isDateOnly(day)) return;
+    const date = new Date(`${day}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + offset);
+    const next = date.toISOString().slice(0, 10);
+    if (!isDateOnly(next)) return;
+    setDay(next);
+    setPage(1);
   }
 
   async function act(row: Assignment, action: AssignmentAction) {
@@ -223,6 +233,11 @@ export function WorkforceScreen() {
             <span>LỊCH LÀM VIỆC</span>
             <h2>{day ? formatVietnameseDate(day) : "Chọn ngày làm việc"}</h2>
             <p>{zoneId ? zoneName(zoneId) : "Tất cả vùng được cấp"}</p>
+          </div>
+          <div className={styles.dateNavigation} role="group" aria-label="Chuyển ngày làm việc">
+            <button type="button" aria-label="Ngày trước" disabled={!isDateOnly(day) || rows.loading} onClick={() => moveDay(-1)}>←</button>
+            <button type="button" disabled={day === businessToday()} onClick={() => { setDay(businessToday()); setPage(1); }}>Hôm nay</button>
+            <button type="button" aria-label="Ngày sau" disabled={!isDateOnly(day) || rows.loading} onClick={() => moveDay(1)}>→</button>
           </div>
           <Button variant="secondary" disabled={rows.loading || !day || editor.pending} onClick={rows.reload}>
             Tải lại phân công

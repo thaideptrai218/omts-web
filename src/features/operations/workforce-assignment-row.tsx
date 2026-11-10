@@ -1,4 +1,7 @@
 "use client";
+import { Fragment, useState } from "react";
+import { OpenableTableRow } from "@/components/ui/openable-table-row";
+import { formatVietnameseDate } from "@/shared/format/date-only";
 import styles from "./workforce-screen.module.css";
 import { Button } from "@/components/ui/button";
 import { businessToday, displayTime } from "./ui";
@@ -28,6 +31,7 @@ export function WorkforceAssignmentRow({
   disabled: boolean;
   onAct(row: Assignment, action: AssignmentAction): void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const canRemove =
     row.date >= businessToday() && !row.checkedInAt && !row.checkedOutAt && allowed("Delete", row.zoneId);
   const canAttend = row.date === businessToday() && allowed("AttendanceCreate", row.zoneId);
@@ -35,7 +39,8 @@ export function WorkforceAssignmentRow({
   const canCheckOut = canAttend && !row.checkedOutAt;
 
   return (
-    <tr>
+    <Fragment>
+    <OpenableTableRow onOpen={() => setExpanded((value) => !value)}>
       <td data-label="Nhân viên">
         <strong>{row.employeeName}</strong>
         {tab === "attendance" && <span className={styles.secondary}>{row.job}</span>}
@@ -62,6 +67,7 @@ export function WorkforceAssignmentRow({
         </span>
       </td>
       <td data-label="Thao tác">
+        <button type="button" className={styles.textAction} aria-expanded={expanded} aria-controls={`assignment-${row.id}`} onClick={() => setExpanded((value) => !value)}>{expanded ? "Thu gọn" : "Xem chi tiết"}</button>
         {canRemove || canCheckIn || canCheckOut ? (
           <details className={styles.rowActions}>
             <summary>Thao tác</summary>
@@ -94,6 +100,20 @@ export function WorkforceAssignmentRow({
           <span className={styles.secondary}>Chỉ xem</span>
         )}
       </td>
-    </tr>
+    </OpenableTableRow>
+    {expanded && <tr><td colSpan={tab === "assignments" ? 5 : 6} className={styles.detailCell}>
+      <section id={`assignment-${row.id}`} className={styles.assignmentDetail} aria-label={`Chi tiết phân công ${row.employeeName}`}>
+        <header><div><small>PHÂN CÔNG · {formatVietnameseDate(row.date)}</small><h3>{row.employeeName}</h3></div><span className={styles.status} data-state={attendanceState(row)}>{attendanceLabel[attendanceState(row)]}</span></header>
+        <dl>
+          <div><dt>Vùng làm việc</dt><dd>{zoneName(row.zoneId)}</dd></div>
+          <div><dt>Bè nuôi</dt><dd>{row.raftCode || "Chưa xác định"}</dd></div>
+          <div><dt>Công việc được giao</dt><dd>{row.job}</dd></div>
+          <div><dt>Vào làm</dt><dd>{row.checkedInAt ? displayTime(row.checkedInAt) : "Chưa ghi nhận"}</dd></div>
+          <div><dt>Ra về</dt><dd>{row.checkedOutAt ? displayTime(row.checkedOutAt) : "Chưa ghi nhận"}</dd></div>
+        </dl>
+        <p>Giờ vào và ra là các lượt đã ghi nhận cho phân công này.</p>
+      </section>
+    </td></tr>}
+    </Fragment>
   );
 }
