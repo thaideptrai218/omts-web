@@ -1,0 +1,43 @@
+/* Màn Sản lượng nuôi: cột lọc + bảng nhóm có dòng mở rộng. Dùng token màu chung của ứng dụng. */
+.form { display: grid; gap: 1rem; }
+.group { border: 0; margin: 0; padding: 0; display: grid; gap: .5rem; min-width: 0; }
+.group legend { font-size: .75rem; font-weight: 700; color: var(--omts-color-text); padding: 0; margin-bottom: .375rem; }
+.check { display: flex; align-items: center; gap: .5rem; min-height: 2rem; font-size: .875rem; cursor: pointer; }
+.check input { width: 1.0625rem; height: 1.0625rem; accent-color: var(--omts-color-primary); }
+.muted { color: var(--omts-color-text-muted); font-size: .8125rem; }
+.error { color: var(--omts-color-danger); font-size: .8125rem; margin: 0; }
+.linkBtn { color: var(--omts-color-primary); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; font-size: .8125rem; min-height: 2rem; }
+.linkBtn:disabled { opacity: .5; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.period { margin: 0 0 .625rem; font-size: .875rem; color: var(--omts-color-text-muted); }
+.totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: .75rem; margin: 0 0 1rem; }
+.totals > div { padding: .75rem .875rem; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); box-shadow: var(--omts-shadow-card); }
+.totals dt { font-size: .75rem; font-weight: 500; color: var(--omts-color-text-muted); }
+.totals dd { margin: .125rem 0 0; font-size: 1.375rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--omts-color-text); }
+.notice { margin: 0 0 .75rem; padding: .625rem .875rem; border: 1px dashed var(--omts-color-border-strong); border-radius: var(--omts-radius-control); background: var(--omts-color-warning-soft); font-size: .875rem; }
+
+.tableFrame { position: relative; margin: 1rem 0; overflow-x: auto; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); }
+.table, .lots { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.table th, .table td { padding: .625rem .875rem; text-align: left; border-bottom: 1px solid var(--omts-color-border); vertical-align: middle; }
+.table thead th { background: var(--omts-color-surface-subtle); font-size: .75rem; font-weight: 600; color: var(--omts-color-text-muted); white-space: nowrap; }
+.table tbody tr:last-child > * { border-bottom: 0; }
+.rowHead { font-weight: 600; }
+.rowOpen > * { background: var(--omts-color-primary-soft); }
+.num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.code { font-variant-numeric: tabular-nums; font-weight: 600; }
+.over { color: var(--omts-color-danger); font-weight: 600; }
+.over::before { content: "▲ "; font-size: .7em; }
+.sortBtn, .expand { display: inline-flex; align-items: center; gap: .375rem; font: inherit; color: inherit; text-align: inherit; min-height: 2rem; border-radius: var(--omts-radius-control); }
+.sortBtn:hover, .expand:hover { color: var(--omts-color-primary); }
+.sortBtn:focus-visible, .expand:focus-visible, .linkBtn:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.num .sortBtn { justify-content: flex-end; }
+.detail > td { padding: 0 !important; background: var(--omts-color-surface-subtle); }
+.lots { margin: 0; }
+.lots th, .lots td { padding: .5rem .875rem; text-align: left; border-bottom: 1px solid var(--omts-color-border); }
+.lots th { font-size: .75rem; font-weight: 600; color: var(--omts-color-text-muted); }
+.lots tbody tr:last-child td { border-bottom: 0; }
+
+.state { margin: 1rem 0; padding: 2rem 1.25rem; text-align: center; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); }
+.state h2 { margin: 0 0 .375rem; font-size: 1rem; font-weight: 700; }
+.state p { margin: 0 0 .75rem; color: var(--omts-color-text-muted); font-size: .875rem; }

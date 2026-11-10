@@ -1,3 +1,4 @@
+import { BootScreen } from "@/components/feedback/boot-screen";
 import { Suspense, type ReactNode } from "react";
 import { connection } from "next/server";
 import { AppSessionShell } from "./app-session-shell";
@@ -17,7 +18,7 @@ async function ApplicationAccess({ children }: { children: ReactNode }) {
 
 export function ServerApplicationBoundary({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<main className="grid min-h-dvh place-items-center p-6" role="status">Đang kiểm tra phiên đăng nhập...</main>}>
+    <Suspense fallback={<BootScreen message="Đang kiểm tra phiên đăng nhập..." />}>
       <ApplicationAccess>{children}</ApplicationAccess>
     </Suspense>
   );

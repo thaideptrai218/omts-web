@@ -89,6 +89,11 @@ export const messageCatalog = {
     "Mật khẩu tạm thời đã hết hạn. Nhân viên vui lòng liên hệ Chủ nhiệm HTX; thương lái vui lòng liên hệ Quản trị viên hệ thống để được đặt lại.",
   MSG69:
     "Bạn đã vượt quá số lần thử cho phép. Vui lòng thử đăng nhập lại sau 15 phút.",
+  "MSG-SALE-13": "Chưa dùng được VietQR vì hợp tác xã chưa có tài khoản nhận tiền. Hãy chọn cách thanh toán khác và nhờ Chủ hợp tác xã thiết lập tài khoản.",
+  "MSG-SALE-14": "Chuyển khoản chưa về. Dừng giao dịch này? Hóa đơn không được lưu, mã chỉ giữ trong nhật ký. Hãy trả lại tiền mặt đã nhận (nếu có) và giữ nguyên hàng.",
+  "MSG-SALE-20": "Hóa đơn đã có phiếu trả hàng nên không thể sửa hoặc hủy.",
+  "MSG-SALE-21": "Hóa đơn khách lẻ không có hồ sơ khách hàng nên không thể tăng tổng tiền. Hãy lập hóa đơn mới cho phần hàng thêm.",
+  "MSG-CLAIM-03": "Hóa đơn đã bị hủy hoặc đã trả hàng nên chưa thể chấp nhận khiếu nại này.",
 } as const;
 
 export type MessageCode = keyof typeof messageCatalog;

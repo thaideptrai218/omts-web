@@ -10,7 +10,6 @@ import { createOperationsRepository } from "./repository";
 import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, Note, Paging, OperationHeading, Skeleton, businessToday, displayTime, useRemote } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
-import { MyPurchaseShifts } from "./purchase-staffing";
 
 const repository = createOperationsRepository("my-work");
 export function MyWorkScreen() {
@@ -23,7 +22,7 @@ export function MyWorkScreen() {
     if (result) { work.reload(); setNotice("Đã hủy yêu cầu nghỉ phép."); }
   }
   return <section>{editor.dialog}<OperationHeading title="Công việc và nghỉ phép" description="Xem lịch phân công, ngày công và các yêu cầu nghỉ phép của bạn." icon="calendar" />
-    <FilterWorkspace label="Khoảng thời gian" filters={<><Field label="Từ ngày" type="date" required value={period.from} onChange={(e) => setPeriod({ ...period, from: e.target.value })} /><Field label="Đến ngày" type="date" required value={period.to} onChange={(e) => setPeriod({ ...period, to: e.target.value })} /><p className={styles.hint}>Khoảng ngày áp dụng cho phân công và ngày công; yêu cầu nghỉ phép hiển thị toàn bộ.</p><nav className={styles.jumpLinks} aria-label="Các mục công việc cá nhân">{work.data?.employeeId && <><a href="#my-assignments">Phân công</a><a href="#my-attendance">Ngày công</a><a href="#my-leave">Nghỉ phép</a></>}<a href="#my-shifts">Lời mời ca</a></nav></>}>
+    <FilterWorkspace label="Khoảng thời gian" filters={<><Field label="Từ ngày" type="date" required value={period.from} onChange={(e) => setPeriod({ ...period, from: e.target.value })} /><Field label="Đến ngày" type="date" required value={period.to} onChange={(e) => setPeriod({ ...period, to: e.target.value })} /><p className={styles.hint}>Khoảng ngày áp dụng cho phân công và ngày công; yêu cầu nghỉ phép hiển thị toàn bộ.</p><nav className={styles.jumpLinks} aria-label="Các mục công việc cá nhân">{work.data?.employeeId && <><a href="#my-assignments">Phân công</a><a href="#my-attendance">Ngày công</a><a href="#my-leave">Nghỉ phép</a></>}</nav></>}>
       <div className={styles.toolbar}><div><h2>{work.data?.name || "Lịch làm việc của bạn"}</h2><p>{dateLabel(period.from)} – {dateLabel(period.to)}</p></div><Button className="w-auto" variant="secondary" disabled={!valid || work.loading || editor.pending} onClick={work.reload}>Tải lại công việc cá nhân</Button></div>
       {!valid && <p role="alert" className="mt-3 text-danger">Chọn khoảng từ ngày đến ngày, tối đa 63 ngày.</p>}<ErrorNotice error={valid ? work.error || editor.mutation.error : undefined} />{notice && <p role="status" className={styles.notice}>{notice}</p>}
       {work.loading ? <Skeleton /> : work.data && (work.data.employeeId ? <>
@@ -37,7 +36,6 @@ export function MyWorkScreen() {
           <PersonalTable rows={work.data.requests} headings={["Thời gian nghỉ", "Lý do", "Trạng thái", "Phản hồi", "Thao tác"]} renderRow={r => <tr key={r.id}><td data-label="Thời gian nghỉ" className={styles.date}>{dateLabel(r.from)}<small className={styles.meta}>đến {dateLabel(r.to)}</small></td><td data-label="Lý do" className={styles.longText}>{r.reason}</td><td data-label="Trạng thái"><StatusPill tone={!r.cancelledAt && r.approved === true ? "success" : "neutral"}>{r.cancelledAt ? "Đã hủy" : r.approved === null ? "Chờ duyệt" : r.approved ? "Đã duyệt" : "Từ chối"}</StatusPill></td><td data-label="Phản hồi" className={styles.longText}>{r.response || "—"}</td><td data-label="Thao tác">{r.approved === null && !r.cancelledAt && <Button className="w-auto" variant="secondary" disabled={editor.disabled} onClick={() => void cancel(r.id)}>Hủy nghỉ phép</Button>}</td></tr>} />
         </section>
       </> : <p className="mt-5">Chưa có hồ sơ nhân viên gắn với tài khoản này.</p>)}
-      <section id="my-shifts" className={styles.section}><MyPurchaseShifts period={period} valid={valid} /></section>
     </FilterWorkspace>
     {editor.mutation.blocked && <p className="mt-3">Chưa rõ kết quả. Hãy đối chiếu trạng thái nghỉ phép hiện tại; hệ thống không tự hủy lại.</p>}
     {creating && <LeaveEditor onClose={() => setCreating(false)} onSaved={() => { setCreating(false); work.reload(); setNotice("Đã gửi yêu cầu nghỉ phép."); }} />}

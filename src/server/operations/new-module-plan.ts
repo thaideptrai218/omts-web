@@ -1,17 +1,16 @@
 import "server-only";
 import { z } from "zod";
 import * as c from "@/features/operations/new-module-contracts";
+import * as t from "@/features/trader-purchases/contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
 import { salesV2Plan } from "./sales-v2-plan";
 
 const productQuery = z.strictObject({ action: z.enum(["list", "all"]).default("list") });
-const staffingQuery = z.strictObject({ action: z.literal("staffing"), id: z.guid() });
-const staffingEmployeesQuery = z.strictObject({ action: z.literal("staffing-employees"), day: z.iso.date() });
 const requestQuery = z.strictObject({ action: z.enum(["list", "mine", "detail", "mine-detail"]).default("list"), id: z.guid().optional(),
-  status: c.requestStatusSchema.optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).default("1"), pageSize: z.string().regex(/^[1-9]\d?$/).default("20") });
+  status: c.requestStatusFilterSchema.optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).default("1"), pageSize: z.string().regex(/^[1-9]\d?$/).default("20") });
 const workforceQuery = z.strictObject({ action: z.enum(["list", "lookups", "leaves", "settings"]).default("list"), day: z.iso.date().optional() });
-const mineQuery = z.strictObject({ action: z.enum(["list", "purchase-shifts"]).default("list"), from: z.iso.date(), to: z.iso.date() }).refine((v) => v.to >= v.from && Date.parse(v.to) - Date.parse(v.from) <= 62 * 86_400_000);
+const mineQuery = z.strictObject({ action: z.literal("list").default("list"), from: z.iso.date(), to: z.iso.date() }).refine((v) => v.to >= v.from && Date.parse(v.to) - Date.parse(v.from) <= 62 * 86_400_000);
 const mutation = z.strictObject({ action: z.string(), id: z.guid().optional(), zoneId: z.guid().optional(), body: z.unknown().default({}) });
 const done = z.object({ done: z.literal(true) }), empty = z.strictObject({});
 
@@ -31,16 +30,15 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
       if (action === "update" && id) { const plan = write(`/api/sales-products/${id}`, c.saveProductSchema.refine((v) => !!v.rowVersion), c.salesProductSchema, "Owner", "PUT"); return plan && { ...plan, expectedId: id }; }
     }
     if (area === "purchase-requests" && !zoneId) {
-      if (action === "plan-staffing" && id) return write(`/api/purchase-requests/${id}/staffing`, c.planStaffingSchema, c.purchaseStaffingSchema, "Respond");
-      if (action === "submit" && !id) return write("/api/me/purchase-requests", c.createRequestSchema, c.purchaseRequestSchema, "Submit");
-      if (id && ["respond", "cancel"].includes(action)) {
-        const plan = action === "respond" ? write(`/api/purchase-requests/${id}/response`, c.respondRequestSchema, c.purchaseRequestSchema, "Respond")
-          : write(`/api/me/purchase-requests/${id}/cancel`, c.cancelRequestSchema, c.purchaseRequestSchema, "CancelMine");
+      if (action === "submit" && !id) return write("/api/me/purchase-requests", t.placeRequestSchema, t.requestSavedSchema, "Submit");
+      if (id && ["accept", "decline", "cancel"].includes(action)) {
+        // Chủ HTX trả lời bằng /accept hoặc /decline (đúng backend); thương lái hủy qua /api/me. Không có endpoint nhân lực/ca làm trong develop.
+        const plan = action === "cancel" ? write(`/api/me/purchase-requests/${id}/cancel`, t.cancelRequestSchema, t.traderRequestSchema, "CancelMine")
+          : write(`/api/purchase-requests/${id}/${action}`, action === "accept" ? c.acceptRequestSchema : c.declineRequestSchema, c.purchaseRequestSchema, "Respond");
         return plan && { ...plan, expectedId: id };
       }
     }
     if (area === "my-work" && !zoneId) {
-      if (action === "respond-shift" && id) { const plan = write(`/api/me/purchase-shifts/${id}/response`, c.respondShiftSchema, c.myPurchaseShiftSchema, "Mine"); return plan && { ...plan, expectedId: id }; }
       if (action === "leave" && !id) return write("/api/me/leave-requests", c.requestLeaveSchema, c.leaveSchema, "Mine");
       if (action === "cancel-leave" && id) { const plan = write(`/api/me/leave-requests/${id}`, empty, c.leaveSchema, "Mine", "DELETE", true); return plan && { ...plan, expectedId: id }; }
     }
@@ -66,17 +64,23 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
       permission: q.data.action === "all" ? "CatalogueAll" : "View", schema: z.array(c.salesProductSchema) };
   }
   if (area === "purchase-requests") {
-    if (values.action === "staffing") { const q = staffingQuery.safeParse(values); return q.success ? { area, action: "staffing", method: "GET", path: `/api/purchase-requests/${q.data.id}/staffing`, permission: "Respond", schema: z.array(c.shiftInvitationSchema) } : undefined; }
-    if (values.action === "staffing-employees") { const q = staffingEmployeesQuery.safeParse(values); return q.success ? { area, action: "staffing-employees", method: "GET", path: `/api/purchase-requests/staffing-employees?day=${q.data.day}`, permission: "Respond", schema: z.array(c.staffingEmployeeSchema) } : undefined; }
     const q = requestQuery.safeParse(values);
     if (!q.success) return undefined;
     const mine = q.data.action.startsWith("mine"), detail = q.data.action.endsWith("detail");
     if (detail !== !!q.data.id || detail && (query.has("status") || query.has("page") || query.has("pageSize"))) return undefined;
-    const path = `${mine ? "/api/me" : "/api"}/purchase-requests`;
     const search = new URLSearchParams({ page: q.data.page, pageSize: q.data.pageSize });
-    if (q.data.status) search.set("status", q.data.status);
+    if (mine) {
+      // Backend: GET /api/me/purchases (MyPurchases) có phân trang nhưng không lọc trạng thái; lọc trạng thái là việc của màn hình.
+      if (q.data.status) return undefined;
+      return detail
+        ? { area, action: q.data.action, method: "GET", path: `/api/me/purchase-requests/${q.data.id}`, permission: "Mine", schema: t.traderRequestSchema, expectedId: q.data.id }
+        : { area, action: q.data.action, method: "GET", path: `/api/me/purchases?${search}`, permission: "Mine", schema: t.myPurchasesSchema };
+    }
+    const path = "/api/purchase-requests";
+    // Backend lọc theo statusId (3201..3204); web giữ tên tham số `status`.
+    if (q.data.status) search.set("statusId", q.data.status);
     return { area, action: q.data.action, method: "GET", path: detail ? `${path}/${q.data.id}` : `${path}?${search}`,
-      permission: mine ? "Mine" : "Review", schema: detail ? c.purchaseRequestSchema : c.purchaseRequestPageSchema, expectedId: detail ? q.data.id : undefined };
+      permission: "Review", schema: detail ? c.purchaseRequestSchema : c.purchaseRequestPageSchema, expectedId: detail ? q.data.id : undefined };
   }
   if (area === "workforce") {
     const q = workforceQuery.safeParse(values);
@@ -88,7 +92,6 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
   if (area === "my-work") {
     const q = mineQuery.safeParse(values);
     if (!q.success) return undefined;
-    const shifts = q.data.action === "purchase-shifts";
-    return { area, action: q.data.action, method: "GET", path: `/api/me/${shifts ? "purchase-shifts" : "workforce"}?from=${q.data.from}&to=${q.data.to}`, permission: "Mine", schema: shifts ? z.array(c.myPurchaseShiftSchema) : c.myWorkSchema };
+    return { area, action: q.data.action, method: "GET", path: `/api/me/workforce?from=${q.data.from}&to=${q.data.to}`, permission: "Mine", schema: c.myWorkSchema };
   }
 }

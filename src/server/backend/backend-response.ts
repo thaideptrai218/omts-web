@@ -1,4 +1,5 @@
 import "server-only";
+import { projectInvoiceConfirmation } from "../../features/sales-invoices/confirmation-problem";
 import { projectCatalogueProblem } from "@/features/api-workspace/catalogue-problem";
 import { isJsonContentType, readRetryAfterMs } from "../../shared/http/api-problem";
 import type { MessageCode } from "../../shared/messages/message-catalog";
@@ -37,7 +38,7 @@ async function readBoundedJson(response: Response): Promise<unknown> {
   }
 }
 
-export async function readBackendResponse(response: Response, endpoint: BackendRequest["endpoint"] | "employeeCreate", catalogue = false): Promise<BackendTransportResult> {
+export async function readBackendResponse(response: Response, endpoint: BackendRequest["endpoint"] | "employeeCreate", catalogue = false, invoiceQuestions = false): Promise<BackendTransportResult> {
   if (response.status >= 300 && response.status < 400) {
     cancelBody(response);
     return { status: "invalid-response" };
@@ -54,14 +55,16 @@ export async function readBackendResponse(response: Response, endpoint: BackendR
     let code: MessageCode | undefined;
     let catalogueProblem: ReturnType<typeof projectCatalogueProblem>;
     let employeeProblem: ReturnType<typeof projectEmployeeProblemMetadata>;
+    let invoiceConfirmation: ReturnType<typeof projectInvoiceConfirmation>;
     try {
       const data = await readBoundedJson(response);
       code = knownBackendMessageCode(data);
       if (catalogue) catalogueProblem = projectCatalogueProblem(response.status, code, data);
       employeeProblem = projectEmployeeProblemMetadata(endpoint, response.status, code, data);
+      if (invoiceQuestions) invoiceConfirmation = projectInvoiceConfirmation(response.status, data);
     } catch { /* Status is still authoritative. */ }
     return { status: "http-error", httpStatus: response.status, code, retryAfterMs,
-      ...(catalogueProblem ? { catalogueProblem } : {}), ...(employeeProblem ? { employeeProblem } : {}) };
+      ...(catalogueProblem ? { catalogueProblem } : {}), ...(employeeProblem ? { employeeProblem } : {}), ...(invoiceConfirmation ? { invoiceConfirmation } : {}) };
   }
   try {
     return { status: "success", httpStatus: response.status, data: await readBoundedJson(response) };

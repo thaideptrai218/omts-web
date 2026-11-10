@@ -1,0 +1,41 @@
+/* Khung báo cáo/bảng lương dùng chung: bộ lọc, ô tổng hợp, bảng, biểu đồ rỗng. Token màu lấy từ globals.css. */
+.form { display: grid; gap: 1rem; }
+.group { border: 0; margin: 0; padding: 0; display: grid; gap: .5rem; min-width: 0; }
+.group legend { font-size: .75rem; font-weight: 700; color: var(--omts-color-text); padding: 0; margin-bottom: .375rem; }
+.check { display: flex; align-items: center; gap: .5rem; min-height: 2rem; font-size: .875rem; cursor: pointer; }
+.check input { width: 1.0625rem; height: 1.0625rem; accent-color: var(--omts-color-primary); }
+.muted { margin: 0; color: var(--omts-color-text-muted); font-size: .8125rem; }
+.stack { display: grid; gap: 1rem; min-width: 0; }
+
+.period { margin: 0; font-size: .875rem; color: var(--omts-color-text-muted); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .75rem; margin: 0; }
+.tiles > div { padding: .75rem .875rem; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); box-shadow: var(--omts-shadow-card); }
+.tiles dt { font-size: .75rem; font-weight: 500; color: var(--omts-color-text-muted); }
+.tiles dd { margin: .125rem 0 0; font-size: 1.375rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--omts-color-text); }
+
+.card { min-width: 0; padding: 1rem; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); box-shadow: var(--omts-shadow-card); }
+.card h2, .section h2 { margin: 0 0 .625rem; font-size: .9375rem; font-weight: 700; color: var(--omts-color-text); }
+.section { min-width: 0; }
+
+.tableFrame { overflow-x: auto; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); }
+.tableFrame:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.table th, .table td { padding: .625rem .875rem; text-align: left; border-bottom: 1px solid var(--omts-color-border); vertical-align: middle; }
+.table thead th { background: var(--omts-color-surface-subtle); font-size: .75rem; font-weight: 600; color: var(--omts-color-text-muted); white-space: nowrap; }
+.table thead .groupHead { text-align: center; border-bottom-color: var(--omts-color-border-strong); }
+.table tbody tr:last-child > * { border-bottom: 0; }
+.right { text-align: right !important; font-variant-numeric: tabular-nums; }
+.emptyCell { text-align: center !important; padding: 1.5rem 1rem !important; color: var(--omts-color-text-muted); }
+
+.chart { margin: 0; }
+.chart figcaption h2 { margin: 0 0 .5rem; font-size: .9375rem; font-weight: 700; }
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 0 0 .5rem; padding: 0; list-style: none; font-size: .8125rem; color: var(--omts-color-text-muted); }
+.legend li { display: inline-flex; align-items: center; gap: .375rem; }
+.legend svg { width: 2rem; height: .75rem; color: var(--omts-color-primary); }
+.plot { display: block; width: 100%; height: 11rem; color: var(--omts-color-border-strong); background: var(--omts-color-surface-subtle); border-radius: var(--omts-radius-control); }
+.axes { display: flex; flex-wrap: wrap; gap: .25rem 1.5rem; margin: .5rem 0 0; font-size: .75rem; color: var(--omts-color-text-muted); }
+.axes dt { display: inline; font-weight: 600; }
+.axes dd { display: inline; margin: 0 0 0 .25rem; }
+.alt { margin: .5rem 0 0; font-size: .8125rem; color: var(--omts-color-text-muted); }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

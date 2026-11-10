@@ -6,14 +6,19 @@ import { FilterChecks } from "@/components/ui/filter-checks";
 import { readSelectionPages } from "./selection-pages";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
 import { DataGrid } from "@/components/ui/data-grid";
-import { StatusPill } from "@/components/ui/management-page";
 import styles from "@/features/sales-api/sales-workspace.module.css";
 import { Button } from "@/components/ui/button";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { createOperationsRepository } from "./repository";
 import * as c from "./new-module-contracts";
 import { DataTable, ErrorNotice, Field, FilterPanel, OperationHeading, Paging, Select, Skeleton, useMutation, useRemote } from "./ui";
-import { CreatePurchaseRequest, ProductEditor, PurchaseRequestDetails, requestStatusLabel } from "./sales-editors";
+import { TraderPurchasesScreen } from "@/features/trader-purchases/trader-purchases-screen";
+import { TraderRequestDetailPage } from "@/features/trader-purchases/trader-request-detail-page";
+import { ProductEditor } from "./sales-editors";
+import { PurchaseRequestReviewDetails } from "./purchase-request-review-details";
+import { ReviewStatusPill } from "./purchase-request-review-parts";
+import { REVIEW_STATUS_OPTIONS, reviewResponseSummary } from "./purchase-request-review-presentation";
+import { formatDate, formatKg } from "@/features/trader-purchases/presentation";
 
 const products = createOperationsRepository("sales-products"), requests = createOperationsRepository("purchase-requests");
 
@@ -33,40 +38,44 @@ export function SalesProductsScreen() {
   </section>;
 }
 
+/** Thương lái có màn riêng "Đơn mua của tôi" (GET /api/me/purchases, đơn vị kg); Chủ HTX/nhân viên xem danh sách duyệt ở dưới. */
 export function PurchaseRequestsScreen() {
-  const { identity } = useApiWorkspace(), mine = identity.subjectType === "Trader";
-  const [status, setStatus] = useState(""), [page, setPage] = useState(1), [selected, setSelected] = useState<c.PurchaseRequest>();
-  const [creating, setCreating] = useState(false);
-  const query = useMemo(() => ({ status, page: String(page), pageSize: "20" }), [status, page]);
-  const rows = useRemote(useMemo(() => (signal: AbortSignal) => readSelectionPages((params,signal)=>requests.read(mine ? "mine" : "list",params,c.purchaseRequestPageSchema,signal),{page:query.page,pageSize:query.pageSize},{status},signal), [mine, query, status]));
-  const mutation = useMutation();
-  async function open(id: string) { const found = await mutation.run(() => requests.read(mine ? "mine-detail" : "detail", { id }, c.purchaseRequestSchema), true); if (found) setSelected(found); }
-  return <section><OperationHeading title={mine ? "Yêu cầu mua của tôi" : "Yêu cầu mua hàu"} description="Theo dõi số lồng, ngày nhận dự kiến và phản hồi theo từng yêu cầu." icon="document">
-    {mine && <Button className="w-auto" onClick={() => setCreating(true)}>Gửi yêu cầu mua</Button>}</OperationHeading>
-    <FilterWorkspace label="Lọc yêu cầu mua" reset={<button type="button" className={styles.reset} disabled={!status} onClick={() => { setStatus(""); setPage(1); }}>Đặt lại</button>} filters={<FilterChecks label="Trạng thái yêu cầu" value={status} options={c.requestStatusSchema.options.map(value=>[value,requestStatusLabel(value)] as const)} onChange={value=>{setStatus(value);setPage(1);}}/>}>
+  const { identity } = useApiWorkspace();
+  return identity.subjectType === "Trader" ? <TraderPurchasesScreen /> : <PurchaseRequestsReviewScreen />;
+}
 
+function PurchaseRequestsReviewScreen() {
+  const [status, setStatus] = useState(""), [page, setPage] = useState(1), [selected, setSelected] = useState<c.PurchaseRequest>();
+  const query = useMemo(() => ({ page: String(page), pageSize: "20" }), [page]);
+  const rows = useRemote(useMemo(() => (signal: AbortSignal) => readSelectionPages((params, signal) => requests.read("list", params, c.purchaseRequestPageSchema, signal), query, { status }, signal, (a, b) => b.sentAt.localeCompare(a.sentAt)), [query, status]));
+  const mutation = useMutation();
+  async function open(id: string) { const found = await mutation.run(() => requests.read("detail", { id }, c.purchaseRequestSchema), true); if (found) setSelected(found); }
+  return <section><OperationHeading title="Yêu cầu mua hàu" description="Theo dõi số kg, ngày lấy hàng và phản hồi theo từng yêu cầu của thương lái." icon="document" />
+    <FilterWorkspace label="Lọc yêu cầu mua" reset={<button type="button" className={styles.reset} disabled={!status} onClick={() => { setStatus(""); setPage(1); }}>Đặt lại</button>} filters={<FilterChecks label="Trạng thái yêu cầu" value={status} options={REVIEW_STATUS_OPTIONS} onChange={value => { setStatus(value); setPage(1); }} />}>
       <div className={styles.results}><div className={styles.toolbar}><div><h2>{status === "-" ? "Chưa chọn trạng thái" : status ? "Yêu cầu theo trạng thái đã chọn" : "Tất cả yêu cầu mua"}</h2><p>{rows.loading ? "Đang tải…" : rows.data ? `${rows.data.total} yêu cầu · ${rows.data.pageSize} dòng/trang` : "Chưa tải được dữ liệu"}</p></div><Button className="w-auto" variant="secondary" disabled={rows.loading || mutation.pending} onClick={rows.reload}>Tải lại yêu cầu mua</Button></div><ErrorNotice error={rows.error || mutation.error} />
-      {rows.loading ? <Skeleton /> : rows.data && <><DataGrid responsive headings={["Yêu cầu / thương lái", "Sản phẩm", "Số lồng", "Ngày nhận dự kiến", "Trạng thái", "Phản hồi của HTX", "Chi tiết"]} empty={!rows.data.items.length}>{rows.data.items.map((row) => <OpenableTableRow key={row.id} disabled={mutation.pending} onOpen={()=>void open(row.id)}>
-        <td data-label="Yêu cầu / thương lái"><span className={styles.code}>{row.code}</span><small className={styles.meta}>{row.customerName}</small></td><td data-label="Sản phẩm" className={styles.name}>{row.productName}</td><td data-label="Số lồng" className={styles.number}>{row.requestedCages.toLocaleString("vi-VN")}</td><td data-label="Ngày nhận dự kiến" className={styles.date}>{row.requestedPickupDate.split("-").reverse().join("/")}</td><td data-label="Trạng thái"><StatusPill tone={row.status === "ACCEPTED" ? "success" : "neutral"}>{requestStatusLabel(row.status)}</StatusPill></td>
-        <td data-label="Phản hồi của HTX" className={styles.response}>{row.acceptedCages !== null && <strong>{row.acceptedCages.toLocaleString("vi-VN")} lồng{row.acceptedPickupDate ? ` · ${row.acceptedPickupDate.split("-").reverse().join("/")}` : ""}</strong>}<span>{row.status === "CANCELLED" ? row.cancellationReason || "—" : row.responseNote || (row.acceptedCages !== null ? row.allowPayLater ? "Cho trả sau" : "Không trả sau" : "Chưa có phản hồi")}</span></td>
-        <td data-label="Chi tiết"><button className={styles.open} disabled={mutation.pending} onClick={() => void open(row.id)}>Mở yêu cầu</button></td></OpenableTableRow>)}</DataGrid><div className={styles.requestPaging}><Paging page={rows.data.page} pageSize={rows.data.pageSize} total={rows.data.total} disabled={mutation.pending || rows.loading} onChange={setPage} /></div></>}
+      {rows.loading ? <Skeleton /> : rows.data && <><DataGrid responsive headings={["Thương lái", "Sản phẩm", "Số kg yêu cầu", "Ngày lấy hàng", "Trạng thái", "Phản hồi của HTX", "Chi tiết"]} empty={!rows.data.items.length}>{rows.data.items.map((row) => { const response = reviewResponseSummary(row); return <OpenableTableRow key={row.id} disabled={mutation.pending} onOpen={() => void open(row.id)}>
+        <td data-label="Thương lái"><span className={styles.code}>{row.customer.name}</span><small className={styles.meta}>{row.customer.phoneNumber || "Chưa có số điện thoại"}</small></td><td data-label="Sản phẩm" className={styles.name}>{row.productName}</td><td data-label="Số kg yêu cầu" className={styles.number}>{formatKg(row.requestedKg)}</td><td data-label="Ngày lấy hàng" className={styles.date}>{formatDate(row.pickupDate)}</td><td data-label="Trạng thái"><ReviewStatusPill request={row} /></td>
+        <td data-label="Phản hồi của HTX" className={styles.response}><strong>{response.headline}</strong>{response.note && <span>{response.note}</span>}</td>
+        <td data-label="Chi tiết"><button className={styles.open} disabled={mutation.pending} onClick={() => void open(row.id)}>Mở yêu cầu</button></td></OpenableTableRow>; })}</DataGrid><div className={styles.requestPaging}><Paging page={rows.data.page} pageSize={rows.data.pageSize} total={rows.data.total} disabled={mutation.pending || rows.loading} onChange={setPage} /></div></>}
       </div>
     </FilterWorkspace>
-    {creating && <CreatePurchaseRequest onClose={() => setCreating(false)} onSaved={() => { setCreating(false); rows.reload(); }} />}
-    {selected && <PurchaseRequestDetails key={`${selected.id}:${selected.rowVersion}`} record={selected} onClose={() => setSelected(undefined)} onSaved={(saved) => { setSelected(saved); rows.reload(); }} />}
+    {selected && <PurchaseRequestReviewDetails key={`${selected.id}:${selected.rowVersion}`} record={selected} onClose={() => setSelected(undefined)} onSaved={(saved) => { setSelected(saved); rows.reload(); }} />}
   </section>;
 }
 
 export function PurchaseRequestDetailPage({ id }: { id: string }) {
   const { identity } = useApiWorkspace();
-  const mine = identity.subjectType === "Trader";
-  const loaded = useRemote(useMemo(() => (signal: AbortSignal) => requests.read(mine ? "mine-detail" : "detail", { id }, c.purchaseRequestSchema, signal), [id, mine]));
+  return identity.subjectType === "Trader" ? <TraderRequestDetailPage id={id} /> : <PurchaseRequestReviewDetail id={id} />;
+}
+
+function PurchaseRequestReviewDetail({ id }: { id: string }) {
+  const loaded = useRemote(useMemo(() => (signal: AbortSignal) => requests.read("detail", { id }, c.purchaseRequestSchema, signal), [id]));
   const [record, setRecord] = useState<c.PurchaseRequest>();
   const current = record ?? loaded.data;
   if (loaded.loading) return <Skeleton />;
   if (loaded.error) return <ErrorNotice error={loaded.error} />;
   if (!current) return <p role="alert" className="rounded-card border border-border p-5">Không tìm thấy yêu cầu mua.</p>;
-  return <PurchaseRequestDetails record={current} onClose={() => window.history.back()} onSaved={(saved) => setRecord(saved)} />;
+  return <PurchaseRequestReviewDetails record={current} onClose={() => window.history.back()} onSaved={(saved) => setRecord(saved)} />;
 }
 
 export { WorkforceScreen } from "./workforce-screen";

@@ -7,6 +7,14 @@ import { cultivationPlan } from "./cultivation-plan";
 import { cultivationRecordsPlan } from "./cultivation-records-plan";
 import { jobTypesPlan } from "./job-types-plan";
 import { purchasingV2Plan } from "./purchasing-v2-plan";
+import { salesInvoicesPlan } from "./sales-invoices-plan";
+import { customerPaymentsPlan } from "./customer-payments-plan";
+import { harvestYieldPlan } from "./harvest-yield-plan";
+import { salesInvoiceListPlan } from "./sales-invoice-list-plan";
+import { claimReportsPlan, qualityClaimsPlan } from "./quality-claims-plan";
+import { waterOverviewPlan } from "./water-overview-plan";
+import { lotTracingPlan } from "./lot-tracing-plan";
+import { payrollSettingsPlan } from "./payroll-settings-plan";
 
 const id = z.guid(), empty = z.strictObject({});
 const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
@@ -23,6 +31,15 @@ export function planOperation(areaName: string, method: string, query: URLSearch
   const area = z.enum(operationAreas).safeParse(areaName);
   if (!area.success) return undefined;
   if (process.env.NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT === "v2" && ["purchase-receipts", "supplier-payments"].includes(area.data)) return purchasingV2Plan(area.data, method, query, input);
+  if (area.data === "sales-invoices") return salesInvoicesPlan(method, query, input);
+  if (area.data === "customer-payments") return customerPaymentsPlan(method, query, input);
+  if (area.data === "harvest-yield") return harvestYieldPlan(method, query, input);
+  if (area.data === "sales-invoice-list") return salesInvoiceListPlan(method, query, input);
+  if (area.data === "claim-reports") return claimReportsPlan(method, query, input);
+  if (area.data === "quality-claims") return qualityClaimsPlan(method, query, input);
+  if (area.data === "lot-tracing") return lotTracingPlan(method, query, input);
+  if (area.data === "payroll-settings") return payrollSettingsPlan(method, query, input);
+  if (area.data === "water" && query.get("action") === "zones-overview") return waterOverviewPlan(method, query);
   if (area.data === "job-types") return jobTypesPlan(method, query, input);
   if (area.data === "cultivation-cycles") return cultivationPlan(method, query, input);
   if (["seeding", "material-usages", "harvest"].includes(area.data)) return cultivationRecordsPlan(area.data, method, query, input);

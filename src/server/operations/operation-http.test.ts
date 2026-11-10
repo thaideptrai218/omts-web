@@ -17,13 +17,13 @@ const get = (query: string) => new Request(`http://localhost:3002/api/operations
 describe("operations BFF authorization and evidence boundary", () => {
   it("requires CSRF on the newly approved sales writes before calling upstream", async () => {
     configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch");
-    const request = new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "https://evil.test", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "submit", body: { productId: ids.item, requestedCages: 2, pickupDate: "2026-10-31", note: null, clientOperationId: ids.receipt } }) });
+    const request = new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "https://evil.test", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "submit", body: { productId: ids.item, requestedKg: 2, pickupDate: "2026-10-31", note: null } }) });
     expect((await handleOperationRequest(request, "purchase-requests")).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
   });
   it("does not let a Trader respond as Owner or choose an employee for leave", async () => {
     configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch");
     const post = (body: unknown) => new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "http://localhost:3002", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify(body) });
-    expect((await handleOperationRequest(post({ action: "respond", id: ids.receipt, body: { accept: false, acceptedCages: null, pickupDate: null, allowPayLater: false, note: "QA", rowVersion: "opaque" } }), "purchase-requests")).status).toBe(403);
+    expect((await handleOperationRequest(post({ action: "decline", id: ids.receipt, body: { note: "QA", rowVersion: "opaque" } }), "purchase-requests")).status).toBe(403);
     configure("Staff");
     expect((await handleOperationRequest(post({ action: "leave", body: { from: "2026-10-31", to: "2026-10-31", reason: "QA", clientOperationId: ids.receipt, employeeId: ids.item } }), "my-work")).status).toBe(400);
     expect(fetcher).not.toHaveBeenCalled();
@@ -41,17 +41,22 @@ describe("operations BFF authorization and evidence boundary", () => {
     configure("Trader"); expect((await handleOperationRequest(get("from=2026-10-01&to=2026-10-31"), "my-work")).status).toBe(403);
   });
   it("keeps Trader reads on the personal endpoint and denies cooperative/all-product reads", async () => {
-    configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 20, total: 0 }));
+    configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ requests: [], page: 1, pageSize: 20, total: 0, message: null, messageCode: null }));
     expect((await handleOperationRequest(get("action=mine"), "purchase-requests")).status).toBe(200);
-    expect(fetcher.mock.calls[0][0].toString()).toBe("http://127.0.0.1:8080/api/me/purchase-requests?page=1&pageSize=20");
+    expect(fetcher.mock.calls[0][0].toString()).toBe("http://127.0.0.1:8080/api/me/purchases?page=1&pageSize=20");
     expect((await handleOperationRequest(get("action=list"), "purchase-requests")).status).toBe(403);
     expect((await handleOperationRequest(get("action=all"), "sales-products")).status).toBe(403);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("rejects a validly shaped purchase request returned with another ID", async () => {
-    configure(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ id: ids.otherZone, code: "YC-QA", productId: ids.item, productName: "Hàu QA", quantityUnit: "Cage", requestedCages: 2,
-      requestedPickupDate: "2026-10-31", note: null, status: "AWAITING_RESPONSE", acceptedCages: null, acceptedPickupDate: null, allowPayLater: false, responseNote: null,
-      respondedAt: null, cancelledAt: null, cancellationReason: null, createdAt: "2026-10-31T02:00:00+07:00", customerName: "QA", rowVersion: "opaque" }));
+    const view = { id: ids.otherZone, customer: { id: ids.item, name: "QA", phoneNumber: null, currentDebt: 0 }, productId: ids.item, productName: "Hàu QA", requestedKg: 2, pickupDate: "2026-10-31", note: null, sentAt: "2026-10-31T02:00:00+07:00",
+      statusId: 3201, status: "Awaiting response", fulfilled: false, response: null, cancelReason: null, cancelledAt: null, sendings: [], rowVersion: "opaque" };
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(view));
+    expect((await handleOperationRequest(get(`action=detail&id=${ids.receipt}`), "purchase-requests")).status).toBe(502);
+    fetcher.mockResolvedValue(Response.json({ ...view, id: ids.receipt }));
+    expect((await handleOperationRequest(get(`action=detail&id=${ids.receipt}`), "purchase-requests")).status).toBe(200);
+    // Hình dạng "lồng" cũ của nhánh backend chưa merge không còn hợp lệ.
+    fetcher.mockResolvedValue(Response.json({ id: ids.receipt, code: "YC-QA", quantityUnit: "Cage", requestedCages: 2, status: "AWAITING_RESPONSE", customerName: "QA" }));
     expect((await handleOperationRequest(get(`action=detail&id=${ids.receipt}`), "purchase-requests")).status).toBe(502);
   });
   it("rejects workforce rows outside the current view-zone grants", async () => {

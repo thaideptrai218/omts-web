@@ -1,6 +1,7 @@
 import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { zipStoredFiles } from "@/shared/downloads/zip-store";
 import { z } from "zod";
+import { invoiceConfirmationSchema } from "@/features/sales-invoices/confirmation-problem";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OperationArea } from "./permissions";
 import { employeeProblemMetadataSchema } from "@/features/employee-management/api/employee-problem-metadata";
@@ -22,9 +23,15 @@ async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>,
     // Expiry may be detected by the BFF's recheck after the backend wrote.
     // A write returning 401 therefore also needs reconciliation, never replay.
     const employeeProblem = area === "employees" ? employeeProblemMetadataSchema.safeParse(result.employeeProblem) : undefined;
-    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}),
+    const invoiceConfirmation = ["sales-invoices", "customer-payments", "sales-invoice-list"].includes(area) ? invoiceConfirmationSchema.safeParse(result.invoiceConfirmation) : undefined;
+    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}), ...(invoiceConfirmation?.success ? { invoiceConfirmation: invoiceConfirmation.data } : {}),
       uncertain: body !== undefined && (response.status >= 500 || response.ok || response.status === 401) };
   } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
+}
+/** Tên tệp do BFF đặt trong Content-Disposition (chỉ nhận ký tự an toàn); không có thì dùng tên mặc định theo màn. */
+export function suggestedFileName(header: string | null): string | undefined {
+  const name = /filename="([A-Za-z0-9._-]{1,80})"/.exec(header ?? "")?.[1];
+  return name && /.(xlsx|zip|pdf)$/.test(name) ? name : undefined;
 }
 export function createOperationsRepository(area: RepositoryArea) {
   return {
@@ -59,7 +66,7 @@ export function createOperationsRepository(area: RepositoryArea) {
         }
         if (!response.headers.get("content-type")?.startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) throw new Error("Unexpected file");
         const url = URL.createObjectURL(await response.blob());
-        const link = document.createElement("a"); link.href = url; link.download = `${area}.xlsx`; link.click();
+        const link = document.createElement("a"); link.href = url; link.download = suggestedFileName(response.headers.get("content-disposition")) ?? `${area}.xlsx`; link.click();
         setTimeout(() => URL.revokeObjectURL(url), 30_000);
         return { status: "success", data: true };
       } catch { return { status: "error", httpStatus: 0, uncertain: false }; }

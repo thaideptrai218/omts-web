@@ -10,16 +10,12 @@ import type {
 import type { EmployeeManagementRepository } from "@/features/employee-management/repositories/employee-management-repository";
 import { createEmployeeEditorSchema } from "@/features/employee-management/schemas/employee-editor-schema";
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
-import { employeeBankFields, toEmployeeBankAccount } from "../schemas/employee-bank-schema";
 import type { EmployeeZoneOption } from "../domain/employee-working-details";
 import { createMockEmployeeEmployment, type MockEmployeeLaborReference } from "./mock-employee-employment";
-import { employeePersonalFields } from "../schemas/employee-personal-schema";
-import { normalizeEmployeePhone } from "../schemas/employee-phone";
-import type { EmployeeIssueTarget } from "../domain/employee-problem";
 import type { EmployeeAccountCreationOptions } from "../domain/employee-account-creation";
 import { createMockEmployeeAccount, type MockEmployeeAccountCreator } from "./mock-employee-account";
-
-const validationTargets = new Set<string>([...employeePersonalFields, "bankAccount", "workingZoneIds"]);
+import { buildSavedEmployee, validateMockEmployeeSave } from "./mock-employee-save-validation";
+import { cloneAccount, cloneEmployee, wait } from "./mock-employee-store-helpers";
 
 type MockOptions = Readonly<{
   getZones?: () => readonly EmployeeZoneOption[];
@@ -36,27 +32,6 @@ type MockOptions = Readonly<{
   createAccount?: MockEmployeeAccountCreator;
   getAccountCreationOptions?: () => EmployeeAccountCreationOptions;
 }>;
-
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function cloneAccount(account: EmployeeAccountSummary): EmployeeAccountSummary {
-  return { ...account };
-}
-
-function cloneEmployee(employee: EmployeeProfile): EmployeeProfile {
-  return {
-    ...employee,
-    account: employee.account ? cloneAccount(employee.account) : null,
-    workingZoneIds: [...employee.workingZoneIds],
-    bankAccount: employee.bankAccount ? { ...employee.bankAccount } : null,
-  };
-}
-
-function sameName(first: string, second: string): boolean {
-  return first.localeCompare(second, "vi", { sensitivity: "base" }) === 0;
-}
 
 export function createMockEmployeeManagementRepository({
   accounts: initialAccounts,
@@ -117,6 +92,13 @@ export function createMockEmployeeManagementRepository({
     zones = getZones?.() ?? zones;
   }
 
+  /** Replaces an existing employee, stamps its audit time and returns a safe copy. */
+  function commit(employee: EmployeeProfile) {
+    employees = employees.map((current) => current.id === employee.id ? employee : current);
+    updatedAt.set(employee.id, now());
+    return cloneEmployee(employee);
+  }
+
   function workspace(): EmployeeManagementWorkspace {
     const linkedAccountIds = new Set(
       employees.flatMap((employee) =>
@@ -136,11 +118,7 @@ export function createMockEmployeeManagementRepository({
 
   return {
     createLoginAccount: createMockEmployeeAccount({ authorize: prepareRequest, find: (id) => employees.find((item) => item.id === id),
-      conflict, nextVersion: allocateVersion, create: createAccount, commit: (employee) => {
-        employees = employees.map((current) => current.id === employee.id ? employee : current);
-        updatedAt.set(employee.id, now());
-        return cloneEmployee(employee);
-      } }),
+      conflict, nextVersion: allocateVersion, create: createAccount, commit }),
     ...createMockEmployeeEmployment({
       authorize: prepareRequest,
       find: (id) => {
@@ -149,11 +127,7 @@ export function createMockEmployeeManagementRepository({
         const account = linkedAccountId ? accounts.find((item) => item.id === linkedAccountId) : undefined;
         return employee && account ? { ...employee, account: cloneAccount(account) } : employee;
       },
-      commit: (employee) => {
-        employees = employees.map((current) => current.id === employee.id ? employee : current);
-        updatedAt.set(employee.id, now());
-        return cloneEmployee(employee);
-      },
+      commit,
       conflict, nextVersion: allocateVersion, now,
       laborRecords: laborRecords.map((record) => ({ ...record })),
     }),
@@ -186,120 +160,15 @@ export function createMockEmployeeManagementRepository({
       const earlyResult = await prepareRequest();
       if (earlyResult) return earlyResult;
 
-      const parsed = editorSchema.safeParse({
-        ...input,
-        accountId: input.accountId ?? "",
-        bankAccount: employeeBankFields(input.bankAccount),
+      const validation = validateMockEmployeeSave(input, { accounts, conflict, editorSchema, employees, zones });
+      if (validation.rejection) return validation.rejection;
+      const { current, data, normalizedPhone, selectedAccount } = validation;
+
+      const saved = buildSavedEmployee({
+        current, data, normalizedPhone, selectedAccount,
+        nextEmployeeId: () => `employee-${nextEmployeeNumber++}`,
+        nextVersion: allocateVersion,
       });
-      if (!parsed.success) {
-        const fields = [...new Set(parsed.error.issues.map((issue) => issue.path[0]))]
-          .filter((field): field is EmployeeIssueTarget => typeof field === "string" && validationTargets.has(field));
-        if (fields.some((field) => field !== "fullName" && field !== "phone")) {
-          return { status: "invalid-fields", code: "MSG01", fields };
-        }
-        const field = parsed.error.issues[0]?.path[0];
-        return {
-          field:
-            field === "fullName" || field === "phone" || field === "status"
-              ? field
-              : "fullName",
-          message: { code: "MSG01" },
-          status: "invalid-input",
-        };
-      }
-
-      const normalizedPhone = normalizeEmployeePhone(parsed.data.phone);
-      if (normalizedPhone === null) return { status: "invalid-input", field: "phone", message: { code: "MSG01" } };
-
-      const current = input.id
-        ? employees.find((employee) => employee.id === input.id)
-        : undefined;
-      if (input.id && !current) {
-        return {
-          field: "fullName",
-          message: { code: "MSG01" },
-          status: "invalid-input",
-        };
-      }
-      if (!current && parsed.data.status !== "employed") {
-        return {
-          field: "status",
-          message: { code: "MSG01" },
-          status: "invalid-input",
-        };
-      }
-      if (current && input.recordVersion !== current.recordVersion) return conflict(current);
-      if (current && parsed.data.status !== current.status) {
-        return { status: "invalid-input", field: "status", message: { code: "MSG01" } };
-      }
-      if (parsed.data.workingZoneIds.some((id) => !zones.some((zone) => zone.id === id && zone.status === "in-use"))) {
-        return { status: "invalid-fields", code: "MSG01", fields: ["workingZoneIds"] };
-      }
-
-      const duplicate = employees.find(
-        (employee) =>
-          employee.id !== input.id &&
-          sameName(employee.fullName, parsed.data.fullName) &&
-          normalizeEmployeePhone(employee.phone) === normalizedPhone,
-      );
-      if (duplicate) {
-        return {
-          existingEmployeeId: duplicate.id,
-          message: {
-            code: "MSG03",
-            params: { object_name: "Hồ sơ nhân viên" },
-          },
-          status: "duplicate",
-        };
-      }
-
-      const selectedAccount = input.accountId
-        ? accounts.find((account) => account.id === input.accountId)
-        : undefined;
-      if (input.accountId && !selectedAccount) {
-        return {
-          field: "accountId",
-          message: { code: "MSG01" },
-          status: "invalid-input",
-        };
-      }
-
-      const employeeUsingAccount = input.accountId
-        ? employees.find(
-            (employee) =>
-              employee.id !== input.id && employee.account?.id === input.accountId,
-          )
-        : undefined;
-      if (employeeUsingAccount) {
-        return {
-          existingEmployeeId: employeeUsingAccount.id,
-          message: {
-            code: "MSG24",
-            params: { employee_name: employeeUsingAccount.fullName },
-          },
-          status: "account-already-linked",
-        };
-      }
-
-      const saved: EmployeeProfile = {
-        account: selectedAccount
-          ? cloneAccount(selectedAccount)
-          : current?.account ? cloneAccount(current.account) : null,
-        address: parsed.data.address.trim(),
-        area: parsed.data.area.trim(),
-        birthday: parsed.data.birthday,
-        fullName: parsed.data.fullName,
-        id: current?.id ?? `employee-${nextEmployeeNumber++}`,
-        notes: parsed.data.notes.trim(),
-        otherInformation: parsed.data.otherInformation.trim(),
-        phone: normalizedPhone,
-        recordVersion: allocateVersion(),
-        status: current ? parsed.data.status : "employed",
-        employmentEndDate: current?.employmentEndDate ?? null,
-        wardCommune: parsed.data.wardCommune.trim(),
-        workingZoneIds: [...parsed.data.workingZoneIds],
-        bankAccount: toEmployeeBankAccount(parsed.data.bankAccount),
-      };
 
       if (current) {
         employees = employees.map((employee) =>

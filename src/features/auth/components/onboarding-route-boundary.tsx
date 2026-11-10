@@ -1,3 +1,4 @@
+import { BootScreen } from "@/components/feedback/boot-screen";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -18,5 +19,5 @@ async function OnboardingAccess({ phase }: { phase: Phase }) {
 }
 
 export function OnboardingRouteBoundary({ phase }: { phase: Phase }) {
-  return <Suspense fallback={<p role="status">Đang kiểm tra phiên đăng nhập...</p>}><OnboardingAccess phase={phase} /></Suspense>;
+  return <Suspense fallback={<BootScreen message="Đang kiểm tra phiên đăng nhập..." />}><OnboardingAccess phase={phase} /></Suspense>;
 }

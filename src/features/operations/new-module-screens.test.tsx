@@ -6,6 +6,7 @@ vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mock
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType }, permissions: { functionPermissions: [] } }) }));
 import { PurchaseRequestsScreen, SalesProductsScreen, WorkforceScreen } from "./new-module-screens";
 import { ids } from "./__tests__/fixtures";
+import { backendRequest } from "./__tests__/purchase-request-fixture";
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
   Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } });
@@ -14,16 +15,20 @@ afterAll(() => { Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"
 beforeEach(() => { vi.resetAllMocks(); mocks.subjectType = "Trader"; });
 afterEach(cleanup);
 describe("new API read screens", () => {
-  it("uses only the Trader's own request feed and preserves status when manually reloading", async () => {
+  it("routes the Owner to the review feed with the backend status id, never the trader's personal endpoint", async () => {
+    mocks.subjectType = "CooperativeOwner";
     mocks.read.mockResolvedValue({ status: "success", data: { items: [], page: 1, pageSize: 20, total: 0 } });
     render(<PurchaseRequestsScreen />); await screen.findByText("Không có dữ liệu phù hợp.");
     const status = within(screen.getByRole("group",{name:"Trạng thái yêu cầu"})); fireEvent.click(status.getByRole("checkbox",{name:"Tất cả"})); fireEvent.click(status.getByRole("checkbox",{name:"Đã chấp nhận"}));
-    await waitFor(() => expect(mocks.read.mock.calls.at(-1)?.[1]).toMatchObject({ status: "ACCEPTED", page: "1" }));
-    await waitFor(() => expect((screen.getByRole("button", { name: "Tải lại yêu cầu mua" }) as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.click(screen.getByRole("button", { name: "Tải lại yêu cầu mua" }));
-    await waitFor(() => expect(mocks.read).toHaveBeenCalledTimes(3));
-    expect(mocks.read.mock.calls.every((args) => args[0] === "mine")).toBe(true);
-    expect((status.getByRole("checkbox",{name:"Đã chấp nhận"}) as HTMLInputElement).checked).toBe(true);
+    await waitFor(() => expect(mocks.read.mock.calls.at(-1)?.[1]).toMatchObject({ status: "3202", page: "1" }));
+    expect(mocks.read.mock.calls.every((args) => args[0] === "list")).toBe(true);
+  });
+  it("lists kg requests with customer, pickup date and response, then opens the detail read", async () => {
+    mocks.subjectType = "CooperativeOwner";
+    mocks.read.mockImplementation(async (action) => ({ status: "success", data: action === "detail" ? backendRequest() : { items: [backendRequest({ statusId: 3202, fulfilled: true, response: { acceptedKg: 100, pickupDate: "2026-11-13", payLaterAgreed: true, note: null, respondedAt: "2026-11-09T09:00:00+07:00" } })], page: 1, pageSize: 20, total: 1 } }));
+    render(<PurchaseRequestsScreen />); await screen.findByText("Thương lái An");
+    expect(screen.getByText("120,5 kg")).toBeTruthy(); expect(screen.getByText("12/11/2026")).toBeTruthy(); expect(screen.getByText(/Đã hoàn thành/)).toBeTruthy(); expect(screen.getByText("100 kg · lấy ngày 13/11/2026 · cho trả sau")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Mở yêu cầu" })); await waitFor(() => expect(mocks.read.mock.calls.some((args) => args[0] === "detail")).toBe(true));
   });
   it("offers all products only to Owner and renders product content as text", async () => {
     mocks.subjectType = "CooperativeOwner";
@@ -40,18 +45,6 @@ describe("new API read screens", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tải lại sản phẩm" })); await screen.findByText("Không có dữ liệu phù hợp.");
     expect((screen.getByLabelText("Tìm sản phẩm") as HTMLInputElement).value).toBe("hàu");
     expect(screen.queryByLabelText("Phạm vi sản phẩm")).toBeNull();
-  });
-  it("opens a Trader request detail through the personal endpoint and shows the accepted cage quantity", async () => {
-    const record = { id: ids.receipt, code: "YC-QA", productId: ids.item, productName: "Hàu QA", quantityUnit: "Cage", requestedCages: 5,
-      requestedPickupDate: "2026-10-31", note: "Ghi chú QA", status: "ACCEPTED", acceptedCages: 3, acceptedPickupDate: "2026-11-01", allowPayLater: true,
-      responseNote: "Đã đối chiếu", respondedAt: "2026-10-31T02:00:00+07:00", cancelledAt: null, cancellationReason: null, createdAt: "2026-10-31T01:00:00+07:00", customerName: "QA trader", rowVersion: "opaque" };
-    mocks.read.mockImplementation(async (action) => ({ status: "success", data: action === "mine-detail" ? record : { items: [record], page: 1, pageSize: 20, total: 1 } }));
-    render(<PurchaseRequestsScreen />); fireEvent.click(await screen.findByRole("button", { name: "Mở yêu cầu" }));
-    const details = await screen.findByRole("dialog", { name: "Yêu cầu YC-QA" });
-    expect(mocks.read.mock.calls.at(-1)?.slice(0, 2)).toEqual(["mine-detail", { id: ids.receipt }]);
-    expect(within(details).getByText("Đã đối chiếu")).toBeTruthy(); expect(within(details).getByText("3")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
   it("requires a selected workforce day and renders absent attendance truthfully", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: [{ id: ids.receipt, employeeId: ids.item, employeeName: "QA nhân viên", zoneId: ids.zone, raftId: null, raftCode: null, jobTypeId: null, job: "Chăm sóc", date: "2026-10-31", checkedInAt: null, checkedOutAt: null }] });

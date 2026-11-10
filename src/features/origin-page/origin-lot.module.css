@@ -1,0 +1,53 @@
+/* Thẻ lô, hành trình và ảnh. Trạng thái luôn có biểu tượng + chữ, không chỉ dựa vào màu. */
+.card { --ink: #10243a; --ink-soft: #46596a; --line: #d9d4c6; --teal: #086f78; --teal-deep: #05555c; --teal-soft: #e3f3f2; --amber-ink: #7a4300; --amber-soft: #fff4dc; --amber-line: #e2b25a;
+  background: #fff; border: 1px solid var(--line); border-radius: 1rem; padding: 1.125rem; display: grid; gap: 1rem; color: var(--ink); min-width: 0; }
+.cardWithdrawn { background: var(--amber-soft); border-color: var(--amber-line); }
+.cardHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem .75rem; }
+.lotTitle { margin: 0; font-size: 1.25rem; font-weight: 800; overflow-wrap: anywhere; }
+.badge { display: inline-flex; align-items: center; gap: .375rem; padding: .3125rem .75rem; border-radius: 999px; border: 1px solid; font-size: .875rem; font-weight: 700; white-space: nowrap; }
+.badgeValid { background: var(--teal-soft); border-color: #8cc9c6; color: var(--teal-deep); }
+.badgeWithdrawn { background: #fff; border-color: var(--amber-line); color: var(--amber-ink); }
+.products { margin: 0; }
+.withdrawnNote { margin: 0; padding: .875rem 1rem; border: 1px dashed var(--amber-line); border-radius: .75rem; background: #fff; color: var(--amber-ink); overflow-wrap: anywhere; }
+.withdrawnDate { margin: 0; color: var(--amber-ink); font-weight: 600; }
+
+.cardBody { display: grid; gap: 1rem; }
+.cardBody > * { min-width: 0; }
+.facts { margin: 0; display: grid; gap: .625rem; }
+.facts > div { display: grid; grid-template-columns: minmax(6.5rem, 9rem) 1fr; gap: .5rem; align-items: baseline; }
+.facts dt { color: var(--ink-soft); font-size: .9375rem; }
+.facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.plainList { list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem; font-weight: 500; }
+
+.mapCard { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: .25rem .75rem; padding: .875rem 1rem; border: 1px solid #8cc9c6; background: var(--teal-soft); border-radius: .875rem; color: var(--teal-deep); text-decoration: none; min-height: 2.75rem; }
+.mapCard:hover { background: #d3ecea; }
+.mapPin { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: #fff; }
+.mapText { display: grid; font-size: .875rem; }
+.mapText strong { font-size: .9375rem; }
+.mapAction { grid-column: 2; display: inline-flex; align-items: center; gap: .375rem; font-weight: 700; font-size: .9375rem; }
+
+.timeline { list-style: none; margin: .5rem 0 0; padding: 0 0 0 1.25rem; position: relative; display: grid; gap: .875rem; }
+.timeline::before { content: ""; position: absolute; left: .4375rem; top: .5rem; bottom: .5rem; width: 2px; background: #b7d8d6; }
+.step { position: relative; display: grid; grid-template-columns: auto 1fr; column-gap: .75rem; align-items: baseline; }
+.stepDot { position: absolute; left: -1.25rem; top: .5rem; width: .9375rem; height: .9375rem; border-radius: 50%; background: #fff; border: 3px solid var(--teal); }
+.stepDate { font-weight: 700; font-variant-numeric: tabular-nums; }
+.stepLabel { font-weight: 600; color: var(--teal-deep); }
+.stepDetail { grid-column: 2; color: var(--ink-soft); font-size: .9375rem; overflow-wrap: anywhere; }
+
+.gallery { display: grid; gap: .5rem; }
+.galleryTitle { margin: 0; font-size: 1rem; font-weight: 700; }
+.photoGrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.photoItem { min-width: 0; }
+.photoLink { position: relative; display: block; border-radius: .75rem; overflow: hidden; background: #e6e2d6; aspect-ratio: 4 / 3; }
+.photoLink img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
+.photoLink:hover img { transform: scale(1.04); }
+.photoHint { position: absolute; right: .5rem; bottom: .5rem; display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: rgb(3 26 32 / .78); color: #fff; }
+
+@media (min-width: 40rem) { .photoGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 48rem) {
+  .card { padding: 1.5rem; }
+  .cardBody { grid-template-columns: 1fr minmax(15rem, 20rem); align-items: start; }
+  .photoGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mapCard { grid-template-columns: auto 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .photoLink img { transition: none; } .photoLink:hover img { transform: none; } }

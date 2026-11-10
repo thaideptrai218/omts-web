@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordForm } from "@/features/account-security/components/change-password-form";
 import type {
@@ -8,59 +8,32 @@ import type {
   CurrentPasswordChangeResult,
 } from "@/features/account-security/domain/change-password";
 import type {
-  CompleteStaffOnboardingInput,
-  CompleteStaffOnboardingResult,
   OnboardingContactChannel,
-  StartStaffContactVerificationResult,
   StaffOnboardingRequired,
 } from "@/features/auth/domain/auth-types";
-import { grantsApplicationAccess } from "@/features/auth/domain/login-result";
 import { completeStaffPasswordChange } from "@/features/auth/domain/staff-onboarding";
+import { StaffOnboardingProgress } from "@/features/auth/components/staff-onboarding-progress";
+import {
+  useStaffContactVerification,
+  type StaffContactVerificationDeps,
+} from "@/features/auth/components/use-staff-contact-verification";
 import { VerificationForm } from "@/features/verification/components/verification-form";
-import type {
-  VerificationChallenge,
-  VerificationToken,
-} from "@/features/verification/domain/verification-types";
-import type { VerificationService } from "@/features/verification/services/verification-service";
-import { formatMessage, type AppMessage } from "@/shared/messages/message-catalog";
+import type { AppMessage } from "@/shared/messages/message-catalog";
 
-type StaffOnboardingShellProps = Readonly<{
+/** Contact-verification callbacks come from `StaffContactVerificationDeps`; the rest drive step 1. */
+type StaffOnboardingShellProps = StaffContactVerificationDeps & Readonly<{
   changeTemporaryPassword(
     input: CurrentPasswordChangeInput,
   ): Promise<CurrentPasswordChangeResult>;
-  completeStaffOnboarding(
-    input: CompleteStaffOnboardingInput,
-  ): Promise<CompleteStaffOnboardingResult>;
   gate: StaffOnboardingRequired;
   identifier: string;
   onGateChanged(gate: StaffOnboardingRequired): void;
-  onOnboardingCompleted(): void;
   onPasswordChanged(message: AppMessage & { code: "MSG18" }): void;
-  onSessionExpired(message: AppMessage & { code: "MSG19" }): void;
   onUseAnotherAccount(): void;
-  startContactVerification(
-    channel: OnboardingContactChannel,
-  ): Promise<StartStaffContactVerificationResult>;
-  verificationService: VerificationService;
 }>;
 
 function getChannelLabel(channel: OnboardingContactChannel) {
   return channel === "email" ? "email" : "số điện thoại";
-}
-
-function StepMarker({ completed, number }: Readonly<{ completed: boolean; number: number }>) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`flex size-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold transition-colors ${
-        completed
-          ? "border-success bg-success text-white"
-          : "border-primary bg-primary-soft text-primary"
-      }`}
-    >
-      {completed ? "✓" : number}
-    </span>
-  );
 }
 
 export function StaffOnboardingShell({
@@ -77,78 +50,27 @@ export function StaffOnboardingShell({
   verificationService,
 }: StaffOnboardingShellProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const [challenge, setChallenge] = useState<VerificationChallenge>();
-  const [contactError, setContactError] = useState<string>();
-  const [isChangingChannel, setIsChangingChannel] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const [startingChannel, setStartingChannel] =
-    useState<OnboardingContactChannel>();
-  const passwordChanged = gate.checklist.passwordChanged;
+  const {
+    challenge,
+    contactError,
+    handleChangeChannel,
+    handleStartContactVerification,
+    handleVerified,
+    isChangingChannel,
+    isCompleting,
+    setChallenge,
+    startingChannel,
+  } = useStaffContactVerification({
+    completeStaffOnboarding,
+    onOnboardingCompleted,
+    onSessionExpired,
+    startContactVerification,
+    verificationService,
+  });
 
   useEffect(() => {
     headingRef.current?.focus();
   }, [gate.nextStep]);
-
-  async function handleStartContactVerification(
-    channel: OnboardingContactChannel,
-  ) {
-    setContactError(undefined);
-    setStartingChannel(channel);
-
-    try {
-      const result = await startContactVerification(channel);
-      if (result.status === "rejected") {
-        if (result.message.code === "MSG19") {
-          onSessionExpired({ code: "MSG19" });
-        }
-        else setContactError(formatMessage(result.message));
-        return;
-      }
-
-      setChallenge(result.challenge);
-    } catch {
-      setContactError(formatMessage({ code: "MSG04" }));
-    } finally {
-      setStartingChannel(undefined);
-    }
-  }
-
-  async function handleVerified(token: VerificationToken) {
-    setContactError(undefined);
-    setIsCompleting(true);
-
-    try {
-      const result = await completeStaffOnboarding({ verificationToken: token });
-      if (grantsApplicationAccess(result)) {
-        onOnboardingCompleted();
-        return;
-      }
-
-      if (result.message.code === "MSG19") {
-        onSessionExpired({ code: "MSG19" });
-      }
-      else setContactError(formatMessage(result.message));
-    } catch {
-      setContactError(formatMessage({ code: "MSG04" }));
-    } finally {
-      setIsCompleting(false);
-    }
-  }
-
-  async function handleChangeChannel() {
-    if (!challenge) return;
-
-    setContactError(undefined);
-    setIsChangingChannel(true);
-    try {
-      await verificationService.cancel(challenge.requestId);
-      setChallenge(undefined);
-    } catch {
-      setContactError(formatMessage({ code: "MSG04" }));
-    } finally {
-      setIsChangingChannel(false);
-    }
-  }
 
   return (
     <section aria-labelledby="staff-onboarding-title" className="mt-7">
@@ -174,29 +96,7 @@ export function StaffOnboardingShell({
         <p className="mt-1 break-all font-semibold text-text">{identifier}</p>
       </div>
 
-      <ol aria-label="Tiến trình thiết lập tài khoản" className="mt-5 grid gap-3 sm:grid-cols-2">
-        <li className="flex items-start gap-3 rounded-control border border-border bg-surface p-4">
-          <StepMarker completed={passwordChanged} number={1} />
-          <div>
-            <p className="font-semibold text-text">Đặt mật khẩu mới</p>
-            <p className="mt-1 text-sm leading-5 text-text-muted">
-              {passwordChanged ? "Đã hoàn tất" : "Đang thực hiện"}
-            </p>
-          </div>
-        </li>
-        <li
-          aria-current={passwordChanged ? "step" : undefined}
-          className="flex items-start gap-3 rounded-control border border-border bg-surface p-4"
-        >
-          <StepMarker completed={gate.checklist.contactVerified} number={2} />
-          <div>
-            <p className="font-semibold text-text">Xác minh liên hệ</p>
-            <p className="mt-1 text-sm leading-5 text-text-muted">
-              {gate.checklist.contactVerified ? "Đã xác minh" : passwordChanged ? "Sẵn sàng thực hiện" : "Mở sau bước 1"}
-            </p>
-          </div>
-        </li>
-      </ol>
+      <StaffOnboardingProgress checklist={gate.checklist} />
 
       <div className="mt-5 rounded-card border border-border bg-surface p-5 shadow-sm sm:p-6">
         {gate.nextStep === "change-temporary-password" ? (

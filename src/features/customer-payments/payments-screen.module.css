@@ -1,0 +1,46 @@
+/* Màn Thanh toán của khách: hai cột ghi nhận; danh sách chờ xác nhận. Dùng token màu chung. */
+.tabs { display: flex; gap: .25rem; margin: 1.25rem 0; border-bottom: 1px solid var(--omts-color-border); }
+.tabs button { min-height: 2.75rem; padding: 0 1.125rem; font-weight: 600; color: var(--omts-color-text-muted); border-bottom: 3px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; }
+.tabs button[aria-current="page"] { color: var(--omts-color-primary); border-bottom-color: var(--omts-color-primary); }
+.twoCol { display: grid; gap: 1.25rem; align-items: start; }
+.card { background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); padding: 1.25rem; box-shadow: var(--omts-shadow-card); min-width: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.h2 { font-size: 1rem; font-weight: 700; margin: 0 0 .875rem; }
+.h3 { font-size: .875rem; font-weight: 700; margin: 1.25rem 0 .5rem; }
+.muted, .hint { color: var(--omts-color-text-muted); font-size: .8125rem; }
+.hint { margin: .5rem 0; }
+.empty { color: var(--omts-color-text-muted); padding: 2rem 0; text-align: center; }
+.error { color: var(--omts-color-danger); font-size: .875rem; }
+.ok { margin: .75rem 0; padding: .625rem .875rem; border-radius: var(--omts-radius-control); background: var(--omts-color-primary-soft); color: var(--omts-color-primary); font-weight: 600; font-size: .875rem; }
+.num { font-variant-numeric: tabular-nums; }
+.right { text-align: right; }
+.warn { color: var(--omts-color-warning); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0 0; }
+.stats > div { padding: .75rem; background: var(--omts-color-surface-subtle); border-radius: var(--omts-radius-control); }
+.stats dt { font-size: .75rem; color: var(--omts-color-text-muted); }
+.stats dd { margin: .125rem 0 0; font-size: 1.0625rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.invoices { list-style: none; margin: 0; padding: 0; max-height: 18rem; overflow-y: auto; }
+.invoices li { display: flex; justify-content: space-between; gap: 1rem; padding: .625rem 0; border-bottom: 1px solid var(--omts-color-border); font-size: .875rem; }
+.invoices small, .table small { display: block; color: var(--omts-color-text-muted); font-size: .75rem; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem; padding: .25rem; background: var(--omts-color-surface-subtle); border-radius: var(--omts-radius-control); margin-bottom: 1rem; }
+.seg button { min-height: 2.5rem; border-radius: .3125rem; font-size: .875rem; font-weight: 600; color: var(--omts-color-text-muted); transition: background-color .2s, color .2s; }
+.seg button[aria-pressed="true"] { background: var(--omts-color-surface); color: var(--omts-color-primary); box-shadow: var(--omts-shadow-card); }
+.grid { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.field { display: block; margin-top: .75rem; }
+.grid .field { margin-top: 0; }
+.field > span { display: block; font-size: .75rem; font-weight: 500; color: var(--omts-color-text-muted); }
+.field input, .field select, .field textarea { margin-top: .375rem; }
+.tableWrap { overflow-x: auto; margin-top: .5rem; }
+.table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.table th { text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--omts-color-text-muted); padding: .625rem .75rem; border-bottom: 1px solid var(--omts-color-border-strong); }
+.table th.right { text-align: right; }
+.table td { padding: .75rem; border-bottom: 1px solid var(--omts-color-border); vertical-align: top; }
+.table tbody tr:hover { background: var(--omts-color-primary-soft); }
+.check { width: 2.75rem; text-align: center !important; }
+.check input { width: 1.125rem; height: 1.125rem; accent-color: var(--omts-color-primary); }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+@media (min-width: 1024px) { .twoCol { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .tabs button, .seg button { transition: none; } }
+
+/* Nút hành động chính cách ô nhập phía trên một khoảng rõ ràng. */
+.card > button:last-child { margin-top: 1rem; }

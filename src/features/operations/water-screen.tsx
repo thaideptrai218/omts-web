@@ -1,236 +1,194 @@
 "use client";
-import { OpenableTableRow } from "@/components/ui/openable-table-row";
-import { EvidenceGallery } from "@/components/ui/evidence-gallery";
-import { FilterChecks } from "@/components/ui/filter-checks";
+import { WaterZoneOverview } from "@/features/water-overview/water-zone-overview";
 import { readSelectionPages } from "./selection-pages";
 import { selectionQueries } from "@/shared/presentation/filter-selection";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
 import styles from "./water-screen.module.css";
-import { formatVietnameseDate } from "@/shared/format/date-only";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { z } from "zod";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
-import { createOperationsRepository, type Query } from "./repository";
+import type { Query } from "./repository";
 import { loadOptions } from "./lookups";
-import { useScopedZones } from "@/features/api-workspace/selected-zones";
-import { DataTable, ErrorNotice, Field, Note, OperationHeading, Paging, Select, Skeleton, businessTime, displayTime, statusLabel, toApiTime, useMutation, useRemote } from "./ui";
+import { ErrorNotice, OperationHeading, useMutation, useRemote } from "./ui";
+import { WaterChartSection } from "./water-chart-section";
+import { WaterHistorySection } from "./water-history-section";
+import { MeasurementEditor } from "./water-measurement-editor";
+import {
+  waterRepository as repository,
+  type WaterChartData,
+  type WaterRecognition,
+} from "./water-measurement-shared";
+import { NewMeasurement } from "./water-new-measurement-dialog";
+import { ThresholdDialog } from "./water-threshold-dialog";
+import { WaterZoneFilters } from "./water-zone-filters";
 
-const repository = createOperationsRepository("water");
+// Re-exported so existing imports from "./water-screen" keep working.
+export { MeasurementEditor } from "./water-measurement-editor";
+export { NewMeasurement } from "./water-new-measurement-dialog";
+
 const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
-type Recognition = z.infer<typeof c.recognitionSchema>["ocr"];
-type Chart = z.infer<typeof c.waterChartSchema>;
-type ZoneThresholds = z.infer<typeof c.zoneThresholdsSchema>;
+
+/** The API expects an empty status for "all"; the UI keeps "All" as its own sentinel. */
+function toStatusSelection(status: string) {
+  return { status: status === "All" ? "" : status };
+}
 
 export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } = {}) {
-  const context = useApiWorkspace(), zones = useRemote(loadZones);
-  const [zoneChoice, setZoneId] = useState(initialZoneId), [filters, setFilters] = useState({ from: "", to: "", status: "Confirmed" }), [page, setPage] = useState(1), [groupBy, setGroupBy] = useState("month");
-  const [selected, setSelected] = useState<c.WaterMeasurement | null>(), [serial, setSerial] = useState(0), [ocr, setOcr] = useState<Recognition>(), [thresholdsOpen, setThresholdsOpen] = useState(false), [notice, setNotice] = useState<string>();
-  const [fullDetail,setFullDetail]=useState(false),[pageSize,setPageSize]=useState(20);
-  const { zones: availableZones, zoneId } = useScopedZones(zones.data?.filter((row) => operationAllowed("water", context.identity, context.permissions.functionPermissions, "View", row.id)) ?? [], zoneChoice, initialZoneId || undefined);
-  const query = useMemo<Query>(() => ({ ...filters, zoneId, page: String(page), pageSize: String(pageSize) }), [filters, zoneId, page, pageSize]);
-  const history = useRemote(useMemo(() => (signal: AbortSignal) => zoneId ? readSelectionPages((params,signal)=>repository.read("list",{...params,status:params.status??"All"},c.waterHistorySchema,signal),query,{status:filters.status==="All"?"":filters.status},signal,(a,b)=>String(b.measuredAt).localeCompare(String(a.measuredAt)))
+  const context = useApiWorkspace();
+  const zones = useRemote(loadZones);
+  const [zoneChoice, setZoneId] = useState(initialZoneId);
+  const permissions = context.permissions.functionPermissions;
+  // The header zone picker narrows the zones offered and may pick the zone itself.
+  const { zones: availableZones, zoneId } = useScopedZones(zones.data?.filter((row) => operationAllowed("water", context.identity, permissions, "View", row.id)) ?? [], zoneChoice, initialZoneId || undefined);
+  const [filters, setFilters] = useState({ from: "", to: "", status: "Confirmed" });
+  const [page, setPage] = useState(1);
+  const [groupBy, setGroupBy] = useState("month");
+  // undefined = nothing selected; null = creating a new measurement; record = selected measurement.
+  const [selected, setSelected] = useState<c.WaterMeasurement | null>();
+  const [serial, setSerial] = useState(0);
+  const [ocr, setOcr] = useState<WaterRecognition>();
+  const [thresholdsOpen, setThresholdsOpen] = useState(false);
+  const [notice, setNotice] = useState<string>();
+  const [fullDetail, setFullDetail] = useState(false);
+  const [pageSize, setPageSize] = useState(20);
+  const query = useMemo<Query>(
+    () => ({ ...filters, zoneId, page: String(page), pageSize: String(pageSize) }),
+    [filters, zoneId, page, pageSize],
+  );
+  const history = useRemote(useMemo(() => (signal: AbortSignal) => zoneId
+    ? readSelectionPages(
+      (params, signal) => repository.read("list", { ...params, status: params.status ?? "All" }, c.waterHistorySchema, signal),
+      query,
+      toStatusSelection(filters.status),
+      signal,
+      (a, b) => String(b.measuredAt).localeCompare(String(a.measuredAt)),
+    )
     : Promise.resolve({ status: "success" as const, data: undefined as c.WaterHistory | undefined }), [query, zoneId, filters.status]));
-  const chart = useRemote(useMemo(() => (signal: AbortSignal) => zoneId ? repository.read("chart", { zoneId, from: filters.from, to: filters.to, groupBy }, c.waterChartSchema, signal)
-    : Promise.resolve({ status: "success" as const, data: undefined as Chart | undefined }), [zoneId, filters.from, filters.to, groupBy]));
+  const chart = useRemote(useMemo(() => (signal: AbortSignal) => zoneId
+    ? repository.read("chart", { zoneId, from: filters.from, to: filters.to, groupBy }, c.waterChartSchema, signal)
+    : Promise.resolve({ status: "success" as const, data: undefined as WaterChartData | undefined }), [zoneId, filters.from, filters.to, groupBy]));
   const mutation = useMutation();
   const currentZone = availableZones.find((row) => row.id === zoneId);
+  const canExport = zoneId && operationAllowed("water", context.identity, permissions, "Export", zoneId);
 
-  async function open(id: string) { const result = await mutation.run(() => repository.read("detail", { id }, c.waterSchema), true); if (result) { setSelected(result); setOcr(undefined); setSerial((value) => value + 1); } }
-  function saved(record: c.WaterMeasurement, recognized?: Recognition) { setSelected(record); setOcr(recognized); setSerial((value) => value + 1); history.reload(); chart.reload(); setNotice("Đã lưu phép đo."); }
-  return <section className={styles.page}><OperationHeading title="Theo dõi chất lượng nước" description="Xem số đo, ngưỡng an toàn và cảnh báo. Ghi nhận phép đo trên ứng dụng điện thoại." icon="waves"><div className="flex flex-wrap gap-2">
-
-    <Button className="w-auto" variant="secondary" disabled={!zoneId || mutation.pending} onClick={() => setThresholdsOpen(true)}>Ngưỡng nước</Button>
-    {zoneId && operationAllowed("water", context.identity, context.permissions.functionPermissions, "Export", zoneId) && <Button className="w-auto" variant="secondary" disabled={mutation.pending||filters.status==="-"} onClick={() => void mutation.run(() => repository.downloadMany(selectionQueries(query,{status:filters.status==="All"?"":filters.status}).map(params=>({...params,status:params.status??"All"}))), true)}>Xuất Excel</Button>}
-  </div></OperationHeading>
-    <FilterWorkspace label="Vùng và thời gian" filters={<><Select label="Vùng nuôi *" value={zoneId} onChange={(e) => { setZoneId(e.target.value); setPage(1); setSelected(undefined); setFullDetail(false); }}><option value="">Chọn vùng được cấp</option>{availableZones.map((row) => <option key={row.id} value={row.id}>{String(row.name)}{row.statusId === 102 ? " (ngừng dùng)" : ""}</option>)}</Select>
-      <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => { setFilters((value) => ({ ...value, from: e.target.value })); setPage(1); setSelected(undefined); }} /><Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => { setFilters((value) => ({ ...value, to: e.target.value })); setPage(1); setSelected(undefined); }} />
-      <FilterChecks label="Trạng thái" value={filters.status==="All"?"":filters.status} options={[["Confirmed","Đã xác nhận"],["Draft","Nháp"],["Corrected","Đã hiệu chỉnh"],["Voided","Đã hủy"]]} onChange={value=>{setFilters(current=>({...current,status:value}));setPage(1);setSelected(undefined);}}/>
-
-    </>}>
-    <ErrorNotice error={zones.error || history.error || mutation.error} />{notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
-    {zones.error && <Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending || zones.loading} onClick={zones.reload}>Tải lại danh sách vùng</Button>}
-    {!zoneId ? <div className={styles.empty}><h2>Chọn vùng nuôi để theo dõi</h2><p>Biểu đồ, cảnh báo và lịch sử phép đo sẽ xuất hiện tại đây.</p></div> : <>
-      <div className={styles.zoneHeading}><div><span>VÙNG ĐANG THEO DÕI</span><h2>{String(currentZone?.name ?? "Vùng nuôi")}</h2><p>Mặc định: lịch sử 3 tháng gần đây, biểu đồ 12 tháng · giờ Việt Nam</p></div><Button variant="secondary" disabled={history.loading} onClick={()=>{history.reload();chart.reload();}}>Tải lại dữ liệu</Button></div>
-      <section aria-labelledby="water-chart-heading" className="mt-7 border-t border-border pt-4">
-      <div className="mb-2 flex flex-wrap items-end justify-between gap-3"><div><h2 id="water-chart-heading" className="text-base font-semibold tracking-tight">Xu hướng chất lượng nước</h2><p className="mt-1 text-xs text-text-muted">Chỉ số đã xác nhận, so với ngưỡng hiện hành</p></div><div className="w-full sm:w-44"><Select label="Khoảng gộp" value={groupBy} onChange={(e) => setGroupBy(e.target.value)}><option value="month">Theo tháng</option><option value="day">Theo ngày</option></Select></div></div>
-      <ErrorNotice error={chart.error} />{chart.loading ? <Skeleton /> : chart.data && <WaterChart data={chart.data} />}
-      </section>
-      <section aria-labelledby="water-history-heading" className="mt-5 border-t border-border pt-4">
-        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"><h2 id="water-history-heading" className="text-base font-semibold tracking-tight">Lịch sử phép đo</h2>{history.data && <p className="text-xs text-text-muted">{history.data.total} bản ghi</p>}</div>
-        {history.loading?<Skeleton/>:history.data&&<><DataTable headings={["Thời điểm / điểm đo","pH","Độ mặn (‰)","Trạng thái","Cảnh báo","Người đo","Chi tiết"]} empty={!history.data.items.length}>{history.data.items.map(row=><Fragment key={row.id}><OpenableTableRow data-water-selected={selected?.id===row.id} disabled={mutation.pending} onOpen={()=>{setFullDetail(false);if(selected?.id===row.id)setSelected(undefined);else void open(row.id);}}><td><strong className="whitespace-nowrap">{displayTime(row.measuredAt)}</strong><span className={styles.point}>{row.measurementPoint??"Chưa ghi điểm đo"}{row.hasPhoto?" · Có ảnh":""}</span></td><td className={styles.number}>{row.ph?.toLocaleString("vi-VN")??"—"}</td><td className={styles.number}>{row.salinity?.toLocaleString("vi-VN")??"—"}</td><td><span className={styles.status}>{statusLabel(row.statusCode)}</span><span className={styles.point}>Phiên bản {row.recordVersion}</span></td><td><span className={styles.alert} data-warning={!!row.violatedValues}>{statusLabel(row.alertState)}</span>{row.violatedValues&&<p className={styles.warning}>{row.violatedValues}</p>}</td><td>{row.measuredBy?.name??"—"}</td><td><button className={styles.textButton} type="button" aria-expanded={selected?.id===row.id} aria-controls={selected?.id===row.id?"water-selected-detail":undefined} disabled={mutation.pending} onClick={()=>{setFullDetail(false);if(selected?.id===row.id)setSelected(undefined);else void open(row.id);}}>{selected?.id===row.id?"Thu gọn":"Xem phép đo"}</button></td></OpenableTableRow>{selected?.id===row.id&&<tr className={styles.detailRow}><td colSpan={7}><WaterReadSummary record={selected} onFullDetail={()=>setFullDetail(true)}/></td></tr>}</Fragment>)}</DataTable><div className={styles.paging}><Select label="Số phép đo mỗi trang" value={String(pageSize)} onChange={e=>{setPageSize(Number(e.target.value));setPage(1);setSelected(undefined);}}>{[10,20,50].map(size=><option key={size} value={size}>{size} phép đo</option>)}</Select><Paging page={page} total={history.data.total} pageSize={pageSize} disabled={mutation.pending} onChange={next=>{setPage(next);setSelected(undefined);}}/></div></>}
-
-      </section>
-
-    </>}
-    </FilterWorkspace>{selected !== undefined && (selected ? fullDetail && <MeasurementEditor readOnly key={`${selected.id}:${serial}`} record={selected} ocr={ocr} onClose={() => setFullDetail(false)} onSaved={saved} onOpen={open} />
-      : <NewMeasurement key={`new:${serial}`} zoneId={zoneId} zoneName={String(currentZone?.name ?? "")} onClose={() => setSelected(undefined)} onSaved={saved} />)}
-    {thresholdsOpen && <ThresholdDialog zoneId={zoneId} owner={context.identity.subjectType === "CooperativeOwner"} onClose={() => setThresholdsOpen(false)} onSaved={() => { chart.reload(); setThresholdsOpen(false); setNotice("Đã lưu ngưỡng nước. Ngưỡng mới áp dụng cho các phép đo xác nhận sau đó."); }} />}
-  </section>;
-}
-
-function WaterReadSummary({record,onFullDetail}:{record:c.WaterMeasurement;onFullDetail():void}){
- return <section id="water-selected-detail" className={styles.readDetail} aria-label="Chi tiết phép đo đang chọn"><div className={styles.readHeading}><div><h3>Phép đo · {displayTime(record.measuredAt)}</h3><p>{record.zoneName} · {record.measurementPoint??"Chưa ghi điểm đo"}</p></div><Button variant="secondary" className="w-auto" onClick={onFullDetail}>Xem đầy đủ & lịch sử</Button></div>{record.thresholdExceeded&&<p className={styles.warning}>Vượt ngưỡng: {record.violatedValues??"Kiểm tra các giá trị và ngưỡng đã áp dụng."}</p>}<div className={styles.evidenceGrid}><EvidenceGallery title="Ảnh máy đo" images={record.photoUrl?[{id:record.id,url:record.photoUrl,label:`Ảnh phép đo ${displayTime(record.measuredAt)}`}]:[]}/><div><h4>Giá trị và ngưỡng của phép đo</h4><table className={styles.thresholdTable}><thead><tr><th>Chỉ số</th><th>Đã ghi</th><th>Ngưỡng đã dùng</th></tr></thead><tbody><tr><th>pH</th><td>{record.ph?.toLocaleString("vi-VN")??"—"}</td><td>{record.thresholdsUsed?.phMin??"—"} – {record.thresholdsUsed?.phMax??"—"}</td></tr><tr><th>Độ mặn (‰)</th><td>{record.salinity?.toLocaleString("vi-VN")??"—"}</td><td>{record.thresholdsUsed?.salinityMin??"—"} – {record.thresholdsUsed?.salinityMax??"—"}</td></tr></tbody></table><dl className={styles.recordMeta}><div><dt>Người đo</dt><dd>{record.measuredBy?.name??"Chưa có thông tin"}</dd></div><div><dt>Nguồn ghi nhận</dt><dd>{record.inputSource==="Ocr"?"Nhận dạng từ ảnh":"Nhập tay"}</dd></div><div><dt>Trạng thái</dt><dd>{statusLabel(record.statusCode)}</dd></div>{record.correctionReason&&<div><dt>Lý do hiệu chỉnh</dt><dd>{record.correctionReason}</dd></div>}{record.voidReason&&<div><dt>Lý do hủy</dt><dd>{record.voidReason}</dd></div>}</dl></div></div></section>;
-}
-
-export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: { zoneId: string; zoneName: string; onClose(): void; onSaved(record: c.WaterMeasurement, ocr?: Recognition): void }) {
-  const confirmation = useActionDialog();
-  const [initialValues] = useState(() => ({ measuredAt: businessTime(), ph: "", salinity: "" }));
-  const [mode, setMode] = useState("manual"), [photo, setPhoto] = useState<File>(), [values, setValues] = useState(initialValues);
-  const [clientOperationId] = useState(() => crypto.randomUUID()), [review, setReview] = useState<c.WaterHistory>();
-  const attempt = useRef<{ mode: string; photo?: File; payload: z.infer<typeof c.recordWaterSchema> }>(undefined);
-  const mutation = useMutation();
-  const dirty = !!photo || mode !== "manual" || JSON.stringify(values) !== JSON.stringify(initialValues);
-  const close = async () => { if (!mutation.busy() && (!dirty || await confirmation.confirm("Bỏ phép đo chưa xác nhận? Nếu lần gửi trước chưa rõ kết quả, hãy kiểm tra lịch sử nháp trước khi tạo phép đo mới."))) onClose(); };
-  async function save(confirm: boolean) {
-    if (!mutation.uncertain) attempt.current = { mode, photo, payload: { clientOperationId, measuredAt: toApiTime(values.measuredAt), ph: values.ph === "" ? null : Number(values.ph), salinity: values.salinity === "" ? null : Number(values.salinity), confirm } };
-    const current = attempt.current;
-    if (!current) return;
-    if (current.mode === "ocr" && current.photo) {
-      const result = await mutation.run(() => repository.upload("recognize", [current.photo!], { clientOperationId }, c.recognitionSchema, undefined, zoneId));
-      if (result) onSaved(result.measurement, result.ocr);
-    } else {
-      const result = await mutation.run(() => current.photo ? repository.upload("record-photo", [current.photo], current.payload, c.waterSchema, undefined, zoneId)
-        : repository.write("record", current.payload, c.waterSchema, undefined, zoneId));
-      if (result) onSaved(result);
+  async function open(id: string) {
+    const result = await mutation.run(() => repository.read("detail", { id }, c.waterSchema), true);
+    if (result) {
+      setSelected(result);
+      setOcr(undefined);
+      setSerial((value) => value + 1);
     }
   }
-  return <Dialog open title={`Ghi phép đo · ${zoneName}`} size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
-    {confirmation.dialog}
-    <ErrorNotice error={mutation.error} /><form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void save(((e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value === "confirm"); }}>
-      <fieldset disabled={mutation.pending || mutation.uncertain} className="space-y-4"><Select label="Cách ghi" value={mode} onChange={(e) => setMode(e.target.value)}><option value="manual">Nhập tay</option><option value="ocr">Nhận dạng từ ảnh</option></Select>
-        <Field label={mode === "ocr" ? "Ảnh máy đo * (JPEG/PNG, tối đa 10 MB)" : "Ảnh máy đo (không bắt buộc)"} type="file" required={mode === "ocr"} accept="image/jpeg,image/png" onChange={(e) => setPhoto(e.target.files?.[0])} />
-        {mode === "manual" && <><Field label="Thời điểm đo (giờ Việt Nam)" type="datetime-local" value={values.measuredAt} onChange={(e) => setValues((current) => ({ ...current, measuredAt: e.target.value }))} /><Field label="pH (0–14)" type="number" min="0" max="14" step="0.01" value={values.ph} onChange={(e) => setValues((current) => ({ ...current, ph: e.target.value }))} /><Field label="Độ mặn (0–100 ‰)" type="number" min="0" max="100" step="0.01" value={values.salinity} onChange={(e) => setValues((current) => ({ ...current, salinity: e.target.value }))} /></>}
-      </fieldset>
-      <div className="flex flex-wrap gap-3">{mutation.uncertain ? <Button className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked}>Xác nhận lại lượt đang chờ</Button> : mode === "ocr" ? <Button className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked || !photo}>Nhận dạng và lưu nháp</Button> : <>
-        <Button className="w-auto" type="submit" value="draft" isPending={mutation.pending} disabled={mutation.blocked}>Lưu nháp</Button><Button className="w-auto" type="submit" value="confirm" disabled={mutation.pending || mutation.blocked || !values.measuredAt || values.ph === "" || values.salinity === ""}>Lưu và xác nhận</Button></>}</div>
-    </form>
-    {mutation.blocked && <div className="my-4 rounded-control border border-border p-4"><p>Chưa gửi lại phép đo. Bản nháp trên màn hình vẫn được giữ.</p><Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => { const result = await mutation.run(() => repository.read("list", { zoneId, status: "All", page: "1", pageSize: "100" }, c.waterHistorySchema), true); if (result) setReview(result); }}>Tải lịch sử để đối chiếu</Button>
-      {review && <><DataTable headings={["Thời gian", "pH", "Độ mặn", "Trạng thái"]}>{review.items.map((row) => <tr key={row.id}><td>{displayTime(row.measuredAt)}</td><td>{row.ph ?? "—"}</td><td>{row.salinity ?? "—"}</td><td>{statusLabel(row.statusCode)}</td></tr>)}</DataTable><p>Đang xem {review.items.length}/{review.total} phép đo mới nhất.</p><Button className="mt-3 w-auto" variant="secondary" onClick={mutation.reviewed}>Đã đối chiếu, cho phép xác nhận lại phép đo đang nhập</Button></>}
-    </div>}
-    <Button className="mt-5 w-auto" variant="secondary" disabled={mutation.pending} onClick={close}>Đóng</Button>
-  </Dialog>;
-}
-
-export function MeasurementEditor({ record, ocr, onClose, onSaved, onOpen, readOnly = false }: { readOnly?: boolean; record: c.WaterMeasurement; ocr?: Recognition; onClose(): void; onSaved(record: c.WaterMeasurement, ocr?: Recognition): void; onOpen(id: string): Promise<void> }) {
-  const confirmation = useActionDialog();
-  const context = useApiWorkspace();
-  const canCreate = !readOnly && operationAllowed("water", context.identity, context.permissions.functionPermissions, "Create", record.zoneId);
-  const canEdit = !readOnly && operationAllowed("water", context.identity, context.permissions.functionPermissions, "Edit", record.zoneId);
-  const [mode, setMode] = useState<"view" | "confirm" | "correct" | "void">(record.statusCode === "DRAFT" && canCreate ? "confirm" : "view");
-  const [values, setValues] = useState({ measuredAt: businessTime(record.measuredAt), ph: record.ph == null ? "" : String(record.ph), salinity: record.salinity == null ? "" : String(record.salinity), reason: "" });
-  const [initial] = useState(() => JSON.stringify(values));
-  const [baseline, setBaseline] = useState(record);
-  const mutation = useMutation();
-  const [latest, setLatest] = useState<c.WaterMeasurement>(), [editors, setEditors] = useState(record.currentEditors), [presenceError, setPresenceError] = useState(false);
-  const dirty = JSON.stringify(values) !== initial;
-  useEffect(() => {
-    if (!canEdit || mode !== "correct" && mode !== "void") return;
-    let active = true;
-    let inFlight: Promise<unknown> = Promise.resolve();
-    const heartbeat = () => { inFlight = repository.write("editing", {}, c.editingSchema, baseline.id).then((result) => {
-      if (!active) return; setPresenceError(result.status !== "success"); if (result.status === "success") setEditors(result.data.otherEditors);
-    }); };
-    heartbeat(); const timer = setInterval(heartbeat, 4 * 60_000);
-    return () => { active = false; clearInterval(timer); void inFlight.finally(() => repository.write("stop-editing", {}, z.object({ stopped: z.literal(true) }), baseline.id)); };
-  }, [canEdit, mode, baseline.id]);
-  const close = async () => { if (!mutation.busy() && (!dirty || await confirmation.confirm("Bỏ các giá trị chưa lưu?"))) onClose(); };
-  async function save() {
-    const original = baseline;
-    const valuesBody = { measuredAt: toApiTime(values.measuredAt), ph: values.ph === "" ? null : Number(values.ph), salinity: values.salinity === "" ? null : Number(values.salinity) };
-    const body = mode === "void" ? { reason: values.reason, recordVersion: original.recordVersion } : mode === "correct" ? { ...valuesBody, reason: values.reason, recordVersion: original.recordVersion } : valuesBody;
-    if (mode === "void" && !await confirmation.confirm("Hủy phép đo này? Phép đo sẽ bị loại khỏi dữ liệu đang sử dụng.")) return;
-    const result = await mutation.run(() => repository.write(mode, body, c.waterSchema, original.id));
-    if (result) onSaved(result);
+  function saved(record: c.WaterMeasurement, recognized?: WaterRecognition) {
+    setSelected(record);
+    setOcr(recognized);
+    setSerial((value) => value + 1);
+    history.reload();
+    chart.reload();
+    setNotice("Đã lưu phép đo.");
   }
-  return <Dialog open title={`Phép đo ${record.zoneCode} · ${statusLabel(record.statusCode)} · v${record.recordVersion}`} size="xl" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
-    {confirmation.dialog}
-    <ErrorNotice error={mutation.error} />
-    {baseline.id !== record.id && <p className="my-3">Bản nháp đang dựa trên phiên bản v{baseline.recordVersion} vừa được đối chiếu.</p>}
-    {record.thresholdExceeded && <p role="alert" className="mb-4 rounded-control border border-danger p-4 text-danger">Vượt ngưỡng: {record.violatedValues}</p>}
-    {ocr?.status === "Failed" && <p role="status" className="mb-4 rounded-control bg-primary-soft p-4">Ảnh và bản nháp đã được lưu. Chưa đọc được số đo từ ảnh; hãy nhập tay, đối chiếu ảnh rồi xác nhận.</p>}
-    {ocr && [ocr.ph?.uncertain && "pH", ocr.salinity?.uncertain && "độ mặn", ocr.measuredAt?.uncertain && "thời điểm"].some(Boolean) && <p className="mb-4">OCR chưa chắc chắn ở: {[ocr.ph?.uncertain && "pH", ocr.salinity?.uncertain && "độ mặn", ocr.measuredAt?.uncertain && "thời điểm"].filter(Boolean).join(", ")}. Hãy đối chiếu ảnh.</p>}
-    <div className="my-5 grid min-w-0 gap-6 lg:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.2fr)]"><aside className="min-w-0 space-y-5"><EvidenceGallery title="Ảnh đồng hồ đo gốc" images={record.photoUrl ? [{ id: record.id, url: record.photoUrl, label: "Ảnh được lưu cùng phép đo" }] : []} />
-    <section className="rounded-control bg-surface-subtle p-4"><h3 className="mb-3 text-sm font-semibold">Ngưỡng khi xác nhận phép đo</h3>{record.thresholdsUsed ? <dl className="space-y-2 text-sm"><div className="flex justify-between gap-3"><dt>pH</dt><dd>{record.thresholdsUsed.phMin ?? "Chưa đặt"} – {record.thresholdsUsed.phMax ?? "Chưa đặt"}</dd></div><div className="flex justify-between gap-3"><dt>Độ mặn (‰)</dt><dd>{record.thresholdsUsed.salinityMin ?? "Chưa đặt"} – {record.thresholdsUsed.salinityMax ?? "Chưa đặt"}</dd></div></dl> : <p className="text-sm text-text-muted">Phép đo chưa có ngưỡng xác nhận được lưu.</p>}</section>
-    <dl className="my-5 grid gap-3 sm:grid-cols-2">{[["Vùng", record.zoneName], ["Điểm đo", record.measurementPoint ?? "—"], ["Người đo", record.measuredBy?.name ?? "—"], ["Người xác nhận", record.confirmedBy?.name ?? "—"], ["Nguồn nhập", record.inputSource === "Ocr" ? "OCR" : "Nhập tay"], ["OCR ban đầu", `pH ${record.ocrDraft.ph ?? "—"} · Độ mặn ${record.ocrDraft.salinity ?? "—"} ‰`]].map(([label, value]) => <div key={label}><dt className="text-sm text-text-muted">{label}</dt><dd>{value}</dd></div>)}</dl>
-    </aside><div className="min-w-0">{editors.length > 0 && <p role="status" className="my-4 rounded-control bg-primary-soft p-4">Đang có người sửa: {editors.map((editor) => `${editor.name} từ ${displayTime(editor.startedAt)}`).join("; ")}. Bạn vẫn có thể sửa; khi lưu hệ thống kiểm tra phiên bản mới nhất.</p>}
-    {presenceError && <p role="status" className="my-3">Chưa tải được thông tin người đang sửa.</p>}
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }}><fieldset disabled={mutation.pending || mode === "view"} className="grid gap-4 sm:grid-cols-2">
-      <Field label="Thời điểm đo (giờ Việt Nam) *" required type="datetime-local" disabled={mode === "view" || mode === "void"} value={values.measuredAt} onChange={(e) => setValues((current) => ({ ...current, measuredAt: e.target.value }))} />
-      <Field label="pH *" required type="number" min="0" max="14" step="0.01" disabled={mode === "view" || mode === "void"} value={values.ph} onChange={(e) => setValues((current) => ({ ...current, ph: e.target.value }))} />
-      <Field label="Độ mặn (‰) *" required type="number" min="0" max="100" step="0.01" disabled={mode === "view" || mode === "void"} value={values.salinity} onChange={(e) => setValues((current) => ({ ...current, salinity: e.target.value }))} />
-      {(mode === "correct" || mode === "void") && <Note label={mode === "correct" ? "Lý do hiệu chỉnh *" : "Lý do hủy *"} required maxLength={1000} value={values.reason} onChange={(e) => setValues((current) => ({ ...current, reason: e.target.value }))} />}
-    </fieldset>
-      {mode !== "view" && <Button className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked}>{mode === "confirm" ? "Xác nhận số đo" : mode === "correct" ? "Lưu bản hiệu chỉnh" : "Xác nhận hủy phép đo"}</Button>}
-    </form></div></div>
-    <div className="my-5 flex flex-wrap gap-2">{record.statusCode === "CONFIRMED" && record.isLatestVersion && canEdit && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked} onClick={() => setMode("correct")}>Hiệu chỉnh</Button>}
-      {["DRAFT", "CONFIRMED"].includes(record.statusCode) && record.isLatestVersion && canEdit && <Button className="w-auto" variant="danger" disabled={mutation.pending || mutation.blocked} onClick={() => setMode("void")}>Hủy phép đo</Button>}
-      {record.statusCode === "DRAFT" && record.photoUrl && record.ocrDraft.ph === null && record.ocrDraft.salinity === null && canCreate && <Button className="w-auto" variant="secondary" disabled={mutation.pending || mutation.blocked || dirty} onClick={async () => { const result = await mutation.run(() => repository.write("recognize-again", {}, c.recognitionSchema, record.id)); if (result) onSaved(result.measurement, result.ocr); }}>Nhận dạng lại ảnh</Button>}
-    </div>
-    {record.thresholdsUsed && <div className="my-4 rounded-control bg-primary-soft p-4"><h3 className="font-semibold">Ngưỡng đã dùng khi xác nhận</h3><p>pH: {record.thresholdsUsed.phMin ?? "—"} — {record.thresholdsUsed.phMax ?? "—"}; độ mặn: {record.thresholdsUsed.salinityMin ?? "—"} — {record.thresholdsUsed.salinityMax ?? "—"} ‰</p></div>}
-    {record.correctionReason && <p className="my-3">Lý do hiệu chỉnh: {record.correctionReason}</p>}{record.voidReason && <p className="my-3">Lý do hủy: {record.voidReason}</p>}
-    <h3 className="mt-6 font-semibold">Lịch sử phiên bản</h3><DataTable headings={["Phiên bản", "Thời điểm đo", "pH", "Độ mặn", "Trạng thái", "Lý do"]}>{record.versions.map((row) => <tr key={row.id}><td><button className="text-primary underline" disabled={mutation.pending} onClick={async () => { if (!dirty || await confirmation.confirm("Bỏ các giá trị chưa lưu để xem phiên bản này?")) void onOpen(row.id); }}>v{row.recordVersion}</button></td><td>{displayTime(row.measuredAt)}</td><td>{row.ph ?? "—"}</td><td>{row.salinity ?? "—"}</td><td>{statusLabel(row.statusCode)}</td><td>{row.correctionReason ?? row.voidReason ?? "—"}</td></tr>)}</DataTable>
-    {mutation.blocked && <div className="my-4 rounded-control border border-border p-4"><p>Bản đang nhập được giữ. Hãy đối chiếu phiên bản mới nhất.</p><Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => {
-      const result = await mutation.run(async () => { const current = await repository.read("detail", { id: record.id }, c.waterSchema); if (current.status !== "success" || current.data.isLatestVersion) return current;
-        const newest = [...current.data.versions].sort((a, b) => b.recordVersion - a.recordVersion)[0]; return newest ? repository.read("detail", { id: newest.id }, c.waterSchema) : current; }, true);
-      if (result) setLatest(result);
-    }}>Tải bản mới để đối chiếu</Button>{latest && <div className="mt-4 space-y-3"><p>v{latest.recordVersion} · {statusLabel(latest.statusCode)} · {displayTime(latest.measuredAt)} · pH {latest.ph ?? "—"} · Độ mặn {latest.salinity ?? "—"} ‰</p><p>Lý do: {latest.correctionReason ?? latest.voidReason ?? "—"}</p>
-      {mode === "correct" && latest.isLatestVersion && latest.statusCode === "CONFIRMED" && <Button className="w-auto" variant="secondary" onClick={() => { setBaseline(latest); mutation.reviewed(); setLatest(undefined); }}>Đã đối chiếu, giữ nháp để hiệu chỉnh bản mới</Button>}
-      <Button className="w-auto" variant="secondary" onClick={async () => { if (!dirty || await confirmation.confirm("Bỏ bản đang nhập và dùng dữ liệu mới?")) onSaved(latest); }}>Dùng bản mới</Button></div>}</div>}
-    <Button className="mt-4 w-auto" variant="secondary" disabled={mutation.pending} onClick={close}>Đóng</Button>
-  </Dialog>;
-}
+  function toggleRow(id: string) {
+    setFullDetail(false);
+    if (selected?.id === id) setSelected(undefined);
+    else void open(id);
+  }
+  function exportExcel() {
+    const queries = selectionQueries(query, toStatusSelection(filters.status))
+      .map((params) => ({ ...params, status: params.status ?? "All" }));
+    void mutation.run(() => repository.downloadMany(queries), true);
+  }
+  function updateDateFilter(key: "from" | "to", value: string) {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+    setSelected(undefined);
+  }
 
-function ThresholdDialog({ zoneId, owner, onClose, onSaved }: { zoneId: string; owner: boolean; onClose(): void; onSaved(): void }) {
-  const thresholds = useRemote(useMemo(() => (signal: AbortSignal) => repository.read("thresholds", { zoneId }, c.zoneThresholdsSchema, signal), [zoneId]));
-  if (thresholds.data) return <ThresholdEditor record={thresholds.data} owner={owner} onClose={onClose} onSaved={onSaved} />;
-  return <Dialog open title="Ngưỡng chất lượng nước" size="lg" onOpenChange={(open) => { if (!open) onClose(); }}><ErrorNotice error={thresholds.error} />{thresholds.loading ? <Skeleton /> : <Button className="w-auto" variant="secondary" onClick={thresholds.reload}>Tải lại ngưỡng</Button>}</Dialog>;
-}
-function ThresholdEditor({ record, owner, onClose, onSaved }: { record: ZoneThresholds; owner: boolean; onClose(): void; onSaved(): void }) {
-  const confirmation = useActionDialog();
-  const [values, setValues] = useState(Object.fromEntries(Object.entries(record.thresholds).map(([key, value]) => [key, value == null ? "" : String(value)]))), [allZones, setAllZones] = useState(false);
-  const [initial] = useState(() => JSON.stringify(values));
-  const [localError, setLocalError] = useState<string>(), [latest, setLatest] = useState<ZoneThresholds[]>();
-  const mutation = useMutation();
-  const close = async () => { if (!mutation.busy() && (JSON.stringify(values) === initial && !allZones || await confirmation.confirm("Bỏ các ngưỡng chưa lưu?"))) onClose(); };
-  return <Dialog open title="Ngưỡng nước" size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>{confirmation.dialog}<form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); setLocalError(undefined); const body = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value === "" ? null : Number(value)]));
-    if (!c.setThresholdsSchema.safeParse(body).success) { setLocalError("Mỗi chỉ số cần đủ hai ngưỡng hoặc để trống cả hai; tối thiểu phải nhỏ hơn tối đa."); return; }
-    if (!await confirmation.confirm(allZones ? "Áp dụng các ngưỡng này cho tất cả vùng đang dùng?" : `Lưu ngưỡng mới cho ${record.zoneName}?`)) return;
-    void mutation.run(() => repository.write<ZoneThresholds | ZoneThresholds[]>("set-thresholds", body, allZones ? z.array(c.zoneThresholdsSchema) : c.zoneThresholdsSchema, undefined, allZones ? undefined : record.zoneId)).then((result) => { if (result) onSaved(); });
-  }}><p className="font-semibold">{record.zoneName}</p><p className="text-sm text-text-muted">Ngưỡng mới áp dụng cho phép đo xác nhận sau khi lưu. Phép đo và cảnh báo cũ giữ ngưỡng đã dùng.</p><ErrorNotice error={localError || mutation.error} />
-    <fieldset disabled={!owner || mutation.pending || mutation.blocked} className="grid gap-4 sm:grid-cols-2">{[["phMin", "pH tối thiểu", "14"], ["phMax", "pH tối đa", "14"], ["salinityMin", "Độ mặn tối thiểu (‰)", "100"], ["salinityMax", "Độ mặn tối đa (‰)", "100"]].map(([key, label, max]) => <Field key={key} label={label} type="number" min="0" max={max} step="0.01" value={values[key]} onChange={(e) => setValues((current) => ({ ...current, [key]: e.target.value }))} />)}
-      {owner && <label className="flex items-start gap-3 sm:col-span-2"><input type="checkbox" checked={allZones} onChange={(e) => setAllZones(e.target.checked)} /><span>Áp dụng cho tất cả vùng đang sử dụng</span></label>}</fieldset>
-    {mutation.blocked && <div className="space-y-3"><Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => { const result = await mutation.run(async () => {
-      if (allZones) return repository.read("thresholds", {}, z.array(c.zoneThresholdsSchema));
-      const response = await repository.read("thresholds", { zoneId: record.zoneId }, c.zoneThresholdsSchema);
-      return response.status === "success" ? { status: "success" as const, data: [response.data] } : response;
-    }, true); if (result) setLatest(result); }}>Tải ngưỡng hiện tại để đối chiếu</Button>{latest && <><DataTable headings={["Vùng", "pH", "Độ mặn (‰)"]}>{latest.map((row) => <tr key={row.zoneId}><td>{row.zoneName}</td><td>{row.thresholds.phMin ?? "—"} — {row.thresholds.phMax ?? "—"}</td><td>{row.thresholds.salinityMin ?? "—"} — {row.thresholds.salinityMax ?? "—"}</td></tr>)}</DataTable><Button className="w-auto" variant="secondary" onClick={mutation.reviewed}>Đã đối chiếu, sửa tiếp bản đang nhập</Button></>}</div>}
-    <div className="flex flex-wrap gap-3">{owner && <Button className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked}>Lưu ngưỡng</Button>}<Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={close}>Đóng</Button></div>
-  </form></Dialog>;
-}
+  const zoneFilters = <WaterZoneFilters
+    availableZones={availableZones}
+    filters={filters}
+    zoneId={zoneId}
+    onZoneChange={(value) => { setZoneId(value); setPage(1); setSelected(undefined); setFullDetail(false); }}
+    onDateChange={updateDateFilter}
+    onStatusChange={(value) => { setFilters((current) => ({ ...current, status: value })); setPage(1); setSelected(undefined); }}
+  />;
 
-function WaterChart({ data }: { data: Chart }) {
-  const readings = data.periods.reduce((sum, period) => sum + period.ph.count + period.salinity.count, 0);
-  const missing = data.periods.filter((period) => period.missing).length;
-  return <>{!readings&&<p className={styles.emptyChart}>Chưa có chỉ số đã xác nhận trong khoảng này. Chọn khoảng thời gian khác hoặc kiểm tra lịch sử bên dưới.</p>}<div className="my-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-y border-border py-2.5 text-xs"><p className="text-text-muted">{formatVietnameseDate(data.from)} — {formatVietnameseDate(data.to)}</p><div className="flex flex-wrap gap-x-5 gap-y-1"><span><strong className="tabular-nums text-text">{readings}</strong> lượt ghi nhận chỉ số</span><span className="text-text-muted">{missing} kỳ thiếu dữ liệu</span><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-sky-700" /> Trung bình</span><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-sky-200" /> Khoảng nhỏ nhất–lớn nhất</span><span className="inline-flex items-center gap-1.5"><i className="h-0 w-4 border-t border-dashed border-amber-700" /> Ngưỡng</span></div></div><div className={styles.charts}><IndicatorChart data={data} indicator="ph" title="Độ pH" min={data.thresholds.phMin} max={data.thresholds.phMax} /><IndicatorChart data={data} indicator="salinity" title="Độ mặn (‰)" min={data.thresholds.salinityMin} max={data.thresholds.salinityMax} /></div>
-    <details className={styles.periodTable}><summary>Số liệu chi tiết theo kỳ · {data.periods.length} kỳ</summary><DataTable headings={["Kỳ", "pH trung bình / thấp nhất / cao nhất", "Lượt đo", "Độ mặn TB / thấp nhất / cao nhất (‰)", "Lượt đo"]}>{data.periods.map((period) => <tr key={period.period}><td className="whitespace-nowrap">{period.period}{period.missing ? <span className="ml-2 text-xs text-text-muted">Thiếu dữ liệu</span> : ""}</td><td className="tabular-nums">{period.ph.average ?? "—"} / {period.ph.minimum ?? "—"} / {period.ph.maximum ?? "—"}</td><td className="tabular-nums">{period.ph.count}</td><td className="tabular-nums">{period.salinity.average ?? "—"} / {period.salinity.minimum ?? "—"} / {period.salinity.maximum ?? "—"}</td><td className="tabular-nums">{period.salinity.count}</td></tr>)}</DataTable></details></>;
-}
-function IndicatorChart({ data, indicator, title, min, max }: { data: Chart; indicator: "ph" | "salinity"; title: string; min: number | null; max: number | null }) {
-  const top = Math.max(1, ...data.periods.flatMap((period) => [period[indicator].maximum ?? 0]), max ?? 0) * 1.1;
-  const x = (index: number) => 42 + index * 510 / Math.max(1, data.periods.length - 1), y = (value: number) => 185 - value * 160 / top;
-  let path = "", previous = false;
-  data.periods.forEach((period, index) => { const average = period[indicator].average; if (period.missing || average === null) { previous = false; return; } path += `${previous ? " L" : " M"}${x(index)} ${y(average)}`; previous = true; });
-  const axisTop = Math.max(1, top);
-  const ticks = [0, 1, 2, 3].map((index) => axisTop * index / 3);
-  return <figure className="min-w-0 rounded-lg border border-border/80 bg-slate-50/70 px-3 pb-2 pt-3 sm:px-4"><figcaption className="flex items-center justify-between gap-3"><span className="text-sm font-semibold">{title}</span><span className="text-[11px] tabular-nums text-text-muted">{min ?? "—"}–{max ?? "—"} · ngưỡng</span></figcaption><svg className="mt-2 w-full overflow-visible" viewBox="0 0 600 230" role="img" aria-label={`${title}: đường trung bình và khoảng nhỏ nhất/lớn nhất; ngưỡng hiện tại ${min ?? "chưa đặt"} đến ${max ?? "chưa đặt"}`}>
-    {ticks.map((tick, index) => <g key={index}><line x1="42" y1={y(tick)} x2="552" y2={y(tick)} stroke="#dbe4e8" strokeWidth="1" /><text x="36" y={y(tick) + 4} textAnchor="end" fontSize="10" fill="#64748b">{Number(tick.toFixed(1))}</text></g>)}
-    {[min, max].map((bound, index) => bound !== null && <g key={index}><line x1="42" x2="552" y1={y(bound)} y2={y(bound)} stroke="#a16207" strokeWidth="1.5" strokeDasharray="5 5" /><text x="556" y={y(bound) + 4} fontSize="10" fill="#854d0e">{bound}</text></g>)}
-    {data.periods.map((period, index) => !period.missing && period[indicator].minimum !== null && period[indicator].maximum !== null && <line key={period.period} x1={x(index)} x2={x(index)} y1={y(period[indicator].minimum!)} y2={y(period[indicator].maximum!)} stroke="#7dd3fc" strokeWidth="7" strokeLinecap="round"><title>{period.period}: {period[indicator].minimum} — {period[indicator].maximum}</title></line>)}
-    <path d={path} fill="none" stroke="#075b73" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />{data.periods.map((period, index) => !period.missing && period[indicator].average !== null && <circle key={period.period} cx={x(index)} cy={y(period[indicator].average!)} r="4" fill="#075b73" stroke="white" strokeWidth="2"><title>{period.period}: trung bình {period[indicator].average}</title></circle>)}
-    <text x="42" y="215" fontSize="12">{data.periods[0]?.period ?? ""}</text><text x="552" y="215" textAnchor="end" fontSize="12">{data.periods.at(-1)?.period ?? ""}</text>
-  </svg></figure>;
+  return <section className={styles.page}>
+    <OperationHeading
+      title="Theo dõi chất lượng nước"
+      description="Xem số đo, ngưỡng an toàn và cảnh báo. Ghi nhận phép đo trên ứng dụng điện thoại."
+      icon="waves"
+    >
+      <div className="flex flex-wrap gap-2">
+        <Button className="w-auto" variant="secondary" disabled={!zoneId || mutation.pending} onClick={() => setThresholdsOpen(true)}>Ngưỡng nước</Button>
+        {canExport && (
+          <Button className="w-auto" variant="secondary" disabled={mutation.pending || filters.status === "-"} onClick={exportExcel}>Xuất Excel</Button>
+        )}
+      </div>
+    </OperationHeading>
+    <FilterWorkspace label="Vùng và thời gian" filters={zoneFilters}>
+      <ErrorNotice error={zones.error || history.error || mutation.error} />
+      {notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
+      {zones.error && (
+        <Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending || zones.loading} onClick={zones.reload}>Tải lại danh sách vùng</Button>
+      )}
+      {!zoneId ? <WaterZoneOverview onSelectZone={(id) => { setZoneId(id); setPage(1); setSelected(undefined); }} /> : <>
+        <div className={styles.zoneHeading}>
+          <div>
+            <span>VÙNG ĐANG THEO DÕI</span>
+            <h2>{String(currentZone?.name ?? "Vùng nuôi")}</h2>
+            <p>Mặc định: lịch sử 3 tháng gần đây, biểu đồ 12 tháng · giờ Việt Nam</p>
+          </div>
+          <Button variant="secondary" disabled={history.loading} onClick={() => { history.reload(); chart.reload(); }}>Tải lại dữ liệu</Button>
+        </div>
+        <WaterChartSection chart={chart} groupBy={groupBy} onGroupByChange={setGroupBy} />
+        <WaterHistorySection
+          history={history}
+          selected={selected}
+          disabled={mutation.pending}
+          page={page}
+          pageSize={pageSize}
+          onToggleRow={toggleRow}
+          onFullDetail={() => setFullDetail(true)}
+          onPageChange={(next) => { setPage(next); setSelected(undefined); }}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); setSelected(undefined); }}
+        />
+      </>}
+    </FilterWorkspace>
+    {selected !== undefined && (selected
+      ? fullDetail && (
+        <MeasurementEditor
+          readOnly
+          key={`${selected.id}:${serial}`}
+          record={selected}
+          ocr={ocr}
+          onClose={() => setFullDetail(false)}
+          onSaved={saved}
+          onOpen={open}
+        />
+      )
+      : (
+        <NewMeasurement
+          key={`new:${serial}`}
+          zoneId={zoneId}
+          zoneName={String(currentZone?.name ?? "")}
+          onClose={() => setSelected(undefined)}
+          onSaved={saved}
+        />
+      ))}
+    {thresholdsOpen && (
+      <ThresholdDialog
+        zoneId={zoneId}
+        owner={context.identity.subjectType === "CooperativeOwner"}
+        onClose={() => setThresholdsOpen(false)}
+        onSaved={() => {
+          chart.reload();
+          setThresholdsOpen(false);
+          setNotice("Đã lưu ngưỡng nước. Ngưỡng mới áp dụng cho các phép đo xác nhận sau đó.");
+        }}
+      />
+    )}
+  </section>;
 }
