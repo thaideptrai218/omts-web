@@ -52,9 +52,11 @@ export function EmployeeDetailTabs({ employee, onSaved, onRefresh, busy = false,
         {(mutation.blocked || mutation.failure?.code === "MSG-GEN-09") && <EmployeeConflictPanel repository={editor.repository} mutation={mutation} baseline={baseline} searchName={values.fullName} latest={editor.latest} reconciledRows={undefined} onLatestLoaded={editor.setLatest} onRowsLoaded={() => undefined} onCompared={() => undefined} onKeepDraft={editor.keepDraft} onAdopt={editor.adopt} />}
         {active !== "account" && employee.canMaintain && <footer className={styles.footer}>
           <div>{active === "bank" && employee.bankAccount && !editing && <Button variant="ghost" disabled={busy || mutation.pending || mutation.blocked} onClick={async () => { if (await confirmation.confirm("Xóa thông tin ngân hàng của nhân viên?")) await editor.save(true); }}><InterfaceIcon name="trash" className="size-4" />Xóa thông tin ngân hàng</Button>}</div>
-          <div>{editing ? <><Button variant="secondary" disabled={mutation.pending} onClick={editor.cancel}>Bỏ qua</Button><Button type="submit" disabled={busy || mutation.blocked || !lookupsReady} isPending={mutation.pending}>Lưu</Button></> : <>
-            {active === "work" && <Button variant="secondary" disabled={busy || mutation.pending} onClick={onStatusAction}>{employee.status === "Employed" ? "Ngừng làm việc" : "Cho làm việc lại"}</Button>}
-            <Button ref={editButton} disabled={busy || !lookupsReady} onClick={editor.begin}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>
+          {/* Distinct keys matter: without them React reuses the clicked "Chỉnh sửa" <button> as the submit "Lưu" button
+              during the click, the browser then submits the form and the edit is saved and closed at once. */}
+          <div>{editing ? <><Button key="cancel" variant="secondary" disabled={mutation.pending} onClick={editor.cancel}>Bỏ qua</Button><Button key="save" type="submit" disabled={busy || mutation.blocked || !lookupsReady} isPending={mutation.pending}>Lưu</Button></> : <>
+            {(active === "information" || active === "work") && onStatusAction && <Button key="status" variant="secondary" disabled={busy || mutation.pending} onClick={onStatusAction}>{employee.status === "Employed" ? "Ngừng làm việc" : "Cho làm việc lại"}</Button>}
+            <Button key="edit" ref={editButton} type="button" disabled={busy || !lookupsReady} onClick={editor.begin}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>
           </>}</div>
         </footer>}
       </form>

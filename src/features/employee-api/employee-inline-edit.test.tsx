@@ -206,10 +206,31 @@ it("hides maintenance actions and protected fields when canMaintain is false", a
   expect(panel().getByRole("alert").textContent).toContain("không có quyền");
 });
 
-it.each(["Employed", "Left"] as const)("opens the existing %s status confirmation only from the work footer", async (status) => {
+it.each(["Employed", "Left"] as const)("opens the existing %s status confirmation from the Công việc footer", async (status) => {
   await setup({ ...record(), status, lastWorkingDay: status === "Left" ? "2026-10-29" : null });
+  // Owner decision 11/11/2026: the state action sits in the footer of Thông tin and Công việc (like Suppliers), not Ngân hàng.
+  tab("Ngân hàng");
   expect(panel().queryByRole("button", { name: /Ngừng làm việc|Cho làm việc lại/ })).toBeNull();
   tab("Công việc"); fireEvent.click(panel().getByRole("button", { name: status === "Employed" ? "Ngừng làm việc" : "Cho làm việc lại" }));
   expect(screen.getByRole("dialog", { name: status === "Employed" ? "Nghỉ việc?" : "Cho làm việc lại?" })).toBeTruthy();
   expect(repository.write).not.toHaveBeenCalled();
+});
+
+it("replaces the clicked Chỉnh sửa button instead of mutating it into the submit button", async () => {
+  // Real browsers run a button's default action AFTER the click handlers: if React turned this very <button> into the
+  // submit "Lưu" button, the form would be submitted at once and the edit saved and closed without the user typing.
+  await setup();
+  const editButton = panel().getByRole("button", { name: "Chỉnh sửa" });
+  fireEvent.click(editButton);
+  const saveButton = panel().getByRole("button", { name: "Lưu" });
+  expect(editButton.isConnected).toBe(false);
+  expect(saveButton).not.toBe(editButton);
+  expect(repository.write).not.toHaveBeenCalled();
+});
+
+it("offers Ngừng làm việc in the footer of the Thông tin tab as well as the Công việc tab", async () => {
+  await setup();
+  expect(panel().getByRole("button", { name: "Ngừng làm việc" })).toBeTruthy();
+  tab("Công việc");
+  expect(panel().getByRole("button", { name: "Ngừng làm việc" })).toBeTruthy();
 });
