@@ -38,7 +38,7 @@ function PurchasesWorkspace() {
 
   return (
     <section>
-      <OperationHeading title="Đơn mua của tôi" description="Gửi yêu cầu mua hàu và theo dõi phản hồi của hợp tác xã: số kg được chấp nhận, ngày lấy hàng, trả sau." icon="request">
+      <OperationHeading title="Đơn mua của tôi" description="Gửi yêu cầu mua hàu và theo dõi phản hồi của hợp tác xã: số lượng (kg) được chấp nhận, ngày lấy hàng, trả sau." icon="request">
         <Button className="w-auto" variant="secondary" disabled={list.loading} onClick={refresh}>Tải lại</Button>
         <Button className="w-auto" onClick={() => setCreating(true)}>Gửi yêu cầu mua</Button>
       </OperationHeading>

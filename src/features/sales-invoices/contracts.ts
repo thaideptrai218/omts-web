@@ -17,6 +17,8 @@ export const restPayment = z.enum(["None", "PayLater", "VietQr"]);
 export const lotForSale = z.object({
   id, lotCode: z.string(), raftId: id, raftCode: z.string(), zoneId: id, zoneCode: z.string(), zoneName: z.string(),
   harvestDate: z.iso.date(), remainingKg: money, statusId: z.number().int(), status: z.string(), originState, withdrawnAt: at.nullable(),
+  // Chưa có trong backend hiện tại; khi API trả thêm thì màn hình dùng số lồng/ratio của chính lô thay vì trung bình HTX.
+  cageCount: z.number().int().nonnegative().nullish(), kgPerCage: z.number().positive().nullish(),
 });
 export const lotsForSale = z.object({ lots: z.array(lotForSale), message: z.string().nullable(), messageCode: z.string().nullable() });
 

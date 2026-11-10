@@ -8,6 +8,8 @@
 .error { color: var(--omts-color-danger); font-size: .8125rem; margin: 0; }
 .linkBtn { color: var(--omts-color-primary); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; font-size: .8125rem; min-height: 2rem; }
 .linkBtn:disabled { opacity: .5; }
+.cageLead { display: block; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cageSub { display: block; font-size: .75rem; font-weight: 400; color: var(--omts-color-text-muted); font-variant-numeric: tabular-nums; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .period { margin: 0 0 .625rem; font-size: .875rem; color: var(--omts-color-text-muted); }

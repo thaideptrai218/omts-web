@@ -1,6 +1,8 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { ErrorNotice, OperationHeading, Paging, Skeleton } from "@/features/operations/ui";
+import { useKgPerCage } from "@/features/harvest-settings-lookup/use-kg-per-cage";
 import { pageSize, pageSlice } from "./yield-logic";
 import { useYieldReport } from "./use-yield-report";
 import { YieldFilterPanel } from "./yield-filter-panel";
@@ -11,7 +13,10 @@ import s from "./yield-screen.module.css";
 /** SCR-HARVEST-03 Sản lượng nuôi: tổng hợp ước tính, đã bán, hao hụt, chênh lệch của các lô thu hoạch trong kỳ (HARVEST-04). */
 export function HarvestYieldScreen() {
   const y = useYieldReport();
+  const { identity } = useApiWorkspace();
   const { report } = y;
+  // Owner-only read; undefined for everyone else, so quantities fall back to kg alone.
+  const { kgPerCage } = useKgPerCage(identity.subjectType === "CooperativeOwner" ? identity.accountId : undefined);
   const heading = <OperationHeading title="Sản lượng nuôi" description="Đối chiếu sản lượng ước tính với số đã bán và hao hụt của các lô thu hoạch theo bè, vùng nuôi hoặc chu kỳ." icon="raft" />;
 
   if (!y.canView) {
@@ -31,12 +36,12 @@ export function HarvestYieldScreen() {
           )}
           {data && (
             <>
-              <YieldTotalsStrip report={data} />
+              <YieldTotalsStrip report={data} kgPerCage={kgPerCage} />
               {!data.groups.length ? (
                 <div className={s.state}><h2>Không có lô thu hoạch trong kỳ</h2><p>{data.message ?? "Hãy mở rộng khoảng thời gian hoặc chọn thêm vùng nuôi."}</p></div>
               ) : (
                 <>
-                  <YieldTable groups={pageSlice(y.groups, y.page)} sort={y.sort} showZone={data.groupBy !== "Zone"} onSort={y.changeSort} />
+                  <YieldTable groups={pageSlice(y.groups, y.page)} sort={y.sort} showZone={data.groupBy !== "Zone"} kgPerCage={kgPerCage} onSort={y.changeSort} />
                   <Paging page={y.page} total={y.groups.length} pageSize={pageSize} onChange={y.setPage} />
                 </>
               )}

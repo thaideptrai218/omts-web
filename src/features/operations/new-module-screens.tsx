@@ -17,8 +17,9 @@ import { TraderRequestDetailPage } from "@/features/trader-purchases/trader-requ
 import { ProductEditor } from "./sales-editors";
 import { PurchaseRequestReviewDetails } from "./purchase-request-review-details";
 import { ReviewStatusPill } from "./purchase-request-review-parts";
-import { REVIEW_STATUS_OPTIONS, reviewResponseSummary } from "./purchase-request-review-presentation";
-import { formatDate, formatKg } from "@/features/trader-purchases/presentation";
+import { REVIEW_STATUS_OPTIONS, quantityWithCages, reviewResponseSummary } from "./purchase-request-review-presentation";
+import { formatDate } from "@/features/trader-purchases/presentation";
+import { useKgPerCage } from "@/features/harvest-settings-lookup/use-kg-per-cage";
 
 const products = createOperationsRepository("sales-products"), requests = createOperationsRepository("purchase-requests");
 
@@ -45,21 +46,23 @@ export function PurchaseRequestsScreen() {
 }
 
 function PurchaseRequestsReviewScreen() {
+  const { identity } = useApiWorkspace();
   const [status, setStatus] = useState(""), [page, setPage] = useState(1), [selected, setSelected] = useState<c.PurchaseRequest>();
   const query = useMemo(() => ({ page: String(page), pageSize: "20" }), [page]);
   const rows = useRemote(useMemo(() => (signal: AbortSignal) => readSelectionPages((params, signal) => requests.read("list", params, c.purchaseRequestPageSchema, signal), query, { status }, signal, (a, b) => b.sentAt.localeCompare(a.sentAt)), [query, status]));
   const mutation = useMutation();
+  const { kgPerCage } = useKgPerCage(identity.subjectType === "CooperativeOwner" ? identity.accountId : undefined); // Chỉ Chủ HTX đọc được.
   async function open(id: string) { const found = await mutation.run(() => requests.read("detail", { id }, c.purchaseRequestSchema), true); if (found) setSelected(found); }
-  return <section><OperationHeading title="Yêu cầu mua hàu" description="Theo dõi số kg, ngày lấy hàng và phản hồi theo từng yêu cầu của thương lái." icon="document" />
+  return <section><OperationHeading title="Yêu cầu mua hàu" description="Theo dõi số lượng, ngày lấy hàng và phản hồi theo từng yêu cầu của thương lái. Yêu cầu tính theo kg; số lồng có dấu “≈” là quy đổi gần đúng." icon="document" />
     <FilterWorkspace label="Lọc yêu cầu mua" reset={<button type="button" className={styles.reset} disabled={!status} onClick={() => { setStatus(""); setPage(1); }}>Đặt lại</button>} filters={<FilterChecks label="Trạng thái yêu cầu" value={status} options={REVIEW_STATUS_OPTIONS} onChange={value => { setStatus(value); setPage(1); }} />}>
       <div className={styles.results}><div className={styles.toolbar}><div><h2>{status === "-" ? "Chưa chọn trạng thái" : status ? "Yêu cầu theo trạng thái đã chọn" : "Tất cả yêu cầu mua"}</h2><p>{rows.loading ? "Đang tải…" : rows.data ? `${rows.data.total} yêu cầu · ${rows.data.pageSize} dòng/trang` : "Chưa tải được dữ liệu"}</p></div><Button className="w-auto" variant="secondary" disabled={rows.loading || mutation.pending} onClick={rows.reload}>Tải lại yêu cầu mua</Button></div><ErrorNotice error={rows.error || mutation.error} />
-      {rows.loading ? <Skeleton /> : rows.data && <><DataGrid responsive headings={["Thương lái", "Sản phẩm", "Số kg yêu cầu", "Ngày lấy hàng", "Trạng thái", "Phản hồi của HTX", "Chi tiết"]} empty={!rows.data.items.length}>{rows.data.items.map((row) => { const response = reviewResponseSummary(row); return <OpenableTableRow key={row.id} disabled={mutation.pending} onOpen={() => void open(row.id)}>
-        <td data-label="Thương lái"><span className={styles.code}>{row.customer.name}</span><small className={styles.meta}>{row.customer.phoneNumber || "Chưa có số điện thoại"}</small></td><td data-label="Sản phẩm" className={styles.name}>{row.productName}</td><td data-label="Số kg yêu cầu" className={styles.number}>{formatKg(row.requestedKg)}</td><td data-label="Ngày lấy hàng" className={styles.date}>{formatDate(row.pickupDate)}</td><td data-label="Trạng thái"><ReviewStatusPill request={row} /></td>
+      {rows.loading ? <Skeleton /> : rows.data && <><DataGrid responsive headings={["Thương lái", "Sản phẩm", "Số lượng yêu cầu", "Ngày lấy hàng", "Trạng thái", "Phản hồi của HTX", "Chi tiết"]} empty={!rows.data.items.length}>{rows.data.items.map((row) => { const response = reviewResponseSummary(row, kgPerCage); return <OpenableTableRow key={row.id} disabled={mutation.pending} onOpen={() => void open(row.id)}>
+        <td data-label="Thương lái"><span className={styles.code}>{row.customer.name}</span><small className={styles.meta}>{row.customer.phoneNumber || "Chưa có số điện thoại"}</small></td><td data-label="Sản phẩm" className={styles.name}>{row.productName}</td><td data-label="Số lượng yêu cầu" className={styles.number}>{quantityWithCages(row.requestedKg, kgPerCage)}</td><td data-label="Ngày lấy hàng" className={styles.date}>{formatDate(row.pickupDate)}</td><td data-label="Trạng thái"><ReviewStatusPill request={row} /></td>
         <td data-label="Phản hồi của HTX" className={styles.response}><strong>{response.headline}</strong>{response.note && <span>{response.note}</span>}</td>
         <td data-label="Chi tiết"><button className={styles.open} disabled={mutation.pending} onClick={() => void open(row.id)}>Mở yêu cầu</button></td></OpenableTableRow>; })}</DataGrid><div className={styles.requestPaging}><Paging page={rows.data.page} pageSize={rows.data.pageSize} total={rows.data.total} disabled={mutation.pending || rows.loading} onChange={setPage} /></div></>}
       </div>
     </FilterWorkspace>
-    {selected && <PurchaseRequestReviewDetails key={`${selected.id}:${selected.rowVersion}`} record={selected} onClose={() => setSelected(undefined)} onSaved={(saved) => { setSelected(saved); rows.reload(); }} />}
+    {selected && <PurchaseRequestReviewDetails key={`${selected.id}:${selected.rowVersion}`} record={selected} kgPerCage={kgPerCage} onClose={() => setSelected(undefined)} onSaved={(saved) => { setSelected(saved); rows.reload(); }} />}
   </section>;
 }
 
@@ -69,13 +72,15 @@ export function PurchaseRequestDetailPage({ id }: { id: string }) {
 }
 
 function PurchaseRequestReviewDetail({ id }: { id: string }) {
+  const { identity } = useApiWorkspace();
   const loaded = useRemote(useMemo(() => (signal: AbortSignal) => requests.read("detail", { id }, c.purchaseRequestSchema, signal), [id]));
   const [record, setRecord] = useState<c.PurchaseRequest>();
+  const { kgPerCage } = useKgPerCage(identity.subjectType === "CooperativeOwner" ? identity.accountId : undefined);
   const current = record ?? loaded.data;
   if (loaded.loading) return <Skeleton />;
   if (loaded.error) return <ErrorNotice error={loaded.error} />;
   if (!current) return <p role="alert" className="rounded-card border border-border p-5">Không tìm thấy yêu cầu mua.</p>;
-  return <PurchaseRequestReviewDetails record={current} onClose={() => window.history.back()} onSaved={(saved) => setRecord(saved)} />;
+  return <PurchaseRequestReviewDetails record={current} kgPerCage={kgPerCage} onClose={() => window.history.back()} onSaved={(saved) => setRecord(saved)} />;
 }
 
 export { WorkforceScreen } from "./workforce-screen";

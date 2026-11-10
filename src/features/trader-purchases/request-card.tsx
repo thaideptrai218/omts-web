@@ -11,7 +11,7 @@ export function RequestCard({ request, busy, onOpen, onCancel }: { request: Trad
       <StatusBadge request={request} className={s.badge} />
       <dl className={s.cardMain}>
         <div className={s.field}><dt>Sản phẩm</dt><dd>{request.productName}</dd></div>
-        <div className={s.field}><dt>Số kg yêu cầu</dt><dd className={s.num}>{formatKg(request.requestedKg)}</dd></div>
+        <div className={s.field}><dt>Số lượng yêu cầu (kg)</dt><dd className={s.num}>{formatKg(request.requestedKg)}</dd></div>
         <div className={s.field}><dt>Ngày lấy hàng</dt><dd className={s.num}>{formatDate(request.pickupDate)}</dd></div>
         <div className={`${s.field} ${s.wide}`}><dt>Phản hồi của hợp tác xã</dt><dd><ResponseBlock request={request} /></dd></div>
       </dl>

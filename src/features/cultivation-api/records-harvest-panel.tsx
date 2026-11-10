@@ -5,7 +5,9 @@ import { FilterChecks } from "@/components/ui/filter-checks";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { DataTable, ErrorNotice, Field, Paging, Skeleton, displayTime, useRemote } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { cagesFromKg, formatCages } from "@/shared/format/cage-quantity";
 import { matchesSelection } from "@/shared/presentation/filter-selection";
+import { CagesWithEstimatedKg, KgWithApproxCages } from "./harvest-quantity-cell";
 import flowStyles from "./cultivation-flow.module.css";
 import { HarvestLotPreview } from "./harvest-lot-preview";
 import { HarvestSettings } from "./harvest-settings";
@@ -45,14 +47,20 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
         lot.lotCode.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi")),
     ) ?? [];
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / 10)));
+  const canShowApproximateCageTotals = rows.every(
+    (lot) => cagesFromKg(lot.invoicedKg, lot.kgPerCage) !== undefined && cagesFromKg(lot.remainingKg, lot.kgPerCage) !== undefined,
+  );
   const totals = rows.reduce(
     (sum, lot) => ({
       cages: sum.cages + lot.cageCount,
       estimated: sum.estimated + lot.estimatedKg,
       invoiced: sum.invoiced + lot.invoicedKg,
       remaining: sum.remaining + lot.remainingKg,
+      // Convert each lot with its own recorded kg/lồng; totals are hidden if any ratio is unavailable.
+      invoicedCages: sum.invoicedCages + (cagesFromKg(lot.invoicedKg, lot.kgPerCage) ?? 0),
+      remainingCages: sum.remainingCages + (cagesFromKg(lot.remainingKg, lot.kgPerCage) ?? 0),
     }),
-    { cages: 0, estimated: 0, invoiced: 0, remaining: 0 },
+    { cages: 0, estimated: 0, invoiced: 0, remaining: 0, invoicedCages: 0, remainingCages: 0 },
   );
   return (
     <section className={flowStyles.recordsPanel}>
@@ -94,7 +102,7 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 ? `Chu kỳ từ ${formatVietnameseDate(remote.data.cycle.startDate)}`
                 : "Bè chưa có chu kỳ đang nuôi"}
               <span>
-                Quy đổi cho lượt ghi mới:{" "}
+                Ước tính kg cho lượt ghi mới:{" "}
                 <strong>{remote.data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng</strong>
               </span>
             </p>
@@ -130,10 +138,9 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 headings={[
                   "Mã lô / thời điểm",
                   "Làn thu hoạch",
-                  "Lồng",
-                  "Ước tính (kg)",
-                  "Đã lập hóa đơn (kg)",
-                  "Còn lại (kg)",
+                  "Số lồng thu hoạch",
+                  "Đã lập hóa đơn",
+                  "Còn lại",
                   "Trạng thái",
                 ]}
                 empty={!rows.length}
@@ -163,17 +170,14 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                           Đã thu hết: {lot.finishedLaneNumbers.join(", ") || "Chưa có"}
                         </span>
                       </td>
-                      <td data-label="Lồng" className="text-right tabular-nums">
-                        {lot.cageCount.toLocaleString("vi-VN")}
+                      <td data-label="Số lồng thu hoạch" className="text-right">
+                        <CagesWithEstimatedKg cages={lot.cageCount} kg={lot.estimatedKg} />
                       </td>
-                      <td data-label="Ước tính (kg)" className="text-right tabular-nums">
-                        {lot.estimatedKg.toLocaleString("vi-VN")}
+                      <td data-label="Đã lập hóa đơn" className="text-right">
+                        <KgWithApproxCages kg={lot.invoicedKg} kgPerCage={lot.kgPerCage} />
                       </td>
-                      <td data-label="Đã lập hóa đơn (kg)" className="text-right tabular-nums">
-                        {lot.invoicedKg.toLocaleString("vi-VN")}
-                      </td>
-                      <td data-label="Còn lại (kg)" className="text-right font-semibold tabular-nums">
-                        {lot.remainingKg.toLocaleString("vi-VN")}
+                      <td data-label="Còn lại" className="text-right font-semibold">
+                        <KgWithApproxCages kg={lot.remainingKg} kgPerCage={lot.kgPerCage} />
                       </td>
                       <td data-label="Trạng thái">
                         <span className={flowStyles.state}>{statusLabel(lot.status)}</span>
@@ -181,7 +185,7 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                     </OpenableTableRow>
                     {selectedLot === lot.id && (
                       <tr>
-                        <td colSpan={7} className={flowStyles.recordDetailCell}>
+                        <td colSpan={6} className={flowStyles.recordDetailCell}>
                           <HarvestLotPreview
                             id={lot.id}
                             zoneId={zoneId}
@@ -201,15 +205,26 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
             <div className={flowStyles.harvestTotals}>
               <span>Tổng các lô phù hợp bộ lọc</span>
               <dl>
-                {[
-                  ["Lồng", totals.cages],
-                  ["Ước tính (kg)", totals.estimated],
-                  ["Đã lập hóa đơn (kg)", totals.invoiced],
-                  ["Còn lại (kg)", totals.remaining],
-                ].map(([label, value]) => (
+                <div>
+                  <dt>Số lồng thu hoạch</dt>
+                  <dd>
+                    <CagesWithEstimatedKg cages={totals.cages} kg={totals.estimated} />
+                  </dd>
+                </div>
+                {(
+                  [
+                    ["Đã lập hóa đơn", totals.invoiced, totals.invoicedCages],
+                    ["Còn lại", totals.remaining, totals.remainingCages],
+                  ] as const
+                ).map(([label, kg, cages]) => (
                   <div key={label}>
                     <dt>{label}</dt>
-                    <dd>{Number(value).toLocaleString("vi-VN")}</dd>
+                    <dd>
+                      {kg.toLocaleString("vi-VN")} kg
+                      <span className="mt-1 block text-xs font-normal text-text-muted">
+                        {canShowApproximateCageTotals ? formatCages(cages, { approx: true }) : "Chưa đủ dữ liệu tỷ lệ quy đổi"}
+                      </span>
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -218,8 +233,8 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
               <Paging page={currentPage} total={rows.length} pageSize={10} onChange={setPage} />
             </div>
             <p className={flowStyles.harvestHint}>
-              Sản lượng ước tính và số lượng đã lập hóa đơn là các chỉ số riêng. Mở hồ sơ lô để xem lượng đã bán, trả
-              lại, hao hụt và chênh lệch.
+              Thu hoạch tính theo lồng; số kg là ước tính theo kg/lồng của từng lô. Số lồng có dấu “≈” là quy đổi từ kg.
+              Mở hồ sơ lô để xem lượng đã bán, trả lại, hao hụt và chênh lệch.
             </p>
             {adding && (
               <HarvestForm

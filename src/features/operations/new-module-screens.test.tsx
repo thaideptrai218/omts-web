@@ -21,7 +21,9 @@ describe("new API read screens", () => {
     render(<PurchaseRequestsScreen />); await screen.findByText("Không có dữ liệu phù hợp.");
     const status = within(screen.getByRole("group",{name:"Trạng thái yêu cầu"})); fireEvent.click(status.getByRole("checkbox",{name:"Tất cả"})); fireEvent.click(status.getByRole("checkbox",{name:"Đã chấp nhận"}));
     await waitFor(() => expect(mocks.read.mock.calls.at(-1)?.[1]).toMatchObject({ status: "3202", page: "1" }));
-    expect(mocks.read.mock.calls.every((args) => args[0] === "list")).toBe(true);
+    // The only non-list read is the cooperative kg/lồng lookup (harvest settings); never the trader's "mine" endpoint.
+    expect(mocks.read.mock.calls.every((args) => args[0] === "list" || args[0] === "settings")).toBe(true);
+    expect(mocks.read.mock.calls.some((args) => args[0] === "mine")).toBe(false);
   });
   it("lists kg requests with customer, pickup date and response, then opens the detail read", async () => {
     mocks.subjectType = "CooperativeOwner";
