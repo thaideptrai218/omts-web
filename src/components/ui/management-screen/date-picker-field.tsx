@@ -48,23 +48,6 @@ export function DatePickerField({ label, value, max, disabled, withTime, classNa
   </>;
 }
 
-/**
- * The same calendar as the picker popup, shown inline. Use it in SHORT dialogs: a popup is positioned inside its dialog and is
- * clipped by the dialog box when the dialog is lower than the calendar.
- */
-export function DateCalendar({ value, max, disabled, onChange }: { value: string; max?: string; disabled?: boolean; onChange(day: string): void }) {
-  const selected = value ? fromQueryDate(value.slice(0, 10)) : undefined, limit = max ? fromQueryDate(max.slice(0, 10)) : undefined;
-  const [month, setMonth] = useState(() => selected ?? new Date());
-  const today = new Date(), todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return <div className={`${screenStyles.theme} ${styles.calendar} ${styles.inlineCalendar}`}>
-    <DayPicker mode="single" navLayout="around" locale={vi} weekStartsOn={1} month={month} onMonthChange={setMonth} selected={selected} fixedWeeks
-      disabled={disabled ? true : limit ? { after: limit } : undefined} onSelect={(day) => { if (day) onChange(toQueryDate(day)); }} />
-    <footer className={styles.calendarFooter}>
-      <button type="button" className={screenStyles.linkButton} disabled={disabled || (!!limit && todayDay > limit)} onClick={() => { setMonth(todayDay); onChange(toQueryDate(todayDay)); }}>Hôm nay</button>
-    </footer>
-  </div>;
-}
-
 const hours = Array.from({ length: 24 }, (_, value) => pad(value)), minutes = Array.from({ length: 60 }, (_, value) => pad(value));
 
 /** Hour and minute columns: click to pick, the chosen value stays in view; arrow keys move within a column. */

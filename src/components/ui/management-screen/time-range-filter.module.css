@@ -20,7 +20,6 @@
 @media (max-width:620px) { .presets { grid-template-columns:repeat(2,minmax(104px,1fr)); } }
 
 .calendar { display:grid; gap:8px; }
-.inlineCalendar { width:max-content; max-width:100%; padding:8px 12px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); }
 .rangeLine { display:flex; gap:8px; font-size:12px; color:var(--omts-color-text-muted); }
 .rangeLine strong { color:var(--omts-color-text); font-weight:600; font-variant-numeric:tabular-nums; }
 .endChip { flex:1 1 0; height:30px; padding:0 10px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); text-align:left; white-space:nowrap; }
