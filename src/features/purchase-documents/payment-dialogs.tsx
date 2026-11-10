@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ function spread(amount: number, receipts: readonly { id: string; remaining: numb
 /** "Thanh toán": pays the supplier and sets the money against its unpaid receipts; what is left over stays an advance. */
 export function PaymentCreateDialog({ supplierId, onClose, onSaved }: { supplierId: string; onClose(): void; onSaved(): void }) {
   const debt = useRemote(useCallback((signal: AbortSignal) => getSupplierDebt(supplierId, signal), [supplierId]));
-  const payers = usePayers(), bankAccounts = useBankAccounts(), confirmation = useActionDialog();
+  const payers = usePayers(), bankAccounts = useBankAccounts(), confirmation = useActionDialog(), { notify } = useToast();
   const [cashAccountId, setCashAccountId] = useState("");
   const [code, setCode] = useState(""), [paidAt, setPaidAt] = useState(nowLocal), [paidById, setPaidById] = useState(""), [method, setMethod] = useState<Method>("Cash"), [bankReference, setBankReference] = useState("");
   const [amount, setAmount] = useState(0), [discount, setDiscount] = useState(0), [note, setNote] = useState(""), [allocate, setAllocate] = useState(true);
@@ -56,6 +57,12 @@ export function PaymentCreateDialog({ supplierId, onClose, onSaved }: { supplier
   const paying = amount + discount, allocated = allocate ? receipts.reduce((sum, receipt) => sum + (applied[receipt.id] ?? 0), 0) : 0;
   const remainingDebt = (debt.data?.debtToday ?? 0) - paying;
   const changeAmount = (next: number, nextDiscount = discount) => { setAmount(next); setApplied(spread(next + nextDiscount, receipts)); };
+  /** Typing into a receipt row drives "Số tiền" too: it follows the row total while the two agree, and grows to cover it otherwise. */
+  const changeApplied = (receiptId: string, value: number) => {
+    const next = { ...applied, [receiptId]: value }, total = receipts.reduce((sum, receipt) => sum + (next[receipt.id] ?? 0), 0);
+    setApplied(next);
+    if (allocated === paying || total > paying) setAmount(Math.max(0, total - discount));
+  };
   const [opened, setOpened] = useState<string>();
 
   async function save(confirmAdvance = false, confirmDuplicateBankReference = false) {
@@ -69,7 +76,7 @@ export function PaymentCreateDialog({ supplierId, onClose, onSaved }: { supplier
     const result = await createPayment({ code, supplierId, paidAt, paidById, amount, discountAmount: discount, method, cashAccountId, bankReference, note, confirmAdvance, confirmDuplicateBankReference, deduplicationKey: key,
       allocations: allocate ? receipts.filter((receipt) => (applied[receipt.id] ?? 0) > 0).map((receipt) => ({ receiptId: receipt.id, amount: applied[receipt.id] })) : null });
     setPending(false);
-    if (result.status === "success") { onSaved(); return; }
+    if (result.status === "success") { notify({ tone: "success", title: `Đã tạo phiếu chi ${result.data.code}.` }); onSaved(); return; }
     if (result.code === "MSG-PURCHASE-05" && await confirmation.confirm(`Khoản chi vượt công nợ hiện tại. Ghi phần vượt ${fmt(-remainingDebt)} đ là tiền trả trước cho nhà cung cấp?`)) return save(true, confirmDuplicateBankReference);
     if (result.code === "MSG-PURCHASE-06" && await confirmation.confirm("Mã giao dịch ngân hàng này đã được ghi trước đó. Đã đối chiếu và vẫn ghi phiếu chi này?")) return save(confirmAdvance, true);
     setError(errorText(result));
@@ -101,7 +108,7 @@ export function PaymentCreateDialog({ supplierId, onClose, onSaved }: { supplier
             <td><button type="button" className={managementStyles.linkButton} onClick={() => setOpened(receipt.id)}>{receipt.code}</button></td>
             <td>{receipt.receivedAt ? viDateTime(receipt.receivedAt) : receipt.receiptDate.split("-").reverse().join("/")}</td>
             <td className={styles.num}>{fmt(receipt.total - (receipt.discount ?? 0))}</td><td className={styles.num}>{fmt(receipt.covered + receipt.returned)}</td><td className={styles.num}>{fmt(receipt.remaining)}</td>
-            <td className={styles.num}><MoneyInput label={`Tiền trả phiếu ${receipt.code}`} className={styles.cellInput} invalid={(applied[receipt.id] ?? 0) > receipt.remaining} value={applied[receipt.id] ?? 0} onChange={(value) => setApplied((current) => ({ ...current, [receipt.id]: value }))} /></td>
+            <td className={styles.num}><MoneyInput label={`Tiền trả phiếu ${receipt.code}`} className={styles.cellInput} invalid={(applied[receipt.id] ?? 0) > receipt.remaining} value={applied[receipt.id] ?? 0} onChange={(value) => changeApplied(receipt.id, value)} /></td>
             <td className={styles.num}>{fmt(receipt.remaining - (applied[receipt.id] ?? 0))}</td></tr>)}
           {!receipts.length && <tr><td colSpan={7} className={styles.empty}>Nhà cung cấp không còn phiếu nhập nào chưa trả hết; khoản chi sẽ là tiền trả trước.</td></tr>}
         </tbody></table></div>}
@@ -122,7 +129,7 @@ export function PaymentVoucherDialog({ id, onClose }: { id: string; onClose(chan
 }
 
 function Voucher({ payment, onClose }: { payment: PaymentView; onClose(changed?: boolean): void }) {
-  const payers = usePayers(), bankAccounts = useBankAccounts(), confirmation = useActionDialog();
+  const payers = usePayers(), bankAccounts = useBankAccounts(), confirmation = useActionDialog(), { notify } = useToast();
   const cancelled = payment.statusId === 1802, paidBack = payment.kind === "PaidBack";
   const editableMethod = payment.method === "Other" ? "Cash" : payment.method;
   const initial = { paidAt: vnLocal(payment.paidAt ?? `${payment.paymentDate}T00:00:00+07:00`), paidById: payment.paidBy?.id ?? "", method: editableMethod, cashAccountId: payment.cashAccount?.id ?? "", bankReference: payment.bankReference ?? "", note: payment.note ?? "" };
@@ -140,7 +147,7 @@ function Voucher({ payment, onClose }: { payment: PaymentView; onClose(changed?:
     setPending(true); setError(undefined);
     const result = await editPayment(payment.id, { rowVersion: payment.rowVersion, ...values, confirmDuplicateBankReference });
     setPending(false);
-    if (result.status === "success") { onClose(true); return; }
+    if (result.status === "success") { notify({ tone: "success", title: `Đã lưu ${paidBack ? "phiếu thu" : "phiếu chi"} ${payment.code}.` }); onClose(true); return; }
     if (result.code === "MSG-PURCHASE-06" && await confirmation.confirm("Mã giao dịch ngân hàng này đã được ghi trước đó. Đã đối chiếu và vẫn lưu?")) return save(true);
     setError(errorText(result));
   }
@@ -150,7 +157,7 @@ function Voucher({ payment, onClose }: { payment: PaymentView; onClose(changed?:
     setPending(true);
     const result = await cancelPayment(payment.id, reason, payment.rowVersion);
     setPending(false);
-    if (result.status === "success") onClose(true); else setError(errorText(result));
+    if (result.status === "success") { notify({ tone: "success", title: `Đã hủy ${paidBack ? "phiếu thu" : "phiếu chi"} ${payment.code}.` }); onClose(true); } else setError(errorText(result));
   }
 
   return <Dialog open size="xl" dismissible={!pending} title={paidBack ? "Phiếu thu (nhà cung cấp trả lại tiền)" : "Phiếu chi"} onOpenChange={(open) => { if (!open) onClose(); }}><div className={`${managementStyles.theme} ${styles.voucher}`}>{confirmation.dialog}

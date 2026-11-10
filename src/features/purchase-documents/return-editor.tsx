@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export function ReturnEditorPage({ id, receiptId }: { id?: string; receiptId?: s
 }
 
 function Editor({ record, receipt, lookups }: { record?: PurchaseReturn; receipt?: Receipt; lookups: ReturnType<typeof usePurchaseLookups> }) {
-  const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog();
+  const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog(), { notify } = useToast();
   const recorded = record?.statusId === RETURN.recorded;
   // A recorded return already holds its own quantities, so editing it may go back up to what it holds plus what is still free.
   const own = Object.fromEntries(recorded ? record!.lines.flatMap((line) => line.receiptLineId ? [[line.receiptLineId, line.quantity]] : []) : []) as Record<string, number>;
@@ -73,12 +74,12 @@ function Editor({ record, receipt, lookups }: { record?: PurchaseReturn; receipt
     setPending(true); setError(undefined);
     const result = await saveReturn({ id: record?.id, rowVersion: record?.rowVersion, code, returnedAt, receiptId: receipt?.id ?? null, supplierId, reason: reason.trim(), discount, ownerApproved: (complete || recorded) && !access.owner, refund: recorded ? null : refund, lines }, complete);
     setPending(false);
-    if (result.status === "success") router.push(`${LIST}?code=${result.data.code}`); else setError(errorText(result));
+    if (result.status === "success") { notify({ tone: "success", title: `Đã lưu phiếu trả ${result.data.code}.` }); router.push(`${LIST}?code=${result.data.code}`); } else setError(errorText(result));
   }
   async function remove() {
     if (!record || !(await confirmation.confirm(`Xóa phiếu tạm ${record.code}?`))) return;
     const result = await removeReturn(record.id);
-    if (result.status === "success") router.push(LIST); else setError(errorText(result));
+    if (result.status === "success") { notify({ tone: "success", title: `Đã xóa phiếu tạm ${record.code}.` }); router.push(LIST); } else setError(errorText(result));
   }
 
   return <EditorFrame title={recorded ? `Sửa phiếu trả ${record!.code}` : record ? `Phiếu trả tạm ${record.code}` : "Trả hàng nhập"} backHref={LIST} source={receipt ? `Từ phiếu nhập ${receipt.code}, nhập ngày ${viDate(receipt.date)}` : undefined}

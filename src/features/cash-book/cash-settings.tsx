@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -35,12 +36,12 @@ export function CashBookSettings() {
 }
 
 function AccountsTab({ kind, rows, canManage, owner, onChanged }: { kind: "Bank" | "EWallet"; rows: CashAccount[]; canManage: boolean; owner: boolean; onChanged(): void }) {
-  const [editing, setEditing] = useState<CashAccount | "new">(), [error, setError] = useState<string>(), confirmation = useActionDialog();
+  const [editing, setEditing] = useState<CashAccount | "new">(), [error, setError] = useState<string>(), confirmation = useActionDialog(), { notify } = useToast();
   const bank = kind === "Bank";
   async function remove(row: CashAccount) {
     if (!(await confirmation.confirm(`Xóa tài khoản ${row.accountNumber} - ${row.providerName}? Tài khoản đã có phiếu thu chi sẽ được chuyển sang ngừng dùng.`))) return;
     const result = await removeAccount(row.id);
-    if (result.status === "success") { setError(undefined); onChanged(); } else setError(result.code === "MSG-CASH-01" ? "Tài khoản đang dùng để nhận VietQR, không thể xóa hoặc ngừng dùng." : errorText(result));
+    if (result.status === "success") { setError(undefined); notify({ tone: "success", title: `Đã xóa tài khoản ${row.accountNumber}.` }); onChanged(); } else setError(result.code === "MSG-CASH-01" ? "Tài khoản đang dùng để nhận VietQR, không thể xóa hoặc ngừng dùng." : errorText(result));
   }
   return <>{confirmation.dialog}
     {canManage && <div className={styles.toolbar}><Button className="w-auto" variant="secondary" onClick={() => setEditing("new")}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm tài khoản</Button></div>}
@@ -59,7 +60,7 @@ function AccountsTab({ kind, rows, canManage, owner, onChanged }: { kind: "Bank"
         {!rows.length && <tr><td colSpan={6} className={styles.muted}>Chưa có {bank ? "tài khoản ngân hàng" : "ví điện tử"} nào.</td></tr>}</tbody>
     </table></div>
     {bank && owner && <p className={`${styles.muted} ${styles.after}`}>Tài khoản nhận VietQR khi bán hàng đổi tại <Link className={managementStyles.linkButton} href="/cooperative/receiving-bank-account">Ngân hàng nhận tiền</Link>; tài khoản đó tự có trong danh sách này.</p>}
-    {editing && <AccountDialog kind={kind} account={editing === "new" ? undefined : editing} onClose={(changed) => { setEditing(undefined); if (changed) onChanged(); }} />}
+    {editing && <AccountDialog kind={kind} account={editing === "new" ? undefined : editing} onClose={(changed) => { setEditing(undefined); if (changed) { notify({ tone: "success", title: "Đã lưu tài khoản." }); onChanged(); } }} />}
   </>;
 }
 

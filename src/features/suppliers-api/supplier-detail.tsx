@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -36,7 +37,7 @@ export function SupplierDetailPanel({ id, access, onEdit, onChanged }: { id: str
 
 function InfoTab({ id, canEdit, onEdit, onChanged }: { id: string; canEdit: boolean; onEdit(record: Detail): void; onChanged(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => supplierRepository.detail(id, signal), [id]));
-  const confirmation = useActionDialog(), [error, setError] = useState<string>(), [pending, setPending] = useState(false), [documents, setDocuments] = useState(false);
+  const confirmation = useActionDialog(), { notify } = useToast(), [error, setError] = useState<string>(), [pending, setPending] = useState(false), [documents, setDocuments] = useState(false);
   const record = remote.data;
   if (remote.loading) return <Skeleton />;
   if (remote.error || !record) return <ListStateMessage error={remote.error ?? "Không tải được hồ sơ."} onRetry={remote.reload} retryLabel="Tải lại hồ sơ" />;
@@ -47,7 +48,7 @@ function InfoTab({ id, canEdit, onEdit, onChanged }: { id: string; canEdit: bool
     setPending(true); setError(undefined);
     const result = await supplierRepository.setStatus(action, id);
     setPending(false);
-    if (result.status === "success") { remote.reload(); onChanged(); } else setError(workspaceError(result));
+    if (result.status === "success") { notify({ tone: "success", title: discontinued ? `Đã sử dụng lại ${record!.name}.` : `Đã ngừng hoạt động ${record!.name}.` }); remote.reload(); onChanged(); } else setError(workspaceError(result));
   }
   const facts: [string, string | null][] = [["Mã nhà cung cấp", record.code], ["Người tạo", record.createdBy], ["Ngày tạo", dateTime(record.createdAt)], ["Nhóm", typeLabel(record.supplierType)], ["Điện thoại", record.phoneNumber], ["Email", record.email],
     ["Địa chỉ", record.address], ["Tỉnh/thành", record.province], ["Phường/xã", record.ward], ["Tên công ty", record.companyName], ["Mã số thuế", record.taxCode], ["Số CCCD", record.identityNumber], ["Ghi chú", record.note]];

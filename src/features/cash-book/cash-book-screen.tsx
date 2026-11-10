@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,8 @@ import { VoucherDialog, VoucherInline, useCashAccess } from "./voucher-dialog";
 import styles from "./cash-book.module.css";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: BookRow): ReactNode };
-const partyHref = (row: BookRow) => row.party?.kind === "Supplier" && row.party.id ? `/workspace/suppliers?recordId=${row.party.id}&search=${encodeURIComponent(row.party.name)}` : undefined;
+/** Supplier rows link to the supplier list searched by the supplier's code. */
+const partyHref = (row: BookRow) => row.party?.kind === "Supplier" && row.party.code ? `/workspace/suppliers?code=${encodeURIComponent(row.party.code)}` : undefined;
 const columns: readonly Column[] = [
   { key: "code", label: "Mã phiếu", sort: "code", render: (row) => <span className="font-mono tabular-nums">{row.code}</span> },
   { key: "time", label: "Thời gian", sort: "time", render: (row) => viDateTime(row.occurredAt) },
@@ -49,10 +51,13 @@ const defaults = columns.filter((column) => !column.hidden).map((column) => colu
 const emptyFilters = { cashAccountId: "", direction: "" as "" | CashDirection, typeId: "", status: "Recorded" as "" | "Recorded" | "Cancelled", createdById: "", partyKind: "" as "" | PartyKind, party: "", countsInResult: "" as "" | "true" | "false" };
 type Opened = { kind: "create"; direction: CashDirection; fund: CashFund } | { kind: "voucher"; id: string } | { kind: "payment"; id: string };
 
-/** "+ Phiếu thu" / "+ Phiếu chi": hover or click opens the funds to pick from. */
-function NewVoucherMenu({ direction, onPick }: { direction: CashDirection; onPick(fund: CashFund): void }) {
+/**
+ * "+ Phiếu thu" / "+ Phiếu chi". With one fund filtered the button opens that fund's voucher directly; only "Tổng quỹ"
+ * (`fund` undefined) shows the menu of funds on hover or click.
+ */
+function NewVoucherMenu({ direction, fund: fixed, onPick }: { direction: CashDirection; fund?: CashFund; onPick(fund: CashFund): void }) {
   const [open, setOpen] = useState(false), root = useRef<HTMLDivElement>(null), timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const show = () => { clearTimeout(timer.current); setOpen(true); };
+  const show = () => { if (fixed) return; clearTimeout(timer.current); setOpen(true); };
   const hide = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(false), 200); };
   useEffect(() => () => clearTimeout(timer.current), []);
   useEffect(() => {
@@ -63,7 +68,7 @@ function NewVoucherMenu({ direction, onPick }: { direction: CashDirection; onPic
   }, [open]);
   const label = direction === "Receipt" ? "Phiếu thu" : "Phiếu chi";
   return <div ref={root} className={styles.menuWrap} onMouseEnter={show} onMouseLeave={hide}>
-    <Button className="w-auto" variant="secondary" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((current) => !current)}><InterfaceIcon name="add" className="mr-1 size-4" />{label}</Button>
+    <Button className="w-auto" variant="secondary" aria-haspopup={fixed ? undefined : "menu"} aria-expanded={fixed ? undefined : open} onClick={() => fixed ? onPick(fixed) : setOpen((current) => !current)}><InterfaceIcon name="add" className="mr-1 size-4" />{label}</Button>
     {open && <div role="menu" className={styles.menu}>{(["Cash", "Bank", "EWallet"] as const).map((fund) =>
       <button key={fund} type="button" role="menuitem" onClick={() => { setOpen(false); onPick(fund); }}><InterfaceIcon name={fund === "Cash" ? "payment" : fund === "Bank" ? "cooperative" : "id-card"} />{fundLabel[fund]}</button>)}</div>}
   </div>;
@@ -73,7 +78,7 @@ export function CashBookScreen({ helpHref }: { helpHref?: string }) {
   const access = useCashAccess(), exportFile = useMutation();
   const [fund, setFund] = useState<CashFund | "All">("Cash"), [time, setTime] = useState<TimeRangeValue>(() => presetValue("thisMonth")), [filters, setFilters] = useState(emptyFilters), [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
-  const [data, setData] = useState<BookPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>(), [notice, setNotice] = useState<string>(), [opened, setOpened] = useState<Opened>();
+  const [data, setData] = useState<BookPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>(), { notify } = useToast(), [opened, setOpened] = useState<Opened>();
   const [stored, store] = useStoredValue("omts-columns-cash-book", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
   const accounts = useRemote(useCallback((signal: AbortSignal) => fund === "Bank" || fund === "EWallet" ? listAccounts(fund, true, signal) : Promise.resolve({ status: "success" as const, data: [] }), [fund]));
@@ -96,7 +101,7 @@ export function CashBookScreen({ helpHref }: { helpHref?: string }) {
   function changed<T>(apply: (value: T) => void) { return (value: T) => { apply(value); setPage(1); setExpanded(undefined); }; }
   const setFilter = <K extends keyof typeof emptyFilters>(key: K) => changed<(typeof emptyFilters)[K]>((value) => setFilters((current) => ({ ...current, [key]: value })));
   const reload = () => setRefresh((value) => value + 1);
-  const closeOpened = (message?: string) => { setOpened(undefined); if (message) { setNotice(message); setExpanded(undefined); reload(); } };
+  const closeOpened = (message?: string) => { setOpened(undefined); if (message) { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); } };
   if (!access.view) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
 
   const rail = <>
@@ -125,12 +130,12 @@ export function CashBookScreen({ helpHref }: { helpHref?: string }) {
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="phiếu thu chi" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm theo mã phiếu" placeholder="Theo mã phiếu" maxLength={100} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      {access.create && <><NewVoucherMenu direction="Receipt" onPick={(value) => setOpened({ kind: "create", direction: "Receipt", fund: value })} /><NewVoucherMenu direction="Payment" onPick={(value) => setOpened({ kind: "create", direction: "Payment", fund: value })} /></>}
+      {access.create && <><NewVoucherMenu direction="Receipt" fund={fund === "All" ? undefined : fund} onPick={(value) => setOpened({ kind: "create", direction: "Receipt", fund: value })} /><NewVoucherMenu direction="Payment" fund={fund === "All" ? undefined : fund} onPick={(value) => setOpened({ kind: "create", direction: "Payment", fund: value })} /></>}
       {access.exportFile && <Button className="w-auto" variant="secondary" isPending={exportFile.pending} onClick={() => void exportFile.run(() => exportBook(query), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
       <ColumnPicker columns={columns} visible={visible.map((column) => column.key)} onChange={(keys) => store(keys.join(","))} />
       <HelpLink helpHref={helpHref} />
     </>}>
-    {(notice || exportFile.error) && <div className={listStyles.feedback} role="status"><ErrorNotice error={exportFile.error} />{notice} {notice && <button type="button" className={managementStyles.linkButton} onClick={() => setNotice(undefined)}>Đóng</button>}</div>}
+    {exportFile.error && <div className={listStyles.feedback}><ErrorNotice error={exportFile.error} /></div>}
     <div className={styles.summary} aria-label="Tổng hợp quỹ">
       <div><span>Quỹ đầu kỳ</span><strong>{summary ? fmt(summary.opening) : "—"}</strong></div>
       <div><span>Tổng thu</span><strong className={styles.in}>{summary ? fmt(summary.totalIn) : "—"}</strong></div>
@@ -149,7 +154,7 @@ export function CashBookScreen({ helpHref }: { helpHref?: string }) {
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
             {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
-              <RowDetail row={row} canEdit={access.edit} canCancel={access.cancel} onOpen={() => setOpened(row.source === "CashVoucher" ? { kind: "voucher", id: row.id } : { kind: "payment", id: row.id })} onChanged={(message) => { setNotice(message); setExpanded(undefined); reload(); }} />
+              <RowDetail row={row} canEdit={access.edit} canCancel={access.cancel} onOpen={() => setOpened(row.source === "CashVoucher" ? { kind: "voucher", id: row.id } : { kind: "payment", id: row.id })} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} />
             </div></td></tr>}
           </Fragment>)}</tbody></table>}
     </ManagementScroller>

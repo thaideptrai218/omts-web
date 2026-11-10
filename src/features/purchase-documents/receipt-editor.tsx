@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -42,7 +43,7 @@ export function ReceiptEditorPage({ id, copyFrom }: { id?: string; copyFrom?: st
 }
 
 function Editor({ start, lookups }: { start: Start; lookups: ReturnType<typeof usePurchaseLookups> }) {
-  const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog();
+  const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog(), { notify } = useToast();
   const { receipt, copy } = start, completed = receipt?.statusId === RECEIPT.completed;
   const [lines, setLines] = useState<Line[]>(() => receipt ? receipt.lines.map((line) => ({ key: line.id, lineId: line.id, item: line.item, quantity: line.quantity == null ? "" : String(line.quantity), unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "", floor: line.seeded + line.returned }))
     : (copy?.lines ?? []).flatMap((line) => { const item = lookups.items.find((row) => row.id === line.itemId); return item ? [{ key: crypto.randomUUID(), lineId: null, item, quantity: "", unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: "", floor: 0 }] : []; }));
@@ -75,12 +76,12 @@ function Editor({ start, lookups }: { start: Start; lookups: ReturnType<typeof u
     const result = await saveReceipt({ id: receipt?.id, rowVersion: receipt?.rowVersion, code, receivedAt, receivedById, supplierId, discount, notes,
       lines: lines.map((line) => ({ lineId: completed ? line.lineId : null, itemId: line.item.id, quantity: quantityOf(line.quantity), unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.item.group === "Seed" ? line.supplierLotCode : "" })) }, complete);
     setPending(false);
-    if (result.status === "success") router.push(`${LIST}?code=${result.data.code}`); else setError(errorText(result));
+    if (result.status === "success") { notify({ tone: "success", title: `Đã lưu phiếu nhập ${result.data.code}.` }); router.push(`${LIST}?code=${result.data.code}`); } else setError(errorText(result));
   }
   async function remove() {
     if (!receipt || !(await confirmation.confirm(`Xóa phiếu tạm ${receipt.code}?`))) return;
     const result = await removeReceipts([receipt.id]);
-    if (result.status === "success" && result.data) router.push(LIST); else setError(errorText(result) ?? "Không xóa được phiếu tạm.");
+    if (result.status === "success" && result.data) { notify({ tone: "success", title: `Đã xóa phiếu tạm ${receipt.code}.` }); router.push(LIST); } else setError(errorText(result) ?? "Không xóa được phiếu tạm.");
   }
 
   return <EditorFrame title={completed ? `Sửa phiếu nhập ${receipt!.code}` : receipt ? `Phiếu tạm ${receipt.code}` : "Nhập hàng"} backHref={LIST}

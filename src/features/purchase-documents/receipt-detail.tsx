@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
@@ -20,7 +21,11 @@ import styles from "./purchases.module.css";
 type Access = ReturnType<typeof usePurchaseAccess>;
 type Tab = "info" | "payments" | "returns";
 type Header = { receivedById: string; receivedAt: string; notes: string };
-export const supplierHref = (receipt: { supplier: { id: string; name: string } }) => `/workspace/suppliers?recordId=${receipt.supplier.id}&search=${encodeURIComponent(receipt.supplier.name)}`;
+/** Opens the supplier list on that one supplier, searched by its unique code (never by name, which repeats and changes). */
+export const supplierHref = (document: { supplier: { code?: string | null }; supplierCode?: string | null }) => {
+  const code = document.supplierCode ?? document.supplier.code;
+  return code ? `/workspace/suppliers?code=${encodeURIComponent(code)}` : "/workspace/suppliers";
+};
 export const itemHref = (itemId: string) => `/workspace/input-items?recordId=${itemId}`;
 
 export function ReceiptDetailPanel({ id, access, onChanged }: { id: string; access: Access; onChanged(message: string): void }) {
@@ -106,7 +111,7 @@ function ReturnsTab({ receipt }: { receipt: Receipt }) {
 }
 
 function Actions({ receipt, access, header, onChanged, onSaved }: { receipt: Receipt; access: Access; header?: Header; onChanged(message: string): void; onSaved(): void }) {
-  const router = useRouter(), confirmation = useActionDialog();
+  const router = useRouter(), confirmation = useActionDialog(), { notify } = useToast();
   const [preview, setPreview] = useState<CancelPreview>(), [error, setError] = useState<string>(), [pending, setPending] = useState(false);
   const draft = receipt.statusId === RECEIPT.draft, completed = receipt.statusId === RECEIPT.completed;
   const canReturn = completed && access.create && receipt.lines.some((line) => line.returnable > 0);
@@ -128,7 +133,7 @@ function Actions({ receipt, access, header, onChanged, onSaved }: { receipt: Rec
     const result = await saveReceipt({ id: receipt.id, rowVersion: receipt.rowVersion, code: receipt.code, receivedAt: header.receivedAt, receivedById: header.receivedById, supplierId: receipt.supplier.id, discount: receipt.discount, notes: header.notes,
       lines: receipt.lines.map((line) => ({ lineId: line.id, itemId: line.item.id, quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "" })) }, false);
     setPending(false);
-    if (result.status === "success") onSaved(); else setError(errorText(result));
+    if (result.status === "success") { notify({ tone: "success", title: `Đã lưu phiếu ${receipt.code}.` }); onSaved(); } else setError(errorText(result));
   }
   return <><ErrorNotice error={error} /><footer className={listStyles.tabFooter}>{confirmation.dialog}
     <div>

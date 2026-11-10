@@ -79,6 +79,10 @@ Bố cục:
 - Cột lọc và danh sách đều có nền trắng và viền; nền xám nhạt gần như trùng nền trang nên khó nhìn.
 - Nội dung mở dòng dùng chiều rộng khung nhìn đo được, không để giãn theo cột. Toàn cục đang ẩn scrollbar nên vùng danh sách phải tự bật lại.
 
+Link sang bản ghi khác:
+- Mở danh sách đích bằng `?code=<mã>` (NCC…, KH…, PN…, PT…): màn đích điền mã vào ô tìm kiếm và mở sẵn dòng có mã **khớp chính xác**. Không đưa id (GUID) lên URL: khó đọc, khó chia sẻ. Màn đích đặt `key={code}` cho danh sách để link bấm ngay trong cùng màn (ví dụ từ hộp xem phiếu) cũng nạp lại ô tìm kiếm. Không dùng tên để tìm: tên trùng được và sửa được.
+- Dữ liệu tham chiếu đi kèm một chứng từ (nhà cung cấp, khách hàng, phiếu gốc) phải có `code`; thiếu thì bổ sung ở backend, không lấy tên thay.
+
 Lọc khoảng số:
 - `Từ`/`Đến` nằm trong ô nền khác với ô nhập.
 - Số nhập canh trái, gõ từ trái sang phải.
@@ -92,6 +96,31 @@ Lịch chọn khoảng:
 - Hover một ngày phải cho thấy kết quả nếu bấm: tô trước khoảng và cập nhật dòng `Từ ngày`/`Đến ngày`.
 - Chỉnh được riêng từng đầu: bấm `Từ ngày` hoặc `Đến ngày` để chọn đầu đang sửa; mỗi bên lịch có điều hướng tháng riêng.
 - Nền hover nằm gọn trong ô ngày.
+
+### 1.10 Thông báo (toast)
+
+Dùng `useToast().notify({ tone, title, description? })` từ `src/components/ui/toast-provider.tsx`, không tự dựng dải thông báo trong trang.
+
+Khi nào dùng:
+- **Bắt buộc** sau mỗi thao tác ghi thành công: tạo, lưu, sửa trên dòng, hủy, xóa, ngừng hoạt động / sử dụng lại, nhập file. Tiêu đề nêu việc đã làm kèm mã chứng từ hoặc tên đối tượng: `Đã tạo phiếu chi TT000012.`, `Đã hủy phiếu nhập PN000034.`, `Đã ngừng hoạt động NCC000005.`
+- Thao tác chạy nền hoặc hàng loạt không giữ form mở (xóa nhiều phiếu tạm, xuất file thất bại sau khi đã đóng hộp thoại): `danger` cho lỗi.
+- **Không** dùng toast cho lỗi nhập liệu hay lỗi máy chủ khi form/hộp thoại còn mở: lỗi hiện ngay trong form (`ErrorNotice`) để người dùng sửa tại chỗ. Không dùng toast thay hộp xác nhận.
+- Chuyển trang sau khi lưu (trang soạn phiếu) vẫn gọi toast trước `router.push`; toast nằm ở gốc ứng dụng nên không mất khi đổi trang.
+
+Kiểu dáng (đã cài sẵn, không ghi đè):
+- Góc **dưới bên phải**, trượt vào từ phải sang trái (240ms); rộng tối đa 360px; tối đa 3 toast, cái mới ở dưới cùng.
+- Chữ 13px, tiêu đề đậm 600; mô tả (nếu có) một dòng ngắn màu xám.
+- Mỗi loại một màu riêng, nền nhạt + viền trái 4px + biểu tượng tròn: `success` xanh lá (✓), `danger` đỏ (✕), `warning` cam (!), `info` xanh dương (i). Không dùng màu teal chung của web cho toast vì `success` và `info` trùng màu.
+- Tự ẩn: `success` 3,5 giây, `info` 4 giây, `warning` 5 giây, `danger` 6 giây; dừng đếm khi rê chuột hoặc focus; có nút đóng nhỏ.
+- `danger` có `role="alert"`, các loại khác `role="status"`.
+
+Kiểm thử: màn hình có gọi toast phải được bọc trong `ToastProvider` khi render trong test.
+
+### 1.11 Màu chủ đạo (Chủ đề)
+
+Người dùng chọn màu chủ đạo trong menu avatar → `Chủ đề` (lưu theo trình duyệt). Màu chọn được đặt vào biến `--omts-brand`, `--omts-brand-hover`, `--omts-brand-soft` và `--omts-color-primary*` trên `<html>`.
+- Không viết cứng màu navy `#315a96` / `#294d82` / `#edf3fc` cho thanh menu, nút chính, tab đang chọn, nền hover: dùng `var(--omts-brand, #315a96)` (hoặc `--omts-color-primary` trong `.theme` của màn hình quản lý) để đổi theo chủ đề.
+- Màu trạng thái (toast, nhãn Hoàn thành/Đã hủy, số âm) **không** đổi theo chủ đề.
 
 ## 2. Nguyên tắc chung
 

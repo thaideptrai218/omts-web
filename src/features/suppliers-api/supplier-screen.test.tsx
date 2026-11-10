@@ -10,6 +10,7 @@ vi.mock("@/features/purchasing-v2/screens", () => ({ ReceiptDialog: () => null, 
 vi.mock("@/features/supplier-api/documents-dialog", () => ({ SupplierDocumentsDialog: () => null }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 import { SupplierScreen } from "./supplier-screen";
+import { ToastProvider } from "@/components/ui/toast-provider";
 
 const row = { id: "122bb318-a72e-49aa-a8d7-a6169f889007", name: "Trại giống", code: "NCC000001", supplierType: "Seed", phoneNumber: "0900000000", statusId: 101, status: "In Use", email: null, address: null, province: null, ward: null, companyName: null, taxCode: null, note: null, createdAt: "2026-11-09T00:00:00Z", createdBy: "Chủ", totalPurchased: 100000, currentDebt: null };
 const grant = (...pairs: [string, string][]) => { state.context.permissions.functionPermissions = pairs.map(([functionCode, action]) => ({ functionCode, action })); };
@@ -23,7 +24,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 it("hides debt column and filter without SUPPLIER_PAYMENTS and never sends debt parameters", async () => {
   grant(["SUPPLIERS", "View"], ["PURCHASE_RECEIPTS", "View"]);
-  render(<SupplierScreen />);
+  render(<ToastProvider><SupplierScreen /></ToastProvider>);
   await screen.findByText("Trại giống");
   expect(screen.queryByRole("button", { name: "Nợ hiện tại" })).toBeNull();
   expect(screen.queryByLabelText("Nợ hiện tại từ")).toBeNull();
@@ -34,7 +35,7 @@ it("hides debt column and filter without SUPPLIER_PAYMENTS and never sends debt 
 it("opens a row on click, not on its checkbox, and shows no debt tab without the permission", async () => {
   grant(["SUPPLIERS", "View"], ["SUPPLIERS", "Edit"]);
   const user = userEvent.setup();
-  render(<SupplierScreen />);
+  render(<ToastProvider><SupplierScreen /></ToastProvider>);
   const name = await screen.findByText("Trại giống");
   await user.click(screen.getByRole("checkbox", { name: "Chọn Trại giống" }));
   expect(screen.queryByRole("tablist")).toBeNull();
@@ -46,12 +47,12 @@ it("opens a row on click, not on its checkbox, and shows no debt tab without the
 it("remembers a closed filter rail and offers a named control to reopen it", async () => {
   grant(["SUPPLIERS", "View"]);
   const user = userEvent.setup();
-  render(<SupplierScreen />);
+  render(<ToastProvider><SupplierScreen /></ToastProvider>);
   await screen.findByText("Trại giống");
   await user.click(screen.getByRole("button", { name: "Ẩn bộ lọc" }));
   expect(screen.getByRole("button", { name: "Hiện bộ lọc" })).toBeTruthy();
   cleanup();
-  render(<SupplierScreen />);
+  render(<ToastProvider><SupplierScreen /></ToastProvider>);
   await screen.findByText("Trại giống");
   expect(screen.getByRole("button", { name: "Hiện bộ lọc" })).toBeTruthy();
 });

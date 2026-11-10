@@ -1,7 +1,8 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { StatusPill } from "@/components/ui/management-page";
@@ -46,13 +47,22 @@ const columns: readonly Column[] = [
 const defaults = columns.filter((column) => !column.hidden).map((column) => column.key).join(",");
 const emptyFilters = { group: "", supplier: "", status: "" };
 
-export function PurchaseReceiptsScreen({ helpHref }: { helpHref?: string }) {
-  const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog(), lookups = usePurchaseLookups(), exportFile = useMutation();
+/**
+ * A link opens this list on one record by its code (`?code=…`). The list is keyed by that code so a link followed while
+ * the list is already open starts it again: the search box shows the code and the row with exactly that code opens.
+ */
+export function PurchaseReceiptsScreen(props: { helpHref?: string }) {
   const linkedCode = useSearchParams().get("code") ?? "";
+  return <ReceiptsList key={linkedCode} linkedCode={linkedCode} {...props} />;
+}
+
+function ReceiptsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
+  const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog(), lookups = usePurchaseLookups(), exportFile = useMutation();
+  const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [time, setTime] = useState<TimeRangeValue>(() => linkedCode ? allTime : presetValue("thisMonth"));
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<Page<ReceiptRow> & { totals: ReceiptTotals }>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
-  const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set()), [notice, setNotice] = useState<string>();
+  const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set()), { notify } = useToast();
   const [stored, store] = useStoredValue("omts-columns-purchase-receipts", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
   const query = useMemo<ReceiptQuery>(() => ({ search, statusId: filters.status, group: filters.group, supplierId: filters.supplier, from: time.from, to: time.to, sortBy: sort.key, sortDir: sort.direction, page, pageSize }), [search, filters, time, sort, page, pageSize]);
@@ -64,7 +74,7 @@ export function PurchaseReceiptsScreen({ helpHref }: { helpHref?: string }) {
       void listReceipts(query, controller.signal).then((result) => {
         if (controller.signal.aborted) return;
         setLoading(false);
-        if (result.status === "success") setData(result.data); else { setData(undefined); setError(errorText(result)); }
+        if (result.status === "success") { setData(result.data); if (linkPending.current) { const code = linkPending.current.toLowerCase(); linkPending.current = ""; const linked = result.data.items.find((row) => row.code.toLowerCase() === code); if (linked) setExpanded(linked.id); } } else { setData(undefined); setError(errorText(result)); }
       });
     }, 200);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -80,7 +90,7 @@ export function PurchaseReceiptsScreen({ helpHref }: { helpHref?: string }) {
   async function removeSelected() {
     if (!(await confirmation.confirm(`Xóa ${selected.size} phiếu tạm đã chọn?`))) return;
     const result = await removeReceipts([...selected]);
-    if (result.status === "success") { setNotice(`Đã xóa ${result.data} phiếu tạm.`); setSelected(new Set()); reload(); } else setNotice(errorText(result));
+    if (result.status === "success") { notify({ tone: "success", title: `Đã xóa ${result.data} phiếu tạm.` }); setSelected(new Set()); reload(); } else notify({ tone: "danger", title: errorText(result) ?? "Không thực hiện được." });
   }
   if (!access.view) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
 
@@ -103,7 +113,7 @@ export function PurchaseReceiptsScreen({ helpHref }: { helpHref?: string }) {
     </>}>
     {confirmation.dialog}
     <BulkBar count={access.remove ? selected.size : 0} onClear={() => setSelected(new Set())}><Button className="w-auto" variant="danger" onClick={() => void removeSelected()}>Xóa phiếu tạm</Button></BulkBar>
-    {(notice || exportFile.error) && <div className={listStyles.feedback} role="status"><ErrorNotice error={exportFile.error} />{notice} {notice && <button type="button" className={managementStyles.linkButton} onClick={() => setNotice(undefined)}>Đóng</button>}</div>}
+    {exportFile.error && <div className={listStyles.feedback}><ErrorNotice error={exportFile.error} /></div>}
     {data && <p className={styles.summary}>Tiền hàng đã nhập <strong>{fmt(data.totals.received)}</strong> · Trả hàng nhập <strong>{fmt(data.totals.returned)}</strong> · Thuần <strong>{fmt(data.totals.net)}</strong> <span>(trước giảm giá, phiếu đã nhập hàng)</span></p>}
     <ManagementScroller busy={loading}>
       {error ? <ListStateMessage error={error} onRetry={reload} retryLabel="Tải lại" />
@@ -120,7 +130,7 @@ export function PurchaseReceiptsScreen({ helpHref }: { helpHref?: string }) {
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => open(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + (access.remove ? 2 : 1)} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><ReceiptDetailPanel id={row.id} access={access} onChanged={(message) => { setNotice(message); setExpanded(undefined); reload(); }} /></div></td></tr>}
+            {expanded === row.id && <tr><td colSpan={visible.length + (access.remove ? 2 : 1)} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><ReceiptDetailPanel id={row.id} access={access} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} /></div></td></tr>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

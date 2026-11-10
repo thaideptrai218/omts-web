@@ -1,6 +1,7 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import { useSearchParams } from "next/navigation";
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { FilterGroup, FilterPills, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
 import { BulkBar, ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, SortableHeader, managementStyles, type SortState } from "@/components/ui/management-screen/management-table";
@@ -43,19 +44,28 @@ const columns: readonly Column[] = [
 const emptyFilters = { type: "", statusId: "", totalFrom: "", totalTo: "", debtFrom: "", debtTo: "" };
 const reversed = (from: string, to: string) => from !== "" && to !== "" && Number(from) > Number(to);
 
-export function SupplierScreen({ helpHref }: { helpHref?: string }) {
+/**
+ * A link opens this list on one supplier by its code (`?code=NCC000002`). The list is keyed by that code so a link
+ * followed while the list is already open starts it again: the search box shows the code and that supplier's row opens.
+ */
+export function SupplierScreen(props: { helpHref?: string }) {
+  const linkedCode = useSearchParams().get("code") ?? "";
+  return <SupplierList key={linkedCode} linkedCode={linkedCode} {...props} />;
+}
+
+function SupplierList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
   const context = useApiWorkspace();
   const can = (fn: string, action: string) => context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some((p) => p.functionCode === fn && p.action === action);
   const canView = can("SUPPLIERS", "View"), canCreate = can("SUPPLIERS", "Create"), canEdit = can("SUPPLIERS", "Edit"), canExport = can("SUPPLIERS", "Export"), canTotal = can("PURCHASE_RECEIPTS", "View"), canDebt = can("SUPPLIER_PAYMENTS", "View");
   const access: SupplierAccess = { edit: canEdit, history: canTotal, debt: canDebt, pay: can("SUPPLIER_PAYMENTS", "Create"), exportDebt: can("SUPPLIER_PAYMENTS", "Export") };
-  // A link from a purchase document opens this list on one supplier: ?search=<name>&recordId=<id>.
-  const params = useSearchParams(), linkedId = params.get("recordId") ?? undefined;
-  const [search, setSearch] = useState(params.get("search") ?? ""), [filters, setFilters] = useState(emptyFilters), [purchaseTime, setPurchaseTime] = useState<TimeRangeValue>(allTime);
+  // A link from another screen opens this list on one supplier by its code: ?code=NCC000002 (searched, and its row expanded).
+  const linkPending = useRef(linkedCode);
+  const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [purchaseTime, setPurchaseTime] = useState<TimeRangeValue>(allTime);
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" });
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SupplierPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
-  const [expanded, setExpanded] = useState<string | undefined>(linkedId), [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [editor, setEditor] = useState<SupplierDetail | null>(), [importing, setImporting] = useState(false), [notice, setNotice] = useState<string>(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();
+  const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [editor, setEditor] = useState<SupplierDetail | null>(), [importing, setImporting] = useState(false), { notify } = useToast(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();
   const bulk = useMutation(), exportFile = useMutation(), confirmation = useActionDialog();
 
   const offered = useMemo(() => columns.filter((column) => column.gate === "total" ? canTotal : column.gate === "debt" ? canDebt : true), [canTotal, canDebt]);
@@ -80,6 +90,11 @@ export function SupplierScreen({ helpHref }: { helpHref?: string }) {
         setLoading(false);
         if (result.status === "success") {
           setData(result.data);
+          if (linkPending.current) {
+            const code = linkPending.current.toLowerCase(); linkPending.current = "";
+            const linked = result.data.items.find((row) => row.code.toLowerCase() === code);
+            if (linked) setExpanded(linked.id);
+          }
           if (result.data.total > 0 && page > Math.ceil(result.data.total / pageSize)) setPage(Math.ceil(result.data.total / pageSize));
         } else { setData(undefined); setError(workspaceError(result)); }
       });
@@ -128,8 +143,8 @@ export function SupplierScreen({ helpHref }: { helpHref?: string }) {
       <Button className="w-auto" variant="danger" disabled={bulk.pending} onClick={() => void runBulk("Discontinue")}>Ngừng dùng</Button>
       <Button className="w-auto" variant="secondary" disabled={bulk.pending} onClick={() => void runBulk("Resume")}>Sử dụng lại</Button>
     </BulkBar>
-    {(bulk.error || exportFile.error || notice || bulkOutcome) && <div className={styles.feedback}>
-      <ErrorNotice error={bulk.error || exportFile.error} />{notice && <p role="status">{notice}</p>}
+    {(bulk.error || exportFile.error || bulkOutcome) && <div className={styles.feedback}>
+      <ErrorNotice error={bulk.error || exportFile.error} />
       {bulkOutcome && <div role="status"><p>Thành công {bulkOutcome.succeeded}, không thực hiện được {bulkOutcome.failed}. <button type="button" className={managementStyles.linkButton} onClick={() => setBulkOutcome(undefined)}>Đóng</button></p>
         {failedOutcomes.length > 0 && <ul>{failedOutcomes.map((outcome) => <li key={outcome.id}>{data?.items.find((row) => row.id === outcome.id)?.name ?? outcome.id}: {outcome.code === "MSG-GEN-09" ? "Trạng thái hiện tại không cho phép." : "Không thực hiện được."}</li>)}</ul>}</div>}
     </div>}
@@ -150,7 +165,7 @@ export function SupplierScreen({ helpHref }: { helpHref?: string }) {
           {expanded === row.id && <tr><td colSpan={visible.length + (canEdit ? 2 : 1)} className={styles.detailCell}><div className={managementStyles.viewWidth}><SupplierDetailPanel id={row.id} access={access} onEdit={setEditor} onChanged={reload} /></div></td></tr>}
         </Fragment>)}</tbody></table>}
     </ManagementScroller>
-    {editor !== undefined && <SupplierFormDialog record={editor} onClose={() => setEditor(undefined)} onSaved={() => { setEditor(undefined); setNotice("Đã lưu nhà cung cấp."); setExpanded(undefined); reload(); }} />}
-    {importing && <SupplierImportDialog onClose={() => setImporting(false)} onImported={(count) => { setImporting(false); setNotice(`Đã nhập ${count} nhà cung cấp.`); reload(); }} />}
+    {editor !== undefined && <SupplierFormDialog record={editor} onClose={() => setEditor(undefined)} onSaved={() => { setEditor(undefined); notify({ tone: "success", title: "Đã lưu nhà cung cấp." }); setExpanded(undefined); reload(); }} />}
+    {importing && <SupplierImportDialog onClose={() => setImporting(false)} onImported={(count) => { setImporting(false); notify({ tone: "success", title: `Đã nhập ${count} nhà cung cấp.` }); reload(); }} />}
   </ManagementLayout>;
 }

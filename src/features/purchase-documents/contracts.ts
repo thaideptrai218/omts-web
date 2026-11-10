@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const id = z.guid(), text = z.string(), n = z.number(), date = z.iso.date(), stamp = z.string(), opt = <T extends z.ZodType>(value: T) => value.nullable().optional();
-const supplier = z.object({ id, name: text, phoneNumber: text });
+const supplier = z.object({ id, code: opt(text), name: text, phoneNumber: text });
 const zone = z.object({ id, code: text, name: text });
 const account = z.object({ id, name: text });
 const paged = <T extends z.ZodType>(row: T) => z.object({ items: z.array(row), page: n, pageSize: n, total: n });
