@@ -15,7 +15,10 @@ import {
   type PausableTimer,
 } from "@/components/ui/pausable-timer";
 
-type ToastTone = "danger" | "info" | "success";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import styles from "./toast-provider.module.css";
+
+type ToastTone = "danger" | "info" | "success" | "warning";
 
 type ToastInput = Readonly<{
   description?: string;
@@ -32,11 +35,14 @@ type ToastContextValue = Readonly<{
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const toneStyles: Record<ToastTone, string> = {
-  danger: "border-danger/30 bg-surface text-danger",
-  info: "border-info/30 bg-surface text-info",
-  success: "border-success/30 bg-surface text-success",
-};
+/** Errors stay longer so they can be read; a success only confirms what the user just did. */
+const defaultDuration: Record<ToastTone, number> = { danger: 6000, warning: 5000, info: 4000, success: 3500 };
+
+function ToneIcon({ tone }: { tone: ToastTone }) {
+  if (tone === "success") return <InterfaceIcon name="check" className="" />;
+  if (tone === "danger") return <InterfaceIcon name="close" className="" />;
+  return <span>{tone === "warning" ? "!" : "i"}</span>;
+}
 
 function ToastItem({
   message,
@@ -50,7 +56,7 @@ function ToastItem({
   useEffect(() => {
     const timer = createPausableTimer(
       () => onDismiss(message.id),
-      message.durationMs ?? 4000,
+      message.durationMs ?? defaultDuration[message.tone ?? "info"],
     );
     timerRef.current = timer;
 
@@ -58,13 +64,13 @@ function ToastItem({
       timer.cancel();
       timerRef.current = null;
     };
-  }, [message.durationMs, message.id, onDismiss]);
+  }, [message.durationMs, message.id, message.tone, onDismiss]);
 
   const tone = message.tone ?? "info";
 
   return (
     <div
-      className={`pointer-events-auto rounded-card border p-4 shadow-card motion-safe:animate-[omts-reveal-from-bottom_180ms_ease-out_both] ${toneStyles[tone]}`}
+      className={`${styles.toast} ${styles[tone]}`}
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           timerRef.current?.resume();
@@ -75,22 +81,14 @@ function ToastItem({
       onMouseLeave={() => timerRef.current?.resume()}
       role={tone === "danger" ? "alert" : "status"}
     >
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-text">{message.title}</p>
-          {message.description && (
-            <p className="mt-1 text-sm leading-6 text-text-muted">{message.description}</p>
-          )}
-        </div>
-        <button
-          aria-label="Đóng thông báo"
-          className="grid size-9 shrink-0 place-items-center rounded-control text-lg text-text-muted hover:bg-surface-subtle hover:text-text"
-          onClick={() => onDismiss(message.id)}
-          type="button"
-        >
-          <span aria-hidden="true">×</span>
-        </button>
+      <span className={styles.icon} aria-hidden="true"><ToneIcon tone={tone} /></span>
+      <div className={styles.body}>
+        <p className={styles.title}>{message.title}</p>
+        {message.description && <p className={styles.description}>{message.description}</p>}
       </div>
+      <button aria-label="Đóng thông báo" className={styles.close} onClick={() => onDismiss(message.id)} type="button">
+        <InterfaceIcon name="close" className="" aria-hidden="true" />
+      </button>
     </div>
   );
 }
@@ -114,10 +112,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div
-        aria-label="Thông báo hệ thống"
-        className="pointer-events-none fixed inset-x-4 bottom-4 z-50 grid gap-3 sm:left-auto sm:right-5 sm:w-full sm:max-w-sm"
-      >
+      <div aria-label="Thông báo hệ thống" className={styles.region}>
         {messages.map((message) => (
           <ToastItem key={message.id} message={message} onDismiss={dismiss} />
         ))}
