@@ -10,9 +10,9 @@ function config() {
   return result.config;
 }
 
-describe("server backend endpoint catalog, no fetch or refresh", () => {
+describe("server backend endpoint catalog, no fetch", () => {
   it.each([
-    ["login", "POST", "/api/auth/login"], ["identity", "GET", "/api/me"],
+    ["login", "POST", "/api/auth/login"], ["refresh", "POST", "/api/auth/refresh"], ["identity", "GET", "/api/me"],
     ["permissions", "GET", "/api/me/permissions"], ["profileRead", "GET", "/api/me/profile"],
     ["profileUpdate", "PUT", "/api/me/profile"], ["logout", "POST", "/api/auth/logout"],
   ])("resolves only catalog endpoint %s", (endpoint, method, path) => {
@@ -20,7 +20,7 @@ describe("server backend endpoint catalog, no fetch or refresh", () => {
       status: "resolved", target: { url: `https://backend.example.test${path}`, method },
     });
   });
-  it.each(["refresh", "/api/auth/refresh", "https://other.example/api/me", "//other.example",
+  it.each(["/api/auth/refresh", "https://other.example/api/me", "//other.example",
     "../api/me", "profileRead?url=evil", "__proto__", "constructor", "", undefined, null, {}])(
     "rejects arbitrary target case %#", (target) => {
       expect(resolveBackendEndpoint(config(), target)).toEqual({ status: "invalid-target" });

@@ -24,6 +24,7 @@ describe("server token custody, not a public login response or session", () => {
     expect(raw.accessToken).toBe(secretCanaries[0]);
     expect(raw.mustChangePassword).toBe(true);
     expect(raw.phoneVerificationRequired).toBe(true);
+    expect(raw.refreshTokenRotated).toBe(true);
     expect(raw).not.toHaveProperty("password");
     expect(raw).not.toHaveProperty("nested");
     expect(Object.isFrozen(raw)).toBe(true);
@@ -35,7 +36,7 @@ describe("server token custody, not a public login response or session", () => {
   });
   it.each([
     { accessToken: "" }, { refreshToken: null }, { accountId: "invalid" }, { subjectType: "FutureActor" },
-    { mustChangePassword: undefined }, { phoneVerificationRequired: "false" }, { accessTokenExpiresAt: "tomorrow" },
+    { mustChangePassword: undefined }, { phoneVerificationRequired: "false" }, { refreshTokenRotated: undefined }, { accessTokenExpiresAt: "tomorrow" },
   ])("rejects invalid wire case %# without an issue/cause payload", (change) => {
     expect(parseServerAuthTokens({ ...tokenFixture(), ...change })).toEqual({ status: "invalid-data" });
   });

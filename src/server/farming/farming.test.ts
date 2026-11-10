@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn(), application: vi.fn() }));
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
-import { resolved } from "../employees/__tests__/employee-fixture";
+import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 import { handleFarmingRequest } from "./farming-http";
 import { planFarming } from "./farming-plan";
 import { farmingIds as ids, licenseFixture, raftFixture, conditionFixture } from "@/features/farming-api/fixtures";
@@ -36,10 +36,10 @@ describe("farming BFF authorization, uploads and file projection", () => {
     expect((await handleFarmingRequest(get(`action=list&zoneId=${ids.zone}`), "zone-licenses")).status).toBe(403);
     expect((await handleFarmingRequest(upload("upload-photo", {}, [], "raft-details"), "raft-details")).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
   });
-  it("requires authentication and a fully onboarded application session", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce({ status: "missing" });
-    expect((await handleFarmingRequest(get(`action=detail&id=${ids.license}`), "zone-licenses")).status).toBe(401);
-    gateway.resolve.mockResolvedValueOnce(resolved({ phase: "password-change-required" }));
+  it("requires authentication and relays the API refusal of an account that still owes onboarding", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch"); gateway.resolve.mockResolvedValueOnce({ status: "anonymous" });
+    expect((await handleFarmingRequest(get(`action=detail&id=${ids.license}`), "zone-licenses")).status).toBe(401); expect(fetcher).not.toHaveBeenCalled();
+    fetcher.mockResolvedValueOnce(Response.json({ code: "MSG-ACCOUNT-04" }, { status: 403 }));
     expect((await handleFarmingRequest(get(`action=detail&id=${ids.license}`), "zone-licenses")).status).toBe(403);
   });
   it("does not read files when the backend refuses a staff raft in another zone", async () => {
@@ -88,7 +88,7 @@ describe("farming BFF authorization, uploads and file projection", () => {
     expect((await handleFarmingRequest(get(`action=file&id=${ids.license}`), "zone-licenses")).status).toBe(404); expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("suppresses a successful write response when the session changes during upload", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "new" }));
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(licenseFixture()));
     const response = await handleFarmingRequest(upload("update", { ...payload, rowVersion: "AQID" }), "zone-licenses");
     expect(response.status).toBe(401); expect(await response.text()).not.toContain("QA-GP-01");

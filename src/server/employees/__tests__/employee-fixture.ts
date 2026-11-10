@@ -15,13 +15,18 @@ export const environment = {
   OMTS_WEB_ORIGIN: "https://web.example.test", OMTS_WEB_COOKIE_PROFILE: "https",
 };
 
-// The session now exists only as claims of the access token, so phase, revision and store hash
-// overrides that older cases pass have no counterpart and are ignored.
-export function resolved(overrides: Partial<{ identity: SessionIdentity; phase: string; revision: string; idHash: string }> = {}) {
+// The session exists only as claims of the access token: account, API session id and subject type.
+// The account phase is not part of it; the API refuses an account that still owes onboarding.
+export function resolved(overrides: Partial<{ identity: SessionIdentity }> = {}) {
   const identity: SessionIdentity = overrides.identity ?? { accountId, backendSessionId: accountId, subjectType: "CooperativeOwner" };
   return { status: "resolved" as const, session: new ResolvedServerSession({
     accountId: identity.accountId, sessionId: identity.backendSessionId, subjectType: identity.subjectType, expiresAtMs: Date.now() + 600_000,
   }, accessCanary) };
+}
+
+// Same account signed in again: the API issues a new session id, which is what marks a replaced session.
+export function replacedSession() {
+  return resolved({ identity: { ...resolved().session.identity, backendSessionId: "322bb318-a72e-49aa-a8d7-a6169f889007" } });
 }
 
 export function putBody() {

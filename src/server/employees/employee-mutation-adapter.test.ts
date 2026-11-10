@@ -58,11 +58,16 @@ describe("unmounted employee BFF adapter access/input boundary", () => {
 
   it.each([
     { status: "anonymous" }, { status: "invalid-session", reason: "invalid-session", clearCookie: true }, { status: "unavailable" },
-    resolved({ phase: "password-change-required" }), resolved({ phase: "contact-verification-required" }),
-  ] as const)("does not send for an unavailable/unauthenticated/onboarding session case %#", async (resolution) => {
+  ] as const)("does not send for an unavailable/unauthenticated session case %#", async (resolution) => {
     const transport = backend(); const resolve = resolver().mockResolvedValue(resolution);
     const result = await createEmployeeMutationAdapter(environment, { resolve, backend: transport }).mutate(request(), employeeId);
     expect(result.status).not.toBe("saved"); expect(transport.request).not.toHaveBeenCalled();
+  });
+
+  it("does not publish a save when the API refuses an account that still owes onboarding", async () => {
+    const transport = backend(); transport.request.mockResolvedValue({ status: "http-error", httpStatus: 403, code: "MSG-ACCOUNT-04" });
+    const result = await createEmployeeMutationAdapter(environment, { resolve: resolver(), backend: transport }).mutate(request(), employeeId);
+    expect(result.status).not.toBe("saved"); expect(result).not.toHaveProperty("employee");
   });
 
   it.each(["Staff", "Trader", "SystemAdministrator"] as const)("denies %s despite browser-supplied credentials", async (subjectType) => {

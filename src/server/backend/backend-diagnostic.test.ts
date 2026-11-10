@@ -14,8 +14,11 @@ describe("minimal server diagnostic projection", () => {
       for (const secret of secretCanaries) expect(JSON.stringify(result)).not.toContain(secret);
     },
   );
-  it.each(["refresh", "https://evil.test", secretCanaries[0], "constructor"])("rejects noncatalog target case %#", (target) => {
+  it.each(["/api/auth/refresh", "https://evil.test", secretCanaries[0], "constructor"])("rejects noncatalog target case %#", (target) => {
     expect(projectBackendDiagnostic(target, { status: "success" })).toEqual({ event: "backend-request", outcome: "invalid-diagnostic" });
+  });
+  it("retains the refresh endpoint as a catalog target", () => {
+    expect(projectBackendDiagnostic("refresh", { status: "success" })).toEqual({ event: "backend-request", endpoint: "refresh", outcome: "success" });
   });
   it.each([{ status: secretCanaries[0] }, { status: "http-error", httpStatus: 600 }, { status: "success", httpStatus: NaN }, null])(
     "rejects malformed result case %# without logging raw data", (result) => {

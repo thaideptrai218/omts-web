@@ -8,10 +8,8 @@ describe("employee mutation lifecycle and redacted failure", () => {
   it.each([
     { status: "anonymous" } as const,
     { status: "invalid-session", reason: "invalid-session", clearCookie: true } as const,
-    resolved({ revision: "revision-2" }), resolved({ idHash: "b".repeat(64) }),
     resolved({ identity: { ...resolved().session.identity, accountId: employeeId } }),
     resolved({ identity: { ...resolved().session.identity, backendSessionId: employeeId } }),
-    resolved({ phase: "password-change-required" }),
     resolved({ identity: { ...resolved().session.identity, subjectType: "Staff" } }),
   ])("does not publish old data or clear a newer cookie after session change case %#", async (current) => {
     const transport = backend();

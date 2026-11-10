@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn() }));
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
 import { handleTraderRequests } from "./trader-requests-http";
-import { resolved } from "../employees/__tests__/employee-fixture";
+import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 const id = "122bb318-a72e-49aa-a8d7-a6169f889007";
 const row = (status = "PENDING_APPROVAL") => ({ accountId: id, displayName: "QA", phoneNumber: "0900000090", note: null, requestedAt: null, status, rejectionReason: null });
 function setup(subjectType: "CooperativeOwner" | "Staff" | "Trader" = "CooperativeOwner") {
@@ -41,6 +41,6 @@ it("rejects foreign-origin writes", async () => {
   setup(); const fetcher = vi.spyOn(globalThis, "fetch"); expect((await handleTraderRequests(write({ action: "approve", accountId: id, confirmed: true }, "https://other.test"))).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
 });
 it("discards a decision acknowledgement when the session changes", async () => {
-  setup(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(row("ACTIVE"))); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+  setup(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(row("ACTIVE"))); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
   expect((await handleTraderRequests(write({ action: "approve", accountId: id, confirmed: true }))).status).toBe(401);
 });

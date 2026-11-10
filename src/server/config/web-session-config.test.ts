@@ -13,7 +13,7 @@ describe("server Web origin and approved C1A cookie profiles, no runtime wiring"
       cookies: { access: "__Host-omts_at", refresh: "__Secure-omts_rt", refreshPath: "/api/auth", marker: "__Host-omts_rf", flow: "__Secure-omts_vf", flowPath: "/api/verifications", device: "__Secure-omts_dv", httpOnly: true, secure: true, sameSite: "lax" },
     } });
     if (result.status !== "valid") return;
-    expect(Object.keys(result.config.cookies).sort()).toEqual(["access", "flow", "httpOnly", "marker", "refresh", "refreshPath", "sameSite", "secure"]);
+    expect(Object.keys(result.config.cookies).sort()).toEqual(["access", "device", "flow", "flowPath", "httpOnly", "marker", "refresh", "refreshPath", "sameSite", "secure"]);
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result.config)).toBe(true);
     expect(Object.isFrozen(result.config.cookies)).toBe(true);

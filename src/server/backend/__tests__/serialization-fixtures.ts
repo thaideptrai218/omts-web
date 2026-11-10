@@ -7,7 +7,7 @@ export function tokenFixture() {
     accountId, displayName: "Người dùng fixture", subjectType: "Staff",
     accessToken: secretCanaries[0], refreshToken: secretCanaries[1],
     accessTokenExpiresAt: "2026-10-24T15:00:00Z", refreshTokenExpiresAt: "2026-10-31T15:00:00Z",
-    mustChangePassword: true, phoneVerificationRequired: true,
+    mustChangePassword: true, phoneVerificationRequired: true, refreshTokenRotated: true,
     password: secretCanaries[2], nested: { token: secretCanaries[0] },
   };
 }

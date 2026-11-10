@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { createFarmingZoneReadAdapter } from "./farming-zone-read-adapter";
-import { accessCanary, environment, resolved, resolver } from "../employees/__tests__/employee-fixture";
+import { accessCanary, environment, replacedSession, resolved, resolver } from "../employees/__tests__/employee-fixture";
 import type { BackendTransportResult } from "../backend/backend-result";
 import type { BackendRequest } from "../backend/backend-request";
 import type { BackendRequestOptions } from "../backend/backend-transport";
@@ -43,21 +43,20 @@ describe("unmounted farming zone read adapter", () => {
   it("does not publish a prior account's response after session replacement", async () => {
     const deps = dependencies();
     deps.resolve.mockResolvedValueOnce(resolved())
-      .mockResolvedValueOnce(resolved({ revision: "new-revision" }));
+      .mockResolvedValueOnce(replacedSession());
     expect(await createFarmingZoneReadAdapter(environment, deps).list(request()))
       .toEqual({ status: "session-changed" });
   });
 
-  it("rejects invalid queries, gated sessions and wrong success payloads", async () => {
+  it("rejects invalid queries, an API refusal and wrong success payloads", async () => {
     const deps = dependencies();
     const adapter = createFarmingZoneReadAdapter(environment, deps);
     expect(await adapter.list(request("?page=1&page=2"))).toEqual({ status: "invalid-input" });
     expect(await adapter.list(request("?statusId=301"))).toEqual({ status: "invalid-input" });
     expect(deps.resolve).not.toHaveBeenCalled();
-    deps.resolve.mockResolvedValueOnce(resolved({ phase: "password-change-required" }));
-    expect((await adapter.list(request())).status).not.toBe("loaded");
-    expect(deps.backend.request).not.toHaveBeenCalled();
     deps.resolve.mockResolvedValue(resolved());
+    deps.backend.request.mockResolvedValueOnce({ status: "http-error", httpStatus: 403, code: "MSG-ACCOUNT-04" });
+    expect((await adapter.list(request())).status).not.toBe("loaded");
     deps.backend.request.mockResolvedValueOnce({ status: "success", httpStatus: 200,
       data: { items: [{ ...zone, inUseRaftCount: -1 }], page: 1, pageSize: 20, total: 1 } });
     expect(await adapter.list(request())).toEqual({ status: "invalid-response" });

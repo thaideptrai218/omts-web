@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn() }));
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
-import { resolved } from "../employees/__tests__/employee-fixture";
+import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 import { notificationFixture, personalFixture } from "@/features/personal-api/fixtures";
 import { handlePersonalRequest } from "./personal-http";
 function configure(subjectType: "CooperativeOwner" | "Staff" | "Trader" = "CooperativeOwner") {
@@ -13,9 +13,10 @@ afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); 
 function request(body?: unknown, origin = "http://localhost:3002") { return new Request("http://localhost:3002/api/account/profile", { method: body ? "PUT" : "GET", ...(body ? { headers: { Origin: origin, "X-OMTS-Request": "web", "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) }); }
 const patch = () => ({ items: [{ category: "WORK", channel: "Email", enabled: true }] });
 describe("personal API identity and input boundaries", () => {
-  it.each(["profile", "notifications"] as const)("refuses anonymous and onboarding %s requests", async (area) => {
-    configure(); gateway.resolve.mockResolvedValueOnce({ status: "anonymous" }).mockResolvedValueOnce(resolved({ phase: "contact-verification-required" })); const fetcher = vi.spyOn(globalThis, "fetch");
-    expect((await handlePersonalRequest(request(), area)).status).toBe(401); expect((await handlePersonalRequest(request(), area)).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
+  it.each(["profile", "notifications"] as const)("refuses anonymous %s requests and relays the API refusal of an onboarding account", async (area) => {
+    configure(); gateway.resolve.mockResolvedValueOnce({ status: "anonymous" }); const fetcher = vi.spyOn(globalThis, "fetch");
+    expect((await handlePersonalRequest(request(), area)).status).toBe(401); expect(fetcher).not.toHaveBeenCalled();
+    fetcher.mockResolvedValueOnce(Response.json({ code: "MSG-ACCOUNT-04" }, { status: 403 })); expect((await handlePersonalRequest(request(), area)).status).toBe(403);
   });
   it.each(["CooperativeOwner", "Staff", "Trader"] as const)("allows the actual %s personal profile and strips unknown fields", async (subjectType) => {
     configure(subjectType); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...personalFixture(), subjectType, passwordHash: "never-return" })); const response = await handlePersonalRequest(request(), "profile"); expect(response.status).toBe(200); expect(await response.text()).not.toContain("never-return");
@@ -66,10 +67,10 @@ describe("notification catalog, channel policy and races", () => {
     let response = await handlePersonalRequest(request(patch()), "notifications"); expect(response.status).toBe(200); expect((await response.json()).data.notice).toContain("Thiết lập thông báo đã được lưu"); response = await handlePersonalRequest(request(patch()), "notifications"); expect(response.status).toBe(502);
   });
   it("denies a write if the session changes during the eligibility read", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "new" })); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(notificationFixture())); expect((await handlePersonalRequest(request(patch()), "notifications")).status).toBe(401); expect(fetcher).toHaveBeenCalledTimes(1);
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession()); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(notificationFixture())); expect((await handlePersonalRequest(request(patch()), "notifications")).status).toBe(401); expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("suppresses a completed write response after a session replacement", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "new" })); vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(notificationFixture())).mockResolvedValueOnce(Response.json({ categories: notificationFixture(), notice: null })); const response = await handlePersonalRequest(request(patch()), "notifications"); expect(response.status).toBe(401); expect(await response.text()).not.toContain("ORDERS");
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession()); vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(notificationFixture())).mockResolvedValueOnce(Response.json({ categories: notificationFixture(), notice: null })); const response = await handlePersonalRequest(request(patch()), "notifications"); expect(response.status).toBe(401); expect(await response.text()).not.toContain("ORDERS");
   });
   it("refuses malformed catalog with duplicate channels instead of inventing eligible cells", async () => {
     configure(); const catalog = notificationFixture(); catalog[0].channels[1] = catalog[0].channels[0]; const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(catalog)); expect((await handlePersonalRequest(request(patch()), "notifications")).status).toBe(502); expect(fetcher).toHaveBeenCalledTimes(1);

@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn(), application: vi.fn() }));
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
 import { handleResourceRequest } from "./resource-http";
-import { resolved } from "../employees/__tests__/employee-fixture";
+import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 
 function configure(subjectType: "CooperativeOwner" | "Staff" = "CooperativeOwner") {
   vi.stubEnv("NODE_ENV", "test"); vi.stubEnv("OMTS_DATA_SOURCE", "api"); vi.stubEnv("OMTS_API_BASE_URL", "http://127.0.0.1:8080"); vi.stubEnv("OMTS_API_TIMEOUT_MS", "1000");
@@ -49,7 +49,7 @@ describe("workspace BFF routing and authorization", () => {
   });
   it("discards an upstream response if the session was replaced while loading", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 20, total: 0 }));
-    gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+    gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
     const response = await handleResourceRequest(new Request("http://localhost:3002/api/workspace/zones"), "zones");
     expect(fetcher).toHaveBeenCalledTimes(1); expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ status: "session-expired" });

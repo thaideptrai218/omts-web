@@ -36,9 +36,11 @@ describe("employee API privacy and authorization", () => {
     expect((await handleEmployeeApi(read("action=linkable-accounts"))).status).toBe(403);
     expect((await handleEmployeeApi(write("unlink", { rowVersion: "AQID" }))).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
   });
-  it("rejects an anonymous or onboarding session", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce({ status: "missing" }); expect((await handleEmployeeApi(read("action=list"))).status).toBe(401);
-    gateway.resolve.mockResolvedValueOnce(resolved({ phase: "contact-verification-required" })); expect((await handleEmployeeApi(read("action=list"))).status).toBe(403);
+  it("rejects an anonymous session and relays the API refusal of an account that still owes onboarding", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch");
+    gateway.resolve.mockResolvedValueOnce({ status: "anonymous" }); expect((await handleEmployeeApi(read("action=list"))).status).toBe(401); expect(fetcher).not.toHaveBeenCalled();
+    fetcher.mockResolvedValueOnce(Response.json({ code: "MSG-ACCOUNT-04" }, { status: 403 }));
+    const response = await handleEmployeeApi(read("action=list")); expect(response.status).toBe(403); expect(await response.json()).toEqual({ status: "rejected", code: "MSG-ACCOUNT-04" });
   });
   it("checks CSRF before consuming a write", async () => {
     configure(); const request = write("create", body(), undefined, "https://evil.test"), reader = vi.spyOn(request.body!, "getReader"), fetcher = vi.spyOn(globalThis, "fetch");
@@ -55,7 +57,7 @@ describe("employee API privacy and authorization", () => {
     response = await handleEmployeeApi(write("create", body(), undefined)); expect((await response.json()).employeeProblem).toEqual({ kind: "invalid-fields", fields: ["Full name"] });
   });
   it("suppresses personal data and duplicate IDs after the session changes", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "new" })); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ code: "MSG24", existingEmployeeId: employeeId }, { status: 409 }));
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ identity: { ...resolved().session.identity, backendSessionId: employeeId } })); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ code: "MSG24", existingEmployeeId: employeeId }, { status: 409 }));
     const response = await handleEmployeeApi(write("update", { ...body(), rowVersion: "AQID" })); expect(response.status).toBe(401); expect(await response.text()).not.toContain(employeeId);
   });
   it("requires the returned employee to match the requested identity", async () => {

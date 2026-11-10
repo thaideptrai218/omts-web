@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createOperationsRepository } from "./repository";
 afterEach(() => vi.restoreAllMocks());
 describe("operation response outcomes", () => {
-  it.each(["network", "503", "invalid-success", "401"])("does not label a failed %s read as an uncertain write", async (kind) => {
+  it.each(["network", "503", "invalid-success"])("does not label a failed %s read as an uncertain write", async (kind) => {
     const fetcher = vi.spyOn(globalThis, "fetch");
     if (kind === "network") fetcher.mockRejectedValue(new TypeError("QA network unavailable"));
     else fetcher.mockResolvedValue(kind === "invalid-success" ? Response.json({ status: "success", data: {} })
@@ -11,6 +11,14 @@ describe("operation response outcomes", () => {
     const result = await createOperationsRepository("supplier-payments").read("debt", {}, z.object({ required: z.string() }));
     expect(result.status).toBe("error"); if (result.status === "error") expect(result.uncertain).toBe(false);
     expect(fetcher).toHaveBeenCalledOnce();
+  });
+  it("tries to renew the session once for a 401 read and, when renewal is refused, reports a certain failure", async () => {
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ status: "session-expired" }, { status: 401 }));
+    const result = await createOperationsRepository("supplier-payments").read("debt", {}, z.object({ required: z.string() }));
+    expect(result).toEqual({ status: "error", httpStatus: 401, code: undefined, uncertain: false });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(String(fetcher.mock.calls[0][0])).toContain("/api/operations/supplier-payments");
+    expect(fetcher.mock.calls[1][0]).toBe("/api/auth/refresh");
   });
   it.each(["network", "503", "invalid-success"])("retains uncertainty for a %s write and never replays it", async (kind) => {
     const fetcher = vi.spyOn(globalThis, "fetch");

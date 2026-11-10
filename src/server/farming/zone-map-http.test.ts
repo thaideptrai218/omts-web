@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn() }));
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
-import { resolved } from "../employees/__tests__/employee-fixture";
+import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 import { handleZoneMap } from "./zone-map-http";
 import { mapPointUrl } from "@/features/farming-api/zone-map-contract";
 const id = "11111111-1111-4111-8111-111111111111";
@@ -31,7 +31,7 @@ describe("zone position read", () => {
   });
   it("drops positions after a session revision changes", async () => {
     configure(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(fixture()));
-    gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+    gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
     expect((await handleZoneMap(new Request("http://localhost:3002/api/zone-map"))).status).toBe(401);
   });
   it("rejects invalid backend coordinates", async () => {

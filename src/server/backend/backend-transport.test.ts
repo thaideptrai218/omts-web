@@ -20,12 +20,12 @@ describe("isolated BFF transport, no application activation", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
   it.each([
-    ["login", "POST", "/api/auth/login"], ["identity", "GET", "/api/me"],
+    ["login", "POST", "/api/auth/login"], ["refresh", "POST", "/api/auth/refresh"], ["identity", "GET", "/api/me"],
     ["permissions", "GET", "/api/me/permissions"], ["profileRead", "GET", "/api/me/profile"],
     ["profileUpdate", "PUT", "/api/me/profile"], ["logout", "POST", "/api/auth/logout"],
   ])("sends exactly one catalog request for %s", async (endpoint, method, path) => {
     const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => ok());
-    const request = endpoint === "login" ? login : {
+    const request = endpoint === "login" || endpoint === "refresh" ? { ...login, endpoint } : {
       endpoint, accessToken: "fake-token", ...(endpoint === "profileUpdate" ? { body: { displayName: "Hải" } } : {}),
     };
     expect((await createBackendTransport(environment, fetcher).request(request)).status).toBe("success");
@@ -48,7 +48,7 @@ describe("isolated BFF transport, no application activation", () => {
     expect(fetcher.mock.calls[0][0]).toBe("http://127.0.0.1:5280/api/auth/login");
     expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify(login.body));
   });
-  it.each(["refresh", "https://evil.test", "__proto__"])("does not send endpoint %s", async (endpoint) => {
+  it.each(["/api/auth/refresh", "https://evil.test", "__proto__"])("does not send endpoint %s", async (endpoint) => {
     const fetcher = vi.fn<typeof fetch>();
     expect(await createBackendTransport(environment, fetcher).request({ ...login, endpoint })).toEqual({ status: "invalid-request" });
     expect(fetcher).not.toHaveBeenCalled();

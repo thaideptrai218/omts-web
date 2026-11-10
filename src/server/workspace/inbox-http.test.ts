@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn() }));
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
 import { handleInbox } from "./inbox-http";
-import { resolved } from "../employees/__tests__/employee-fixture";
+import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 const id = "122bb318-a72e-49aa-a8d7-a6169f889007";
 function setup() {
   vi.stubEnv("NODE_ENV", "test"); vi.stubEnv("OMTS_DATA_SOURCE", "api"); vi.stubEnv("OMTS_API_BASE_URL", "http://127.0.0.1:8081"); vi.stubEnv("OMTS_API_TIMEOUT_MS", "1000");
@@ -28,7 +28,7 @@ it("rejects foreign-origin writes and injected recipient IDs", async () => {
   expect((await handleInbox(request({ action: "read-all", accountId: id }))).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
 });
 it("drops even a successful write acknowledgement after session replacement", async () => {
-  setup(); vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 })); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+  setup(); vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 })); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
   expect((await handleInbox(request({ action: "read-all" }))).status).toBe(401);
 });
 it("returns404 from a backend without the new endpoint without inventing data", async () => {
@@ -80,6 +80,6 @@ it("rejects a mismatched notification and a replaced session while opening", asy
   setup(); vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ notificationId: "122bb318-a72e-49aa-a8d7-a6169f889008", recordType: "Account", recordId: id, recordCode: null, zoneId: null }))
     .mockResolvedValueOnce(Response.json({ notificationId: id, recordType: "Account", recordId: id, recordCode: null, zoneId: null }));
   expect((await handleInbox(new Request(`http://localhost:3003/api/inbox?open=${id}`))).status).toBe(502);
-  gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+  gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
   expect((await handleInbox(new Request(`http://localhost:3003/api/inbox?open=${id}`))).status).toBe(401);
 });

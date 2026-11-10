@@ -32,15 +32,22 @@ describe("unmounted employee read adapter", () => {
   it.each([
     { status: "anonymous" } as const, { status: "unavailable" } as const,
     { status: "invalid-session", reason: "invalid-session", clearCookie: true } as const,
-    resolved({ phase: "password-change-required" }), resolved({ phase: "contact-verification-required" }),
     ...(["Staff", "Trader", "SystemAdministrator"] as const).map((subjectType) => resolved({ identity: { ...resolved().session.identity, subjectType } })),
-  ])("never sends read requests for a denied/gated session case %#", async (session) => {
+  ])("never sends read requests for a denied session case %#", async (session) => {
     const transport = backend(); const resolve = resolver().mockResolvedValue(session);
     const adapter = createEmployeeReadAdapter(environment, { resolve, backend: transport });
     expect((await adapter.list(request())).status).not.toBe("loaded");
     expect((await adapter.detail(request(), employeeId)).status).not.toBe("loaded");
     expect((await adapter.linkableAccounts(request())).status).not.toBe("loaded");
     expect(transport.request).not.toHaveBeenCalled();
+  });
+
+  it("does not publish data when the API refuses an account that still owes onboarding", async () => {
+    const transport = backend(); transport.request.mockResolvedValue({ status: "http-error", httpStatus: 403, code: "MSG-ACCOUNT-04" });
+    const adapter = createEmployeeReadAdapter(environment, { resolve: resolver(), backend: transport });
+    for (const result of [await adapter.list(request()), await adapter.detail(request(), employeeId), await adapter.linkableAccounts(request())]) {
+      expect(result.status).not.toBe("loaded"); expect(result).not.toHaveProperty("employee"); expect(result).not.toHaveProperty("accounts");
+    }
   });
 
   it("does not access the session or transport for invalid inputs/methods or an aborted request", async () => {

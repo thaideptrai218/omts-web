@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn(), application: vi.fn() }));
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
 import { handleOperationRequest, localFileTarget } from "./operation-http";
-import { resolved } from "../employees/__tests__/employee-fixture";
+import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 import { ids, receiptFixture, waterFixture } from "@/features/operations/__tests__/fixtures";
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
 function configure(subjectType = "CooperativeOwner", permissions: FunctionPermission[] = []) {
@@ -30,7 +30,7 @@ describe("operations BFF authorization and evidence boundary", () => {
   });
   it("keeps bodyless workforce commands explicit and rechecks the session after 204", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
-    gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+    gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
     const request = new Request("http://localhost:3002/api/operations/workforce", { method: "POST", headers: { Origin: "http://localhost:3002", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "remove", id: ids.receipt, zoneId: ids.zone, body: {} }) });
     expect((await handleOperationRequest(request, "workforce")).status).toBe(401); expect(fetcher.mock.calls[0][1]).toMatchObject({ method: "DELETE", body: undefined });
   });
@@ -66,7 +66,7 @@ describe("operations BFF authorization and evidence boundary", () => {
     expect(response.status).toBe(502); expect(await response.text()).not.toContain("QA outside");
   });
   it("does not release new-module data after the session changes", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([]));
     expect((await handleOperationRequest(get("action=list"), "sales-products")).status).toBe(401);
   });
@@ -101,7 +101,7 @@ describe("operations BFF authorization and evidence boundary", () => {
     const body = await response.text(); expect(response.status).toBe(200); expect(body).not.toContain("private-signed-link"); expect(body).toContain(`/api/operations/water?action=photo&id=${ids.water}`);
   });
   it("rechecks the session before returning an uploaded record or file", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "replaced" }));
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(waterFixture()));
     const response = await handleOperationRequest(get(`action=detail&id=${ids.water}`), "water");
     expect(response.status).toBe(401); expect(await response.text()).not.toContain("Vùng QA");

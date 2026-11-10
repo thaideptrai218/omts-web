@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn() }));
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
-import { resolved } from "../employees/__tests__/employee-fixture";
+import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 import { cooperativeFixture } from "@/features/cooperative-api/fixtures";
 import { cooperativeValues } from "@/features/cooperative-api/contracts";
 import { handleCooperativeRequest, cooperativeLogoPath, cooperativeCoverPath } from "./cooperative-http";
@@ -52,9 +52,10 @@ describe("cooperative API boundaries", () => {
     configure(); const owner = resolved(); gateway.resolve.mockResolvedValue(resolved({ identity: { ...owner.session.identity, subjectType } })); const fetcher = vi.spyOn(globalThis, "fetch");
     expect((await handleCooperativeRequest(new Request(base))).status).toBe(403); expect((await handleCooperativeRequest(write(cooperativeValues(cooperativeFixture())))).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
   });
-  it("denies anonymous and onboarding requests", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce({ status: "missing" }).mockResolvedValueOnce(resolved({ phase: "contact-verification-required" }));
-    expect((await handleCooperativeRequest(new Request(base))).status).toBe(401); expect((await handleCooperativeRequest(new Request(base))).status).toBe(403);
+  it("denies anonymous requests and relays the API refusal of an onboarding account", async () => {
+    configure(); gateway.resolve.mockResolvedValueOnce({ status: "anonymous" }); const fetcher = vi.spyOn(globalThis, "fetch");
+    expect((await handleCooperativeRequest(new Request(base))).status).toBe(401); expect(fetcher).not.toHaveBeenCalled();
+    fetcher.mockResolvedValueOnce(Response.json({ code: "MSG-ACCOUNT-04" }, { status: 403 })); expect((await handleCooperativeRequest(new Request(base))).status).toBe(403);
   });
   it("accepts nullable preliminary fields and strips unrelated response fields", async () => {
     configure(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...cooperativeFixture(), taxCode: null, officeAddress: null, phoneNumber: null, legalRepresentative: null, status: "Preliminary", accessToken: "never-return", publicPreview: { fullName: "HTX", shortName: null, yearEstablished: null, officeAddress: null, phoneNumber: null, email: null, website: null, socialLink: null, logoUrl: null, coverPhotoUrl: null, introductionVi: null, introductionEn: null, certifications: [], bank: "never-return" } }));
@@ -72,7 +73,7 @@ describe("cooperative API boundaries", () => {
     expect((await handleCooperativeRequest(request)).status).toBe(403); expect(reader).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
   });
   it("suppresses profile data and backend errors after a session switch", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" })); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...cooperativeFixture(), private: "never-return" }));
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession()); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...cooperativeFixture(), private: "never-return" }));
     const response = await handleCooperativeRequest(new Request(base)); expect(response.status).toBe(401); expect(await response.text()).not.toContain(cooperativeFixture().fullName);
   });
   it("passes only a whitelisted conflict code", async () => {
@@ -91,7 +92,7 @@ describe("cooperative logo isolation", () => {
     expect((await handleCooperativeRequest(new Request(base + "/logo?version=stale"), true)).status).toBe(404); expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("rechecks the session after reading image bytes", async () => {
-    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved({ revision: "changed" }));
+    configure(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ ...cooperativeFixture(), logoUrl: logoPath })).mockResolvedValueOnce(new Response("private-image", { headers: { "Content-Type": "image/png" } }));
     const response = await handleCooperativeRequest(new Request(base + "/logo"), true); expect(response.status).toBe(401); expect(await response.text()).not.toContain("private-image");
   });
