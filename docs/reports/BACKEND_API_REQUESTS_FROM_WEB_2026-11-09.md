@@ -46,6 +46,16 @@ Mỗi báo cáo cần: truy vấn theo kỳ + bộ lọc, tổng hợp, dòng nh
 - Trạng thái vùng trong `water-measurements/zones`: trả mã ổn định (Web đang suy ra tiếng Việt từ chữ tiếng Anh).
 - Thông tin lỗi 400 của backend: trả tên trường lỗi (Web hiện chỉ báo chung "kiểm tra lại thông tin").
 
+## D. Đơn vị lồng
+
+Chủ HTX chốt: thu hoạch tính theo **lồng**, kg chỉ là số ước tính/quy đổi. Backend lưu đúng điều này ở lô thu hoạch (`CageCount`, `KgPerCage`, `EstimatedKg`) nhưng nhiều API chỉ trả kg. Web hiện quy đổi kg → lồng bằng tỷ lệ của chính lô (nếu có) hoặc `AverageKgPerCage` của HTX (chỉ Chủ HTX đọc được `GET api/harvest-settings`), luôn ghi "≈". Người không đọc được tỷ lệ chỉ thấy kg. Để số lồng chính xác cho mọi vai trò, Web đề nghị:
+
+- **D1. `GET api/harvest-lots/for-sale` (`HarvestLotForSale`)**: thêm `cageCount` (int, tổng lồng của lô), `kgPerCage` (decimal, tỷ lệ lúc ghi nhận) và nếu tính được `remainingCages`. Web đã parse sẵn `cageCount`/`kgPerCage` (tùy chọn, nullable) và ưu tiên dùng khi có; hóa đơn vẫn bán theo kg.
+- **D2. Báo cáo sản lượng nuôi (`HarvestYieldLot`, `HarvestYieldGroup`, `HarvestYieldTotals`)**: thêm `cageCount` ở dòng lô (số lồng thật của lô) và tổng `cageCount` ở nhóm và tổng cộng; nếu có thể thêm `kgPerCage` ở dòng lô để quy đổi đã bán/hao hụt/chênh lệch chính xác theo từng lô. File Excel xuất ra cũng nên có cột "Số lồng".
+- **D3. Yêu cầu mua (`PurchaseRequestView`, `GET api/me/purchases`)**: một trong hai cách: (a) thêm `requestedCages`/`acceptedCages` (thương lái và Chủ HTX nhập/xem theo lồng nếu nghiệp vụ muốn), hoặc (b) cho thương lái đọc `averageKgPerCage` của HTX (ví dụ trong response danh sách sản phẩm hoặc một endpoint đọc tối thiểu), vì hiện thương lái và nhân viên không có quyền `harvest-settings` nên Web chỉ hiển thị kg.
+- **D4. Quyền đọc tỷ lệ**: nếu chưa làm D1-D3, mở quyền đọc `averageKgPerCage` (chỉ đọc) cho Kế toán, Quản lý vùng, Nhân viên có quyền xem báo cáo sản lượng/lập hóa đơn để Web quy đổi "≈ N lồng" cho các vai trò đó.
+- **Câu hỏi nghiệp vụ**: yêu cầu mua của thương lái nên nhập theo lồng hay kg? Web giữ kg (đúng hợp đồng hiện tại) cho tới khi có quyết định.
+
 ## Câu hỏi mở
 - A1: thương lái có xem được giá trên hóa đơn của mình không (khiếu nại hiện ẩn giá)?
 - B2/B3: bảng lương trả bằng nhiều lần? (Wireframe có "Trả một phần", "Đã trả đủ".)

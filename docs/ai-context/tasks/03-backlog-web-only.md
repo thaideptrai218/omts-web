@@ -1,0 +1,25 @@
+# 03 — Backlog: Web tự làm được
+
+- [ ] **Chạy Web trên `develop` mới nhất với runtime mới**; kiểm tay trên trình duyệt đợt 09/11 (hóa đơn, thanh toán khách, sản lượng, truy xuất lô, cài đặt lương, tổng quan nước, landing, boot screen) — chưa được kiểm với backend sống. Một test nhân viên-gỡ-liên-kết từng fail một lần khi chạy song song, pass 40/40 khi chạy riêng.
+- [ ] **Đồng bộ tài liệu lỗi thời**:
+  - `README.md`: ghi "last updated November 3", nói trang QR chưa xong, liệt kê tài khoản mock cũ, nói công việc UI chỉ ở `feature/OMTS-132-web-foundation`.
+  - `docs/PROJECT_CONTEXT.md`: tiêu đề ghi 31/10 nhưng đã chèn mục 11-04 lên trên.
+  - `docs/REVIEW_GUIDE.md`: còn dùng fixture `nguyen.an`…
+  - `docs/WEB_NAVIGATION_UX_UPGRADE_PLAN.md` và font: ghi Geist, thực tế Be Vietnam Pro; mô tả sidebar trong khi shell thật là menu ngang.
+- [ ] **Mâu thuẫn mật khẩu demo**: README vs quyết định 03/11 và `TESTER_RUNBOOK_2026-11-02.md` — thống nhất một nguồn.
+- [ ] **Hợp nhất nhánh review**: README bảo reviewer dùng `feature/OMTS-132-web-foundation`, công việc hiện ở `experiment/wireframe-cycle-redesign-20261107` (PR4 draft).
+- [ ] **Commit phần refactor landing** đang untracked/modified (`landing-*.tsx`, `landing-*.module.css`, `(public)/page.tsx`).
+- [ ] **Ánh xạ trạng thái vùng sang tiếng Việt** (`zoneStatus`); mã trạng thái vùng ổn định.
+- [ ] **Dùng `Content-Disposition`** làm tên tệp in/xuất khi backend gửi.
+- [ ] **Hiển thị tên trường cho lỗi 400** khi backend cung cấp.
+- [ ] **Thêm text tiếng Việt MSG-SALE-13/14/20/21, MSG-CLAIM-03** vào catalog Web (phía Web đã có chữ; A6 xin backend).
+- [ ] **Test VietQR bằng app ngân hàng thật**; kiểm 360/1024 px cho màn mới.
+- [ ] **Áp dụng chọn lọc wireframe tiếp** theo `WEB_WIREFRAME_INVENTORY_2026-11-08.csv`; menu ngang chỉ có ở nhánh experiment.
+- [ ] **Xác minh CI đúng SHA** cho PR3/PR4 (kỳ vọng ngày, test top-nav); báo cáo nói đã sửa nhưng cần xác nhận lại.
+- [ ] **Dọn code sidebar chết** (`app-shell.module.css`, `use-sidebar-expansion.ts`, `sidebar-account.tsx`) sau khi xác nhận shell ngang là bản cuối.
+- [ ] **Thống nhất `Field`/`Select` của operations với `FormField`**; thêm pill cảnh báo, màn từ chối quyền dùng chung, trạng thái offline/syncing/success dùng chung.
+- [ ] **Thêm test** cho feature chưa có: landing, bank-api, certifications-api, admin-api, labor-api, sales-api, customer-lookup, customer-payments.
+- [ ] **Đưa `test:boundary`, `test:serialization`, `test:cookies` vào CI** (cần quyết định, xem file 04).
+- [ ] **Mở rộng theo SRS** những use case chưa có lát cắt Web (xem `WEB_IMPLEMENTATION_PLAN`, danh sách ưu tiên: khách hàng/đơn hàng/bàn giao, báo cáo/thông báo/audit).
+- [ ] **Sửa lỗi nhỏ nghi vấn**: `PAYROLLS` vs `PAYROLL` trong `actor-label.ts`; `--omts-radius-dialog` chưa dùng; thang breakpoint/z-index.
+- [ ] **Thêm khóa Jira vào các commit lịch sử thiếu** (hoặc viết lại tiêu đề khi squash-merge).
