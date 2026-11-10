@@ -5,17 +5,23 @@ import { DataGrid } from "@/components/ui/data-grid";
 import { StatusPill } from "@/components/ui/management-page";
 import type { EmployeeListItemDto } from "@/features/employee-management/api/employee-contract.schemas";
 import { accountLabel, employmentLabel, employeeTypeLabel, dateLabel } from "./employee-editor-model";
+import { EmployeeDetailPanel } from "./employee-detail-panel";
+import type { EmployeeDetailCache } from "./use-employee-detail";
+import type { Employee } from "./contracts";
 import styles from "./employee-screen.module.css";
 
 /** Employee rows; the whole row and the explicit "Mở …" button both open the profile. */
 export function EmployeeDirectoryTable({
   items,
   disabled,
-  onOpen,
+  onOpen, cache, onSaved, detailRevision = 0,
 }: {
   items: EmployeeListItemDto[];
   disabled: boolean;
   onOpen(id: string): void;
+  cache: EmployeeDetailCache;
+  onSaved(employee: Employee): void;
+  detailRevision?: number;
 }) {
   const [expandedId, setExpandedId] = useState<string>();
   function toggle(id: string) {
@@ -31,52 +37,38 @@ export function EmployeeDirectoryTable({
         <Fragment key={row.id}>
         <OpenableTableRow disabled={disabled} onOpen={() => toggle(row.id)}>
           <td data-label="Họ và tên" className="font-semibold">
-            {row.fullName}
+            <span className={styles.truncated} title={row.fullName}>{row.fullName}</span>
           </td>
-          <td data-label="Số điện thoại">{row.phoneNumber ?? "—"}</td>
-          <td data-label="Loại nhân viên">{employeeTypeLabel(row.employeeType)}</td>
-          <td data-label="Loại công việc">{row.jobTypes.map(job => job.name).join(", ") || "—"}</td>
-          <td data-label="Vùng làm việc">{row.workingZones.map((zone) => zone.code).join(", ") || "—"}</td>
+          <td data-label="Số điện thoại" className={styles.phone}>{row.phoneNumber ?? "—"}</td>
+          <td data-label="Loại nhân viên"><span className={styles.typeChip}>{employeeTypeLabel(row.employeeType)}</span></td>
+          <td data-label="Loại công việc"><span className={styles.truncated} title={row.jobTypes.map(job => job.name).join(", ")}>{row.jobTypes.map(job => job.name).join(", ") || "—"}</span></td>
+          <td data-label="Vùng làm việc"><span className={styles.truncated} title={row.workingZones.map(zone => `${zone.code} · ${zone.name}`).join(", ")}>{row.workingZones.map(zone => zone.code).join(", ") || "—"}</span></td>
           <td data-label="Tài khoản">
             {row.account ? (
               <>
-                <span className={styles.username}>@{row.account.username}</span>
+                <span className={styles.truncated} title={row.account.username}>@{row.account.username}</span>
                 <small className={styles.meta}>{accountLabel(row.account.status)}</small>
               </>
             ) : (
               <span className={styles.meta}>Chưa có tài khoản</span>
             )}
           </td>
-          <td data-label="Tình trạng">
+          <td data-label="Tình trạng" className={styles.noWrap}>
             <StatusPill tone={row.status === "Employed" ? "success" : "neutral"}>
               {employmentLabel(row.status)}
             </StatusPill>
             {row.lastWorkingDay && <small className={styles.meta}>Ngày làm cuối: {dateLabel(row.lastWorkingDay)}</small>}
           </td>
-          <td data-label="Hồ sơ">
-            <button type="button" className={styles.open} disabled={disabled} aria-expanded={expandedId === row.id} aria-controls={`employee-preview-${row.id}`} onClick={() => toggle(row.id)}>
-              {expandedId === row.id ? "Thu gọn hồ sơ" : `Xem ${row.fullName}`}
+          <td data-label="Hồ sơ" className={styles.noWrap}>
+            {/* Short visible text keeps the column narrow; the accessible name still says whose profile it opens. */}
+            <button type="button" className={styles.open} disabled={disabled} aria-expanded={expandedId === row.id} aria-controls={`employee-preview-${row.id}`} aria-label={expandedId === row.id ? undefined : `Xem ${row.fullName}`} onClick={() => toggle(row.id)}>
+              {expandedId === row.id ? "Thu gọn hồ sơ" : "Xem hồ sơ"}
             </button>
           </td>
         </OpenableTableRow>
         {expandedId === row.id && <tr>
           <td colSpan={8} className={styles.previewCell}>
-            <section id={`employee-preview-${row.id}`} className={styles.preview} aria-label={`Hồ sơ ${row.fullName}`}>
-              <header className={styles.previewHeader}>
-                <div><small>HỒ SƠ NHÂN VIÊN</small><h3>{row.fullName}</h3></div>
-                <StatusPill tone={row.status === "Employed" ? "success" : "neutral"}>{employmentLabel(row.status)}</StatusPill>
-              </header>
-              <dl className={styles.previewFields}>
-                <div><dt>Số điện thoại</dt><dd>{row.phoneNumber || "Chưa cập nhật"}</dd></div>
-                <div><dt>Vùng làm việc</dt><dd>{row.workingZones.map((zone) => zone.code).join(", ") || "Chưa phân vùng"}</dd></div>
-                <div><dt>Tài khoản liên kết</dt><dd>{row.account ? `@${row.account.username}` : "Chưa có tài khoản"}</dd></div>
-                <div><dt>Tình trạng tài khoản</dt><dd>{row.account ? accountLabel(row.account.status) : "Chưa có tài khoản"}</dd></div>
-              </dl>
-              <footer className={styles.previewActions}>
-                <button type="button" className={styles.open} disabled={disabled} onClick={() => toggle(row.id)}>Thu gọn</button>
-                <button type="button" className={styles.profileAction} disabled={disabled} onClick={() => onOpen(row.id)}>Cập nhật hồ sơ</button>
-              </footer>
-            </section>
+            <EmployeeDetailPanel id={row.id} cache={cache} onOpen={onOpen} onSaved={onSaved} revision={detailRevision} />
           </td>
         </tr>}
         </Fragment>

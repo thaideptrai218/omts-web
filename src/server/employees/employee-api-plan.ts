@@ -3,9 +3,10 @@ import { z } from "zod";
 import * as c from "@/features/employee-api/contracts";
 import { employeeSavedSchema } from "@/features/employee-management/api/employee-contract.schemas";
 import { parseEmployeeListSearchParams } from "@/features/employee-management/api/employee-read-request";
+import { issueEmployeeAccountRequestSchema, issueEmployeeAccountSavedSchema } from "@/features/employee-api/employee-account-contract";
 type Plan = { path: string; method: "GET" | "POST" | "PUT"; action: string; schema: z.ZodType; body?: unknown; id?: string };
 const id = z.guid();
-const mutation = z.strictObject({ action: z.enum(["create", "update", "end-employment", "resume"]), id: id.optional(), body: z.unknown() });
+const mutation = z.strictObject({ action: z.enum(["create", "update", "end-employment", "resume", "issue-account"]), id: id.optional(), body: z.unknown() });
 export function planEmployeeApi(method: string, query: URLSearchParams, input?: unknown): Plan | undefined {
   if (method === "GET") {
     if ([...query.keys()].length !== new Set(query.keys()).size) return;
@@ -32,6 +33,7 @@ export function planEmployeeApi(method: string, query: URLSearchParams, input?: 
   };
   if (action === "create" && !employeeId) return make(c.createProfileInputSchema, employeeSavedSchema, "POST");
   if (!employeeId) return;
+  if (action === "issue-account") return make(issueEmployeeAccountRequestSchema, issueEmployeeAccountSavedSchema, "POST", "/account");
   if (action === "update") return make(c.updateProfileInputSchema, employeeSavedSchema, "PUT");
   if (action === "end-employment") return make(c.endEmploymentSchema, c.employmentChangedSchema, "POST", "/end-employment");
   if (action === "resume") return make(c.resumeEmployeeSchema, c.employmentChangedSchema, "POST", "/resume");

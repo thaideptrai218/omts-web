@@ -1,12 +1,11 @@
 "use client";
+import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { businessToday, ErrorNotice } from "@/features/operations/ui";
 import { EmployeeConflictPanel } from "./employee-conflict-panel";
 import { EmployeeEditorFields } from "./employee-editor-fields";
 import {
-  dateLabel,
-  employmentLabel,
   fieldLabels,
   localFieldLabels,
   valuesOf,
@@ -16,6 +15,8 @@ import styles from "./employee-screen.module.css";
 import { EmployeeStatusActionDialog } from "./employee-status-action-dialog";
 
 import { useEmployeeEditor, type EmployeeEditorProps } from "./use-employee-editor";
+import { EmployeeTabs } from "./employee-tabs";
+import { EmployeeEditorEmployment } from "./employee-editor-employment";
 
 /** Employee profile and separate employment status changes. */
 export function EmployeeApiEditor({
@@ -27,7 +28,8 @@ export function EmployeeApiEditor({
   onAdopt,
   onSaved,
 }: EmployeeEditorProps) {
-  const { repository, mutation, baseline, setBaseline, values, setValues, issues, setIssues, latest, setLatest, compared, setCompared, comparisonTarget, action, setAction, endDate, setEndDate, actionError, setActionError, discard, setDiscard, reconciledRows, setReconciledRows, formRef, dirty, zoneOptions, availableZones, close, problem, errorProps, save, confirmAction, openComparison } = useEmployeeEditor({record, zones, jobTypes, lookupsReady, onClose, onAdopt, onSaved});
+  const idPrefix = useId();
+  const { repository, mutation, baseline, setBaseline, values, setValues, issues, setIssues, activeTab, setActiveTab, errorTabs, latest, setLatest, compared, setCompared, comparisonTarget, action, setAction, endDate, setEndDate, actionError, setActionError, discard, setDiscard, reconciledRows, setReconciledRows, formRef, dirty, zoneOptions, availableZones, close, problem, errorProps, save, confirmAction, openComparison } = useEmployeeEditor({record, zones, jobTypes, lookupsReady, onClose, onAdopt, onSaved});
 
   return (
     <Dialog
@@ -79,30 +81,11 @@ export function EmployeeApiEditor({
         </div>
       )}
       {baseline && (
-        <div className={styles.employment}>
-          <p className="font-semibold">
-            {employmentLabel(baseline.status)}
-            {baseline.lastWorkingDay ? ` · Ngày nghỉ: ${dateLabel(baseline.lastWorkingDay)}` : ""}
-          </p>
-          <Button
-            className="mt-3 sm:w-auto"
-            variant="secondary"
-            disabled={!baseline.canMaintain || dirty || mutation.pending || mutation.blocked}
-            onClick={() => {
-              if (!dirty && !mutation.busy()) {
-                setEndDate(businessToday());
-                setAction(baseline.status === "Employed" ? "end-employment" : "resume");
-              }
-            }}
-          >
-            {baseline.status === "Employed" ? "Nghỉ việc" : "Cho làm việc lại"}
-          </Button>
-          {dirty && (
-            <p className="mt-3 text-sm text-text-muted">Lưu hoặc hủy bản nháp trước khi đổi tình trạng làm việc.</p>
-          )}
-        </div>
+        <EmployeeEditorEmployment baseline={baseline} dirty={dirty} disabled={!baseline.canMaintain || dirty || mutation.pending || mutation.blocked}
+          onAction={() => { if (!dirty && !mutation.busy()) { setEndDate(businessToday()); setAction(baseline.status === "Employed" ? "end-employment" : "resume"); } }} />
       )}
       <form
+        noValidate
         className={styles.editor}
         ref={formRef}
         onSubmit={(event) => {
@@ -110,8 +93,11 @@ export function EmployeeApiEditor({
           void save();
         }}
       >
+        <EmployeeTabs idPrefix={idPrefix} active={activeTab} onChange={setActiveTab} errors={errorTabs} label="Nhóm thông tin hồ sơ nhân viên" />
         <fieldset disabled={(!!baseline && !baseline.canMaintain) || mutation.pending || mutation.blocked || !!action} className="space-y-4">
           <EmployeeEditorFields
+            active={activeTab}
+            idPrefix={idPrefix}
             values={values}
             setValues={setValues}
             errorProps={errorProps}

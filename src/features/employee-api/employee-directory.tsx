@@ -18,6 +18,7 @@ import { EmployeeDirectoryPaging } from "./employee-directory-paging";
 import { EmployeeDirectoryTable } from "./employee-directory-table";
 import { EmployeeApiEditor } from "./employee-editor";
 import styles from "./employee-screen.module.css";
+import { useEmployeeDirectoryList } from "./use-employee-directory-list";
 
 /** Employment status filter codes: 401 employed, 402 left. */
 function statusFilterLabel(statusId: string) {
@@ -30,6 +31,11 @@ function statusFilterLabel(statusId: string) {
 /** Owner's searchable, filterable list of seasonal employees with the profile editor. */
 export function EmployeeDirectory() {
   const repository = useMemo(() => createOperationsRepository("employees"), []);
+  const detailCache = useMemo(() => {
+    const records = new Map<string, Employee>();
+    return { records, invalidate: () => records.clear() };
+  }, []);
+  const [detailRevision, setDetailRevision] = useState(0);
   const [search, setSearch] = useState("");
   // Debounced copy of `search` that actually drives the query.
   const [term, setTerm] = useState("");
@@ -52,7 +58,7 @@ export function EmployeeDirectory() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const list = useRemote(
+  const list = useEmployeeDirectoryList(
     useCallback(
       (signal: AbortSignal) =>
         readSelectionPages(
@@ -81,6 +87,8 @@ export function EmployeeDirectory() {
   }
 
   function refresh() {
+    detailCache.invalidate();
+    setDetailRevision(value => value + 1);
     list.reload();
     jobTypes.reload();
   }
@@ -160,15 +168,18 @@ export function EmployeeDirectory() {
               Tải lại danh mục
             </Button>
           )}
-          {list.loading ? (
+          {list.loading && !list.data ? (
             <Skeleton />
           ) : (
             list.data && (
               <>
                 <div className="my-4">
                   <EmployeeDirectoryTable
+                    cache={detailCache.records}
+                    detailRevision={detailRevision}
+                    onSaved={() => { refresh(); setNotice("Đã cập nhật hồ sơ nhân viên."); }}
                     items={list.data.items}
-                    disabled={opening.pending}
+                    disabled={opening.pending || list.loading}
                     onOpen={(id) => void open(id)}
                   />
                 </div>

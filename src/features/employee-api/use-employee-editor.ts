@@ -15,6 +15,8 @@ import {
   valuesOf,
 } from "./employee-editor-model";
 import type { EmployeeStatusAction } from "./employee-status-action-dialog";
+import type { EmployeeTabKey } from "./employee-tabs";
+import { employeeFieldTab, focusEmployeeField } from "./employee-editor-validation";
 
 type Issue = { path: string; message: string };
 
@@ -35,6 +37,7 @@ export function useEmployeeEditor({ record, zones, lookupsReady, onClose, onSave
   const [baseline, setBaseline] = useState(record);
   const [values, setValues] = useState(() => valuesOf(record));
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [activeTab, setActiveTab] = useState<EmployeeTabKey>("information");
   const [latest, setLatest] = useState<Employee>();
   const [compared, setCompared] = useState<Employee>();
   const [comparisonTarget, setComparisonTarget] = useState<{ id: string; linked: boolean }>();
@@ -71,6 +74,16 @@ export function useEmployeeEditor({ record, zones, lookupsReady, onClose, onSave
   const problem = mutation.failure?.employeeProblem;
   const invalidServerFields =
     problem?.kind === "invalid-fields" ? problem.fields.map((field) => fieldLabels[field][0]) : [];
+  const errorTabs = [...new Set([...issues.map(issue => issue.path), ...invalidServerFields].map(employeeFieldTab))];
+  const firstServerField = invalidServerFields[0];
+  useEffect(() => {
+    if (!firstServerField) return;
+    const frame = requestAnimationFrame(() => {
+      setActiveTab(employeeFieldTab(firstServerField));
+      requestAnimationFrame(() => focusEmployeeField(formRef.current, firstServerField));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [firstServerField, mutation.failure]);
 
   function errorProps(name: string) {
     return {
@@ -91,7 +104,9 @@ export function useEmployeeEditor({ record, zones, lookupsReady, onClose, onSave
   /** Shows validation issues and moves focus to the first invalid field. */
   function showIssues(next: Issue[]) {
     setIssues(next);
-    requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>(`[name="${next[0]?.path}"]`)?.focus());
+    if (!next[0]) return;
+    setActiveTab(employeeFieldTab(next[0].path));
+    requestAnimationFrame(() => focusEmployeeField(formRef.current, next[0].path));
   }
 
   async function save() {
@@ -156,5 +171,5 @@ export function useEmployeeEditor({ record, zones, lookupsReady, onClose, onSave
     if (next) setCompared(next);
   }
 
- return { repository, mutation, baseline, setBaseline, values, setValues, issues, setIssues, latest, setLatest, compared, setCompared, comparisonTarget, action, setAction, endDate, setEndDate, actionError, setActionError, discard, setDiscard, reconciledRows, setReconciledRows, formRef, dirty, zoneOptions, availableZones, close, problem, errorProps, save, confirmAction, openComparison };
+ return { repository, mutation, baseline, setBaseline, values, setValues, issues, setIssues, activeTab, setActiveTab, errorTabs, latest, setLatest, compared, setCompared, comparisonTarget, action, setAction, endDate, setEndDate, actionError, setActionError, discard, setDiscard, reconciledRows, setReconciledRows, formRef, dirty, zoneOptions, availableZones, close, problem, errorProps, save, confirmAction, openComparison };
 }

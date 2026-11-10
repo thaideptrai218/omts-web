@@ -17,7 +17,8 @@ describe("employee API editor lifecycle", () => {
     fireEvent.change(screen.getByLabelText("Họ và tên *"), { target: { value: "QA employee" } });
     fireEvent.change(screen.getByLabelText("Loại nhân viên *"), { target: { value: "SeasonalWorker" } });
     fireEvent.change(screen.getByLabelText("Số điện thoại", { exact: true }), { target: { value: "0920000001" } });
-    fireEvent.change(screen.getByLabelText("Ngân hàng", { exact: true }), { target: { value: "QA Bank" } });
+    fireEvent.click(screen.getByRole("tab", { name: "Ngân hàng" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Ngân hàng" }), { target: { value: "QA Bank" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
     expect(screen.getByText("Số tài khoản: Vui lòng kiểm tra lại thông tin đã nhập.")).toBeTruthy();
     expect(screen.getByText("Chủ tài khoản: Vui lòng kiểm tra lại thông tin đã nhập.")).toBeTruthy();
@@ -79,8 +80,9 @@ describe("employee API editor lifecycle", () => {
     repository.write.mockResolvedValue({ status: "success", data: fixture() });
     render(<EmployeeApiEditor {...props()} record={null} />);
     fireEvent.change(screen.getByLabelText("Họ và tên *"), { target: { value: "Người mới" } });
+    fireEvent.click(screen.getByRole("tab", { name: "Công việc" }));
     fireEvent.click(screen.getByRole("checkbox", { name: /Vùng Đông/ }));
-    // Exercise schema validation too; browsers also enforce the required select.
+    // Saving uses schema validation across all tab panels.
     fireEvent.submit(screen.getByRole("button", { name: "Lưu hồ sơ" }).closest("form")!);
     expect(repository.write).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Loại nhân viên *").getAttribute("aria-invalid")).toBe("true");
@@ -98,6 +100,7 @@ describe("employee API editor lifecycle", () => {
     const record = { ...fixture(), jobTypes: [{ id: "9429f1c0-b70f-42d6-9a9f-1c6a1e608c22", name: "Thu hoạch", status: "In Use" }] };
     repository.write.mockResolvedValue({ status: "success", data: record });
     render(<EmployeeApiEditor {...props()} record={record} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Công việc" }));
     expect((screen.getByRole("checkbox", { name: "Thu hoạch" }) as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByLabelText("Áp dụng từ ngày *")).toBeNull();
     fireEvent.change(screen.getByLabelText("Ghi chú"), { target: { value: "Giữ nguyên loại việc" } });
@@ -123,6 +126,7 @@ describe("employee API editor lifecycle", () => {
     const record = { ...fixture(), jobTypes: [{ id: "9429f1c0-b70f-42d6-9a9f-1c6a1e608c22", name: "Thu hoạch", status: "In Use" }] };
     repository.write.mockResolvedValue({ status: "success", data: record });
     render(<EmployeeApiEditor {...props()} record={record} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Công việc" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Thu hoạch" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Treo giống" }));
     fireEvent.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
