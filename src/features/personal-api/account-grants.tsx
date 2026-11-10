@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -20,7 +21,7 @@ export function AccountGrantHistory({ accountId, canRevoke = false }: { accountI
     {remote.loading && <Skeleton />}<ErrorNotice error={(!reviewedRows ? remote.error : undefined) || mutation.error} />{notice && <p role="status">{notice}</p>}
     {!remote.loading && <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => { setReviewing(blocked); setReviewedRows(undefined); const next = await mutation.run(() => readAccountGrants(accountId), true); if (next) setReviewedRows(next); }}>Tải lại phân quyền</Button>}
     {blocked && <div className="space-y-3"><p>Hãy đối chiếu lịch sử hiện tại trước khi thực hiện lượt mới. Lệnh thu hồi không được gửi lại tự động.</p>{reviewedRows && !mutation.uncertain && <Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => { setReviewing(false); mutation.reviewed(); }}>Đã đối chiếu lịch sử</Button>}</div>}
-    {data && <><label className="block text-sm font-semibold">Tình trạng phân quyền<select className="mt-2 min-h-12 w-full rounded-control border border-border bg-surface px-3" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">Tất cả</option>{Object.entries(stateLabels).map(([state, label]) => <option key={state} value={state}>{label}</option>)}</select></label>
+    {data && <><label className="block text-sm font-semibold">Tình trạng phân quyền<SelectBox className="mt-2 min-h-12 w-full rounded-control border border-border bg-surface px-3" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">Tất cả</option>{Object.entries(stateLabels).map(([state, label]) => <option key={state} value={state}>{label}</option>)}</SelectBox></label>
       {!rows?.length && <p>Không có cặp vùng – vai trò phù hợp.</p>}
       <ul className="space-y-3">{rows?.map((row) => <li key={row.id} className="space-y-2 rounded-control border border-border p-3 break-words"><p className="font-semibold">{row.roleName} · {stateLabels[row.state]}</p><p>{row.allZones ? "Tất cả vùng" : row.zoneName || "Vùng chưa có tên trong danh mục"}</p><p className="text-sm">{row.grantedAt ? `Cấp lúc ${displayTime(row.grantedAt)}${row.grantedByName ? ` · ${row.grantedByName}` : ""}` : `Từ ${date(row.effectiveFrom!)} · Đến ${row.effectiveTo ? date(row.effectiveTo) : "Không giới hạn"}`}</p>
         {row.revokedAt && <p className="text-sm">Thu hồi: {displayTime(row.revokedAt)}{row.revokedByName ? ` · ${row.revokedByName}` : ""}</p>}{row.revokeReason && <p className="text-sm">Lý do: {row.revokeReason}</p>}

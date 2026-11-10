@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { Button } from "@/components/ui/button";
 import { CustomerSearch } from "@/features/customer-lookup/customer-search";
 import { control, ErrorNotice, Field, money, Skeleton } from "@/features/operations/ui";
@@ -43,12 +44,12 @@ export function PaymentRecordPanel({ onRecorded }: { onRecorded: () => void }) {
           <Field label="Ngày" type="date" value={f.date} disabled={r.saving} onChange={(e) => r.setForm({ date: e.target.value })} />
           <label className={s.field}><span>Số tiền (₫)</span><input inputMode="numeric" className={`${control} ${s.num}`} placeholder="0" value={f.amount} disabled={r.saving} onChange={(e) => r.setForm({ amount: e.target.value })} /></label>
           <label className={s.field}><span>Hình thức</span>
-            <select className={control} value={f.method} disabled={r.saving} onChange={(e) => r.setForm({ method: e.target.value as "Cash" | "OtherTransfer" })}>
-              <option value="Cash">Tiền mặt</option><option value="OtherTransfer">Chuyển khoản</option></select></label>
+            <SelectBox className={control} value={f.method} disabled={r.saving} onChange={(e) => r.setForm({ method: e.target.value as "Cash" | "OtherTransfer" })}>
+              <option value="Cash">Tiền mặt</option><option value="OtherTransfer">Chuyển khoản</option></SelectBox></label>
           {f.method === "Cash" && paying && (
             <label className={s.field}><span>Người nhận tiền mặt</span>
-              <select className={control} value={f.collector} disabled={r.saving || !data} onChange={(e) => r.setForm({ collector: e.target.value })}>
-                <option value="">Chọn người nhận</option>{data?.cashCollectors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+              <SelectBox className={control} value={f.collector} disabled={r.saving || !data} onChange={(e) => r.setForm({ collector: e.target.value })}>
+                <option value="">Chọn người nhận</option>{data?.cashCollectors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</SelectBox></label>
           )}
           {f.method === "OtherTransfer" && <Field label="Mã giao dịch ngân hàng" value={f.bankReference} maxLength={100} disabled={r.saving} onChange={(e) => r.setForm({ bankReference: e.target.value })} />}
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectBox } from "@/components/ui/select-box";
 import { useId, useState } from "react";
 import { DirectoryEmpty, StatusPill } from "@/components/ui/management-page";
 import { vietnameseBusinessDate } from "@/shared/format/date-only";
@@ -57,7 +58,7 @@ export function ZoneDirectory({
           <label htmlFor={`${id}-status`} className="text-xs font-medium">
             Trạng thái vùng
           </label>
-          <select
+          <SelectBox
             id={`${id}-status`}
             value={status}
             onChange={(event) => setStatus(event.target.value)}
@@ -66,7 +67,7 @@ export function ZoneDirectory({
             <option value="all">Tất cả trạng thái</option>
             <option value="in-use">Đang sử dụng</option>
             <option value="discontinued">Đã ngừng sử dụng</option>
-          </select>
+          </SelectBox>
         </div>
       </div>
       <div className="overflow-hidden rounded-card border border-border bg-surface">

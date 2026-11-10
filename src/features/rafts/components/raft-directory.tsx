@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useId, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,7 @@ export function RaftDirectory({
           <label htmlFor={`${id}-zone`} className="text-sm font-semibold">
             Vùng nuôi
           </label>
-          <select
+          <SelectBox
             id={`${id}-zone`}
             name="zoneId"
             defaultValue={zoneId}
@@ -112,13 +113,13 @@ export function RaftDirectory({
             {zoneId && !zoneNames.has(zoneId) && (
               <option value={zoneId}>Vùng không có trong phạm vi</option>
             )}
-          </select>
+          </SelectBox>
         </div>
         <div className="min-w-0">
           <label htmlFor={`${id}-status`} className="text-sm font-semibold">
             Trạng thái bè
           </label>
-          <select
+          <SelectBox
             id={`${id}-status`}
             name="status"
             defaultValue={status}
@@ -127,7 +128,7 @@ export function RaftDirectory({
             <option value="">Tất cả trạng thái</option>
             <option value="in-use">Đang sử dụng</option>
             <option value="discontinued">Đã ngừng</option>
-          </select>
+          </SelectBox>
         </div>
         <Button type="submit" className="self-end sm:w-auto">
           <InterfaceIcon name="search" />

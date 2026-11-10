@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -119,7 +120,7 @@ export function QuickSupplierDialog({ onClose, onSaved }: { onClose(): void; onS
   }
   return <Dialog open title="Thêm nhà cung cấp" mobileLayout="compact" dismissible={!pending} onOpenChange={(open) => { if (!open) onClose(); }}><div className={`${managementStyles.theme} ${styles.dialogForm}`}>
     <label className={styles.field}>Tên nhà cung cấp *<input autoFocus maxLength={200} value={name} onChange={(event) => setName(event.target.value)} /></label>
-    <label className={styles.field}>Loại *<select value={type} onChange={(event) => setType(event.target.value)}><option value="Seed">Giống</option><option value="Material">Vật tư</option><option value="Other">Khác</option></select></label>
+    <label className={styles.field}>Loại *<SelectBox value={type} onChange={(event) => setType(event.target.value)}><option value="Seed">Giống</option><option value="Material">Vật tư</option><option value="Other">Khác</option></SelectBox></label>
     <label className={styles.field}>Số điện thoại *<input inputMode="tel" maxLength={20} value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
     <p className={styles.sub}>Địa chỉ, email và giấy chứng nhận bổ sung sau ở màn hình Nhà cung cấp.</p>
     <ErrorNotice error={error} />

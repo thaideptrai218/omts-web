@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectBox } from "@/components/ui/select-box";
 import { useMemo, useState } from "react";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import {
@@ -98,7 +99,7 @@ export function AccountList({
             >
               Vùng phụ trách
             </label>
-            <select
+            <SelectBox
               id="account-zone-filter"
               value={zoneId}
               onChange={(event) => setZoneId(event.target.value)}
@@ -113,7 +114,7 @@ export function AccountList({
                     {zone.label}
                   </option>
                 ))}
-            </select>
+            </SelectBox>
           </div>
           <div className="min-w-0">
             <label
@@ -122,7 +123,7 @@ export function AccountList({
             >
               Vai trò đảm nhiệm
             </label>
-            <select
+            <SelectBox
               id="account-role-filter"
               value={roleId}
               onChange={(event) => setRoleId(event.target.value)}
@@ -136,7 +137,7 @@ export function AccountList({
                     {role.name}
                   </option>
                 ))}
-            </select>
+            </SelectBox>
           </div>
           <div className="min-w-0">
             <label
@@ -145,7 +146,7 @@ export function AccountList({
             >
               Trạng thái tài khoản
             </label>
-            <select
+            <SelectBox
               id="account-status-filter"
               value={status}
               onChange={(event) => setStatus(event.target.value)}
@@ -154,7 +155,7 @@ export function AccountList({
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
               <option value="locked">Đã khóa</option>
-            </select>
+            </SelectBox>
           </div>
         </div>
         <div className="mt-4 flex min-h-8 items-center justify-between gap-3">

@@ -1,3 +1,4 @@
+import { SelectBox } from "@/components/ui/select-box";
 import { Button } from "@/components/ui/button";
 import type {
   EmployeeAccountSummary,
@@ -40,7 +41,7 @@ export function EmployeeAccountLinkSection({
           optional
           error={errors.accountId?.message}
         >
-          <select {...controlProps("accountId")} className={employeeInputStyles} {...register("accountId")}>
+          <SelectBox {...controlProps("accountId")} className={employeeInputStyles} {...register("accountId")}>
             <option value="">{employee?.account ? "Giữ tài khoản hiện tại" : "Chưa liên kết tài khoản"}</option>
             {accountOptions.map((account) => (
               <option key={account.id} value={account.id}>
@@ -48,7 +49,7 @@ export function EmployeeAccountLinkSection({
                 {account.status === "locked" ? " · Đã khóa" : ""}
               </option>
             ))}
-          </select>
+          </SelectBox>
         </EmployeeEditorField>
       </div>
       {!employee && (

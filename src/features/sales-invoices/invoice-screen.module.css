@@ -19,7 +19,7 @@
 .lineList { display: grid; gap: .5rem; }
 .lineRow { display: grid; grid-template-columns: minmax(7rem, 1.1fr) minmax(8rem, 1.2fr) 6.5rem 7.5rem minmax(6.5rem, .9fr) 3rem; gap: .625rem; align-items: center; padding: .5rem 0; border-bottom: 1px solid var(--omts-color-border); }
 .lineRow > * { min-width: 0; }
-.lineRow input, .lineRow select { margin-top: 0; }
+.lineRow input, .lineRow select, .lineRow :global(.omts-select-trigger) { margin-top: 0; }
 .lineHead { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--omts-color-text-muted); border-bottom-color: var(--omts-color-border-strong); }
 .remove { color: var(--omts-color-danger); font-size: .8125rem; font-weight: 600; min-height: 2.75rem; border-radius: var(--omts-radius-control); }
 .remove:hover:not(:disabled) { background: var(--omts-color-danger-soft); }
@@ -37,7 +37,7 @@
 .seg button[aria-pressed="true"] { background: var(--omts-color-surface); color: var(--omts-color-primary); box-shadow: var(--omts-shadow-card); }
 .field { display: block; margin-top: .75rem; }
 .field > span { display: block; font-size: .75rem; font-weight: 500; color: var(--omts-color-text-muted); }
-.field input, .field select { margin-top: .375rem; }
+.field input, .field select, .field :global(.omts-select-trigger) { margin-top: .375rem; }
 .sums { margin: 0; display: grid; gap: .375rem; }
 .sums > div { display: flex; justify-content: space-between; gap: 1rem; font-size: .875rem; }
 .sums dt { color: var(--omts-color-text-muted); }

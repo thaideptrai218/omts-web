@@ -32,7 +32,7 @@
 .warning { margin: .75rem 0 0; padding: .625rem .875rem; border-radius: var(--omts-radius-control); border: 1px solid var(--omts-color-warning); font-size: .875rem; }
 .linkButton { color: var(--omts-color-primary); text-decoration: underline; font-size: .8125rem; }
 .field { display: block; margin-top: .75rem; font-size: .75rem; font-weight: 500; color: var(--omts-color-text-muted); }
-.field input, .field select, .field textarea { margin-top: .375rem; }
+.field input, .field select, .field textarea, .field :global(.omts-select-trigger) { margin-top: .375rem; }
 .formGrid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
 .lineEditor { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(5.5rem, 1fr)) auto; gap: .5rem; align-items: end; padding: .5rem 0; border-bottom: 1px solid var(--omts-color-border); }
 .lineEditor strong { font-size: .875rem; }

@@ -74,15 +74,15 @@
 .kv { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,170px); align-items:center; gap:10px; min-height:30px; font-size:13px; }
 .kv > span { color:var(--omts-color-text); }
 .kv > div { min-width:0; text-align:right; font-variant-numeric:tabular-nums; }
-.kv input, .kv select { width:100%; height:30px; padding:0 8px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; text-align:right; }
-.kv select { text-align:left; }
+.kv input, .kv select, .kv :global(.omts-select-trigger) { width:100%; height:30px; padding:0 8px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; text-align:right; }
+.kv select, .kv :global(.omts-select-trigger) { text-align:left; }
 .kv input:read-only { border-color:var(--omts-color-border); background:var(--omts-color-surface-subtle); color:var(--omts-color-text-muted); }
 .kvStrong > span { font-weight:700; }
 .kvStrong > div { font-size:15px; font-weight:700; color:var(--omts-color-primary); }
 .sideNote { width:100%; min-height:72px; padding:8px 10px; border:1px solid var(--omts-color-border-strong); border-radius:6px; font-size:13px; resize:vertical; }
 .divider { height:1px; background:var(--omts-color-border); }
 .field { display:grid; gap:3px; font-size:12px; font-weight:500; color:var(--omts-color-text-muted); min-width:0; }
-.field input, .field select, .field textarea { width:100%; height:30px; padding:0 8px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; color:var(--omts-color-text); }
+.field input, .field select, .field textarea, .field :global(.omts-select-trigger) { width:100%; height:30px; padding:0 8px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; color:var(--omts-color-text); }
 .field textarea { height:60px; padding:6px 8px; resize:vertical; }
 .supplierChosen { display:flex; align-items:center; gap:8px; min-height:38px; padding:4px 6px 4px 10px; border:1px solid var(--omts-color-border-strong); border-radius:6px; font-size:13px; }
 .supplierChosen > svg { flex:none; width:16px; height:16px; color:var(--omts-color-primary); }
@@ -146,7 +146,7 @@
 .headFacts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 28px; margin-bottom:14px; font-size:13px; }
 .headFacts > div { display:grid; grid-template-columns:96px minmax(0,1fr); align-items:center; gap:8px; min-height:30px; }
 .headFacts > div > span { color:var(--omts-color-text-muted); }
-.headFacts select { width:100%; max-width:220px; height:30px; padding:0 6px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; }
+.headFacts select, .headFacts :global(.omts-select-trigger) { width:100%; max-width:220px; height:30px; padding:0 6px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; }
 .headFacts button[aria-haspopup] { max-width:200px; }
 @media (max-width:1100px) { .headFacts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 .lineSearch td { padding:6px 10px; border-bottom:1px solid var(--omts-color-border); }
@@ -182,3 +182,9 @@
 .voucherFoot > div { display:flex; gap:8px; }
 @media (max-width:700px) { .voucherGrid { grid-template-columns:1fr; } }
 .codeList { display:inline-flex; flex-wrap:wrap; gap:2px 8px; }
+
+/* Same feel as the shared form controls: brand focus ring, colour-only transitions. */
+.voucherInput, .voucherNote { transition:border-color 120ms ease, box-shadow 120ms ease; }
+.voucherInput:hover:not(:read-only), .voucherNote:hover:not(:read-only) { border-color:var(--omts-brand, var(--omts-color-primary)); }
+.voucherInput:focus, .voucherNote:focus { outline:none; border-color:var(--omts-brand, var(--omts-color-primary)); box-shadow:0 0 0 3px color-mix(in srgb, var(--omts-brand, var(--omts-color-primary)) 18%, transparent); }
+.cellInput { transition:border-color 120ms ease; }

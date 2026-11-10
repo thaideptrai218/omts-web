@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { Button } from "@/components/ui/button";
 import { control } from "@/features/operations/ui";
 import { START_DAY_FIRST, START_DAY_LAST } from "./contracts";
@@ -18,9 +19,9 @@ export function PayrollSettingsFormPanel({ draft, disabled, dirty, problem, canS
       <fieldset className={s.fieldset} disabled={disabled}>
         <label className={s.field}>
           <span>Ngày bắt đầu kỳ lương</span>
-          <select className={control} value={draft.startDay} aria-describedby="start-day-hint" aria-invalid={!!problem} onChange={(e) => onChange({ startDay: e.target.value })}>
+          <SelectBox className={control} value={draft.startDay} aria-describedby="start-day-hint" aria-invalid={!!problem} onChange={(e) => onChange({ startDay: e.target.value })}>
             {days.map((d) => <option key={d} value={d}>Ngày {d} hằng tháng</option>)}
-          </select>
+          </SelectBox>
           <small id="start-day-hint" className={s.hint}>Chọn từ ngày {START_DAY_FIRST} đến {START_DAY_LAST} để ngày này có ở mọi tháng. Kỳ được đặt tên theo tháng kết thúc.</small>
         </label>
         <label className={s.switchRow}>

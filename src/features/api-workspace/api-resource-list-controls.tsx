@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { countNounFor } from "./api-resource-presentation";
@@ -80,7 +81,7 @@ export function ResourcePager({
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-sm">
           Số dòng/trang{" "}
-          <select
+          <SelectBox
             className="ml-2 rounded-control border border-border px-2 py-2"
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
@@ -89,7 +90,7 @@ export function ResourcePager({
             <option value={20}>20</option>
             <option value={50}>50</option>
             <option value={100}>100</option>
-          </select>
+          </SelectBox>
         </label>
         <Button className="w-auto" variant="secondary" disabled={loading || pageNumber <= 1} onClick={onPrevious}>
           Trước

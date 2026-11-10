@@ -16,15 +16,16 @@
 .body { display:grid; grid-template-columns:var(--rail) minmax(0,1fr); gap:var(--gap); flex:1 1 auto; min-height:0; }
 .screen[data-filters="closed"] .body { grid-template-columns:minmax(0,1fr); }
 .rail { position:relative; min-height:0; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); }
-.railScroll { height:100%; overflow-y:auto; padding:14px; display:grid; gap:16px; align-content:start; }
-.railToggle { position:absolute; top:50%; z-index:6; display:grid; place-items:center; width:22px; height:48px; transform:translateY(-50%); border:1px solid var(--omts-color-border-strong); background:var(--omts-color-surface); color:var(--omts-color-text-muted); }
+.railScroll { position:relative; height:100%; overflow-y:auto; padding:14px; display:grid; gap:16px; align-content:start; }
+/* Show/hide filter toggle: one look in both states, always visible, centred with `top` (not a transform, which the
+   global pressed-button style replaced and made the button jump on click). */
+.railToggle { position:absolute; top:calc(50% - 22px); z-index:6; display:grid; place-items:center; width:20px; height:44px; padding:0; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); color:var(--omts-color-text-muted); box-shadow:0 1px 3px rgb(20 43 56 / .08); transition:color .12s, border-color .12s; }
+.railToggle, .railToggle:active { transform:none !important; }
 .railToggle svg { width:14px; height:14px; }
 .railToggle:hover { color:var(--omts-color-primary); border-color:var(--omts-color-primary); }
-.railClose { right:-11px; border-radius:6px; opacity:0; transition:opacity .12s; }
-.rail:hover .railClose, .railClose:focus-visible { opacity:1; }
-@media (hover:none) { .railClose { opacity:1; } }
-.railOpen { left:-1px; border-radius:0 6px 6px 0; }
-.listColumn { display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; }
+.railClose { right:-10px; }
+.railOpen { left:-10px; }
+.listColumn { position:relative; display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; }
 .list { position:relative; flex:1 1 auto; display:flex; flex-direction:column; min-width:0; min-height:0; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); overflow:hidden; }
 .filterGroup { display:grid; gap:6px; min-width:0; }
 .filterGroup legend { margin-bottom:6px; font-size:12px; font-weight:650; color:var(--omts-color-text); }
@@ -39,13 +40,13 @@
 .bulkBar button:not(.linkButton) { min-height:28px; height:28px; padding-block:0; }
 .linkButton { color:var(--omts-color-primary); font-size:13px; font-weight:600; min-height:32px; }
 .linkButton:hover { text-decoration:underline; }
-.scroller { flex:1 1 auto; min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--omts-color-border-strong) transparent; }
+.scroller { position:relative; flex:1 1 auto; min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--omts-color-border-strong) transparent; }
 .scroller::-webkit-scrollbar { display:block; width:10px; height:10px; }
 .scroller::-webkit-scrollbar-thumb { background:var(--omts-color-border-strong); border-radius:6px; }
 .viewWidth { position:sticky; left:0; width:var(--view-width, 100%); }
 .pagination { flex:none; display:flex; align-items:center; gap:4px; flex-wrap:wrap; padding:2px 12px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); font-size:12px; }
 .pagination label { display:inline-flex; align-items:center; gap:8px; margin-right:6px; }
-.pagination select, .pagination input { min-height:26px; padding:0 4px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); }
+.pagination select, .pagination input, .pagination :global(.omts-select-trigger) { min-height:26px; padding:0 4px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); }
 .pagination input { width:44px; text-align:center; }
 .pagination span { margin-left:auto; color:var(--omts-color-text-muted); font-variant-numeric:tabular-nums; }
 .pageButton { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:6px; }

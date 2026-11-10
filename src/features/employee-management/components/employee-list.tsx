@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectBox } from "@/components/ui/select-box";
 import { useRef, useState } from "react";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import {
@@ -82,7 +83,7 @@ export function EmployeeList({
             >
               Tình trạng làm việc
             </label>
-            <select
+            <SelectBox
               id="employee-status"
               value={status}
               onChange={(event) =>
@@ -93,7 +94,7 @@ export function EmployeeList({
               <option value="all">Tất cả trạng thái</option>
               <option value="employed">Đang làm việc</option>
               <option value="left">Đã nghỉ</option>
-            </select>
+            </SelectBox>
           </div>
           <div className="min-w-0">
             <label
@@ -102,7 +103,7 @@ export function EmployeeList({
             >
               Liên kết tài khoản
             </label>
-            <select
+            <SelectBox
               id="employee-account-filter"
               value={link}
               onChange={(event) => { setLink(event.target.value as EmployeeDirectoryFilters["link"]); setRequestedPage(1); }}
@@ -111,16 +112,16 @@ export function EmployeeList({
               <option value="all">Tất cả hồ sơ</option>
               <option value="linked">Đã liên kết</option>
               <option value="unlinked">Chưa liên kết</option>
-            </select>
+            </SelectBox>
           </div>
           <div className="min-w-0">
             <label htmlFor="employee-zone-filter" className="text-sm font-medium text-text">Vùng làm việc</label>
-            <select id="employee-zone-filter" value={zoneId} className={fieldStyles}
+            <SelectBox id="employee-zone-filter" value={zoneId} className={fieldStyles}
               onChange={(event) => { setZoneId(event.target.value); setRequestedPage(1); }}>
               <option value="">Tất cả vùng</option>
               {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
               {zoneId && !zones.some((zone) => zone.id === zoneId) && <option value={zoneId}>Vùng không còn trong danh mục</option>}
-            </select>
+            </SelectBox>
           </div>
         </div>
         <div className="mt-4 flex min-h-8 items-center justify-between gap-3">

@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectBox } from "@/components/ui/select-box";
 import { useState } from "react";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import type {
@@ -82,7 +83,7 @@ export function PermissionMatrixEditor({
           >
             Nhóm chức năng
           </label>
-          <select
+          <SelectBox
             id="permission-group"
             value={group}
             onChange={(event) => setGroup(event.target.value)}
@@ -94,7 +95,7 @@ export function PermissionMatrixEditor({
                 {label}
               </option>
             ))}
-          </select>
+          </SelectBox>
         </div>
       </div>
       <p className="text-xs leading-5 text-text-muted">
@@ -185,7 +186,7 @@ export function PermissionMatrixEditor({
                     >
                       Phạm vi dữ liệu
                     </label>
-                    <select
+                    <SelectBox
                       id={`scope-${feature.code}`}
                       aria-label={`Phạm vi dữ liệu của ${feature.label}`}
                       value={permission.dataScopeId ?? ""}
@@ -207,7 +208,7 @@ export function PermissionMatrixEditor({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </SelectBox>
                   </div>
                 )}
                 {viewLocked && (

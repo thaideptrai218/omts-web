@@ -1,3 +1,4 @@
+import { SelectBox } from "@/components/ui/select-box";
 import { Controller, type UseFormReturn } from "react-hook-form";
 import type { Ref } from "react";
 import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
@@ -30,13 +31,13 @@ export function ZoneDocumentFields({
     <div className="grid min-w-0 gap-4 sm:grid-cols-2">
       <ZoneField label="Loại giấy tờ" required error={errors.type?.message}>
         {(props) => (
-          <select {...props} {...register("type")} className={zoneInputStyles}>
+          <SelectBox {...props} {...register("type")} className={zoneInputStyles}>
             {Object.entries(zoneDocumentTypes).map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
               </option>
             ))}
-          </select>
+          </SelectBox>
         )}
       </ZoneField>
       <ZoneField label="Số giấy tờ" required error={errors.number?.message}>

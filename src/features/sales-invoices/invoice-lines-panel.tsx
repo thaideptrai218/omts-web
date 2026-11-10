@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/management-page";
@@ -32,9 +33,9 @@ export function InvoiceLinesPanel({ lots, draft, active, listPrice, disabled, on
               <div className={s.lineRow} key={line.key}>
                 <div><strong className={s.code}>{line.lot.lotCode}</strong><div className={s.muted}>{line.lot.raftCode} · {line.lot.zoneCode}</div>
                   {line.lot.originState === "Withdrawn" && <StatusPill tone="danger">Nguồn gốc đã thu hồi</StatusPill>}</div>
-                <select aria-label={`Sản phẩm dòng ${i + 1}`} className={control} disabled={disabled} value={line.productId} onChange={(e) => edit(line.key, { productId: e.target.value })}>
+                <SelectBox aria-label={`Sản phẩm dòng ${i + 1}`} className={control} disabled={disabled} value={line.productId} onChange={(e) => edit(line.key, { productId: e.target.value })}>
                   <option value="">Chọn sản phẩm</option>{active.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                </SelectBox>
                 <input aria-label={`Số kg dòng ${i + 1}`} inputMode="decimal" className={`${control} ${s.num}`} disabled={disabled} placeholder={`≤ ${line.lot.remainingKg}`} value={line.kg} onChange={(e) => edit(line.key, { kg: e.target.value })} />
                 <input aria-label={`Đơn giá dòng ${i + 1}`} inputMode="numeric" className={`${control} ${s.num}`} disabled={disabled} placeholder={listPrice(line.productId) != null ? money(listPrice(line.productId)).replace(" ₫", "") : "Giá niêm yết"} value={line.unitPrice} onChange={(e) => edit(line.key, { unitPrice: e.target.value })} />
                 <strong className={`${s.right} ${s.num}`}>{money(lineAmount(line, listPrice(line.productId)))}</strong>

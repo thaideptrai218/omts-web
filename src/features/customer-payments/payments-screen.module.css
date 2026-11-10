@@ -29,7 +29,7 @@
 .field { display: block; margin-top: .75rem; }
 .grid .field { margin-top: 0; }
 .field > span { display: block; font-size: .75rem; font-weight: 500; color: var(--omts-color-text-muted); }
-.field input, .field select, .field textarea { margin-top: .375rem; }
+.field input, .field select, .field textarea, .field :global(.omts-select-trigger) { margin-top: .375rem; }
 .tableWrap { overflow-x: auto; margin-top: .5rem; }
 .table { width: 100%; border-collapse: collapse; font-size: .875rem; }
 .table th { text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--omts-color-text-muted); padding: .625rem .75rem; border-bottom: 1px solid var(--omts-color-border-strong); }

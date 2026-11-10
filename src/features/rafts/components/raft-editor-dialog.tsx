@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -127,7 +128,7 @@ export function RaftEditorDialog({
                 error={form.formState.errors.zoneId?.message}
               >
                 {(props) => (
-                  <select
+                  <SelectBox
                     {...props}
                     className={raftInputStyles}
                     {...form.register("zoneId")}
@@ -145,7 +146,7 @@ export function RaftEditorDialog({
                           {zone.status === "discontinued" ? " — đã ngừng" : ""}
                         </option>
                       ))}
-                  </select>
+                  </SelectBox>
                 )}
               </RaftField>
             </div>

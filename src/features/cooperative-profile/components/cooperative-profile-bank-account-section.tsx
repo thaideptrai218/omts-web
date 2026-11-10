@@ -1,3 +1,4 @@
+import { SelectBox } from "@/components/ui/select-box";
 import { FormField } from "@/components/form/form-field";
 import {
   CooperativeProfileFormSection,
@@ -25,7 +26,7 @@ export function CooperativeProfileBankAccountSection({
           <label className="block text-sm font-semibold text-text" htmlFor="receiving-bank">
             Ngân hàng<span aria-hidden="true" className="ml-1 text-danger">*</span>
           </label>
-          <select
+          <SelectBox
             aria-describedby={errors.bankId ? "receiving-bank-error" : undefined}
             aria-invalid={errors.bankId ? true : undefined}
             className={`mt-2 min-h-12 w-full rounded-control border bg-surface px-3.5 py-2.5 text-base text-text shadow-sm outline-none transition ${getControlBorderClassName(
@@ -41,7 +42,7 @@ export function CooperativeProfileBankAccountSection({
                 {bank.shortName} — {bank.name}
               </option>
             ))}
-          </select>
+          </SelectBox>
           {errors.bankId && (
             <p className="mt-1.5 text-sm font-medium text-danger" id="receiving-bank-error" role="alert">
               {errors.bankId.message}

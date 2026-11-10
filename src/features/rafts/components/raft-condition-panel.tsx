@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
@@ -84,7 +85,7 @@ export function RaftConditionPanel({
           <label htmlFor={`${id}-cycle`} className="text-sm font-semibold">
             Chu kỳ
           </label>
-          <select
+          <SelectBox
             id={`${id}-cycle`}
             value={cycleId}
             onChange={(event) => {
@@ -101,7 +102,7 @@ export function RaftConditionPanel({
                 {cycle.code} ({cycle.closedAt ? "đã đóng" : "đang mở"})
               </option>
             ))}
-          </select>
+          </SelectBox>
         </div>
       </div>
       {!dateValid && (

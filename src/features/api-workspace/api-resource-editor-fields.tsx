@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import type { Dispatch, SetStateAction } from "react";
 import { FormField } from "@/components/form/form-field";
 import { inputClass, text } from "./api-resource-presentation";
@@ -45,7 +46,7 @@ export function ResourceEditorFields({
         field.type === "select" ? (
           <label key={field.key} className="text-sm font-semibold">
             {field.label}
-            <select
+            <SelectBox
               required={field.required}
               className={inputClass}
               value={values[field.key]}
@@ -64,7 +65,7 @@ export function ResourceEditorFields({
                   {label}
                 </option>
               ))}
-            </select>
+            </SelectBox>
           </label>
         ) : field.type === "textarea" ? (
           <label key={field.key} className="text-sm font-semibold sm:col-span-2">

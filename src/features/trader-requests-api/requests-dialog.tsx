@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -26,7 +27,7 @@ export function TraderRequestsDialog({ onClose, asPage = false }: { onClose(): v
   }
   const rows = list.data?.filter((row) => `${row.displayName} ${row.phoneNumber ?? ""}`.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi")));
   const content = <>
-    <div className="flex flex-wrap gap-3"><label>Trạng thái<select className="ml-2 rounded-control border border-border-strong p-3" disabled={mutation.pending || !!selection} value={String(rejected)} onChange={(event) => setRejected(event.target.value === "true")}><option value="false">Chờ duyệt</option><option value="true">Đã từ chối</option></select></label>
+    <div className="flex flex-wrap gap-3"><label>Trạng thái<SelectBox className="ml-2 rounded-control border border-border-strong p-3" disabled={mutation.pending || !!selection} value={String(rejected)} onChange={(event) => setRejected(event.target.value === "true")}><option value="false">Chờ duyệt</option><option value="true">Đã từ chối</option></SelectBox></label>
       <Button className="w-auto" variant="secondary" disabled={list.loading || mutation.pending} onClick={list.reload}>Tải lại danh sách</Button></div>
     <label className="mt-4 block">Tìm tên hoặc số điện thoại<input className="mt-2 min-h-12 w-full rounded-control border border-border-strong p-3" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
     <ErrorNotice error={list.error || mutation.error} />

@@ -1,6 +1,6 @@
 .filters { display:grid; gap:16px; min-width:0; }
 .filters label { font-size:12px; color:var(--omts-color-text-muted); }
-.filters input, .filters select { min-height:40px; margin-top:6px; font-size:13px; color:var(--omts-color-text); }
+.filters input, .filters select, .filters :global(.omts-select-trigger) { min-height:40px; margin-top:6px; font-size:13px; color:var(--omts-color-text); }
 .reset { font-size:12px; color:var(--omts-color-primary); text-decoration:underline; text-underline-offset:3px; min-height:32px; }
 .reset:disabled { opacity:.45; cursor:default; text-decoration:none; }
 .reset:focus-visible { outline:2px solid var(--omts-color-primary); outline-offset:3px; }
@@ -17,7 +17,7 @@
 .identity p { font-size:12px; color:var(--omts-color-text-muted); margin-bottom:4px; }
 .identity h2 { font-size:20px; font-weight:650; line-height:1.4; overflow-wrap:anywhere; }
 .identity span { font-size:12px; }
-.editor input, .editor select { min-height:42px; }
+.editor input, .editor select, .editor :global(.omts-select-trigger) { min-height:42px; }
 .profileFacts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; padding:14px 16px; margin-bottom:20px; border-radius:8px; background:var(--omts-color-surface-subtle); }
 .profileFacts dt { font-size:12px; color:var(--omts-color-text-muted); margin-bottom:4px; }
 .profileFacts dd { font-size:14px; font-weight:550; overflow-wrap:anywhere; }

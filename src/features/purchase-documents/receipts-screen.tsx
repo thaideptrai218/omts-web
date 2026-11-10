@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -98,7 +99,7 @@ function ReceiptsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
     <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(presetValue("thisMonth")); })()}>Đặt lại</button></div>
     <FilterPills legend="Nhóm hàng" name="receipt-group" value={filters.group} options={itemGroups} onChange={setFilter("group")} />
     <TimeRangeFilter legend="Thời gian" value={time} onChange={changed<TimeRangeValue>(setTime)} />
-    <FilterGroup legend="Nhà cung cấp"><select aria-label="Nhà cung cấp" className={styles.railSelect} value={filters.supplier} onChange={(event) => setFilter("supplier")(event.target.value)}><option value="">Tất cả nhà cung cấp</option>{lookups.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></FilterGroup>
+    <FilterGroup legend="Nhà cung cấp"><SelectBox aria-label="Nhà cung cấp" className={styles.railSelect} value={filters.supplier} onChange={(event) => setFilter("supplier")(event.target.value)}><option value="">Tất cả nhà cung cấp</option>{lookups.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</SelectBox></FilterGroup>
     <FilterPills legend="Trạng thái" name="receipt-status" value={filters.status} options={[[String(RECEIPT.draft), "Phiếu tạm"], [String(RECEIPT.completed), "Đã nhập hàng"], [String(RECEIPT.cancelled), "Đã hủy"]]} onChange={setFilter("status")} />
   </>;
 

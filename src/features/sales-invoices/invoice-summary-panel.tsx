@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useCallback } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -69,10 +70,10 @@ function CustomerPicker({ draft, disabled, onChange }: { draft: Draft; disabled:
       <CustomerSearch value={draft.customer} disabled={disabled} onSelect={(customer) => onChange((d) => ({ ...d, customer, requestId: null }))} />
       {draft.customer && !!requests.data?.length && (
         <label className={s.field}><span>Liên kết yêu cầu mua</span>
-          <select className={control} disabled={disabled} value={draft.requestId ?? ""} onChange={(e) => onChange((d) => ({ ...d, requestId: e.target.value || null }))}>
+          <SelectBox className={control} disabled={disabled} value={draft.requestId ?? ""} onChange={(e) => onChange((d) => ({ ...d, requestId: e.target.value || null }))}>
             <option value="">Không liên kết</option>
             {requests.data.map((r) => <option key={r.id} value={r.id}>{r.productName} · {r.acceptedKg} kg · lấy {r.pickupDate}</option>)}
-          </select></label>
+          </SelectBox></label>
       )}
     </div>
   );

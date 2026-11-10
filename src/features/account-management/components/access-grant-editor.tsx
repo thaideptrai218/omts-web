@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectBox } from "@/components/ui/select-box";
 import { useId, useMemo, useState } from "react";
 import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
 import { isDateOnly, vietnameseBusinessDate } from "@/shared/format/date-only";
@@ -175,22 +176,22 @@ export function AccessGrantEditor({
           <div className="mt-3 grid min-w-0 gap-3 md:grid-cols-2">
             <label className="min-w-0 text-sm font-semibold text-text">
               Vùng <span className="text-danger">*</span>
-              <select className={`mt-2 ${inputStyles}`} disabled={allZonesOnlyRoleIds.includes(roleId)} onChange={(event) => setZoneId(event.target.value)} value={zoneId}>
+              <SelectBox className={`mt-2 ${inputStyles}`} disabled={allZonesOnlyRoleIds.includes(roleId)} onChange={(event) => setZoneId(event.target.value)} value={zoneId}>
                 <option value="">Chọn vùng</option>
                 <option value="all-zones">Tất cả vùng</option>
                 {effectiveZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
-              </select>
+              </SelectBox>
             </label>
             <label className="min-w-0 text-sm font-semibold text-text">
               Vai trò <span className="text-danger">*</span>
-              <select className={`mt-2 ${inputStyles}`} onChange={(event) => {
+              <SelectBox className={`mt-2 ${inputStyles}`} onChange={(event) => {
                 const nextRoleId = event.target.value;
                 setRoleId(nextRoleId);
                 if (allZonesOnlyRoleIds.includes(nextRoleId)) setZoneId("all-zones");
               }} value={roleId}>
                 <option value="">Chọn vai trò</option>
                 {effectiveRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
-              </select>
+              </SelectBox>
               {unavailableRoleIds.length > 0 && (
                 <span className="mt-2 block font-normal text-text-muted">
                   HTX đã có Kế toán đang hoạt động; không thể cấp thêm vai trò này.

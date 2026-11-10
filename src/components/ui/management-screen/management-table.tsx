@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { InterfaceIcon } from "../interface-icon";
 import styles from "./management-screen.module.css";
@@ -72,7 +73,7 @@ export function ManagementPagination({ page, pageSize, total, pageSizes = [15, 3
   const nav = (label: string, icon: "first" | "chevron-left" | "chevron-right" | "last", target: number, off: boolean) =>
     <button type="button" className={styles.pageButton} aria-label={label} title={label} disabled={disabled || off} onClick={() => onPage(target)}><InterfaceIcon name={icon} /></button>;
   return <nav className={styles.pagination} aria-label="Phân trang">
-    <label>Hiển thị<select value={pageSize} disabled={disabled} onChange={(event) => onPageSize(Number(event.target.value))}>{pageSizes.map((size) => <option key={size} value={size}>{size} dòng</option>)}</select></label>
+    <label>Hiển thị<SelectBox value={pageSize} disabled={disabled} onChange={(event) => onPageSize(Number(event.target.value))}>{pageSizes.map((size) => <option key={size} value={size}>{size} dòng</option>)}</SelectBox></label>
     {nav("Trang đầu", "first", 1, page <= 1)}{nav("Trang trước", "chevron-left", page - 1, page <= 1)}
     <input aria-label="Số trang" inputMode="numeric" value={draft ?? page} disabled={disabled} onChange={(event) => setDraft(event.target.value.replace(/\D/g, ""))} onBlur={commit} onKeyDown={(event) => { if (event.key === "Enter") commit(); }} />
     {nav("Trang sau", "chevron-right", page + 1, page >= last)}{nav("Trang cuối", "last", last, page >= last)}

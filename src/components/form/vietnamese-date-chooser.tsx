@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectBox } from "@/components/ui/select-box";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -80,7 +81,7 @@ export function VietnameseDateChooser({
         <div className="grid grid-cols-3 gap-3">
           <label htmlFor={`${id}-day`} className="text-sm font-semibold">
             Ngày
-            <select
+            <SelectBox
               id={`${id}-day`}
               value={day}
               onChange={(event) => setDay(event.target.value)}
@@ -93,11 +94,11 @@ export function VietnameseDateChooser({
                   {item}
                 </option>
               ))}
-            </select>
+            </SelectBox>
           </label>
           <label htmlFor={`${id}-month`} className="text-sm font-semibold">
             Tháng
-            <select
+            <SelectBox
               id={`${id}-month`}
               value={month}
               onChange={(event) => setMonth(event.target.value)}
@@ -110,7 +111,7 @@ export function VietnameseDateChooser({
                   {item}
                 </option>
               ))}
-            </select>
+            </SelectBox>
           </label>
           <label htmlFor={`${id}-year`} className="text-sm font-semibold">
             Năm

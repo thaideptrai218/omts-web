@@ -83,6 +83,13 @@ Link sang bản ghi khác:
 - Mở danh sách đích bằng `?code=<mã>` (NCC…, KH…, PN…, PT…): màn đích điền mã vào ô tìm kiếm và mở sẵn dòng có mã **khớp chính xác**. Không đưa id (GUID) lên URL: khó đọc, khó chia sẻ. Màn đích đặt `key={code}` cho danh sách để link bấm ngay trong cùng màn (ví dụ từ hộp xem phiếu) cũng nạp lại ô tìm kiếm. Không dùng tên để tìm: tên trùng được và sửa được.
 - Dữ liệu tham chiếu đi kèm một chứng từ (nhà cung cấp, khách hàng, phiếu gốc) phải có `code`; thiếu thì bổ sung ở backend, không lấy tên thay.
 
+Ô nhập và hiệu năng form:
+- Ô nhập trong form dùng `Field` / `Select` / `Note` (class `omts-control`: cao 34px, chữ 13px, viền bo 6px, vòng focus màu chủ đạo, mũi tên select tự vẽ). Không để `<input>`/`<select>` trần không class.
+- Không dùng thẻ `<select>` trực tiếp: dùng `Select` (có nhãn) hoặc `SelectBox` (`src/components/ui/select-box.tsx`, cùng props và `<option>` như `<select>`). Danh sách chọn tự vẽ, mở trên `body` (không bị dialog cắt), mục đang chọn có dấu ✓; select gốc vẫn còn nhưng ẩn để bàn phím, trình đọc màn hình, form và test dùng.
+- Ô tích và radio dùng chung cỡ 16px, màu chủ đạo; cột ô tích và cột nút mở dòng trong danh sách căn giữa theo cùng một trục.
+- Màn quản lý không được cuộn trang chính: chỉ cột lọc và danh sách tự cuộn. Phần tử ẩn (`sr-only`, select gốc của `SelectBox`) phải nằm trong một khối `position:relative` có cuộn riêng (`railScroll`, `scroller` đã có sẵn) hoặc `position:fixed`; phần tử `absolute` ẩn nằm thấp trong cột lọc sẽ kéo dài trang và làm trang cuộn.
+- Không dùng `backdrop-filter`/blur cho nền dialog hay vùng phủ: trình duyệt vẽ lại cả trang phía sau mỗi lần gõ phím, gây lag.
+
 Lọc khoảng số:
 - `Từ`/`Đến` nằm trong ô nền khác với ô nhập.
 - Số nhập canh trái, gõ từ trái sang phải.

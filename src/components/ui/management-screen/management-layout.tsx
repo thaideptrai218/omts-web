@@ -42,8 +42,9 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
         <button type="button" className={`${styles.railToggle} ${styles.railClose}`} aria-label="Ẩn bộ lọc" title="Ẩn bộ lọc" onClick={() => store("closed")}><InterfaceIcon name="chevron-left" /></button>
       </aside>}
       <div className={styles.listColumn}>
+        {/* Outside the list box, which clips its content, so the button can straddle the list's left border. */}
+        {!open && <button type="button" className={`${styles.railToggle} ${styles.railOpen}`} aria-label="Hiện bộ lọc" title="Hiện bộ lọc" onClick={() => store("open")}><InterfaceIcon name="chevron-right" /></button>}
         <div className={styles.list}>
-          {!open && <button type="button" className={`${styles.railToggle} ${styles.railOpen}`} aria-label="Hiện bộ lọc" title="Hiện bộ lọc" onClick={() => store("open")}><InterfaceIcon name="chevron-right" /></button>}
           {children}
         </div>
         {footer}

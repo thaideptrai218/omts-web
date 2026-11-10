@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid } from "@/components/ui/data-grid";
@@ -24,7 +25,7 @@ export function operationError(result: Exclude<WorkspaceResult<unknown>, { statu
   return result.code && messages[result.code] || workspaceError(result);
 }
 
-export const control = "mt-1.5 min-h-11 lg:min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm font-normal text-text transition-colors hover:border-primary/60 focus:border-primary";
+export const control = "omts-control mt-1";
 export function OperationHeading({ title, description, icon, children }: { title: string; description: string; icon: InterfaceIconName; children?: ReactNode }) {
   return <ManagementHeading title={title} description={description} icon={icon}>{children}</ManagementHeading>;
 }
@@ -41,7 +42,7 @@ export function Field({ label, ...props }: ComponentProps<"input"> & { label: st
   return <label className="block text-xs font-medium text-text-muted">{label}<input {...props} className={control} /></label>;
 }
 export function Select({ label, children, ...props }: ComponentProps<"select"> & { label: string }) {
-  return <label className="block text-xs font-medium text-text-muted">{label}<select aria-label={label} {...props} className={control}>{children}</select></label>;
+  return <label className="block text-xs font-medium text-text-muted">{label}<SelectBox aria-label={label} {...props} className={control}>{children}</SelectBox></label>;
 }
 export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: string }) {
   return <label className="block text-xs font-medium text-text-muted">{label}<textarea {...props} className={control} rows={3} /></label>;
