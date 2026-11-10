@@ -37,7 +37,7 @@ const sending = z.object({ channel: z.string(), phoneNumber: z.string().nullable
 
 export const salesInvoice = z.object({
   id, code: z.string(), invoicedAt: at, invoiceDate: z.iso.date(), zone: z.object({ id, code: z.string(), name: z.string() }),
-  customer: z.object({ id, name: z.string(), phoneNumber: z.string().nullable() }).nullable(), walkInCustomer: z.boolean(),
+  customer: z.object({ id, name: z.string(), phoneNumber: z.string().nullable(), code: z.string().nullish() }).nullable(), walkInCustomer: z.boolean(),
   purchaseRequestId: id.nullable(), takesRequestInFull: z.boolean(), lines: z.array(line), totalKg: money, subtotal: money, discount: money, discountDecidedByOwner: z.boolean(),
   otherCharges: money, priceCutTotal: money, total: money, paymentTerm, statusId: z.number().int(), status: z.string(), payments: z.array(payment), createdBy: accountRef,
   qrToken: z.string().nullable(), qrUrl: z.string().nullable(), qrDecidedAt: at.nullable(), deliveryStatusId: z.number().int(), deliveryStatus: z.string(), sendings: z.array(sending), rowVersion: z.string(),

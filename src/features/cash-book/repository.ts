@@ -47,10 +47,15 @@ export const getVoucher = (id: string, signal?: AbortSignal) => read({ action: "
 export type VoucherInput = {
   code: string; direction: c.CashDirection; fund: c.CashFund; cashAccountId: string; typeId: string; occurredAt: string; amount: number; collectorId: string;
   partyKind: "" | c.PartyKind; partyId: string; partyName: string; note: string; countsInResult: boolean;
+  countInDebt: boolean; debtMode: "AllocateToInvoices" | "DebtOnly"; debtAllocations: { invoiceId: string; amount: number }[];
 };
+/** The system types of the vouchers that count in a customer's debt; the backend ignores the type it is given for them. */
+export const customerVoucherTypeId = { Receipt: "5d6c1a10-0000-4c3a-9a10-000000000001", Payment: "5d6c1a10-0000-4c3a-9a10-000000000008" } as const;
 export function saveVoucher(input: VoucherInput, id?: string, rowVersion?: string) {
+  const counted = input.countInDebt && !id && input.partyKind === "Customer" && !!input.partyId;
   const body = { code: input.code.trim() || null, direction: input.direction, fund: input.fund, cashAccountId: input.fund === "Cash" ? null : input.cashAccountId || null, typeId: input.typeId, occurredAt: vnInstant(input.occurredAt),
     amount: input.amount, collectorId: input.collectorId || null, partyKind: input.partyKind || null, partyId: input.partyId || null, partyName: input.partyName.trim() || null, note: input.note.trim() || null, countsInResult: input.countsInResult,
+    ...(counted ? { typeId: customerVoucherTypeId[input.direction], countInDebt: true, debtMode: input.debtMode, ...(input.direction === "Receipt" && input.debtMode === "AllocateToInvoices" && input.debtAllocations.length ? { debtAllocations: input.debtAllocations } : {}) } : {}),
     ...(rowVersion ? { rowVersion } : {}) };
   return write({ action: "save-voucher", id, body }, c.voucherView);
 }

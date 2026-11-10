@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { useCallback, useState } from "react";
@@ -80,7 +81,7 @@ function AccountDialog({ kind, account, onClose }: { kind: "Bank" | "EWallet"; a
   }
   return <Dialog open size="md" dismissible={!pending} title={`${account ? "Sửa" : "Thêm"} ${bank ? "tài khoản ngân hàng" : "ví điện tử"}`} onOpenChange={(open) => { if (!open) onClose(false); }}><div className={managementStyles.theme}>
     <div className={styles.formGrid}>
-      {bank ? <Field label="Ngân hàng *" wide><select className={styles.input} disabled={banks.loading || account?.isVietQr} value={values.bankBin} onChange={set("bankBin")}><option value="">{banks.loading ? "Đang tải…" : "Chọn ngân hàng"}</option>{(banks.data ?? []).map((row) => <option key={row.bin} value={row.bin}>{row.shortName} - {row.name}</option>)}</select></Field>
+      {bank ? <Field label="Ngân hàng *" wide><SelectBox className={styles.input} disabled={banks.loading || account?.isVietQr} value={values.bankBin} onChange={set("bankBin")}><option value="">{banks.loading ? "Đang tải…" : "Chọn ngân hàng"}</option>{(banks.data ?? []).map((row) => <option key={row.bin} value={row.bin}>{row.shortName} - {row.name}</option>)}</SelectBox></Field>
         : <Field label="Ví điện tử *" wide><input className={styles.input} maxLength={100} placeholder="Ví dụ: MoMo, ZaloPay" value={values.providerName} onChange={set("providerName")} /></Field>}
       <Field label="Số tài khoản *"><input className={styles.input} maxLength={30} readOnly={account?.isVietQr} value={values.accountNumber} onChange={set("accountNumber")} /></Field>
       <Field label="Chủ tài khoản *"><input className={styles.input} maxLength={200} value={values.holderName} onChange={set("holderName")} /></Field>

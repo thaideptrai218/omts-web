@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -9,8 +10,11 @@ import { ListStateMessage, managementStyles } from "@/components/ui/management-s
 import { PersonPicker } from "@/components/ui/management-screen/person-picker";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { MoneyInput, errorText, nowLocal, viDateTime, vnLocal } from "@/features/purchase-documents/document-parts";
+import { MoneyInput, errorText, fmt, nowLocal, viDateTime, vnLocal } from "@/features/purchase-documents/document-parts";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
+import { useAllocation } from "@/features/customers/allocation";
+import { customerRepository } from "@/features/customers/repository";
+import { CustomerDebtBlock, countableDebt } from "./customer-debt-block";
 import type { CashDirection, CashFund, PartyKind, VoucherView } from "./contracts";
 import { AccountPicker, Field, PartyDialog, PartyPicker, TypePicker } from "./cash-pickers";
 import { cancelVoucher, fundLabel, getVoucher, listAccounts, listCollectors, listTypes, partyKindLabel, saveVoucher, type VoucherInput } from "./repository";
@@ -20,7 +24,7 @@ export function useCashAccess() {
   const { identity, permissions } = useApiWorkspace();
   const owner = identity.subjectType === "CooperativeOwner";
   const can = (fn: string, action: string) => owner || permissions.functionPermissions.some((p) => p.functionCode === fn && p.action === action);
-  return { owner, view: can("CASH_BOOK", "View"), create: can("CASH_BOOK", "Create"), edit: can("CASH_BOOK", "Edit"), cancel: can("CASH_BOOK", "Delete"), exportFile: can("CASH_BOOK", "Export"),
+  return { owner, customerPayments: can("CUSTOMER_PAYMENTS", "View"), customerPaymentsEdit: can("CUSTOMER_PAYMENTS", "Edit"), view: can("CASH_BOOK", "View"), create: can("CASH_BOOK", "Create"), edit: can("CASH_BOOK", "Edit"), cancel: can("CASH_BOOK", "Delete"), exportFile: can("CASH_BOOK", "Export"),
     settings: can("CASH_BOOK_SETTINGS", "View"), manageSettings: can("CASH_BOOK_SETTINGS", "Edit") };
 }
 
@@ -55,7 +59,7 @@ function VoucherForm({ direction, fund: initialFund, voucher, inline, onOpen, on
   const [initial] = useState<VoucherInput>(() => ({
     code: voucher?.code ?? "", direction, fund: initialFund, cashAccountId: voucher?.cashAccount?.id ?? "", typeId: voucher?.type.id ?? "", occurredAt: voucher ? vnLocal(voucher.occurredAt) : nowLocal(),
     amount: voucher?.amount ?? 0, collectorId: voucher?.collector?.id ?? "", partyKind: voucher?.party?.kind ?? "Other", partyId: voucher?.party?.id ?? "", partyName: voucher?.party?.name ?? "", note: voucher?.note ?? "",
-    countsInResult: voucher?.countsInResult ?? true,
+    countsInResult: voucher?.countsInResult ?? true, countInDebt: false, debtMode: "AllocateToInvoices", debtAllocations: [],
   }));
   const [values, setValues] = useState(initial);
   const dirty = (Object.keys(initial) as (keyof VoucherInput)[]).some((key) => values[key] !== initial[key]);
@@ -64,17 +68,27 @@ function VoucherForm({ direction, fund: initialFund, voucher, inline, onOpen, on
   const accounts = useRemote(useCallback((signal: AbortSignal) => values.fund === "Cash" ? Promise.resolve({ status: "success" as const, data: [] }) : listAccounts(values.fund, false, signal), [values.fund]));
   const collectors = useRemote(useCallback((signal: AbortSignal) => listCollectors(signal), []));
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false), [creatingParty, setCreatingParty] = useState(false);
+  // A new voucher of a customer may count in the customer's debt; what the customer owes (or is owed) decides whether it is offered.
+  const canDebt = access.owner || access.customerPayments, customerId = !voucher && canDebt && values.partyKind === "Customer" ? values.partyId : "";
+  const debtForm = useRemote(useCallback((signal: AbortSignal) => customerId ? customerRepository.paymentForm(customerId, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [customerId]));
+  const form = debtForm.data, offered = !!form && countableDebt(direction, form) > 0, counting = offered && values.countInDebt;
+  const allocating = counting && receipt && values.debtMode === "AllocateToInvoices";
+  const allocation = useAllocation(allocating ? form!.unpaidInvoices : [], values.amount, 0, (amount) => set("amount", amount));
   const typeList = voucher && !types.data?.some((type) => type.id === voucher.type.id) ? [...(types.data ?? []), { ...voucher.type, direction, description: null, countsInResult: voucher.countsInResult, isSystem: false, manual: true, rowVersion: "" }] : types.data ?? [];
   const people = collectors.data ?? [];
   const accountRows = voucher?.cashAccount && !accounts.data?.some((row) => row.id === voucher.cashAccount!.id)
     ? [...(accounts.data ?? []), { ...voucher.cashAccount, kind: values.fund === "EWallet" ? "EWallet" as const : "Bank" as const, holderName: "", isActive: false, isVietQr: false, rowVersion: "" }] : accounts.data ?? [];
 
   async function save() {
-    if (!values.typeId) { setError(`Chọn loại ${word}.`); return; }
+    if (!counting && !values.typeId) { setError(`Chọn loại ${word}.`); return; }
     if (values.fund !== "Cash" && !values.cashAccountId) { setError(`Chọn tài khoản ${receipt ? "nhận" : "chi"}.`); return; }
     if (values.amount <= 0) { setError("Nhập số tiền lớn hơn 0."); return; }
+    if (counting && values.amount > countableDebt(direction, form)) { setError(receipt ? `Số tiền thu vượt công nợ hiện tại của khách (${fmt(form!.debt)} đ).` : `Số tiền chi vượt số hợp tác xã còn nợ khách (${fmt(form!.owedBack)} đ).`); return; }
+    if (allocating && allocation.allocated > values.amount) { setError("Tổng tiền phân bổ vượt số tiền thu."); return; }
+    const over = allocating ? allocation.over() : undefined;
+    if (over) { setError(`Hóa đơn ${over.code} chỉ còn cần thu ${fmt(over.unpaid)} đ.`); return; }
     setPending(true); setError(undefined);
-    const result = await saveVoucher(values, voucher?.id, voucher?.rowVersion);
+    const result = await saveVoucher({ ...values, countInDebt: counting, debtAllocations: allocating ? allocation.named() : [] }, voucher?.id, voucher?.rowVersion);
     setPending(false);
     if (result.status === "success") { onClose(`Đã lưu phiếu ${word} ${result.data.code}.`); return; }
     setError(result.code === "MSG-GEN-02" ? `Mã phiếu ${values.code.trim()} đã được dùng.` : errorText(result));
@@ -95,23 +109,25 @@ function VoucherForm({ direction, fund: initialFund, voucher, inline, onOpen, on
     <div className={inline ? `${styles.formGrid} ${styles.inlineGrid}` : styles.formGrid}>
       <Field label="Mã phiếu"><input className={styles.input} aria-label="Mã phiếu" readOnly={readOnly} maxLength={30} placeholder="Tự động" value={values.code} onChange={(event) => set("code", event.target.value.replace(/\s/g, ""))} /></Field>
       <Field label="Thời gian"><DatePickerField label="Thời gian" withTime disabled={readOnly} value={values.occurredAt} max={nowLocal()} onChange={(value) => set("occurredAt", value)} /></Field>
-      <Field label={`Loại ${word}`}>{types.loading ? <Skeleton /> : <TypePicker direction={direction} types={typeList} value={values.typeId} canManage={access.manageSettings} disabled={readOnly}
-        onChange={(type) => setValues((current) => ({ ...current, typeId: type.id, countsInResult: type.countsInResult }))} onTypesChanged={() => types.reload()} />}</Field>
+      {!counting && <Field label={`Loại ${word}`}>{types.loading ? <Skeleton /> : <TypePicker direction={direction} types={typeList} value={values.typeId} canManage={access.manageSettings} disabled={readOnly}
+        onChange={(type) => setValues((current) => ({ ...current, typeId: type.id, countsInResult: type.countsInResult }))} onTypesChanged={() => types.reload()} />}</Field>}
       <Field label={receipt ? "Người thu" : "Người chi"}><PersonPicker label={receipt ? "Người thu" : "Người chi"} people={people} value={values.collectorId} placeholder="Người đang đăng nhập" disabled={readOnly} onChange={(value) => set("collectorId", value)} /></Field>
-      <Field label={receipt ? "Đối tượng nộp" : "Đối tượng nhận"}><select className={styles.input} disabled={readOnly} value={values.partyKind} onChange={(event) => setValues((current) => ({ ...current, partyKind: event.target.value as PartyKind, partyId: "", partyName: "" }))}>
-        {kinds.map((kind) => <option key={kind} value={kind}>{partyKindLabel[kind]}</option>)}</select></Field>
+      <Field label={receipt ? "Đối tượng nộp" : "Đối tượng nhận"}><SelectBox className={styles.input} disabled={readOnly} value={values.partyKind} onChange={(event) => setValues((current) => ({ ...current, partyKind: event.target.value as PartyKind, partyId: "", partyName: "", countInDebt: false }))}>
+        {kinds.map((kind) => <option key={kind} value={kind}>{partyKindLabel[kind]}</option>)}</SelectBox></Field>
       <Field label={receipt ? "Tên người nộp" : "Tên người nhận"} action={values.partyKind === "Other" && access.create && !readOnly ? <button type="button" className={styles.labelLink} onClick={() => setCreatingParty(true)}>Tạo mới</button> : undefined}>
         <PartyPicker kind={values.partyKind || "Other"} label={receipt ? "Người nộp" : "Người nhận"} disabled={readOnly} value={values.partyId ? { id: values.partyId, name: values.partyName } : null}
-          onChange={(party) => setValues((current) => ({ ...current, partyId: party?.id ?? "", partyName: party?.name ?? "" }))} /></Field>
-      {voucher && <Field label="Quỹ"><select className={styles.input} disabled={readOnly} value={values.fund} onChange={(event) => setValues((current) => ({ ...current, fund: event.target.value as CashFund, cashAccountId: "" }))}>
-        {(["Cash", "Bank", "EWallet"] as const).map((key) => <option key={key} value={key}>{fundLabel[key]}</option>)}</select></Field>}
+          onChange={(party) => setValues((current) => ({ ...current, partyId: party?.id ?? "", partyName: party?.name ?? "", countInDebt: false }))} /></Field>
+      {voucher && <Field label="Quỹ"><SelectBox className={styles.input} disabled={readOnly} value={values.fund} onChange={(event) => setValues((current) => ({ ...current, fund: event.target.value as CashFund, cashAccountId: "" }))}>
+        {(["Cash", "Bank", "EWallet"] as const).map((key) => <option key={key} value={key}>{fundLabel[key]}</option>)}</SelectBox></Field>}
       {values.fund !== "Cash" && <Field label={receipt ? "Tài khoản nhận" : "Tài khoản chi"}><AccountPicker label={receipt ? "Tài khoản nhận" : "Tài khoản chi"} accounts={accountRows} value={values.cashAccountId} disabled={readOnly} onChange={(value) => set("cashAccountId", value)} /></Field>}
-      <Field label="Số tiền" wide><MoneyInput label="Số tiền" className={`${styles.input} ${styles.num}`} disabled={readOnly} value={values.amount} onChange={(value) => set("amount", value)} /></Field>
+      <Field label="Số tiền" wide><MoneyInput label="Số tiền" className={`${styles.input} ${styles.num}`} disabled={readOnly} value={values.amount} onChange={(value) => { set("amount", value); if (allocating) allocation.respread(value); }} /></Field>
+      {offered && !readOnly && <CustomerDebtBlock direction={direction} form={form!} values={values} applied={allocation.applied} onToggle={(on) => { set("countInDebt", on); if (on && receipt && values.debtMode === "AllocateToInvoices") allocation.respread(values.amount); }}
+        onMode={(mode) => { set("debtMode", mode); if (mode === "AllocateToInvoices") allocation.respread(values.amount); }} onAllocate={allocation.change} />}
       <Field label="Ghi chú" wide><textarea className={styles.textarea} readOnly={readOnly} maxLength={2000} placeholder="Nhập ghi chú" value={values.note} onChange={(event) => set("note", event.target.value)} /></Field>
-      <div className={styles.formWide}>
+      {!counting && <div className={styles.formWide}>
         <label className={styles.check}><input type="checkbox" disabled={readOnly} checked={values.countsInResult} onChange={(event) => set("countsInResult", event.target.checked)} />Hạch toán vào kết quả hoạt động kinh doanh</label>
         <p className={styles.hint}>Nếu hạch toán, khoản này sẽ được tính vào báo cáo kết quả kinh doanh.</p>
-      </div>
+      </div>}
       {voucher && <p className={`${styles.formWide} ${styles.muted}`}>Tạo lúc {viDateTime(voucher.createdAt)}{voucher.createdBy ? ` bởi ${voucher.createdBy.name}` : ""}{voucher.updatedAt ? ` · sửa lúc ${viDateTime(voucher.updatedAt)}` : ""}</p>}
     </div>
     <ErrorNotice error={error} />

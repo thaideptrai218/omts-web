@@ -16,7 +16,7 @@ export type ResourceField = Readonly<{ key: string; label: string; type?: "text"
 type ResourceDefinition = Readonly<{ title: string; functionCode?: string; ownerOnly?: boolean; editable: boolean; creatable?: boolean; zoneRequired?: boolean;
   columns: readonly (readonly [string, string])[]; fields: readonly ResourceField[] }>;
 export const resources: Record<ResourceKey, ResourceDefinition> = {
-  customers: { title: "Khách hàng và thương lái", functionCode: "CUSTOMERS", editable: true,
+  customers: { title: "Khách hàng", functionCode: "CUSTOMERS", editable: true,
     columns: [["name", "Tên khách hàng"], ["phoneNumber", "Số điện thoại"], ["address", "Địa chỉ"], ["hasTraderAccount", "Tài khoản thương lái"]],
     fields: [{ key: "name", label: "Tên khách hàng", required: true }, { key: "phoneNumber", label: "Số điện thoại" }, { key: "address", label: "Địa chỉ", type: "textarea" }, { key: "note", label: "Ghi chú", type: "textarea" }] },
   zones: { title: "Vùng nuôi", editable: true,

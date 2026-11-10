@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { resources, resourceCategoryFilters, resourceAllowed, type ResourceKey }
 import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
 import { SupplierScreen } from "@/features/suppliers-api/supplier-screen";
+import { CustomerScreen } from "@/features/customers/customer-screen";
 import { useScopedZones } from "./selected-zones";
 import { workspaceError } from "./workspace-error";
 import { GlobalZoneMap } from "@/features/farming-api/global-zone-map";
@@ -37,6 +39,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 /** Directory screen for a workspace resource; employees have their own dedicated screen. */
 export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
   if (resource === "suppliers") return <SupplierScreen />;
+  if (resource === "customers") return <CustomerScreen />;
   return resource === "employees" ? <EmployeeApiScreen /> : <GenericResourceScreen resource={resource} />;
 }
 
@@ -258,7 +261,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
       {definition.zoneRequired && (
         <label className="min-w-0 text-sm font-semibold">
           Vùng nuôi
-          <select
+          <SelectBox
             className={inputClass}
             disabled={zoneLoading || !!zoneError}
             value={zoneId}
@@ -273,7 +276,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
                 {text(zone.name)}
               </option>
             ))}
-          </select>
+          </SelectBox>
         </label>
       )}
     </div>

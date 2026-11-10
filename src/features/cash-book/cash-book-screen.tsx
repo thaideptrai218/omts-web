@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -20,6 +21,8 @@ import type { PaymentView } from "@/features/purchase-documents/contracts";
 import { errorText, fmt, nowLocal, viDateTime, vnLocal } from "@/features/purchase-documents/document-parts";
 import { cancelPayment, editPayment, getPayment } from "@/features/purchase-documents/repository";
 import { PaymentVoucherDialog } from "@/features/purchase-documents/payment-dialogs";
+import { CustomerPaymentView } from "@/features/customers/customer-payment-dialogs";
+import { customerHref } from "@/features/customers/customer-links";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import type { BookPage, BookRow, CashDirection, CashFund, PartyKind } from "./contracts";
 import { Field } from "./cash-pickers";
@@ -28,8 +31,9 @@ import { VoucherDialog, VoucherInline, useCashAccess } from "./voucher-dialog";
 import styles from "./cash-book.module.css";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: BookRow): ReactNode };
-/** Supplier rows link to the supplier list searched by the supplier's code. */
-const partyHref = (row: BookRow) => row.party?.kind === "Supplier" && row.party.code ? `/workspace/suppliers?code=${encodeURIComponent(row.party.code)}` : undefined;
+/** Supplier and customer rows link to their own list searched by the party's code. */
+const partyHref = (row: BookRow) => row.party?.code ? row.party.kind === "Supplier" ? `/workspace/suppliers?code=${encodeURIComponent(row.party.code)}` : row.party.kind === "Customer" ? customerHref(row.party.code) : undefined : undefined;
+const isCustomerPayment = (row: BookRow) => row.source === "CustomerPayment" || row.source === "CustomerPaidBack";
 const columns: readonly Column[] = [
   { key: "code", label: "Mã phiếu", sort: "code", render: (row) => <span className="font-mono tabular-nums">{row.code}</span> },
   { key: "time", label: "Thời gian", sort: "time", render: (row) => viDateTime(row.occurredAt) },
@@ -49,7 +53,7 @@ const columns: readonly Column[] = [
 ];
 const defaults = columns.filter((column) => !column.hidden).map((column) => column.key).join(",");
 const emptyFilters = { cashAccountId: "", direction: "" as "" | CashDirection, typeId: "", status: "Recorded" as "" | "Recorded" | "Cancelled", createdById: "", partyKind: "" as "" | PartyKind, party: "", countsInResult: "" as "" | "true" | "false" };
-type Opened = { kind: "create"; direction: CashDirection; fund: CashFund } | { kind: "voucher"; id: string } | { kind: "payment"; id: string };
+type Opened = { kind: "create"; direction: CashDirection; fund: CashFund } | { kind: "voucher"; id: string } | { kind: "payment"; id: string } | { kind: "customerPayment"; id: string };
 
 /**
  * "+ Phiếu thu" / "+ Phiếu chi". With one fund filtered the button opens that fund's voucher directly; only "Tổng quỹ"
@@ -108,21 +112,21 @@ export function CashBookScreen({ helpHref }: { helpHref?: string }) {
     <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(presetValue("thisMonth")); setFund("Cash"); })()}>Đặt lại</button></div>
     <FilterGroup legend="Quỹ tiền"><div className={layoutStyles.pills}>{(["Cash", "Bank", "EWallet", "All"] as const).map((key) =>
       <label key={key} className={layoutStyles.pill}><input type="radio" className="sr-only" name="cash-fund" checked={fund === key} onChange={() => changed<void>(() => { setFund(key); setFilters((current) => ({ ...current, cashAccountId: "" })); })()} />{fundLabel[key]}</label>)}</div>
-      {(fund === "Bank" || fund === "EWallet") && <select aria-label="Tài khoản" className={styles.railInput} value={filters.cashAccountId} onChange={(event) => setFilter("cashAccountId")(event.target.value)}>
-        <option value="">Tất cả tài khoản</option>{(accounts.data ?? []).map((row) => <option key={row.id} value={row.id}>{row.accountNumber} - {row.providerName}</option>)}</select>}
+      {(fund === "Bank" || fund === "EWallet") && <SelectBox aria-label="Tài khoản" className={styles.railInput} value={filters.cashAccountId} onChange={(event) => setFilter("cashAccountId")(event.target.value)}>
+        <option value="">Tất cả tài khoản</option>{(accounts.data ?? []).map((row) => <option key={row.id} value={row.id}>{row.accountNumber} - {row.providerName}</option>)}</SelectBox>}
     </FilterGroup>
     <TimeRangeFilter legend="Thời gian" value={time} onChange={changed<TimeRangeValue>(setTime)} />
     <FilterPills legend="Loại chứng từ" name="cash-direction" value={filters.direction} options={[["Receipt", "Phiếu thu"], ["Payment", "Phiếu chi"]]} onChange={(value) => setFilter("direction")(value as "" | CashDirection)} />
-    <FilterGroup legend="Loại thu chi"><select aria-label="Loại thu chi" className={styles.railSelect} value={filters.typeId} onChange={(event) => setFilter("typeId")(event.target.value)}>
+    <FilterGroup legend="Loại thu chi"><SelectBox aria-label="Loại thu chi" className={styles.railSelect} value={filters.typeId} onChange={(event) => setFilter("typeId")(event.target.value)}>
       <option value="">Tất cả loại thu chi</option>
       {(["Receipt", "Payment"] as const).map((key) => <optgroup key={key} label={key === "Receipt" ? "Loại thu" : "Loại chi"}>{(types.data ?? []).filter((type) => type.direction === key).map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</optgroup>)}
-    </select></FilterGroup>
+    </SelectBox></FilterGroup>
     <FilterPills legend="Trạng thái" name="cash-status" value={filters.status} options={[["Recorded", "Đã thanh toán"], ["Cancelled", "Đã hủy"]]} onChange={(value) => setFilter("status")(value as "" | "Recorded" | "Cancelled")} />
     <FilterPills legend="Hạch toán kết quả kinh doanh" name="cash-counts" value={filters.countsInResult} options={[["true", "Có"], ["false", "Không"]]} onChange={(value) => setFilter("countsInResult")(value as "" | "true" | "false")} />
-    <FilterGroup legend="Người tạo"><select aria-label="Người tạo" className={styles.railSelect} value={filters.createdById} onChange={(event) => setFilter("createdById")(event.target.value)}>
-      <option value="">Tất cả</option>{(people.data ?? []).map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></FilterGroup>
-    <FilterGroup legend="Người nộp/nhận"><select aria-label="Loại người nộp/nhận" className={styles.railSelect} value={filters.partyKind} onChange={(event) => setFilter("partyKind")(event.target.value as "" | PartyKind)}>
-      <option value="">Tất cả</option>{(["Customer", "Supplier", "Employee", "Other"] as const).map((key) => <option key={key} value={key}>{partyKindLabel[key]}</option>)}</select>
+    <FilterGroup legend="Người tạo"><SelectBox aria-label="Người tạo" className={styles.railSelect} value={filters.createdById} onChange={(event) => setFilter("createdById")(event.target.value)}>
+      <option value="">Tất cả</option>{(people.data ?? []).map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</SelectBox></FilterGroup>
+    <FilterGroup legend="Người nộp/nhận"><SelectBox aria-label="Loại người nộp/nhận" className={styles.railSelect} value={filters.partyKind} onChange={(event) => setFilter("partyKind")(event.target.value as "" | PartyKind)}>
+      <option value="">Tất cả</option>{(["Customer", "Supplier", "Employee", "Other"] as const).map((key) => <option key={key} value={key}>{partyKindLabel[key]}</option>)}</SelectBox>
       <input type="search" aria-label="Tên, mã người nộp/nhận" className={styles.railInput} placeholder="Tên, mã, số điện thoại" maxLength={200} value={filters.party} onChange={(event) => setFilter("party")(event.target.value)} /></FilterGroup>
   </>;
   const summary = data?.summary;
@@ -154,12 +158,13 @@ export function CashBookScreen({ helpHref }: { helpHref?: string }) {
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
             {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
-              <RowDetail row={row} canEdit={access.edit} canCancel={access.cancel} onOpen={() => setOpened(row.source === "CashVoucher" ? { kind: "voucher", id: row.id } : { kind: "payment", id: row.id })} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} />
+              <RowDetail row={row} canEdit={access.edit} canCancel={access.cancel} onOpen={() => setOpened(row.source === "CashVoucher" ? { kind: "voucher", id: row.id } : isCustomerPayment(row) ? { kind: "customerPayment", id: row.id } : { kind: "payment", id: row.id })} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} />
             </div></td></tr>}
           </Fragment>)}</tbody></table>}
     </ManagementScroller>
     {opened?.kind === "create" && <VoucherDialog target={{ mode: "create", direction: opened.direction, fund: opened.fund }} onClose={closeOpened} />}
     {opened?.kind === "voucher" && <VoucherDialog target={{ mode: "edit", id: opened.id }} onClose={closeOpened} />}
+    {opened?.kind === "customerPayment" && <CustomerPaymentView id={opened.id} canConfirm={access.customerPaymentsEdit} canCancel={access.customerPaymentsEdit} onClose={(changedPayment) => { setOpened(undefined); if (changedPayment) { setExpanded(undefined); reload(); } }} />}
     {opened?.kind === "payment" && <PaymentVoucherDialog id={opened.id} onClose={(changedPayment) => closeOpened(changedPayment ? "Đã cập nhật phiếu." : undefined)} />}
   </ManagementLayout>;
 }
@@ -170,9 +175,26 @@ function RowDetail({ row, canEdit, canCancel, onOpen, onChanged }: { row: BookRo
     <div className={listStyles.tabBody}>
       {row.source === "CashVoucher"
         ? <VoucherInline id={row.id} onOpen={onOpen} onChanged={onChanged} />
+        : isCustomerPayment(row) ? <CustomerPaymentFacts row={row} onOpen={onOpen} />
         : <PaymentInline row={row} canEdit={canEdit} canCancel={canCancel} onOpen={onOpen} onChanged={onChanged} />}
     </div>
   </section>;
+}
+
+/** A customer payment or money paid back to a customer: it is the customer's document, so the book only shows it and opens it ("Mở phiếu"). */
+function CustomerPaymentFacts({ row, onOpen }: { row: BookRow; onOpen(): void }) {
+  return <>
+    <dl className={styles.facts}>
+      <div><dt>Mã phiếu</dt><dd>{row.code}</dd></div>
+      <div><dt>Loại thu chi</dt><dd>{row.type.name}</dd></div>
+      <div><dt>Giá trị</dt><dd className={row.signedAmount < 0 ? styles.out : styles.in}>{fmt(row.signedAmount)}</dd></div>
+      <div><dt>Khách hàng</dt><dd>{row.party ? partyHref(row) ? <Link className={managementStyles.linkButton} href={partyHref(row)!}>{row.party.name}</Link> : row.party.name : "—"}</dd></div>
+      <div><dt>Quỹ</dt><dd>{fundLabel[row.fund]}{row.fund !== "Cash" && ` · ${row.cashAccount ? `${row.cashAccount.accountNumber} - ${row.cashAccount.providerName}` : "Chưa rõ tài khoản"}`}</dd></div>
+      <div><dt>Thời gian</dt><dd>{viDateTime(row.occurredAt)}</dd></div>
+    </dl>
+    <p className={styles.muted}>Phiếu này thuộc công nợ khách hàng nên chỉ xem ở đây; số tiền và phân bổ vào hóa đơn xem trong phiếu gốc, bấm “Mở phiếu”.</p>
+    <footer className={styles.foot}><div /><div><Button className="w-auto" variant="secondary" onClick={onOpen}><InterfaceIcon name="document" className="size-4" />Mở phiếu</Button></div></footer>
+  </>;
 }
 
 /**

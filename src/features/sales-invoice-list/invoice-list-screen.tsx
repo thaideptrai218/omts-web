@@ -1,4 +1,5 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ErrorNotice, OperationHeading, Paging, Skeleton } from "@/features/operations/ui";
@@ -13,8 +14,17 @@ import s from "./invoice-list.module.css";
 
 /** SCR-SALE-05 Hóa đơn bán: danh sách hóa đơn của các vùng bạn được xem, lọc theo kỳ/vùng/khách/lô/trạng thái, chi tiết mở dưới dòng và các lệnh theo quyền (SALE-09). */
 export function SalesInvoiceListScreen() {
-  const v = useInvoiceList(), { list } = v;
-  const [expanded, setExpanded] = useState<string>(), [kept, setKept] = useState<SearchResult>(), [code, setCode] = useState("");
+  const linkedCode = useSearchParams()?.get("code") ?? "";
+  return <InvoiceList key={linkedCode} linkedCode={linkedCode} />;
+}
+
+/** A link opens the list on one invoice by its code (`?code=HD000123`): the code is searched and the invoice with exactly that code opens. */
+function InvoiceList({ linkedCode }: { linkedCode: string }) {
+  const v = useInvoiceList(linkedCode), { list } = v;
+  const [expanded, setExpanded] = useState<string>(), [kept, setKept] = useState<SearchResult>(), [code, setCode] = useState(linkedCode);
+  const [linkOpened, setLinkOpened] = useState(false), items = list.data?.page.items;
+  const linked = !linkOpened && linkedCode && items ? items.find((row) => row.code.toLowerCase() === linkedCode.toLowerCase()) : undefined;
+  if (linked) { setLinkOpened(true); setExpanded(linked.id); }
   // Giữ dữ liệu trước đó trong lúc tải lại (sau gửi lại / sửa / hủy) để dòng chi tiết đang mở không bị đóng.
   if (list.data && list.data !== kept) setKept(list.data);
   const data = list.error ? undefined : list.data ?? kept, busy = list.loading;

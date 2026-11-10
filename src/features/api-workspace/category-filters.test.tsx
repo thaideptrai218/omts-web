@@ -24,26 +24,3 @@ it.each([["input-items", "Nhóm vật tư", "Material", "group"]] as const)("com
   fireEvent.click(category.getByRole("checkbox",{name:"Tất cả"}));
   await vi.waitFor(() => { const query = state.list.mock.calls.at(-1)![0]; expect(query[key]).toBeUndefined(); expect(query.search).toBe("qa"); }); expect(state.mutate).not.toHaveBeenCalled();
 });
-
-it("does not describe a failed customer read as an empty customer directory", async () => {
-  state.list.mockResolvedValue({ status: "error", httpStatus: 404, uncertain: false });
-  render(<ApiResourceScreen resource="customers" />);
-  await screen.findByRole("alert");
-  expect(screen.getByText("Chưa tải được dữ liệu")).toBeTruthy();
-  expect(screen.queryByText("Không có dữ liệu phù hợp.")).toBeNull();
-  expect(state.mutate).not.toHaveBeenCalled();
-});
-
-it("preserves a linked customer's locked phone when opening the refined profile", async () => {
-  const customer = { id: "20000000-0000-4000-8000-000000000001", name: "Khách QA", phoneNumber: "0900000001", address: null, hasTraderAccount: true };
-  state.list.mockResolvedValue({ status: "success", data: { items: [customer], page: 1, pageSize: 20, total: 1 } });
-  state.detail.mockResolvedValue({ status: "success", data: { ...customer, phoneLocked: true, note: null, email: null, currentDebt: 2500000, mergedIntoCustomerId: null, traderAccount: { displayName: "Thương lái QA" }, rowVersion: "opaque" } });
-  render(<ApiResourceScreen resource="customers" />);
-  fireEvent.click(await screen.findByRole("button", { name: "Mở khách hàng" }));
-  await screen.findByRole("heading", { name: "Khách QA" });
-  expect((screen.getByLabelText("Số điện thoại") as HTMLInputElement).disabled).toBe(true);
-  expect(screen.getByText("2.500.000 ₫")).toBeTruthy();
-  expect(screen.getByText("Thương lái QA")).toBeTruthy();
-  expect(state.mutate).not.toHaveBeenCalled();
-});
-

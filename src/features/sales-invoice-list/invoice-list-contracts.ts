@@ -11,7 +11,7 @@ const id = z.guid(), money = z.number(), day = z.iso.date(), at = z.iso.datetime
 
 export const listRow = z.object({
   id, code: z.string(), invoicedAt: at, invoiceDate: day, zone: z.object({ id, code: z.string(), name: z.string() }),
-  customer: z.object({ id, name: z.string(), phoneNumber: z.string().nullable() }).nullable(), walkInCustomer: z.boolean(), total: money,
+  customer: z.object({ id, name: z.string(), phoneNumber: z.string().nullable(), code: z.string().nullish() }).nullable(), walkInCustomer: z.boolean(), total: money,
   statusId: z.number().int(), status: z.string(), paymentTerm: z.enum(["PayNow", "PayLater"]), isPaid: z.boolean().nullable(), unpaidAmount: money,
   deliveryStatusId: z.number().int(), deliveryStatus: z.string(), cashAwaitingConfirmation: money.nullable(),
 });

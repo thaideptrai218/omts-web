@@ -6,7 +6,6 @@ import { LOCAL_SIGN_OUT_MESSAGE, logoutWithApi } from "@/features/auth/api/api-a
 import { setDisplayedAccount } from "@/features/auth/api/displayed-account";
 import { resources, resourceKeys, resourceAllowed } from "./resources";
 import { operationModules, operationAllowed } from "@/features/operations/permissions";
-import { customerDebtAllowed } from "@/features/customer-debts-api/access";
 import { OwnerOverview } from "./owner-overview";
 import { InboxBell } from "@/features/inbox-api/inbox-bell";
 import { SelectedZonesProvider } from "./selected-zones";
@@ -48,7 +47,7 @@ const workspaceGroups = [
   { label: "Vật tư", resources: ["input-items"], operations: [] },
   { label: "Mua hàng", resources: ["suppliers"], operations: [] },
   { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "payroll", "payroll-payments", "payroll-settings", "my-work"] },
-  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoices", "sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "customer-payments", "sales-products", "purchase-requests"] },
+  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoices", "sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests"] },
   { label: "Báo cáo", resources: [], operations: ["sales-report", "price-trend-report", "after-sales-report"] },
 ];
 
@@ -95,7 +94,6 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
         {context.identity.subjectType === "CooperativeOwner" && link("/audit", "Nhật ký thao tác", "search")}
         {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/certifications", "Chứng nhận HTX", "document")}
         {(context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "SUPPLIER_PAYMENTS" && p.action === "View")) && link("/operations/supplier-debts", "Đối chiếu công nợ", "payment")}
-        {customerDebtAllowed(context.identity, context.permissions.functionPermissions) && link("/operations/customer-debts", "Công nợ khách hàng", "payment")}
         {context.identity.subjectType === "CooperativeOwner" && link("/trader-requests", "Yêu cầu đăng ký thương lái", "request")}
       </div></NavigationGroup>
       {context.identity.subjectType === "SystemAdministrator" && <NavigationGroup label="Quản trị hệ thống" compact={compact}><div className={styles.navigationItems}>{link("/system/accounts", "Tài khoản & nhật ký", "roles")}</div></NavigationGroup>}
@@ -138,8 +136,8 @@ export function ApiWorkspaceHome() {
   return <section><ManagementHeading title="Tổng quan hoạt động" description="Chọn công việc trong phạm vi được cấp." icon="dashboard" />
     <div className="mt-7 grid gap-6 xl:grid-cols-2"><section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Danh mục quản lý</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{visible.map((key) => <a key={key} href={`/workspace/${key}`}
       className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{resources[key].title}<span aria-hidden="true">↗</span></a>)}</div></section>
-    <section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Công việc</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{operationModules.filter((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{entry.title}<span aria-hidden="true">↗</span></a>)}</div></section></div>
-    {!visible.length && !operationModules.some((entry) => operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)) && <p className="mt-6 rounded-card border border-border bg-surface p-6">Tài khoản hiện chưa được cấp chức năng nghiệp vụ. Bạn có thể xem hồ sơ cá nhân.</p>}
+    <section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Công việc</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{operationModules.filter((entry) => entry.key !== "customer-payments" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{entry.title}<span aria-hidden="true">↗</span></a>)}</div></section></div>
+    {!visible.length && !operationModules.some((entry) => entry.key !== "customer-payments" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)) && <p className="mt-6 rounded-card border border-border bg-surface p-6">Tài khoản hiện chưa được cấp chức năng nghiệp vụ. Bạn có thể xem hồ sơ cá nhân.</p>}
   </section>;
 }
 

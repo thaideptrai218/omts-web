@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { customerHref } from "@/features/customers/customer-links";
 import q from "@/features/quality-claims/frame-kit.module.css";
 import type { InvoiceDetail } from "./invoice-list-contracts";
 import { dateTimeText, num, paymentTerm, priceSource, vnd } from "./invoice-labels";
@@ -16,7 +18,7 @@ export function InvoiceInfoTab({ invoice }: { invoice: InvoiceDetail }) {
     <>
       <dl className={q.kv}>
         <div><dt>Thời gian</dt><dd>{dateTimeText(invoice.invoicedAt)}</dd></div>
-        <div><dt>Khách hàng</dt><dd>{invoice.customer?.name ?? "Khách lẻ"}</dd></div>
+        <div><dt>Khách hàng</dt><dd>{invoice.customer?.code ? <Link href={customerHref(invoice.customer.code)}>{invoice.customer.name}</Link> : invoice.customer?.name ?? "Khách lẻ"}</dd></div>
         <div><dt>Số điện thoại</dt><dd>{invoice.customer?.phoneNumber ?? "—"}</dd></div>
         <div><dt>Hình thức thanh toán</dt><dd>{paymentTerm(invoice.paymentTerm)}</dd></div>
         <div><dt>Người lập</dt><dd>{invoice.createdBy.name || "—"}</dd></div>

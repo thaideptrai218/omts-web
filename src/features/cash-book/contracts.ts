@@ -25,7 +25,7 @@ const partyRef = z.object({ kind: partyKind, id: opt(id), code: opt(text), name:
 const person = z.object({ id, name: text });
 
 export const bookRow = z.object({
-  id, source: z.enum(["CashVoucher", "SupplierPayment", "SupplierPaidBack"]), code: text, occurredAt: stamp, createdAt: stamp, direction, fund, cashAccount: opt(accountRef), type: typeRef,
+  id, source: z.enum(["CashVoucher", "SupplierPayment", "SupplierPaidBack", "CustomerPayment", "CustomerPaidBack"]), code: text, occurredAt: stamp, createdAt: stamp, direction, fund, cashAccount: opt(accountRef), type: typeRef,
   party: opt(partyRef), amount: n, signedAmount: n, collector: opt(person), createdBy: opt(person), note: opt(text), countsInResult: z.boolean(), status: z.enum(["Recorded", "Cancelled"]),
   sourceDocument: opt(z.object({ kind: text, id, code: text })),
 });

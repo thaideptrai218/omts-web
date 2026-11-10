@@ -1,6 +1,8 @@
 "use client";
+import Link from "next/link";
 import { Fragment, useId } from "react";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
+import { customerHref } from "@/features/customers/customer-links";
 import { InvoiceDetailPanel } from "./invoice-detail";
 import type { ListRow } from "./invoice-list-contracts";
 import { dateTimeText, deliveryStatus, deliveryTone, invoiceStatus, paidState, paidTone, paymentTerm, statusTone, vnd } from "./invoice-labels";
@@ -29,7 +31,7 @@ export function InvoiceListTable({ rows, expandedId, canExport, onToggle, onChan
                   <td><button type="button" className={s.rowButton} aria-expanded={open} aria-controls={open ? panelId : undefined} aria-label={`Hóa đơn ${row.code}, ${open ? "thu gọn" : "xem chi tiết"}`} onClick={() => onToggle(row.id)}>{row.code}</button></td>
                   <td>{dateTimeText(row.invoicedAt)}</td>
                   <td>{row.zone.code}<span className={s.sub}>{row.zone.name}</span></td>
-                  <td>{row.customer?.name ?? "Khách lẻ"}{row.customer?.phoneNumber && <span className={s.sub}>{row.customer.phoneNumber}</span>}</td>
+                  <td>{row.customer?.code ? <Link href={customerHref(row.customer.code)}>{row.customer.name}</Link> : row.customer?.name ?? "Khách lẻ"}{row.customer?.phoneNumber && <span className={s.sub}>{row.customer.phoneNumber}</span>}</td>
                   <td className={s.num}>{vnd(row.total)}</td>
                   <td><span className={s.chip} data-tone={statusTone(row.statusId)}>{invoiceStatus(row.statusId)}</span></td>
                   <td>{paymentTerm(row.paymentTerm)}</td>

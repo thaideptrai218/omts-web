@@ -93,6 +93,11 @@ export const messageCatalog = {
   "MSG-SALE-14": "Chuyển khoản chưa về. Dừng giao dịch này? Hóa đơn không được lưu, mã chỉ giữ trong nhật ký. Hãy trả lại tiền mặt đã nhận (nếu có) và giữ nguyên hàng.",
   "MSG-SALE-20": "Hóa đơn đã có phiếu trả hàng nên không thể sửa hoặc hủy.",
   "MSG-SALE-21": "Hóa đơn khách lẻ không có hồ sơ khách hàng nên không thể tăng tổng tiền. Hãy lập hóa đơn mới cho phần hàng thêm.",
+  "MSG-DEBT-04": "Khoản thu vượt công nợ hiện tại của khách. Hãy xác nhận ghi phần vượt là tiền hợp tác xã còn nợ lại khách.",
+  "MSG-DEBT-05": "Mã giao dịch ngân hàng này đã được ghi trước đó. Hãy đối chiếu rồi xác nhận nếu vẫn ghi.",
+  "MSG-DEBT-06": "Số tiền trả lại không được lớn hơn số tiền hợp tác xã còn nợ khách.",
+  "MSG-SALE-04": "Cần xác nhận chủ hợp tác xã đã đồng ý việc gộp hồ sơ này. Thao tác không thể hoàn tác.",
+  "MSG-SALE-05": "Chưa gộp được: hồ sơ bị gộp có tài khoản thương lái mà hồ sơ giữ lại chưa có. Hãy giữ hồ sơ có tài khoản và gộp hồ sơ còn lại vào đó.",
   "MSG-CLAIM-03": "Hóa đơn đã bị hủy hoặc đã trả hàng nên chưa thể chấp nhận khiếu nại này.",
 } as const;
 

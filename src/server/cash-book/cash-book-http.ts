@@ -30,6 +30,8 @@ const short = (max: number) => z.string().trim().max(max).nullable();
 const voucherBody = z.strictObject({
   code: z.string().regex(/^[A-Za-z0-9._-]{1,30}$/).nullable(), direction: c.direction, fund: c.fund, cashAccountId: z.guid().nullable(), typeId: z.guid(), occurredAt: z.iso.datetime({ offset: true }), amount: money,
   collectorId: z.guid().nullable(), partyKind: c.partyKind.nullable(), partyId: z.guid().nullable(), partyName: short(200), note: short(2000), countsInResult: z.boolean(),
+  // A voucher of a customer may count in the customer's debt: it is then saved as a customer payment, with its invoices when named.
+  countInDebt: z.boolean().optional(), debtMode: z.enum(["AllocateToInvoices", "DebtOnly"]).optional(), debtAllocations: z.array(z.strictObject({ invoiceId: z.guid(), amount: money })).max(300).optional(),
 });
 const accountBody = z.strictObject({ kind: c.accountKind, bankBin: z.string().regex(/^\d{6}$/).nullable(), providerName: short(100), accountNumber: z.string().trim().min(1).max(30), holderName: z.string().trim().min(1).max(200), note: short(500) });
 const typeBody = z.strictObject({ direction: c.direction, category: c.category, name: z.string().trim().min(1).max(100), description: short(500), countsInResult: z.boolean() });

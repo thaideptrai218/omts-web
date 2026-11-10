@@ -1,4 +1,5 @@
 "use client";
+import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -94,7 +95,7 @@ export function TypeDialog({ direction, type, initialName, onClose }: { directio
   return <Dialog open size="md" dismissible={!pending} title={`${type ? "Sửa" : "Tạo"} loại ${word}`} onOpenChange={(open) => { if (!open) onClose(false); }}><div className={managementStyles.theme}>{confirmation.dialog}
     <div className={styles.formGrid}>
       <Field label={`Tên loại ${word}`} wide><input className={styles.input} autoFocus maxLength={100} value={name} onChange={(event) => setName(event.target.value)} /></Field>
-      <Field label={`Danh mục ${word}`} wide><select className={styles.input} value={category} onChange={(event) => setCategory(event.target.value as CashCategory)}>{categories.map((key) => <option key={key} value={key}>{categoryLabel[key]}</option>)}</select></Field>
+      <Field label={`Danh mục ${word}`} wide><SelectBox className={styles.input} value={category} onChange={(event) => setCategory(event.target.value as CashCategory)}>{categories.map((key) => <option key={key} value={key}>{categoryLabel[key]}</option>)}</SelectBox></Field>
       <Field label="Mô tả" wide><textarea className={styles.textarea} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} /></Field>
       <label className={`${styles.check} ${styles.formWide}`}><input type="checkbox" checked={counts} onChange={(event) => setCounts(event.target.checked)} />Hạch toán vào kết quả hoạt động kinh doanh</label>
     </div>

@@ -1,0 +1,76 @@
+/* Khách hàng: the list reuses suppliers.module.css (table, detail, footer); these are the parts only this module has. */
+.totalRow td { position:sticky; top:33px; z-index:3; font-weight:700; background:var(--omts-color-surface)!important; border-bottom:2px solid var(--omts-color-border)!important; }
+.num { text-align:right!important; font-variant-numeric:tabular-nums; }
+.neg { color:var(--omts-color-danger, #b42318); }
+.muted { color:var(--omts-color-text-muted); }
+.badge { display:inline-block; margin-left:6px; padding:1px 8px; border-radius:999px; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:11px; font-weight:600; white-space:nowrap; }
+.badgeWarn { background:#fef3c7; color:#92400e; }
+.name { font-weight:600; }
+.link { color:var(--omts-color-primary); font-weight:500; }
+.link:hover { text-decoration:underline; }
+
+/* Profile photo */
+.photoBox { display:flex; align-items:center; gap:14px; grid-column:1 / -1; }
+.photo { display:grid; place-items:center; flex:none; width:72px; height:72px; overflow:hidden; border:1px solid var(--omts-color-border); border-radius:50%; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:22px; font-weight:700; }
+.photo img { width:100%; height:100%; object-fit:cover; }
+.photoActions { display:grid; gap:4px; font-size:12px; color:var(--omts-color-text-muted); }
+.photoActions > div { display:flex; gap:12px; }
+.infoPhoto { width:64px; height:64px; font-size:20px; }
+.infoHead { display:flex; align-items:center; gap:14px; margin-bottom:12px; flex-wrap:wrap; }
+.infoHead h3 { font-size:16px; font-weight:650; overflow-wrap:anywhere; }
+.fieldLabel { display:block; font-size:12px; font-weight:500; color:var(--omts-color-text-muted); }
+.fieldLabel > :last-child { margin-top:6px; }
+.dateClear { margin-left:8px; font-size:12px; font-weight:600; color:var(--omts-color-primary); }
+.wide { grid-column:1 / -1; }
+.hint { font-size:12px; color:var(--omts-color-text-muted); }
+
+/* Debt tab */
+.debtTop { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; font-size:13px; }
+.debtTop strong { font-size:16px; font-variant-numeric:tabular-nums; }
+.debtTop label { display:inline-flex; align-items:center; gap:8px; }
+.entryTable { width:100%; border-collapse:collapse; font-size:13px; }
+.entryTable th { padding:7px 10px; background:var(--omts-color-primary-soft); font-size:12px; font-weight:650; text-align:left; white-space:nowrap; }
+.entryTable td { padding:7px 10px; border-bottom:1px solid var(--omts-color-border); vertical-align:middle; }
+.entryScroll { overflow-x:auto; }
+.entryCancelled td { color:var(--omts-color-text-muted); }
+.entryCancelled td:not(:last-child) { text-decoration:line-through; }
+.rowActions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+.rowActions button { min-height:26px; padding:0 8px; border:1px solid var(--omts-color-border-strong); border-radius:6px; font-size:12px; font-weight:600; color:var(--omts-color-primary); }
+.rowActions button:hover:not(:disabled) { border-color:var(--omts-color-primary); }
+.rowActions button:disabled { opacity:.5; }
+.state { display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:600; background:var(--omts-color-surface-subtle); color:var(--omts-color-text-muted); }
+.stateWait { background:#fef3c7; color:#92400e; }
+.stateOff { background:#fee2e2; color:#b42318; }
+
+/* QR dialog */
+.qrLayout { display:grid; grid-template-columns:minmax(0, 260px) minmax(0, 1fr); gap:20px; align-items:start; }
+.qrBox { display:grid; place-items:center; padding:12px; border:1px solid var(--omts-color-border); border-radius:8px; background:#fff; }
+.qrBox svg { width:100%; height:auto; max-width:240px; }
+.qrInfo { display:grid; gap:10px; min-width:0; font-size:13px; }
+.qrInfo dl { display:grid; grid-template-columns:110px minmax(0, 1fr); gap:6px 12px; }
+.qrInfo dt { color:var(--omts-color-text-muted); }
+.qrInfo dd { overflow-wrap:anywhere; font-weight:600; }
+.qrNote { padding:10px 12px; border-radius:8px; background:var(--omts-color-primary-soft); color:var(--omts-color-text); font-size:12px; }
+.qrActions { display:flex; flex-wrap:wrap; gap:8px; }
+@media (max-width:700px) { .qrLayout { grid-template-columns:minmax(0, 1fr); } }
+
+/* Merge dialog */
+.mergeGrid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+.mergeCard { padding:12px; border:1px solid var(--omts-color-border); border-radius:8px; font-size:13px; }
+.mergeCard h4 { margin-bottom:6px; font-size:12px; font-weight:650; text-transform:uppercase; letter-spacing:.03em; color:var(--omts-color-text-muted); }
+.mergeCard strong { display:block; font-size:14px; }
+.warn { padding:10px 12px; border:1px solid #fcd34d; border-radius:8px; background:#fffbeb; color:#92400e; font-size:13px; }
+.pickList { display:grid; gap:2px; max-height:220px; overflow-y:auto; margin-top:6px; padding:4px; border:1px solid var(--omts-color-border); border-radius:8px; }
+.pickList button { display:grid; gap:1px; padding:6px 8px; border-radius:6px; font-size:13px; text-align:left; }
+.pickList button:hover { background:var(--omts-color-primary-soft); }
+.pickList small { color:var(--omts-color-text-muted); }
+@media (max-width:700px) { .mergeGrid { grid-template-columns:minmax(0, 1fr); } }
+
+/* Allocation hints in the dialogs */
+.owedChip { padding:2px 8px; border-radius:6px; background:var(--omts-color-surface-subtle); color:var(--omts-color-text-muted); }
+.owedChip strong { color:var(--omts-color-text); }
+.radioRow { display:flex; flex-wrap:wrap; gap:16px; font-size:13px; }
+.radioRow label { display:inline-flex; align-items:center; gap:6px; }
+.radioRow input { accent-color:var(--omts-color-primary); }
+
+.debtBlock { display:grid; gap:10px; padding:10px 12px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface-subtle); }
