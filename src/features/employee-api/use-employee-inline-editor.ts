@@ -55,7 +55,7 @@ export function useEmployeeInlineEditor({ employee, active, setActive, zones, lo
       if (draft.workingZoneIds.some(id => zones.find(zone => zone.id === id)?.statusId !== 101)) next.push({ path: "workingZoneIds", message: "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu." });
     }
     setIssues(next);
-    if (next.length || !checked.success) { requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()); return; }
+    if (next.length || !checked.success) { requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]')?.focus()); return; }
     const normalized = { ...draft, ...checked.data };
     const result = await mutation.run(() => repository.write("update", employeeTabSaveBody(base, normalized, tab), employeeViewSchema, base.id));
     if (result) { setEditing(undefined); setLeave(undefined); setIssues([]); onSaved(result); restoreFocus(); }

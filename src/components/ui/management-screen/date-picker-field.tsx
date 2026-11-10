@@ -16,7 +16,7 @@ const nowTime = () => { const now = new Date(); return `${pad(now.getHours())}:$
  * One date picked from the same calendar as the time filter. The value is `yyyy-mm-dd`, or `yyyy-mm-ddTHH:mm` with
  * `withTime` (local wall time of the cooperative).
  */
-export function DatePickerField({ label, value, max, disabled, withTime, className, onChange }: { label: string; value: string; max?: string; disabled?: boolean; withTime?: boolean; className?: string; onChange(value: string): void }) {
+export function DatePickerField({ label, value, max, disabled, withTime, className, name, invalid, describedBy, onChange }: { label: string; value: string; max?: string; disabled?: boolean; withTime?: boolean; className?: string; name?: string; invalid?: boolean; describedBy?: string; onChange(value: string): void }) {
   const anchor = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [datePart, timePart = ""] = value.split("T");
@@ -29,7 +29,7 @@ export function DatePickerField({ label, value, max, disabled, withTime, classNa
   const today = new Date(), todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const shown = datePart ? `${toDisplayDate(datePart)}${withTime && timePart ? ` ${timePart.slice(0, 5)}` : ""}` : withTime ? "dd/mm/yyyy hh:mm" : "dd/mm/yyyy";
   return <>
-    <button ref={anchor} type="button" className={`${styles.input} ${className ?? ""}`} aria-label={`${label}: ${datePart ? shown : "chưa chọn"}`} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
+    <button ref={anchor} type="button" name={name} data-invalid={invalid || undefined} aria-describedby={describedBy} className={`${styles.input} ${className ?? ""}`} aria-label={`${label}: ${datePart ? shown : "chưa chọn"}`} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
       <span>{shown}</span><InterfaceIcon name="calendar" />
     </button>
     {open && <Popover anchor={anchor} label={label} placement="below" onClose={close}>
@@ -46,6 +46,23 @@ export function DatePickerField({ label, value, max, disabled, withTime, classNa
       </div>
     </Popover>}
   </>;
+}
+
+/**
+ * The same calendar as the picker popup, shown inline. Use it in SHORT dialogs: a popup is positioned inside its dialog and is
+ * clipped by the dialog box when the dialog is lower than the calendar.
+ */
+export function DateCalendar({ value, max, disabled, onChange }: { value: string; max?: string; disabled?: boolean; onChange(day: string): void }) {
+  const selected = value ? fromQueryDate(value.slice(0, 10)) : undefined, limit = max ? fromQueryDate(max.slice(0, 10)) : undefined;
+  const [month, setMonth] = useState(() => selected ?? new Date());
+  const today = new Date(), todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return <div className={`${screenStyles.theme} ${styles.calendar} ${styles.inlineCalendar}`}>
+    <DayPicker mode="single" navLayout="around" locale={vi} weekStartsOn={1} month={month} onMonthChange={setMonth} selected={selected} fixedWeeks
+      disabled={disabled ? true : limit ? { after: limit } : undefined} onSelect={(day) => { if (day) onChange(toQueryDate(day)); }} />
+    <footer className={styles.calendarFooter}>
+      <button type="button" className={screenStyles.linkButton} disabled={disabled || (!!limit && todayDay > limit)} onClick={() => { setMonth(todayDay); onChange(toQueryDate(todayDay)); }}>Hôm nay</button>
+    </footer>
+  </div>;
 }
 
 const hours = Array.from({ length: 24 }, (_, value) => pad(value)), minutes = Array.from({ length: 60 }, (_, value) => pad(value));

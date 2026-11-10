@@ -115,9 +115,17 @@ it("requires an effective date when the work tab changes employee type", async (
   const { employee } = await setup(); tab("Công việc"); edit(); change("Loại nhân viên", "SeasonalWorker"); save();
   expect(repository.write).not.toHaveBeenCalled();
   expect(panel().getByText(/Chọn ngày áp dụng loại nhân viên/)).toBeTruthy();
-  change("Áp dụng từ ngày *", "01/11/2026"); fireEvent.blur(panel().getByLabelText("Áp dụng từ ngày *")); save();
+  // The date is picked from the kit's calendar (the same one as the time filter), not typed: open it and take the first selectable day.
+  fireEvent.click(panel().getByRole("button", { name: /^Áp dụng từ ngày: chưa chọn/ }));
+  const day = document.querySelector<HTMLButtonElement>("button.rdp-day_button:not([disabled])");
+  expect(day).toBeTruthy();
+  fireEvent.click(day!);
+  save();
   await waitFor(() => expect(repository.write).toHaveBeenCalled());
-  expectPreserved(employee, { employeeType: "SeasonalWorker", employeeTypeFrom: "2026-11-01" });
+  const body = repository.write.mock.calls[0][1] as { employeeType: string; employeeTypeFrom: string };
+  expect(body.employeeType).toBe("SeasonalWorker");
+  expect(body.employeeTypeFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expectPreserved(employee, { employeeType: "SeasonalWorker", employeeTypeFrom: body.employeeTypeFrom });
 });
 
 it("prevents duplicate submissions and keeps save pending until the request completes", async () => {

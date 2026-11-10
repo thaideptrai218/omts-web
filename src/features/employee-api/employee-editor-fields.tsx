@@ -1,6 +1,6 @@
 "use client";
 import type { Dispatch, SetStateAction } from "react";
-import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
+import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { businessToday, control, Field } from "@/features/operations/ui";
 import type { Employee } from "./contracts";
@@ -40,7 +40,7 @@ export function EmployeeEditorFields(props: EmployeeEditorFieldsProps & { active
         <Field label="Số điện thoại" type="tel" {...errorProps("phone")} value={values.phone} onChange={event => setValues({ ...values, phone: event.target.value })} />
       </div>
       <label className="block text-sm font-semibold">Ngày sinh
-        <VietnameseDateInput className={control} {...errorProps("birthday")} value={values.birthday} max={businessToday()} onValueChange={birthday => setValues({ ...values, birthday })} calendarLabel="Chọn ngày sinh" />
+        <DatePickerField className={control} label="Ngày sinh" name="birthday" invalid={errorProps("birthday")["aria-invalid"]} describedBy={errorProps("birthday")["aria-describedby"]} value={values.birthday} max={businessToday()} onChange={birthday => setValues({ ...values, birthday })} />
       </label>
       <EmployeeAddressFields values={values} setValues={setValues} errorProps={errorProps} />
     </div>

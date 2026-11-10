@@ -1,4 +1,4 @@
-import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
+import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
 import { control, Select } from "@/features/operations/ui";
 import type { EmployeeEditorFieldsProps } from "./employee-editor-fields";
 
@@ -13,7 +13,7 @@ export function EmployeeEditorWorkFields({ values, setValues, errorProps, baseli
       {error("employeeType")}
       {baseline && values.employeeType && values.employeeType !== baseline.employeeType && <label className="block text-sm font-semibold">
         Áp dụng từ ngày *
-        <VietnameseDateInput className={control} required {...errorProps("employeeTypeFrom")} value={values.employeeTypeFrom} onValueChange={employeeTypeFrom => setValues({ ...values, employeeTypeFrom })} calendarLabel="Chọn ngày áp dụng" />
+        <DatePickerField className={control} label="Áp dụng từ ngày" name="employeeTypeFrom" invalid={errorProps("employeeTypeFrom")["aria-invalid"]} describedBy={errorProps("employeeTypeFrom")["aria-describedby"]} value={values.employeeTypeFrom} onChange={employeeTypeFrom => setValues({ ...values, employeeTypeFrom })} />
       </label>}
       {error("employeeTypeFrom")}
       <fieldset className="rounded-control border border-border p-3" tabIndex={-1} {...errorProps("jobTypeIds")}>
