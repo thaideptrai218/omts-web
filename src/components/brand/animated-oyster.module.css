@@ -1,36 +1,43 @@
-/* Con hàu hoạt họa ở bảng giới thiệu trang đăng nhập. Mọi chuyển động chỉ dùng transform/opacity để giữ 60 khung hình. */
-.root { --px: 0; --py: 0; position: relative; width: clamp(240px, 30vw, 400px); aspect-ratio: 1; }
-.glow { position: absolute; inset: 8% 6% 4%; border-radius: 50%; background: radial-gradient(closest-side, rgb(95 211 196 / 0.26), rgb(95 211 196 / 0) 70%); filter: blur(14px); animation: breathe 6s ease-in-out infinite; transform: translate(calc(var(--px) * -10px), calc(var(--py) * -8px)); transition: transform 0.4s ease-out; }
-.svg { position: relative; width: 100%; height: 100%; overflow: visible; transform: translate(calc(var(--px) * 8px), calc(var(--py) * 6px)) rotate(calc(var(--px) * 1.2deg)); transition: transform 0.35s ease-out; }
-
-.float { animation: float 6.5s ease-in-out infinite; transform-origin: 215px 300px; }
-/* Hàu hé vỏ như đang thở: bản lề ở đầu nhọn bên trái (toạ độ cục bộ trước khi cả con hàu được xoay nghiêng). */
-.lid { transform-origin: 90px 252px; animation: lid 10s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
-.cavity { animation: cavity 10s ease-in-out infinite; }
-.meat { transform-origin: 220px 300px; animation: meat 10s ease-in-out infinite; }
-.shine { animation: shine 10s ease-in-out infinite; }
-
-.ray { transform-origin: 50% 0; animation: sway 9s ease-in-out infinite; }
-.ripple { stroke: #5fd3c4; stroke-opacity: 0.45; stroke-width: 1.5; transform-origin: 215px 352px; animation: ripple 4.8s ease-out infinite; opacity: 0; }
-.bubble { fill: rgb(217 245 240 / 0.28); stroke: rgb(217 245 240 / 0.7); stroke-width: 1; animation: rise linear infinite; opacity: 0; }
-
-@keyframes float { 0%, 100% { transform: translateY(0) rotate(-0.8deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
-/* Nghỉ khép, hé mở dần, giữ mở để lộ thân hàu, rồi khép lại. */
-@keyframes lid { 0%, 8% { transform: rotate(0); } 28%, 68% { transform: rotate(-9deg); } 88%, 100% { transform: rotate(0); } }
-/* Thân hàu căng nhẹ theo nhịp thở khi vỏ mở. */
-@keyframes meat { 0%, 20% { transform: scale(1, 0.96); } 34% { transform: scale(1.015, 1.05); } 48% { transform: scale(1, 0.98); } 62% { transform: scale(1.015, 1.05); } 80%, 100% { transform: scale(1, 0.96); } }
-/* Ruột hàu chỉ hiện khi vỏ hé mở; khi khép thì ẩn hẳn sau vỏ. */
-@keyframes cavity { 0%, 10% { opacity: 0; } 24%, 72% { opacity: 1; } 86%, 100% { opacity: 0; } }
-@keyframes shine { 0%, 24% { opacity: 0.2; } 40%, 62% { opacity: 0.85; } 80%, 100% { opacity: 0.2; } }
-@keyframes sway { 0%, 100% { transform: skewX(-4deg); opacity: 0.55; } 50% { transform: skewX(5deg); opacity: 1; } }
-@keyframes ripple { 0% { transform: scale(0.35); opacity: 0.6; } 100% { transform: scale(1.15); opacity: 0; } }
-@keyframes rise { 0% { transform: translateY(0) translateX(0) scale(0.7); opacity: 0; } 12% { opacity: 1; } 100% { transform: translateY(-170px) translateX(14px) scale(1.15); opacity: 0; } }
-@keyframes breathe { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .glow, .float, .ray, .ripple, .bubble, .svg { animation: none; transition: none; transform: none; }
-  /* Giữ tĩnh ở khoảnh khắc đẹp nhất: vỏ hé mở, thân hàu hiện rõ. */
-  .lid { animation: none; transform: rotate(-7deg); }
-  .cavity, .meat, .shine { animation: none; }
-  .ripple, .bubble { opacity: 0; }
+﻿/* An absolute, contained SVG cannot impose an intrinsic minimum on the flex area. */
+.root { position:relative; width:min(100%, 150cqh); height:auto; max-height:100%; aspect-ratio:3/2; min-width:0; min-height:0; pointer-events:none; }
+.svg { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:contain; }
+.water { stop-color:var(--omts-color-primary, #086f78); }
+.light { stop-color:var(--omts-color-primary-soft, #e7f3f3); }
+.drift { transform-origin:300px 246px; animation:drift 7.2s infinite; }
+.lid, .lidBreath { transform-origin:154px 246px; }
+.lid { transform:rotate(-8deg); transition:transform 620ms cubic-bezier(.2,.85,.3,1.08); }
+.root[data-mood="closed"] .lid { transform:rotate(0deg); }
+.root[data-mood="open"] .lid { transform:rotate(-33deg); }
+.root[data-mood="idle"] .lidBreath { animation:breathe 5.8s ease-in-out infinite; }
+.rays { animation:shimmer 11s ease-in-out infinite; }
+.bubble { fill:none; stroke:var(--omts-color-primary-soft, #e7f3f3); stroke-opacity:.42; stroke-width:.85; opacity:0; animation:rise linear infinite; }
+.particle { stroke:#c1d3ca; stroke-width:1.5; stroke-linecap:round; opacity:0; animation:current linear infinite; }
+@keyframes drift {
+  0%,100% { transform:translate(-60px, 5px) rotate(-5deg); animation-timing-function:cubic-bezier(.28,.05,.3,1); }
+  43% { transform:translate(60px, -7px) rotate(5deg); animation-timing-function:cubic-bezier(.45,0,.65,1); }
+  78% { transform:translate(-32px, 9px) rotate(-3deg); animation-timing-function:ease-out; }
 }
+@keyframes breathe { 0%,100% { transform:rotate(0deg); } 50% { transform:rotate(-1.2deg); } }
+@keyframes shimmer { 0%,100% { transform:translateX(-18px) rotate(-2deg); opacity:.4; } 43% { transform:translateX(24px) rotate(2deg); opacity:.75; } }
+@keyframes rise {
+  0% { transform:translate(-24px, 0); opacity:0; }
+  12% { opacity:.48; }
+  35% { transform:translate(var(--wobble), -110px); }
+  65% { transform:translate(calc(var(--wobble) + 28px), -235px); opacity:.32; }
+  83% { transform:translate(8px, -300px); }
+  100% { transform:translate(-24px, -365px); opacity:0; }
+}
+@keyframes current {
+  0% { transform:translateX(-70px); opacity:0; }
+  25%,65% { opacity:.26; }
+  100% { transform:translate(110px, -16px); opacity:0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .root * { animation:none; transition:none; }
+  .drift, .bubble { transform:none; }
+  .rays { opacity:.6; }
+  .bubble { opacity:.18; }
+  .bubble:nth-child(even) { opacity:0; }
+  .particle { opacity:.2; }
+}
+

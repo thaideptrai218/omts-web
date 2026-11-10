@@ -1,9 +1,10 @@
-import { AnimatedOyster } from "@/components/brand/animated-oyster";
+﻿import { AnimatedOyster } from "@/components/brand/animated-oyster";
+import { OysterMoodProvider } from "@/components/brand/oyster-mood";
 import { BrandMark } from "@/components/brand/brand-mark";
 import styles from "./auth-shell.module.css";
 
 export function AuthShell({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <main className={styles.shell}>
+  return <OysterMoodProvider><main className={styles.shell}>
     <div className={styles.entry}>
       <header className={styles.brand}><BrandMark compact /><span>Hợp tác xã Nuôi trồng Thủy sản Trung Nam</span></header>
       <div className={styles.form}>{children}</div>
@@ -15,5 +16,6 @@ export function AuthShell({ children }: Readonly<{ children: React.ReactNode }>)
       <div className={styles.storyCopy}><span className={styles.index}>HỢP TÁC XÃ THỦY SẢN TRUNG NAM</span><h2>Từ vùng nuôi,<br/>đến từng lô hàu.</h2><p>Một nơi theo dõi hoạt động của hợp tác xã, kết nối thông tin nuôi trồng, mua bán và nguồn gốc sản phẩm.</p></div>
       <div className={styles.storyFooter}><span>Nuôi trồng</span><span>Mua bán</span><span>Truy xuất nguồn gốc</span></div>
     </aside>
-  </main>;
+  </main></OysterMoodProvider>;
 }
+
