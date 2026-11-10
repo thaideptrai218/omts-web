@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { getPasswordRuleState } from "@/shared/security/password-policy";
 import { profileViewSchema } from "@/features/profile/api/profile-contract.schemas";
-export const verificationPurposeSchema = z.enum(["registration", "recovery", "contact", "password-email"]);
+// recovery: anonymous password reset. contact: change of a verified contact. phone: first verification of the account phone during onboarding.
+export const verificationPurposeSchema = z.enum(["recovery", "contact", "phone"]);
 export type VerificationPurpose = z.infer<typeof verificationPurposeSchema>;
 export const channelSchema = z.enum(["Email", "Sms"]);
 const purpose = verificationPurposeSchema, id = z.uuid();
@@ -21,12 +22,16 @@ export const verificationCommandSchema = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("complete"), purpose, id, newPassword: z.string().min(1).max(128).optional(), confirmPassword: z.string().min(1).max(128).optional() }),
 ]).superRefine((value, ctx) => {
   if (value.op === "start") {
-    if (value.purpose === "password-email") {
-      if (value.channel || value.target || value.currentPassword) ctx.addIssue({ code: "custom", message: "Invalid password proof request" });
-    } else if (!value.channel || !value.target || !validContact(value.channel, value.target) || (value.purpose === "contact" ? !value.currentPassword : !!value.currentPassword)) ctx.addIssue({ code: "custom", message: "Invalid contact request" });
+    if (value.purpose === "recovery") {
+      // Recovery is by SMS to the phone number: an email address never receives a recovery code.
+      if (value.channel !== "Sms" || !value.target || !validContact("Sms", value.target) || value.currentPassword) ctx.addIssue({ code: "custom", message: "Invalid recovery request" });
+    } else if (value.purpose === "phone") {
+      // The API sends the code to the number already on the account; the browser supplies nothing.
+      if (value.channel || value.target || value.currentPassword) ctx.addIssue({ code: "custom", message: "Invalid phone verification request" });
+    } else if (!value.channel || !value.target || !validContact(value.channel, value.target) || !value.currentPassword) ctx.addIssue({ code: "custom", message: "Invalid contact request" });
   }
   if (value.op === "complete") {
-    if (value.purpose === "contact") {
+    if (value.purpose !== "recovery") {
       if (value.newPassword || value.confirmPassword) ctx.addIssue({ code: "custom", message: "Invalid contact confirmation" });
     } else {
       const rules = getPasswordRuleState(value.newPassword ?? "");
@@ -35,10 +40,10 @@ export const verificationCommandSchema = z.discriminatedUnion("op", [
   }
 });
 export type VerificationCommand = z.infer<typeof verificationCommandSchema>;
-export const verificationViewSchema = z.object({ id, purpose, phase: z.enum(["pending", "code", "verified", "unknown", "failed", "done"]), channel: channelSchema.nullable(), maskedTarget: z.string().max(300),
+export const verificationViewSchema = z.object({ id, purpose, phase: z.enum(["code", "verified"]), channel: channelSchema.nullable(), maskedTarget: z.string().max(300),
   expiresAt: z.iso.datetime({ offset: true }), nextResendAt: z.iso.datetime({ offset: true }).nullable(), sendsLeft: z.number().int().min(0).max(2).nullable() });
 export type VerificationView = z.infer<typeof verificationViewSchema>;
 export const verificationResultSchema = z.object({ status: z.enum(["success", "completed", "empty", "cancelled", "error"]), flow: verificationViewSchema.optional(), code: z.string().max(64).optional(),
-  uncertain: z.boolean().optional(), retryAfterMs: z.number().nonnegative().max(3_600_000).optional(), username: z.string().min(1).max(254).optional(), oldDocumentsHidden: z.boolean().optional(),
-  profile: profileViewSchema.nullable().optional(), destination: z.enum(["/login", "/dashboard", "/onboarding/password", "/onboarding/contact"]).optional() });
+  uncertain: z.boolean().optional(), retryAfterMs: z.number().nonnegative().max(3_600_000).optional(), oldDocumentsHidden: z.boolean().optional(),
+  profile: profileViewSchema.nullable().optional() });
 export type VerificationResult = z.infer<typeof verificationResultSchema>;

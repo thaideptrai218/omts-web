@@ -5,7 +5,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   // Bound static-build processes on Windows without changing page/cache rules.
-  experimental: process.platform === "win32" ? { cpus: 2 } : {},
+  experimental: {
+    agentUpgrade: "security",
+    ...(process.platform === "win32" ? { cpus: 2 } : {}),
+  },
   turbopack: {
     rules: {
       // Tailwind transforms the global entry only. Rewriting every CSS file

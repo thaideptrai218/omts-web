@@ -1,5 +1,6 @@
 "use client";
 import { ApiSecurityGate } from "@/features/auth/components/api-security-gate";
+import { DevicesPanel } from "@/features/device-sessions-api/devices-panel";
 import styles from "./profile-layout.module.css";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { PersonalApiEditor } from "./profile-editor";
 // The editor lives in its own module; keep exporting it from here for existing importers.
 export { PersonalApiEditor };
 
-type AccountTab = "profile" | "security" | "notifications";
+type AccountTab = "profile" | "security" | "devices" | "notifications";
 
 const tabClass =
   "border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary";
@@ -26,6 +27,7 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
   const [tab, setTab] = useState<AccountTab>(initialTab);
   const [preferencesVisited, setPreferencesVisited] = useState(initialTab === "notifications");
   const [securityVisited, setSecurityVisited] = useState(initialTab === "security");
+  const [devicesVisited, setDevicesVisited] = useState(initialTab === "devices");
 
   function showPreferences() {
     setPreferencesVisited(true);
@@ -34,6 +36,10 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
   function showSecurity() {
     setSecurityVisited(true);
     setTab("security");
+  }
+  function showDevices() {
+    setDevicesVisited(true);
+    setTab("devices");
   }
 
   return (
@@ -59,6 +65,14 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
           className={tabClass}
         >
           Đổi mật khẩu
+        </button>
+        <button
+          type="button"
+          aria-current={tab === "devices" ? "page" : undefined}
+          onClick={showDevices}
+          className={tabClass}
+        >
+          Thiết bị đăng nhập
         </button>
         <button
           type="button"
@@ -88,6 +102,11 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
       {securityVisited && (
         <div hidden={tab !== "security"} className="mx-auto w-full max-w-2xl">
           <ApiSecurityGate phase="password-change-required" forced={false} />
+        </div>
+      )}
+      {devicesVisited && (
+        <div hidden={tab !== "devices"} className="mx-auto w-full max-w-2xl">
+          <DevicesPanel />
         </div>
       )}
       {preferencesVisited && (

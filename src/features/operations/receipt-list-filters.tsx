@@ -19,6 +19,7 @@ export function ReceiptListFilters({
   filters,
   filter,
   zones,
+  narrowed,
   suppliers,
   items,
   rafts,
@@ -26,6 +27,8 @@ export function ReceiptListFilters({
   filters: ReceiptListFilterValues;
   filter(key: keyof ReceiptListFilterValues, value: string): void;
   zones: ApiRecord[] | undefined;
+  /** True when the zone picker already narrowed the list to specific zones. */
+  narrowed: boolean;
   suppliers: ApiRecord[] | undefined;
   items: ApiRecord[] | undefined;
   rafts: ApiRecord[] | undefined;
@@ -34,7 +37,7 @@ export function ReceiptListFilters({
     <FilterPanel>
       <Field label="Mã phiếu" value={filters.code} onChange={(e) => filter("code", e.target.value)} />
       <Select label="Vùng nuôi" value={filters.zoneId} onChange={(e) => filter("zoneId", e.target.value)}>
-        <option value="">Tất cả vùng được cấp</option>
+        {!narrowed && <option value="">Tất cả vùng được cấp</option>}
         {zones?.map((row) => (
           <option key={row.id} value={row.id}>
             {String(row.name)}

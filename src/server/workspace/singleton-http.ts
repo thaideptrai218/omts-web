@@ -16,7 +16,6 @@ export async function handleSingletonRequest(request: Request, key: SingletonKey
   try {
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: "session-expired" }, 401);
-    if (initial.session.phase !== "application") return json({ status: "onboarding-required" }, 403);
     if (key === "cooperative" && initial.session.identity.subjectType !== "CooperativeOwner") return json({ status: "forbidden", code: "MSG02" }, 403);
     let body: unknown;
     if (request.method !== "GET") {

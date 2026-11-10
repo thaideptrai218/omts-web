@@ -11,6 +11,7 @@ import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import type { Query } from "./repository";
 import { loadOptions } from "./lookups";
+import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { ErrorNotice, OperationHeading, useMutation, useRemote } from "./ui";
 import { WaterChartSection } from "./water-chart-section";
 import { WaterHistorySection } from "./water-history-section";
@@ -38,7 +39,7 @@ function toStatusSelection(status: string) {
 export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } = {}) {
   const context = useApiWorkspace();
   const zones = useRemote(loadZones);
-  const [zoneId, setZoneId] = useState(initialZoneId);
+  const [zoneChoice, setZoneId] = useState(initialZoneId);
   const [filters, setFilters] = useState({ from: "", to: "", status: "Confirmed" });
   const [page, setPage] = useState(1);
   const [groupBy, setGroupBy] = useState("month");
@@ -50,6 +51,13 @@ export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } =
   const [notice, setNotice] = useState<string>();
   const [fullDetail, setFullDetail] = useState(false);
   const [pageSize, setPageSize] = useState(20);
+  // The zone picker's selection scopes the zones offered here; an explicit initial zone stays reachable.
+  const permissions = context.permissions.functionPermissions;
+  const { zones: availableZones, zoneId } = useScopedZones(
+    zones.data?.filter((row) => operationAllowed("water", context.identity, permissions, "View", row.id)) ?? [],
+    zoneChoice,
+    initialZoneId || undefined,
+  );
   const query = useMemo<Query>(
     () => ({ ...filters, zoneId, page: String(page), pageSize: String(pageSize) }),
     [filters, zoneId, page, pageSize],
@@ -67,8 +75,6 @@ export function WaterScreen({ initialZoneId = "" }: { initialZoneId?: string } =
     ? repository.read("chart", { zoneId, from: filters.from, to: filters.to, groupBy }, c.waterChartSchema, signal)
     : Promise.resolve({ status: "success" as const, data: undefined as WaterChartData | undefined }), [zoneId, filters.from, filters.to, groupBy]));
   const mutation = useMutation();
-  const permissions = context.permissions.functionPermissions;
-  const availableZones = zones.data?.filter((row) => operationAllowed("water", context.identity, permissions, "View", row.id)) ?? [];
   const currentZone = availableZones.find((row) => row.id === zoneId);
   const canExport = zoneId && operationAllowed("water", context.identity, permissions, "Export", zoneId);
 

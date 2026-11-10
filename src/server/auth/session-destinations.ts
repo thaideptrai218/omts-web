@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { SessionPhase } from "./session-store";
+// Where the account stands, derived from the API on demand and never stored.
+export type SessionPhase = "password-change-required" | "contact-verification-required" | "application";
 
 export function sessionDestination(phase: SessionPhase): string {
   switch (phase) {

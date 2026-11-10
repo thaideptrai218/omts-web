@@ -1,3 +1,4 @@
+import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { pushCatalogSchema, pushSavedSchema } from "./push-contract";
 import { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
@@ -5,7 +6,7 @@ import { notificationCatalogSchema, notificationSavedSchema, profileViewSchema, 
 async function send<T>(path: string, schema: z.ZodType<T>, body?: unknown, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
   const writing = body !== undefined;
   try {
-    const response = await fetch(path, { method: writing ? "PUT" : "GET", credentials: "same-origin", redirect: "error", cache: "no-store", signal: signal ?? AbortSignal.timeout(30_000),
+    const response = await bffFetch(path, { method: writing ? "PUT" : "GET", credentials: "same-origin", redirect: "error", cache: "no-store", signal: signal ?? AbortSignal.timeout(30_000),
       headers: { Accept: "application/json", ...(writing ? { "X-OMTS-Request": "web", "Content-Type": "application/json" } : {}) }, body: writing ? JSON.stringify(body) : undefined });
     const result = await response.json();
     if (response.status === 200 && result.status === "success") { const parsed = schema.safeParse(result.data); if (parsed.success) return { status: "success", data: parsed.data }; }

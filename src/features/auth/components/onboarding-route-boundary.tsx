@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { requireOnboardingPage } from "@/server/auth/next-session-access";
-import type { SessionPhase } from "@/server/auth/session-store";
+import type { SessionPhase } from "@/server/auth/session-destinations";
 import { SessionServiceState } from "./session-service-state";
 import { ApiSecurityGate } from "./api-security-gate";
 

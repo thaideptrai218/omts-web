@@ -53,18 +53,17 @@ Pending invoices survive draft Save and the refreshed editor, with names/count s
 
 The `/account` page explicitly opts out of the development instant-navigation validator because its authentication guard intentionally withholds the page while the session is unresolved. Authentication and private response rules remain active. Other route validation stays enabled. See [branch audit and local startup details](reports/WEB_BACKEND_BRANCH_INBOX_2026-10-30.md).
 
-The API workspace now uses the running .NET backend and Redis. Start the backend's existing Docker demo environment on `127.0.0.1:8080`. Start a separate Redis instance on loopback (or edit the generated configuration to use your existing Redis):
+The API workspace uses the running .NET backend; the Web app itself needs no Redis or other store. Start the backend's existing Docker demo environment on `127.0.0.1:8080`, then:
 
 ```powershell
-docker run --detach --name omts-web-session-redis --publish 127.0.0.1:6380:6379 redis:7.4.11-alpine
 npm run setup:api
 npm run build
 npm run start:api
 ```
 
-If that Redis container already exists, use `docker start omts-web-session-redis`. Open `http://localhost:3002/login`. `setup:api` preserves an existing `.env.api.local`, generates the session encryption key without printing it, and leaves `.env.local` alone. The local built-app launcher uses test mode for the HTTP loopback cookie profile; production deployments still require HTTPS. The launcher binds loopback and does not publish the site to the Internet.
+Open `http://localhost:3002/login`. `setup:api` preserves an existing `.env.api.local`, generates the key that seals the short verification cookie without printing it, and leaves `.env.local` alone. The local built-app launcher uses test mode for the HTTP loopback cookie profile; production deployments still require HTTPS. The launcher binds loopback and does not publish the site to the Internet.
 
-Use the backend demo accounts documented in the backend README, including `owner`, `quanlyvung1`, `quanlyvung2`, `ketoan` and `thuonglai1`. These are not the frontend mock accounts. A password changed earlier remains changed. The session is bounded by the backend access-token expiry; automatic refresh remains disabled.
+Use the backend demo accounts documented in the backend README, including `owner`, `quanlyvung1`, `quanlyvung2`, `ketoan` and `thuonglai1`. These are not the frontend mock accounts. A password changed earlier remains changed. Sign in with the phone number of the account, not its username. The access token and the refresh token are `HttpOnly` cookies, the app renews the access token through the refresh token, and "Thiết bị đang đăng nhập" (Tài khoản, tab Thiết bị đăng nhập) lists and ends the account's sessions per browser or app.
 
 ### Tài khoản kiểm thử API thật
 
@@ -167,7 +166,7 @@ npm run build
 npm run start
 ```
 
-Open [http://localhost:3000/login](http://localhost:3000/login). If that port is occupied, run `npm run start -- --port 3001` and open the URL printed in the terminal. No backend, database, Redis, or Docker is required for this review.
+Open [http://localhost:3000/login](http://localhost:3000/login). If that port is occupied, run `npm run start -- --port 3001` and open the URL printed in the terminal. No backend, database, or Docker is required for this review.
 
 For coding with live updates, use `npm run dev` instead of `npm run start`. Next.js development tools may show an Instant Navigation diagnostic for session-gated pages; that diagnostic is tracked separately and is not displayed by the production server. Do not run dev and build concurrently in one checkout.
 
@@ -287,7 +286,7 @@ npm run build
 npm run test:session-pages
 ```
 
-The last command tests the built app's session/API-mode guards with fixture configuration. It does not authenticate against the actual backend. Live Redis suites skip when `OMTS_TEST_REDIS_URL` is absent; the UI review does not need that variable.
+The last command tests the built app's session/API-mode guards with fixture configuration. It does not authenticate against the actual backend.
 
 Windows uses one Vitest worker and two Next.js static-build workers to reduce contention when loading Next/ESLint and generating pages. Other platforms retain four Vitest workers and Next's normal build-worker selection. No test is skipped and no timeout is increased. The earlier timeout observations remain documented; limiting workers does not prove all sources of tool-startup latency have been eliminated.
 

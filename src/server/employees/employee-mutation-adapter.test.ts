@@ -57,7 +57,7 @@ describe("unmounted employee BFF adapter access/input boundary", () => {
   });
 
   it.each([
-    { status: "anonymous" }, { status: "invalid-session", reason: "revoked", clearCookie: true }, { status: "unavailable" },
+    { status: "anonymous" }, { status: "invalid-session", reason: "invalid-session", clearCookie: true }, { status: "unavailable" },
     resolved({ phase: "password-change-required" }), resolved({ phase: "contact-verification-required" }),
   ] as const)("does not send for an unavailable/unauthenticated/onboarding session case %#", async (resolution) => {
     const transport = backend(); const resolve = resolver().mockResolvedValue(resolution);

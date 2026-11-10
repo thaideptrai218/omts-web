@@ -41,6 +41,7 @@ export function PaymentEditor({
   const [method, setMethod] = useState<PaymentMethod>(record?.method ?? "Cash");
   const [reference, setReference] = useState(record?.bankReference ?? "");
   const [note, setNote] = useState(record?.note ?? initialDraft?.note ?? "");
+  const [discount, setDiscount] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string>();
   // One key per dialog so a retried submit is recognised as the same payment by the server.
@@ -66,7 +67,8 @@ export function PaymentEditor({
       supplierId: supplier,
       kind,
       paymentDate: date,
-      amount: Number(amount),
+      amount: Number(amount || 0),
+      discountAmount: kind === "Payment" ? Number(discount || 0) : 0,
       method,
       bankReference: method === "BankTransfer" ? reference || null : null,
       note: note || null,
@@ -75,14 +77,16 @@ export function PaymentEditor({
       deduplicationKey: key,
     });
     if (!parsed.success || date > businessToday() || (method === "BankTransfer" && !reference.trim())) {
-      setError("Chọn nhà cung cấp, ngày không vượt hôm nay, số tiền nguyên dương và mã giao dịch khi chuyển khoản.");
+      setError("Chọn nhà cung cấp, ngày không vượt hôm nay, số tiền hoặc chiết khấu lớn hơn 0 và mã giao dịch khi chuyển khoản.");
       return;
     }
     setError(undefined);
     const verb = kind === "Payment" ? "Chi trả" : "Nhận lại";
     const advanceNote = confirmAdvance ? "(đã xác nhận trả trước)" : "";
     const duplicateNote = confirmDuplicate ? " (đã xác nhận mã ngân hàng trùng)" : "";
-    const question = `${verb} ${Number(amount).toLocaleString("vi-VN")} đồng ${advanceNote}${duplicateNote}?`;
+    const discountNote =
+      kind === "Payment" && Number(discount) > 0 ? `, chiết khấu ${Number(discount).toLocaleString("vi-VN")} đồng` : "";
+    const question = `${verb} ${Number(amount || 0).toLocaleString("vi-VN")} đồng${discountNote} ${advanceNote}${duplicateNote}?`;
     if (await editor.submit(question, () => payments.write("create", parsed.data, c.payment))) onSaved();
   }
 
@@ -154,7 +158,7 @@ export function PaymentEditor({
             <Field
               label="Số tiền (đồng) *"
               type="number"
-              min={1}
+              min={0}
               step={1}
               required
               value={amount}
@@ -163,6 +167,19 @@ export function PaymentEditor({
                 setAdvance(false);
               }}
             />
+            {kind === "Payment" && (
+              <Field
+                label="Chiết khấu thanh toán (đồng)"
+                type="number"
+                min={0}
+                step={1}
+                value={record ? String((record as { discountAmount?: number }).discountAmount ?? 0) : discount}
+                onChange={(e) => {
+                  setDiscount(e.target.value);
+                  setAdvance(false);
+                }}
+              />
+            )}
             <Select
               label="Phương thức"
               value={method}

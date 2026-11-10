@@ -148,9 +148,11 @@ html[data-omts-scroll-locked] body {
     transform: translateY(0.75rem) scale(0.985);
   }
 
+  /* `none`, not an identity transform: the animation fill keeps the last frame, and any transform would make the dialog
+     the containing block of fixed popovers inside it (date pickers), shifting and clipping them. */
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 

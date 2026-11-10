@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { recoveryIdentifierSchema } from "@/features/account-recovery/schemas/recovery-identifier-schema";
 
 describe("recoveryIdentifierSchema", () => {
-  it("validates email syntax when email is selected", () => {
+  it("accepts the phone channel only", () => {
     expect(
       recoveryIdentifierSchema.safeParse({
         channel: "email",
-        identifier: "khong-phai-email",
+        identifier: "owner@omts.test",
       }).success,
     ).toBe(false);
   });

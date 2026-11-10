@@ -7,7 +7,7 @@ import { employeeListQuerySchema, prepareEmployeeReadRequest } from "@/features/
 import { farmingZoneListQuerySchema, prepareFarmingZoneListRequest } from "@/features/farming-zones/api/farming-zone-read-request";
 
 export const backendEndpointSchema = z.enum([
-  "login", "identity", "permissions", "profileRead", "profileUpdate", "logout",
+  "login", "refresh", "identity", "permissions", "profileRead", "profileUpdate", "logout",
   "employeeUpdate", "employeeUnlink", "employeeList", "employeeRead", "employeeLinkableAccounts",
   "farmingZoneList", "passwordChange",
 ]);
@@ -17,6 +17,7 @@ type Target = Readonly<{ url: string; method: "GET" | "POST" | "PUT" | "DELETE" 
 type StaticEndpoint = Exclude<Endpoint, "employeeUpdate" | "employeeUnlink" | "employeeList" | "employeeRead" | "farmingZoneList">;
 const routes: Readonly<Record<StaticEndpoint, Readonly<{ path: string; method: Target["method"] }>>> = {
   login: { path: "/api/auth/login", method: "POST" },
+  refresh: { path: "/api/auth/refresh", method: "POST" },
   identity: { path: "/api/me", method: "GET" },
   permissions: { path: "/api/me/permissions", method: "GET" },
   profileRead: { path: "/api/me/profile", method: "GET" },

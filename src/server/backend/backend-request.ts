@@ -15,7 +15,7 @@ export const MAX_REQUEST_BYTES = 64 * 1024;
 const token = z.string().min(1).max(16_384).regex(/^[A-Za-z0-9._~+/-]+=*$/);
 const body = z.record(z.string(), z.json());
 const requestSchema = z.union([
-  z.strictObject({ endpoint: z.literal("login"), body }),
+  z.strictObject({ endpoint: z.enum(["login", "refresh"]), body }),
   z.strictObject({ endpoint: z.literal("profileUpdate"), accessToken: token, body }),
   z.strictObject({ endpoint: z.literal("passwordChange"), accessToken: token, body }),
   z.strictObject({ endpoint: z.enum(["identity", "permissions", "profileRead", "logout"]), accessToken: token }),

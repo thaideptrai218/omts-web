@@ -7,10 +7,6 @@ export type ProtectedAccessDecision =
   | Readonly<{ action: "render"; session: ResolvedServerSession }>
   | Readonly<{ action: "redirect-login" }>
   | Readonly<{ action: "recover-invalid-session" }>
-  | Readonly<{
-      action: "onboarding";
-      phase: "password-change-required" | "contact-verification-required";
-    }>
   | Readonly<{ action: "service-unavailable" }>;
 
 /**
@@ -22,9 +18,6 @@ export function decideProtectedAccess(
 ): ProtectedAccessDecision {
   if (result.status === "granted") {
     return Object.freeze({ action: "render", session: result.session });
-  }
-  if (result.status === "onboarding-required") {
-    return Object.freeze({ action: "onboarding", phase: result.phase });
   }
   if (result.status === "unavailable") {
     return Object.freeze({ action: "service-unavailable" });

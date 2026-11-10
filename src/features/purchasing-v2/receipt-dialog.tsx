@@ -112,7 +112,8 @@ function ReceiptEditor({ record, onClose, onSaved }: { record: Receipt | null; o
     Object.values(returnQuantities).some(Boolean);
   const editor = useOperationEditor(onClose, dirty);
   const read = useMutation();
-  const editable = !record ? allowed("Create") : record.statusId === 1701 && own && allowed("Edit");
+  // Drafts are continued on the receipt page, which carries the zone and discount a completion needs.
+  const editable = false;
 
   async function save(complete: boolean) {
     const parsed = c.receiptValues.safeParse({
@@ -158,6 +159,11 @@ function ReceiptEditor({ record, onClose, onSaved }: { record: Receipt | null; o
   return (
     <div className={styles.editor}>
       {editor.dialog}
+      {record?.statusId === 1701 && own && allowed("Edit") && (
+        <a className="font-semibold text-primary underline" href={`/operations/purchase-receipts/${record.id}/edit`}>
+          Mở phiếu tạm để tiếp tục
+        </a>
+      )}
       {record && <ReceiptRecordSummary record={record} />}
       <ErrorNotice
         error={error || editor.mutation.error || read.error || suppliers.error || items.error || rafts.error}

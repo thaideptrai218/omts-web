@@ -17,7 +17,7 @@ const port = await new Promise((resolve, reject) => {
   });
 });
 const origin = `http://127.0.0.1:${port}`;
-// Use the real built product in API mode, deliberately without Redis credentials.
+// Use the real built product in API mode, deliberately without a session key ring.
 // No backend, seed or user data is changed. Only this owned child is stopped.
 const env = { ...process.env, NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1",
   OMTS_DATA_SOURCE: "api", OMTS_API_BASE_URL: "https://not-called.invalid", OMTS_API_TIMEOUT_MS: "1000",
@@ -27,7 +27,7 @@ const env = { ...process.env, NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "
 env.OMTS_WEB_ORIGIN = "https://web.example.test";
 env.OMTS_WEB_COOKIE_PROFILE = "https";
 for (const name of Object.keys(env)) {
-  if (name.includes("SESSION_REDIS") || name.includes("SESSION_KEYRING") || name.includes("SESSION_ACTIVE_KEY")) delete env[name];
+  if (name.includes("SESSION_KEYRING") || name.includes("SESSION_ACTIVE_KEY")) delete env[name];
 }
 const child = spawn(process.execPath, [next, "start", "--hostname", "127.0.0.1", "--port", String(port)], {
   cwd: root, windowsHide: true, stdio: ["ignore", "pipe", "pipe"], env,
@@ -82,15 +82,11 @@ try {
     assert.equal(privateRead.headers.get("set-cookie"), null);
     checks += 3;
   }
-  const invalid = await get("/dashboard", { Cookie: "__Host-omts_web_sid=bad" });
+  const invalid = await get("/dashboard", { Cookie: "__Host-omts_at=bad" });
   const invalidBody = await invalid.text();
   assert.ok(invalid.headers.get("location") === "/session/recover" || invalidBody.includes("/session/recover"));
   privateFree(invalidBody);
   checks++;
-  const unavailable = await get("/api/auth/session", { Cookie: `__Host-omts_web_sid=${"A".repeat(43)}` });
-  assert.equal(unavailable.status, 503);
-  assert.equal(unavailable.headers.get("set-cookie"), null);
-  checks += 2;
   const login = await get("/login");
   const loginBody = await login.text();
   assert.ok(loginBody.includes("Đăng nhập hệ thống"));
@@ -104,14 +100,14 @@ try {
   assert.equal(rejected.status, 403);
   assert.equal(rejected.headers.get("set-cookie"), null);
   checks += 2;
-  for (const path of ["/register", "/recover"]) {
+  for (const path of ["/recover"]) {
     const publicPage = await get(path), publicBody = await publicPage.text();
     assert.equal(publicPage.status, 200); privateFree(publicBody); checks++;
   }
   const verificationRejected = await fetch(origin + "/api/verifications", { method: "POST", headers: { Origin: "https://foreign.example", "X-OMTS-Request": "web", "Content-Type": "application/json" }, body: JSON.stringify({ op: "read", purpose: "recovery" }), redirect: "manual", signal: AbortSignal.timeout(5000) });
   assert.equal(verificationRejected.status, 403); assert.equal(verificationRejected.headers.get("set-cookie"), null); assert.ok(verificationRejected.headers.get("cache-control").includes("no-store")); checks += 3;
   assert.ok(!logs.includes("demo123"));
-  console.log(`PASS: ${checks} built-product assertions (HTTP and compiled UI styles) for API mode, anonymous SSR, cookie recovery and unavailable Redis. TLS/browser not inferred.`);
+  console.log(`PASS: ${checks} built-product assertions (HTTP and compiled UI styles) for API mode, anonymous SSR and cookie recovery. TLS/browser not inferred.`);
 } finally {
   if (child.exitCode === null) child.kill();
   await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 3000))]);

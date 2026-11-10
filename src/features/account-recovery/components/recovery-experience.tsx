@@ -23,7 +23,7 @@ const stepContent: Record<
 > = {
   identifier: {
     description:
-      "Chọn cách nhận mã và nhập thông tin đã được xác minh trên tài khoản.",
+      "Nhập số điện thoại đã được xác minh trên tài khoản để nhận mã qua SMS.",
     title: "Khôi phục tài khoản",
   },
   "new-password": {
@@ -173,9 +173,7 @@ export function RecoveryExperience() {
                 setVerificationToken(token);
                 setActiveStep("new-password");
               }}
-              secondaryActionLabel={
-                "Đổi cách nhận mã"
-              }
+              secondaryActionLabel="Đổi số điện thoại"
               secondaryActionPending={isChangingIdentifier}
               secondaryActionPendingLabel="Đang hủy mã cũ..."
               service={mockAccountRecoveryEnvironment.verificationService}

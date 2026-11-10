@@ -137,14 +137,20 @@ export function StaffOnboardingShell({
 
             {!challenge ? (
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {gate.availableContactChannels.map((channel) => (
+                {/* Verification is by phone number only; an email address cannot satisfy the gate. */}
+                {!gate.availableContactChannels.includes("phone") && (
+                  <p className="text-sm leading-6 text-text-muted sm:col-span-2">
+                    Tài khoản chưa có số điện thoại để xác minh. Hãy liên hệ Chủ nhiệm HTX để bổ sung.
+                  </p>
+                )}
+                {gate.availableContactChannels.filter((channel) => channel === "phone").map((channel) => (
                   <Button
                     disabled={Boolean(startingChannel)}
                     isPending={startingChannel === channel}
                     key={channel}
                     onClick={() => handleStartContactVerification(channel)}
                     pendingLabel="Đang gửi mã..."
-                    variant={channel === "email" ? "primary" : "secondary"}
+                    variant="primary"
                   >
                     Gửi mã qua {getChannelLabel(channel)}
                   </Button>

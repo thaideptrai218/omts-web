@@ -25,7 +25,6 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
     if (!plan) return json({ status: "invalid-input", code: "MSG01" }, 400);
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: "session-expired" }, initial.status === "unavailable" ? 503 : 401);
-    if (initial.session.phase !== "application") return json({ status: "onboarding-required" }, 403);
     const context = await gateway.application(request.headers.get("cookie"));
     if (context.status !== "ready") return json({ status: "unavailable" }, 503);
     if (context.context.identity.subjectType !== "CooperativeOwner") return json({ status: "forbidden", code: "MSG02" }, 403);

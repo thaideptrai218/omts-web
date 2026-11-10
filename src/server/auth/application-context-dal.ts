@@ -1,7 +1,7 @@
 import "server-only";
 
 import { myPermissionsSchema } from "@/features/auth/api/permissions-contract.schema";
-import { currentIdentitySchema } from "@/features/auth/api/auth-contract.schemas";
+import { currentIdentitySchema, onboardingStateSchema } from "@/features/auth/api/auth-contract.schemas";
 import type { PermissionProjection } from "@/features/access/domain/function-permission";
 import type { BrowserIdentityDto } from "../backend/browser-dto";
 import { projectIdentityDto, projectPermissionsDto } from "../backend/browser-dto";
@@ -56,6 +56,10 @@ function backendFailure(
   endpoint: ContextEndpoint,
   result: BackendTransportResult,
 ): ApplicationContextResult {
+  // The API refused a token the cookie still holds (revoked, locked): recovery clears the cookies.
+  if (result.status === "http-error" && result.httpStatus === 401) {
+    return Object.freeze({ status: "unauthenticated", clearCookie: true });
+  }
   return Object.freeze({
     status: "backend-failure",
     endpoint,
@@ -68,7 +72,6 @@ export async function loadApplicationContext(
   backend: BackendRequester,
 ): Promise<ApplicationContextResult> {
   if (sessionResult.status === "unauthenticated") return sessionResult;
-  if (sessionResult.status === "onboarding-required") return sessionResult;
   if (sessionResult.status === "unavailable") {
     return Object.freeze({ status: "session-unavailable" });
   }
@@ -106,6 +109,18 @@ export async function loadApplicationContext(
   if (!identityWire.success || identityWire.data.sessionId.toLowerCase()
     !== sessionResult.session.identity.backendSessionId.toLowerCase()) {
     return Object.freeze({ status: "invalid-data", endpoint: "identity", reason: "session-mismatch" });
+  }
+
+  // The identity answer says which onboarding step is owed, in the order of the API account gate: phone, then password.
+  const onboarding = onboardingStateSchema.safeParse(identityResult.data);
+  if (!onboarding.success) {
+    return Object.freeze({ status: "invalid-data", endpoint: "identity", reason: "invalid-payload" });
+  }
+  if (onboarding.data.phoneVerificationRequired || onboarding.data.mustChangePassword) {
+    return Object.freeze({
+      status: "onboarding-required",
+      phase: onboarding.data.phoneVerificationRequired ? "contact-verification-required" : "password-change-required",
+    });
   }
 
   const permissionsResult = await requestBackend(backend, {

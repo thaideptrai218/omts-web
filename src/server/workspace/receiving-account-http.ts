@@ -27,7 +27,7 @@ export async function handleReceivingAccount(request: Request) {
     }
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: "session-expired" }, initial.status === "unavailable" ? 503 : 401);
-    if (initial.session.phase !== "application" || initial.session.identity.subjectType !== "CooperativeOwner") return json({ status: "forbidden" }, 403);
+    if (initial.session.identity.subjectType !== "CooperativeOwner") return json({ status: "forbidden" }, 403);
     const response = await fetch(new URL(banks ? "/api/banks" : "/api/cooperative/receiving-bank-account", config.config.origin), { method: body ? "PUT" : "GET", headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined, cache: "no-store", credentials: "omit", redirect: "error", signal: AbortSignal.any([request.signal, AbortSignal.timeout(config.config.timeoutMs)]) });
     const result = await readBackendResponse(response, "profileRead");
     const current = await gateway.resolve(request.headers.get("cookie"));

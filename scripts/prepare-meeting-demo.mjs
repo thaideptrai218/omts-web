@@ -11,7 +11,6 @@ async function send(path, body, form = false) {
 }
 const write = (area, action, id, zoneId, body) => send(`/api/operations/${area}`, { action, id, zoneId, body });
 try {
-  await send("/api/auth/bootstrap",null);
   await send("/api/auth/login",{identifier:"owner",password:process.env.OMTS_QA_PASSWORD || "Demo@1234"});
   const zones=(await send("/api/workspace/zones?page=1&pageSize=100")).data.items;
   const zone=zones.find(v=>v.code === "DEMO-01");
@@ -41,4 +40,4 @@ try {
   const lot=(await send(`/api/operations/harvest?action=detail&id=${harvest.data.lot.id}&zoneId=${zone.id}`)).data;
   console.log(`harvest saved ${lot.lotCode} cages=${lot.cageCount} estimatedKg=${lot.estimatedKg} photos=${lot.photos.length}`);
 } catch(error) { console.error(error.message); process.exitCode=1; }
-finally { try { const state=await send("/api/auth/bootstrap",null); await send("/api/auth/logout",{expectedRevision:state.revision}); } catch { /* no credentials output */ } }
+finally { try { await send("/api/auth/logout",null); } catch { /* no credentials output */ } }

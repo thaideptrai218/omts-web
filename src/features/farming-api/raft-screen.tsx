@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { createOperationsRepository } from "@/features/operations/repository";
-import { raftCostsSchema } from "@/features/operations/contracts";
+import { getRaftCosts } from "@/features/purchase-documents/repository";
 import { operationAllowed } from "@/features/operations/permissions";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { businessToday, DataTable, ErrorNotice, Field, money, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
@@ -55,13 +55,13 @@ export function RaftMaterialCosts({ raftId, zoneId }: { raftId: string; zoneId: 
   return operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions, "View", zoneId)
     ? <LoadedCosts raftId={raftId} zoneId={zoneId} /> : <p className="my-3">Bạn không có quyền xem chi phí phiếu nhập của bè.</p>;
 }
-function LoadedCosts({ raftId, zoneId }: { raftId: string; zoneId: string }) {
-  const repository = useMemo(() => createOperationsRepository("purchase-receipts"), []);
-  const costs = useRemote(useCallback((signal: AbortSignal) => repository.read("costs", { raftId, zoneId }, raftCostsSchema, signal), [repository, raftId, zoneId]));
-  const row = costs.data?.find((entry) => entry.raft.id === raftId);
-  return <div className="my-4 rounded-control border border-border p-3"><h2 className="font-semibold">Chi phí vật tư từ phiếu nhập</h2><ErrorNotice error={costs.error} />
-    {costs.loading ? <Skeleton /> : costs.error ? <Button className="w-auto" variant="secondary" onClick={costs.reload}>Tải lại chi phí</Button> : row?.receipts.length ? <><p className="mt-2">Tổng chi phí: {money(row.materialCost)}</p><details className="mt-3"><summary className="cursor-pointer text-primary">Phiếu làm căn cứ</summary>
-      <ul className="mt-2 space-y-2">{row.receipts.map((receipt) => <li key={receipt.receiptId}>{receipt.code} · {dateLabel(receipt.receiptDate)} · {money(receipt.materialCost)}</li>)}</ul></details></> : <p className="mt-2">Chưa có số liệu chi phí.</p>}
+/** Material cost comes from the material used on the raft, each use priced at the item's latest purchase price. */
+function LoadedCosts({ raftId }: { raftId: string; zoneId: string }) {
+  const costs = useRemote(useCallback((signal: AbortSignal) => getRaftCosts(raftId, signal), [raftId]));
+  const row = costs.data?.rafts.find((entry) => entry.raft.id === raftId);
+  return <div className="my-4 rounded-control border border-border p-3"><h2 className="font-semibold">Chi phí vật tư đã sử dụng</h2><ErrorNotice error={costs.error} />
+    {costs.loading ? <Skeleton /> : costs.error ? <Button className="w-auto" variant="secondary" onClick={costs.reload}>Tải lại chi phí</Button> : row?.usages.length ? <><p className="mt-2">Tổng chi phí tháng này: {money(row.materialCost)}{row.unpricedCount ? ` · ${row.unpricedCount} lần dùng chưa có giá nhập` : ""}</p><details className="mt-3"><summary className="cursor-pointer text-primary">Các lần sử dụng vật tư</summary>
+      <ul className="mt-2 space-y-2">{row.usages.map((usage) => <li key={usage.usageId}>{dateLabel(usage.date)} · {usage.itemName} · {usage.quantity.toLocaleString("vi-VN")} {usage.unit} × {usage.unpriced ? "chưa có giá nhập" : money(usage.unitPrice)} = {money(usage.amount)}</li>)}</ul></details></> : <p className="mt-2">Chưa có lần sử dụng vật tư nào trong tháng này.</p>}
   </div>;
 }
 const colors = { NotSeeded: "bg-slate-200 text-slate-900", Growing: "bg-emerald-700 text-white", Harvested: "bg-sky-700 text-white", WrittenOff: "bg-amber-200 text-slate-900" };

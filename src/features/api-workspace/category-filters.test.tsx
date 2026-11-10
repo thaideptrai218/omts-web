@@ -13,7 +13,7 @@ beforeAll(() => {
 afterAll(() => { Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"); Reflect.deleteProperty(HTMLDialogElement.prototype, "close"); });
 beforeEach(() => { vi.clearAllMocks(); state.list.mockImplementation(async (query) => ({ status: "success", data: { items: [], page: Number(query.page), pageSize: 20, total: 40 } })); });
 afterEach(cleanup);
-it.each([["suppliers", "Loại nhà cung cấp", "Material", "type"], ["input-items", "Nhóm vật tư", "Material", "group"]] as const)("combines category, status and search and resets paging for %s", async (resource, label, value, key) => {
+it.each([["input-items", "Nhóm vật tư", "Material", "group"]] as const)("combines category, status and search and resets paging for %s", async (resource, label, value, key) => {
   render(<ApiResourceScreen resource={resource} />);
   fireEvent.click(await screen.findByRole("button", { name: "Sau" })); await vi.waitFor(() => expect(state.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: "2" }), expect.any(AbortSignal)));
   const category = within(screen.getByRole("group",{name:label}));
@@ -47,16 +47,3 @@ it("preserves a linked customer's locked phone when opening the refined profile"
   expect(state.mutate).not.toHaveBeenCalled();
 });
 
-it("expands supplier details beneath the row without opening the edit dialog", async () => {
- const supplier = {id:"20000000-0000-4000-8000-000000000001",name:"Nhà cung cấp QA",supplierType:"Seed",phoneNumber:"0900000001",statusId:101};
- state.list.mockResolvedValue({status:"success",data:{items:[supplier],page:1,pageSize:20,total:1}});
- state.detail.mockResolvedValue({status:"success",data:{...supplier,address:"Địa chỉ kiểm thử",email:"supplier@example.test"}});
- render(<ApiResourceScreen resource="suppliers"/>);
- fireEvent.click(await screen.findByRole("button",{name:"Xem hồ sơ Nhà cung cấp QA"}));
- expect(await screen.findByText("Địa chỉ kiểm thử")).toBeTruthy();
- expect(screen.getByRole("region",{name:"Chi tiết nhà cung cấp"}).closest("tr")?.previousElementSibling?.textContent).toContain("Nhà cung cấp QA");
- expect(screen.queryByRole("dialog")).toBeNull();
- fireEvent.click(screen.getByRole("button",{name:"Xem hồ sơ Nhà cung cấp QA"}));
- expect(screen.queryByRole("region",{name:"Chi tiết nhà cung cấp"})).toBeNull();
- expect(state.mutate).not.toHaveBeenCalled();
-});

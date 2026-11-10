@@ -141,7 +141,7 @@ export function PersonalApiEditor({
           setContactError(contactFailureMessage(nameSaved, result));
           if (result.uncertain) setContactUncertain(true);
           else if (!retryableContactCodes.includes(result.code ?? ""))
-            setContactFlow({ ...contactFlow, phase: "failed" });
+            setContactFlow({ ...contactFlow, phase: "code" });
         }
       }
     } finally {

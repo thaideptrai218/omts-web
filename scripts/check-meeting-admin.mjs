@@ -10,7 +10,6 @@ for (const username of ["sysadmin", "owner"]) {
   }
   const assert = (condition, label) => { if (!condition) throw new Error(`${username}: ${label}`); console.log(`PASS ${username}: ${label}`); };
   try {
-    await request("/api/auth/bootstrap", null);
     const login = await request("/api/auth/login", { identifier: username, password: "Demo@1234" });
     assert([200,201].includes(login.http), `API login HTTP ${login.http} ${login.value.status ?? login.value.code ?? ""}`);
     assert((await request("/api/auth/session")).http === 200, "session");
@@ -35,5 +34,5 @@ for (const username of ["sysadmin", "owner"]) {
         assert(activity.value.data.filter(v => v.recordCode === fixture.username).length >= 2, "lock and unlock audited");
       }
     }
-  } finally { const state = await request("/api/auth/bootstrap", null); await request("/api/auth/logout", { expectedRevision: state.value.revision }); }
+  } finally { await request("/api/auth/logout", null); }
 }

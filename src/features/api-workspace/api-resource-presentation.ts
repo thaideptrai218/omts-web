@@ -12,7 +12,6 @@ export const directoryPresentation = {
   },
   zones: { icon: "zone", description: "Tìm vùng nuôi và mở hồ sơ để xem vị trí, bè và thông tin chi tiết." },
   rafts: { icon: "raft", description: "Tra cứu bè trong vùng được cấp và mở hồ sơ làn, vị trí, giấy tờ." },
-  suppliers: { icon: "users", description: "Tra cứu nhà cung cấp, liên hệ và trạng thái sử dụng." },
   "input-items": { icon: "document", description: "Tra cứu vật tư, nhóm và đơn vị tính trước khi lập chứng từ." },
   accounts: { icon: "account", description: "Xem tài khoản nội bộ, tình trạng và hồ sơ liên quan." },
   roles: { icon: "roles", description: "Đối chiếu vai trò và quyền hiện hành của hệ thống." },
@@ -20,7 +19,6 @@ export const directoryPresentation = {
 
 export const directoryActions: Partial<Record<ResourceKey, { create: string; open: string }>> = {
   customers: { create: "Thêm khách hàng", open: "Mở khách hàng" },
-  suppliers: { create: "Thêm nhà cung cấp", open: "Mở nhà cung cấp" },
   "input-items": { create: "Thêm vật tư", open: "Mở vật tư" },
 };
 

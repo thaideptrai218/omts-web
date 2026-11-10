@@ -22,7 +22,7 @@ export function EmployeeAccountDialog({ employee, options, service, onClose, onP
   function close() { if (!isPending()) onClose(); }
   const permissionPreview = buildEffectivePermissionPreview({ currentGrants: [], newGrants: drafts,
     featureCatalog: options.featureCatalog, roles: options.roles, zones: options.zones });
-  return <Dialog open size="lg" title={`Tạo tài khoản cho ${employee.fullName}`} description="Tên đăng nhập được tạo tự động. Thông tin kích hoạt được gửi trực tiếp cho nhân viên; Chủ nhiệm HTX không xem mật khẩu."
+  return <Dialog open size="lg" title={`Tạo tài khoản cho ${employee.fullName}`} description="Nhân viên đăng nhập bằng số điện thoại. Thông tin kích hoạt được gửi trực tiếp cho nhân viên; Chủ nhiệm HTX không xem mật khẩu."
     dismissible={!pending} onOpenChange={(open) => { if (!open) close(); }}>
     <form noValidate onSubmit={(event) => { event.preventDefault(); if (step === "preview") void create(); else void preview(); }} className="space-y-5">
       {feedback && <p role="alert" tabIndex={-1} ref={summaryRef} className="text-sm text-danger focus-visible:outline-2 focus-visible:outline-primary">{feedback}</p>}

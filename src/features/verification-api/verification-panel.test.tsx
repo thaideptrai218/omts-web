@@ -6,7 +6,7 @@ vi.mock("./repository", () => ({ createVerificationRepository: () => ({ execute 
 import { VerificationPanel } from "./verification-panel";
 const challenge = (phase: "code" | "verified" = "code") => ({ id: "122bb318-a72e-49aa-a8d7-a6169f889007", purpose: "contact", phase, channel: "Email", maskedTarget: "q***@example.test", expiresAt: new Date(Date.now() + 300_000).toISOString(), nextResendAt: new Date(Date.now() + 60_000).toISOString(), sendsLeft: 2 });
 beforeEach(() => execute.mockReset()); afterEach(() => cleanup());
-describe("G2 OTP panel", () => {
+describe("OTP panel", () => {
   it("leaves an expired screen only after missing cancellation is reconciled as empty", async () => {
     const old = { ...challenge(), expiresAt: new Date(Date.now() - 1000).toISOString() }, close = vi.fn();
     execute.mockResolvedValueOnce({ status: "success", flow: old }).mockResolvedValueOnce({ status: "error", code: "MSG16", uncertain: false }).mockResolvedValueOnce({ status: "empty" });

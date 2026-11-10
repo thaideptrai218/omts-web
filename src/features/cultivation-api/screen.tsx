@@ -11,6 +11,7 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { operationAllowed } from "@/features/operations/permissions";
 import { loadOptions } from "@/features/operations/lookups";
+import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { DataTable, ErrorNotice, Field, Select, Skeleton, useRemote } from "@/features/operations/ui";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import { cycle, cycleSummary, cycleValues, zoneCycle, type Cycle, type ZoneCycle } from "./contracts";
@@ -20,8 +21,8 @@ const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
 export function CyclesScreen() {
   const context = useApiWorkspace(), zones = useRemote(loadZones);
   const [zoneId, setZone] = useState(""), [selected, setSelected] = useState<ZoneCycle>(), [editingRow, setEditingRow] = useState<ZoneCycle>();
-  const available = zones.data?.filter(v => operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions, "View", v.id)) ?? [];
-  const activeZone = String(zoneId || available[0]?.id || "");
+  const { zones: available, zoneId: scopedZone } = useScopedZones(zones.data?.filter(v => operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions, "View", v.id)) ?? [], zoneId);
+  const activeZone = String(scopedZone || available[0]?.id || "");
   const rows = useRemote(useMemo(() => (signal: AbortSignal) => activeZone ? repo.read("list", { zoneId: activeZone }, z.array(zoneCycle), signal) : Promise.resolve({ status: "success" as const, data: [] }), [activeZone]));
   if (editingRow) return <CycleDetail row={editingRow} zoneId={activeZone} onClose={() => setEditingRow(undefined)} onSaved={() => { setEditingRow(undefined); setSelected(undefined); rows.reload(); }} />;
   const current = rows.data?.find(row => row.raftId === selected?.raftId);

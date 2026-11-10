@@ -12,9 +12,11 @@ import { useApiWorkspace } from "./api-workspace-shell";
 import { resources, resourceCategoryFilters, resourceAllowed, type ResourceKey } from "./resources";
 import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
+import { SupplierScreen } from "@/features/suppliers-api/supplier-screen";
 import { workspaceError } from "./workspace-error";
 import { GlobalZoneMap } from "@/features/farming-api/global-zone-map";
 import { loadOptions } from "@/features/operations/lookups";
+import { useScopedZones } from "./selected-zones";
 import { useDirectoryView } from "@/components/ui/use-directory-view";
 import { ResourceEditor } from "./api-resource-editor";
 import { ResourcePager, ResourceViewToggle } from "./api-resource-list-controls";
@@ -34,16 +36,16 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 /** Directory screen for a workspace resource; employees have their own dedicated screen. */
 export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
+  if (resource === "suppliers") return <SupplierScreen />;
   return resource === "employees" ? <EmployeeApiScreen /> : <GenericResourceScreen resource={resource} />;
 }
-
 function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const context = useApiWorkspace();
   const params = useSearchParams();
   // A single valid ?accountId= (accounts) or ?recordId= (zones, rafts) opens that record directly.
   const accountQuery = params.getAll(resource === "accounts" ? "accountId" : "recordId");
   const initialAccountId =
-    ["accounts", "zones", "rafts"].includes(resource) && accountQuery.length === 1 && UUID_PATTERN.test(accountQuery[0])
+    ["accounts", "zones", "rafts", "input-items"].includes(resource) && accountQuery.length === 1 && UUID_PATTERN.test(accountQuery[0])
       ? accountQuery[0]
       : undefined;
   const definition = resources[resource];
@@ -63,10 +65,10 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const [zoneError, setZoneError] = useState<string>();
   const [zoneLoading, setZoneLoading] = useState(false);
   const [zoneRefresh, setZoneRefresh] = useState(0);
-  const [zoneId, setZoneId] = useState("");
-  const [expandedSupplier, setExpandedSupplier] = useState<string>();
+  const [zoneChoice, setZoneId] = useState("");
   // undefined = editor closed, null = new record.
   const [selected, setSelected] = useState<ApiRecord | null>();
+  const { zones: offeredZones, zoneId } = useScopedZones(zones, zoneChoice, typeof selected?.zoneId === "string" ? selected.zoneId : undefined);
   // Bumped to remount the editor with fresh state.
   const [editorId, setEditorId] = useState(0);
   const [opening, setOpening] = useState(false);
@@ -263,7 +265,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
             }}
           >
             <option value="">Chọn vùng</option>
-            {zones.map((zone) => (
+            {offeredZones.map((zone) => (
               <option key={zone.id} value={zone.id}>
                 {text(zone.name)}
               </option>
@@ -349,16 +351,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
           items={page?.items}
           opening={opening}
           usesFilterRail={usesFilterRail}
-          expandedSupplier={expandedSupplier}
-          onToggleSupplier={(id) => setExpandedSupplier((value) => (value === id ? undefined : id))}
           onOpen={(row) => void open(row)}
-          canEdit={canEdit}
-          refresh={refresh}
-          onEditSupplier={(record) => {
-            setSelected(record);
-            setEditorId((value) => value + 1);
-          }}
-          onSupplierSaved={() => setRefresh((value) => value + 1)}
         />
       )}
       {page && (

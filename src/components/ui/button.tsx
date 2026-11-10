@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-type ButtonVariant = "danger" | "primary" | "secondary";
+type ButtonVariant = "danger" | "ghost" | "primary" | "secondary";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
@@ -11,6 +11,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantStyles: Record<ButtonVariant, string> = {
   danger: "border-danger bg-danger text-white hover:brightness-95",
+  ghost: "border-transparent bg-transparent text-text hover:text-primary",
   primary:
     "border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover",
   secondary:
@@ -31,14 +32,14 @@ export function Button({
     <button
       {...buttonProps}
       aria-busy={isPending || undefined}
-      className={`inline-flex min-h-11 lg:min-h-10 ${className.includes("w-auto") ? "" : "w-full"} items-center justify-center gap-2 rounded-control border px-3.5 py-2 text-[13px] font-medium transition-[background-color,border-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantStyles[variant]} ${className}`}
+      className={`inline-flex min-h-11 lg:min-h-0 ${className.includes("w-auto") ? "" : "w-full"} items-center justify-center gap-2 rounded-control border px-3 py-2 lg:py-1 text-[13px] leading-5 font-medium transition-[background-color,border-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantStyles[variant]} ${className}`}
       disabled={disabled || isPending}
       type={type}
     >
       {isPending && (
         <span
           aria-hidden="true"
-          className="size-5 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
+          className="size-4 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
         />
       )}
       <span className="inline-flex items-center justify-center gap-2">

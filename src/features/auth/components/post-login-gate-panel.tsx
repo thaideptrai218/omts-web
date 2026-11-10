@@ -13,12 +13,8 @@ type PostLoginGatePanelProps = Readonly<{
 function getGateContent(gate: PostLoginGate) {
   if (gate.status === "staff-onboarding-required") {
     if (gate.nextStep === "verify-contact") {
-      const availableChannels = gate.availableContactChannels
-        .map((channel) => (channel === "email" ? "email" : "số điện thoại"))
-        .join(" hoặc ");
-
       return {
-        description: `Mật khẩu mới đã được lưu. Tiếp theo, hãy xác minh ${availableChannels} mà Chủ nhiệm HTX đã khai báo.`,
+        description: "Mật khẩu mới đã được lưu. Tiếp theo, hãy xác minh số điện thoại mà Chủ nhiệm HTX đã khai báo.",
         title: "Xác minh thông tin liên hệ",
       };
     }

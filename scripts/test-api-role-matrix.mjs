@@ -24,8 +24,8 @@ class Client {
     if (path.startsWith("/api/")) assert.ok(value.response.headers.get("cache-control")?.includes("no-store"));
     results.push({ actor: this.username ?? "anonymous", path: path.split("?")[0], expected, actual: value.response.status }); return value.data;
   }
-  async login() { await this.check("/api/auth/bootstrap", 200, true); await this.check("/api/auth/login", 200, { identifier: this.username, password }); clients.push(this); }
-  async logout() { const state = await this.check("/api/auth/bootstrap", 200, true); await this.check("/api/auth/logout", 200, { expectedRevision: state.revision }); await this.check("/api/auth/session", 401); }
+  async login() { await this.check("/api/auth/login", 200, { identifier: this.username, password }); clients.push(this); }
+  async logout() { await this.check("/api/auth/logout", 200, true); await this.check("/api/auth/session", 401); }
 }
 try {
   const owner = new Client("owner"); await owner.login();

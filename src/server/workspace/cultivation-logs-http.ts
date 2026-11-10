@@ -15,7 +15,6 @@ export async function handleCultivationLogs(request: Request) {
   if (gateway.mode !== "api" || backend.status !== "valid" || backend.config.source !== "api") return json({ status: "unavailable" }, 503);
   try {
     const initial = await gateway.resolve(request.headers.get("cookie")); if (initial.status !== "resolved") return json({ status: "session-expired" }, 401);
-    if (initial.session.phase !== "application") return json({ status: "forbidden" }, 403);
     const application = await gateway.application(request.headers.get("cookie")); if (application.status !== "ready") return json({ status: "unavailable" }, 503);
     const { action, id } = q.data, permission = action === "list" ? "View" : action === "create" ? "Create" : "Edit";
     if (application.context.identity.subjectType !== "CooperativeOwner" && !application.context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_LOGS" && p.action === permission)) return json({ status: "forbidden", code: "MSG02" }, 403);

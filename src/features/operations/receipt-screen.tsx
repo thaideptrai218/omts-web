@@ -6,6 +6,7 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import * as c from "./contracts";
 import { type Query } from "./repository";
 import { loadOptions } from "./lookups";
+import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { ReceiptEditor } from "./receipt-editor";
 import { ReceiptListFilters, type ReceiptListFilterValues } from "./receipt-list-filters";
 import { ReceiptRaftCostsDialog } from "./receipt-raft-costs-dialog";
@@ -33,7 +34,7 @@ const loadItems = (signal: AbortSignal) => loadOptions("input-items", signal);
 /** Purchase receipt list with filters, raft material costs, Excel export and the receipt editor. */
 export function ReceiptScreen() {
   const context = useApiWorkspace();
-  const [filters, setFilters] = useState<ReceiptListFilterValues>({
+  const [chosen, setFilters] = useState<ReceiptListFilterValues>({
     code: "",
     zoneId: "",
     supplierId: "",
@@ -57,6 +58,9 @@ export function ReceiptScreen() {
   const zones = useRemote(loadZones);
   const suppliers = useRemote(loadSuppliers);
   const items = useRemote(loadItems);
+  // The zone picker narrows the zone filter; "all zones" is only offered while nothing is narrowed.
+  const { zones: offeredZones, zoneId: zoneFilter, narrowed } = useScopedZones(zones.data ?? [], chosen.zoneId);
+  const filters = useMemo(() => ({ ...chosen, zoneId: zoneFilter }), [chosen, zoneFilter]);
   const query = useMemo<Query>(() => ({ ...filters, page: String(page), pageSize: "20" }), [filters, page]);
   const list = useRemote(
     useMemo(() => (signal: AbortSignal) => repository.read("list", query, c.receiptSearchSchema, signal), [query]),
@@ -130,7 +134,8 @@ export function ReceiptScreen() {
       <ReceiptListFilters
         filters={filters}
         filter={filter}
-        zones={zones.data}
+        zones={offeredZones}
+        narrowed={narrowed}
         suppliers={suppliers.data}
         items={items.data}
         rafts={rafts.data}

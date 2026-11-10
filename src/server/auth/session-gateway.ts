@@ -2,58 +2,48 @@ import "server-only";
 
 import { parseServerBackendConfig } from "../config/backend-config";
 import { parseServerWebSessionConfig } from "../config/web-session-config";
-import { readSessionCookie } from "./session-cookie-reader";
-import { openServerSessionReadRuntime } from "./server-session-runtime";
-import { createServerSessionRuntimeOwner } from "./server-session-runtime-owner";
-import type { ServerSessionResolution } from "./server-session-resolver";
-import { guardApplicationSession } from "./application-session-guard";
 import { createBackendTransport } from "../backend/backend-transport";
+import { guardApplicationSession } from "./application-session-guard";
 import { loadApplicationContext } from "./application-context-dal";
+import { createServerSessionResolver, type ServerSessionResolution } from "./server-session-resolver";
+import { createSessionCookieHelpers } from "./session-cookies";
+import type { SessionPhase } from "./session-destinations";
+import { probeSessionPhase } from "./session-phase";
 
-// One gateway per worker; Redis provides shared session state across workers.
-// Request results and DTOs are never retained by the owner.
+export type SessionPhaseResult =
+  | Readonly<{ status: "ready"; phase: SessionPhase }>
+  | Readonly<{ status: "unauthenticated"; clearCookie: boolean }>
+  | Readonly<{ status: "unavailable" }>;
+
+// Stateless: every answer comes from the request cookies and, where a page needs it, from the API.
+// Nothing is cached across requests and no session record exists on the BFF.
 export function createSessionGateway(
   environment: Readonly<Record<string, unknown>>,
-  open = () => openServerSessionReadRuntime(environment),
   transport = createBackendTransport(environment),
+  clock: () => number = Date.now,
 ) {
   const source = parseServerBackendConfig(environment);
   const web = parseServerWebSessionConfig(environment);
-  const owner = createServerSessionRuntimeOwner(open);
+  const cookies = createSessionCookieHelpers(environment);
   const mode = source.status !== "valid" ? "unavailable" : source.config.source;
+  const resolver = cookies.status === "available" ? createServerSessionResolver({ cookies: cookies.cookies, clock }) : undefined;
 
   async function resolve(cookieHeader: unknown): Promise<ServerSessionResolution> {
-    if (mode !== "api" || web.status !== "valid") return { status: "unavailable" };
-    const cookie = readSessionCookie(cookieHeader, web.config.cookie.name);
-    if (cookie.status === "missing") return { status: "anonymous" };
-    if (cookie.status === "invalid-cookie") {
-      return { status: "invalid-session", reason: "invalid-cookie", clearCookie: true };
-    }
-    const opened = await owner.get();
-    return opened.status === "ready"
-      ? opened.runtime.resolve(cookieHeader)
-      : { status: "unavailable" };
+    if (mode !== "api" || web.status !== "valid" || !resolver) return { status: "unavailable" };
+    return resolver.resolve(cookieHeader);
   }
 
   return Object.freeze({
     mode,
     resolve,
-    async application(cookieHeader: unknown) {
-      const initial = guardApplicationSession(await resolve(cookieHeader));
-      const result = await loadApplicationContext(initial, transport);
-      if (result.status !== "ready" || initial.status !== "granted") return result;
-
-      // Logout/expiry may occur while /me or /permissions is pending. Never
-      // publish the old DTO until the same session revision has been rechecked.
-      const current = guardApplicationSession(await resolve(cookieHeader));
-      if (current.status === "unavailable") return { status: "session-unavailable" as const };
-      if (current.status !== "granted") return current;
-      if (current.session.revision !== initial.session.revision
-        || current.session.identity.accountId !== initial.session.identity.accountId) {
-        return { status: "session-unavailable" as const };
-      }
-      return result;
+    application: async (cookieHeader: unknown) => loadApplicationContext(guardApplicationSession(await resolve(cookieHeader)), transport),
+    // Where the account stands (application, password change, phone verification), asked of the API.
+    async phase(cookieHeader: unknown): Promise<SessionPhaseResult> {
+      const guarded = guardApplicationSession(await resolve(cookieHeader));
+      if (guarded.status !== "granted") return guarded;
+      const probe = await probeSessionPhase(transport, guarded.session.readAccessTokenForBackend());
+      if (probe.state === "live") return { status: "ready", phase: probe.phase };
+      return probe.state === "dead" ? { status: "unauthenticated", clearCookie: true } : { status: "unavailable" };
     },
-    dispose: owner.dispose,
   });
 }

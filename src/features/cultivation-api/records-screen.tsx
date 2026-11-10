@@ -10,6 +10,7 @@ import { CultivationProgress } from "./cultivation-progress";
 import { ManagementHeading } from "@/components/ui/management-page";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { loadOptions } from "@/features/operations/lookups";
+import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { operationAllowed } from "@/features/operations/permissions";
 import { ErrorNotice, Field, Select, Skeleton, useRemote } from "@/features/operations/ui";
 import { zoneCycle } from "./contracts";
@@ -38,12 +39,16 @@ function CultivationRecordsContent({ area }: { area: Area }) {
   const [zone, setZone] = useState(query.get("zoneId") ?? "");
   const [raft, setRaft] = useState(query.get("raftId") ?? "");
   const [search, setSearch] = useState("");
-  const available =
+  // The zone picker's selection scopes the list; a ?zoneId= link stays reachable.
+  const { zones: available, zoneId: scopedZone } = useScopedZones(
     zones.data?.filter((v) =>
       operationAllowed(area, context.identity, context.permissions.functionPermissions, "View", v.id),
-    ) ?? [];
+    ) ?? [],
+    zone,
+    query.get("zoneId") ?? undefined,
+  );
   // Without an explicit choice, fall back to the first zone the user may view.
-  const zoneId = String(zone || available[0]?.id || "");
+  const zoneId = String(scopedZone || available[0]?.id || "");
   const rafts = useRemote(
     useMemo(
       () => (signal: AbortSignal) =>

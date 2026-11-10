@@ -4,5 +4,5 @@ import { connection } from "next/server";
 
 export async function GET(request: Request) {
   await connection();
-  return createSessionHttpHandlers(process.env, getSessionGateway()).read(request);
+  return createSessionHttpHandlers(getSessionGateway()).read(request);
 }

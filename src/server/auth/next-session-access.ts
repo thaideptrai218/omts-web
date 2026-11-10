@@ -4,8 +4,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionGateway } from "./session-gateway.instance";
-import { sessionDestination } from "./session-destinations";
-import type { SessionPhase } from "./session-store";
+import { sessionDestination, type SessionPhase } from "./session-destinations";
 
 // React cache deduplicates within one RSC request; no cross-request user cache.
 export const readRequestSession = cache(async () => {
@@ -18,6 +17,12 @@ export const readRequestApplication = cache(async () => {
   return getSessionGateway().application(header);
 });
 
+// The account phase comes from the API, once per request, and is stored nowhere.
+export const readRequestPhase = cache(async () => {
+  const header = (await headers()).get("cookie");
+  return getSessionGateway().phase(header);
+});
+
 export async function requireApplicationPage() {
   const result = await readRequestApplication();
   if (result.status === "unauthenticated") {
@@ -28,12 +33,8 @@ export async function requireApplicationPage() {
 }
 
 export async function requireOnboardingPage(expected: Exclude<SessionPhase, "application">) {
-  const result = await readRequestSession();
-  if (result.status === "anonymous") redirect("/login");
-  if (result.status === "invalid-session") redirect("/session/recover");
-  if (result.status === "resolved" && result.session.phase !== expected) {
-    redirect(sessionDestination(result.session.phase));
-  }
-  // Do not pass the server capability to an onboarding Client Component.
-  return result.status === "resolved" ? { status: "ready" as const } : { status: "unavailable" as const };
+  const result = await readRequestPhase();
+  if (result.status === "unauthenticated") redirect(result.clearCookie ? "/session/recover" : "/login");
+  if (result.status === "ready" && result.phase !== expected) redirect(sessionDestination(result.phase));
+  return result.status === "ready" ? { status: "ready" as const } : { status: "unavailable" as const };
 }

@@ -1,3 +1,4 @@
+import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { zipStoredFiles } from "@/shared/downloads/zip-store";
 import { z } from "zod";
 import { invoiceConfirmationSchema } from "@/features/sales-invoices/confirmation-problem";
@@ -11,7 +12,7 @@ function queryString(input: Query) { return new URLSearchParams(Object.entries(i
 async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>, body?: unknown, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
   try {
     const form = body instanceof FormData;
-    const response = await fetch(`/api/operations/${area}?${queryString(query)}`, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", redirect: "error", cache: "no-store",
+    const response = await bffFetch(`/api/operations/${area}?${queryString(query)}`, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", redirect: "error", cache: "no-store",
       headers: { Accept: "application/json", ...(body === undefined ? {} : { "X-OMTS-Request": "web", ...(form ? {} : { "Content-Type": "application/json" }) }) },
       body: body === undefined ? undefined : form ? body : JSON.stringify(body), signal: signal ?? AbortSignal.timeout(60_000) });
     const result = await response.json();
@@ -47,7 +48,7 @@ export function createOperationsRepository(area: RepositoryArea) {
       try {
         const files: {name:string;bytes:Uint8Array}[]=[]; let size=0;
         for (const [index,query] of queries.entries()) {
-          const response=await fetch(`/api/operations/${area}?${queryString({...query,action:"export"})}`,{credentials:"same-origin",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(60_000)});
+          const response=await bffFetch(`/api/operations/${area}?${queryString({...query,action:"export"})}`,{credentials:"same-origin",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(60_000)});
           if (!response.ok) {const data=await response.json();return {status:"error",httpStatus:response.status,code:data.code,uncertain:false};}
           if (!response.headers.get("content-type")?.startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) throw new Error("Unexpected file");
           const bytes=new Uint8Array(await response.arrayBuffer());size+=bytes.length;if(size>63*1024*1024)throw new Error("Export too large");
@@ -59,7 +60,7 @@ export function createOperationsRepository(area: RepositoryArea) {
     },
     async download(query: Query): Promise<WorkspaceResult<true>> {
       try {
-        const response = await fetch(`/api/operations/${area}?${queryString({ ...query, action: "export" })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000) });
+        const response = await bffFetch(`/api/operations/${area}?${queryString({ ...query, action: "export" })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000) });
         if (!response.ok) {
           const data = await response.json(); return { status: "error", httpStatus: response.status, code: data.code, uncertain: false };
         }

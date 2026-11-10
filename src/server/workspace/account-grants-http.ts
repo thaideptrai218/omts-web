@@ -24,7 +24,6 @@ export async function handleOwnerAccessRead(request: Request, area: keyof typeof
   try {
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: initial.status === "unavailable" ? "unavailable" : "session-expired" }, initial.status === "unavailable" ? 503 : 401);
-    if (initial.session.phase !== "application") return json({ status: "onboarding-required" }, 403);
     if (initial.session.identity.subjectType !== "CooperativeOwner") return json({ status: "forbidden", code: "MSG02" }, 403);
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(backend.config.timeoutMs)]);
     const response = await fetch(new URL(plan.path(id?.success ? id.data : ""), backend.config.origin), { cache: "no-store", credentials: "omit", redirect: "error", signal, headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` } });

@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { sessionCookieNames, type SessionCookieNames } from "../auth/session-cookie-names";
 
 const environmentInput = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
@@ -9,12 +10,12 @@ const environmentInput = z.object({
   NEXT_PUBLIC_OMTS_WEB_COOKIE_PROFILE: z.never().optional(),
 });
 type ConfigField = keyof z.infer<typeof environmentInput>;
-type CookieBase = Readonly<{ httpOnly: true; sameSite: "lax"; path: "/" }>;
-export type ServerWebSessionConfig =
-  | Readonly<{ origin: string; cookieProfile: "https";
-    cookie: CookieBase & Readonly<{ name: "__Host-omts_web_sid"; secure: true }> }>
-  | Readonly<{ origin: string; cookieProfile: "http-loopback-dev";
-    cookie: CookieBase & Readonly<{ name: "omts_web_sid_dev"; secure: false }> }>;
+type CookieAttributes = Readonly<{ httpOnly: true; sameSite: "lax"; secure: boolean }>;
+export type ServerWebSessionConfig = Readonly<{
+  origin: string;
+  cookieProfile: "https" | "http-loopback-dev";
+  cookies: SessionCookieNames & CookieAttributes;
+}>;
 
 type ConfigResult = Readonly<{ status: "valid"; config: ServerWebSessionConfig }>
   | Readonly<{ status: "invalid-config"; fields: readonly ConfigField[] }>;
@@ -50,18 +51,14 @@ export function parseServerWebSessionConfig(environment: Readonly<Record<string,
     if (!origin) return invalid(["OMTS_WEB_ORIGIN"]);
     if (env.OMTS_WEB_COOKIE_PROFILE === "https") {
       if (origin.protocol !== "https:") return invalid(["OMTS_WEB_ORIGIN"]);
-      const cookie = Object.freeze({
-        name: "__Host-omts_web_sid", httpOnly: true, secure: true, sameSite: "lax", path: "/",
-      } as const);
-      const config = Object.freeze({ origin: origin.origin, cookieProfile: "https", cookie } as const);
+      const cookies = Object.freeze({ ...sessionCookieNames("https"), httpOnly: true, secure: true, sameSite: "lax" } as const);
+      const config = Object.freeze({ origin: origin.origin, cookieProfile: "https", cookies } as const);
       return Object.freeze({ status: "valid", config });
     }
     if (env.NODE_ENV === "production") return invalid(["OMTS_WEB_COOKIE_PROFILE"]);
     if (origin.protocol !== "http:" || !origin.loopback) return invalid(["OMTS_WEB_ORIGIN"]);
-    const cookie = Object.freeze({
-      name: "omts_web_sid_dev", httpOnly: true, secure: false, sameSite: "lax", path: "/",
-    } as const);
-    const config = Object.freeze({ origin: origin.origin, cookieProfile: "http-loopback-dev", cookie } as const);
+    const cookies = Object.freeze({ ...sessionCookieNames("http-loopback-dev"), httpOnly: true, secure: false, sameSite: "lax" } as const);
+    const config = Object.freeze({ origin: origin.origin, cookieProfile: "http-loopback-dev", cookies } as const);
     return Object.freeze({ status: "valid", config });
   } catch {
     // Even malformed caller objects/getters must not leak environment values/cause.

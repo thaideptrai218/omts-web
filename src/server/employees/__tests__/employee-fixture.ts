@@ -2,26 +2,26 @@ import { vi } from "vitest";
 import { employeeDetailFixture, employeeId } from "@/features/employee-management/api/employee-wire.fixtures";
 import { mapEmployeeDetailResponse } from "@/features/employee-management/api/map-employee-response";
 import { employeeRecordToEditorValues, mapEmployeeUpdate } from "@/features/employee-management/api/map-employee-update";
-import { newSession, accountId } from "../../auth/__tests__/session-fixture";
-import { ResolvedServerSession, type ServerSessionResolution } from "../../auth/server-session-resolver";
-import type { StoredSession } from "../../auth/session-store";
+import { ResolvedServerSession, type ServerSessionResolution, type SessionIdentity } from "../../auth/server-session-resolver";
 import type { BackendRequest } from "../../backend/backend-request";
 import type { BackendRequestOptions } from "../../backend/backend-transport";
 import type { BackendTransportResult } from "../../backend/backend-result";
 
 export { employeeDetailFixture, employeeId };
 export const accessCanary = crypto.randomUUID();
+const accountId = "122bb318-a72e-49aa-a8d7-a6169f889007";
 export const environment = {
   NODE_ENV: "test", OMTS_DATA_SOURCE: "api", OMTS_API_BASE_URL: "http://127.0.0.1:5280", OMTS_API_TIMEOUT_MS: "1000",
   OMTS_WEB_ORIGIN: "https://web.example.test", OMTS_WEB_COOKIE_PROFILE: "https",
 };
 
-export function resolved(overrides: Partial<StoredSession> = {}) {
-  const stored: StoredSession = {
-    ...newSession({ phase: "application", identity: { accountId, backendSessionId: accountId, subjectType: "CooperativeOwner" } }),
-    schemaVersion: 1, revision: "revision-1", createdAtMs: 1, ...overrides,
-  };
-  return { status: "resolved" as const, session: new ResolvedServerSession(stored, accessCanary) };
+// The session now exists only as claims of the access token, so phase, revision and store hash
+// overrides that older cases pass have no counterpart and are ignored.
+export function resolved(overrides: Partial<{ identity: SessionIdentity; phase: string; revision: string; idHash: string }> = {}) {
+  const identity: SessionIdentity = overrides.identity ?? { accountId, backendSessionId: accountId, subjectType: "CooperativeOwner" };
+  return { status: "resolved" as const, session: new ResolvedServerSession({
+    accountId: identity.accountId, sessionId: identity.backendSessionId, subjectType: identity.subjectType, expiresAtMs: Date.now() + 600_000,
+  }, accessCanary) };
 }
 
 export function putBody() {

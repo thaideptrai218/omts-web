@@ -24,7 +24,7 @@ describe("shared API navigation shell", () => {
     fireEvent.click(cultivation.querySelector("summary")!);
     expect(within(cultivation).getByRole("link", { name: "Chu kỳ nuôi" }).getAttribute("href")).toBe("/farming/cycles");
     expect(nav.querySelectorAll('a[href="/farming/cycles"]')).toHaveLength(1);
-    const personnel = within(nav).getByText("Nhân sự & phân quyền", { exact: true }).closest("details")!;
+    const personnel = within(nav).getByText("Nhân sự", { exact: true }).closest("details")!;
     fireEvent.click(personnel.querySelector("summary")!);
     expect(within(personnel).getByRole("link", { name: "Nhân viên thời vụ" }).getAttribute("href")).toBe("/workspace/employees");
     expect(within(personnel).getByRole("link", { name: "Phân công và chấm công" }).getAttribute("href")).toBe("/operations/workforce");
@@ -38,6 +38,33 @@ describe("shared API navigation shell", () => {
     const sales = within(nav).getByText("Kinh doanh", { exact: true }).closest("details")!;
     fireEvent.click(sales.querySelector("summary")!);
     expect(within(sales).getByRole("link", { name: "Yêu cầu mua hàu" })).toBeTruthy();
+  });
+  it("puts the overview first and moves settings destinations into the header settings menu", () => {
+    const view = setup("CooperativeOwner");
+    const nav = within(view.container).getByRole("navigation", { name: "Chức năng" });
+    expect(nav.querySelector("details summary")?.textContent).toBe("Điều hành");
+    expect(nav.querySelector('details a[href="/dashboard"]')).toBeTruthy();
+    expect(nav.querySelector('a[href="/cooperative/profile"]')).toBeNull();
+    expect(nav.querySelector('a[href="/cooperative/receiving-bank-account"]')).toBeNull();
+    const settings = within(view.container).getByRole("button", { name: "Cài đặt" });
+    expect(settings.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(settings);
+    expect(settings.getAttribute("aria-expanded")).toBe("true");
+    expect(within(view.container).getByRole("link", { name: "Hồ sơ hợp tác xã" }).getAttribute("href")).toBe("/cooperative/profile");
+    expect(within(view.container).getByRole("link", { name: "Ngân hàng nhận tiền" }).getAttribute("href")).toBe("/cooperative/receiving-bank-account");
+    fireEvent.keyDown(settings, { key: "Escape" });
+    expect(settings.getAttribute("aria-expanded")).toBe("false");
+  });
+  it("collapses the account block to an avatar button that names the account and keeps sign-out reachable", () => {
+    const view = setup("Trader");
+    expect(within(view.container).queryByRole("button", { name: "Cài đặt" })).toBeNull();
+    const avatar = within(view.container).getByRole("button", { name: /Menu tài khoản: fixture, Thương lái/ });
+    expect(within(view.container).queryByText("Đăng xuất")).toBeNull();
+    fireEvent.click(avatar);
+    expect(within(view.container).getByRole("link", { name: "Hồ sơ cá nhân" }).getAttribute("href")).toBe("/account");
+    expect(within(view.container).getByRole("button", { name: "Đăng xuất" })).toBeTruthy();
+    fireEvent.pointerDown(document.body);
+    expect(avatar.getAttribute("aria-expanded")).toBe("false");
   });
   it("closes a top navigation group after selecting a destination", () => {
     const view = setup("Trader");

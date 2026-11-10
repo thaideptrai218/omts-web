@@ -1,8 +1,9 @@
+import { bffFetch } from "@/features/auth/api/bff-fetch";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { zoneMapSchema, type MapZone } from "./zone-map-contract";
 export async function readZoneMap(includeDiscontinued: boolean, signal: AbortSignal): Promise<WorkspaceResult<MapZone[]>> {
   try {
-    const response = await fetch(`/api/zone-map?includeDiscontinued=${includeDiscontinued}`, { cache: "no-store", credentials: "same-origin", redirect: "error", signal, headers: { Accept: "application/json" } });
+    const response = await bffFetch(`/api/zone-map?includeDiscontinued=${includeDiscontinued}`, { cache: "no-store", credentials: "same-origin", redirect: "error", signal, headers: { Accept: "application/json" } });
     const value = await response.json();
     const parsed = response.ok && value.status === "success" ? zoneMapSchema.safeParse(value.data) : undefined;
     return parsed?.success ? { status: "success", data: parsed.data }

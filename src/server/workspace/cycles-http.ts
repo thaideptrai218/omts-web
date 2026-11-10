@@ -20,7 +20,6 @@ export async function handleCycles(request: Request) {
   try {
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: "session-expired" }, 401);
-    if (initial.session.phase !== "application") return json({ status: "forbidden" }, 403);
     const application = await gateway.application(request.headers.get("cookie"));
     if (application.status !== "ready") return json({ status: "unavailable" }, 503);
     if (application.context.identity.subjectType !== "CooperativeOwner" && !application.context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_CYCLES" && p.action === "View")) return json({ status: "forbidden", code: "MSG02" }, 403);
@@ -53,7 +52,6 @@ export async function handleCycleWrite(request: Request) {
     ]).safeParse(check.body.readForValidation());
     if (!command.success || new URL(request.url).search) return json({ status: "invalid-input" }, 400);
     const initial = await gateway.resolve(request.headers.get("cookie")); if (initial.status !== "resolved") return json({ status: "session-expired" }, 401);
-    if (initial.session.phase !== "application") return json({ status: "forbidden" }, 403);
     const application = await gateway.application(request.headers.get("cookie")); if (application.status !== "ready") return json({ status: "unavailable" }, 503);
     const q = command.data, permission = q.action === "start" ? "Create" : q.action === "edit" ? "Edit" : "Delete";
     if (application.context.identity.subjectType !== "CooperativeOwner" && !application.context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_CYCLES" && p.action === permission)) return json({ status: "forbidden", code: "MSG02" }, 403);
