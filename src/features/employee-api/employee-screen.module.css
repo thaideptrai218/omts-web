@@ -1,4 +1,18 @@
 .directory { min-width:0; }
+.previewCell { padding:0 !important; white-space:normal !important; }
+.preview { padding:20px 24px; background:var(--omts-color-surface-subtle); border-inline-start:3px solid var(--omts-color-primary); }
+.previewHeader { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.previewHeader small { font-size:10px; letter-spacing:.08em; color:var(--omts-color-text-muted); }
+.previewHeader h3 { margin-top:4px; font-size:18px; font-weight:650; }
+.previewFields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 32px; margin:20px 0; }
+.previewFields > div { padding-bottom:10px; border-bottom:1px solid var(--omts-color-border); }
+.previewFields dt { font-size:12px; color:var(--omts-color-text-muted); }
+.previewFields dd { margin-top:5px; font-size:14px; overflow-wrap:anywhere; }
+.previewActions { display:flex; justify-content:flex-end; gap:20px; align-items:center; }
+.profileAction { padding:9px 14px; border-radius:6px; background:var(--omts-color-primary); color:white; font-size:13px; font-weight:600; }
+.profileAction:focus-visible { outline:2px solid var(--omts-color-primary); outline-offset:3px; }
+.profileAction:disabled { opacity:.5; }
+@media(max-width:639px) { .preview { padding:16px; } .previewHeader { align-items:flex-start; } .previewFields { grid-template-columns:minmax(0,1fr); gap:12px; } }
 .resultHeading { display:flex; align-items:start; justify-content:space-between; gap:16px; padding-bottom:14px; border-bottom:1px solid var(--omts-color-border); }
 .resultHeading h2 { font-size:16px; font-weight:650; }
 .resultHeading p, .resultHeading > span { color:var(--omts-color-text-muted); font-size:12px; }

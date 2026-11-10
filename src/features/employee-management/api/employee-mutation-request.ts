@@ -1,6 +1,4 @@
-import { z } from "zod";
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
-import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 import { employeeUpdateRequestSchema } from "./employee-update.schema";
 
 // Prepared upstream requests only. No origin, auth header, HTTP execution,
@@ -12,20 +10,8 @@ type EmployeePutRequest = Readonly<{
   body: string;
 }>;
 
-type EmployeeUnlinkRequest = Readonly<{
-  method: "DELETE";
-  path: string;
-  headers: Readonly<{ Accept: "application/json" }>;
-  body?: never;
-}>;
-
-export type EmployeeMutationRequest = EmployeePutRequest | EmployeeUnlinkRequest;
+export type EmployeeMutationRequest = EmployeePutRequest;
 type PreparationResult<T> = Readonly<{ status: "prepared"; request: T }> | Readonly<{ status: "invalid-input" }>;
-
-const unlinkInputSchema = z.strictObject({
-  employeeId: apiIdSchema,
-  recordVersion: employeeRowVersionSchema,
-});
 
 export function prepareEmployeePutRequest(employeeId: unknown, body: unknown): PreparationResult<EmployeePutRequest> {
   const id = apiIdSchema.safeParse(employeeId);
@@ -41,16 +27,8 @@ export function prepareEmployeePutRequest(employeeId: unknown, body: unknown): P
   };
 }
 
-export function prepareEmployeeUnlinkRequest(input: unknown): PreparationResult<EmployeeUnlinkRequest> {
-  const parsed = unlinkInputSchema.safeParse(input);
-  if (!parsed.success) return { status: "invalid-input" };
-  const { employeeId, recordVersion } = parsed.data;
-  return {
-    status: "prepared",
-    request: {
-      method: "DELETE",
-      path: `/api/employees/${employeeId}/account?rowVersion=${encodeURIComponent(recordVersion)}`,
-      headers: { Accept: "application/json" },
-    },
-  };
+// Compatibility export for the unmounted legacy transport registry. This endpoint no longer exists.
+export function prepareEmployeeUnlinkRequest(_input: unknown): { readonly status: "invalid-input" } {
+  void _input;
+  return { status: "invalid-input" };
 }

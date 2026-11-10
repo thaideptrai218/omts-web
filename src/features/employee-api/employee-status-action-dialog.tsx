@@ -5,9 +5,9 @@ import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
 import { businessToday, control, ErrorNotice } from "@/features/operations/ui";
 import type { Employee } from "./contracts";
 
-export type EmployeeStatusAction = "unlink" | "end-employment" | "reinstate";
+export type EmployeeStatusAction = "end-employment" | "resume";
 
-/** Confirmation for unlinking the account, ending employment (with end date) or reinstating. */
+/** Confirms the employee's last working day or resumption. */
 export function EmployeeStatusActionDialog({
   action,
   baseline,
@@ -30,12 +30,8 @@ export function EmployeeStatusActionDialog({
   onCancel(): void;
   onConfirm(): void;
 }) {
-  const title =
-    action === "unlink" ? "Bỏ liên kết tài khoản?" : action === "end-employment" ? "Nghỉ việc?" : "Đi làm lại?";
-  const message =
-    action === "unlink"
-      ? `Bỏ liên kết @${baseline.account?.username} khỏi ${baseline.fullName}? Các thay đổi khác đang nhập vẫn được giữ.`
-      : `${baseline.fullName} sẽ chuyển sang ${action === "end-employment" ? "Đã nghỉ việc" : "Đang làm việc"}. Tài khoản và quyền truy cập được kiểm tra riêng.`;
+  const title = action === "end-employment" ? "Nghỉ việc?" : "Cho làm việc lại?";
+  const message = `${baseline.fullName} sẽ chuyển sang ${action === "end-employment" ? "Đã nghỉ việc" : "Đang làm việc"}.`;
 
   return (
     <Dialog
@@ -74,7 +70,7 @@ export function EmployeeStatusActionDialog({
             Hủy
           </Button>
           <Button className="w-auto" type="submit" isPending={pending}>
-            Xác nhận {action === "unlink" ? "bỏ liên kết" : action === "end-employment" ? "nghỉ việc" : "đi làm lại"}
+            Xác nhận {action === "end-employment" ? "nghỉ việc" : "cho làm việc lại"}
           </Button>
         </div>
       </form>

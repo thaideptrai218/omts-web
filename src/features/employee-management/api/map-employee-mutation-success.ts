@@ -9,10 +9,8 @@ export function mapEmployeeMutationSuccess(
   body: unknown,
   expectedEmployeeId: string,
 ) {
+  if (method !== "PUT") return { status: "unexpected-status" } as const;
   if (httpStatus !== 200) return { status: "unexpected-status" } as const;
   const result = mapEmployeeSavedResponse(body, expectedEmployeeId);
-  if (result.status === "mapped" && method === "DELETE" && result.value.account !== null) {
-    return { status: "invalid-response" } as const;
-  }
   return result;
 }

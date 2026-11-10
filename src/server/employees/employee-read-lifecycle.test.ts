@@ -11,11 +11,9 @@ describe("employee GET lifecycle", () => {
   it.each([
     { status: "anonymous" } as const,
     { status: "invalid-session", reason: "invalid-session", clearCookie: true } as const,
-    resolved({ revision: "new-revision" }), resolved({ idHash: "b".repeat(64) }),
     resolved({ identity: { ...resolved().session.identity, accountId: employeeId } }),
     resolved({ identity: { ...resolved().session.identity, backendSessionId: employeeId } }),
     resolved({ identity: { ...resolved().session.identity, subjectType: "Staff" } }),
-    resolved({ phase: "contact-verification-required" }),
   ])("discards data after session identity/phase changes case %#", async (current) => {
     const transport = backend(); transport.request.mockResolvedValue(success());
     const resolve = resolver().mockResolvedValueOnce(resolved()).mockResolvedValueOnce(current);

@@ -2,17 +2,20 @@ import { z } from "zod";
 import { employeeUpdateRequestSchema } from "@/features/employee-management/api/employee-update.schema";
 import { employeeViewSchema } from "@/features/employee-management/api/employee-contract.schemas";
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
-import { createEmployeeEndDateSchema } from "@/features/employee-management/schemas/employee-employment-schema";
+import { employeeDateOnlySchema } from "@/features/employee-management/schemas/employee-date-only";
 import { employeeBusinessDate } from "@/features/employee-management/schemas/employee-date-only";
+import { normalizeEmployeePhone } from "@/features/employee-management/schemas/employee-phone";
 
-export { employeePageSchema, employeeViewSchema, linkableEmployeeAccountsSchema } from "@/features/employee-management/api/employee-contract.schemas";
+export { employeePageSchema, employeeViewSchema, jobTypeOptionsSchema } from "@/features/employee-management/api/employee-contract.schemas";
 export type { EmployeeViewDto as Employee } from "@/features/employee-management/api/employee-contract.schemas";
-export const createProfileSchema = employeeUpdateRequestSchema.omit({ rowVersion: true });
-export function validProfileDate<T extends { birthday: string | null }>(value: T) { return value.birthday === null || value.birthday <= employeeBusinessDate(new Date()); }
+export const createProfileSchema = employeeUpdateRequestSchema.omit({ rowVersion: true }).extend({ employeeType: z.enum(["SeasonalWorker", "Staff"]), workingZoneIds: z.array(z.guid()).min(1).refine(ids => new Set(ids).size === ids.length) });
+export function validProfileDate<T extends { birthday?: string | null }>(value: T) { return !value.birthday || value.birthday <= employeeBusinessDate(new Date()); }
 export const createProfileInputSchema = createProfileSchema.refine(validProfileDate, { path: ["birthday"] });
-export const updateProfileInputSchema = employeeUpdateRequestSchema.refine(validProfileDate, { path: ["birthday"] });
-export const endEmploymentSchema = z.strictObject({ endDate: z.string(), rowVersion: employeeRowVersionSchema }).refine((value) => createEmployeeEndDateSchema().safeParse(value).success, { path: ["endDate"] });
+export const updateProfileInputSchema = employeeUpdateRequestSchema
+  .refine(validProfileDate, { path: ["birthday"] })
+  .refine(value => !value.employeeTypeFrom || !!value.employeeType, { path: ["employeeTypeFrom"] });
+export const endEmploymentSchema = z.strictObject({ lastWorkingDay: employeeDateOnlySchema, rowVersion: employeeRowVersionSchema }).refine(value => value.lastWorkingDay <= employeeBusinessDate(new Date()), { path: ["lastWorkingDay"] });
 export const employeeVersionSchema = z.strictObject({ rowVersion: employeeRowVersionSchema });
-export const employmentChangedSchema = z.object({ employee: employeeViewSchema, followUp: z.object({ action: z.enum(["review-lock", "review-access"]), accountId: z.guid() }).nullable() })
-  .refine((value) => !value.followUp || value.employee.account?.id === value.followUp.accountId, { path: ["followUp"] });
+export const resumeEmployeeSchema = employeeVersionSchema.extend({ phoneNumber: z.string().refine(value => !value.trim() || normalizeEmployeePhone(value) !== null).nullish() });
+export const employmentChangedSchema = z.object({ employee: employeeViewSchema });
 export type EmploymentChange = z.infer<typeof employmentChangedSchema>;

@@ -41,7 +41,6 @@ export function mapEmployeeUpdate(
     notes: optionalText(input.notes, record.notes),
     workingZoneIds: [...input.workingZoneIds],
     bankAccount: toEmployeeBankAccount(input.bankAccount),
-    accountId: input.accountId || null,
     rowVersion: record.recordVersion,
   });
   return parsed.success

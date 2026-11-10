@@ -8,6 +8,11 @@ export function employeeListItemFixture() {
     id: employeeId,
     fullName: "Nguyễn Văn An",
     phoneNumber: "0900000000",
+    employeeType: "Staff",
+    jobTypes: [],
+    lastWorkingDay: null,
+    canMaintain: true,
+    rowVersion: "AAAAAAAA+/8=",
     workingZones: [{ id: workingZoneId, code: "V01", name: "Vùng Đông" }],
     account: {
       id: linkedAccountId,
@@ -33,7 +38,8 @@ export function employeeDetailFixture() {
       accountNumber: "000000123456",
       accountHolderName: "NGUYEN VAN AN",
     },
-    employmentEndDate: null,
+    typeHistory: [{ type: "Staff", effectiveFrom: "2026-01-01" }],
+    hasStaffAccount: true,
     rowVersion: "AAAAAAAA+/8=",
   };
 }

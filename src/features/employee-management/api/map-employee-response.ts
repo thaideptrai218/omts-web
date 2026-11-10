@@ -1,9 +1,9 @@
 import {
-  employeePageSchema, employeeSavedSchema, employeeViewSchema, linkableEmployeeAccountsSchema,
+  employeePageSchema, employeeSavedSchema, employeeViewSchema,
   type EmployeeListItemDto, type EmployeeViewDto,
 } from "./employee-contract.schemas";
 import type {
-  EmployeeLinkableAccount, EmployeeLinkedAccount, EmployeeListRecord, EmployeePage, EmployeeRecord,
+  EmployeeLinkedAccount, EmployeeListRecord, EmployeePage, EmployeeRecord,
 } from "@/features/employee-management/domain/employee-record";
 
 type MappingResult<T> =
@@ -31,10 +31,10 @@ function mapDetail(dto: EmployeeViewDto, expectedEmployeeId: string): MappingRes
   return {
     status: "mapped",
     value: {
-      ...mapSummary(dto), birthday: dto.birthday, address: dto.address, area: dto.area,
-      wardCommune: dto.ward, otherInformation: dto.otherInformation, notes: dto.notes,
-      bankAccount: dto.bankAccount === null ? null : { ...dto.bankAccount },
-      employmentEndDate: dto.employmentEndDate, recordVersion: dto.rowVersion,
+      ...mapSummary(dto), birthday: dto.birthday ?? null, address: dto.address ?? null, area: dto.area ?? null,
+      wardCommune: dto.ward ?? null, otherInformation: dto.otherInformation ?? null, notes: dto.notes ?? null,
+      bankAccount: dto.bankAccount == null ? null : { ...dto.bankAccount },
+      employmentEndDate: dto.lastWorkingDay, recordVersion: dto.rowVersion,
     },
   };
 }
@@ -55,13 +55,4 @@ export function mapEmployeePageResponse(input: unknown): MappingResult<EmployeeP
   if (!parsed.success) return { status: "invalid-response" };
   const { items, page, pageSize, total } = parsed.data;
   return { status: "mapped", value: { items: items.map(mapSummary), page, pageSize, total } };
-}
-
-export function mapLinkableEmployeeAccountsResponse(input: unknown): MappingResult<readonly EmployeeLinkableAccount[]> {
-  const parsed = linkableEmployeeAccountsSchema.safeParse(input);
-  if (!parsed.success) return { status: "invalid-response" };
-  return {
-    status: "mapped",
-    value: parsed.data.map((account) => ({ ...mapAccount(account), phone: account.phoneNumber })),
-  };
 }

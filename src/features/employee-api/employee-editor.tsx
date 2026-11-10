@@ -1,21 +1,10 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
-import type {
-  EmployeeListItemDto,
-  LinkableEmployeeAccountDto,
-} from "@/features/employee-management/api/employee-contract.schemas";
-import { employeeEditorSchema } from "@/features/employee-management/schemas/employee-editor-schema";
-import { createEmployeeEndDateSchema } from "@/features/employee-management/schemas/employee-employment-schema";
-import { createOperationsRepository } from "@/features/operations/repository";
-import { businessToday, ErrorNotice, useMutation } from "@/features/operations/ui";
-import { employeeViewSchema, employmentChangedSchema, type Employee, type EmploymentChange } from "./contracts";
+import { businessToday, ErrorNotice } from "@/features/operations/ui";
 import { EmployeeConflictPanel } from "./employee-conflict-panel";
 import { EmployeeEditorFields } from "./employee-editor-fields";
 import {
-  buildEmployeeSaveBody,
   dateLabel,
   employmentLabel,
   fieldLabels,
@@ -24,180 +13,21 @@ import {
 } from "./employee-editor-model";
 import { ProfileComparison } from "./employee-profile-comparison";
 import styles from "./employee-screen.module.css";
-import { EmployeeStatusActionDialog, type EmployeeStatusAction } from "./employee-status-action-dialog";
+import { EmployeeStatusActionDialog } from "./employee-status-action-dialog";
 
-type Issue = { path: string; message: string };
+import { useEmployeeEditor, type EmployeeEditorProps } from "./use-employee-editor";
 
-type EmployeeEditorProps = {
-  record: Employee | null;
-  zones: ApiRecord[];
-  accounts: LinkableEmployeeAccountDto[];
-  lookupsReady: boolean;
-  onClose(): void;
-  onReloadAccounts(): void;
-  onAdopt(employee: Employee): void;
-  onSaved(employee: Employee, followUp?: EmploymentChange): void;
-  onUnlinked(employee: Employee): void;
-};
-
-/** Create/edit dialog for a seasonal employee, including account link and employment status changes. */
+/** Employee profile and separate employment status changes. */
 export function EmployeeApiEditor({
   record,
   zones,
-  accounts,
+  jobTypes,
   lookupsReady,
   onClose,
-  onReloadAccounts,
   onAdopt,
   onSaved,
-  onUnlinked,
 }: EmployeeEditorProps) {
-  const repository = useMemo(() => createOperationsRepository("employees"), []);
-  const mutation = useMutation();
-  // Server copy the draft is based on; replaced after unlink or an accepted conflict review.
-  const [baseline, setBaseline] = useState(record);
-  const [values, setValues] = useState(() => valuesOf(record));
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [latest, setLatest] = useState<Employee>();
-  const [compared, setCompared] = useState<Employee>();
-  const [comparisonTarget, setComparisonTarget] = useState<{ id: string; linked: boolean }>();
-  const [action, setAction] = useState<EmployeeStatusAction>();
-  const [endDate, setEndDate] = useState(businessToday);
-  const [actionError, setActionError] = useState<string>();
-  const [discard, setDiscard] = useState(false);
-  const [reconciledRows, setReconciledRows] = useState<EmployeeListItemDto[]>();
-  const formRef = useRef<HTMLFormElement>(null);
-  // Guards state updates after an awaited status action when the dialog has unmounted.
-  const alive = useRef(true);
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-    };
-  }, []);
-
-  const dirty = JSON.stringify(values) !== JSON.stringify(valuesOf(baseline));
-  // Catalogue zones plus saved zones that are no longer in the catalogue.
-  const zoneOptions: ApiRecord[] = [
-    ...zones,
-    ...(baseline?.workingZones ?? []).filter((zone) => !zones.some((entry) => entry.id === zone.id)),
-  ];
-  const inactiveZones = values.workingZoneIds.filter((id) => zones.find((zone) => zone.id === id)?.statusId !== 101);
-  const availableZones = zoneOptions.filter((zone) => zone.statusId === 101 || values.workingZoneIds.includes(zone.id));
-  // The currently linked account first, then linkable accounts, without duplicates.
-  const accountOptions = [...(baseline?.account ? [baseline.account] : []), ...accounts].filter(
-    (entry, i, all) => all.findIndex((option) => option.id === entry.id) === i,
-  );
-
-  function close() {
-    if (mutation.busy()) return;
-    if (dirty) setDiscard(true);
-    else onClose();
-  }
-
-  const problem = mutation.failure?.employeeProblem;
-  const invalidServerFields =
-    problem?.kind === "invalid-fields" ? problem.fields.map((field) => fieldLabels[field][0]) : [];
-
-  function errorProps(name: string) {
-    return {
-      name,
-      "aria-invalid":
-        issues.some((issue) => issue.path === name) ||
-        invalidServerFields.some((field) => field === name || name.startsWith(field + ".")),
-      "aria-describedby":
-        [
-          name.startsWith("bankAccount.") ? "employee-api-bank-help" : undefined,
-          issues.length ? "employee-api-errors" : invalidServerFields.length ? "employee-api-server-errors" : undefined,
-        ]
-          .filter(Boolean)
-          .join(" ") || undefined,
-    };
-  }
-
-  /** Shows validation issues and moves focus to the first invalid field. */
-  function showIssues(next: Issue[]) {
-    setIssues(next);
-    requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>(`[name="${next[0]?.path}"]`)?.focus());
-  }
-
-  async function save() {
-    if (mutation.busy() || mutation.blocked || !lookupsReady) return;
-    const checked = employeeEditorSchema.safeParse({
-      ...values,
-      status: baseline?.status === "Left" ? "left" : "employed",
-    });
-    if (!checked.success) {
-      showIssues(checked.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })));
-      return;
-    }
-    if (inactiveZones.length) {
-      showIssues([
-        { path: "workingZoneIds", message: "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu." },
-      ]);
-      return;
-    }
-    setIssues([]);
-    setComparisonTarget(undefined);
-    setCompared(undefined);
-    const body = buildEmployeeSaveBody(checked.data, baseline);
-    const result = await mutation.run(() =>
-      repository.write(baseline ? "update" : "create", body, employeeViewSchema, baseline?.id),
-    );
-    if (result) onSaved(result);
-  }
-
-  async function confirmAction() {
-    // Employment changes need a clean draft; unlinking keeps other unsaved edits.
-    if (!baseline || !action || mutation.busy() || mutation.blocked || (action !== "unlink" && dirty)) return;
-    if (action === "end-employment" && !createEmployeeEndDateSchema().safeParse({ endDate }).success) {
-      setActionError("Ngày nghỉ việc phải hợp lệ và không sau hôm nay.");
-      return;
-    }
-    setIssues([]);
-    if (action === "unlink") {
-      const next = await mutation.run(() =>
-        repository.write("unlink", { rowVersion: baseline.rowVersion }, employeeViewSchema, baseline.id),
-      );
-      if (!alive.current) return;
-      setAction(undefined);
-      if (next) {
-        // Keep a newly chosen account; drop the selection if it was the account just unlinked.
-        const selected = values.accountId;
-        setBaseline(next);
-        setValues((current) => ({
-          ...current,
-          accountId: selected && selected !== baseline.account?.id ? selected : "",
-        }));
-        onUnlinked(next);
-      }
-    } else {
-      const next = await mutation.run(() =>
-        repository.write(
-          action,
-          { rowVersion: baseline.rowVersion, ...(action === "end-employment" ? { endDate } : {}) },
-          employmentChangedSchema,
-          baseline.id,
-        ),
-      );
-      if (!alive.current) return;
-      setAction(undefined);
-      if (next) onSaved(next.employee, next);
-    }
-  }
-
-  /** Loads the existing profile named by the last comparison target or by the server's duplicate problem. */
-  async function openComparison() {
-    const target =
-      comparisonTarget ??
-      (problem && problem.kind !== "invalid-fields"
-        ? { id: problem.existingEmployeeId, linked: problem.kind === "account-already-linked" }
-        : undefined);
-    if (!target || mutation.busy()) return;
-    setComparisonTarget(target);
-    const next = await mutation.run(() => repository.read("detail", { id: target.id }, employeeViewSchema), true);
-    if (next) setCompared(next);
-  }
+  const { repository, mutation, baseline, setBaseline, values, setValues, issues, setIssues, latest, setLatest, compared, setCompared, comparisonTarget, action, setAction, endDate, setEndDate, actionError, setActionError, discard, setDiscard, reconciledRows, setReconciledRows, formRef, dirty, zoneOptions, availableZones, close, problem, errorProps, save, confirmAction, openComparison } = useEmployeeEditor({record, zones, jobTypes, lookupsReady, onClose, onAdopt, onSaved});
 
   return (
     <Dialog
@@ -252,20 +82,20 @@ export function EmployeeApiEditor({
         <div className={styles.employment}>
           <p className="font-semibold">
             {employmentLabel(baseline.status)}
-            {baseline.employmentEndDate ? ` · Ngày nghỉ: ${dateLabel(baseline.employmentEndDate)}` : ""}
+            {baseline.lastWorkingDay ? ` · Ngày nghỉ: ${dateLabel(baseline.lastWorkingDay)}` : ""}
           </p>
           <Button
             className="mt-3 sm:w-auto"
             variant="secondary"
-            disabled={dirty || mutation.pending || mutation.blocked}
+            disabled={!baseline.canMaintain || dirty || mutation.pending || mutation.blocked}
             onClick={() => {
               if (!dirty && !mutation.busy()) {
                 setEndDate(businessToday());
-                setAction(baseline.status === "Employed" ? "end-employment" : "reinstate");
+                setAction(baseline.status === "Employed" ? "end-employment" : "resume");
               }
             }}
           >
-            {baseline.status === "Employed" ? "Nghỉ việc" : "Đi làm lại"}
+            {baseline.status === "Employed" ? "Nghỉ việc" : "Cho làm việc lại"}
           </Button>
           {dirty && (
             <p className="mt-3 text-sm text-text-muted">Lưu hoặc hủy bản nháp trước khi đổi tình trạng làm việc.</p>
@@ -280,7 +110,7 @@ export function EmployeeApiEditor({
           void save();
         }}
       >
-        <fieldset disabled={mutation.pending || mutation.blocked || !!action} className="space-y-4">
+        <fieldset disabled={(!!baseline && !baseline.canMaintain) || mutation.pending || mutation.blocked || !!action} className="space-y-4">
           <EmployeeEditorFields
             values={values}
             setValues={setValues}
@@ -288,11 +118,7 @@ export function EmployeeApiEditor({
             baseline={baseline}
             availableZones={availableZones}
             zoneOptions={zoneOptions}
-            accountOptions={accountOptions}
-            lookupsReady={lookupsReady}
-            accountSelectDisabled={!lookupsReady || mutation.pending || mutation.blocked || !!action}
-            onReloadAccounts={onReloadAccounts}
-            onUnlink={() => setAction("unlink")}
+            jobTypes={jobTypes}
           />
         </fieldset>
         {mutation.blocked && (
@@ -348,7 +174,7 @@ export function EmployeeApiEditor({
             className="w-auto"
             type="submit"
             isPending={mutation.pending}
-            disabled={mutation.blocked || !lookupsReady || (!!baseline && !dirty)}
+            disabled={mutation.blocked || !lookupsReady || (!!baseline && (!dirty || !baseline.canMaintain))}
           >
             Lưu hồ sơ
           </Button>

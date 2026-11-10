@@ -14,7 +14,7 @@ function get(path = "/fixture") {
 }
 
 describe("employee GET with disposable Node HTTP peers, not .NET", () => {
-  it("sends the exact list/detail/picker targets, raw query values and server bearer", async () => {
+  it("sends the exact list/detail targets, raw query values and server bearer", async () => {
     const received: Array<{ path: string; method?: string; bearer?: string; cookie?: string; body: string; contentType?: string }> = [];
     const query = { search: "Nguyễn +84900000000 & statusId=402 / %20", statusId: 401, zoneId: workingZoneId, page: 2, pageSize: 20 };
     await withHttpFixture(async (incoming, response) => {
@@ -37,18 +37,15 @@ describe("employee GET with disposable Node HTTP peers, not .NET", () => {
       expect(listed).toMatchObject({ status: "loaded", page: { page: 2, total: 21 } });
       const detail = await adapter.detail(get(), employeeId);
       expect(detail).toMatchObject({ status: "loaded", employee: { id: employeeId, bankAccount: employeeDetailFixture().bankAccount } });
-      const accounts = await adapter.linkableAccounts(get());
-      expect(accounts).toMatchObject({ status: "loaded", accounts: [{ phone: null }] });
-      expect(JSON.stringify([listed, detail, accounts])).not.toMatch(new RegExp(`${accessCanary}|browser-session-marker|upstream-only`));
+      expect(JSON.stringify([listed, detail])).not.toMatch(new RegExp(`${accessCanary}|browser-session-marker|upstream-only`));
     });
-    expect(received).toHaveLength(3);
+    expect(received).toHaveLength(2);
     const listUrl = new URL(received[0].path, "http://fixture.test");
     expect(listUrl.pathname).toBe("/api/employees");
     expect(listUrl.searchParams.getAll("search")).toEqual([query.search]);
     expect(listUrl.searchParams.getAll("statusId")).toEqual(["401"]);
     expect(listUrl.searchParams.size).toBe(5);
     expect(received[1].path).toBe(`/api/employees/${employeeId}`);
-    expect(received[2].path).toBe("/api/employees/linkable-accounts");
     for (const item of received) expect(item).toMatchObject({ method: "GET", bearer: `Bearer ${accessCanary}`, cookie: undefined, body: "", contentType: undefined });
   });
 
@@ -78,7 +75,7 @@ describe("employee GET with disposable Node HTTP peers, not .NET", () => {
       const adapter = createEmployeeReadAdapter(env, { resolve: resolver(), backend: createBackendTransport(env) });
       expect(await adapter.detail(get(), employeeId)).toMatchObject({ status: "backend-failure", diagnostic: { outcome: "invalid-response" } });
       expect(await adapter.list(get())).toEqual({ status: "invalid-response" });
-      expect(await adapter.linkableAccounts(get())).toEqual({ status: "invalid-response" });
+      expect(await adapter.list(get())).toEqual({ status: "invalid-response" });
     });
   });
 
@@ -87,7 +84,7 @@ describe("employee GET with disposable Node HTTP peers, not .NET", () => {
     await withHttpFixture((_req, res) => { destinationHits++; res.end("unexpected"); }, async (destination) => {
       await withHttpFixture((_req, res) => { res.writeHead(307, { Location: destination }).end(); }, async (origin) => {
         const env = { ...environment, ...fixtureEnvironment(origin) };
-        const result = await createEmployeeReadAdapter(env, { resolve: resolver(), backend: createBackendTransport(env) }).linkableAccounts(get());
+        const result = await createEmployeeReadAdapter(env, { resolve: resolver(), backend: createBackendTransport(env) }).detail(get(), employeeId);
         expect(result).toMatchObject({ status: "backend-failure", diagnostic: { outcome: "unavailable" } });
       });
     });

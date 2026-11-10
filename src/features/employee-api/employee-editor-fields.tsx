@@ -1,12 +1,11 @@
 "use client";
 import type { Dispatch, SetStateAction } from "react";
-import { Button } from "@/components/ui/button";
 import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
-import type { LinkableEmployeeAccountDto } from "@/features/employee-management/api/employee-contract.schemas";
-import { businessToday, control, Field, Note, Select } from "@/features/operations/ui";
+import { businessToday, control, Field, Select } from "@/features/operations/ui";
 import type { Employee } from "./contracts";
 import { accountLabel, type EmployeeFormValues } from "./employee-editor-model";
+import { EmployeeAddressFields } from "./employee-address-fields";
 import styles from "./employee-screen.module.css";
 
 /** Builds name / aria-invalid / aria-describedby props for a field path. */
@@ -24,11 +23,7 @@ export function EmployeeEditorFields({
   baseline,
   availableZones,
   zoneOptions,
-  accountOptions,
-  lookupsReady,
-  accountSelectDisabled,
-  onReloadAccounts,
-  onUnlink,
+  jobTypes,
 }: {
   values: EmployeeFormValues;
   setValues: Dispatch<SetStateAction<EmployeeFormValues>>;
@@ -36,11 +31,7 @@ export function EmployeeEditorFields({
   baseline: Employee | null;
   availableZones: ApiRecord[];
   zoneOptions: ApiRecord[];
-  accountOptions: Pick<LinkableEmployeeAccountDto, "id" | "username" | "displayName" | "status">[];
-  lookupsReady: boolean;
-  accountSelectDisabled: boolean;
-  onReloadAccounts(): void;
-  onUnlink(): void;
+  jobTypes: { id: string; name: string }[];
 }) {
   return (
     <>
@@ -55,9 +46,8 @@ export function EmployeeEditorFields({
           onChange={(event) => setValues({ ...values, fullName: event.target.value })}
         />
         <Field
-          label="Số điện thoại *"
+          label="Số điện thoại"
           type="tel"
-          required
           {...errorProps("phone")}
           value={values.phone}
           onChange={(event) => setValues({ ...values, phone: event.target.value })}
@@ -74,6 +64,20 @@ export function EmployeeEditorFields({
           calendarLabel="Chọn ngày sinh"
         />
       </label>
+      <Select label={baseline ? "Loại nhân viên" : "Loại nhân viên *"} required={!baseline} {...errorProps("employeeType")} value={values.employeeType} onChange={event => setValues({ ...values, employeeType: event.target.value })}>
+        {(!baseline || !baseline.employeeType) && <option value="">Chọn loại nhân viên</option>}
+        <option value="SeasonalWorker">Thời vụ</option><option value="Staff">Nhân viên</option>
+      </Select>
+      {baseline && values.employeeType && values.employeeType !== baseline.employeeType && <label className="block text-sm font-semibold">
+        Áp dụng từ ngày *
+        <VietnameseDateInput className={control} required {...errorProps("employeeTypeFrom")} value={values.employeeTypeFrom} onValueChange={employeeTypeFrom => setValues({ ...values, employeeTypeFrom })} calendarLabel="Chọn ngày áp dụng" />
+      </label>}
+      <fieldset className="rounded-control border border-border p-3" tabIndex={-1} {...errorProps("jobTypeIds")}>
+        <legend className="font-semibold">Loại công việc</legend>
+        {[...jobTypes, ...(baseline?.jobTypes ?? []).filter(job => !jobTypes.some(option => option.id === job.id))].map(job => <label key={job.id} className="flex min-h-12 items-center gap-3">
+          <input type="checkbox" checked={values.jobTypeIds.includes(job.id)} onChange={event => setValues({ ...values, jobTypeIds: event.target.checked ? [...values.jobTypeIds, job.id] : values.jobTypeIds.filter(id => id !== job.id) })} />{job.name}
+        </label>)}
+      </fieldset>
       <fieldset className="rounded-control border border-border p-3" tabIndex={-1} {...errorProps("workingZoneIds")}>
         <legend className="font-semibold">Vùng làm việc</legend>
         {availableZones.map((zone) => (
@@ -140,68 +144,8 @@ export function EmployeeEditorFields({
         ))}
       </fieldset>
       <h3 className={styles.sectionTitle}>Tài khoản liên kết</h3>
-      <Select
-        label="Tài khoản đăng nhập"
-        {...errorProps("accountId")}
-        value={values.accountId}
-        disabled={accountSelectDisabled}
-        onChange={(event) => setValues({ ...values, accountId: event.target.value })}
-      >
-        <option value="">{baseline?.account ? "Giữ tài khoản đang liên kết" : "Chưa liên kết tài khoản"}</option>
-        {accountOptions.map((account) => (
-          <option key={account.id} value={account.id}>
-            @{account.username} · {account.displayName} · {accountLabel(account.status)}
-          </option>
-        ))}
-        {values.accountId && !accountOptions.some((option) => option.id === values.accountId) && (
-          <option value={values.accountId}>Tài khoản đã chọn không còn trong danh sách hiện tại</option>
-        )}
-      </Select>
-      <Button className="w-auto" variant="secondary" onClick={onReloadAccounts}>
-        Tải lại tài khoản có thể liên kết
-      </Button>
-      {!lookupsReady && <p className="text-sm text-text-muted">Cần tải đủ danh mục vùng và tài khoản trước khi lưu.</p>}
-      {baseline?.account && (
-        <div className="rounded-control border border-border p-3">
-          <p>
-            Đang liên kết: @{baseline.account.username} · {accountLabel(baseline.account.status)}
-          </p>
-          <Button className="mt-3 w-auto" variant="secondary" onClick={onUnlink}>
-            Bỏ liên kết tài khoản
-          </Button>
-        </div>
-      )}
-      <h3 className={styles.sectionTitle}>Địa chỉ và ghi chú</h3>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {[
-          ["address", "Địa chỉ", 500],
-          ["area", "Khu vực", 100],
-          ["wardCommune", "Phường/Xã", 100],
-        ].map(([key, label, max]) => (
-          <Field
-            key={key}
-            label={String(label)}
-            maxLength={Number(max)}
-            {...errorProps(String(key))}
-            value={values[key as "address" | "area" | "wardCommune"]}
-            onChange={(event) => setValues({ ...values, [key]: event.target.value })}
-          />
-        ))}
-      </div>
-      <Note
-        label="Thông tin khác"
-        maxLength={1000}
-        {...errorProps("otherInformation")}
-        value={values.otherInformation}
-        onChange={(event) => setValues({ ...values, otherInformation: event.target.value })}
-      />
-      <Note
-        label="Ghi chú"
-        maxLength={1000}
-        {...errorProps("notes")}
-        value={values.notes}
-        onChange={(event) => setValues({ ...values, notes: event.target.value })}
-      />
+      <p>{baseline?.account ? `@${baseline.account.username} · ${baseline.account.displayName} · ${accountLabel(baseline.account.status)}` : "Chưa có tài khoản"}</p>
+      <EmployeeAddressFields values={values} setValues={setValues} errorProps={errorProps} />
     </>
   );
 }

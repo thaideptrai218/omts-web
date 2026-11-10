@@ -32,7 +32,7 @@ export function putBody() {
   return result.request;
 }
 
-export function request(method: "PUT" | "DELETE" = "DELETE", init: RequestInit = {}, query?: string) {
+export function request(method: "PUT" | "DELETE" = "PUT", init: RequestInit = {}, query?: string) {
   const search = query ?? (method === "DELETE" ? "?rowVersion=AAAAAAAA%2B%2F8%3D" : "");
   const headers = new Headers({ Origin: environment.OMTS_WEB_ORIGIN, "X-OMTS-Request": "web" });
   if (method === "PUT") headers.set("Content-Type", "application/json");
@@ -48,5 +48,5 @@ export function resolver() {
 
 export function backend() {
   return { request: vi.fn<(input: BackendRequest, options?: BackendRequestOptions) => Promise<BackendTransportResult>>()
-    .mockResolvedValue({ status: "success", httpStatus: 200, data: { employee: { ...employeeDetailFixture(), account: null }, message: "Saved" } }) };
+    .mockResolvedValue({ status: "success", httpStatus: 200, data: { employee: { ...employeeDetailFixture(), account: null }, message: "Saved", messageCode: "MSG-GEN-05" } }) };
 }

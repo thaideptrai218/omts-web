@@ -22,9 +22,10 @@ export const employeeListRequestSchema = z.strictObject({
 export const employeeDetailRequestSchema = z.strictObject({
   endpoint: z.literal("employeeRead"), employeeId: apiIdSchema,
 });
-export const employeePickerRequestSchema = z.strictObject({ endpoint: z.literal("employeeLinkableAccounts") });
+// Compatibility for the external legacy registry: reject this removed endpoint.
+export const employeePickerRequestSchema = z.strictObject({ endpoint: z.literal("employeeLinkableAccounts").refine(() => false, "Endpoint removed") });
 export const employeeReadRequestSchema = z.discriminatedUnion("endpoint", [
-  employeeListRequestSchema, employeeDetailRequestSchema, employeePickerRequestSchema,
+  employeeListRequestSchema, employeeDetailRequestSchema,
 ]);
 export type EmployeeListQuery = z.infer<typeof employeeListQuerySchema>;
 export type EmployeeReadRequest = z.infer<typeof employeeReadRequestSchema>;
@@ -57,8 +58,7 @@ export function prepareEmployeeReadRequest(input: unknown) {
     }
     path = `/api/employees?${query.toString()}`;
   } else {
-    path = request.endpoint === "employeeRead"
-      ? `/api/employees/${request.employeeId}` : "/api/employees/linkable-accounts";
+    path = `/api/employees/${request.employeeId}`;
   }
   return { status: "prepared" as const, request: {
     method: "GET" as const, path, headers: { Accept: "application/json" as const },

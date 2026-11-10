@@ -35,7 +35,7 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
       if (request.signal.aborted) controller.abort();
       const response = await fetch(new URL(plan.path, config.config.origin), { method: plan.method, cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal,
         headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(plan.body ? { "Content-Type": "application/json" } : {}) }, body: plan.body ? JSON.stringify(plan.body) : undefined });
-      const result = await readBackendResponse(response, plan.action === "create" ? "employeeCreate" : plan.action === "update" ? "employeeUpdate" : plan.action === "unlink" ? "employeeUnlink" : "profileRead");
+      const result = await readBackendResponse(response, plan.action === "create" ? "employeeCreate" : plan.action === "update" ? "employeeUpdate" : "profileRead");
       const current = await gateway.resolve(request.headers.get("cookie"));
       if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
       if (request.signal.aborted || controller.signal.aborted) return json({ status: "unavailable" }, 503);
@@ -45,8 +45,8 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
       if (!parsed.success) return json({ status: "invalid-response" }, 502);
       const data = parsed.data as Record<string, unknown>, employee = (data.employee ?? data) as Record<string, unknown>;
       if (plan.id && employee.id !== plan.id) return json({ status: "invalid-response" }, 502);
-      if ("employee" in data) delete data.message;
-      return json({ status: "success", data: "employee" in data && !["end-employment", "reinstate"].includes(plan.action) ? employee : data });
+      if ("employee" in data) { delete data.message; delete data.messageCode; }
+      return json({ status: "success", data: "employee" in data && !["end-employment", "resume"].includes(plan.action) ? employee : data });
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); }
   } catch { return json({ status: "unavailable" }, 503); }
 }

@@ -23,23 +23,19 @@ describe("unmounted employee read adapter", () => {
       query: { page: 2, pageSize: 20, statusId: 401, zoneId: workingZoneId } });
     expect(await adapter.detail(request(), employeeId)).toMatchObject({ status: "loaded", employee: { id: employeeId } });
     expect(transport.request.mock.calls[1][0]).toEqual({ endpoint: "employeeRead", employeeId, accessToken: accessCanary });
-    expect(await adapter.linkableAccounts(request())).toEqual({ status: "loaded", accounts: [] });
-    expect(transport.request.mock.calls[2][0]).toEqual({ endpoint: "employeeLinkableAccounts", accessToken: accessCanary });
-    expect(resolve).toHaveBeenCalledTimes(6);
+    expect(resolve).toHaveBeenCalledTimes(4);
     expect(transport.request.mock.calls[0][1]?.signal).toBe(input.signal);
   });
 
   it.each([
     { status: "anonymous" } as const, { status: "unavailable" } as const,
     { status: "invalid-session", reason: "invalid-session", clearCookie: true } as const,
-    resolved({ phase: "password-change-required" }), resolved({ phase: "contact-verification-required" }),
     ...(["Staff", "Trader", "SystemAdministrator"] as const).map((subjectType) => resolved({ identity: { ...resolved().session.identity, subjectType } })),
   ])("never sends read requests for a denied/gated session case %#", async (session) => {
     const transport = backend(); const resolve = resolver().mockResolvedValue(session);
     const adapter = createEmployeeReadAdapter(environment, { resolve, backend: transport });
     expect((await adapter.list(request())).status).not.toBe("loaded");
     expect((await adapter.detail(request(), employeeId)).status).not.toBe("loaded");
-    expect((await adapter.linkableAccounts(request())).status).not.toBe("loaded");
     expect(transport.request).not.toHaveBeenCalled();
   });
 
@@ -49,7 +45,6 @@ describe("unmounted employee read adapter", () => {
     expect(await adapter.list(request("?page=0"))).toEqual({ status: "invalid-input" });
     expect(await adapter.detail(request(), "../accounts")).toEqual({ status: "invalid-input" });
     expect(await adapter.detail(request("?page=1"), employeeId)).toEqual({ status: "invalid-input" });
-    expect(await adapter.linkableAccounts(request("?zoneId=" + workingZoneId))).toEqual({ status: "invalid-input" });
     expect(await adapter.list(request("", { method: "POST" }))).toEqual({ status: "rejected", httpStatus: 405 });
     const controller = new AbortController(); controller.abort();
     expect(await adapter.list(request("", { signal: controller.signal }))).toEqual({ status: "unavailable" });

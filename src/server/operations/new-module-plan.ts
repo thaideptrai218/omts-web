@@ -51,7 +51,7 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
       }
       if (action === "review-leave" && id && !zoneId) { const plan = write(`/api/workforce/leave-requests/${id}/review`, c.reviewLeaveSchema, c.leaveSchema, "Owner"); return plan && { ...plan, expectedId: id }; }
       if (action === "job" && !id && !zoneId) return write("/api/workforce/job-types", z.strictObject({ name: z.string().trim().min(1).max(200) }), z.object({ id: z.guid(), name: z.string() }), "Owner");
-      if (action === "settings" && !id && !zoneId) return write("/api/workforce/attendance-settings", c.saveAttendanceSettingsSchema, c.attendanceSettingsSchema, "Owner");
+      if (action === "settings" && !id && !zoneId) return write("/api/attendance-settings", c.saveAttendanceSettingsSchema, c.attendanceSettingsSavedSchema, "Owner");
     }
     return undefined;
   }
@@ -86,8 +86,8 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
     const q = workforceQuery.safeParse(values);
     if (!q.success || ["list", "lookups"].includes(q.data.action) !== !!q.data.day) return undefined;
     return { area, action: q.data.action, method: "GET", path: q.data.action === "list" ? `/api/workforce/assignments?day=${q.data.day}` : q.data.action === "lookups" ? `/api/workforce/lookups?day=${q.data.day}`
-      : q.data.action === "leaves" ? "/api/workforce/leave-requests" : "/api/workforce/attendance-settings", permission: ["list", "lookups"].includes(q.data.action) ? "View" : "Owner",
-      schema: q.data.action === "list" ? z.array(c.assignmentSchema) : q.data.action === "lookups" ? c.workforceLookupsSchema : q.data.action === "leaves" ? z.array(c.leaveSchema) : z.array(c.attendanceSettingsSchema) };
+      : q.data.action === "leaves" ? "/api/workforce/leave-requests" : "/api/attendance-settings", permission: ["list", "lookups"].includes(q.data.action) ? "View" : "Owner",
+      schema: q.data.action === "list" ? z.array(c.assignmentSchema) : q.data.action === "lookups" ? c.workforceLookupsSchema : q.data.action === "leaves" ? z.array(c.leaveSchema) : c.attendanceSettingsSchema };
   }
   if (area === "my-work") {
     const q = mineQuery.safeParse(values);

@@ -1,23 +1,22 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FilterChecks } from "@/components/ui/filter-checks";
+import { EmployeeDirectoryFilters, EmployeeDirectoryReset } from "./employee-directory-filters";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
 import { ManagementHeading } from "@/components/ui/management-page";
 import { loadOptions } from "@/features/operations/lookups";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { readSelectionPages } from "@/features/operations/selection-pages";
-import { ErrorNotice, Field, Paging, Select, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
+import { ErrorNotice, Field, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import {
   employeePageSchema,
   employeeViewSchema,
-  linkableEmployeeAccountsSchema,
+  jobTypeOptionsSchema,
   type Employee,
-  type EmploymentChange,
 } from "./contracts";
+import { EmployeeDirectoryPaging } from "./employee-directory-paging";
 import { EmployeeDirectoryTable } from "./employee-directory-table";
 import { EmployeeApiEditor } from "./employee-editor";
-import { EmployeeFollowUpDialog } from "./employee-follow-up-dialog";
 import styles from "./employee-screen.module.css";
 
 /** Employment status filter codes: 401 employed, 402 left. */
@@ -42,7 +41,6 @@ export function EmployeeDirectory() {
   const [selected, setSelected] = useState<Employee | null>();
   // Bumped to remount the editor with fresh state.
   const [serial, setSerial] = useState(0);
-  const [followUp, setFollowUp] = useState<EmploymentChange>();
   const [notice, setNotice] = useState<string>();
   const opening = useMutation();
 
@@ -67,9 +65,9 @@ export function EmployeeDirectory() {
     ),
   );
   const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
-  const accounts = useRemote(
+  const jobTypes = useRemote(
     useCallback(
-      (signal: AbortSignal) => repository.read("linkable-accounts", {}, linkableEmployeeAccountsSchema, signal),
+      (signal: AbortSignal) => repository.read("job-types", {}, jobTypeOptionsSchema, signal),
       [repository],
     ),
   );
@@ -84,7 +82,7 @@ export function EmployeeDirectory() {
 
   function refresh() {
     list.reload();
-    accounts.reload();
+    jobTypes.reload();
   }
 
   function showEditor(employee: Employee) {
@@ -100,13 +98,13 @@ export function EmployeeDirectory() {
   return (
     <section>
       <ManagementHeading
-        title="Nhân viên thời vụ"
+        title="Nhân viên"
         description="Tra cứu hồ sơ, vùng làm việc và tài khoản liên kết."
         icon="users"
       >
         <Button
           className="sm:w-auto"
-          disabled={opening.pending || zones.loading || accounts.loading || !zones.data || !accounts.data}
+          disabled={opening.pending || zones.loading || jobTypes.loading || !zones.data || !jobTypes.data}
           onClick={() => {
             setSelected(null);
             setSerial((value) => value + 1);
@@ -117,52 +115,8 @@ export function EmployeeDirectory() {
       </ManagementHeading>
       <FilterWorkspace
         label="Lọc nhân viên"
-        filters={
-          <>
-            <FilterChecks
-              label="Tình trạng làm việc"
-              value={statusId}
-              options={[
-                ["401", "Đang làm việc"],
-                ["402", "Đã nghỉ việc"],
-              ]}
-              onChange={(value) => {
-                setStatusId(value);
-                setPage(1);
-              }}
-            />
-            <Select
-              label="Vùng làm việc"
-              value={zoneId}
-              onChange={(event) => {
-                setZoneId(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">Tất cả vùng</option>
-              {zones.data?.map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {String(zone.code)} · {String(zone.name)}
-                </option>
-              ))}
-            </Select>
-          </>
-        }
-        reset={
-          <button
-            type="button"
-            className={styles.reset}
-            disabled={!search && !zoneId && statusId === "401"}
-            onClick={() => {
-              setSearch("");
-              setStatusId("401");
-              setZoneId("");
-              setPage(1);
-            }}
-          >
-            Đặt lại
-          </button>
-        }
+        filters={<EmployeeDirectoryFilters statusId={statusId} setStatusId={setStatusId} zoneId={zoneId} setZoneId={setZoneId} setPage={setPage} zones={zones.data ?? []} />}
+        reset={<EmployeeDirectoryReset search={search} zoneId={zoneId} statusId={statusId} setSearch={setSearch} setStatusId={setStatusId} setZoneId={setZoneId} setPage={setPage} />}
       >
         <div className={styles.directory}>
           <div className="mb-5 max-w-xl">
@@ -177,7 +131,7 @@ export function EmployeeDirectory() {
           </div>
           <div className={styles.resultHeading}>
             <div>
-              <h2>Danh sách nhân viên thời vụ</h2>
+              <h2>Danh sách nhân viên</h2>
               <p>
                 {statusFilterLabel(statusId)}
                 {zoneSummary}
@@ -193,8 +147,8 @@ export function EmployeeDirectory() {
               {notice}
             </p>
           )}
-          <ErrorNotice error={list.error || zones.error || accounts.error || opening.error} />
-          {(list.error || zones.error || accounts.error) && (
+          <ErrorNotice error={list.error || zones.error || jobTypes.error || opening.error} />
+          {(list.error || zones.error || jobTypes.error) && (
             <Button
               className="w-auto"
               variant="secondary"
@@ -218,29 +172,7 @@ export function EmployeeDirectory() {
                     onOpen={(id) => void open(id)}
                   />
                 </div>
-                <div className={styles.paging}>
-                  <Select
-                    label="Số dòng/trang"
-                    value={String(pageSize)}
-                    onChange={(event) => {
-                      setPageSize(Number(event.target.value));
-                      setPage(1);
-                    }}
-                  >
-                    {[10, 20, 50, 100].map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </Select>
-                  <Paging
-                    page={list.data.page}
-                    pageSize={list.data.pageSize}
-                    total={list.data.total}
-                    disabled={list.loading}
-                    onChange={setPage}
-                  />
-                </div>
+                <EmployeeDirectoryPaging list={{data: list.data, loading: list.loading}} pageSize={pageSize} setPageSize={setPageSize} setPage={setPage} />
               </>
             )
           )}
@@ -251,28 +183,21 @@ export function EmployeeDirectory() {
           key={serial}
           record={selected}
           zones={zones.data ?? []}
-          accounts={accounts.data ?? []}
-          lookupsReady={!!zones.data && !!accounts.data && !accounts.loading}
+          jobTypes={jobTypes.data ?? []}
+          lookupsReady={!!zones.data && !!jobTypes.data && !jobTypes.loading}
           onClose={() => setSelected(undefined)}
-          onReloadAccounts={accounts.reload}
           onAdopt={(employee) => {
             showEditor(employee);
             setNotice(undefined);
           }}
-          onSaved={(employee, follow) => {
+          onSaved={(employee) => {
             showEditor(employee);
             setNotice("Đã lưu hồ sơ nhân viên.");
-            if (follow?.followUp) setFollowUp(follow);
           }}
-          onUnlinked={() => {
-            refresh();
-            setNotice("Đã bỏ liên kết tài khoản.");
-          }}
+
         />
       )}
-      {followUp?.followUp && (
-        <EmployeeFollowUpDialog change={followUp} followUp={followUp.followUp} onClose={() => setFollowUp(undefined)} />
-      )}
+
     </section>
   );
 }

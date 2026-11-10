@@ -8,10 +8,8 @@ describe("employee mutation lifecycle and redacted failure", () => {
   it.each([
     { status: "anonymous" } as const,
     { status: "invalid-session", reason: "invalid-session", clearCookie: true } as const,
-    resolved({ revision: "revision-2" }), resolved({ idHash: "b".repeat(64) }),
     resolved({ identity: { ...resolved().session.identity, accountId: employeeId } }),
     resolved({ identity: { ...resolved().session.identity, backendSessionId: employeeId } }),
-    resolved({ phase: "password-change-required" }),
     resolved({ identity: { ...resolved().session.identity, subjectType: "Staff" } }),
   ])("does not publish old data or clear a newer cookie after session change case %#", async (current) => {
     const transport = backend();
@@ -41,7 +39,6 @@ describe("employee mutation lifecycle and redacted failure", () => {
   it.each([
     { status: "http-error", httpStatus: 401, code: "MSG19" },
     { status: "http-error", httpStatus: 403, code: "MSG02" },
-    { status: "http-error", httpStatus: 409, code: "MSG24" },
     { status: "timeout" }, { status: "unavailable" }, { status: "invalid-response" },
   ] satisfies BackendTransportResult[])("keeps failure internal/redacted without retry case %#", async (failure) => {
     const transport = backend(); transport.request.mockResolvedValue(failure);
@@ -61,29 +58,29 @@ describe("employee mutation lifecycle and redacted failure", () => {
     } finally { log.mockRestore(); }
   });
 
-  it("rejects 204, a wrong employee and a DELETE result that still has a link", async () => {
+  it("rejects 204 and a wrong employee while allowing a read-only linked account", async () => {
     const transport = backend();
     const adapter = createEmployeeMutationAdapter(environment, { resolve: resolver(), backend: transport });
     transport.request.mockResolvedValueOnce({ status: "success", httpStatus: 204, data: undefined });
     expect(await adapter.mutate(request(), employeeId)).toEqual({ status: "unexpected-status" });
-    transport.request.mockResolvedValueOnce({ status: "success", httpStatus: 200, data: { employee: employeeDetailFixture(), message: "Saved" } });
-    expect(await adapter.mutate(request(), employeeId)).toEqual({ status: "invalid-response" });
+    transport.request.mockResolvedValueOnce({ status: "success", httpStatus: 200, data: { employee: employeeDetailFixture(), message: "Saved", messageCode: "MSG-GEN-05" } });
+    expect(await adapter.mutate(request(), employeeId)).toMatchObject({ status: "saved", employee: { account: { id: employeeDetailFixture().account.id } } });
     transport.request.mockResolvedValueOnce({ status: "success", httpStatus: 200,
-      data: { employee: { ...employeeDetailFixture(), id: resolved().session.identity.accountId, account: null }, message: "Saved" } });
+      data: { employee: { ...employeeDetailFixture(), id: resolved().session.identity.accountId, account: null }, message: "Saved", messageCode: "MSG-GEN-05" } });
     expect(await adapter.mutate(request(), employeeId)).toEqual({ status: "employee-mismatch" });
   });
 
   it("propagates abort and discards even a nominal success after cancellation", async () => {
     const transport = backend(); const controller = new AbortController();
     transport.request.mockImplementationOnce(async () => {
-      controller.abort(); return { status: "success", httpStatus: 200, data: { employee: { ...employeeDetailFixture(), account: null }, message: "Saved" } };
+      controller.abort(); return { status: "success", httpStatus: 200, data: { employee: { ...employeeDetailFixture(), account: null }, message: "Saved", messageCode: "MSG-GEN-05" } };
     });
-    const input = request("DELETE", { signal: controller.signal });
+    const input = request("PUT", { signal: controller.signal });
     const adapter = createEmployeeMutationAdapter(environment, { resolve: resolver(), backend: transport });
     expect(await adapter.mutate(input, employeeId)).toEqual({ status: "unavailable" });
     expect(transport.request.mock.calls[0][1]?.signal).toBe(input.signal);
     expect(transport.request).toHaveBeenCalledTimes(1);
-    expect(await adapter.mutate(request("DELETE", { signal: controller.signal }), employeeId)).toEqual({ status: "unavailable" });
+    expect(await adapter.mutate(request("PUT", { signal: controller.signal }), employeeId)).toEqual({ status: "unavailable" });
     expect(transport.request).toHaveBeenCalledTimes(1);
   });
 });

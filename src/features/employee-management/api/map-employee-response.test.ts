@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   mapEmployeeDetailResponse, mapEmployeePageResponse, mapEmployeeSavedResponse,
-  mapLinkableEmployeeAccountsResponse,
 } from "./map-employee-response";
 import { employeeDetailFixture, employeeId, employeeListItemFixture, linkedAccountId } from "./employee-wire.fixtures";
 
@@ -24,7 +23,7 @@ describe("employee wire-to-record mapping", () => {
   it("maps Left/Locked exactly without conflating employment and account access", () => {
     const dto = employeeDetailFixture();
     const result = mapEmployeeDetailResponse({
-      ...dto, status: "Left", employmentEndDate: "2026-10-20",
+      ...dto, status: "Left", lastWorkingDay: "2026-10-20",
       account: { ...dto.account, status: "Locked" },
     }, employeeId);
     expect(result).toMatchObject({ status: "mapped", value: {
@@ -50,14 +49,14 @@ describe("employee wire-to-record mapping", () => {
     const dto = employeeDetailFixture();
     expect(mapEmployeeDetailResponse(dto, employeeId.toUpperCase()).status).toBe("mapped");
     expect(mapEmployeeDetailResponse(dto, linkedAccountId)).toEqual({ status: "employee-mismatch" });
-    expect(mapEmployeeSavedResponse({ employee: dto, message: "Saved" }, linkedAccountId))
+    expect(mapEmployeeSavedResponse({ employee: dto, message: "Saved", messageCode: "MSG-GEN-05" }, linkedAccountId))
       .toEqual({ status: "employee-mismatch" });
   });
 
   it("reads a save envelope and projects away English copy and one-time credentials", () => {
     const result = mapEmployeeSavedResponse({
       employee: { ...employeeDetailFixture(), account: null },
-      message: "Saved upstream", temporaryPassword: crypto.randomUUID(),
+      message: "Saved upstream", messageCode: "MSG-GEN-05", temporaryPassword: crypto.randomUUID(),
     }, employeeId);
     expect(result).toMatchObject({ status: "mapped", value: { account: null } });
     expect(result).not.toHaveProperty("message");
@@ -85,14 +84,6 @@ describe("employee wire-to-record mapping", () => {
       .toEqual({ status: "invalid-response" });
   });
 
-  it("keeps only the actual picker phone, including null, without copying employee data", () => {
-    const account = employeeListItemFixture().account;
-    expect(mapLinkableEmployeeAccountsResponse([{ ...account, phoneNumber: null }]))
-      .toEqual({ status: "mapped", value: [{ ...account, status: "active", phone: null }] });
-    expect(mapLinkableEmployeeAccountsResponse([{ ...account, phoneNumber: "+84900000000" }]))
-      .toMatchObject({ status: "mapped", value: [{ phone: "+84900000000" }] });
-    expect(mapLinkableEmployeeAccountsResponse([account])).toEqual({ status: "invalid-response" });
-  });
 
   it("does not mutate the input or retain references to nested response objects", () => {
     const input = { ...employeeDetailFixture(), privateField: "ignore" };

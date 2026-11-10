@@ -3,8 +3,10 @@ import { apiIdSchema, apiTextSchema } from "@/features/auth/api/auth-contract.sc
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 import { employeeDateOnlySchema } from "../schemas/employee-date-only";
 
-// Wire snapshot: omts-backend develop@953f597. No HTTP/runtime binding.
+// Wire contract: omts-backend develop@db158b44.
 export { employeeDateOnlySchema } from "../schemas/employee-date-only";
+export const employeeTypeSchema = z.enum(["SeasonalWorker", "Staff"]);
+export const jobTypeOptionsSchema = z.array(z.object({ id: apiIdSchema, name: apiTextSchema }));
 export const employeeStatusSchema = z.enum(["Employed", "Left"]);
 const accountStatusSchema = z.enum(["Active", "Locked"]);
 
@@ -32,6 +34,11 @@ export const employeeListItemSchema = z.object({
   id: apiIdSchema,
   fullName: apiTextSchema,
   phoneNumber: z.string().nullable(),
+  employeeType: employeeTypeSchema.nullable(),
+  jobTypes: z.array(z.object({ id: apiIdSchema, name: apiTextSchema, status: apiTextSchema })),
+  lastWorkingDay: employeeDateOnlySchema.nullable(),
+  canMaintain: z.boolean(),
+  rowVersion: employeeRowVersionSchema,
   workingZones: z.array(workingZoneSchema),
   account: linkedAccountSchema.nullable(),
   status: employeeStatusSchema,
@@ -45,31 +52,25 @@ export const employeePageSchema = z.object({
 });
 
 export const employeeViewSchema = employeeListItemSchema.extend({
-  birthday: employeeDateOnlySchema.nullable(),
-  address: z.string().nullable(),
-  area: z.string().nullable(),
-  ward: z.string().nullable(),
-  otherInformation: z.string().nullable(),
-  notes: z.string().nullable(),
-  bankAccount: bankAccountSchema.nullable(),
-  employmentEndDate: employeeDateOnlySchema.nullable(),
-  rowVersion: employeeRowVersionSchema,
+  birthday: employeeDateOnlySchema.nullish(),
+  address: z.string().nullish(),
+  area: z.string().nullish(),
+  ward: z.string().nullish(),
+  otherInformation: z.string().nullish(),
+  notes: z.string().nullish(),
+  bankAccount: bankAccountSchema.nullish(),
+  typeHistory: z.array(z.object({ type: employeeTypeSchema, effectiveFrom: employeeDateOnlySchema })),
+  hasStaffAccount: z.boolean(),
 });
 
-// Projection for update/unlink only. Account creation and its one-time
+// Projection for profile saves only. Account creation and its one-time
 // credential handover need a separate contract before they are integrated.
 export const employeeSavedSchema = z.object({
   employee: employeeViewSchema,
   message: z.string(),
+  messageCode: apiTextSchema,
 });
-
-export const linkableEmployeeAccountSchema = linkedAccountSchema.extend({
-  phoneNumber: z.string().nullable(),
-});
-
-export const linkableEmployeeAccountsSchema = z.array(linkableEmployeeAccountSchema);
 
 export type EmployeeListItemDto = z.infer<typeof employeeListItemSchema>;
 export type EmployeeViewDto = z.infer<typeof employeeViewSchema>;
 export type EmployeeSavedDto = z.infer<typeof employeeSavedSchema>;
-export type LinkableEmployeeAccountDto = z.infer<typeof linkableEmployeeAccountSchema>;

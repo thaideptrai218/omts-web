@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   employeeListItemSchema, employeePageSchema, employeeSavedSchema,
-  employeeViewSchema, linkableEmployeeAccountsSchema,
+  employeeViewSchema,
 } from "./employee-contract.schemas";
 import { employeeDetailFixture, employeeListItemFixture } from "./employee-wire.fixtures";
 
-describe("employee response contract at backend 953f597", () => {
+describe("employee response contract at backend db158b44", () => {
   it("distinguishes a paged summary from the complete editable record", () => {
     const summary = employeeListItemFixture();
     const page = { items: [summary], page: 1, pageSize: 20, total: 1 };
@@ -17,14 +17,13 @@ describe("employee response contract at backend 953f597", () => {
   it("accepts empty lists without inventing rows or pages", () => {
     const page = { items: [], page: 2, pageSize: 20, total: 0 };
     expect(employeePageSchema.parse(page)).toEqual(page);
-    expect(linkableEmployeeAccountsSchema.parse([])).toEqual([]);
   });
 
   it("preserves Unicode, date-only text, bank leading zeros and the exact version", () => {
     const detail = employeeDetailFixture();
     expect(employeeViewSchema.parse(detail)).toEqual(detail);
-    expect(employeeSavedSchema.parse({ employee: detail, message: "Saved" }))
-      .toEqual({ employee: detail, message: "Saved" });
+    expect(employeeSavedSchema.parse({ employee: detail, message: "Saved", messageCode: "MSG-GEN-05" }))
+      .toEqual({ employee: detail, message: "Saved", messageCode: "MSG-GEN-05" });
   });
 
   it("keeps nullable values separate from empty strings and missing fields", () => {
@@ -35,10 +34,10 @@ describe("employee response contract at backend 953f597", () => {
     };
     expect(employeeViewSchema.parse(detail)).toEqual(detail);
     expect(employeeViewSchema.safeParse({ ...detail, birthday: "" }).success).toBe(false);
-    expect(employeeViewSchema.safeParse({ ...detail, bankAccount: undefined }).success).toBe(false);
+    expect(employeeViewSchema.safeParse({ ...detail, bankAccount: undefined }).success).toBe(true);
   });
 
-  it.each(Object.keys(employeeDetailFixture()))("rejects a missing detail field: %s", (field) => {
+  it.each(Object.keys(employeeListItemFixture()).concat(["typeHistory", "hasStaffAccount"]))("rejects a missing detail field: %s", (field) => {
     const incomplete: Record<string, unknown> = employeeDetailFixture();
     delete incomplete[field];
     expect(employeeViewSchema.safeParse(incomplete).success).toBe(false);
@@ -47,7 +46,7 @@ describe("employee response contract at backend 953f597", () => {
   it.each([
     { id: "local-mock-id" }, { fullName: " " }, { phoneNumber: 900000000 },
     { birthday: "2025-02-29" }, { birthday: "2026-04-31" }, { birthday: "0000-01-01" },
-    { birthday: "1996-02-29T00:00:00Z" }, { employmentEndDate: "2026-13-01" },
+    { birthday: "1996-02-29T00:00:00Z" }, { lastWorkingDay: "2026-13-01" },
     { status: "Working" }, { status: 401 },
     { account: { ...employeeListItemFixture().account, status: "Disabled" } },
     { account: { id: employeeDetailFixture().id } },
@@ -67,7 +66,7 @@ describe("employee response contract at backend 953f597", () => {
       .toBe(false);
   });
 
-  it("reads the actual update/unlink envelope, not a bare record or 204", () => {
+  it("reads the actual save envelope, not a bare record or 204", () => {
     expect(employeeSavedSchema.safeParse(employeeDetailFixture()).success).toBe(false);
     expect(employeeSavedSchema.safeParse(undefined).success).toBe(false);
   });
@@ -81,16 +80,15 @@ describe("employee response contract at backend 953f597", () => {
         bankAccount: { ...detail.bankAccount, ...extra },
         workingZones: detail.workingZones.map((zone) => ({ ...zone, ...extra })),
       },
-      message: "Saved", temporaryPassword: crypto.randomUUID(), ...extra,
+      message: "Saved", messageCode: "MSG-GEN-05", temporaryPassword: crypto.randomUUID(), ...extra,
     };
-    expect(employeeSavedSchema.parse(input)).toEqual({ employee: detail, message: "Saved" });
+    expect(employeeSavedSchema.parse(input)).toEqual({ employee: detail, message: "Saved", messageCode: "MSG-GEN-05" });
     expect(input.employee).toHaveProperty("privateField");
   });
 
-  it("requires a separate phone field only for the linkable-account picker", () => {
-    const linked = employeeListItemFixture().account;
-    expect(linkableEmployeeAccountsSchema.safeParse([linked]).success).toBe(false);
-    expect(linkableEmployeeAccountsSchema.parse([{ ...linked, phoneNumber: null }]))
-      .toEqual([{ ...linked, phoneNumber: null }]);
+  it("accepts redacted personal fields when maintenance is unavailable", () => {
+    const redacted = { ...employeeListItemFixture(), canMaintain: false, typeHistory: [], hasStaffAccount: false };
+    expect(employeeViewSchema.parse(redacted)).toEqual(redacted);
+    expect(employeeListItemSchema.parse({ ...employeeListItemFixture(), employeeType: null }).employeeType).toBeNull();
   });
 });
