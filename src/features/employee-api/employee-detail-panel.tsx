@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/management-page";
+import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { businessToday, ErrorNotice, Skeleton, useMutation } from "@/features/operations/ui";
 import { createEmployeeEndDateSchema } from "@/features/employee-management/schemas/employee-employment-schema";
@@ -10,10 +11,12 @@ import { EmployeeDetailTabs } from "./employee-detail-tabs";
 import { employmentLabel } from "./employee-editor-model";
 import { EmployeeStatusActionDialog, type EmployeeStatusAction } from "./employee-status-action-dialog";
 import { useEmployeeDetail, type EmployeeDetailCache } from "./use-employee-detail";
-import styles from "./employee-screen.module.css";
+import type { EmployeeLeaveGuard } from "./use-employee-inline-editor";
+import styles from "./employee-detail.module.css";
 
-export function EmployeeDetailPanel({ id, cache, onOpen, onSaved, revision = 0 }: {
-  id: string; cache: EmployeeDetailCache; onOpen(id: string): void; onSaved(employee: Employee): void; revision?: number;
+export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, jobTypes, lookupsReady, onGuardChange }: {
+  id: string; cache: EmployeeDetailCache; onOpen?(id: string): void; onSaved(employee: Employee): void; revision?: number;
+  zones?: ApiRecord[]; jobTypes?: { id: string; name: string }[]; lookupsReady?: boolean; onGuardChange?(guard: EmployeeLeaveGuard | undefined): void;
 }) {
   const detail = useEmployeeDetail(id, cache, revision);
   const repository = useMemo(() => createOperationsRepository("employees"), []);
@@ -35,7 +38,8 @@ export function EmployeeDetailPanel({ id, cache, onOpen, onSaved, revision = 0 }
     setAction(undefined);
     if (result) onSaved(result.employee);
   }
-  return <section id={`employee-preview-${id}`} className={styles.preview} aria-label="Chi tiết nhân viên">
+  function saved(record: Employee) { cache.set(id, record); onSaved(record); detail.reload(); }
+  return <section id={`employee-preview-${id}`} className={styles.detail} aria-label="Chi tiết nhân viên">
     {detail.loading && <Skeleton />}
     <ErrorNotice error={detail.error || mutation.error} />
     {detail.error && <Button variant="secondary" onClick={() => { cache.delete(id); detail.reload(); }}>Thử lại tải hồ sơ</Button>}
@@ -43,14 +47,10 @@ export function EmployeeDetailPanel({ id, cache, onOpen, onSaved, revision = 0 }
       {reviewRequested && !detail.loading && !detail.error && !mutation.uncertain && <Button variant="secondary" onClick={() => { mutation.reviewed(); setReviewRequested(false); }}>Đã đối chiếu hồ sơ</Button>}
     </>}
     {employee && <>
-      <header className={styles.previewHeader}>
+      <header className={styles.header}>
         <div><h3>{employee.fullName}</h3><StatusPill tone={employee.status === "Employed" ? "success" : "neutral"}>{employmentLabel(employee.status)}</StatusPill></div>
-        <div className={styles.previewActions}>
-          <Button variant="secondary" className="w-auto" disabled={!employee.canMaintain || mutation.pending || detail.loading} onClick={() => onOpen(id)}>Cập nhật hồ sơ</Button>
-          <Button variant="secondary" className="w-auto" disabled={!employee.canMaintain || mutation.pending || mutation.blocked || detail.loading} onClick={() => { setEndDate(businessToday()); setAction(employee.status === "Employed" ? "end-employment" : "resume"); }}>{employee.status === "Employed" ? "Ngừng làm việc" : "Cho làm việc lại"}</Button>
-        </div>
       </header>
-      <EmployeeDetailTabs employee={employee} onSaved={onSaved} onRefresh={reload} busy={detail.loading || mutation.pending || mutation.blocked} />
+      <EmployeeDetailTabs employee={employee} onSaved={saved} onRefresh={reload} busy={detail.loading || mutation.pending || mutation.blocked} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={onGuardChange} onStatusAction={() => { setEndDate(businessToday()); setAction(employee.status === "Employed" ? "end-employment" : "resume"); }} />
       {action && <EmployeeStatusActionDialog action={action} baseline={employee} pending={mutation.pending} busy={mutation.busy} endDate={endDate} actionError={actionError} onEndDateChange={value => { setEndDate(value); setActionError(undefined); }} onCancel={() => setAction(undefined)} onConfirm={() => void confirm()} />}
     </>}
   </section>;

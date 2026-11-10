@@ -1,214 +1,74 @@
-"use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿"use client";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { EmployeeDirectoryFilters, EmployeeDirectoryReset } from "./employee-directory-filters";
-import { FilterWorkspace } from "@/components/ui/filter-workspace";
-import { ManagementHeading } from "@/components/ui/management-page";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
+import { ColumnPicker, ListStateMessage, ManagementScroller } from "@/components/ui/management-screen/management-table";
+import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { loadOptions } from "@/features/operations/lookups";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { readSelectionPages } from "@/features/operations/selection-pages";
-import { ErrorNotice, Field, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
-import {
-  employeePageSchema,
-  employeeViewSchema,
-  jobTypeOptionsSchema,
-  type Employee,
-} from "./contracts";
+import { ErrorNotice, useRemote } from "@/features/operations/ui";
+import { employeePageSchema, jobTypeOptionsSchema, type Employee } from "./contracts";
+import { EmployeeDirectoryFilters } from "./employee-directory-filters";
 import { EmployeeDirectoryPaging } from "./employee-directory-paging";
-import { EmployeeDirectoryTable } from "./employee-directory-table";
+import { defaultEmployeeColumns, employeeColumns, EmployeeDirectoryTable, type EmployeeLeaveGuard } from "./employee-directory-table";
 import { EmployeeApiEditor } from "./employee-editor";
-import styles from "./employee-screen.module.css";
 import { useEmployeeDirectoryList } from "./use-employee-directory-list";
+import styles from "./employee-directory.module.css";
 
-/** Employment status filter codes: 401 employed, 402 left. */
-function statusFilterLabel(statusId: string) {
-  if (statusId === "401") return "Đang làm việc";
-  if (statusId === "402") return "Đã nghỉ việc";
-  if (statusId === "-") return "Chưa chọn tình trạng";
-  return "Tất cả tình trạng";
-}
-
-/** Owner's searchable, filterable list of seasonal employees with the profile editor. */
+/** Owner directory shares the same fixed management frame and data contracts as the other production lists. */
 export function EmployeeDirectory() {
   const repository = useMemo(() => createOperationsRepository("employees"), []);
-  const detailCache = useMemo(() => {
-    const records = new Map<string, Employee>();
-    return { records, invalidate: () => records.clear() };
-  }, []);
+  // Replaced (not cleared) on refresh so the cached Map is never mutated after render.
+  const [cache, setCache] = useState(() => new Map<string, Employee>());
   const [detailRevision, setDetailRevision] = useState(0);
-  const [search, setSearch] = useState("");
-  // Debounced copy of `search` that actually drives the query.
-  const [term, setTerm] = useState("");
-  const [statusId, setStatusId] = useState("401");
-  const [zoneId, setZoneId] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  // undefined = editor closed, null = creating a new employee.
-  const [selected, setSelected] = useState<Employee | null>();
-  // Bumped to remount the editor with fresh state.
-  const [serial, setSerial] = useState(0);
+  const [search, setSearch] = useState(""), [term, setTerm] = useState("");
+  const [statusId, setStatusId] = useState("401"), [zoneId, setZoneId] = useState("");
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [creating, setCreating] = useState(false), [serial, setSerial] = useState(0);
   const [notice, setNotice] = useState<string>();
-  const opening = useMutation();
+  const [storedColumns, storeColumns] = useStoredValue("omts-columns-employees", defaultEmployeeColumns.join(","));
+  const offered = employeeColumns.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);
+  const visible = offered.length ? offered : defaultEmployeeColumns;
+  const guard = useRef<EmployeeLeaveGuard | undefined>(undefined);
+  const registerGuard = useCallback((next: EmployeeLeaveGuard | undefined) => { guard.current = next; }, []);
+  function leave(apply: () => void) { if (guard.current) guard.current(apply); else apply(); }
+  function filter(apply: () => void) { leave(() => { apply(); setPage(1); }); }
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTerm(search.trim());
-      setPage(1);
-    }, 300);
+    const timer = setTimeout(() => { setTerm(search.trim()); setPage(1); }, 300);
     return () => clearTimeout(timer);
   }, [search]);
-
-  const list = useEmployeeDirectoryList(
-    useCallback(
-      (signal: AbortSignal) =>
-        readSelectionPages(
-          (query, signal) => repository.read("list", query, employeePageSchema, signal),
-          { search: term, zoneId, page: String(page), pageSize: String(pageSize) },
-          { statusId },
-          signal,
-        ),
-      [repository, term, statusId, zoneId, page, pageSize],
-    ),
-  );
+  const list = useEmployeeDirectoryList(useCallback((signal: AbortSignal) => readSelectionPages(
+    (query, signal) => repository.read("list", query, employeePageSchema, signal),
+    { search: term, zoneId, page: String(page), pageSize: String(pageSize) }, { statusId }, signal,
+  ), [repository, term, statusId, zoneId, page, pageSize]));
   const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
-  const jobTypes = useRemote(
-    useCallback(
-      (signal: AbortSignal) => repository.read("job-types", {}, jobTypeOptionsSchema, signal),
-      [repository],
-    ),
-  );
+  const jobTypes = useRemote(useCallback((signal: AbortSignal) => repository.read("job-types", {}, jobTypeOptionsSchema, signal), [repository]));
+  const lookupsReady = !!zones.data && !!jobTypes.data && !zones.loading && !jobTypes.loading;
+  function refresh() { setCache(new Map()); setDetailRevision(value => value + 1); list.reload(); jobTypes.reload(); }
+  function saved() { refresh(); setNotice("Đã cập nhật hồ sơ nhân viên."); }
+  function retry() { refresh(); zones.reload(); }
+  const hasFilters = !!search || !!zoneId || statusId !== "401";
+  const filters = <EmployeeDirectoryFilters statusId={statusId} setStatusId={value => filter(() => setStatusId(value))} zoneId={zoneId} setZoneId={value => filter(() => setZoneId(value))} zones={zones.data ?? []} hasFilters={hasFilters} onReset={() => filter(() => { setSearch(""); setTerm(""); setStatusId("401"); setZoneId(""); })} />;
 
-  async function open(id: string) {
-    const result = await opening.run(() => repository.read("detail", { id }, employeeViewSchema), true);
-    if (result) {
-      setSelected(result);
-      setSerial((value) => value + 1);
-    }
-  }
-
-  function refresh() {
-    detailCache.invalidate();
-    setDetailRevision(value => value + 1);
-    list.reload();
-    jobTypes.reload();
-  }
-
-  function showEditor(employee: Employee) {
-    setSelected(employee);
-    setSerial((value) => value + 1);
-    refresh();
-  }
-
-  const zoneSummary = zoneId
-    ? ` · ${String(zones.data?.find((zone) => zone.id === zoneId)?.name ?? "Vùng đã chọn")}`
-    : " · Tất cả vùng";
-
-  return (
-    <section>
-      <ManagementHeading
-        title="Nhân viên"
-        description="Tra cứu hồ sơ, vùng làm việc và tài khoản liên kết."
-        icon="users"
-      >
-        <Button
-          className="sm:w-auto"
-          disabled={opening.pending || zones.loading || jobTypes.loading || !zones.data || !jobTypes.data}
-          onClick={() => {
-            setSelected(null);
-            setSerial((value) => value + 1);
-          }}
-        >
-          Thêm nhân viên
-        </Button>
-      </ManagementHeading>
-      <FilterWorkspace
-        label="Lọc nhân viên"
-        filters={<EmployeeDirectoryFilters statusId={statusId} setStatusId={setStatusId} zoneId={zoneId} setZoneId={setZoneId} setPage={setPage} zones={zones.data ?? []} />}
-        reset={<EmployeeDirectoryReset search={search} zoneId={zoneId} statusId={statusId} setSearch={setSearch} setStatusId={setStatusId} setZoneId={setZoneId} setPage={setPage} />}
-      >
-        <div className={styles.directory}>
-          <div className="mb-5 max-w-xl">
-            <Field
-              label="Tìm theo tên hoặc số điện thoại"
-              type="search"
-              placeholder="Tên hoặc số điện thoại…"
-              value={search}
-              maxLength={200}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-          <div className={styles.resultHeading}>
-            <div>
-              <h2>Danh sách nhân viên</h2>
-              <p>
-                {statusFilterLabel(statusId)}
-                {zoneSummary}
-              </p>
-            </div>
-            <span>
-              {list.loading ? "Đang tải…" : list.data ? `${list.data.total} nhân viên` : "Chưa tải được dữ liệu"}
-            </span>
-          </div>
-
-          {notice && (
-            <p role="status" className="mt-4 text-primary">
-              {notice}
-            </p>
-          )}
-          <ErrorNotice error={list.error || zones.error || jobTypes.error || opening.error} />
-          {(list.error || zones.error || jobTypes.error) && (
-            <Button
-              className="w-auto"
-              variant="secondary"
-              onClick={() => {
-                refresh();
-                zones.reload();
-              }}
-            >
-              Tải lại danh mục
-            </Button>
-          )}
-          {list.loading && !list.data ? (
-            <Skeleton />
-          ) : (
-            list.data && (
-              <>
-                <div className="my-4">
-                  <EmployeeDirectoryTable
-                    cache={detailCache.records}
-                    detailRevision={detailRevision}
-                    onSaved={() => { refresh(); setNotice("Đã cập nhật hồ sơ nhân viên."); }}
-                    items={list.data.items}
-                    disabled={opening.pending || list.loading}
-                    onOpen={(id) => void open(id)}
-                  />
-                </div>
-                <EmployeeDirectoryPaging list={{data: list.data, loading: list.loading}} pageSize={pageSize} setPageSize={setPageSize} setPage={setPage} />
-              </>
-            )
-          )}
-        </div>
-      </FilterWorkspace>
-      {selected !== undefined && (
-        <EmployeeApiEditor
-          key={serial}
-          record={selected}
-          zones={zones.data ?? []}
-          jobTypes={jobTypes.data ?? []}
-          lookupsReady={!!zones.data && !!jobTypes.data && !jobTypes.loading}
-          onClose={() => setSelected(undefined)}
-          onAdopt={(employee) => {
-            showEditor(employee);
-            setNotice(undefined);
-          }}
-          onSaved={(employee) => {
-            showEditor(employee);
-            setNotice("Đã lưu hồ sơ nhân viên.");
-          }}
-
-        />
-      )}
-
-    </section>
-  );
+  return <ManagementLayout storageKey="employees" icon="users" title="Nhân viên" filters={filters} filterLabel="Bộ lọc nhân viên"
+    search={<input type="search" aria-label="Tìm nhân viên" placeholder="Theo tên hoặc số điện thoại" maxLength={200} value={search} onChange={event => { const value = event.target.value; filter(() => setSearch(value)); }} />}
+    actions={<>
+      <Button className="w-auto" disabled={!lookupsReady} onClick={() => leave(() => { setCreating(true); setSerial(value => value + 1); })}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm nhân viên</Button>
+      <ColumnPicker columns={employeeColumns} visible={visible} onChange={keys => storeColumns(keys.join(","))} /><HelpLink />
+    </>}
+    footer={<EmployeeDirectoryPaging page={list.data?.page ?? page} total={list.data?.total ?? 0} loading={list.loading} pageSize={pageSize} setPage={value => leave(() => setPage(value))} setPageSize={value => filter(() => setPageSize(value))} />}>
+    {(notice || zones.error || jobTypes.error) && <div className={styles.feedback}>{notice && <p role="status">{notice}</p>}<ErrorNotice error={zones.error || jobTypes.error} />{(zones.error || jobTypes.error) && <button type="button" onClick={retry}>Tải lại danh mục</button>}</div>}
+    <ManagementScroller busy={list.loading}>
+      {list.error ? <ListStateMessage error={list.error} onRetry={retry} retryLabel="Tải lại" />
+        : !list.data ? <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3, 4, 5].map(key => <div key={key} />)}</div>
+        : !list.data.items.length ? <ListStateMessage>{hasFilters ? "Không có nhân viên phù hợp bộ lọc." : "Chưa có nhân viên."}</ListStateMessage>
+        : <EmployeeDirectoryTable items={list.data.items} disabled={list.loading} cache={cache} detailRevision={detailRevision} onSaved={saved} visible={visible} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onGuardChange={registerGuard} />}
+    </ManagementScroller>
+    {creating && <EmployeeApiEditor key={serial} record={null} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onClose={() => setCreating(false)} onAdopt={() => {}} onSaved={employee => {
+      setCreating(false); setSearch(employee.fullName); setTerm(employee.fullName); setStatusId(employee.status === "Employed" ? "401" : "402"); setZoneId(""); setPage(1); refresh(); setNotice("Đã lưu hồ sơ nhân viên.");
+    }} />}
+  </ManagementLayout>;
 }

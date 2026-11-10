@@ -2,7 +2,7 @@ import { Field } from "@/features/operations/ui";
 import type { EmployeeEditorFieldsProps } from "./employee-editor-fields";
 import styles from "./employee-screen.module.css";
 
-export function EmployeeEditorBankFields({ values, setValues, errorProps }: EmployeeEditorFieldsProps) {
+export function EmployeeEditorBankFields({ values, setValues, errorProps, fieldError }: EmployeeEditorFieldsProps) {
   return <>
       <fieldset className={styles.bank}>
         <legend className="font-semibold">Thông tin ngân hàng</legend>
@@ -15,8 +15,7 @@ export function EmployeeEditorBankFields({ values, setValues, errorProps }: Empl
           ["accountNumber", "Số tài khoản"],
           ["accountHolderName", "Chủ tài khoản"],
         ].map(([key, label]) => (
-          <Field
-            key={key}
+          <div key={key}><Field
             label={label}
             {...errorProps(`bankAccount.${key}`)}
             value={values.bankAccount[key as keyof typeof values.bankAccount]}
@@ -30,7 +29,7 @@ export function EmployeeEditorBankFields({ values, setValues, errorProps }: Empl
                 },
               })
             }
-          />
+          />{fieldError?.(`bankAccount.${key}`) && <p id={`employee-inline-error-bankAccount.${key}`} role="alert" className="text-xs text-danger">{fieldError(`bankAccount.${key}`)}</p>}</div>
         ))}
       </fieldset>
   </>;

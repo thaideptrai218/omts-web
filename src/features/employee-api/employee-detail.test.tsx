@@ -14,8 +14,27 @@ function setup(record = fixture()) {
   repository.read.mockResolvedValue({ status: "success", data: record });
   const cache = new Map();
   render(<EmployeeDirectoryTable items={[record]} disabled={false} onOpen={vi.fn()} onSaved={vi.fn()} cache={cache} />);
-  return screen.getByRole("button", { name: `Xem ${record.fullName}` });
+  return screen.getByRole("button", { name: `Mở ${record.fullName}` });
 }
+it("keeps closed rows free of action buttons and opens only one row by pointer", async () => {
+  const first = fixture(), second = { ...fixture(), id: "c669dc43-c9dc-4df8-930b-ab9de6d978e3", fullName: "Trần Bình" };
+  repository.read.mockImplementation(async (_action, query) => ({ status: "success", data: query.id === first.id ? first : second }));
+  render(<EmployeeDirectoryTable items={[first, second]} disabled={false} onSaved={vi.fn()} cache={new Map()} />);
+  const rows = screen.getAllByRole("row").slice(1);
+  for (const row of rows) {
+    expect(within(row).getAllByRole("button")).toHaveLength(1);
+    expect(within(row).getByRole("button").hasAttribute("aria-expanded")).toBe(true);
+    expect(row.hasAttribute("tabindex")).toBe(false);
+  }
+  fireEvent.click(within(rows[0]).getByText(first.fullName));
+  await screen.findByRole("tab", { name: "Thông tin" });
+  fireEvent.click(within(rows[1]).getByText(second.fullName));
+  await screen.findByRole("heading", { name: second.fullName });
+  expect(screen.getAllByRole("tablist")).toHaveLength(1);
+  expect(screen.getByRole("button", { name: `Mở ${first.fullName}` }).getAttribute("aria-expanded")).toBe("false");
+  fireEvent.click(within(rows[1]).getByText(second.fullName));
+  expect(screen.queryByRole("tablist")).toBeNull();
+});
 it("toggles a row with Enter and Space using its native accessible button", async () => {
   const user = userEvent.setup(), toggle = setup();
   toggle.focus();
@@ -52,7 +71,7 @@ it("shows denial instead of absent personal and bank fields", async () => {
   fireEvent.click(screen.getByRole("tab", { name: "Ngân hàng" }));
   expect(within(screen.getByRole("tabpanel")).getByRole("alert").textContent).toContain("không có quyền");
   expect(screen.queryByText("Chưa có thông tin ngân hàng")).toBeNull();
-  expect((screen.getByRole("button", { name: "Cập nhật hồ sơ" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.queryByRole("button", { name: "Chỉnh sửa" })).toBeNull();
 });
 it("shows initial loading and retries a failed detail read", async () => {
   const toggle = setup();
@@ -70,7 +89,7 @@ it("refreshes the open account tab after a save without caching credentials or r
   repository.read.mockResolvedValue({ status: "success", data: record });
   const props = { items: [record], disabled: false, onOpen: vi.fn(), onSaved: vi.fn(), cache };
   const view = render(<EmployeeDirectoryTable {...props} detailRevision={0} />);
-  fireEvent.click(screen.getByRole("button", { name: `Xem ${record.fullName}` }));
+  fireEvent.click(screen.getByRole("button", { name: `Mở ${record.fullName}` }));
   fireEvent.click(await screen.findByRole("tab", { name: "Tài khoản đăng nhập" }));
   cache.clear();
   repository.read.mockResolvedValue({ status: "success", data: { ...record, account: { ...record.account!, username: "updated.staff" } } });

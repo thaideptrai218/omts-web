@@ -1,8 +1,10 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 
 type ButtonVariant = "danger" | "ghost" | "primary" | "secondary";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  /** React 19 passes `ref` as a normal prop; it reaches the <button> through the rest spread. */
+  ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
   isPending?: boolean;
   pendingLabel?: string;

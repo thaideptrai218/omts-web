@@ -29,6 +29,8 @@ KiotViet là tham chiếu bố cục; không dùng logo, tên hoặc nội dung 
 
 Nút nào người dùng không có quyền thì ẩn.
 
+Import/Export chỉ xuất hiện khi backend hỗ trợ.
+
 ### 1.3 Cột lọc (bên trái)
 
 - Mục đầu tiên là **nhóm phân loại** của chức năng (ví dụ Nhà cung cấp: Giống, Vật tư, Khác).
@@ -92,6 +94,11 @@ Lịch chọn khoảng:
 - Hover một ngày phải cho thấy kết quả nếu bấm: tô trước khoảng và cập nhật dòng `Từ ngày`/`Đến ngày`.
 - Chỉnh được riêng từng đầu: bấm `Từ ngày` hoặc `Đến ngày` để chọn đầu đang sửa; mỗi bên lịch có điều hướng tháng riêng.
 - Nền hover nằm gọn trong ô ngày.
+
+### 1.10 Chỉnh sửa tại chỗ (quyết định 10/11/2026)
+
+- Chỉnh sửa bản ghi hiện có ngay trong dòng đã mở, theo từng subtab; chân subtab có `Bỏ qua` / `Lưu`.
+- Pop-up chỉ giữ cho tạo bản ghi, xác nhận đổi trạng thái/thao tác phá hủy và bí mật chỉ hiển thị một lần.
 
 ## 2. Nguyên tắc chung
 

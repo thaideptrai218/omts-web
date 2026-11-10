@@ -26,6 +26,7 @@ export type EmployeeEditorFieldsProps = {
   availableZones: ApiRecord[];
   zoneOptions: ApiRecord[];
   jobTypes: { id: string; name: string }[];
+  fieldError?(path: string): string | undefined;
 };
 /** Panels stay mounted so switching groups preserves every draft value. */
 export function EmployeeEditorFields(props: EmployeeEditorFieldsProps & { active: EmployeeTabKey; idPrefix: string }) {
