@@ -30,6 +30,11 @@ export function EmployeeCreateBasicFields({ values, setValues, errorProps, field
   return <>
     <div className={styles.grid}>
       <div>
+        <Field label="Mã nhân viên" maxLength={20} autoComplete="off" placeholder="Tự động" {...errorProps("code")} value={values.code} onChange={event => set({ code: event.target.value.toUpperCase() })} />
+        <p className={styles.hint}>Để trống để hệ thống tự sinh.</p>
+        <FieldError path="code" fieldError={fieldError} />
+      </div>
+      <div>
         <Field label="Họ và tên *" required maxLength={100} autoComplete="off" {...errorProps("fullName")} value={values.fullName} onChange={event => set({ fullName: event.target.value })} />
         <FieldError path="fullName" fieldError={fieldError} />
       </div>
@@ -43,6 +48,15 @@ export function EmployeeCreateBasicFields({ values, setValues, errorProps, field
           <DatePickerField label="Ngày sinh" name="birthday" value={values.birthday} max={businessToday()} className={control} invalid={fieldError("birthday") !== undefined} describedBy={fieldError("birthday") ? "employee-create-error-birthday" : undefined} onChange={birthday => set({ birthday })} />
         </div>
         <FieldError path="birthday" fieldError={fieldError} />
+      </div>
+      <div>
+        <Select label="Giới tính" {...errorProps("gender")} value={values.gender} onChange={event => set({ gender: event.target.value as EmployeeCreateValues["gender"] })}>
+          <option value="">Chưa chọn</option>
+          <option value="Male">Nam</option>
+          <option value="Female">Nữ</option>
+          <option value="Other">Khác</option>
+        </Select>
+        <FieldError path="gender" fieldError={fieldError} />
       </div>
       <div>
         <Select label="Loại nhân viên *" required {...errorProps("employeeType")} value={values.employeeType} onChange={event => set({ employeeType: event.target.value })}>
@@ -65,6 +79,15 @@ export function EmployeeCreateWorkFields({ values, setValues, errorProps, fieldE
   const offered = zones.filter(zone => zone.statusId === 101 || values.workingZoneIds.includes(zone.id));
   const missing = values.workingZoneIds.filter(id => !zones.some(zone => zone.id === id));
   return <>
+    <div className={styles.grid}>
+      <div>
+        <div className="block text-xs font-medium text-text-muted">
+          <span>Ngày bắt đầu làm việc</span>
+          <DatePickerField label="Ngày bắt đầu làm việc" name="startDate" value={values.startDate} max={businessToday()} className={control} invalid={fieldError("startDate") !== undefined} describedBy={fieldError("startDate") ? "employee-create-error-startDate" : undefined} onChange={startDate => setValues(current => ({ ...current, startDate }))} />
+        </div>
+        <FieldError path="startDate" fieldError={fieldError} />
+      </div>
+    </div>
     <fieldset className={styles.choices} tabIndex={-1} {...errorProps("workingZoneIds")}>
       <legend>Vùng làm việc *</legend>
       {offered.map(zone => (
@@ -99,6 +122,11 @@ const personalFields = [["address", "Địa chỉ", 500], ["area", "Khu vực", 
 export function EmployeeCreatePersonalFields({ values, setValues, errorProps, fieldError }: EmployeeCreateFieldsProps) {
   return <>
     <div className={styles.grid}>
+      <div>
+        <Field label="CCCD" maxLength={12} inputMode="numeric" autoComplete="off" {...errorProps("idNumber")} value={values.idNumber} onChange={event => setValues(current => ({ ...current, idNumber: event.target.value }))} />
+        <p className={styles.hint}>9 hoặc 12 chữ số.</p>
+        <FieldError path="idNumber" fieldError={fieldError} />
+      </div>
       {personalFields.map(([key, label, max]) => (
         <div key={key}>
           <Field label={label} maxLength={max} autoComplete="off" {...errorProps(key)} value={values[key]} onChange={event => setValues(current => ({ ...current, [key]: event.target.value }))} />

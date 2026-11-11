@@ -15,9 +15,9 @@ export const defaultOpenGroups: readonly EmployeeCreateGroup[] = ["basic", "work
 /** Maps both local field paths and normalized backend field paths to their group. */
 export function employeeFieldGroup(path: string): EmployeeCreateGroup {
   if (path.startsWith("bankAccount")) return "bank";
-  if (["workingZoneIds", "jobTypeIds"].includes(path)) return "work";
-  if (["address", "area", "wardCommune", "otherInformation", "notes"].includes(path)) return "personal";
-  if (["createAccount", "username", "email", "accountId"].includes(path)) return "account";
+  if (["workingZoneIds", "jobTypeIds", "startDate"].includes(path)) return "work";
+  if (["idNumber", "address", "area", "wardCommune", "otherInformation", "notes"].includes(path)) return "personal";
+  if (["createAccount", "username", "accountId"].includes(path)) return "account";
   return "basic";
 }
 

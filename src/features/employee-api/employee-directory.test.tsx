@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: async () => ({ status: "success", data: [{ id: "zone-one", code: "V01", name: "Vùng Đông", statusId: 102 }] }) }));
 vi.mock("./employee-detail-panel", () => ({ EmployeeDetailPanel: ({ id }: { id: string }) => <section id={`employee-preview-${id}`} aria-label={`Chi tiết ${id}`}>Chi tiết đã mở</section> }));
@@ -39,10 +40,9 @@ it("closed rows expose only native chevrons, click and keyboard toggle one open 
 it("offers only real columns and remembers browser column choices across mounts", async () => {
   const view = render(<EmployeeDirectory />);
   await screen.findByText(first().fullName);
-  expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Mở dòng", "Họ và tên", "Số điện thoại", "Loại nhân viên", "Vùng làm việc", "Tình trạng"]);
-  expect(screen.queryByRole("button", { name: /Import|Xuất file/ })).toBeNull();
-  expect(screen.queryByRole("checkbox")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Họ và tên" })).toBeNull();
+  expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["", "Mở dòng", "Mã nhân viên", "Họ và tên", "Số điện thoại", "Loại nhân viên", "Vùng làm việc", "Tình trạng"]);
+  // Sortable headers are real buttons; the job-type column has no server sort.
+  expect(screen.getByRole("button", { name: "Họ và tên" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Chọn trường hiển thị" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "Loại công việc" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "Số điện thoại" }));
@@ -72,6 +72,7 @@ it("status pills, zone, reset, server paging and debounced search drive the actu
   await waitFor(() => expect(latestQuery()).toMatchObject({ search: "Nguyễn", page: "1" }));
   fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
   await waitFor(() => expect(latestQuery()).toMatchObject({ search: "", zoneId: "", statusId: "401", page: "1" }));
-  fireEvent.click(screen.getByRole("radio", { name: /^Tất cả$/ }));
+  // Two pill groups now offer "Tất cả": employee type first, status second.
+  fireEvent.click(screen.getAllByRole("radio", { name: /^Tất cả$/ })[1]);
   await waitFor(() => expect(latestQuery()).not.toHaveProperty("statusId"));
 });

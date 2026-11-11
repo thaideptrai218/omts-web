@@ -7,6 +7,8 @@ import { employeeDateOnlySchema } from "../schemas/employee-date-only";
 export { employeeDateOnlySchema } from "../schemas/employee-date-only";
 export const employeeTypeSchema = z.enum(["SeasonalWorker", "Staff"]);
 export const jobTypeOptionsSchema = z.array(z.object({ id: apiIdSchema, name: apiTextSchema }));
+/** Backend stores the enum name; "Other" is offered as "Khác". */
+export const employeeGenderSchema = z.enum(["Male", "Female", "Other"]);
 export const employeeStatusSchema = z.enum(["Employed", "Left"]);
 const accountStatusSchema = z.enum(["Active", "Locked"]);
 
@@ -32,6 +34,8 @@ const bankAccountSchema = z.object({
 
 export const employeeListItemSchema = z.object({
   id: apiIdSchema,
+  // NV000001...; unique per cooperative, upper-case.
+  code: apiTextSchema,
   fullName: apiTextSchema,
   phoneNumber: z.string().nullable(),
   employeeType: employeeTypeSchema.nullable(),
@@ -53,6 +57,10 @@ export const employeePageSchema = z.object({
 
 export const employeeViewSchema = employeeListItemSchema.extend({
   birthday: employeeDateOnlySchema.nullish(),
+  gender: employeeGenderSchema.nullish(),
+  // Only sent to callers who may maintain the employee; the list never carries it.
+  idNumber: z.string().nullish(),
+  startDate: employeeDateOnlySchema.nullish(),
   address: z.string().nullish(),
   area: z.string().nullish(),
   ward: z.string().nullish(),

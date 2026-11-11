@@ -46,12 +46,13 @@ export function useEmployeeEditor({ zones, lookupsReady, onClose, onSaved }: Emp
 
   const failure = mutation.failure;
   const problem = failure?.employeeProblem;
-  // Server-reported fields and a taken username/email, shown next to the same inputs as local issues.
+  // Server-reported fields, a taken username/phone and a taken employee code, shown next to the same inputs as local issues.
   const serverIssues = useMemo<EmployeeCreateIssue[]>(() => {
     if (problem?.kind === "invalid-fields") {
       return problem.fields.map(field => ({ path: fieldLabels[field][0] === "accountId" ? "username" : fieldLabels[field][0], message: "Kiểm tra lại mục này." }));
     }
-    return failure?.code === "MSG-ACCOUNT-09" ? [{ path: "username", message: "Tên đăng nhập hoặc email đã được sử dụng." }] : [];
+    if (failure?.code === "MSG-GEN-02") return [{ path: "code", message: "Mã nhân viên đã được dùng cho nhân viên khác." }];
+    return failure?.code === "MSG-ACCOUNT-09" ? [{ path: "username", message: "Tên đăng nhập hoặc số điện thoại đã được sử dụng." }] : [];
   }, [failure, problem]);
   const allIssues = useMemo(() => [...issues, ...serverIssues], [issues, serverIssues]);
   const errorGroups = useMemo(() => groupsWithIssues(allIssues), [allIssues]);

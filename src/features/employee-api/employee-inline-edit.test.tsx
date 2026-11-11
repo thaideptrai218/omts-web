@@ -35,7 +35,8 @@ function expectPreserved(employee: Employee, overrides: Record<string, unknown>)
   expect(repository.write.mock.calls[0][0]).toBe("update");
   expect(repository.write.mock.calls[0][3]).toBe(employee.id);
   expect(repository.write.mock.calls[0][1]).toEqual({
-    fullName: employee.fullName, phoneNumber: employee.phoneNumber, birthday: employee.birthday,
+    code: employee.code, fullName: employee.fullName, phoneNumber: employee.phoneNumber, birthday: employee.birthday,
+    gender: employee.gender, idNumber: employee.idNumber, startDate: employee.startDate,
     address: employee.address, area: employee.area, ward: employee.ward, otherInformation: employee.otherInformation,
     notes: employee.notes, bankAccount: employee.bankAccount, employeeType: employee.employeeType,
     jobTypeIds: [jobId], workingZoneIds: [workingZoneId], rowVersion: employee.rowVersion, ...overrides,
@@ -58,7 +59,7 @@ it.each(["Thông tin", "Công việc", "Ngân hàng"])("discards only the %s dra
 
 it("saves personal fields in place while preserving loaded job, zone, type and bank data", async () => {
   const { employee, onSaved } = await setup(); edit();
-  await waitFor(() => expect(document.activeElement).toBe(panel().getByLabelText("Họ và tên *")));
+  await waitFor(() => expect(document.activeElement).toBe(panel().getByLabelText("Mã nhân viên")));
   change("Ghi chú", "Ghi chú mới"); save();
   await waitFor(() => expect(onSaved).toHaveBeenCalledWith(employee));
   expectPreserved(employee, { notes: "Ghi chú mới" });

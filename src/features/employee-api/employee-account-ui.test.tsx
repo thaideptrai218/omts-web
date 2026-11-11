@@ -30,7 +30,6 @@ describe("employee account handover", () => {
     fetchMock.mockResolvedValue(Response.json({ status: "success", data: { employee: saved(), temporaryPassword: secret, temporaryPasswordExpiresAt: "2026-11-11T12:00:00+07:00" } }));
     const local = vi.spyOn(Storage.prototype, "setItem");
     render(<Harness />); openAndFill();
-    fireEvent.change(screen.getByLabelText("Email (không bắt buộc)"), { target: { value: "staff@example.test" } });
     fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
     expect(await screen.findByText(secret)).toBeTruthy();
     expect(screen.getByText(/sẽ không được hiển thị lại/)).toBeTruthy();
@@ -45,11 +44,13 @@ describe("employee account handover", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, request] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/operations/employees?");
-    expect(JSON.parse(request.body)).toEqual({ action: "issue-account", id: saved().id, body: { username: "fixture.an", email: "staff@example.test" } });
+    expect(JSON.parse(request.body)).toEqual({ action: "issue-account", id: saved().id, body: { username: "fixture.an" } });
+    // The employee has no email anywhere: the dialog offers no such field.
+    expect(screen.queryByLabelText(/Email/)).toBeNull();
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain(secret);
     expect(local).not.toHaveBeenCalled();
   });
-  it("omits empty email, prevents double-submit and never replays an uncertain write", async () => {
+  it("sends the username only, prevents double-submit and never replays an uncertain write", async () => {
     let finish!: (value: Response) => void;
     fetchMock.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
     render(<Harness />); openAndFill();
@@ -86,12 +87,12 @@ describe("employee account handover", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
-  it("focuses invalid email before sending and has no account action for Left or inaccessible employees", () => {
+  it("focuses an empty username before sending and has no account action for Left or inaccessible employees", () => {
     const view = render(<EmployeeAccountTab employee={withoutAccount()} onSaved={vi.fn()} />);
     openAndFill();
-    fireEvent.change(screen.getByLabelText("Email (không bắt buộc)"), { target: { value: "invalid" } });
+    fireEvent.change(screen.getByLabelText("Tên tài khoản *"), { target: { value: "   " } });
     fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
-    expect(document.activeElement).toBe(screen.getByLabelText("Email (không bắt buộc)"));
+    expect(document.activeElement).toBe(screen.getByLabelText("Tên tài khoản *"));
     expect(fetchMock).not.toHaveBeenCalled();
     view.unmount();
     const left = render(<EmployeeAccountTab employee={{ ...withoutAccount(), status: "Left" }} onSaved={vi.fn()} />);
@@ -101,7 +102,7 @@ describe("employee account handover", () => {
     expect(screen.queryByRole("button", { name: "Cấp tài khoản đăng nhập" })).toBeNull();
   });
   it.each([
-    ["MSG-GEN-01", 400, /Kiểm tra tên tài khoản, email/],
+    ["MSG-GEN-01", 400, /Kiểm tra tên tài khoản và số điện thoại/],
     ["MSG-GEN-09", 409, /đã có tài khoản hoặc đã nghỉ việc/],
     ["MSG06", 409, /Hồ sơ đã thay đổi/],
     [undefined, 403, /Chỉ Chủ hợp tác xã/],

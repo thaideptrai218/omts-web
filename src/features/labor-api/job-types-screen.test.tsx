@@ -60,6 +60,19 @@ it("sends the status pill and the page to the list query", async () => {
   await waitFor(() => expect(lastList()).toMatchObject({ statusId: "102" }));
 });
 
+it("sorts on the server: default order untouched, header click sends sortBy and sortDir, second click flips it", async () => {
+  const user = userEvent.setup();
+  render(<JobTypesScreen />);
+  await screen.findByText("Công việc 1");
+  expect(lastList()).not.toHaveProperty("sortBy", expect.anything());
+  await user.click(screen.getByRole("button", { name: "Đơn giá hiện tại / giờ" }));
+  await waitFor(() => expect(lastList()).toMatchObject({ sortBy: "rate", sortDir: "asc", page: "1" }));
+  await user.click(screen.getByRole("button", { name: "Đơn giá hiện tại / giờ" }));
+  await waitFor(() => expect(lastList()).toMatchObject({ sortBy: "rate", sortDir: "desc" }));
+  await user.click(screen.getByRole("button", { name: "Hiệu lực từ" }));
+  await waitFor(() => expect(lastList()).toMatchObject({ sortBy: "effectiveFrom", sortDir: "asc" }));
+});
+
 it("renames in place: Bỏ qua discards, Lưu sends the rename with the row version", async () => {
   const user = userEvent.setup();
   await open(user);

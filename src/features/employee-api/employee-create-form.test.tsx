@@ -32,7 +32,12 @@ describe("create employee dialog: groups", () => {
     for (const name of [/Thông tin cá nhân/, /Thông tin ngân hàng/, /Tài khoản đăng nhập/]) expect(expanded(name)).toBe("false");
     expect(screen.getByRole("button", { name: "Bỏ qua" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Lưu" })).toBeTruthy();
-    for (const absent of [/Mã nhân viên/, /Giới tính/, /CCCD/, /Lương/, /Bảo hiểm/, /Phòng ban/]) expect(screen.queryByLabelText(absent)).toBeNull();
+    for (const absent of [/Lương/, /Bảo hiểm/, /Phòng ban/, /Email/]) expect(screen.queryByLabelText(absent)).toBeNull();
+    // New profile fields live in the groups that fit them: code, gender and start date are visible, CCCD sits in the collapsed personal group.
+    expect((screen.getByLabelText("Mã nhân viên") as HTMLInputElement).placeholder).toBe("Tự động");
+    expect(screen.getByText("Để trống để hệ thống tự sinh.")).toBeTruthy();
+    expect(screen.getByLabelText("Giới tính")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Ngày bắt đầu làm việc/ })).toBeTruthy();
   });
   it("keeps typed values while a group is collapsed and expanded again", () => {
     render(<EmployeeApiEditor {...props()} />);

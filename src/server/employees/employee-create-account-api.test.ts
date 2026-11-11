@@ -23,15 +23,15 @@ const saved = () => ({ employee: employeeDetailFixture(), message: "Private upst
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe("employee creation with a login account: request", () => {
-  it("accepts a profile with username and optional email and trims the username", () => {
-    const plan = planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: { ...profile(), account: { username: " nhanvien.moi ", email: "a@example.test" } } });
-    expect(plan).toMatchObject({ path: "/api/employees", method: "POST", receipt: true, body: { account: { username: "nhanvien.moi", email: "a@example.test" } } });
+  it("accepts a profile with a username only and trims the username", () => {
+    const plan = planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: { ...profile(), account: { username: " nhanvien.moi " } } });
+    expect(plan).toMatchObject({ path: "/api/employees", method: "POST", receipt: true, body: { account: { username: "nhanvien.moi" } } });
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: { ...profile(), account: { username: "u" } } })).toMatchObject({ receipt: true });
   });
   it("keeps the plain create plan free of the receipt path", () => {
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: profile() })).toMatchObject({ receipt: false });
   });
-  it.each([{ username: "" }, { username: "u", email: "bad" }, { username: "u", grants: [] }, { username: "u", subjectType: "CooperativeOwner" }, { username: "u", temporaryPassword: "x" }])("rejects account %j", account => {
+  it.each([{ username: "" }, { username: "u", email: "a@example.test" }, { username: "u", grants: [] }, { username: "u", subjectType: "CooperativeOwner" }, { username: "u", temporaryPassword: "x" }])("rejects account %j", account => {
     expect(createEmployeeRequestSchema.safeParse({ ...profile(), account }).success).toBe(false);
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: { ...profile(), account } })).toBeUndefined();
   });

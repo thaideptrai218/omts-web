@@ -4,7 +4,6 @@ import { employeeViewSchema } from "@/features/employee-management/api/employee-
 /** No grants or subject type cross this step; roles are assigned in account management. */
 export const issueEmployeeAccountRequestSchema = z.strictObject({
   username: z.string().trim().min(1),
-  email: z.email().optional(),
 });
 
 /** One-use handover only. Never use this schema for a cached employee read. */

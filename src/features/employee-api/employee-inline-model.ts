@@ -3,7 +3,7 @@ import type { Employee } from "./contracts";
 import { buildEmployeeSaveBody, employeeApiEditorSchema, valuesOf, type EmployeeFormValues } from "./employee-editor-model";
 import type { EmployeeTabKey } from "./employee-tabs";
 
-const personal = { fullName: true, phone: true, birthday: true, address: true, area: true, wardCommune: true, otherInformation: true, notes: true } as const;
+const personal = { code: true, fullName: true, phone: true, birthday: true, gender: true, idNumber: true, startDate: true, address: true, area: true, wardCommune: true, otherInformation: true, notes: true } as const;
 const work = { employeeType: true, employeeTypeFrom: true, jobTypeIds: true, workingZoneIds: true } as const;
 const bank = { bankAccount: true } as const;
 const masks = { information: personal, work, bank, account: {} };

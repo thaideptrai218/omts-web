@@ -14,7 +14,6 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
 }) {
   const repository = useMemo(() => createOperationsRepository("employees"), []);
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -41,11 +40,10 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
   }
   async function save() {
     if (active.current || blocked || credential || employee.account || employee.hasStaffAccount || employee.status !== "Employed" || !employee.canMaintain) return;
-    const checked = issueEmployeeAccountRequestSchema.safeParse({ username, ...(email.trim() ? { email: email.trim() } : {}) });
+    const checked = issueEmployeeAccountRequestSchema.safeParse({ username });
     if (!checked.success) {
-      setError("Nhập tên tài khoản và email hợp lệ (nếu có).");
-      const name = checked.error.issues[0]?.path[0] === "email" ? "email" : "username";
-      form.current?.querySelector<HTMLInputElement>(`[name="${name}"]`)?.focus();
+      setError("Nhập tên tài khoản.");
+      form.current?.querySelector<HTMLInputElement>('[name="username"]')?.focus();
       return;
     }
     active.current = true; setPending(true); setError(undefined);
@@ -55,7 +53,7 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
       if (result.status === "success") {
         savedEmployee.current = result.data.employee;
         setCredential({ password: result.data.temporaryPassword, expiresAt: result.data.temporaryPasswordExpiresAt, username: result.data.employee.account?.username ?? checked.data.username });
-        setUsername(""); setEmail("");
+        setUsername("");
       } else {
         setError(employeeAccountError(result));
         setBlocked(result.uncertain || ["MSG06", "MSG-GEN-06", "MSG-GEN-09", "MSG24"].includes(result.code ?? ""));
@@ -69,7 +67,6 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
     <p className="mb-4">Cấp tài khoản cho {employee.fullName}. Phân quyền được thực hiện tại màn Tài khoản.</p>
     <form ref={form} className="space-y-4" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
       <Field label="Tên tài khoản *" name="username" required autoComplete="off" value={username} disabled={pending || blocked} onChange={event => setUsername(event.target.value)} />
-      <Field label="Email (không bắt buộc)" name="email" type="email" autoComplete="off" value={email} disabled={pending || blocked} onChange={event => setEmail(event.target.value)} />
       <ErrorNotice error={error} />
       <div className="flex flex-wrap gap-3">
         <Button className="w-auto" variant="secondary" disabled={pending} onClick={close}>Đóng</Button>

@@ -59,7 +59,9 @@ it("loads detail lazily, exposes linked ARIA tabs, keyboard navigation and cache
   expect(work.getAttribute("aria-selected")).toBe("true"); expect(document.activeElement).toBe(work);
   expect(within(screen.getByRole("tabpanel")).getByText("Lịch sử loại nhân viên")).toBeTruthy();
   fireEvent.keyDown(work, { key: "End" });
-  expect(screen.getByRole("tab", { name: "Tài khoản đăng nhập" }).getAttribute("aria-selected")).toBe("true");
+  // The Owner directory appends the payroll tabs (KiotViet section 7) after the account tab.
+  expect(screen.getByRole("tab", { name: "Nợ và tạm ứng" }).getAttribute("aria-selected")).toBe("true");
+  expect(screen.getByRole("tab", { name: "Phiếu lương" })).toBeTruthy();
   fireEvent.click(toggle); fireEvent.click(toggle);
   await screen.findByRole("tab", { name: "Thông tin" });
   expect(repository.read).toHaveBeenCalledTimes(1);

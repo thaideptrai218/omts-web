@@ -20,10 +20,6 @@ export function EmployeeCreateAccountFields({ values, setValues, errorProps, fie
           <Field label="Tên đăng nhập *" required autoComplete="off" {...errorProps("username")} value={values.username} onChange={event => setValues(current => ({ ...current, username: event.target.value }))} />
           <FieldError path="username" fieldError={fieldError} />
         </div>
-        <div>
-          <Field label="Email (không bắt buộc)" type="email" autoComplete="off" {...errorProps("email")} value={values.email} onChange={event => setValues(current => ({ ...current, email: event.target.value }))} />
-          <FieldError path="email" fieldError={fieldError} />
-        </div>
       </div>
     )}
   </>;

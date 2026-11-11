@@ -49,26 +49,21 @@ describe("create employee dialog: login account", () => {
     expect(screen.getByLabelText("Số điện thoại", { exact: true }).getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByRole("button", { name: /Tài khoản đăng nhập.*Có lỗi/ })).toBeTruthy();
     expect(repository.write).not.toHaveBeenCalled();
-    type("Email (không bắt buộc)", "khong-hop-le");
-    type("Tên đăng nhập *", "nhanvien.moi");
-    type("Số điện thoại", "0912345678");
-    save();
-    expect(screen.getByText("Email không hợp lệ.")).toBeTruthy();
-    expect(repository.write).not.toHaveBeenCalled();
+    // The account has no email: the group offers a username only.
+    expect(screen.queryByLabelText(/Email/)).toBeNull();
   });
-  it("sends username and optional email, shows the one-time password, then clears it on acknowledgement", async () => {
+  it("sends the username, shows the one-time password, then clears it on acknowledgement", async () => {
     const callbacks = props();
     repository.write.mockResolvedValue({ status: "success", data: receipt() });
     render(<EmployeeApiEditor {...callbacks} />);
     fireEvent.click(screen.getByRole("button", { name: /Tài khoản đăng nhập/ }));
     fireEvent.click(accountSwitch());
     type("Tên đăng nhập *", "  nhanvien.moi ");
-    type("Email (không bắt buộc)", "nv@example.test");
     fillProfile();
     save();
     const dialog = await screen.findByRole("dialog", { name: "Đã cấp tài khoản đăng nhập" });
     expect(within(dialog).getByLabelText("Mật khẩu tạm").textContent).toBe(password);
-    expect(repository.write.mock.calls[0][1]).toMatchObject({ account: { username: "nhanvien.moi", email: "nv@example.test" }, phoneNumber: "0912345678" });
+    expect(repository.write.mock.calls[0][1]).toMatchObject({ account: { username: "nhanvien.moi" }, phoneNumber: "0912345678" });
     expect(repository.write.mock.calls[0][2]).toBe(employeeCreateReceiptSchema);
     expect(callbacks.onSaved).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog", { name: "Thêm nhân viên" })).toBeNull();
@@ -104,7 +99,7 @@ describe("create employee dialog: login account", () => {
     save();
     await waitFor(() => expect(screen.getByRole("button", { name: /Tài khoản đăng nhập.*Có lỗi/ }).getAttribute("aria-expanded")).toBe("true"));
     await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Tên đăng nhập *")));
-    expect(screen.getAllByText(/Tên đăng nhập hoặc email đã được sử dụng/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Tên đăng nhập hoặc số điện thoại đã được sử dụng/).length).toBeGreaterThan(0);
     expect((screen.getByLabelText("Họ và tên *") as HTMLInputElement).value).toBe("Người mới");
     expect(repository.write).toHaveBeenCalledTimes(1);
   });

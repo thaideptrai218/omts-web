@@ -1,16 +1,17 @@
 import { z } from "zod";
 import { apiTextSchema } from "@/features/auth/api/auth-contract.schemas";
 import { employeeViewSchema } from "@/features/employee-management/api/employee-contract.schemas";
-import { createProfileSchema, validProfileDate } from "./contracts";
+import { createProfileSchema, validProfileDate, validStartDate } from "./contracts";
 import { issueEmployeeAccountRequestSchema } from "./employee-account-contract";
 
 /**
- * Create request: the profile plus an optional login account (username and optional email only).
+ * Create request: the profile plus an optional login account (username only).
  * Grants and subject type are deliberately not accepted; roles are assigned in account management.
  */
 export const createEmployeeRequestSchema = createProfileSchema
   .extend({ account: issueEmployeeAccountRequestSchema.optional() })
-  .refine(validProfileDate, { path: ["birthday"] });
+  .refine(validProfileDate, { path: ["birthday"] })
+  .refine(validStartDate, { path: ["startDate"] });
 
 /** Backend answer when an account was requested: the one-time password must be present and the account linked. */
 export const employeeCreatedWithAccountSchema = z.object({

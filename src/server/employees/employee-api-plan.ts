@@ -2,16 +2,30 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/employee-api/contracts";
 import { employeeSavedSchema } from "@/features/employee-management/api/employee-contract.schemas";
-import { parseEmployeeListSearchParams } from "@/features/employee-management/api/employee-read-request";
+import { parseEmployeeExportSearchParams, parseEmployeeListSearchParams } from "@/features/employee-management/api/employee-read-request";
 import { issueEmployeeAccountRequestSchema, issueEmployeeAccountSavedSchema } from "@/features/employee-api/employee-account-contract";
 import { createEmployeeRequestSchema, employeeCreatedWithAccountSchema } from "@/features/employee-api/employee-create-contract";
-type Plan = { path: string; method: "GET" | "POST" | "PUT"; action: string; schema: z.ZodType; body?: unknown; id?: string; receipt?: boolean };
+import { employeeImportResultSchema } from "@/features/employee-api/employee-file-contract";
+export type Plan = { path: string; method: "GET" | "POST" | "PUT"; action: string; schema: z.ZodType; body?: unknown; id?: string; receipt?: boolean; file?: "export" | "template" | "import" };
 const id = z.guid();
 const mutation = z.strictObject({ action: z.enum(["create", "update", "end-employment", "resume", "issue-account"]), id: id.optional(), body: z.unknown() });
+
+/** The export answers with a workbook, never JSON; `ids` may repeat (ids=a&ids=b), every other key may not. */
+function planExport(query: URLSearchParams): Plan | undefined {
+  const rest = new URLSearchParams(query); rest.delete("action");
+  const parsed = parseEmployeeExportSearchParams(rest);
+  if (parsed.status !== "parsed" || query.getAll("action").length !== 1) return;
+  const values = new URLSearchParams();
+  for (const [key, value] of Object.entries(parsed.query)) for (const item of Array.isArray(value) ? value : [value]) if (item !== undefined) values.append(key, String(item));
+  return { action: "export", file: "export", path: `/api/employees/export${values.size ? `?${values}` : ""}`, method: "GET", schema: z.never() };
+}
+
 export function planEmployeeApi(method: string, query: URLSearchParams, input?: unknown): Plan | undefined {
   if (method === "GET") {
-    if ([...query.keys()].length !== new Set(query.keys()).size) return;
     const action = query.get("action");
+    if (action === "export") return planExport(query);
+    if ([...query.keys()].length !== new Set(query.keys()).size) return;
+    if (action === "import-template" && query.size === 1) return { action, file: "template", path: "/api/employees/import/template", method, schema: z.never() };
     if (action === "list") {
       const list = new URLSearchParams(query); list.delete("action");
       const parsed = parseEmployeeListSearchParams(list);
@@ -44,4 +58,10 @@ export function planEmployeeApi(method: string, query: URLSearchParams, input?: 
   if (action === "update") return make(c.updateProfileInputSchema, employeeSavedSchema, "PUT");
   if (action === "end-employment") return make(c.endEmploymentSchema, c.employmentChangedSchema, "POST", "/end-employment");
   if (action === "resume") return make(c.resumeEmployeeSchema, c.employmentChangedSchema, "POST", "/resume");
+}
+
+/** Upload of the import file: the HTTP layer reads the multipart body; only the endpoint is planned here. */
+export function planEmployeeImport(query: URLSearchParams): Plan | undefined {
+  if (query.size !== 1 || query.get("action") !== "import") return;
+  return { action: "import", file: "import", path: "/api/employees/import", method: "POST", schema: employeeImportResultSchema };
 }

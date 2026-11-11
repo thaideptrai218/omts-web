@@ -6,6 +6,7 @@ export const workingZoneId = "e4cc1e23-71cb-45c7-be03-fb03d4ac8796";
 export function employeeListItemFixture() {
   return {
     id: employeeId,
+    code: "NV000001",
     fullName: "Nguyễn Văn An",
     phoneNumber: "0900000000",
     employeeType: "Staff",
@@ -28,6 +29,9 @@ export function employeeDetailFixture() {
   return {
     ...employeeListItemFixture(),
     birthday: "1996-02-29",
+    gender: "Male",
+    idNumber: "012345678901",
+    startDate: "2025-03-01",
     address: "Địa chỉ mẫu",
     area: "Khu vực mẫu",
     ward: "Phường mẫu",

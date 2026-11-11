@@ -28,7 +28,7 @@ export function EmployeeApiEditor(props: EmployeeEditorProps) {
   };
   const locked = mutation.pending || mutation.blocked;
   const errorText = mutation.failure?.code === "MSG-ACCOUNT-09"
-    ? "Tên đăng nhập hoặc email đã được sử dụng. Vui lòng chọn tên khác."
+    ? "Tên đăng nhập hoặc số điện thoại đã được sử dụng. Vui lòng chọn tên khác."
     : mutation.error;
 
   // The one-time password replaces the form until the user confirms the handover.

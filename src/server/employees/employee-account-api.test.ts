@@ -18,7 +18,7 @@ function configure(subjectType = "CooperativeOwner") {
   gateway.resolve.mockResolvedValue(resolved());
   gateway.application.mockResolvedValue({ status: "ready", context: { identity: { subjectType } } });
 }
-function request(body: unknown = { username: "nhanvien.new", email: "staff@example.test" }, origin = "http://localhost:3002") {
+function request(body: unknown = { username: "nhanvien.new" }, origin = "http://localhost:3002") {
   return new Request("http://localhost:3002/api/operations/employees", {
     method: "POST", headers: { Origin: origin, "X-OMTS-Request": "web", "Content-Type": "application/json" },
     body: JSON.stringify({ action: "issue-account", id: employeeId, body }),
@@ -31,7 +31,7 @@ function saved() {
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe("employee login account operation contract", () => {
-  it.each([{ username: "" }, { username: "   " }, { username: "new", email: "invalid" },
+  it.each([{ username: "" }, { username: "   " }, { username: "new", email: "staff@example.test" },
     { username: "new", grants: [] }, { username: "new", subjectType: "CooperativeOwner" },
     { username: "new", temporaryPassword: "forbidden" }])("rejects invalid fields and privilege/secret injection", body => {
     expect(issueEmployeeAccountRequestSchema.safeParse(body).success).toBe(false);
@@ -74,7 +74,7 @@ describe("employee login account BFF security", () => {
     const [url, options] = fetcher.mock.calls[0];
     expect(url.toString()).toBe(`http://127.0.0.1:8080/api/employees/${employeeId}/account`);
     expect(options?.cache).toBe("no-store");
-    expect(JSON.parse(options!.body as string)).toEqual({ username: "nhanvien.new", email: "staff@example.test" });
+    expect(JSON.parse(options!.body as string)).toEqual({ username: "nhanvien.new" });
     expect(JSON.stringify(fetcher.mock.calls)).not.toContain(payload.temporaryPassword);
   });
   it.each(["Staff", "Trader", "SystemAdministrator"])("refuses %s before contacting backend", async subject => {

@@ -13,8 +13,8 @@ import { useEmployeeDetail, type EmployeeDetailCache } from "./use-employee-deta
 import type { EmployeeLeaveGuard } from "./use-employee-inline-editor";
 import styles from "./employee-detail.module.css";
 
-export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, jobTypes, lookupsReady, onGuardChange }: {
-  id: string; cache: EmployeeDetailCache; onOpen?(id: string): void; onSaved(employee: Employee): void; revision?: number;
+export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, jobTypes, lookupsReady, onGuardChange, payroll }: {
+  payroll?: boolean; id: string; cache: EmployeeDetailCache; onOpen?(id: string): void; onSaved(employee: Employee): void; revision?: number;
   zones?: ApiRecord[]; jobTypes?: { id: string; name: string }[]; lookupsReady?: boolean; onGuardChange?(guard: EmployeeLeaveGuard | undefined): void;
 }) {
   const detail = useEmployeeDetail(id, cache, revision);
@@ -44,7 +44,7 @@ export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, j
       <header className={styles.header}>
         <div><h3>{employee.fullName}</h3><StatusPill tone={employee.status === "Employed" ? "success" : "neutral"}>{employmentLabel(employee.status)}</StatusPill></div>
       </header>
-      <EmployeeDetailTabs employee={employee} onSaved={saved} onRefresh={reload} busy={detail.loading || mutation.pending || mutation.blocked} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={onGuardChange} onStatusAction={() => { setAction(employee.status === "Employed" ? "end-employment" : "resume"); }} />
+      <EmployeeDetailTabs employee={employee} onSaved={saved} onRefresh={reload} busy={detail.loading || mutation.pending || mutation.blocked} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={onGuardChange} payroll={payroll} onStatusAction={() => { setAction(employee.status === "Employed" ? "end-employment" : "resume"); }} />
       {action && <EmployeeStatusActionDialog action={action} baseline={employee} pending={mutation.pending} busy={mutation.busy} onCancel={() => setAction(undefined)} onConfirm={() => void confirm()} />}
     </>}
   </section>;

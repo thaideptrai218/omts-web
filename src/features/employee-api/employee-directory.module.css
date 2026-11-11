@@ -5,6 +5,7 @@
 .table thead th { position:sticky; top:0; z-index:4; padding:8px; background:var(--omts-color-primary-soft); border-bottom:1px solid var(--omts-color-border); font-size:12px; font-weight:650; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .table tbody td { padding:8px; border-bottom:1px solid var(--omts-color-border); vertical-align:middle; }
 .table tbody tr[data-selected] > td { background:var(--omts-color-primary-soft); }
+.checkCell { width:28px; padding-inline:4px!important; }
 .expandCell { width:28px; padding-inline:2px!important; }
 .expandCell button { display:grid; place-items:center; width:26px; height:26px; color:var(--omts-color-text-muted); }
 .expandCell svg { width:15px; height:15px; }

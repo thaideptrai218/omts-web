@@ -32,7 +32,10 @@ export function mapEmployeeProblem(
   if (!parsed.success || !matches(problemCode, parsed.data)) return blocked;
   if (parsed.data.kind === "invalid-fields") {
     if (endpoint === "employeeUnlink" && parsed.data.fields.some((field) => field !== "RowVersion")) return blocked;
-    return { status: "invalid-fields", code: "MSG01", fields: [...new Set(parsed.data.fields.map((field) => fieldTargets[field]))] };
+    // The legacy editor has no targets for the newer profile fields (code, gender, ID number, start date): not bindable there.
+    const targets = parsed.data.fields.map((field) => Object.hasOwn(fieldTargets, field) ? fieldTargets[field as keyof typeof fieldTargets] : undefined);
+    if (targets.includes(undefined)) return blocked;
+    return { status: "invalid-fields", code: "MSG01", fields: [...new Set(targets as EmployeeIssueTarget[])] };
   }
   return parsed.data.kind === "duplicate-employee"
     ? { status: "duplicate", code: "MSG03", existingEmployeeId: parsed.data.existingEmployeeId }

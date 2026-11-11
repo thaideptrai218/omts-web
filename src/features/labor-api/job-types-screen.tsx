@@ -3,7 +3,7 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { FilterPills, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
-import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, managementStyles } from "@/components/ui/management-screen/management-table";
+import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, SortableHeader, managementStyles, type SortState } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { StatusPill } from "@/components/ui/management-page";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
@@ -18,12 +18,12 @@ import { IN_USE, NO_RATE, statusLabel, type Job } from "./job-types-model";
 import { jobTypesRepository } from "./job-types-write";
 import styles from "./job-types-screen.module.css";
 
-type Column = { key: string; label: string; render(job: Job): ReactNode };
+type Column = { key: string; label: string; sort?: string; render(job: Job): ReactNode };
 const columns: readonly Column[] = [
-  { key: "name", label: "Loại công việc", render: job => <span className={styles.name}>{job.name}</span> },
-  { key: "rate", label: "Đơn giá hiện tại / giờ", render: job => job.currentRate ? <Money value={job.currentRate.hourlyRate} /> : "—" },
-  { key: "from", label: "Hiệu lực từ", render: job => job.currentRate ? formatVietnameseDate(job.currentRate.effectiveFrom) : NO_RATE },
-  { key: "status", label: "Trạng thái", render: job => <StatusPill tone={job.statusId === IN_USE ? "success" : "neutral"}>{statusLabel(job.statusId)}</StatusPill> },
+  { key: "name", label: "Loại công việc", sort: "name", render: job => <span className={styles.name}>{job.name}</span> },
+  { key: "rate", label: "Đơn giá hiện tại / giờ", sort: "rate", render: job => job.currentRate ? <Money value={job.currentRate.hourlyRate} /> : "—" },
+  { key: "from", label: "Hiệu lực từ", sort: "effectiveFrom", render: job => job.currentRate ? formatVietnameseDate(job.currentRate.effectiveFrom) : NO_RATE },
+  { key: "status", label: "Trạng thái", sort: "status", render: job => <StatusPill tone={job.statusId === IN_USE ? "success" : "neutral"}>{statusLabel(job.statusId)}</StatusPill> },
 ];
 const defaultColumns = columns.map(column => column.key).join(",");
 const pageSizes = [10, 20, 50] as const;
@@ -35,6 +35,8 @@ export function JobTypesScreen({ helpHref }: { helpHref?: string }) {
   const canCreate = allowed("Create"), canEdit = allowed("Edit");
   const [search, setSearch] = useState(""), [term, setTerm] = useState(""), [status, setStatus] = useState("");
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(20);
+  // No header chosen: the backend keeps its default order (by name).
+  const [sort, setSort] = useState<SortState>();
   const [expanded, setExpanded] = useState<string>(), [creating, setCreating] = useState(false), [notice, setNotice] = useState<string>();
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-job-types", defaultColumns);
   const visible = useMemo(() => { const keys = storedColumns.split(","), shown = columns.filter(column => keys.includes(column.key)); return shown.length ? shown : columns; }, [storedColumns]);
@@ -44,7 +46,7 @@ export function JobTypesScreen({ helpHref }: { helpHref?: string }) {
     const timer = setTimeout(() => { setTerm(search.trim()); setPage(1); setExpanded(undefined); }, 300);
     return () => clearTimeout(timer);
   }, [search, term]);
-  const remote = useRemote(useMemo(() => (signal: AbortSignal) => jobTypesRepository.read("list", { search: term, statusId: status || undefined, page: String(page), pageSize: String(pageSize) }, jobsPage, signal), [term, status, page, pageSize]));
+  const remote = useRemote(useMemo(() => (signal: AbortSignal) => jobTypesRepository.read("list", { search: term, statusId: status || undefined, page: String(page), pageSize: String(pageSize), sortBy: sort?.key, sortDir: sort?.direction }, jobsPage, signal), [term, status, page, pageSize, sort]));
   // A saved job replaces its row until the next list load, so the open row keeps its subtab and draft after a write.
   const [saved, setSaved] = useState<{ base?: unknown; byId: Record<string, Job> }>({ byId: {} });
   const overrides = saved.base === remote.data ? saved.byId : {};
@@ -78,7 +80,7 @@ export function JobTypesScreen({ helpHref }: { helpHref?: string }) {
         : !rows.length ? <ListStateMessage>{hasFilter ? "Không có loại công việc phù hợp bộ lọc." : "Chưa có loại công việc."}</ListStateMessage>
         : <table className={styles.table}><thead><tr>
           <th scope="col" className={styles.expandCell}><span className="sr-only">Mở dòng</span></th>
-          {visible.map(column => <th key={column.key} scope="col">{column.label}</th>)}
+          {visible.map(column => <SortableHeader key={column.key} label={column.label} sortKey={column.sort} sort={sort ?? { key: "", direction: "asc" }} onSort={changed<SortState>(setSort)} />)}
         </tr></thead><tbody>{rows.map(job => {
           const open = expanded === job.id, toggle = () => setExpanded(value => value === job.id ? undefined : job.id);
           return <Fragment key={job.id}>
