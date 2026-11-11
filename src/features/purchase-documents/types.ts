@@ -11,12 +11,23 @@ export type ItemGroup = (typeof itemGroups)[number][0];
 export type SupplierOption = { id: string; code: string; name: string; phone: string };
 export type ZoneRef = { id: string; name: string };
 export type RaftOption = { id: string; code: string; zoneId: string; zoneName: string };
-export type ItemOption = { id: string; code: string; name: string; unit: string; group: ItemGroup };
+/** One unit an item is counted in: `factor` base units make one of it (the base unit is 1). */
+export type ItemUnit = { id: string; name: string; factor: number; code: string; isBase: boolean };
+export type ItemOption = { id: string; code: string; name: string; unit: string; group: ItemGroup; units: ItemUnit[] };
+/** The units a line may pick from; an item missing from the catalogue lists (discontinued) keeps just the unit its line already has. */
+export function unitChoices(item: ItemOption, current?: { itemUnitId: string | null; unit: string; unitFactor: number }): ItemUnit[] {
+  if (item.units.length) return item.units;
+  return current?.itemUnitId ? [{ id: current.itemUnitId, name: current.unit, factor: current.unitFactor, code: "", isBase: current.unitFactor === 1 }] : [];
+}
+/** The base unit of an item (what its quantities on hand are counted in). */
+export const baseUnitOf = (item: ItemOption) => item.units.find((unit) => unit.isBase) ?? item.units[0];
 export type PaymentMethod = "Cash" | "BankTransfer" | "Other";
 export type { ReceiptRow, ReturnRow };
 
 export type ReceiptLine = {
   id: string; item: ItemOption; quantity: number | null; unitPrice: number | null; raft: RaftOption | null;
+  /** The unit the line was typed in and how many base units it holds; `seeded`, `returned` and `returnable` are in base units. */
+  itemUnitId: string | null; unitFactor: number;
   supplierLotCode: string | null; seedLotCode: string | null; seeded: number; returned: number; returnable: number; discount: number;
   /** What was actually paid per unit: (unit price − line discount) with the receipt's header discount spread by amount. */
   netUnitPrice: number;
@@ -36,10 +47,10 @@ export const goodsTotal = (lines: readonly { quantity: number | null; unitPrice:
 export type ReceiptDraft = {
   id?: string; rowVersion?: string; code: string; receivedAt: string; receivedById: string; supplierId: string; discount: number; notes: string;
   /** `lineId` keeps an existing line of a completed receipt; a line without it is new, and existing lines left out are removed. */
-  lines: { lineId: string | null; itemId: string; quantity: number | null; unitPrice: number | null; discount: number; supplierLotCode: string }[];
+  lines: { lineId: string | null; itemId: string; itemUnitId: string | null; quantity: number | null; unitPrice: number | null; discount: number; supplierLotCode: string }[];
 };
 
-export type ReturnLine = { id: string; receiptLineId: string | null; item: ItemOption; quantity: number; unitPrice: number };
+export type ReturnLine = { id: string; receiptLineId: string | null; item: ItemOption; itemUnitId: string | null; unitFactor: number; quantity: number; unitPrice: number };
 export type ReturnRefund = { code: string; amount: number; method: PaymentMethod; bankReference: string | null };
 export type PurchaseReturn = {
   id: string; code: string; date: string; returnedAt: string; rowVersion: string; receipt: { id: string; code: string } | null;
@@ -50,7 +61,7 @@ export type PurchaseReturn = {
 export type ReturnDraft = {
   id?: string; rowVersion?: string; code: string; returnedAt: string; receiptId: string | null; supplierId: string; reason: string; discount: number; ownerApproved: boolean;
   refund: { amount: number; method: PaymentMethod; bankReference: string } | null;
-  lines: { receiptLineId: string | null; itemId: string; quantity: number; unitPrice: number }[];
+  lines: { receiptLineId: string | null; itemId: string; itemUnitId: string | null; quantity: number; unitPrice: number }[];
 };
 
 export type Page<T> = { items: T[]; page: number; total: number };

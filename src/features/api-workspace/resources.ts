@@ -55,7 +55,8 @@ const text = z.string();
 const nullableText = text.nullable();
 const usage = { statusId: z.number().int(), status: text };
 const version = { rowVersion: text.min(1) };
-const customerRow = z.object({ id: apiIdSchema, name: text, phoneNumber: nullableText, address: nullableText, hasTraderAccount: z.boolean(), ...version });
+const customerRow = z.object({ id: apiIdSchema, name: text, phoneNumber: nullableText, address: nullableText, hasTraderAccount: z.boolean(), ...version,
+  overDebtLimit: z.boolean().nullish(), overDebtAmount: z.boolean().nullish(), overDebtDays: z.boolean().nullish(), debtDays: z.number().int().nullish() });
 const customerView = z.object({ id: apiIdSchema, name: text, phoneNumber: nullableText, email: nullableText, address: nullableText, note: nullableText,
   phoneLocked: z.boolean(), traderAccount: z.object({ accountId: apiIdSchema, username: nullableText, displayName: text }).nullable(), mergedIntoCustomerId: apiIdSchema.nullable(), currentDebt: z.number(), ...version });
 const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, phoneNumber: text, ...usage });

@@ -3,6 +3,7 @@ import type { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { loadOptions } from "@/features/operations/lookups";
+import { inputRepository } from "@/features/input-items/repository";
 import * as c from "./contracts";
 import type { CancelPreview, ItemGroup, ItemOption, Page, PaymentMethod, PurchaseReturn, RaftOption, Receipt, ReceiptDraft, ReceiptPayment, ReceiptQuery, ReceiptRow, ReceiptTotals, ReturnDraft, ReturnQuery, ReturnRow, SupplierOption, ZoneRef } from "./types";
 
@@ -46,7 +47,8 @@ function toReceipt(view: c.ReceiptView): Receipt {
     id: view.id, code: view.code, date: view.receiptDate, receivedAt: view.receivedAt ?? `${view.receiptDate}T00:00:00+07:00`, receivedBy: view.receivedBy ?? null, completedAt: view.completedAt ?? null, rowVersion: view.rowVersion, supplier: supplierOf(view.supplier), zone: zoneOf(view.zone),
     recordedBy: view.recordedBy.name, statusId: view.statusId, discount: view.discount, payable: view.payable, paid: view.paid, notes: view.notes ?? null, cancelReason: view.cancelReason ?? null,
     lines: view.lines.map((line) => ({
-      id: line.id, item: { id: line.itemId ?? "", code: line.itemCode ?? "—", name: line.itemName ?? "Chưa chọn hàng", unit: line.unit, group: groupOf(line.group) },
+      id: line.id, item: { id: line.itemId ?? "", code: line.itemCode ?? "—", name: line.itemName ?? "Chưa chọn hàng", unit: line.unit, group: groupOf(line.group), units: [] },
+      itemUnitId: line.itemUnitId ?? null, unitFactor: line.unitFactor ?? 1,
       quantity: line.quantity ?? null, unitPrice: line.unitPrice ?? null, raft: line.raft ? { id: line.raft.id, code: line.raft.code, zoneId: line.raft.zoneId, zoneName: line.raft.zoneCode } : null,
       supplierLotCode: line.supplierLotCode ?? null, seedLotCode: line.seedLotCode ?? null, seeded: line.seeded, returned: line.returnedQuantity, returnable: line.returnable, discount: line.discount ?? 0,
       netUnitPrice: line.netUnitPrice ?? netUnit(view, line),
@@ -60,8 +62,8 @@ function toReturn(view: c.ReturnView, items: readonly ItemOption[]): PurchaseRet
     id: view.id, code: view.code, date: view.returnDate, returnedAt: view.returnedAt ?? `${view.returnDate}T00:00:00+07:00`, rowVersion: view.rowVersion, receipt: view.receipt ?? null, supplier: supplierOf(view.supplier), zone: zoneOf(view.zone),
     recordedBy: view.recordedBy.name, statusId: view.statusId, reason: view.reason, discount: view.discount, value: view.returnValue, netValue: view.netValue, cancelReason: view.cancelReason ?? null,
     refund: refund ? { code: refund.code, amount: refund.amount, method: refund.method, bankReference: refund.bankReference ?? null } : null,
-    lines: view.lines.map((line, index) => ({ id: `${view.id}:${index}`, receiptLineId: line.receiptLineId ?? null, quantity: line.quantity, unitPrice: line.unitPrice,
-      item: { id: line.itemId, code: line.itemCode, name: line.itemName, unit: line.unit, group: items.find((item) => item.id === line.itemId)?.group ?? "Other" } })),
+    lines: view.lines.map((line, index) => { const known = items.find((item) => item.id === line.itemId); return { id: `${view.id}:${index}`, receiptLineId: line.receiptLineId ?? null, itemUnitId: line.itemUnitId ?? null, unitFactor: line.unitFactor ?? 1, quantity: line.quantity, unitPrice: line.unitPrice,
+      item: { id: line.itemId, code: line.itemCode, name: line.itemName, unit: line.unit, group: known?.group ?? "Other", units: known?.units ?? [] } }; }),
   };
 }
 const sortKey = (key: string) => key === "payable" || key === "value" ? "total" : key;
@@ -82,7 +84,7 @@ export function saveReceipt(draft: ReceiptDraft, complete: boolean) {
   // The picker gives the cooperative's wall time; the API takes an instant with its +07:00 offset.
   const receivedAt = draft.receivedAt ? `${draft.receivedAt.slice(0, 16)}:00+07:00` : null;
   const body = { code: draft.code.trim() || null, supplierId: draft.supplierId || null, receiptDate: receivedAt ? receivedAt.slice(0, 10) : null, receivedAt, receivedById: draft.receivedById || null, notes: draft.notes || null, discount: draft.discount, zoneId: null, complete, rowVersion: draft.rowVersion ?? null,
-    lines: draft.lines.map((line) => ({ lineId: line.lineId, itemId: line.itemId || null, quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode || null, raftId: null })) };
+    lines: draft.lines.map((line) => ({ lineId: line.lineId, itemId: line.itemId || null, itemUnitId: line.itemUnitId, quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode || null, raftId: null })) };
   return write({ action: "save-receipt", id: draft.id, body }, c.receiptView).then((result) => map(result, toReceipt));
 }
 export async function removeReceipts(ids: readonly string[]): Promise<WorkspaceResult<number>> {
@@ -102,7 +104,7 @@ export function saveReturn(draft: ReturnDraft, complete: boolean) {
   const returnedAt = draft.returnedAt ? `${draft.returnedAt.slice(0, 16)}:00+07:00` : null;
   const body = { code: draft.code.trim() || null, receiptId: draft.receiptId, returnedAt, supplierId: draft.receiptId ? null : draft.supplierId || null, zoneId: null, reason: draft.reason, discount: draft.discount, ownerApproved: draft.ownerApproved, complete, rowVersion: draft.rowVersion ?? null,
     refund: complete && draft.refund && draft.refund.amount > 0 ? { amount: draft.refund.amount, method: draft.refund.method === "BankTransfer" ? "BankTransfer" as const : "Cash" as const, bankReference: draft.refund.bankReference.trim() || null } : null,
-    lines: draft.lines.map((line) => draft.receiptId ? { receiptLineId: line.receiptLineId, itemId: null, unitPrice: line.unitPrice, quantity: line.quantity } : { receiptLineId: null, itemId: line.itemId, unitPrice: line.unitPrice, quantity: line.quantity }) };
+    lines: draft.lines.map((line) => draft.receiptId ? { receiptLineId: line.receiptLineId, itemId: null, unitPrice: line.unitPrice, quantity: line.quantity } : { receiptLineId: null, itemId: line.itemId, itemUnitId: line.itemUnitId, unitPrice: line.unitPrice, quantity: line.quantity }) };
   return write({ action: "save-return", id: draft.id, body }, c.returnView);
 }
 export const getRaftCosts = (raftId: string, signal?: AbortSignal) => read({ action: "raft-costs", raftId }, c.raftCosts, signal);
@@ -138,11 +140,12 @@ export async function download(kind: "receipts" | "returns", query: ReceiptQuery
 let cached: Promise<{ suppliers: SupplierOption[]; items: ItemOption[]; rafts: RaftOption[]; receivers: { id: string; name: string }[] }> | undefined;
 async function loadLookups() {
   const signal = AbortSignal.timeout(30_000);
-  const [suppliers, items, rafts, receivers] = await Promise.all([loadOptions("suppliers", signal), loadOptions("input-items", signal), read({ action: "rafts" }, c.raftLookup, signal), read({ action: "receivers" }, c.receivers, signal)]);
+  const [suppliers, items, rafts, receivers] = await Promise.all([loadOptions("suppliers", signal), inputRepository.all({ statusId: "101" }, signal), read({ action: "rafts" }, c.raftLookup, signal), read({ action: "receivers" }, c.receivers, signal)]);
   const text = (value: unknown) => typeof value === "string" ? value : "";
   return {
     suppliers: suppliers.status === "success" ? suppliers.data.filter((row) => row.statusId === 101).map((row) => ({ id: row.id, code: text(row.code), name: text(row.name), phone: text(row.phoneNumber) })) : [],
-    items: items.status === "success" ? items.data.filter((row) => row.statusId === 101).map((row) => ({ id: row.id, code: text(row.code), name: text(row.name), unit: text(row.unit), group: groupOf(text(row.group)) })) : [],
+    items: items.status === "success" ? items.data.filter((row) => row.statusId === 101).map((row): ItemOption => ({ id: row.id, code: row.code, name: row.name, unit: row.unit, group: groupOf(row.group),
+      units: row.units.map((unit) => ({ id: unit.id, name: unit.name, factor: unit.factor, code: unit.code, isBase: unit.isBase })) })) : [],
     rafts: rafts.status === "success" ? rafts.data.map((row) => ({ id: row.id, code: row.code, zoneId: row.zoneId, zoneName: row.zoneCode })) : [],
     receivers: receivers.status === "success" ? receivers.data : [],
   };

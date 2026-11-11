@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { resourceKeys } from "@/features/api-workspace/resources";
 import type { ResourceKey } from "@/features/api-workspace/resources";
 import { ApiResourceScreen } from "@/features/api-workspace/api-resource-screen";
@@ -9,5 +9,7 @@ export default async function WorkspaceResourcePage({ params }: { params: Promis
   await connection();
   const { resource } = await params;
   if (getSessionGateway().mode !== "api" || !resourceKeys.includes(resource as ResourceKey)) notFound();
+  // The input catalogue has its own screen under Vật tư & Giống.
+  if (resource === "input-items") redirect("/inputs/items");
   return <ApiResourceScreen key={resource} resource={resource as ResourceKey} />;
 }

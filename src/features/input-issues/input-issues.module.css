@@ -1,0 +1,43 @@
+/* Xuất dùng / Xuất hủy: lists reuse suppliers.module.css (table, detail, footer) and the editor reuses purchases.module.css; these are the parts only this module has. */
+.num { text-align:right!important; font-variant-numeric:tabular-nums; }
+.totalRow td { position:sticky; top:33px; z-index:3; font-weight:700; background:var(--omts-color-surface)!important; border-bottom:2px solid var(--omts-color-border)!important; }
+.link { color:var(--omts-color-primary); font-weight:500; }
+.link:hover { text-decoration:underline; }
+.muted { color:var(--omts-color-text-muted); }
+.danger { color:var(--omts-color-danger, #b42318); }
+.cancelled td:not(:last-child) { color:var(--omts-color-text-muted); }
+
+.head { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:12px; }
+.head h3 { font-size:16px; font-weight:650; }
+.facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 24px; margin-bottom:14px; font-size:13px; }
+.facts > div { display:grid; grid-template-columns:96px minmax(0,1fr); gap:8px; align-items:baseline; }
+.facts dt { color:var(--omts-color-text-muted); }
+.facts dd { overflow-wrap:anywhere; }
+@media (max-width:1100px) { .facts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:640px) { .facts { grid-template-columns:minmax(0,1fr); } }
+.inner { width:100%; border-collapse:collapse; font-size:13px; }
+.inner th { padding:7px 10px; background:var(--omts-color-primary-soft); font-size:12px; font-weight:650; text-align:left; white-space:nowrap; }
+.inner td { padding:7px 10px; border-bottom:1px solid var(--omts-color-border); vertical-align:middle; }
+.innerScroll { overflow-x:auto; }
+.sub { display:block; font-size:12px; color:var(--omts-color-text-muted); }
+.foot { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:32px; margin-top:14px; }
+@media (max-width:900px) { .foot { grid-template-columns:minmax(0,1fr); } }
+.noteBox { min-height:60px; padding:8px 10px; border:1px solid var(--omts-color-border); border-radius:6px; font-size:13px; color:var(--omts-color-text-muted); white-space:pre-wrap; }
+.sums { display:grid; gap:7px; font-size:13px; align-content:start; }
+.sums div { display:flex; justify-content:flex-end; gap:24px; font-variant-numeric:tabular-nums; }
+.sums div span:last-child { min-width:120px; text-align:right; }
+.sums .strong { padding-top:6px; border-top:1px solid var(--omts-color-border); font-weight:700; }
+
+/* Editor cells */
+/* The name keeps room to read on one or two lines; the note sits under it like the supplier lot code on a receipt. */
+.nameCell { min-width:190px; overflow-wrap:anywhere; }
+.noteInline { display:block; width:100%; max-width:260px; height:24px; margin-top:4px; padding:0 2px; border:0; border-bottom:1px dashed var(--omts-color-border-strong); background:transparent; font-size:12px; font-style:italic; }
+.noteInline:focus { outline:none; border-bottom:1px solid var(--omts-color-primary); }
+.lotCell { width:170px; min-width:150px; }
+.lotError { display:block; max-width:170px; font-size:11px; color:var(--omts-color-danger, #b42318); }
+.unitCell { min-width:84px; white-space:nowrap; }
+.costCell { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--omts-color-text-muted); }
+.typeHead { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+
+/* Zone and raft side by side, in the place the supplier picker holds on a purchase receipt. */
+.placeRow { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }

@@ -8,7 +8,7 @@ import { StatusPill } from "@/components/ui/management-page";
 import { ListStateMessage, managementStyles } from "@/components/ui/management-screen/management-table";
 import { Skeleton, useRemote } from "@/features/operations/ui";
 import { fmt, methodLabel, usePurchaseAccess, viDateTime, vnLocal } from "./document-parts";
-import { InfoTab, supplierHref } from "./receipt-detail";
+import { InfoTab, itemHref, supplierHref } from "./receipt-detail";
 import { getReceipt, getReturn } from "./repository";
 import { RECEIPT, RETURN, goodsTotal, returnStatusLabel } from "./types";
 import styles from "./purchases.module.css";
@@ -55,7 +55,7 @@ export function ReturnViewDialog({ id, onClose }: { id: string; onClose(): void 
           {item.refund && <div><span>NCC trả tiền:</span><strong>{item.refund.code} · {methodLabel[item.refund.method]}</strong></div>}
         </div>
         <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>Mã hàng</th><th>Tên hàng</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Giá trả lại</th><th className={styles.num}>Thành tiền</th></tr></thead>
-          <tbody>{item.lines.map((line) => <tr key={line.id}><td><Link className={styles.link} href={`/workspace/input-items?recordId=${line.item.id}`}>{line.item.code}</Link></td><td>{line.item.name} <span className={styles.sub}>{line.item.unit}</span></td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}><strong>{fmt(Math.round(line.quantity * line.unitPrice))}</strong></td></tr>)}</tbody></table></div>
+          <tbody>{item.lines.map((line) => <tr key={line.id}><td><Link className={styles.link} href={itemHref(line.item.code)}>{line.item.code}</Link></td><td>{line.item.name} <span className={styles.sub}>{line.item.unit}</span></td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}><strong>{fmt(Math.round(line.quantity * line.unitPrice))}</strong></td></tr>)}</tbody></table></div>
         <div className={styles.foot}><p className={styles.noteBox}>{item.reason || "Chưa có lý do trả hàng."}</p>
           <div className={styles.sums}><div><span>Tổng tiền hàng</span><span>{fmt(goodsTotal(item.lines))}</span></div><div><span>Giảm giá</span><span>{fmt(item.discount)}</span></div><div className={styles.strong}><span>NCC cần trả</span><span>{fmt(item.netValue)}</span></div><div><span>Tiền NCC đã trả</span><span>{fmt(item.refund?.amount ?? 0)}</span></div></div></div>
         <footer className={styles.dialogFoot}>

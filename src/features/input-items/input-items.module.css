@@ -1,0 +1,93 @@
+/* Danh mục vật tư & giống: the list reuses suppliers.module.css (table, detail, footer); these are the parts only this module has. */
+.totalRow td { position:sticky; top:33px; z-index:3; font-weight:700; background:var(--omts-color-surface)!important; border-bottom:2px solid var(--omts-color-border)!important; }
+.num { text-align:right!important; font-variant-numeric:tabular-nums; }
+.neg { color:var(--omts-color-danger, #b42318); }
+.muted { color:var(--omts-color-text-muted); }
+.name { font-weight:600; }
+.link { color:var(--omts-color-primary); font-weight:500; }
+.link:hover { text-decoration:underline; }
+.badge { display:inline-block; margin-left:6px; padding:1px 8px; border-radius:999px; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:11px; font-weight:600; white-space:nowrap; }
+.badgeWarn { background:#fef3c7; color:#92400e; }
+/* Unit picker under the item name: a small link "- Hộp ⌄", not a boxed field. */
+.unitPick { display:block; width:max-content; margin-top:2px; font-weight:400; }
+.unitPick .unitLink { width:auto; min-width:0; height:auto; min-height:0; gap:2px; padding:0; border:0; background:none; box-shadow:none; color:var(--omts-color-primary); font-size:12px; }
+.unitPick .unitLink::before { content:"- "; white-space:pre; }
+.unitPick .unitLink:hover { text-decoration:underline; }
+.unitPick .unitLink > svg { width:12px; height:12px; stroke:currentColor; }
+.railSelect { width:100%; height:30px; padding:0 6px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; }
+.railHead { display:flex; align-items:center; justify-content:space-between; font-size:13px; }
+
+/* Detail */
+.infoHead { display:flex; align-items:center; gap:14px; margin-bottom:12px; flex-wrap:wrap; }
+.infoHead h3 { font-size:16px; font-weight:650; overflow-wrap:anywhere; }
+.gallery { display:grid; gap:6px; flex:none; }
+.photoMain { display:grid; place-items:center; width:96px; height:96px; overflow:hidden; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:24px; font-weight:700; }
+.photoMain img { width:100%; height:100%; object-fit:cover; }
+.thumbs { display:flex; gap:4px; }
+.thumbs button { width:28px; height:28px; overflow:hidden; border:1px solid var(--omts-color-border); border-radius:5px; }
+.thumbs button[aria-current="true"] { border-color:var(--omts-color-primary); box-shadow:0 0 0 1px var(--omts-color-primary); }
+.thumbs img { width:100%; height:100%; object-fit:cover; }
+.infoBody { display:flex; gap:20px; align-items:flex-start; }
+.infoBody > dl { flex:1 1 auto; min-width:0; }
+.unitList { display:grid; gap:2px; }
+.unitList small { color:var(--omts-color-text-muted); }
+.textBlock { white-space:pre-wrap; overflow-wrap:anywhere; font-size:13px; }
+.textBlock h4 { margin:10px 0 4px; font-size:12px; font-weight:650; color:var(--omts-color-text-muted); }
+.inner { width:100%; border-collapse:collapse; font-size:13px; }
+.inner th { padding:7px 10px; background:var(--omts-color-primary-soft); font-size:12px; font-weight:650; text-align:left; white-space:nowrap; }
+.inner td { padding:7px 10px; border-bottom:1px solid var(--omts-color-border); vertical-align:middle; }
+.innerScroll { overflow-x:auto; }
+.reversed td { color:var(--omts-color-text-muted); font-style:italic; background:#fffbeb; }
+.undone td { color:var(--omts-color-text-muted); text-decoration:line-through; }
+.tabTools { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; font-size:13px; }
+.tabTools label { display:inline-flex; align-items:center; gap:8px; }
+.switchLabel { cursor:pointer; }
+.tabTools + .hint { margin:-2px 0 10px; }
+.empty { padding:20px; text-align:center; font-size:13px; color:var(--omts-color-text-muted); }
+
+/* Form */
+.formTabs { margin-bottom:12px; }
+.formGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; }
+.wide { grid-column:1 / -1; }
+.hint { font-size:12px; color:var(--omts-color-text-muted); }
+.inlineAdd { display:flex; align-items:flex-end; gap:8px; }
+.inlineAdd > :first-child { flex:1 1 auto; min-width:0; }
+/* Item form head: identity fields on the left, the photo panel on the right (stacked on narrow screens). */
+.identity { display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:16px; margin-bottom:12px; }
+.identityFields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; align-content:start; }
+.labelRow { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.labelRow button { min-height:0; font-size:12px; }
+.photos { display:flex; flex-wrap:wrap; align-content:flex-start; gap:8px; padding:10px; border:1px dashed var(--omts-color-border-strong); border-radius:8px; background:var(--omts-color-surface-subtle); }
+.photos .hint { flex-basis:100%; }
+@media (max-width:700px) { .identity, .identityFields { grid-template-columns:minmax(0,1fr); } }
+.photoTile { position:relative; width:64px; height:64px; overflow:hidden; border:1px solid var(--omts-color-border); border-radius:8px; }
+.photoTile img { width:100%; height:100%; object-fit:cover; }
+.photoTile button { position:absolute; top:2px; right:2px; display:grid; place-items:center; width:20px; height:20px; border-radius:50%; background:#000a; color:#fff; }
+.photoTile button svg { width:12px; height:12px; }
+.photoAdd { display:grid; place-items:center; width:64px; height:64px; border:1px dashed var(--omts-color-border-strong); border-radius:8px; color:var(--omts-color-primary); font-size:12px; font-weight:600; }
+.units { display:grid; gap:8px; grid-column:1 / -1; }
+/* Quy cách: "Đơn vị cơ bản", then "Tên đơn vị = Giá trị quy đổi [base]" rows, then the per-unit code + cost table. */
+.unitLine { display:flex; align-items:flex-end; gap:10px; padding-bottom:10px; border-bottom:1px dashed var(--omts-color-border); }
+.unitField { display:grid; gap:4px; width:240px; font-size:12px; font-weight:500; color:var(--omts-color-text-muted); }
+.unitField .labelRow { gap:6px; }
+.unitField .labelRow > :first-child { flex:1 1 auto; min-width:0; }
+.unitLine .eq { padding-bottom:7px; color:var(--omts-color-text-muted); }
+.unitLine > .iconBtn { margin-left:auto; }
+.factorBox { display:flex; align-items:center; height:36px; overflow:hidden; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); }
+.factorBox:focus-within { border-color:var(--omts-color-primary); box-shadow:0 0 0 1px var(--omts-color-primary); }
+.factorBox input { flex:1 1 auto; min-width:0; height:100%; padding:0 8px; border:0; background:none; text-align:right; font-size:13px; color:var(--omts-color-text); outline:none; }
+.factorBox input:disabled { background:var(--omts-color-surface-subtle); }
+.factorBox em { flex:none; padding:0 10px; font-style:normal; font-size:13px; color:var(--omts-color-text); background:var(--omts-color-surface-subtle); align-self:stretch; display:grid; place-items:center; border-left:1px solid var(--omts-color-border); }
+.unitTable { width:100%; margin-top:6px; border-collapse:collapse; font-size:13px; }
+.unitTable th { padding:8px 10px; background:var(--omts-color-surface-subtle); font-weight:600; text-align:left; }
+.unitTable td { padding:6px 10px; border-bottom:1px solid var(--omts-color-border); }
+.unitTable td:nth-child(3) { width:34%; }
+.unitTable td:nth-child(4) { width:22%; }
+.numInput { text-align:right; }
+.derived { display:block; padding:7px 8px; border-radius:6px; background:var(--omts-color-surface-subtle); color:var(--omts-color-text-muted); }
+.iconBtn { display:inline-grid; place-items:center; width:30px; height:30px; border:1px solid var(--omts-color-border-strong); border-radius:6px; color:var(--omts-color-text-muted); }
+.iconBtn:hover:not(:disabled) { border-color:var(--omts-color-primary); color:var(--omts-color-primary); }
+.iconBtn:disabled { opacity:.4; cursor:not-allowed; }
+.iconBtn svg { width:15px; height:15px; }
+.formFoot { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; margin-top:16px; }
+@media (max-width:700px) { .formGrid { grid-template-columns:minmax(0,1fr); } .unitRow, .unitRowBase { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .infoBody { flex-direction:column; } }

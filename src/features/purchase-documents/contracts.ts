@@ -19,7 +19,7 @@ export const receiptView = z.object({
   completedAt: opt(stamp), cancelledAt: opt(stamp), cancelReason: opt(text), rowVersion: text, discount: n, payable: n, paid: n, zone: opt(zone),
   receivedAt: opt(stamp), receivedBy: opt(account),
   lines: z.array(z.object({
-    id, lineNumber: n, itemId: opt(id), itemCode: opt(text), itemName: opt(text), group: opt(text), unit: text, quantity: opt(n), unitPrice: opt(n), lineAmount: opt(n),
+    id, lineNumber: n, itemId: opt(id), itemCode: opt(text), itemName: opt(text), group: opt(text), unit: text, itemUnitId: opt(id), unitFactor: opt(n), baseQuantity: opt(n), baseUnit: opt(text), quantity: opt(n), unitPrice: opt(n), lineAmount: opt(n),
     supplierLotCode: opt(text), raft: opt(z.object({ id, code: text, zoneId: id, zoneCode: text })), seedLotCode: opt(text), seeded: n, returnedQuantity: n, returnable: n, discount: opt(n), netUnitPrice: opt(n),
   })),
   returns: z.array(z.object({ id, code: text, returnDate: date, returnedAt: opt(stamp), reason: text, returnValue: n, statusId: n, status: text, discount: n, netValue: n })),
@@ -39,7 +39,7 @@ export const returnSearch = z.object({ page: paged(returnRow), totalValue: n });
 export const returnView = z.object({
   id, code: text, receipt: opt(z.object({ id, code: text })), supplier, zone: opt(zone), returnDate: date, returnedAt: opt(stamp), reason: text, discount: n, statusId: n, status: text,
   cancelReason: opt(text), recordedBy: account, returnValue: n, netValue: n, rowVersion: text,
-  lines: z.array(z.object({ receiptLineId: opt(id), itemId: id, itemCode: text, itemName: text, unit: text, quantity: n, unitPrice: n, returnValue: n })),
+  lines: z.array(z.object({ receiptLineId: opt(id), itemId: id, itemCode: text, itemName: text, unit: text, itemUnitId: opt(id), unitFactor: opt(n), baseQuantity: opt(n), quantity: n, unitPrice: n, returnValue: n })),
   refunds: z.array(z.object({ id, code: text, paymentDate: date, amount: n, method, bankReference: opt(text), statusId: n, status: text })),
 });
 export const cancelledReturn = z.object({ receipt: opt(z.unknown()), return: opt(z.unknown()) }).or(z.object({ id }));
