@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { ListStateMessage, ManagementPagination } from "@/components/ui/management-screen/management-table";
@@ -15,7 +15,7 @@ import { inputRepository } from "./repository";
 import styles from "./input-items.module.css";
 
 /** Nhập – xuất: every movement of the item, newest first, with the balance after it; corrections are hidden together with the rows they undo. */
-export function ItemMovementsTab({ itemId, canExport }: { itemId: string; canExport: boolean }) {
+export function ItemMovementsTab({ itemId, canExport, note }: { itemId: string; canExport: boolean; note?: ReactNode }) {
   const [kind, setKind] = useState(""), [reversals, setReversals] = useState(false), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
   const exportFile = useMutation();
   const remote = useRemote(useCallback((signal: AbortSignal) => inputRepository.movements(itemId,
@@ -30,6 +30,7 @@ export function ItemMovementsTab({ itemId, canExport }: { itemId: string; canExp
       <label>Loại giao dịch<SelectBox aria-label="Loại giao dịch" className={styles.unitSelect} value={kind} onChange={(event) => { setKind(event.target.value); setPage(1); }}>
         <option value="">Tất cả</option>{movementKinds.filter((key) => key !== "Reversal").map((key) => <option key={key} value={key}>{movementKindLabel[key]}</option>)}</SelectBox></label>
     </div>
+    {note && <p className={styles.hint}>{note}</p>}
     {reversals && data && !hasAdjustments && <p className={styles.hint}>Chưa có bút toán điều chỉnh nào: chưa có phiếu của vật tư này bị sửa hoặc hủy sau khi hoàn thành.</p>}
     {remote.loading ? <Skeleton /> : remote.error || !data ? <ListStateMessage error={remote.error ?? "Không tải được nhập – xuất."} onRetry={remote.reload} />
       : !data.items.length ? <p className={styles.empty}>Chưa có lần nhập hay xuất nào{kind ? " thuộc loại này" : ""}.</p>

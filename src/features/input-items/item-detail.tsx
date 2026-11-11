@@ -10,8 +10,8 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
-import { DISCONTINUED, typeLabel, type ItemView } from "./contracts";
-import { baseUnitOf } from "./item-helpers";
+import { DISCONTINUED, typeLabel, type ItemView, type UnitView } from "./contracts";
+import { baseUnitOf, inUnitPrice, inUnitQuantity } from "./item-helpers";
 import { ItemLotsTab } from "./item-lots-tab";
 import { ItemMovementsTab } from "./item-movements-tab";
 import { errorText, inputRepository } from "./repository";
@@ -20,7 +20,8 @@ import styles from "./input-items.module.css";
 export type ItemAccess = { owner: boolean; receive: boolean; issue: boolean; exportFile: boolean };
 type Tab = "info" | "description" | "movements" | "lots";
 
-export function ItemDetailPanel({ id, access, onEdit, onChanged, onRemoved }: { id: string; access: ItemAccess; onEdit(record: ItemView, copy: boolean): void; onChanged(): void; onRemoved(): void }) {
+/** `unit` is the unit picked under the name on the list: the row then shows that unit alone (its code, cost and quantity), not the unit list. */
+export function ItemDetailPanel({ id, unit, access, onEdit, onChanged, onRemoved }: { id: string; unit?: UnitView; access: ItemAccess; onEdit(record: ItemView, copy: boolean): void; onChanged(): void; onRemoved(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => inputRepository.detail(id, signal), [id]));
   const [tab, setTab] = useState<Tab>("info");
   const record = remote.data;
@@ -31,21 +32,30 @@ export function ItemDetailPanel({ id, access, onEdit, onChanged, onRemoved }: { 
   const changed = () => { remote.reload(); onChanged(); };
   return <section className={listStyles.detail} aria-label={`Chi tiết ${record.code}`}>
     <Subtabs<Tab> label="Nội dung vật tư" tabs={tabs} value={tab} onChange={setTab} />
-    {tab === "info" && <InfoTab record={record} access={access} onEdit={onEdit} onChanged={changed} onRemoved={onRemoved} />}
+    {tab === "info" && <InfoTab record={record} unit={unit} access={access} onEdit={onEdit} onChanged={changed} onRemoved={onRemoved} />}
     {tab === "description" && <DescriptionTab record={record} access={access} onEdit={onEdit} onChanged={changed} onRemoved={onRemoved} />}
-    {tab === "movements" && <ItemMovementsTab itemId={id} canExport={access.exportFile} />}
+    {tab === "movements" && <ItemMovementsTab itemId={id} canExport={access.exportFile} note={unit && !unit.isBase ? <>Lưu ý: Nhập – xuất được tính theo đơn vị cơ bản ({baseUnitOf(record.units)?.name ?? record.unit}); còn lại tương ứng với đơn vị ({unit.name}) là: <strong>{fmt(inUnitQuantity(record.onHand, unit.factor))}</strong></> : undefined} />}
     {tab === "lots" && <ItemLotsTab itemId={id} canDelete={access.owner} onChanged={onChanged} />}
   </section>;
 }
 
-type TabProps = { record: ItemView; access: ItemAccess; onEdit(record: ItemView, copy: boolean): void; onChanged(): void; onRemoved(): void };
+type TabProps = { record: ItemView; unit?: UnitView; access: ItemAccess; onEdit(record: ItemView, copy: boolean): void; onChanged(): void; onRemoved(): void };
 
 function InfoTab(props: TabProps) {
   const { record } = props, [shown, setShown] = useState(0);
   const base = baseUnitOf(record.units), discontinued = record.statusId === DISCONTINUED, photos = record.photos ?? [];
   const initials = record.name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join("").toUpperCase();
   const quantity = (value: number | null | undefined) => value == null ? "—" : `${fmt(value)} ${base?.name ?? ""}`;
-  const facts: [string, ReactNode][] = [
+  const inUnit = props.unit;
+  const unitQuantity = (value: number | null | undefined) => value == null || !inUnit ? "—" : `${fmt(inUnitQuantity(value, inUnit.factor))} ${inUnit.name}`;
+  const unitPrice = (value: number | null | undefined) => value == null || !inUnit ? null : `${fmt(inUnitPrice(value, inUnit.factor))} / ${inUnit.name}`;
+  // With a unit picked on the list only that unit shows (its code, cost and quantity); otherwise the whole unit list.
+  const facts: [string, ReactNode][] = inUnit ? [
+    ["Mã hàng", inUnit.code], ["Tên hàng", record.name], ["Loại hàng", typeLabel(record.group)], ["Nhóm hàng", record.itemGroupName], ["Đơn vị tính", inUnit.name],
+    ["Giá vốn", unitPrice(record.costPrice)], ["Giá nhập cuối", unitPrice(record.lastPurchasePrice)],
+    ["Còn lại", unitQuantity(record.onHand)], ["Giá trị còn lại", fmt(record.stockValue)], ["Định mức tối thiểu", unitQuantity(record.minQuantity)], ["Định mức tối đa", unitQuantity(record.maxQuantity)],
+    ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
+  ] : [
     ["Mã hàng", record.code], ["Tên hàng", record.name], ["Loại hàng", typeLabel(record.group)], ["Nhóm hàng", record.itemGroupName],
     ["Đơn vị tính", <span key="units" className={styles.unitList}>{record.units.map((unit) => <span key={unit.id}>{unit.name} <small>· {unit.code}</small></span>)}</span>],
     ["Giá vốn", record.costPrice == null ? null : `${fmt(record.costPrice)} / ${base?.name ?? ""}`], ["Giá nhập cuối", record.lastPurchasePrice == null ? null : `${fmt(record.lastPurchasePrice)} / ${base?.name ?? ""}`],
@@ -53,7 +63,7 @@ function InfoTab(props: TabProps) {
     ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
   ];
   return <div className={listStyles.tabBody}>
-    <header className={styles.infoHead}><h3>{record.name}</h3><StatusPill tone={discontinued ? "neutral" : "success"}>{discontinued ? "Ngừng sử dụng" : "Đang sử dụng"}</StatusPill></header>
+    <header className={styles.infoHead}><h3>{record.name}{inUnit ? ` - ${inUnit.name}` : ""}</h3><StatusPill tone={discontinued ? "neutral" : "success"}>{discontinued ? "Ngừng sử dụng" : "Đang sử dụng"}</StatusPill></header>
     <div className={styles.infoBody}>
       <div className={styles.gallery}>
         <span className={styles.photoMain}>{photos[shown] ? (

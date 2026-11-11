@@ -184,7 +184,7 @@ function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row, units[row.id], (unitId) => setUnits((current) => ({ ...current, [row.id]: unitId })))}</td>)}
             </OpenableTableRow>
             {expanded === row.id && <tr><td colSpan={columnCount} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
-              <ItemDetailPanel id={row.id} access={access} onEdit={(record, copy) => setEditor({ record, copy })} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
+              <ItemDetailPanel id={row.id} unit={row.units.find((unit) => unit.id === units[row.id])} access={access} onEdit={(record, copy) => setEditor({ record, copy })} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
             </div></td></tr>}
           </Fragment>)}
         </tbody></table>}

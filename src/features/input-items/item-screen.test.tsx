@@ -74,6 +74,19 @@ it("converts what is left and the cost into the unit picked for the row", async 
   expect(within(line).getByText("2")).toBeTruthy();
 });
 
+it("shows only the picked unit in the opened row: its code, cost and quantity, with no unit list", async () => {
+  const user = userEvent.setup();
+  render(<ToastProvider><ItemScreen /></ToastProvider>);
+  const line = (await screen.findByText("Phao nhựa")).closest("tr")!;
+  await user.selectOptions(within(line).getByLabelText("Đơn vị VT000001"), id(4));
+  await user.click(within(line).getByRole("button", { name: /Mở Phao nhựa/ }));
+  const detail = await screen.findByRole("region", { name: "Chi tiết VT000001" });
+  expect(within(detail).getByText("VT000001-T")).toBeTruthy();
+  expect(within(detail).getByText("12.000 / thùng")).toBeTruthy();
+  expect(within(detail).getByText("2 thùng")).toBeTruthy();
+  expect(within(detail).queryByText("VT000001-C")).toBeNull();
+});
+
 it("searches a linked item by its code among every status", async () => {
   state.linked = "VT000001";
   render(<ToastProvider><ItemScreen /></ToastProvider>);

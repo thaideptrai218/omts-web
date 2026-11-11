@@ -19,39 +19,44 @@ function search(values: Query) {
   return params;
 }
 
-async function read<T>(action: string, values: Query, schema: z.ZodType<T>, signal?: AbortSignal): Promise<Result<T>> {
-  try {
-    const response = await bffFetch(`/api/input-items?${search({ action, ...values })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: signal ?? AbortSignal.timeout(30_000) });
-    const value = await response.json(), parsed = schema.safeParse(value.data);
-    return response.ok && value.status === "success" && parsed.success ? { status: "success", data: parsed.data } : failed(response.ok ? 502 : response.status, value.code, false, problemOf(value.problem));
-  } catch { return failed(0); }
+/** The calls of one BFF door: reads by action name, JSON actions, uploads and spreadsheet downloads, all answering the same `Result`. */
+export function bffClient(endpoint: string) {
+  async function read<T>(action: string, values: Query, schema: z.ZodType<T>, signal?: AbortSignal): Promise<Result<T>> {
+    try {
+      const response = await bffFetch(`${endpoint}?${search({ action, ...values })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: signal ?? AbortSignal.timeout(30_000) });
+      const value = await response.json(), parsed = schema.safeParse(value.data);
+      return response.ok && value.status === "success" && parsed.success ? { status: "success", data: parsed.data } : failed(response.ok ? 502 : response.status, value.code, false, problemOf(value.problem));
+    } catch { return failed(0); }
+  }
+  async function send<T>(init: RequestInit, schema: z.ZodType<T>, query = ""): Promise<Result<T>> {
+    try {
+      const response = await bffFetch(`${endpoint}${query}`, { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000), ...init });
+      const value = await response.json(), parsed = schema.safeParse(value.data);
+      return response.ok && value.status === "success" && parsed.success ? { status: "success", data: parsed.data }
+        : failed(response.status, value.code, response.status === 401 || response.status >= 500 || response.ok, problemOf(value.problem));
+    } catch { return failed(0, undefined, true); }
+  }
+  const json = <T,>(action: string, payload: Record<string, unknown>, schema: z.ZodType<T>) =>
+    send({ headers: { "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action, ...payload }) }, schema);
+  function upload<T>(action: string, file: File, schema: z.ZodType<T>, id?: string) {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    return send({ headers: { "X-OMTS-Request": "web" }, body: form }, schema, `?${search({ action, id })}`);
+  }
+  async function download(action: string, values: Query, name: string): Promise<Result<true>> {
+    try {
+      const response = await bffFetch(`${endpoint}?${search({ action, ...values })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000) });
+      if (!response.ok) { const value = await response.json(); return failed(response.status, value.code); }
+      if (!response.headers.get("content-type")?.startsWith(mime)) return failed(502);
+      const url = URL.createObjectURL(await response.blob()), link = document.createElement("a");
+      link.href = url; link.download = name; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      return { status: "success", data: true };
+    } catch { return failed(0); }
+  }
+  return { read, json, upload, download };
 }
-async function send<T>(init: RequestInit, schema: z.ZodType<T>, query = ""): Promise<Result<T>> {
-  try {
-    const response = await bffFetch(`/api/input-items${query}`, { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000), ...init });
-    const value = await response.json(), parsed = schema.safeParse(value.data);
-    return response.ok && value.status === "success" && parsed.success ? { status: "success", data: parsed.data }
-      : failed(response.status, value.code, response.status === 401 || response.status >= 500 || response.ok, problemOf(value.problem));
-  } catch { return failed(0, undefined, true); }
-}
-const json = <T,>(action: string, payload: Record<string, unknown>, schema: z.ZodType<T>) =>
-  send({ headers: { "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action, ...payload }) }, schema);
-function upload<T>(action: "import" | "photo", file: File, schema: z.ZodType<T>, id?: string) {
-  const form = new FormData();
-  form.append("file", file, file.name);
-  return send({ headers: { "X-OMTS-Request": "web" }, body: form }, schema, `?${search({ action, id })}`);
-}
-async function download(action: string, values: Query, name: string): Promise<Result<true>> {
-  try {
-    const response = await bffFetch(`/api/input-items?${search({ action, ...values })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000) });
-    if (!response.ok) { const value = await response.json(); return failed(response.status, value.code); }
-    if (!response.headers.get("content-type")?.startsWith(mime)) return failed(502);
-    const url = URL.createObjectURL(await response.blob()), link = document.createElement("a");
-    link.href = url; link.download = name; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
-    return { status: "success", data: true };
-  } catch { return failed(0); }
-}
+const { read, json, upload, download } = bffClient("/api/input-items");
 
 /** The text of a failed call: the API's own sentence for a shortage, the message of the code when the web has one, otherwise the usual wording of the status. */
 export function inputError(result: Failure) {

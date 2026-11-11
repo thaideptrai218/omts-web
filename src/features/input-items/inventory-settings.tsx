@@ -17,7 +17,7 @@ import { errorText, inputRepository, type Result } from "./repository";
 import styles from "./inventory-settings.module.css";
 
 type Tab = "units" | "groups" | "types" | "cost";
-type Row = { id: string; name: string; rowVersion: string; count?: number; locked?: boolean; parentId?: string | null; depth?: 0 | 1; hasChildren?: boolean };
+export type Row = { id: string; name: string; rowVersion: string; count?: number; locked?: boolean; parentId?: string | null; depth?: 0 | 1; hasChildren?: boolean };
 
 /** The ids in the order a row moved one step among its siblings gives, or undefined at the end of the line. A top-level row moves together with its children; a child moves within its parent. */
 function movedOrder(rows: readonly Row[], index: number, delta: -1 | 1): string[] | undefined {
@@ -62,7 +62,7 @@ export function InputInventorySettings() {
     <div className={cashStyles.tabs} role="tablist" aria-label="Thiết lập vật tư và giống">
       {tabButton("units", "Đơn vị tính", unitRows?.length)}{tabButton("groups", "Nhóm hàng", groupRows?.length)}{tabButton("types", "Loại xuất", typeRows?.length)}{tabButton("cost", "Tính giá vốn")}
     </div>
-    {tab === "units" && <NameTab key="units" noun="đơn vị tính" maxLength={30} rows={unitRows} loading={units.loading} error={units.error} reload={units.reload} canManage={owner} countLabel="Số vật tư dùng"
+    {tab === "units" && <NameTab key="units" noun="đơn vị tính" maxLength={30} rows={unitRows} loading={units.loading} error={units.error} reload={units.reload} canManage={owner} countLabel="Số mặt hàng dùng"
       save={(name, row) => inputRepository.saveUnit(name, row?.id, row?.rowVersion)} remove={(row) => inputRepository.removeUnit(row.id)} />}
     {tab === "groups" && <NameTab key="groups" noun="nhóm hàng" maxLength={100} rows={groupRows} loading={groups.loading} error={groups.error} reload={groups.reload} canManage={owner} countLabel="Số vật tư"
       tree save={(name, row, parentId) => inputRepository.saveGroup(name, row?.id, row?.rowVersion, parentId)} remove={(row) => inputRepository.removeGroup(row.id)} reorder={(ids) => inputRepository.reorderGroups(ids)} />}
@@ -72,12 +72,12 @@ export function InputInventorySettings() {
   </div>;
 }
 
-type NameTabProps = {
+export type NameTabProps = {
   noun: string; maxLength: number; rows: Row[] | undefined; loading: boolean; error?: string; reload(): void; canManage: boolean; countLabel?: string; tree?: boolean;
   save(name: string, row?: Row, parentId?: string | null): Promise<Result<unknown>>; remove(row: Row): Promise<Result<unknown>>; reorder?(ids: string[]): Promise<Result<unknown>>;
 };
 
-function NameTab({ noun, maxLength, rows, loading, error, reload, canManage, countLabel, tree, save, remove, reorder }: NameTabProps) {
+export function NameTab({ noun, maxLength, rows, loading, error, reload, canManage, countLabel, tree, save, remove, reorder }: NameTabProps) {
   const [editing, setEditing] = useState<Row | "new">(), [failure, setFailure] = useState<string>(), [busy, setBusy] = useState(false);
   const confirmation = useActionDialog(), { notify } = useToast();
   const cap = noun.charAt(0).toUpperCase() + noun.slice(1);

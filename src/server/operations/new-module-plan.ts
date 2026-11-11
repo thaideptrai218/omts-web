@@ -6,7 +6,6 @@ import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
 import { salesV2Plan } from "./sales-v2-plan";
 
-const productQuery = z.strictObject({ action: z.enum(["list", "all"]).default("list") });
 const requestQuery = z.strictObject({ action: z.enum(["list", "mine", "detail", "mine-detail"]).default("list"), id: z.guid().optional(),
   status: c.requestStatusFilterSchema.optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).default("1"), pageSize: z.string().regex(/^[1-9]\d?$/).default("20") });
 const workforceQuery = z.strictObject({ action: z.enum(["list", "lookups", "leaves", "settings"]).default("list"), day: z.iso.date().optional() });
@@ -15,7 +14,7 @@ const mutation = z.strictObject({ action: z.string(), id: z.guid().optional(), z
 const done = z.object({ done: z.literal(true) }), empty = z.strictObject({});
 
 export function planNewModule(area: OperationArea, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
-  if (["sales-products"].includes(area)) return salesV2Plan(area as "sales-products", method, query, input);
+  if (["sales-products"].includes(area)) return salesV2Plan(area as "sales-products", method, query);
   if (new Set(query.keys()).size !== [...query.keys()].length) return undefined;
   if (method === "POST") {
     const parsed = mutation.safeParse(input);
@@ -25,10 +24,6 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
       const values = validator.safeParse(body);
       return values.success ? { area, action, path, method: verb, permission, zoneId, schema, ...(bodyless ? {} : { body: values.data }) } : undefined;
     };
-    if (area === "sales-products" && !zoneId) {
-      if (action === "create" && !id) return write("/api/sales-products", c.saveProductSchema, c.salesProductSchema, "Owner");
-      if (action === "update" && id) { const plan = write(`/api/sales-products/${id}`, c.saveProductSchema.refine((v) => !!v.rowVersion), c.salesProductSchema, "Owner", "PUT"); return plan && { ...plan, expectedId: id }; }
-    }
     if (area === "purchase-requests" && !zoneId) {
       if (action === "submit" && !id) return write("/api/me/purchase-requests", t.placeRequestSchema, t.requestSavedSchema, "Submit");
       if (id && ["accept", "decline", "cancel"].includes(action)) {
@@ -57,12 +52,6 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
   }
   if (method !== "GET") return undefined;
   const values = Object.fromEntries(query);
-  if (area === "sales-products") {
-    const q = productQuery.safeParse(values);
-    if (!q.success) return undefined;
-    return { area, action: q.data.action, method: "GET", path: `/api/sales-products${q.data.action === "all" ? "?includeUnavailable=true" : ""}`,
-      permission: q.data.action === "all" ? "CatalogueAll" : "View", schema: z.array(c.salesProductSchema) };
-  }
   if (area === "purchase-requests") {
     const q = requestQuery.safeParse(values);
     if (!q.success) return undefined;

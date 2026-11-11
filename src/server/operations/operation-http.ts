@@ -150,6 +150,11 @@ export async function handleOperationRequest(request: Request, areaName: string)
       payload = new FormData();
       for (const file of input.files) payload.append(area.data === "water" ? "photo" : area.data === "harvest" || logUpload ? "photos" : "files", file, file.name);
       for (const [key, value] of Object.entries(values.data)) if (value != null) {
+        // The product lines of a harvest lot go as indexed fields: productLines[0].productId, productLines[0].cageCount, productLines[0].kg (empty kg is left out).
+        if (key === "productLines" && Array.isArray(value)) {
+          for (const [index, line] of (value as Record<string, unknown>[]).entries()) for (const [field, part] of Object.entries(line)) if (part != null) payload.append(`productLines[${index}].${field}`, String(part));
+          continue;
+        }
         for (const part of Array.isArray(value) ? value : [value]) payload.append(key, String(part));
       }
     }

@@ -1,4 +1,5 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -22,8 +23,14 @@ const modes: readonly (readonly [SearchMode, string, string])[] = [["lotCode", "
  * SCR-TRACE-01 Truy xuất lô hàng và SCR-TRACE-02 Sửa dữ liệu truy xuất.
  * Trạng thái tìm kiếm nằm ở màn này để quay lại từ màn sửa vẫn thấy đúng lô vừa truy xuất.
  */
-export function LotTracingScreen({ helpHref }: { helpHref?: string }) {
-  const search = useLotSearch();
+export function LotTracingScreen(props: { helpHref?: string }) {
+  // Keyed by the linked code so a second `?code=` link followed while the screen is open starts a new search.
+  const linkedCode = useSearchParams()?.get("code") ?? "";
+  return <LotTracingView key={linkedCode} linkedCode={linkedCode} {...props} />;
+}
+
+function LotTracingView({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
+  const search = useLotSearch(linkedCode);
   const [correcting, setCorrecting] = useState<Correcting>();
   if (correcting) {
     return (

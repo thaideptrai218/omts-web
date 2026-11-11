@@ -96,4 +96,6 @@ export const fieldNames: Record<string, string> = {
   "Min quantity": "Định mức tối thiểu", "Max quantity": "Định mức tối đa", "Cost price": "Giá vốn", "Opening quantity": "Còn lại ban đầu", Description: "Mô tả", Notes: "Ghi chú",
   Zone: "Vùng", Raft: "Bè", "Issue type": "Loại xuất", Receiver: "Người nhận", "Issued at": "Thời gian", Reason: "Lý do", Lines: "Hàng xuất", "Disposal fields": "Vùng, bè, loại xuất, người nhận",
   Ids: "Thứ tự", Parent: "Nhóm cha",
+  "Unit price": "Giá bán", Category: "Nhóm sản phẩm", "Min kg": "Định mức tối thiểu", "Max kg": "Định mức tối đa", Factor: "Quy đổi", "Disposed at": "Thời gian",
+  "Product lines": "Sản phẩm thu hoạch",
 };

@@ -23,6 +23,7 @@ import type { ResourceKey } from "./resources";
 import type { OperationArea } from "@/features/operations/permissions";
 import { workspaceRoleLabel } from "@/shared/presentation/actor-label";
 import { createPersonalRepository } from "@/features/personal-api/repository";
+import { canReadProducts } from "@/features/products/product-permissions";
 
 const resourceIcons: Record<ResourceKey, InterfaceIconName> = {
   zones: "zone", rafts: "raft", "input-items": "material", suppliers: "supplier",
@@ -85,14 +86,19 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const cashSettings = holds("CASH_BOOK_SETTINGS", "View"), cashBook = holds("CASH_BOOK", "View");
   const cashItems: SettingsSection["items"] = cashSettings ? [{ href: "/settings?section=cash-book", panel: "cash-book", label: "Sổ quỹ", icon: "payment", description: "Tài khoản ngân hàng, ví điện tử và loại thu chi dùng cho phiếu thu chi." }] : [];
   const inputSettings: SettingsSection["items"] = inputReaders.some((fn) => holds(fn, "View")) ? [{ href: "/settings?section=input-inventory", panel: "input-inventory", label: INPUT_GROUP, icon: "material", description: "Đơn vị tính, nhóm hàng, loại xuất, cách tính giá vốn và cho phép xuất khi hết." }] : [];
+  const productSettings: SettingsSection["items"] = canReadProducts(context.identity, context.permissions.functionPermissions) ? [{ href: "/settings?section=products", panel: "products", label: "Sản phẩm", icon: "product", description: "Nhóm sản phẩm hàu; đơn vị tính dùng chung với Vật tư & Giống." }] : [];
   const customerSettings: SettingsSection["items"] = holds("CUSTOMERS", "View") ? [{ href: "/settings?section=customers", panel: "customers", label: "Khách hàng", icon: "users", description: "Cảnh báo công nợ và thông tin bắt buộc khi thêm khách hàng." }] : [];
   const inputLinks: [string, string, InterfaceIconName][] = [
     ...(resourceAllowed("input-items", context.identity, context.permissions.functionPermissions) ? [["/inputs/items", "Danh mục", "material"] as [string, string, InterfaceIconName]] : []),
     ...(holds("INPUT_ISSUES", "View") ? [["/inputs/uses", "Xuất dùng", "work"] as [string, string, InterfaceIconName]] : []),
     ...(holds("INPUT_DISPOSALS", "View") ? [["/inputs/disposals", "Xuất hủy", "trash"] as [string, string, InterfaceIconName]] : []),
   ];
+  const productLinks: [string, string, InterfaceIconName][] = [
+    ...(context.identity.subjectType !== "Trader" && canReadProducts(context.identity, context.permissions.functionPermissions) ? [["/sales/products", "Sản phẩm", "product"] as [string, string, InterfaceIconName]] : []),
+    ...(holds("PRODUCT_DISPOSALS", "View") ? [["/sales/disposals", "Xuất hủy hàu", "trash"] as [string, string, InterfaceIconName]] : []),
+  ];
   const settingsSections: SettingsSection[] = [
-    { label: "Quản lý", items: [...cashItems, ...inputSettings, ...customerSettings] },
+    { label: "Quản lý", items: [...cashItems, ...inputSettings, ...productSettings, ...customerSettings] },
     { label: "Phân quyền", items: (["accounts", "roles"] as const).filter((key) => visible.includes(key)).map((key) => ({ href: `/workspace/${key}`, label: resources[key].title, icon: resourceIcons[key], description: settingsDescriptions[key] })) },
     { label: "Hợp tác xã", items: isOwner ? [{ href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã." }, { href: "/cooperative/receiving-bank-account", label: "Ngân hàng nhận tiền", icon: "payment", description: "Tài khoản dùng để nhận chuyển khoản và tạo mã VietQR." }] : [] },
     { label: "Cấu hình nghiệp vụ", items: operationModules.filter((entry) => entry.key === "job-types" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => ({ href: `/operations/${entry.key}`, label: entry.title, icon: operationIcons[entry.key], description: "Đơn giá theo giờ và lịch sử ngày hiệu lực của từng loại công việc." })) },
@@ -111,12 +117,15 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       {workspaceGroups.map((group) => {
         if (financeWorkspace && group.label === "Nuôi trồng") return null;
         const rows = visible.filter((key) => group.resources.includes(key));
-        const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).sort((a, b) => group.operations.indexOf(a.key) - group.operations.indexOf(b.key));
+        // The product catalogue has its own screen for everyone but a trader, who keeps the plain list.
+        const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && !(entry.key === "sales-products" && context.identity.subjectType !== "Trader") && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).sort((a, b) => group.operations.indexOf(a.key) - group.operations.indexOf(b.key));
         const purchasing = operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions);
         const inputs = group.label === INPUT_GROUP ? inputLinks : [];
-        return rows.length || modules.length || inputs.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
+        const sales: [string, string, InterfaceIconName][] = group.label === "Kinh doanh" ? productLinks : [];
+        return rows.length || modules.length || inputs.length || sales.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
           {inputs.map(([href, label, icon]) => link(href, label, icon))}
+          {sales.map(([href, label, icon]) => link(href, label, icon))}
           {modules.map((entry) => link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]))}
           {group.label === "Mua hàng" && purchasing && <>{link("/operations/purchase-receipts", "Nhập hàng", "receipt")}{link("/operations/purchase-returns", "Trả hàng nhập", "upload")}</>}
         </div></NavigationGroup> : null;

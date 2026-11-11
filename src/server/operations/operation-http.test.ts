@@ -15,6 +15,22 @@ function configure(subjectType = "CooperativeOwner", permissions: FunctionPermis
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 const get = (query: string) => new Request(`http://localhost:3002/api/operations/water?${query}`);
 describe("operations BFF authorization and evidence boundary", () => {
+  it("sends the product lines of a harvest lot as indexed form fields and leaves an empty kg out", async () => {
+    configure(); const raft = ids.receipt, zone = ids.item, product = ids.supplier ?? ids.receipt;
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ lot: { id: ids.receipt, lotCode: "L1" } }, { status: 201 }));
+    const form = new FormData();
+    form.set("payload", JSON.stringify({ laneNumbers: [1], finishedLaneNumbers: [], cageCount: 5, estimatedKg: null, productLines: [{ productId: product, cageCount: 3, kg: 75 }, { productId: ids.item, cageCount: 2, kg: null }] }));
+    const request = new Request(`http://localhost:3002/api/operations/harvest?action=harvest-record&id=${raft}&zoneId=${zone}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form });
+    expect((await handleOperationRequest(request, "harvest")).status).toBe(200);
+    const sent = fetcher.mock.calls[0][1]!.body as FormData, keys = [...sent.keys()];
+    expect(sent.get("productLines[0].productId")).toBe(product);
+    expect(sent.get("productLines[0].cageCount")).toBe("3");
+    expect(sent.get("productLines[0].kg")).toBe("75");
+    expect(sent.get("productLines[1].cageCount")).toBe("2");
+    expect(keys).not.toContain("productLines[1].kg");
+    expect(keys.filter((key) => key.startsWith("productLines"))).toHaveLength(5);
+    expect(sent.get("cageCount")).toBe("5");
+  });
   it("requires CSRF on the newly approved sales writes before calling upstream", async () => {
     configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch");
     const request = new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "https://evil.test", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "submit", body: { productId: ids.item, requestedKg: 2, pickupDate: "2026-10-31", note: null } }) });

@@ -4,11 +4,12 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/features/operations/ui";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
+import { HarvestProductLines, blankLine, linesPayload, linesProblem, linesTotals, useHarvestProducts, type HarvestLine } from "./harvest-product-lines";
 import flowStyles from "./cultivation-flow.module.css";
 import * as c from "./records-contracts";
 import { EditorFrame, LaneChoices, harvestRepo } from "./records-shared";
 
-/** Records one harvest trip: lanes, lanes finished, cage count, optional kg estimate and photos. */
+/** Records one harvest trip: lanes, lanes finished, the product lines (product, cages, kg) and photos. */
 export function HarvestForm({
   zoneId,
   raftId,
@@ -24,26 +25,28 @@ export function HarvestForm({
 }) {
   const [lanes, setLanes] = useState<number[]>([]);
   const [finished, setFinished] = useState<number[]>([]);
-  const [cages, setCages] = useState("");
-  const [kg, setKg] = useState("");
+  const [lines, setLines] = useState<HarvestLine[]>(() => [blankLine()]);
   const [error, setError] = useState<string>();
   const [photos, setPhotos] = useState<File[]>([]);
-  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length);
-  // Live hint: the kg the backend will store when the estimate is left blank.
-  const cageNumber = Number(cages);
-  const estimateHint =
-    !kg && Number.isInteger(cageNumber) && cageNumber > 0
-      ? `${cageNumber.toLocaleString("vi-VN")} lồng ≈ ${(cageNumber * data.averageKgPerCage).toLocaleString("vi-VN")} kg. `
-      : "";
+  const products = useHarvestProducts();
+  const editor = useOperationEditor(onClose, !!lanes.length || lines.some((line) => line.productId || line.cages) || !!photos.length);
   async function save() {
+    const problem = linesProblem(lines, true);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    const totals = linesTotals(lines);
+    // With product lines the lot's cages and kg are their sums; the API ignores the two totals sent here.
     const parsed = c.harvestValues.safeParse({
       laneNumbers: lanes,
       finishedLaneNumbers: finished,
-      cageCount: Number(cages),
-      estimatedKg: kg ? Number(kg) : null,
+      cageCount: totals.cages,
+      estimatedKg: null,
+      productLines: linesPayload(lines),
     });
     if (!parsed.success) {
-      setError("Chọn làn thu hoạch, số lồng nguyên dương và sản lượng lớn hơn 0 nếu nhập.");
+      setError("Chọn làn thu hoạch, sản phẩm với số lồng nguyên dương và số kg lớn hơn 0 nếu nhập.");
       return;
     }
     if (
@@ -58,7 +61,7 @@ export function HarvestForm({
     setError(undefined);
     if (
       await editor.submit(
-        `Ghi nhận ${cages} lồng từ làn ${lanes.join(", ")}${finished.length ? `; đã thu hết làn ${finished.join(", ")}` : ""}?`,
+        `Ghi nhận ${totals.cages} lồng từ làn ${lanes.join(", ")}${finished.length ? `; đã thu hết làn ${finished.join(", ")}` : ""}?`,
         () =>
           harvestRepo.upload(
             "harvest-record",
@@ -100,28 +103,17 @@ export function HarvestForm({
             />
           </div>
           <div className={flowStyles.harvestFormSection}>
-            <h3>Số lồng và ảnh</h3>
-            <Field
-              label="Số lồng thu hoạch *"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              step={1}
-              required
-              value={cages}
-              onChange={(e) => setCages(e.target.value)}
-            />
-            <Field
-              label={`Ước tính kg (để trống sẽ quy đổi theo ${data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng)`}
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={kg}
-              onChange={(e) => setKg(e.target.value)}
+            <h3>Sản phẩm thu hoạch và ảnh</h3>
+            <HarvestProductLines
+              lines={lines}
+              products={products.products}
+              loading={products.loading}
+              error={products.error}
+              disabled={editor.disabled}
+              onChange={setLines}
             />
             <p className={flowStyles.harvestHint}>
-              {estimateHint}
-              Thu hoạch tính theo lồng; số kg chỉ là ước tính. Thời điểm thu hoạch được hệ thống ghi khi lưu.
+              Chia chuyến thu hoạch theo sản phẩm: số kg tự tính theo quy đổi Lồng của sản phẩm và sửa được. Thời điểm thu hoạch được hệ thống ghi khi lưu.
             </p>
             <Field
               label="Ảnh chuyến thu hoạch (tối đa 10 ảnh JPEG/PNG, 10 MB/ảnh)"

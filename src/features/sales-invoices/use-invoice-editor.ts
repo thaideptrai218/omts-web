@@ -36,8 +36,10 @@ export function useInvoiceEditor() {
   const setDraft = useCallback((update: (current: Draft) => Draft) => {
     setDraftState(update); answers.current = noAnswers; key.current = crypto.randomUUID(); setError(undefined);
   }, []);
+  // The products a line of this lot may name: those the lot was split into, else every product in use. A single choice is taken at once.
+  const only = (lot: LotForSale) => { const own = lot.products?.length ? active.filter((p) => lot.products?.some((item) => item.productId === p.id)) : active; return own.length === 1 ? own[0] : undefined; };
   const addLot = (lot: LotForSale) => setDraft((d) => d.lines.some((l) => l.lot.id === lot.id) ? d
-    : { ...d, lines: [...d.lines, { key: crypto.randomUUID(), lot, productId: active.length === 1 ? active[0].id : "", kg: "", unitPrice: "" }] });
+    : { ...d, lines: [...d.lines, { key: crypto.randomUUID(), lot, productId: only(lot)?.id ?? "", kg: "", unitPrice: "" }] });
 
   const ask = (confirmation: InvoiceConfirmation) => new Promise<Reply>((resolve) => setQuestion({ confirmation, reply: (a) => { setQuestion(undefined); resolve(a); } }));
 

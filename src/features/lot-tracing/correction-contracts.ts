@@ -21,6 +21,8 @@ export const logItem = z.object({
 export const lotItem = z.object({
   id, lotCode: z.string(), harvestedAt: z.string(), harvestDate: day, laneNumbers: numbers, finishedLaneNumbers: numbers, cageCount: z.number().int(), kgPerCage: z.number(),
   estimatedKg: z.number(), status: z.string(), originState, rowVersion: z.string(),
+  // Sản phẩm của lô đã tách theo sản phẩm (rỗng với lô cũ); lô đã tách thì số lồng và kg là tổng các dòng này.
+  productLines: z.array(z.object({ productId: id, productCode: z.string(), productName: z.string(), cageCount: z.number().int(), kg: z.number() })).optional(),
 });
 export const correctionRecords = z.object({
   cycleId: id, raftId: id, raftCode: z.string(), cycleStatus: z.string(), startDate: day, closeDate: day.nullable(),

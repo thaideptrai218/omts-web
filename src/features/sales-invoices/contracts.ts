@@ -19,6 +19,8 @@ export const lotForSale = z.object({
   harvestDate: z.iso.date(), remainingKg: money, statusId: z.number().int(), status: z.string(), originState, withdrawnAt: at.nullable(),
   // Chưa có trong backend hiện tại; khi API trả thêm thì màn hình dùng số lồng/ratio của chính lô thay vì trung bình HTX.
   cageCount: z.number().int().nonnegative().nullish(), kgPerCage: z.number().positive().nullish(),
+  // Sản phẩm của lô đã tách theo sản phẩm (rỗng với lô cũ); hóa đơn chỉ được bán các sản phẩm này từ lô.
+  products: z.array(z.object({ productId: id, productCode: z.string(), productName: z.string(), harvestedKg: z.number(), remainingKg: z.number() })).optional(),
 });
 export const lotsForSale = z.object({ lots: z.array(lotForSale), message: z.string().nullable(), messageCode: z.string().nullable() });
 

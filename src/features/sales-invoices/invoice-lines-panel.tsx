@@ -36,9 +36,17 @@ export function InvoiceLinesPanel({ lots, draft, active, listPrice, disabled, ha
               <div className={s.lineRow} key={line.key}>
                 <div><strong className={s.code}>{line.lot.lotCode}</strong><div className={s.muted}>{line.lot.raftCode} · {line.lot.zoneCode}</div>
                   {line.lot.originState === "Withdrawn" && <StatusPill tone="danger">Nguồn gốc đã thu hồi</StatusPill>}</div>
-                <SelectBox aria-label={`Sản phẩm dòng ${i + 1}`} className={control} disabled={disabled} value={line.productId} onChange={(e) => edit(line.key, { productId: e.target.value })}>
-                  <option value="">Chọn sản phẩm</option>{active.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </SelectBox>
+                <div>
+                {(() => {
+                  const offered = active.filter((p) => !line.lot.products?.length || line.lot.products.some((own) => own.productId === p.id));
+                  return <>
+                    <SelectBox aria-label={`Sản phẩm dòng ${i + 1}`} className={control} disabled={disabled} value={line.productId} onChange={(e) => edit(line.key, { productId: e.target.value })}>
+                      <option value="">Chọn sản phẩm</option>{offered.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </SelectBox>
+                    {!offered.length && !!line.lot.products?.length && <small className={s.muted}>Lô chỉ bán được: {line.lot.products.map((own) => own.productName).join(", ")} (đang ngừng bán hoặc chưa có giá).</small>}
+                  </>;
+                })()}
+                </div>
                 <input aria-label={`Số kg dòng ${i + 1}`} inputMode="decimal" className={`${control} ${s.num}`} disabled={disabled} placeholder={`≤ ${line.lot.remainingKg}`} value={line.kg} onChange={(e) => edit(line.key, { kg: e.target.value })} />
                 <input aria-label={`Đơn giá dòng ${i + 1}`} inputMode="numeric" className={`${control} ${s.num}`} disabled={disabled} placeholder={listPrice(line.productId) != null ? money(listPrice(line.productId)).replace(" ₫", "") : "Giá niêm yết"} value={line.unitPrice} onChange={(e) => edit(line.key, { unitPrice: e.target.value })} />
                 <strong className={`${s.right} ${s.num}`}>{money(lineAmount(line, listPrice(line.productId)))}</strong>

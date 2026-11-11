@@ -37,7 +37,7 @@ function LotForm({ item, photoKeys, onClose, onSaved }: Props & { photoKeys: str
     preview: (value) => repo.write("lot-preview", value, preview, item.id),
     save: (value, ownerApproved) => repo.upload("lot-trace-correct", draft.files, { ...value, rowVersion: item.rowVersion, ownerApproved }, corrected, item.id),
   }, onSaved);
-  const busy = flow.mutation.pending;
+  const busy = flow.mutation.pending, lines = item.productLines ?? [], split = lines.length > 0;
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }));
 
   if (flow.reviewed) {
@@ -52,9 +52,10 @@ function LotForm({ item, photoKeys, onClose, onSaved }: Props & { photoKeys: str
       <div className={s.formGrid}>
         <Field label="Luống thu hoạch (cách nhau bởi dấu phẩy)" required value={draft.lanes} disabled={busy} onChange={(e) => set({ lanes: e.target.value })} />
         <Field label="Luống đã thu xong" value={draft.finished} disabled={busy} onChange={(e) => set({ finished: e.target.value })} />
-        <Field label="Số lồng" inputMode="numeric" required value={draft.cageCount} disabled={busy} onChange={(e) => set({ cageCount: e.target.value })} />
-        <Field label="kg ước tính (để trống: tính lại theo số lồng)" inputMode="decimal" value={draft.estimatedKg} disabled={busy} onChange={(e) => set({ estimatedKg: e.target.value })} />
+        <Field label="Số lồng" inputMode="numeric" required value={draft.cageCount} disabled={busy || split} onChange={(e) => set({ cageCount: e.target.value })} />
+        <Field label="kg ước tính (để trống: tính lại theo số lồng)" inputMode="decimal" value={draft.estimatedKg} disabled={busy || split} onChange={(e) => set({ estimatedKg: e.target.value })} />
       </div>
+      {split && <p className={s.hint}>Lô đã tách theo sản phẩm nên số lồng và kg là tổng các dòng sản phẩm: {lines.map((line) => `${line.productName} ${line.cageCount} lồng`).join(", ")}. Muốn đổi, sửa dòng sản phẩm của lô ở Thu hoạch → Sửa lô khi chu kỳ còn mở.</p>}
       <PhotoKeeper existing={photoKeys} keep={draft.keep} files={draft.files} max={maxPhotos} min={0} disabled={busy} onChange={(next) => set(next)} />
       <Note label="Lý do sửa" required maxLength={1000} value={draft.reason} disabled={busy} onChange={(e) => set({ reason: e.target.value })} />
       <ErrorNotice error={flow.mutation.error} />
