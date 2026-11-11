@@ -32,6 +32,13 @@ export function AnimatedOyster() {
         <path d="M100 0 120 0 320 365 270 350Z"/><path d="M340 0 350 0 520 330 490 315Z"/>
       </g>
       <g className={s.drift}><OysterArtwork id={id}/></g>
+      <g className={s.revealBubbles}>
+        <circle cx="224" cy="258" r="24" />
+        <circle cx="267" cy="290" r="17" />
+        <circle cx="310" cy="254" r="30" />
+        <circle cx="355" cy="290" r="18" />
+        <circle cx="397" cy="250" r="23" />
+      </g>
       <g data-part="bubbles">
         {bubbles.map(({ x, y, r, duration, delay, wobble }) => <circle key={x} cx={x} cy={y} r={r} className={s.bubble} style={{
           animationDuration: `${duration}s`, animationDelay: `${delay}s`, "--wobble": `${wobble}px`,

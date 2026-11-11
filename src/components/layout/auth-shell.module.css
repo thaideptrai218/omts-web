@@ -38,3 +38,101 @@
 @media(max-height:720px) and (min-width:1024px) { .art { min-height:0; } .storyCopy h2 { font-size:36px; } .form { padding-block:12px; } .storyCopy { padding-top:8px; } .storyCopy h2 { margin-block:12px; } .storyFooter { margin-top:18px; padding-top:14px; } .form :global(.login-links) { margin-top:16px; padding-top:14px; } }
 
 
+
+/* The login scene shares one ocean backdrop across the form and artwork. */
+.shell:has([data-login-scene]) {
+  height: auto;
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse at 74% 4%, #2b969e 0%, transparent 48%),
+    radial-gradient(ellipse at 18% 26%, #206079 0%, transparent 52%),
+    linear-gradient(165deg, #12495e, #081f35 78%);
+}
+
+.shell:has([data-login-scene]) .entry {
+  overflow: visible;
+}
+
+.shell:has([data-login-scene]) .brand > span,
+.shell:has([data-login-scene]) .footer {
+  color: #e1f3f5;
+}
+
+.shell:has([data-login-scene]) .brand [data-brand-name] {
+  color: #fff;
+}
+
+.shell:has([data-login-scene]) .form {
+  max-width: 460px;
+  padding: clamp(20px, 4vw, 38px);
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 18px;
+  background: #f6fbfc;
+  box-shadow: 0 18px 60px rgb(4 21 37 / 28%);
+}
+
+.shell:has([data-login-scene]) .story {
+  background: transparent;
+}
+
+.shell:has([data-login-scene]) .art {
+  opacity: 0;
+  transform: translateY(18px) scale(.94);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+
+.shell:has([data-login-scene]):has(input[autocomplete="username"]:not(:placeholder-shown)) .art {
+  --login-oyster-bubbles: inline;
+  opacity: 1;
+  transform: none;
+}
+
+.shell:has([data-login-scene]):has(input[autocomplete="username"]:not(:placeholder-shown)):has(input[autocomplete="current-password"]:not(:placeholder-shown):focus) .art > div {
+  animation: login-oyster-dance 1.35s ease-in-out infinite;
+}
+
+@keyframes login-oyster-dance {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-15px) rotate(4deg); }
+}
+
+@media (max-width: 1023px) {
+  .shell:has([data-login-scene]) {
+    grid-template-rows: auto 1fr;
+  }
+
+  .shell:has([data-login-scene]) .story {
+    display: grid;
+    grid-row: 1;
+    height: 132px;
+  }
+
+  .shell:has([data-login-scene]) .art {
+    position: relative;
+    container-type: size;
+    display: grid;
+    place-items: center;
+  }
+
+  .shell:has([data-login-scene]) .storyLabel,
+  .shell:has([data-login-scene]) .storyCopy,
+  .shell:has([data-login-scene]) .storyFooter,
+  .shell:has([data-login-scene]) .orbit {
+    display: none;
+  }
+
+  .shell:has([data-login-scene]) .entry {
+    gap: 16px;
+    padding-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell:has([data-login-scene]) .art {
+    transition: none;
+  }
+
+  .shell:has([data-login-scene]) .art > div {
+    animation: none !important;
+  }
+}

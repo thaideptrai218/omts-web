@@ -12,6 +12,21 @@
 .rays { animation:shimmer 11s ease-in-out infinite; }
 .bubble { fill:none; stroke:var(--omts-color-primary-soft, #e7f3f3); stroke-opacity:.42; stroke-width:.85; opacity:0; animation:rise linear infinite; }
 .particle { stroke:#c1d3ca; stroke-width:1.5; stroke-linecap:round; opacity:0; animation:current linear infinite; }
+.revealBubbles { display:var(--login-oyster-bubbles, none); }
+.revealBubbles circle {
+  fill:rgb(183 239 251 / 24%);
+  stroke:#e8fcff;
+  stroke-width:3;
+  opacity:0;
+  animation:oyster-bubble-reveal 2.5s ease-out both;
+}
+.revealBubbles circle:nth-child(2n) { animation-delay:160ms; }
+.revealBubbles circle:nth-child(3n) { animation-delay:280ms; }
+@keyframes oyster-bubble-reveal {
+  0% { transform:translateY(12px); opacity:0; }
+  18%, 65% { opacity:.95; }
+  100% { transform:translateY(-145px); opacity:0; }
+}
 @keyframes drift {
   0%,100% { transform:translate(-60px, 5px) rotate(-5deg); animation-timing-function:cubic-bezier(.28,.05,.3,1); }
   43% { transform:translate(60px, -7px) rotate(5deg); animation-timing-function:cubic-bezier(.45,0,.65,1); }
