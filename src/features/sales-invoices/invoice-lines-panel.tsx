@@ -1,13 +1,15 @@
 "use client";
 import { SelectBox } from "@/components/ui/select-box";
 import { useMemo, useState } from "react";
+import { MoneyInput } from "@/components/form/money-input";
+import { UnitInput } from "@/components/form/unit-input";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/management-page";
 import { useKgPerCage } from "@/features/harvest-settings-lookup/use-kg-per-cage";
 import { control, money, Skeleton } from "@/features/operations/ui";
 import type { Product } from "@/features/sales-api/contracts";
 import type { LotForSale } from "./contracts";
-import { lineAmount, type Draft } from "./invoice-draft";
+import { lineAmount, numberOrNull, toKg, toMoney, type Draft } from "./invoice-draft";
 import { lotRemainingText } from "./invoice-lot-quantity";
 import s from "./invoice-screen.module.css";
 
@@ -39,8 +41,8 @@ export function InvoiceLinesPanel({ lots, draft, active, listPrice, disabled, ha
                 <SelectBox aria-label={`Sản phẩm dòng ${i + 1}`} className={control} disabled={disabled} value={line.productId} onChange={(e) => edit(line.key, { productId: e.target.value })}>
                   <option value="">Chọn sản phẩm</option>{active.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </SelectBox>
-                <input aria-label={`Số kg dòng ${i + 1}`} inputMode="decimal" className={`${control} ${s.num}`} disabled={disabled} placeholder={`≤ ${line.lot.remainingKg}`} value={line.kg} onChange={(e) => edit(line.key, { kg: e.target.value })} />
-                <input aria-label={`Đơn giá dòng ${i + 1}`} inputMode="numeric" className={`${control} ${s.num}`} disabled={disabled} placeholder={listPrice(line.productId) != null ? money(listPrice(line.productId)).replace(" ₫", "") : "Giá niêm yết"} value={line.unitPrice} onChange={(e) => edit(line.key, { unitPrice: e.target.value })} />
+                <UnitInput label={`Số kg dòng ${i + 1}`} unit="kg" decimals={3} className={`${control} ${s.num}`} disabled={disabled} placeholder={`≤ ${line.lot.remainingKg}`} value={numberOrNull(toKg(line.kg), line.kg)} onChange={(next) => edit(line.key, { kg: next === null ? "" : String(next) })} />
+                <MoneyInput label={`Đơn giá dòng ${i + 1}`} className={`${control} ${s.num}`} disabled={disabled} placeholder={listPrice(line.productId) != null ? money(listPrice(line.productId)).replace(" ₫", "") : "Giá niêm yết"} value={numberOrNull(toMoney(line.unitPrice), line.unitPrice)} onChange={(next) => edit(line.key, { unitPrice: next === null ? "" : String(next) })} />
                 <strong className={`${s.right} ${s.num}`}>{money(lineAmount(line, listPrice(line.productId)))}</strong>
                 <button type="button" className={s.remove} disabled={disabled} aria-label={`Bỏ dòng ${i + 1}`} onClick={() => onChange((d) => ({ ...d, lines: d.lines.filter((l) => l.key !== line.key) }))}>Bỏ</button>
               </div>

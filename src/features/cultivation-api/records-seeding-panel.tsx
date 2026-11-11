@@ -1,6 +1,9 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
 import { z } from "zod";
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { Button } from "@/components/ui/button";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { DataTable, ErrorNotice, Paging, Skeleton, displayTime, useRemote } from "@/features/operations/ui";
@@ -12,8 +15,9 @@ import { SeedingForm } from "./records-seeding-form";
 import { seedRepo, useAllowed } from "./records-shared";
 
 /** Seeding records of the raft's current cycle, per-lot totals and the "mark seeding complete" action. */
-export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raftId: string; cycleId: string }) {
-  const [expanded, setExpanded] = useState<string>();
+export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zoneId: string; raftId: string; cycleId: string; cycleStartDate?: string }) {
+  const query = useSearchParams();
+  const [expanded, setExpanded] = useState<string | undefined>(() => query.get("recordId") ?? undefined);
   const allowed = useAllowed("seeding", zoneId);
   const remote = useRemote(
     useMemo(
@@ -24,8 +28,9 @@ export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raft
   const [selected, setSelected] = useState<z.infer<typeof c.seedingRecord> | null>();
   const [completing, setCompleting] = useState(false);
   const data = remote.data;
-  const [page, setPage] = useState(1);
-  const currentPage = Math.min(page, Math.max(1, Math.ceil((data?.records.length ?? 0) / 10)));
+  const [page, setPage] = useState<number>();
+  const linkedPage = Math.max(1, Math.ceil(((data?.records.findIndex(v => v.id === query.get("recordId")) ?? 0) + 1) / 10));
+  const currentPage = Math.min(page ?? linkedPage, Math.max(1, Math.ceil((data?.records.length ?? 0) / 10)));
   const visible = data?.records.slice((currentPage - 1) * 10, currentPage * 10) ?? [];
   return (
     <section className={flowStyles.recordsPanel}>
@@ -39,14 +44,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raft
               : "Theo dõi giống trong chu kỳ đang chọn"}
           </p>
         </div>
-        <div className={flowStyles.actions}>
-          <Button variant="secondary" disabled={remote.loading} onClick={remote.reload}>
-            Tải lại
-          </Button>
-          {data?.canRecord && allowed("Create") && (
-            <Button onClick={() => setSelected(null)}>Ghi nhận thả giống</Button>
-          )}
-        </div>
+
       </div>
       {remote.loading ? (
         <Skeleton />
@@ -60,7 +58,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raft
                   : "Chưa đánh dấu hoàn tất thả giống"}
               </span>
               {data.canMarkComplete && allowed("Create") && (
-                <Button variant="secondary" onClick={() => setCompleting(true)}>
+                <Button type="button" variant="secondary" onClick={() => setCompleting(true)}>
                   Đánh dấu hoàn tất
                 </Button>
               )}
@@ -88,7 +86,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raft
                       </button>
                     </td>
                     <td data-label="Lô giống / nhà cung cấp">
-                      <strong>{v.seedLot.code}</strong>
+                      <Link href={farmingReferenceHref("seeding", { zoneId, raftId, cycleId, recordId: v.id })}>{v.seedLot.code}</Link>
                       <span className="block text-xs text-text-muted">{v.seedLot.supplierName}</span>
                     </td>
                     <td data-label="Làn">{v.laneNumbers.join(", ")}</td>
@@ -100,7 +98,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raft
                   {expanded === v.id && (
                     <tr>
                       <td colSpan={5} className={flowStyles.recordDetailCell}>
-                        <section className={flowStyles.recordDetail} aria-label="Chi tiết lần thả giống">
+                        {selected?.id === v.id ? <SeedingForm zoneId={zoneId} raftId={raftId} cycleId={cycleId} cycleStartDate={cycleStartDate} data={data} record={v} allowed={allowed} onClose={() => setSelected(undefined)} onSaved={() => { setSelected(undefined); remote.reload(); }} /> : <section className={flowStyles.recordDetail} aria-label="Chi tiết lần thả giống">
                           <h4>Thả giống · {formatVietnameseDate(v.seedingDate)}</h4>
                           <dl>
                             <div>
@@ -111,7 +109,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raft
                             </div>
                             <div>
                               <dt>Phiếu nhập</dt>
-                              <dd>{v.seedLot.receiptCode}</dd>
+                              <dd><Link href={farmingReferenceHref("purchaseReceipt", { code: v.seedLot.receiptCode })}>{v.seedLot.receiptCode}</Link></dd>
                             </div>
                             <div>
                               <dt>Nhà cung cấp</dt>
@@ -140,15 +138,15 @@ export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raft
                           )}
                           <footer>
                             {v.canCorrect && (allowed("Edit") || allowed("Delete")) && (
-                              <Button className="w-auto" onClick={() => setSelected(v)}>
+                              <Button type="button" className="w-auto" onClick={() => setSelected(v)}>
                                 {allowed("Edit") ? "Chỉnh sửa lần thả giống" : "Xử lý lần thả giống"}
                               </Button>
                             )}
-                            <Button className="w-auto" variant="secondary" onClick={() => setExpanded(undefined)}>
+                            <Button type="button" className="w-auto" variant="secondary" onClick={() => setExpanded(undefined)}>
                               Thu gọn
                             </Button>
                           </footer>
-                        </section>
+                        </section>}
                       </td>
                     </tr>
                   )}
@@ -171,11 +169,20 @@ export function SeedingPanel({ zoneId, raftId, cycleId }: { zoneId: string; raft
                 ))}
               </DataTable>
             </details>
-            {selected !== undefined && (
+        <div className={flowStyles.actions}>
+          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
+            Tải lại
+          </Button>
+          {data?.canRecord && allowed("Create") && (
+            <Button type="button" onClick={() => setSelected(null)}>Ghi nhận thả giống</Button>
+          )}
+        </div>
+            {selected === null && (
               <SeedingForm
                 zoneId={zoneId}
                 raftId={raftId}
                 cycleId={cycleId}
+                cycleStartDate={cycleStartDate}
                 data={data}
                 record={selected}
                 allowed={allowed}

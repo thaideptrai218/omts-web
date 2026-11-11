@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useCallback, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
 import { CyclePlanSummary, LaneBoard } from "@/features/cultivation-api/lane-board";
 import { TabFooter } from "@/features/farming-management/detail-parts";
@@ -17,18 +18,17 @@ import cycleStyles from "./cycles-screen.module.css";
 
 /** "Tiến độ": lane board of a chosen cycle or date, the seeding sessions of a lane and the plan tracking. */
 export function CycleProgressTab({ row, zoneId, canSeeFlow }: { row: CycleRow; zoneId: string; canSeeFlow: boolean }) {
-  const [cycleId, setCycleId] = useState(row.cycle?.id ?? ""), [date, setDate] = useState(businessToday), [lane, setLane] = useState<number>();
-  const [applied, setApplied] = useState({ cycleId: row.cycle?.id ?? "", date: businessToday() });
+  const params = useSearchParams();
+  const [cycleId, setCycleId] = useState(params?.get("cycleId") ?? row.cycle?.id ?? ""), [date, setDate] = useState(businessToday), [lane, setLane] = useState<number>();
   const history = useRemote(useCallback((signal: AbortSignal) => readCycles({ action: "history", raftId: row.raftId }, cycleHistory, signal), [row.raftId]));
-  const progress = useRemote(useCallback((signal: AbortSignal) => readCycles({ action: "progress", raftId: row.raftId, ...(applied.cycleId ? { cycleId: applied.cycleId } : { date: applied.date }) }, cycleProgress, signal), [row.raftId, applied]));
-  const flow = (area: string) => `/operations/${area}?zoneId=${encodeURIComponent(zoneId)}&raftId=${encodeURIComponent(row.raftId)}`;
+  const progress = useRemote(useCallback((signal: AbortSignal) => readCycles({ action: "progress", raftId: row.raftId, ...(cycleId ? { cycleId } : { date }) }, cycleProgress, signal), [row.raftId, cycleId, date]));
+  const flow = (area: "seeding" | "material" | "harvest") => farmingReferenceHref(area, { zoneId, raftId: row.raftId, cycleId });
   const data = progress.data;
   return <>
     <div className={styles.subToolbar}>
-      <Select label="Chu kỳ" value={cycleId} onChange={event => setCycleId(event.target.value)}><option value="">Tra cứu theo ngày</option>
+      <Select label="Chu kỳ" value={cycleId} onChange={event => { setCycleId(event.target.value); setLane(undefined); }}><option value="">Tra cứu theo ngày</option>
         {history.data?.map(cycle => <option key={cycle.id} value={cycle.id}>{formatVietnameseDate(cycle.startDate)} → {cycle.closeDate ? formatVietnameseDate(cycle.closeDate) : "Đang nuôi"}</option>)}</Select>
-      <Field label="Ngày xem" type="date" max={businessToday()} disabled={!!cycleId} value={date} onChange={event => setDate(event.target.value)} />
-      <Button key="view" type="button" className="w-auto" variant="secondary" disabled={progress.loading || (!cycleId && !date)} onClick={() => { setApplied({ cycleId, date }); setLane(undefined); }}>Xem tiến độ</Button>
+      {!cycleId && <Field label="Ngày xem" type="date" max={businessToday()} value={date} onChange={event => { setDate(event.target.value); setLane(undefined); }} />}
     </div>
     <ErrorNotice error={history.error} />
     {progress.loading ? <Skeleton /> : progress.error || !data ? <ListStateMessage error={progress.error ?? "Không tải được tiến độ."} onRetry={progress.reload} retryLabel="Tải lại tiến độ" />
@@ -42,6 +42,6 @@ export function CycleProgressTab({ row, zoneId, canSeeFlow }: { row: CycleRow; z
         </div>
         {data.cycle && <aside className={cycleStyles.planPanel}><CyclePlanSummary plan={data.cycle} /><CyclePlanTracking cycleId={data.cycle.id} zoneId={zoneId} /></aside>}
       </div>}
-    {canSeeFlow && data?.cycle && <TabFooter left={<><Link className={styles.footerLink} href={flow("seeding")}>Thả giống</Link><Link className={styles.footerLink} href={flow("material-usages")}>Sử dụng vật tư</Link></>} />}
+    {canSeeFlow && data?.cycle && <TabFooter left={<><Link className={styles.footerLink} href={flow("seeding")}>Thả giống</Link><Link className={styles.footerLink} href={flow("material")}>Sử dụng vật tư</Link><Link className={styles.footerLink} href={flow("harvest")}>Thu hoạch</Link></>} />}
   </>;
 }

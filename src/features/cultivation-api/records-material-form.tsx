@@ -1,7 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
 import { z } from "zod";
+import { useToast } from "@/components/ui/toast-provider";
 import { Button } from "@/components/ui/button";
+import { UnitField } from "@/components/form/number-fields";
 import { loadOptions } from "@/features/operations/lookups";
 import { Field, Note, Select, businessToday, useRemote } from "@/features/operations/ui";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
@@ -45,6 +47,9 @@ export function MaterialForm({
       JSON.stringify(
         record ? [{ itemId: record.itemId, quantity: String(record.quantity) }] : [{ itemId: "", quantity: "" }],
       );
+  // The unit is the item's catalogue unit, so the quantity box never shows a bare number.
+  const unitOf = (itemId: string) => String(items.data?.find((v) => v.id === itemId)?.unit ?? (record?.itemId === itemId ? record.unit : "đơn vị"));
+  const { notify } = useToast();
   const editor = useOperationEditor(onClose, dirty);
   const editable = record ? record.canEdit && allowed("Edit") : allowed("Create");
   async function save() {
@@ -78,11 +83,11 @@ export function MaterialForm({
           zoneId,
         ),
       )
-    )
-      onSaved();
+    ) { notify({ tone: "success", title: record ? `Đã cập nhật sử dụng vật tư ${record.itemCode}.` : "Đã ghi nhận sử dụng vật tư." }); onSaved(); }
   }
   return (
     <EditorFrame
+      inline={!!record}
       title={record ? "Bản ghi sử dụng vật tư" : "Ghi nhận sử dụng vật tư"}
       editor={editor}
       error={error || items.error}
@@ -121,16 +126,16 @@ export function MaterialForm({
                   </option>
                 ))}
               </Select>
-              <Field
+              <UnitField
+                key={`material-quantity-${index}`}
                 label="Số lượng *"
-                type="number"
-                min="0.001"
-                step="0.001"
+                accessibleName={`Dòng ${index + 1}: số lượng vật tư`}
+                unit={unitOf(line.itemId)}
+                decimals={3}
+                min={0.001}
                 required
                 value={line.quantity}
-                onChange={(e) =>
-                  setLines((v) => v.map((r, i) => (i === index ? { ...r, quantity: e.target.value } : r)))
-                }
+                onChange={(quantity) => setLines((v) => v.map((r, i) => (i === index ? { ...r, quantity } : r)))}
               />
               {!record && lines.length > 1 && (
                 <Button
@@ -155,15 +160,17 @@ export function MaterialForm({
           {record && (
             <Note label="Lý do điều chỉnh *" required value={reason} onChange={(e) => setReason(e.target.value)} />
           )}
-          {editable && (
-            <Button type="submit" disabled={items.loading || !!items.error}>
-              Lưu sử dụng vật tư
-            </Button>
-          )}
         </fieldset>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button className="w-auto" key="discard-material" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
+          {editable && (
+            <Button className="w-auto" key="save-material" type="submit" disabled={editor.disabled || items.loading || !!items.error}>
+              Lưu
+            </Button>
+          )}</div>
       </form>
       {items.error && (
-        <Button variant="secondary" onClick={items.reload}>
+        <Button type="button" variant="secondary" onClick={items.reload}>
           Tải lại vật tư
         </Button>
       )}

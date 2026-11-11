@@ -1,6 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { z } from "zod";
+import { useToast } from "@/components/ui/toast-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton, useRemote } from "@/features/operations/ui";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
@@ -25,6 +26,7 @@ export function CompleteSeeding({
       [cycleId, zoneId],
     ),
   );
+  const { notify } = useToast();
   const editor = useOperationEditor(onClose, false);
   return (
     <EditorFrame title="Hoàn tất thả giống" editor={editor} error={preview.error}>
@@ -41,7 +43,7 @@ export function CompleteSeeding({
                 ? `Các làn chưa thả giống: ${preview.data.notSeededLanes.join(", ")}.`
                 : "Tất cả làn đã được thả giống."}
             </p>
-            <Button
+            <div className="flex justify-end gap-2"><Button key="discard-complete" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button><Button key="confirm-complete" type="button"
               disabled={editor.disabled}
               onClick={async () => {
                 if (
@@ -54,17 +56,16 @@ export function CompleteSeeding({
                       zoneId,
                     ),
                   )
-                )
-                  onSaved();
+                ) { notify({ tone: "success", title: "Đã hoàn tất thả giống." }); onSaved(); }
               }}
             >
               Xác nhận hoàn tất
-            </Button>
+            </Button></div>
           </>
         )
       )}
       {preview.error && (
-        <Button variant="secondary" onClick={preview.reload}>
+        <Button type="button" variant="secondary" onClick={preview.reload}>
           Tải lại thông tin
         </Button>
       )}

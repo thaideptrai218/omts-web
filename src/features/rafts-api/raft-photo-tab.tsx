@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/toast-provider";
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,12 +16,13 @@ const MAX_PHOTO = 10 * 1024 * 1024, MAX_PHOTOS = 3;
 export function RaftPhotoTab({ raftId, canEdit }: { raftId: string; canEdit: boolean }) {
   const repository = useMemo(() => createOperationsRepository("raft-details"), []), mutation = useMutation();
   const [saved, setSaved] = useState<Raft>(), [latest, setLatest] = useState<Raft>(), [file, setFile] = useState<File>(), [fileError, setFileError] = useState<string>(), [fileKey, setFileKey] = useState(0);
+  const { notify } = useToast();
   const detail = useRemote(useCallback((signal: AbortSignal) => repository.read("detail", { id: raftId }, raftSchema, signal), [repository, raftId]));
   const record = saved ?? detail.data;
   async function upload() {
     if (!file || !canEdit || mutation.busy() || mutation.blocked) return;
     const result = await mutation.run(() => repository.upload("upload-photo", [file], {}, raftSchema, raftId));
-    if (result) { setSaved(result); setFile(undefined); setFileKey(value => value + 1); }
+    if (result) { notify({ tone: "success", title: `Đã thêm ảnh bè ${result.code}.` }); setSaved(result); setFile(undefined); setFileKey(value => value + 1); }
   }
   if (detail.loading) return <Skeleton />;
   if (detail.error || !record) return <ListStateMessage error={detail.error ?? "Không tải được ảnh và làn của bè."} onRetry={detail.reload} retryLabel="Tải lại" />;

@@ -1,5 +1,9 @@
 /* Màn Sản lượng nuôi: cột lọc + bảng nhóm có dòng mở rộng. Dùng token màu chung của ứng dụng. */
 .form { display: grid; gap: 1rem; }
+.pills { display:flex; flex-wrap:wrap; gap:6px; }
+.pill { border:1px solid var(--omts-color-border); border-radius:6px; padding:5px 9px; font-size:12px; }
+.pill[aria-pressed=true] { border-color:var(--omts-brand); background:var(--omts-brand-soft); color:var(--omts-brand); }
+.pill:focus-visible { outline:2px solid var(--omts-color-focus-ring); outline-offset:2px; }
 .group { border: 0; margin: 0; padding: 0; display: grid; gap: .5rem; min-width: 0; }
 .group legend { font-size: .75rem; font-weight: 700; color: var(--omts-color-text); padding: 0; margin-bottom: .375rem; }
 .check { display: flex; align-items: center; gap: .5rem; min-height: 2rem; font-size: .875rem; cursor: pointer; }
@@ -48,3 +52,8 @@
 .tableFrame { margin:0 !important; border:0 !important; border-radius:0 !important; overflow:visible !important; }
 .table thead th { position:sticky; top:0; z-index:4; }
 .tableTotals { padding:12px 14px; border-bottom:1px solid var(--omts-color-border); }
+.target { display:grid; gap:4px; min-width:9rem; }
+.targetBar { height:6px; border-radius:999px; background:var(--omts-color-border); overflow:hidden; }
+.targetFill, .targetFillOver { display:block; height:100%; border-radius:inherit; background:var(--omts-color-primary); }
+.targetFillOver { background:#b45309; }
+.targetText { font-size:.75rem; color:var(--omts-color-text-muted); font-variant-numeric:tabular-nums; }

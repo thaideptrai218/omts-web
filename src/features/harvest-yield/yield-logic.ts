@@ -2,7 +2,7 @@ import { groupingValue, type Grouping, type YieldGroup } from "./contracts";
 
 /** Logic thuần của màn Sản lượng nuôi: bộ lọc, sắp xếp, phân trang phía trình duyệt (backend trả toàn bộ nhóm của kỳ). */
 export type Filters = { from: string; to: string; groupBy: Grouping; zoneIds: string[] };
-export type SortKey = "label" | "lotCount" | "estimatedKg" | "soldKg" | "lostKg" | "differenceKg";
+export type SortKey = "label" | "lotCount" | "estimatedKg" | "soldKg" | "remainingKg";
 export type Sort = { key: SortKey; dir: "asc" | "desc" };
 export const pageSize = 20;
 export const defaultSort: Sort = { key: "label", dir: "asc" };
@@ -16,6 +16,16 @@ export function monthRange(today: string): { from: string; to: string } {
   return { from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(last)}` };
 }
 export const defaultFilters = (today: string): Filters => ({ ...monthRange(today), groupBy: "Raft", zoneIds: [] });
+
+/** A record link must include historical harvests; omitted API dates otherwise mean the current month. */
+export function linkedYieldFilters(today: string, linked: { zoneId?: string; cycleId?: string; recordId?: string; from?: string; to?: string }): Filters {
+  const filters = defaultFilters(today);
+  const validDate = (value?: string) => value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) ? value : undefined;
+  const from = validDate(linked.from), to = validDate(linked.to);
+  if (linked.cycleId || linked.recordId || from || to) { filters.from = from ?? "0001-01-01"; filters.to = to ?? today; }
+  if (linked.zoneId) filters.zoneIds = [linked.zoneId];
+  return filters;
+}
 
 /** Lỗi nhập bộ lọc để chặn gọi API; null nếu hợp lệ. */
 export function filterProblem(f: Filters): string | null {
@@ -32,7 +42,7 @@ export function toQuery(f: Filters, allZoneCount: number): Record<string, string
 
 export function sortGroups(groups: readonly YieldGroup[], sort: Sort): YieldGroup[] {
   const sign = sort.dir === "asc" ? 1 : -1;
-  return [...groups].sort((a, b) => sign * (sort.key === "label" ? a.label.localeCompare(b.label, "vi", { numeric: true }) : a[sort.key] - b[sort.key]));
+  return [...groups].sort((a, b) => sign * (sort.key === "label" ? a.label.localeCompare(b.label, "vi", { numeric: true }) : (a[sort.key] ?? 0) - (b[sort.key] ?? 0)));
 }
 export const nextSort = (current: Sort, key: SortKey): Sort => current.key === key ? { key, dir: current.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "label" ? "asc" : "desc" };
 
@@ -41,14 +51,7 @@ export const pageSlice = <T,>(rows: readonly T[], page: number) => rows.slice((p
 const number = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 });
 export const formatKg = (value: number) => number.format(value);
 
-/** Chênh lệch âm nghĩa là đã bán nhiều hơn ước tính; câu chữ đi kèm để không chỉ dựa vào màu. */
-export function differenceNote(value: number): string {
-  if (value < 0) return `Bán vượt ước tính ${formatKg(-value)} kg`;
-  if (value === 0) return "Khớp với ước tính";
-  return `Còn lệch ${formatKg(value)} kg so với ước tính`;
-}
-
-/** Tóm tắt một dòng cho người đọc màn hình và phần chú thích dưới tổng. */
-export function summaryLine(t: { lotCount: number; estimatedKg: number; soldKg: number; lostKg: number; differenceKg: number }): string {
-  return `${t.lotCount} lô · ước tính ${formatKg(t.estimatedKg)} kg · đã bán ${formatKg(t.soldKg)} kg · hao hụt ${formatKg(t.lostKg)} kg · chênh lệch ${formatKg(t.differenceKg)} kg`;
+/** Phần trăm đạt so với kg mục tiêu của chu kỳ; undefined khi chưa có mục tiêu (không hiển thị thanh). */
+export function percentOfTarget(harvestedKg: number, targetKg?: number | null): number | undefined {
+  return targetKg && targetKg > 0 ? Math.round((harvestedKg / targetKg) * 100) : undefined;
 }

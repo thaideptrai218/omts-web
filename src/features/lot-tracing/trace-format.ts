@@ -18,8 +18,8 @@ export const formatNumber = (value: number) => new Intl.NumberFormat("vi-VN", { 
 export const lanesText = (lanes: readonly number[]) => lanes.length ? lanes.join(", ") : "—";
 
 export function describeGap(gap: OriginGap) {
-  if (gap.kind === "NoSeedingSession") return `Luống ${gap.laneNumber} chưa có phiên thả giống trong chu kỳ của lô.`;
-  if (gap.kind === "SeedLotNotOnCompletedReceipt") return `Lô giống ${gap.seedLotCodes.join(", ")} của luống ${gap.laneNumber} chưa thuộc phiếu nhập đã hoàn thành.`;
+  if (gap.kind === "NoSeedingSession") return `Làn ${gap.laneNumber} chưa có phiên thả giống trong chu kỳ của lô.`;
+  if (gap.kind === "SeedLotNotOnCompletedReceipt") return `Lô giống ${gap.seedLotCodes.join(", ")} của làn ${gap.laneNumber} chưa thuộc phiếu nhập đã hoàn thành.`;
   return `Chỉ Quản lý vùng ${gap.zoneCode ?? ""} hoặc Chủ hợp tác xã mới công bố được lô này.`;
 }
 export const blockLabel = (block: string | null) => ({
@@ -42,8 +42,8 @@ export function parseDecimal(text: string) {
 }
 
 const fieldLabels: Record<string, string> = {
-  seedingDate: "Ngày thả giống", seedLot: "Lô giống", lanes: "Luống", quantity: "Số lượng", visitDate: "Ngày ghi nhật ký", notes: "Ghi chú", photos: "Ảnh",
-  finishedLanes: "Luống đã thu xong", cageCount: "Số lồng", kgPerCage: "kg mỗi lồng", estimatedKg: "kg ước tính",
+  seedingDate: "Ngày thả giống", seedLot: "Lô giống", lanes: "Làn", quantity: "Số lượng", visitDate: "Ngày ghi nhật ký", notes: "Ghi chú", photos: "Ảnh",
+  finishedLanes: "Làn đã thu xong", cageCount: "Số lồng", kgPerCage: "kg mỗi lồng", estimatedKg: "kg ước tính",
 };
 export const fieldLabel = (name: string) => fieldLabels[name] ?? name;
 export function formatValue(name: string, value: unknown): string {

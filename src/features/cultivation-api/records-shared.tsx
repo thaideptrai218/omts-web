@@ -1,6 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+
 import { Dialog } from "@/components/ui/dialog";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed, type OperationArea } from "@/features/operations/permissions";
@@ -29,34 +29,18 @@ export function EditorFrame({
   editor,
   error,
   children,
+  inline = false,
 }: {
   title: string;
   editor: ReturnType<typeof useOperationEditor>;
   error?: string;
   children: ReactNode;
+  inline?: boolean;
 }) {
-  return (
-    <Dialog
-      open
-      size="lg"
-      dismissible={false}
-      onCloseRequest={() => void editor.close()}
-      title={title}
-      onOpenChange={() => {}}
-    >
-      {editor.dialog}
-      <ErrorNotice error={error || editor.mutation.error} />
-      {children}
-      {editor.mutation.blocked && (
-        <p role="alert" className="mt-3 text-sm">
-          Kết quả cần được đối chiếu. Bản nháp vẫn được giữ; hãy đọc dữ liệu mới trước khi gửi lệnh tiếp.
-        </p>
-      )}
-      <Button className="mt-4" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>
-        Đóng
-      </Button>
-    </Dialog>
-  );
+  const content = <>{editor.dialog}<ErrorNotice error={error || editor.mutation.error} />{children}
+    {editor.mutation.blocked && <p role="alert" className="mt-3 text-sm">Kết quả cần được đối chiếu. Bản nháp vẫn được giữ; hãy đọc dữ liệu mới trước khi gửi lệnh tiếp.</p>}</>;
+  if (inline) return <section aria-label={title} className="min-w-0"><h4 className="mb-3 font-semibold">{title}</h4>{content}</section>;
+  return <Dialog open size="lg" dismissible={false} onCloseRequest={() => void editor.close()} title={title} onOpenChange={() => {}}>{content}</Dialog>;
 }
 
 /** Checkbox group of lane numbers; the selection is kept sorted ascending. */
@@ -79,6 +63,7 @@ export function LaneChoices({
           <label key={n} className="flex items-center gap-2 rounded-control border border-border px-3 py-2 text-sm">
             <input
               type="checkbox"
+              className="omts-check"
               checked={values.includes(n)}
               onChange={(e) =>
                 onChange(e.target.checked ? [...values, n].sort((a, b) => a - b) : values.filter((v) => v !== n))

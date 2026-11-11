@@ -1,12 +1,13 @@
 "use client";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useToast } from "@/components/ui/toast-provider";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { loadOptions } from "@/features/operations/lookups";
 import { operationAllowed } from "@/features/operations/permissions";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { businessToday, useMutation, useRemote } from "@/features/operations/ui";
 import { harvestYieldReport } from "./contracts";
-import { defaultFilters, defaultSort, filterProblem, nextSort, sortGroups, toQuery, type Filters, type SortKey } from "./yield-logic";
+import { defaultFilters, defaultSort, filterProblem, linkedYieldFilters, nextSort, sortGroups, toQuery, type Filters, type SortKey } from "./yield-logic";
 
 const repo = createOperationsRepository("harvest-yield");
 const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
@@ -16,9 +17,11 @@ export type ZoneOption = { id: string; label: string };
  * Trạng thái màn Sản lượng nuôi. Bộ lọc nhập ở `draft`, chỉ khi bấm "Xem báo cáo" mới thành `applied` và gọi API,
  * nên ngày đang gõ dở không bắn yêu cầu. Xuất Excel luôn dùng bộ lọc đã áp dụng (đúng với bảng đang xem).
  */
-export function useYieldReport() {
+export function useYieldReport(linked: Parameters<typeof linkedYieldFilters>[1] = {}) {
   const workspace = useApiWorkspace(), exporter = useMutation();
-  const [draft, setDraft] = useState<Filters>(() => defaultFilters(businessToday()));
+  const { notify } = useToast();
+  useEffect(() => { if (exporter.error) notify({ tone: "danger", title: "Chưa xuất được báo cáo sản lượng nuôi.", description: exporter.error }); }, [exporter.error, notify]);
+  const [draft, setDraft] = useState<Filters>(() => linkedYieldFilters(businessToday(), linked));
   const [applied, setApplied] = useState<Filters>(draft);
   const [sort, setSort] = useState(defaultSort), [page, setPage] = useState(1);
 

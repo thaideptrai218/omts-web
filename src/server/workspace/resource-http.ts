@@ -36,7 +36,9 @@ export async function handleResourceRequest(request: Request, resourceName: stri
       if (new Set(keys).size !== keys.length || keys.some((name) => !["proposal", "id", "zoneId", "search", "page", "pageSize", "statusId", ...(category ? [category.key] : [])].includes(name))) return json({ status: "invalid-input" }, 400);
       if (category && query.has(category.key) && (query.has("id") || !category.options.some(([value]) => value === query.get(category.key)))) return json({ status: "invalid-input" }, 400);
       if (query.has("proposal")) {
-        if (key !== "input-items" || query.size !== 1 || query.get("proposal") !== "1") return json({ status: "invalid-input" }, 400);
+        // Code proposals: input items, zones (KV01...) and rafts (needs the zone id in the query).
+        const proposable = key === "input-items" || key === "zones" || key === "rafts";
+        if (!proposable || query.size !== (key === "rafts" ? 2 : 1) || query.get("proposal") !== "1" || (key === "rafts") !== query.has("zoneId")) return json({ status: "invalid-input" }, 400);
         action = "proposal";
       }
       if (query.has("id")) {
@@ -105,7 +107,7 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     if (upstream.status === "http-error") return json({ status: "rejected", code: upstream.code, ...(upstream.catalogueProblem ? { catalogueProblem: upstream.catalogueProblem } : {}) }, upstream.httpStatus);
     if (upstream.status !== "success" || ![200, 201].includes(upstream.httpStatus)) return json({ status: "unavailable" }, 503);
     if (action === "proposal") {
-      const proposal = z.object({ code: z.string().min(1).max(30), seedUnit: z.string().min(1).max(50).nullable() }).safeParse(upstream.data);
+      const proposal = z.object({ code: z.string().min(1).max(30), seedUnit: z.string().min(1).max(50).nullish() }).safeParse(upstream.data);
       return proposal.success ? json({ status: "success", data: proposal.data }) : json({ status: "invalid-response" }, 502);
     }
     const result = projectResource(key, upstream.data, action !== "list", action === "list"

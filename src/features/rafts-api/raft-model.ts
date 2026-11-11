@@ -56,14 +56,15 @@ export const raftDraftOf = (raft: RaftDetail): RaftDraft => ({ code: raft.code, 
   conditionNotes: asText(raft.conditionNotes), laneCount: asText(raft.laneCount ?? raft.lanes.length) });
 const toNumber = (value: string) => Number(value.trim().replace(",", "."));
 
-/** Required fields are those the raft form always required; the lane count is a whole number of at least 1. */
+/** Backend permits no location, or a complete coordinate pair; lane count remains a positive integer. */
 export function validateRaftDraft(draft: RaftDraft): Partial<Record<RaftField, string>> {
   const errors: Partial<Record<RaftField, string>> = {};
   if (!draft.code.trim()) errors.code = "Nhập mã bè.";
   if (!draft.size.trim()) errors.size = "Nhập kích thước.";
   for (const [key, min, max, label] of [["latitude", -90, 90, "vĩ độ"], ["longitude", -180, 180, "kinh độ"]] as const) {
     const value = toNumber(draft[key]);
-    if (!draft[key].trim()) errors[key] = `Nhập ${label}.`;
+    if (!draft.latitude.trim() && !draft.longitude.trim()) continue;
+    if (!draft[key].trim()) errors[key] = `Chọn đầy đủ vị trí trên bản đồ (${label}).`;
     else if (!Number.isFinite(value) || value < min || value > max) errors[key] = `Nhập số từ ${min} đến ${max}.`;
   }
   const lanes = Number(draft.laneCount);
@@ -71,7 +72,7 @@ export function validateRaftDraft(draft: RaftDraft): Partial<Record<RaftField, s
   return errors;
 }
 export function raftBody(draft: RaftDraft, rowVersion?: string): Record<string, unknown> {
-  const body: Record<string, unknown> = { code: draft.code.trim(), latitude: toNumber(draft.latitude), longitude: toNumber(draft.longitude), size: draft.size.trim(),
+  const body: Record<string, unknown> = { code: draft.code.trim(), latitude: draft.latitude.trim() ? toNumber(draft.latitude) : null, longitude: draft.longitude.trim() ? toNumber(draft.longitude) : null, size: draft.size.trim(),
     location: draft.location.trim() || null, conditionNotes: draft.conditionNotes.trim() || null, laneCount: Number(draft.laneCount) };
   if (rowVersion) body.rowVersion = rowVersion;
   return body;

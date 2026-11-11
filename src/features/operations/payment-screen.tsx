@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { z } from "zod";
+import { MoneyField } from "@/components/form/number-fields";
 import { Dialog } from "@/components/ui/dialog";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import { createOperationsRepository, type Query } from "./repository";
-import { DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, OperationHeading, Paging, Select, Skeleton, businessToday, methodLabel, statusLabel, useMutation, useRemote } from "./ui";
+import { DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, OperationHeading, Paging, Select, Skeleton, businessToday, methodLabel, money, statusLabel, useMutation, useRemote } from "./ui";
 
 const repository = createOperationsRepository("supplier-payments");
 const loadDebts = (signal: AbortSignal) => repository.read("debts", {}, c.debtsSchema, signal);
@@ -106,9 +107,9 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
     {(!payment && canCreate || canAllocate) && <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirming(true); }}>
       <fieldset disabled={mutation.pending || mutation.uncertain || confirming} className="space-y-4">
         {!payment && <Select label="Nhà cung cấp *" required value={supplierId} onChange={(e) => { setSupplierId(e.target.value); setReceiptId(""); }}><option value="">Chọn nhà cung cấp</option>{suppliers.map((row) => <option key={row.supplierId} value={row.supplierId}>{row.supplierName}</option>)}</Select>}
-        {debt.loading && supplierId ? <Skeleton /> : <Select label="Phiếu nhập hoàn thành *" required value={receiptId} onChange={(e) => setReceiptId(e.target.value)}><option value="">Chọn phiếu</option>{debt.data?.receipts.filter((row) => row.outstanding > 0).map((row) => <option key={row.receiptId} value={row.receiptId}>{row.code} · Còn nợ {new Intl.NumberFormat("vi-VN").format(row.outstanding)} đồng</option>)}</Select>}
+        {debt.loading && supplierId ? <Skeleton /> : <Select label="Phiếu nhập hoàn thành *" required value={receiptId} onChange={(e) => setReceiptId(e.target.value)}><option value="">Chọn phiếu</option>{debt.data?.receipts.filter((row) => row.outstanding > 0).map((row) => <option key={row.receiptId} value={row.receiptId}>{row.code} · Còn nợ {money(row.outstanding)}</option>)}</Select>}
         {target && <p className="rounded-control bg-primary-soft p-3">Còn nợ trên phiếu: <strong><Money value={target.outstanding} /></strong></p>}
-        {!payment && <><Field label="Số tiền đã trả (đồng) *" type="number" min="1000" max={target?.outstanding} step="1000" required value={amount} onChange={(e) => setAmount(e.target.value)} />
+        {!payment && <><MoneyField label="Số tiền đã trả *" min={1000} max={target?.outstanding} autoThousands showWords required value={amount} onChange={setAmount} />
           <Field label="Ngày trả *" type="date" max={businessToday()} required value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Hình thức *" value={method} onChange={(e) => setMethod(e.target.value)}><MethodOptions /></Select>
           <Field label="Mã tham chiếu" maxLength={100} value={reference} onChange={(e) => setReference(e.target.value)} /></>}
       </fieldset>

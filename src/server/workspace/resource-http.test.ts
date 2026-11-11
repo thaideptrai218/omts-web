@@ -66,6 +66,21 @@ describe("workspace BFF routing and authorization", () => {
     expect(response.status).toBe(200); expect(await response.json()).toMatchObject({ data: { code: "VT099", seedUnit: "con" } });
     expect(String(fetcher.mock.calls[0][0])).toBe("http://127.0.0.1:8080/api/farming-input-items/next-code");
   });
+  it("proposes the next zone code and the next raft code of a zone", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ code: "KV03" }));
+    const zone = await handleResourceRequest(new Request("http://localhost:3002/api/workspace/zones?proposal=1"), "zones");
+    expect(zone.status).toBe(200); expect(await zone.json()).toMatchObject({ data: { code: "KV03" } });
+    expect(new URL(String(fetcher.mock.calls[0][0])).pathname).toBe("/api/zones/next-code");
+    const zoneId = "529ec3ce-af8f-42f7-a08f-4bab36ba7e62";
+    const raft = await handleResourceRequest(new Request(`http://localhost:3002/api/workspace/rafts?proposal=1&zoneId=${zoneId}`), "rafts");
+    expect(raft.status).toBe(200); expect(new URL(String(fetcher.mock.calls[1][0])).pathname).toBe(`/api/zones/${zoneId}/rafts/next-code`);
+  });
+  it("refuses a raft proposal without a zone and a zone proposal with one", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch");
+    expect((await handleResourceRequest(new Request("http://localhost:3002/api/workspace/rafts?proposal=1"), "rafts")).status).toBe(400);
+    expect((await handleResourceRequest(new Request("http://localhost:3002/api/workspace/zones?proposal=1&zoneId=529ec3ce-af8f-42f7-a08f-4bab36ba7e62"), "zones")).status).toBe(400);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
   it("does not let Staff request a code proposal", async () => {
     configure("Staff"); const fetcher = vi.spyOn(globalThis, "fetch");
     expect((await handleResourceRequest(new Request("http://localhost:3002/api/workspace/input-items?proposal=1"), "input-items")).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();

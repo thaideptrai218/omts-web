@@ -19,7 +19,7 @@ export const logItem = z.object({
   id, visitDate: day, notes: z.string().nullable(), photos: z.array(z.object({ key: z.string(), sortOrder: z.number() })), recordedByName: z.string().nullable(), rowVersion: z.string(),
 });
 export const lotItem = z.object({
-  id, lotCode: z.string(), harvestedAt: z.string(), harvestDate: day, laneNumbers: numbers, finishedLaneNumbers: numbers, cageCount: z.number().int(), kgPerCage: z.number(),
+  id, lotCode: z.string(), harvestedAt: z.string(), harvestDate: day, laneNumbers: numbers, finishedLaneNumbers: numbers, cageCount: z.number(), kgPerCage: z.number(),
   estimatedKg: z.number(), status: z.string(), originState, rowVersion: z.string(),
 });
 export const correctionRecords = z.object({
@@ -46,7 +46,7 @@ export const seedingPreviewBody = z.strictObject(seedingBase).refine((v) => dist
 export const seedingSaveBody = z.strictObject({ ...seedingBase, rowVersion: z.string().min(1), ownerApproved: z.boolean() }).refine((v) => distinct(v.laneNumbers));
 
 const lotBase = {
-  laneNumbers: numbers.min(1), finishedLaneNumbers: numbers, cageCount: z.number().int().positive().max(1_000_000), estimatedKg: z.number().positive().max(100_000_000).nullable(),
+  laneNumbers: numbers.min(1), finishedLaneNumbers: numbers, cageCount: z.number().positive().max(100_000), estimatedKg: z.number().positive().max(100_000_000).nullable(),
   keepPhotoKeys: z.array(z.string().min(1)).max(10), reason,
 };
 const lotRule = (v: { laneNumbers: number[]; finishedLaneNumbers: number[] }) => distinct(v.laneNumbers) && distinct(v.finishedLaneNumbers) && v.finishedLaneNumbers.every((n) => v.laneNumbers.includes(n));

@@ -23,6 +23,8 @@ export function toMoney(text: string): number {
   const cleaned = text.trim().replace(/[\s.]/g, "");
   return cleaned === "" ? 0 : /^\d+$/.test(cleaned) ? Number(cleaned) : NaN;
 }
+/** Parsed number for a numeric input, or null when the text is blank or not a number. */
+export const numberOrNull = (parsed: number, text: string): number | null => (text.trim() === "" || Number.isNaN(parsed) ? null : parsed);
 const wholeMoney = toMoney;
 const validKg = (n: number) => n > 0 && Number.isFinite(n) && Math.round(n * 1000) / 1000 === n;
 

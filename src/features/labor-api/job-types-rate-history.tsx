@@ -1,5 +1,6 @@
 "use client";
 import { useId, useState, type FormEvent } from "react";
+import { MoneyInput } from "@/components/form/money-input";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
@@ -33,7 +34,7 @@ export function JobTypeRateHistory({ record, canEdit, onSynced }: { record: Job;
       <tbody>
         {draft && <tr className={styles.draftRow}>
           <td><DatePickerField label="Hiệu lực từ" value={draft.date} disabled={busy} onChange={date => setDraft({ ...draft, date })} />{errors?.effectiveFrom && <p role="alert" className={styles.fieldError}>{errors.effectiveFrom}</p>}</td>
-          <td><div className={styles.rateInput}><input id={id} type="number" inputMode="numeric" min={1} max={999999999} step={1} required className={styles.input} aria-label="Đơn giá mới (đồng/giờ)" aria-invalid={!!errors?.hourlyRate} value={draft.rate} disabled={busy} autoFocus onChange={event => setDraft({ ...draft, rate: event.target.value })} /><span>đồng/giờ</span></div>
+          <td><div className={styles.rateInput}><MoneyInput id={id} required autoThousands min={1} max={999999999} className={styles.input} wrapperClassName="min-w-0 flex-1" label="Đơn giá mới (đồng/giờ)" invalid={!!errors?.hourlyRate} value={draft.rate.trim() === "" ? null : Number(draft.rate)} disabled={busy} autoFocus onChange={next => setDraft({ ...draft, rate: next === null ? "" : String(next) })} /><span>/ giờ</span></div>
             {errors?.hourlyRate && <p role="alert" className={styles.fieldError}>{errors.hourlyRate}</p>}</td>
         </tr>}
         {rates.map(rate => <tr key={rate.effectiveFrom}>

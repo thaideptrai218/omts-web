@@ -144,7 +144,7 @@ it("shows a rate that cannot cover a finalized month inline and keeps the draft"
   await user.type(screen.getByLabelText("Đơn giá mới (đồng/giờ)"), "30000");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   expect((await screen.findByText(/đã chốt lương/)).getAttribute("role")).toBe("alert");
-  expect((screen.getByLabelText("Đơn giá mới (đồng/giờ)") as HTMLInputElement).value).toBe("30000");
+  expect((screen.getByLabelText("Đơn giá mới (đồng/giờ)") as HTMLInputElement).value).toBe("30.000");
 });
 
 it("blocks on a version conflict (MSG06), keeps the draft and saves again after re-reading", async () => {
@@ -155,7 +155,7 @@ it("blocks on a version conflict (MSG06), keeps the draft and saves again after 
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await user.click(await screen.findByRole("button", { name: "Đọc hồ sơ hiện tại" }));
   expect((await screen.findByText(/Đã đọc hồ sơ hiện tại/)).textContent).toContain("Bản mới");
-  expect((screen.getByLabelText("Đơn giá mới (đồng/giờ)") as HTMLInputElement).value).toBe("30000");
+  expect((screen.getByLabelText("Đơn giá mới (đồng/giờ)") as HTMLInputElement).value).toBe("30.000");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(state.write).toHaveBeenLastCalledWith("rate", expect.objectContaining({ rowVersion: "v9" }), expect.anything(), job(1).id));
 });
@@ -186,7 +186,7 @@ it("creates a job type from the dialog after confirmation", async () => {
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   expect(state.write).not.toHaveBeenCalled();
   await user.type(screen.getByLabelText("Tên loại công việc *"), "Phân loại hàu");
-  await user.type(screen.getByLabelText("Đơn giá (đồng/giờ) *"), "27000");
+  await user.type(screen.getByLabelText("Đơn giá mỗi giờ *"), "27000");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
   await waitFor(() => expect(state.write).toHaveBeenCalledWith("create", { name: "Phân loại hàu", hourlyRate: 27000, effectiveFrom: businessToday() }, expect.anything()));

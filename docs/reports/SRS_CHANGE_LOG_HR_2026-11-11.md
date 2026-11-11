@@ -231,3 +231,62 @@ Nguồn: bản trích văn bản của Report-3 V8 (số dòng là dòng trong b
 **Cần PM quyết định:** email **liên hệ** (không phải đăng nhập) ở hồ sơ hợp tác xã (dòng 592) và nhà cung cấp (682, SCR-PURCHASE-06 dòng 1249) giữ hay bỏ? Tôi chưa đụng tới.
 
 **Backend (mô-đun tài khoản, của người khác): chưa làm.** Đăng nhập, đăng ký, khôi phục và xác minh bằng email vẫn chạy trên `develop`. Web đã bỏ email ở phần cấp tài khoản và thêm nhân viên.
+
+## G. Nuôi trồng (11/11)
+
+Quyết định của chủ dự án ngày 11/11/2026 (đây là sự đồng ý đổi quy tắc SRS). Backend: nhánh `feature/OMTS-132-farming-rules`. Hợp đồng API chi tiết: `FARMING_API_CONTRACT_2026-11-11.md`. Báo cáo kiểm tra gốc: `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md`.
+
+### G.1 Các quy tắc đổi so với SRS v8
+
+| # | SRS v8 ghi | Quyết định 11/11 | BR/UC bị ảnh hưởng |
+|---|---|---|---|
+| 1 | BR-FARM-03, mục "Out of scope": thả giống và thu hoạch ghi theo **cả làn**, hệ thống **không ước tính kg theo làn**; làn chỉ có trạng thái | Giống đếm bằng đơn vị của mặt hàng giống trong danh mục Vật tư (đang là `con`, có thể là "mảnh"); **thu hoạch đếm bằng lồng**; kg = lồng × kg/lồng. Màn thu hoạch trả thêm sự kiện của từng làn (số lô, ngày thu gần nhất, mã lô giống, số lồng đã thu — chia đều theo số làn của lô) và tiến độ cả chu kỳ. Vẫn **không** có khối lượng trung bình/con, hao hụt, tỷ lệ sống, ước tính số con lớn lên (bỏ D3/D4) | BR-FARM-03, BR-HARVEST-02 |
+| 2 | BR-HARVEST-02: số lồng là số nguyên; kg ước tính mặc định = lồng × kg/lồng, **sửa tự do** (> 0); "kg ước tính chỉ để theo dõi, không giới hạn bán" | Số lồng **thập phân 2 chữ số** (0,5 = nửa lồng), > 0 và ≤ 100000 (cột `decimal(9,2)`, migration mới, dữ liệu cũ giữ nguyên). kg **ước tính** (`estimatedKg`, đúng thuật ngữ SRS: lồng × kg/lồng, Quản lý vùng được sửa, không bao giờ dùng để thanh toán; khối lượng xác nhận là cân tại cảng) tự tính khi không gửi, `kgPerCage` được **sao chép vào lô** lúc ghi và không đổi theo cài đặt sau. kg gửi tay **không bị chặn** theo 0,2×–2× mà chỉ có cảnh báo `ESTIMATED_KG_FAR_FROM_CAGES` trong `warnings[]`; chỉ từ chối khi vượt **10×** (lồng × kg/lồng). Giới hạn bán theo kg ước tính **không đổi** (bán vẫn không bị chặn); yêu cầu mua vẫn tính bằng kg (SALE-01), không đụng tới | BR-HARVEST-02, UC HARVEST-01 (bước 6), HARVEST-01.1, TRACE-03.2 |
+| 3 | Không có so sánh thu hoạch với kế hoạch (BR-CYCLE-06 chỉ so khi xem tổng kết) | Kế hoạch = hai số ước tính của chính chu kỳ (`targetYieldKg`, `expectedHarvestDate`), **không có thực thể kế hoạch thu hoạch** (D5a). Khi ghi/sửa lô: tổng kg **ước tính** của cả chu kỳ (các lô đã có + lô này) so với `targetYieldKg`: > 110 % mục tiêu (vượt quá +10 %) → 409 `MSG-GEN-04`, phải gửi lại với `confirmOverPlan=true` và `overPlanReason` (lưu trên lô và trong nhật ký); > 150 % mục tiêu (vượt quá +50 %, chặn cứng) → 400. Đúng 150 % vẫn xác nhận được. Không có mục tiêu thì không giới hạn. Không so với số giống đã thả (D1/D2: cấp chu kỳ) | BR-HARVEST-02, BR-CYCLE-01, BR-CYCLE-06 |
+| 4 | HARVEST-01 bước 3: đánh dấu làn thu xong **chỉ** trong form lô (hoặc sửa lô có lý do) | Thêm hành động riêng `POST /api/rafts/{raftId}/lanes/{laneNumber}/finish-harvest` (Owner/Quản lý vùng, như ghi thu hoạch): đánh dấu làn đang thu của lô mới nhất chứa làn; idempotent; ghi nhật ký `HarvestLot.LaneFinished`; 409 nếu không có gì để hoàn tất. Làn "Đang thu" vẫn chọn được; làn "Đã thu xong" bị từ chối (đã có) | BR-HARVEST-01, BR-FARM-03, UC HARVEST-01 |
+| 5 | GBR-04 / CYCLE-02: so số lượng thả với giống còn lại — **không** (SRS: "OMTS không theo dõi giống còn lại") | **Giữ nguyên ở bước 1** (D6a: thả giống chưa nối với sổ kho). Bước 2 (kho là nguồn sự thật) xem G.4 | GBR-04, BR-PURCHASE-07 |
+| 6 | CYCLE-02.1: đánh dấu hoàn tất thả giống được phép dù **0 làn đã thả** | 0 làn đã thả → 409 `MSG-CYCLE-01` (dạng xác nhận), gửi lại với `confirmEmpty=true` (D10) | CYCLE-02.1, MSG-CYCLE-01 |
+| 7 | FARM-02/04: chỉ kiểm tra khoảng vĩ độ/kinh độ | Từ chối `(0,0)` và cặp **bị đảo** (cặp đã cho không thuộc Việt Nam 8–24,5 / 102–110 nhưng cặp đảo thì thuộc) → 400 MSG-GEN-01 kèm `hint`. Cảnh báo không chặn (`warnings[]`): vùng nằm ngoài Việt Nam; bè cách điểm vùng > 5 km. Tọa độ bè **vẫn tùy chọn** (đã đúng), tọa độ vùng vẫn bắt buộc (D9) | FARM-02, FARM-04 |
+| 8 | HARVEST-04 (BR-HARVEST-07): tổng ước tính − đã bán − hao hụt | Giữ công thức. Thêm cho mỗi nhóm: số lồng, kg đã thu, mục tiêu, còn lại so mục tiêu, số giống + đơn vị (danh mục), đã bán, kg còn để bán; file xuất thêm cột "Cages" | BR-HARVEST-07, HARVEST-04 |
+| 9 | CYCLE-06 | Đã kiểm: `/summary`, `/close/preview`, `/close` cùng một bộ đọc nên khớp nhau; Owner đóng thẳng, Quản lý vùng đóng sớm thì `needsOwnerApproval` (SRS không đổi). Thêm `harvestedCages`, `remainingKg` vào tổng kết | BR-CYCLE-06, BR-CYCLE-07 |
+
+BR-PURCHASE-07 ("OMTS không giữ tồn kho") **không** bị đụng ở bước 1; xem G.4 cho bước 2.
+
+### G.2 Chưa làm (bước 1)
+
+- Không có thực thể kế hoạch thu hoạch, không có khối lượng/con, hao hụt, tỷ lệ sống, ước tính số con (đã bỏ).
+- Không giới hạn số lồng theo làn: mô hình dữ liệu **không có sức chứa lồng của làn**, nên không bịa ra (D2b chưa làm).
+- Số lồng theo làn là phép chia đều (một chuyến thu ghi chung cho nhiều làn), không phải số đo.
+- Ghi kg thu hoạch không bị chặn theo số giống đã thả (chỉ theo mục tiêu của chu kỳ).
+- Chưa có "undo" riêng cho hoàn tất làn (vẫn qua sửa lô có lý do).
+- Chưa dịch `reason` của làn sang tiếng Việt ở backend (web dịch theo `reasonCode`).
+
+### G.3 Câu hỏi mở (bước 1)
+
+1. Hoàn tất làn cuối cùng có gửi nhắc đóng chu kỳ (MSG-CYCLE-08)? Hiện **có** (giống lúc ghi lô hoàn tất làn cuối).
+2. Cảnh báo vượt kế hoạch: chỉ Owner thấy hay cả Quản lý vùng? Hiện người ghi lô nhận 409 và tự xác nhận; chưa gửi thông báo cho Owner.
+3. Ngưỡng 110 % / 150 %, cảnh báo 0,2×–2×, trần cứng 10×, 100000 lồng, 5 km có phải số cuối cùng không (đang là số mặc định đề xuất).
+4. Chu kỳ có mục tiêu sai (ví dụ demo B1-01 dự kiến 250 con nhưng mục tiêu 8.500 kg) sẽ chặn ghi thu hoạch ở 150 %: cần chủ dự án rà lại số liệu mẫu.
+
+### G.4 Kho là nguồn sự thật duy nhất của số lượng tồn (bước 2, quyết định của chủ dự án: "phải kiểm tra hàng tồn, tất cả mọi thứ phải liên kết và reference với nhau")
+
+**Thay thế** hai quy tắc SRS v8: **BR-PURCHASE-07** ("OMTS không giữ tồn kho / không trừ kho") và **GBR-04** ("thả giống không so số lượng với giống còn lại, vì OMTS không theo dõi giống còn lại"). Thay vào đó: kho (sổ nhập–xuất–hủy của module Vật tư) theo dõi tồn; thả giống và sử dụng vật tư **đi qua kho**, không đếm hai lần.
+
+Đã làm (backend, migration `20261111130000_FarmingStockIssueLinks`):
+
+| Use case | SRS v8 nói | Quy tắc mới |
+|---|---|---|
+| CYCLE-02 (thả giống), CYCLE-02.2 (sửa/xóa), TRACE-03.1 | không so với giống còn lại | Số lượng ≤ tồn của lô giống (409 `MSG-INPUT-01`, kèm số còn lại, khi hợp tác xã không cho tồn âm); cùng một lần lưu tạo **phiếu Xuất dùng** (loại "Thả giống", vùng/bè của chu kỳ) liên kết hai chiều (`SeedingRecord.IssueId` ↔ `InputIssue.SourceRecordId`, kèm `CycleId`). Sửa phiếu thả giống = đảo bút toán và ghi lại; xóa = hủy phiếu xuất, giống trả về lô |
+| CYCLE-03 (dùng vật tư), sửa | không trừ kho | Mỗi bản ghi (một vật tư của một lần sửa chữa) tạo một phiếu Xuất dùng (loại "Sửa chữa bè") liên kết hai chiều; kiểm tồn như trên; sửa đổi theo |
+| Xuất dùng thủ công (INPUT) | — | Xuất dùng giống/vật tư cho bè **đang có chu kỳ mở** bị từ chối (400, `field: Lines`) và chỉ dẫn sang màn Thả giống / Sử dụng vật tư (một đường duy nhất). Phiếu do thả giống/dùng vật tư tạo ra **không sửa/hủy/xóa** ở màn Xuất dùng (409 `MSG-GEN-09`). Bè không có chu kỳ mở và Xuất hủy giữ nguyên, Xuất hủy trừ tồn và liệt kê theo mặt hàng |
+| PURCHASE-02 (trả hàng) | trả ≤ nhập − đã trả − đã thả | trả ≤ nhập − đã trả − **đã tiêu thụ thực** (thả giống + xuất dùng + xuất hủy của lô) = tồn của lô; mã và câu thông báo `MSG-PURCHASE-03` giữ nguyên |
+| PURCHASE-06 (hủy phiếu nhập) | chặn nếu lô đã thả | chặn nếu bất kỳ phần nào của lô đã tiêu thụ; mã `MSG-PURCHASE-09`, câu giữ nguyên (câu "đã được thả giống" hơi hẹp, nên đổi) |
+| TRACE-02 | truy xuất dựa trên lô giống–phiếu nhập–NCC | không đổi; thêm tham chiếu chéo trong dữ liệu đọc (xem hợp đồng API, mục 13) |
+
+Tham chiếu chéo (chỉ thêm trường): dòng sổ kho → `sourceKind`, `sourceRecordId`, `cycleId`, `raftId`, `zoneId`; bản ghi thả giống/dùng vật tư → `issueId`, `issueCode`; lô giống → `quantityReturned`, `quantityConsumed`, `onHand`, đơn vị của danh mục; lô thu hoạch → chu kỳ, bè, làn, mã lô giống theo làn.
+
+Dữ liệu cũ: **không** tạo bút toán ngược thời gian cho bản ghi thả giống/dùng vật tư đã có (phải ghi lùi sổ kho với giá vốn chưa từng ghi). Chúng giữ `issueId = null` (legacy): giống của phiên thả cũ vẫn được tính là đã tiêu thụ từ chính phiên đó (không đếm hai lần), vật tư cũ chưa từng trừ kho và vẫn vậy.
+
+**Chưa làm bước 2:** giới hạn trả hàng theo tồn cho dòng vật tư (không phải giống); tham chiếu "hóa đơn đã bán lô" và "chu kỳ/bè đã tiêu thụ" trong chi tiết phiếu nhập; màn/phiếu nhập hiển thị tồn của vật tư không lô; nhật ký audit của phiếu Xuất dùng tự sinh dùng chung hành động `InputIssue.Created/Edited` (chưa có hành động riêng); xóa bản ghi dùng vật tư (API chưa có). Khi hợp tác xã để "cho phép tồn âm" (**mặc định hiện là cho phép**) thì không có kiểm tra tồn: chủ dự án cần quyết định đổi mặc định.
+
+**Câu hỏi mở bước 2:** (1) Đổi mặc định "cho phép tồn âm" thành không cho phép? (2) Câu "seed lot X has already been seeded" của PURCHASE-06 đổi thành "đã sử dụng"? (3) Cho phép Xuất dùng thủ công vật tư cho bè có chu kỳ mở dưới dạng "dùng ngoài chu kỳ"? Hiện chặn. (4) Có muốn tạo bút toán ngược thời gian cho dữ liệu cũ không (cần giá vốn)?

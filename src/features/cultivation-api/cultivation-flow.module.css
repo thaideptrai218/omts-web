@@ -14,3 +14,5 @@
 .recordDetail p { font-size:12px; color:var(--omts-color-text-muted); margin-top:16px; } .recordDetail footer { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; margin-top:20px; }
 @media(max-width:900px) { .recordDetail dl { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:639px) { .recordDetailCell { display:block!important; } .recordDetailCell::before { display:none!important; } .recordDetail { padding:14px; } .recordDetail dl { grid-template-columns:minmax(0,1fr); } .recordLink { min-height:44px; } }
+
+.actions{justify-content:flex-end;margin-top:16px}.actions button{min-height:30px;padding:5px 10px}.harvestFormFooter{gap:8px}

@@ -48,6 +48,11 @@ export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
 }
 
 function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
+  const params = useSearchParams();
+  return <GenericResourceWorkspace key={`${resource}:${params.toString()}`} resource={resource} />;
+}
+
+function GenericResourceWorkspace({ resource }: { resource: ResourceKey }) {
   const context = useApiWorkspace();
   const params = useSearchParams();
   // A single valid ?accountId= (accounts) or ?recordId= (zones, rafts) opens that record directly.
@@ -62,7 +67,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const [page, setPage] = useState<ApiPage>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(params.get("search") ?? params.get("code") ?? "");
   const [filter, setFilter] = useState("");
   const [category, setCategory] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
@@ -73,7 +78,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const [zoneError, setZoneError] = useState<string>();
   const [zoneLoading, setZoneLoading] = useState(false);
   const [zoneRefresh, setZoneRefresh] = useState(0);
-  const [zoneChoice, setZoneId] = useState("");
+  const [zoneChoice, setZoneId] = useState(params.get("zoneId") ?? "");
   // undefined = editor closed, null = new record.
   const [selected, setSelected] = useState<ApiRecord | null>();
   // The header zone picker narrows the zones offered for a new record.

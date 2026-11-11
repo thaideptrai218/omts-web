@@ -2,12 +2,13 @@
 import { SelectBox } from "@/components/ui/select-box";
 import { useCallback } from "react";
 import { z } from "zod";
+import { MoneyInput } from "@/components/form/money-input";
 import { Button } from "@/components/ui/button";
 import { CustomerSearch } from "@/features/customer-lookup/customer-search";
 import { control, ErrorNotice, money, useRemote } from "@/features/operations/ui";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { openPurchaseRequest } from "./contracts";
-import type { Draft, PaymentMode, Totals } from "./invoice-draft";
+import { numberOrNull, toMoney, type Draft, type PaymentMode, type Totals } from "./invoice-draft";
 import s from "./invoice-screen.module.css";
 
 const sales = createOperationsRepository("sales-invoices");
@@ -59,7 +60,7 @@ export function InvoiceSummaryPanel({ draft, sums, problem, error, saving, savin
 }
 
 function MoneyField({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange(v: string): void }) {
-  return <label className={s.field}><span>{label}</span><input inputMode="numeric" className={`${control} ${s.num}`} placeholder="0" disabled={disabled} value={value} onChange={(e) => onChange(e.target.value)} /></label>;
+  return <label className={s.field}><span>{label}</span><MoneyInput label={label} autoThousands className={`${control} ${s.num}`} placeholder="0" disabled={disabled} value={numberOrNull(toMoney(value), value)} onChange={(next) => onChange(next === null ? "" : String(next))} /></label>;
 }
 
 function CustomerPicker({ draft, disabled, onChange }: { draft: Draft; disabled: boolean; onChange: Props["onChange"] }) {

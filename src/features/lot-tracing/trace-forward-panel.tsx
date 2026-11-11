@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import type { LotTrace } from "./contracts";
 import { formatDay, formatNumber } from "./trace-format";
 import s from "./lot-tracing.module.css";
@@ -14,7 +16,7 @@ export function TraceForwardPanel({ trace }: { trace: LotTrace }) {
             <tbody>
               {trace.invoices.flatMap((inv) => [
                 <tr key={inv.invoiceId}>
-                  <th scope="row">{inv.invoiceCode}<div className={s.muted}>{inv.zoneCode}</div></th><td>{formatDay(inv.invoiceDate)}</td>
+                  <th scope="row"><Link href={farmingReferenceHref("salesInvoice", { code: inv.invoiceCode })}>{inv.invoiceCode}</Link><div className={s.muted}>{inv.zoneCode}</div></th><td>{formatDay(inv.invoiceDate)}</td>
                   <td>{inv.walkIn ? "Khách lẻ" : inv.customerName ?? "—"}{inv.customerPhone ? <div className={s.muted}>{inv.customerPhone}</div> : null}</td>
                   <td>{inv.lines.map((l) => l.productName).join(", ") || "—"}</td><td className={s.num}>{formatNumber(inv.kg)}</td>
                 </tr>,

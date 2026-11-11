@@ -1,4 +1,6 @@
 "use client";
+import { MoneyInput } from "@/components/form/money-input";
+import { UnitInput } from "@/components/form/unit-input";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -107,13 +109,12 @@ function DebtWarningDialog({ settings, owner, pending, error, onClose, onSave }:
     <div className={s.limits}>
       <div className={s.limitRow}>
         <label><input type="checkbox" className="omts-check" checked={useAmount} disabled={readOnly} onChange={(event) => setUseAmount(event.target.checked)} />Số tiền nợ</label>
-        <input className={`omts-control ${s.amount}`} inputMode="numeric" aria-label="Số tiền nợ tối đa" disabled={readOnly || !useAmount} value={group(amount)} onChange={(event) => setAmount(event.target.value.replace(/\D/g, "").slice(0, 12))} />
-        <span>₫</span>
+        <MoneyInput label="Số tiền nợ tối đa" autoThousands wrapperClassName="w-44" disabled={readOnly || !useAmount} value={amount ? Number(amount) : null} max={999_999_999_999} onChange={(next) => setAmount(next === null ? "" : String(next))} />
       </div>
       <div className={s.limitRow}>
         <label><input type="checkbox" className="omts-check" checked={useDays} disabled={readOnly} onChange={(event) => setUseDays(event.target.checked)} />Số ngày nợ</label>
-        <input className={`omts-control ${s.days}`} inputMode="numeric" aria-label="Số ngày nợ tối đa" disabled={readOnly || !useDays} value={days} onChange={(event) => setDays(event.target.value.replace(/\D/g, "").slice(0, 4))} />
-        <span>ngày, tính từ hóa đơn nợ cũ nhất chưa trả</span>
+        <UnitInput label="Số ngày nợ tối đa" unit="ngày" wrapperClassName="w-32" disabled={readOnly || !useDays} value={days ? Number(days) : null} max={MAX_DAYS} onChange={(next) => setDays(next === null ? "" : String(next))} />
+        <span>tính từ hóa đơn nợ cũ nhất chưa trả</span>
       </div>
     </div>
     <p className={s.section}>Tùy chọn khác</p>

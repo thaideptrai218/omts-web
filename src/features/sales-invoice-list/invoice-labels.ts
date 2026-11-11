@@ -1,3 +1,4 @@
+import { formatVndWithSymbol } from "@/shared/format/vnd";
 import type { InvoiceAction } from "./invoice-list-contracts";
 import { knownActions } from "./invoice-list-contracts";
 
@@ -34,7 +35,7 @@ export function allowedSet(actions: readonly string[]): ReadonlySet<InvoiceActio
 
 const vnNumber = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 });
 export const num = (value: number) => vnNumber.format(value);
-export const vnd = (value: number) => `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)} ₫`;
+export const vnd = formatVndWithSymbol;
 /** "2026-11-09" -> "09/11/2026" (ghép chuỗi, không qua múi giờ). */
 export const dateText = (iso: string) => { const [y, m, d] = iso.slice(0, 10).split("-"); return `${d}/${m}/${y}`; };
 export const dateTimeText = (iso: string) => new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(iso));

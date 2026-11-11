@@ -42,7 +42,7 @@ export function ZoneInfoTab({ zone, canEdit, canSeeLicense, busy, dirtyRef, onSa
       {editing ? <ZoneFormFields draft={draft} setDraft={setDraft} errors={errors} /> : <Facts items={[
         ["Mã vùng", zone.code], ["Tên vùng", zone.name], ["Vị trí", zone.location], ["Diện tích (ha)", zone.area?.toLocaleString("vi-VN")],
         ["Trạng thái", zoneStatusLabel(zone.statusId)], ["Vĩ độ", zone.latitude], ["Kinh độ", zone.longitude],
-        ...(canSeeLicense ? [["Hồ sơ giấy phép", zone.licenseState ? stateLabel(zone.licenseState) : "Thiếu hồ sơ"] as const] : []),
+        ...(canSeeLicense ? [["Hồ sơ giấy phép", zone.licenseState ? stateLabel(zone.licenseState) : "Xem ở tab Giấy phép"] as const] : []),
       ]} />}
     </fieldset>
     <ErrorNotice error={mutation.error} />

@@ -1,17 +1,19 @@
 "use client";
-import { Fragment, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FilterChecks } from "@/components/ui/filter-checks";
-import { OpenableTableRow } from "@/components/ui/openable-table-row";
-import { DataTable, ErrorNotice, Field, Paging, Skeleton, displayTime, useRemote } from "@/features/operations/ui";
+import { FilterPills } from "@/components/ui/management-screen/management-layout";
+
+import { ErrorNotice, Field, Paging, Skeleton, useRemote } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { cagesFromKg, formatCages } from "@/shared/format/cage-quantity";
 import { matchesSelection } from "@/shared/presentation/filter-selection";
-import { CagesWithEstimatedKg, KgWithApproxCages } from "./harvest-quantity-cell";
+import { CagesWithEstimatedKg } from "./harvest-quantity-cell";
 import flowStyles from "./cultivation-flow.module.css";
 import { HarvestLotPreview } from "./harvest-lot-preview";
-import { HarvestLotButton } from "./harvest-detail";
-import { HarvestSettings } from "./harvest-settings";
+import { HarvestRecordsTable } from "./harvest-records-table";
+
+
 import * as c from "./records-contracts";
 import { HarvestForm } from "./records-harvest-form";
 import { harvestRepo, useAllowed } from "./records-shared";
@@ -20,17 +22,18 @@ import { harvestRepo, useAllowed } from "./records-shared";
 export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {
   const allowed = useAllowed("harvest", zoneId);
   const [adding, setAdding] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const remote = useRemote(
     useMemo(
       () => (signal: AbortSignal) => harvestRepo.read("list", { id: raftId, zoneId }, c.harvestList, signal),
       [raftId, zoneId],
     ),
   );
-  const [search, setSearch] = useState("");
+  const query = useSearchParams();
+  const [search, setSearch] = useState(() => query.get("search") ?? "");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [selectedLot, setSelectedLot] = useState<string>();
+  const [selectedLot, setSelectedLot] = useState<string | undefined>(() => query.get("recordId") ?? undefined);
   // The API reports lot status in either casing.
   const statusLabel = (value: string) =>
     ({
@@ -69,30 +72,10 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
       <div className={flowStyles.panelHeading}>
         <div>
           <h3>Các lô thu hoạch</h3>
-          <p>Chọn mã lô để xem sản lượng, ảnh và lịch sử ghi nhận.</p>
+
         </div>
-        <div className={flowStyles.actions}>
-          <Button variant="secondary" disabled={remote.loading} onClick={remote.reload}>
-            Tải lại
-          </Button>
-          {allowed("Owner") && (
-            <Button variant="secondary" onClick={() => setSettingsOpen(true)}>
-              Quy đổi & tự đóng lô
-            </Button>
-          )}
-          {remote.data?.canRecordHarvest && allowed("Create") && (
-            <Button onClick={() => setAdding(true)}>Ghi nhận thu hoạch</Button>
-          )}
-        </div>
+
       </div>
-      {settingsOpen && (
-        <HarvestSettings
-          onClose={() => {
-            setSettingsOpen(false);
-            remote.reload();
-          }}
-        />
-      )}
       {remote.loading ? (
         <Skeleton />
       ) : (
@@ -118,8 +101,9 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                   setPage(1);
                 }}
               />
-              <FilterChecks
-                label="Trạng thái lô"
+              <FilterPills
+                legend="Trạng thái lô"
+                name="harvest-lot-status"
                 value={status}
                 options={[
                   ...new Map(remote.data.lots.map((lot) => [String(lot.statusId), statusLabel(lot.status)])).entries(),
@@ -133,89 +117,8 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 {rows.length}/{remote.data.lots.length} lô
               </span>
             </div>
-            <div className={flowStyles.harvestTable}>
-              <DataTable
-                responsive
-                headings={[
-                  "Mã lô / thời điểm",
-                  "Làn thu hoạch",
-                  "Số lồng thu hoạch",
-                  "Đã lập hóa đơn",
-                  "Còn lại",
-                  "Trạng thái",
-                ]}
-                empty={!rows.length}
-              >
-                {rows.slice((currentPage - 1) * 10, currentPage * 10).map((lot) => (
-                  <Fragment key={lot.id}>
-                    <OpenableTableRow
-                      data-selected={selectedLot === lot.id || undefined}
-                      onOpen={() => setSelectedLot((value) => (value === lot.id ? undefined : lot.id))}
-                    >
-                      <td data-label="Mã lô / thời điểm">
-                        <button
-                          type="button"
-                          className={flowStyles.recordLink}
-                          aria-expanded={selectedLot === lot.id}
-                          onClick={() => setSelectedLot((value) => (value === lot.id ? undefined : lot.id))}
-                        >
-                          {lot.lotCode}
-                        </button>
-                        <span className="mt-1 block whitespace-nowrap text-xs text-text-muted">
-                          {displayTime(lot.harvestedAt)}
-                        </span>
-                      </td>
-                      <td data-label="Làn thu hoạch">
-                        {lot.laneNumbers.join(", ")}
-                        <span className="mt-1 block text-xs text-text-muted">
-                          Đã thu hết: {lot.finishedLaneNumbers.join(", ") || "Chưa có"}
-                        </span>
-                      </td>
-                      <td data-label="Số lồng thu hoạch" className="text-right">
-                        <CagesWithEstimatedKg cages={lot.cageCount} kg={lot.estimatedKg} />
-                      </td>
-                      <td data-label="Đã lập hóa đơn" className="text-right">
-                        <KgWithApproxCages kg={lot.invoicedKg} kgPerCage={lot.kgPerCage} />
-                      </td>
-                      <td data-label="Còn lại" className="text-right font-semibold">
-                        <KgWithApproxCages kg={lot.remainingKg} kgPerCage={lot.kgPerCage} />
-                      </td>
-                      <td data-label="Trạng thái">
-                        <span className={flowStyles.state}>{statusLabel(lot.status)}</span>
-                        {lot.canCorrect && allowed("Edit") && (
-                          <div className="mt-2 text-sm">
-                            <HarvestLotButton
-                              id={lot.id}
-                              zoneId={zoneId}
-                              label="Sửa lô"
-                              onSaved={() => {
-                                setSelectedLot(undefined);
-                                remote.reload();
-                              }}
-                            />
-                          </div>
-                        )}
-                      </td>
-                    </OpenableTableRow>
-                    {selectedLot === lot.id && (
-                      <tr>
-                        <td colSpan={6} className={flowStyles.recordDetailCell}>
-                          <HarvestLotPreview
-                            id={lot.id}
-                            zoneId={zoneId}
-                            onClose={() => setSelectedLot(undefined)}
-                            onSaved={() => {
-                              setSelectedLot(undefined);
-                              remote.reload();
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                ))}
-              </DataTable>
-            </div>
+            <HarvestRecordsTable rows={rows.slice((currentPage - 1) * 10, currentPage * 10)} selectedLot={selectedLot} zoneId={zoneId} statusLabel={statusLabel} onSelect={setSelectedLot} onSaved={remote.reload} />
+            {selectedLot && !remote.data.lots.some(lot => lot.id === selectedLot) && <HarvestLotPreview id={selectedLot} zoneId={zoneId} onClose={() => setSelectedLot(undefined)} onSaved={() => { setSelectedLot(undefined); remote.reload(); }} />}
             <div className={flowStyles.harvestTotals}>
               <span>Tổng các lô phù hợp bộ lọc</span>
               <dl>
@@ -227,8 +130,8 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 </div>
                 {(
                   [
-                    ["Đã lập hóa đơn", totals.invoiced, totals.invoicedCages],
-                    ["Còn lại", totals.remaining, totals.remainingCages],
+                    ["Đã bán", totals.invoiced, totals.invoicedCages],
+                    ["Còn để bán", totals.remaining, totals.remainingCages],
                   ] as const
                 ).map(([label, kg, cages]) => (
                   <div key={label}>
@@ -246,10 +149,15 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
             <div className={flowStyles.tablePaging}>
               <Paging page={currentPage} total={rows.length} pageSize={10} onChange={setPage} />
             </div>
-            <p className={flowStyles.harvestHint}>
-              Thu hoạch tính theo lồng; số kg là ước tính theo kg/lồng của từng lô. Số lồng có dấu “≈” là quy đổi từ kg.
-              Mở hồ sơ lô để xem lượng đã bán, trả lại, hao hụt và chênh lệch.
-            </p>
+
+        <div className={flowStyles.actions}>
+          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
+            Tải lại
+          </Button>
+          {remote.data?.canRecordHarvest && allowed("Create") && (
+            <Button type="button" onClick={() => setAdding(true)}>Ghi nhận thu hoạch</Button>
+          )}
+        </div>
             {adding && (
               <HarvestForm
                 zoneId={zoneId}

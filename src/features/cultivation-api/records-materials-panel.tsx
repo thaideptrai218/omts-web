@@ -1,6 +1,9 @@
 "use client";
-import { Fragment, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { z } from "zod";
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { Button } from "@/components/ui/button";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { DataTable, ErrorNotice, Paging, Skeleton, displayTime, useRemote } from "@/features/operations/ui";
@@ -28,14 +31,7 @@ export function MaterialsPanel({ zoneId, raftId }: { zoneId: string; raftId: str
           <h3>Nhật ký sử dụng vật tư</h3>
           <p>Nhóm theo chu kỳ; mỗi dòng là một vật tư đã ghi nhận.</p>
         </div>
-        <div className={flowStyles.actions}>
-          <Button variant="secondary" disabled={remote.loading} onClick={remote.reload}>
-            Tải lại
-          </Button>
-          {remote.data?.canRecord && allowed("Create") && (
-            <Button onClick={() => setSelected(null)}>Ghi nhận vật tư</Button>
-          )}
-        </div>
+
       </div>
       {remote.loading ? (
         <Skeleton />
@@ -49,14 +45,25 @@ export function MaterialsPanel({ zoneId, raftId }: { zoneId: string; raftId: str
               <MaterialGroup
                 key={group.cycle?.id ?? index}
                 group={group}
+                zoneId={zoneId}
                 canEdit={allowed("Edit")}
                 onSelect={setSelected}
+                editor={selected && <MaterialForm zoneId={zoneId} raftId={raftId} record={selected} allowed={allowed} onClose={() => setSelected(undefined)} onSaved={() => { setSelected(undefined); remote.reload(); }} />}
+                editingId={selected?.id}
               />
             ))}
           </>
         )
       )}
-      {selected !== undefined && (
+        <div className={flowStyles.actions}>
+          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
+            Tải lại
+          </Button>
+          {remote.data?.canRecord && allowed("Create") && (
+            <Button type="button" onClick={() => setSelected(null)}>Ghi nhận vật tư</Button>
+          )}
+        </div>
+      {selected === null && (
         <MaterialForm
           zoneId={zoneId}
           raftId={raftId}
@@ -75,17 +82,25 @@ export function MaterialsPanel({ zoneId, raftId }: { zoneId: string; raftId: str
 /** One cycle group of material usage rows; each row expands into its detail. */
 function MaterialGroup({
   group,
+  zoneId,
   canEdit,
   onSelect,
+  editor,
+  editingId,
 }: {
   group: z.infer<typeof c.materialList>["groups"][number];
   canEdit: boolean;
+  zoneId: string;
+  editor?: ReactNode;
+  editingId?: string;
   onSelect(record: z.infer<typeof c.materialRecord>): void;
 }) {
-  const [page, setPage] = useState(1);
-  const [expanded, setExpanded] = useState<string>();
+  const [page, setPage] = useState<number>();
+  const query = useSearchParams();
+  const [expanded, setExpanded] = useState<string | undefined>(() => query.get("recordId") ?? undefined);
   const rows = group.repairs.flatMap((repair) => repair.records);
-  const current = Math.min(page, Math.max(1, Math.ceil(rows.length / 10)));
+  const linkedPage = Math.max(1, Math.ceil((rows.findIndex(v => v.id === query.get("recordId")) + 1) / 10));
+  const current = Math.min(page ?? linkedPage, Math.max(1, Math.ceil(rows.length / 10)));
   return (
     <section className={flowStyles.materialGroup}>
       <div className={flowStyles.groupHeading}>
@@ -132,9 +147,9 @@ function MaterialGroup({
             {expanded === row.id && (
               <tr>
                 <td colSpan={5} className={flowStyles.recordDetailCell}>
-                  <section className={flowStyles.recordDetail} aria-label="Chi tiết sử dụng vật tư">
+                  {editingId === row.id ? editor : <section className={flowStyles.recordDetail} aria-label="Chi tiết sử dụng vật tư">
                     <h4>
-                      {row.itemCode} · {row.itemName}
+                      <Link href={farmingReferenceHref("inputItem", { code: row.itemCode })}>{row.itemCode} · {row.itemName}</Link>
                     </h4>
                     <dl>
                       <div>
@@ -143,7 +158,7 @@ function MaterialGroup({
                       </div>
                       <div>
                         <dt>Bè sử dụng</dt>
-                        <dd>{row.raftCode}</dd>
+                        <dd><Link href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>{row.raftCode}</Link></dd>
                       </div>
                       <div>
                         <dt>Số lượng</dt>
@@ -167,15 +182,15 @@ function MaterialGroup({
                     {!row.canEdit && <p>Bản ghi này hiện chỉ được xem.</p>}
                     <footer>
                       {canEdit && row.canEdit && (
-                        <Button className="w-auto" onClick={() => onSelect(row)}>
+                        <Button type="button" className="w-auto" onClick={() => onSelect(row)}>
                           Chỉnh sửa ghi nhận
                         </Button>
                       )}
-                      <Button className="w-auto" variant="secondary" onClick={() => setExpanded(undefined)}>
+                      <Button type="button" className="w-auto" variant="secondary" onClick={() => setExpanded(undefined)}>
                         Thu gọn
                       </Button>
                     </footer>
-                  </section>
+                  </section>}
                 </td>
               </tr>
             )}

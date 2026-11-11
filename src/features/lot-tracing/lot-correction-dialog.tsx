@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+
 import { createOperationsRepository } from "@/features/operations/repository";
 import { ErrorNotice, Field, Note, Skeleton, useRemote } from "@/features/operations/ui";
 import { corrected, lotPhotoKeys, preview, type LotItem } from "./correction-contracts";
@@ -19,14 +19,14 @@ type Props = { item: LotItem; onClose(): void; onSaved(published: string[]): voi
 export function LotCorrectionDialog({ item, onClose, onSaved }: Props) {
   const photos = useRemote(useCallback((signal: AbortSignal) => repo.read("lot-photos", { id: item.id }, lotPhotoKeys, signal), [item.id]));
   return (
-    <Dialog open size="lg" title={`Sửa dữ liệu thu hoạch lô ${item.lotCode}`} onOpenChange={(open) => !open && onClose()}>
+    <section aria-label={`Sửa dữ liệu thu hoạch lô ${item.lotCode}`}>
       <div className={s.dialogBody}>
         {photos.loading && <Skeleton />}
         <ErrorNotice error={photos.error} />
-        {photos.error && <Button className="w-auto" variant="secondary" onClick={photos.reload}>Tải lại</Button>}
+        {photos.error && <Button type="button" className="w-auto" variant="secondary" onClick={photos.reload}>Tải lại</Button>}
         {photos.data && <LotForm item={item} photoKeys={[...photos.data.photos].sort((a, b) => a.sortOrder - b.sortOrder).map((p) => p.key)} onClose={onClose} onSaved={onSaved} />}
       </div>
-    </Dialog>
+    </section>
   );
 }
 
@@ -50,8 +50,8 @@ function LotForm({ item, photoKeys, onClose, onSaved }: Props & { photoKeys: str
     <form onSubmit={(event) => { event.preventDefault(); void flow.review(); }}>
       <p className={s.hint}>Ngày giờ thu hoạch: <strong>{formatDateTime(item.harvestedAt)}</strong> (không sửa được).</p>
       <div className={s.formGrid}>
-        <Field label="Luống thu hoạch (cách nhau bởi dấu phẩy)" required value={draft.lanes} disabled={busy} onChange={(e) => set({ lanes: e.target.value })} />
-        <Field label="Luống đã thu xong" value={draft.finished} disabled={busy} onChange={(e) => set({ finished: e.target.value })} />
+        <Field label="Làn thu hoạch (cách nhau bởi dấu phẩy)" required value={draft.lanes} disabled={busy} onChange={(e) => set({ lanes: e.target.value })} />
+        <Field label="Làn đã thu xong" value={draft.finished} disabled={busy} onChange={(e) => set({ finished: e.target.value })} />
         <Field label="Số lồng" inputMode="numeric" required value={draft.cageCount} disabled={busy} onChange={(e) => set({ cageCount: e.target.value })} />
         <Field label="kg ước tính (để trống: tính lại theo số lồng)" inputMode="decimal" value={draft.estimatedKg} disabled={busy} onChange={(e) => set({ estimatedKg: e.target.value })} />
       </div>
@@ -60,8 +60,8 @@ function LotForm({ item, photoKeys, onClose, onSaved }: Props & { photoKeys: str
       <ErrorNotice error={flow.mutation.error} />
       {!flow.built.ok && <p className={s.hint}>{flow.built.problem}</p>}
       <div className={s.dialogActions}>
-        <Button className="w-auto" variant="secondary" disabled={busy} onClick={onClose}>Hủy</Button>
-        <Button className="w-auto" type="submit" disabled={!flow.built.ok} isPending={busy} pendingLabel="Đang kiểm tra...">Xem lại thay đổi</Button>
+        <Button key="discard-correction" type="button" className="w-auto" variant="secondary" disabled={busy} onClick={onClose}>Bỏ qua</Button>
+        <Button key="review-correction" className="w-auto" type="submit" disabled={!flow.built.ok} isPending={busy} pendingLabel="Đang kiểm tra...">Xem lại thay đổi</Button>
       </div>
     </form>
   );

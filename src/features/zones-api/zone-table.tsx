@@ -22,7 +22,7 @@ export const zoneColumns: readonly Column[] = [
   { key: "location", label: "Vị trí", weight: 28, render: row => text(row.location) },
   { key: "area", label: "Diện tích (ha)", weight: 14, numeric: true, render: row => row.area === null ? "—" : row.area.toLocaleString("vi-VN") },
   { key: "rafts", label: "Bè đang dùng", weight: 14, numeric: true, render: row => row.inUseRaftCount },
-  { key: "license", label: "Hồ sơ giấy phép", weight: 20, licenseOnly: true, render: row => text(row.licenseState ? stateLabel(row.licenseState) : "Thiếu hồ sơ") },
+  { key: "license", label: "Hồ sơ giấy phép", weight: 20, licenseOnly: true, render: row => text(row.licenseState ? stateLabel(row.licenseState) : "—") },
   { key: "water", label: "Phép đo nước gần nhất", weight: 22, waterOnly: true, render: (row, water) => {
     const item = water?.get(row.id);
     return !item ? "—" : item.latestMeasuredAt ? <span className={styles.truncated}>{displayTime(item.latestMeasuredAt)}{item.hasWaterAlert ? " · có cảnh báo" : ""}</span> : "Chưa có phép đo";

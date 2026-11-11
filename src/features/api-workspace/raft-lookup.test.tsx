@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render as baseRender, screen } from "@testing-library/react";
+import { ToastProvider } from "@/components/ui/toast-provider";
 const state = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("./api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "Staff" }, permissions: { functionPermissions: [] } }) }));
 vi.mock("./workspace-repository", () => ({ createWorkspaceRepository: (resource: string) => ({ list: (query: unknown) => state.list(resource, query) }) }));
 import { ApiResourceScreen } from "./api-resource-screen";
+const render = (ui: import("react").ReactElement) => baseRender(<ToastProvider>{ui}</ToastProvider>);
 const zoneId = (number: number) => `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`;
 const zone = (number: number, name: string) => ({ id: zoneId(number), code: `Z${number}`, name, location: null, area: null, statusId: 101, status: "In Use", inUseRaftCount: 0, licenseState: null });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });

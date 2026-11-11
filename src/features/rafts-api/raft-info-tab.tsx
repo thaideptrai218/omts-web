@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useEffect, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -11,8 +13,8 @@ import { DISCONTINUED, laneStatusLabel, parseRaftDetail, raftBody, raftDraftOf, 
 
 const repository = createWorkspaceRepository("rafts");
 /** "Thông tin": read-only facts, or the same grid as inputs with `Bỏ qua` / `Lưu` in the footer. */
-export function RaftInfoTab({ raft, zoneLabel, canEdit, busy, dirtyRef, onSaved, onReload, onStatus }: {
-  raft: RaftDetail; zoneLabel: string; canEdit: boolean; busy: boolean; dirtyRef: RefObject<boolean>;
+export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, onSaved, onReload, onStatus }: {
+  raft: RaftDetail; zoneId: string; zoneLabel: string; canEdit: boolean; busy: boolean; dirtyRef: RefObject<boolean>;
   onSaved(raft: RaftDetail): void; onReload(): void; onStatus(): void;
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState<RaftDraft>(() => raftDraftOf(raft));
@@ -37,8 +39,8 @@ export function RaftInfoTab({ raft, zoneLabel, canEdit, busy, dirtyRef, onSaved,
   }
   return <form noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
     <fieldset disabled={locked || mutation.blocked} className="min-w-0 border-0 p-0">
-      {editing ? <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} /> : <Facts items={[
-        ["Mã bè", raft.code], ["Vùng nuôi", zoneLabel], ["Kích thước", raft.size], ["Số làn đang dùng", raft.laneCount ?? raft.lanes.length], ["Trạng thái", raftStatusLabel(raft.statusId)],
+      {editing ? <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={raft.id} /> : <Facts items={[
+        ["Mã bè", raft.code], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId })}>{zoneLabel}</Link>], ["Kích thước", raft.size], ["Số làn đang dùng", raft.laneCount ?? raft.lanes.length], ["Trạng thái", raftStatusLabel(raft.statusId)],
         ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude], ["Tình trạng bè", raft.conditionNotes],
       ]} />}
     </fieldset>

@@ -2,6 +2,7 @@
 import { SelectBox } from "@/components/ui/select-box";
 import type { Dispatch, SetStateAction } from "react";
 import { FormField } from "@/components/form/form-field";
+import { ResourceLocationPicker } from "@/features/farming-api/resource-location-picker";
 import { inputClass, text } from "./api-resource-presentation";
 import { resources, type ResourceKey } from "./resources";
 import type { ApiRecord } from "./workspace-repository";
@@ -42,7 +43,7 @@ export function ResourceEditorFields({
   const definition = resources[resource];
   return (
     <>
-      {definition.fields.map((field) =>
+      {definition.fields.filter(field => !(["zones", "rafts"].includes(resource) && ["latitude", "longitude"].includes(field.key))).map((field) =>
         field.type === "select" ? (
           <label key={field.key} className="text-sm font-semibold">
             {field.label}
@@ -94,6 +95,7 @@ export function ResourceEditorFields({
           />
         ),
       )}
+      {(resource === "zones" || resource === "rafts") && <ResourceLocationPicker resource={resource} record={record} values={values} setValues={setValues} zones={zones} />}
       {resource === "employees" && (
         <>
           <fieldset className="rounded-control border border-border p-4 sm:col-span-2">

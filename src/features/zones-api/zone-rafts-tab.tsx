@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect } from "react";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
@@ -37,7 +38,7 @@ export function ZoneRaftsTab({ zoneId, raftAccess, guard, openId }: {
     const timer = setTimeout(() => document.getElementById(`zone-raft-row-${openId}`)?.scrollIntoView({ block: "nearest" }), 0);
     return () => clearTimeout(timer);
   }, [openId, remote.data]);
-  const listHref = `/workspace/rafts?zoneId=${encodeURIComponent(zoneId)}`;
+  const listHref = farmingReferenceHref("raft", { zoneId });
   if (!remote.data) return remote.error ? <ListStateMessage error={remote.error} onRetry={remote.reload} retryLabel="Tải lại" /> : <Skeleton />;
   return <>
     {remote.data.length === 0 ? <p className={styles.hint}>Vùng chưa có bè nuôi.</p>
@@ -47,17 +48,17 @@ export function ZoneRaftsTab({ zoneId, raftAccess, guard, openId }: {
             <td className={styles.name}>
               <Link
                 className={styles.link}
-                href={`${listHref}&recordId=${encodeURIComponent(raft.id)}`}
+                href={farmingReferenceHref("raft", { zoneId, recordId: raft.id, search: raft.code })}
                 aria-label={`Mở hồ sơ bè ${raft.code}`}
                 onNavigate={(event) => {
                   if (!guard.dirty.current) return;
                   event.preventDefault();
-                  void guard.leave(() => router.push(`${listHref}&recordId=${encodeURIComponent(raft.id)}`));
+                  void guard.leave(() => router.push(farmingReferenceHref("raft", { zoneId, recordId: raft.id, search: raft.code })));
                 }}
               >{raft.code}</Link>
             </td><td>{raft.size || "—"}</td><td className={styles.number}>{raft.laneCount ?? "—"}</td>
             <td><StatusPill tone={raft.statusId === IN_USE ? "success" : "neutral"}>{raft.statusId === IN_USE ? "Đang sử dụng" : "Ngừng sử dụng"}</StatusPill></td>
-            {showCycles && <td>{raft.cycle ? `${raft.cycle.closeDate ? "Đã đóng" : "Đang mở"} · từ ${formatVietnameseDate(raft.cycle.startDate)}` : "Chưa có chu kỳ"}</td>}
+            {showCycles && <td>{raft.cycle ? <Link className={styles.link} href={farmingReferenceHref("cycle", { zoneId, raftId: raft.id, cycleId: raft.cycle.id })}>{`${raft.cycle.closeDate ? "Đã đóng" : "Đang mở"} · từ ${formatVietnameseDate(raft.cycle.startDate)}`}</Link> : "Chưa có chu kỳ"}</td>}
           </tr>)}</tbody></table>}
     <TabFooter right={<Link className={styles.footerLink} href={listHref}>Mở danh sách bè của vùng</Link>} />
   </>;

@@ -1,8 +1,12 @@
 "use client";
 import { useState } from "react";
 import { z } from "zod";
+import { useToast } from "@/components/ui/toast-provider";
+import { CollapsibleSection } from "@/components/ui/management-screen/management-table";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/features/operations/ui";
+import { RecordPhotoPicker } from "./record-photo-picker";
+import { UnitField } from "@/components/form/number-fields";
+import { HarvestLaneChoices } from "./harvest-lane-choices";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import flowStyles from "./cultivation-flow.module.css";
 import * as c from "./records-contracts";
@@ -28,12 +32,13 @@ export function HarvestForm({
   const [kg, setKg] = useState("");
   const [error, setError] = useState<string>();
   const [photos, setPhotos] = useState<File[]>([]);
+  const { notify } = useToast();
   const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length);
   // Live hint: the kg the backend will store when the estimate is left blank.
   const cageNumber = Number(cages);
   const estimateHint =
-    !kg && Number.isInteger(cageNumber) && cageNumber > 0
-      ? `${cageNumber.toLocaleString("vi-VN")} lồng ≈ ${(cageNumber * data.averageKgPerCage).toLocaleString("vi-VN")} kg. `
+    !kg && Number.isFinite(cageNumber) && cageNumber > 0
+      ? `${cageNumber.toLocaleString("vi-VN")} lồng ≈ ${(cageNumber * data.averageKgPerCage).toLocaleString("vi-VN")} kg ước tính. `
       : "";
   async function save() {
     const parsed = c.harvestValues.safeParse({
@@ -43,7 +48,7 @@ export function HarvestForm({
       estimatedKg: kg ? Number(kg) : null,
     });
     if (!parsed.success) {
-      setError("Chọn làn thu hoạch, số lồng nguyên dương và sản lượng lớn hơn 0 nếu nhập.");
+      setError("Chọn làn thu hoạch, số lồng lớn hơn 0 (được nhập 0,5) và kg ước tính lớn hơn 0 nếu nhập.");
       return;
     }
     if (
@@ -69,8 +74,7 @@ export function HarvestForm({
             zoneId,
           ),
       )
-    )
-      onSaved();
+    ) { notify({ tone: "success", title: "Đã ghi nhận chuyến thu hoạch." }); onSaved(); }
   }
   return (
     <EditorFrame title="Ghi nhận chuyến thu hoạch" editor={editor} error={error}>
@@ -81,10 +85,9 @@ export function HarvestForm({
         }}
       >
         <fieldset disabled={editor.disabled} className={flowStyles.harvestFormGrid}>
-          <div className={flowStyles.harvestFormSection}>
-            <h3>Phạm vi thu hoạch</h3>
-            <LaneChoices
-              lanes={data.lanes.filter((v) => v.canHarvest).map((v) => v.laneNumber)}
+          <CollapsibleSection title="Làn thu hoạch" description="Các làn trong chuyến thu." columns={1}>
+            <HarvestLaneChoices
+              lanes={data.lanes}
               values={lanes}
               onChange={(v) => {
                 setLanes(v);
@@ -92,56 +95,53 @@ export function HarvestForm({
               }}
               label="Làn thu hoạch *"
             />
-            <LaneChoices
-              lanes={lanes}
-              values={finished}
-              onChange={setFinished}
-              label="Làn đã thu hết hàu trong chuyến này"
-            />
-          </div>
-          <div className={flowStyles.harvestFormSection}>
-            <h3>Số lồng và ảnh</h3>
-            <Field
+            <div>
+              <h4 className="mb-1 text-sm font-semibold">Xác nhận làn đã thu xong</h4>
+              <p className={flowStyles.harvestHint}>
+                {lanes.length
+                  ? "Tích những làn không còn hàu để thu. Làn không tích sẽ vẫn ở trạng thái Đang thu hoạch sau khi lưu."
+                  : "Chọn làn thu hoạch ở trên để hiện các ô xác nhận đã thu xong."}
+              </p>
+              {lanes.length > 0 && <LaneChoices
+                lanes={lanes}
+                values={finished}
+                onChange={setFinished}
+                label="Làn đã thu hết hàu trong chuyến này"
+              />}
+            </div>
+          </CollapsibleSection>
+          <CollapsibleSection title="Số lượng và ảnh" description="Số lồng thu hoạch và ảnh ghi nhận." columns={1}>
+            <UnitField
+              key="harvest-cages"
               label="Số lồng thu hoạch *"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              step={1}
+              unit="lồng"
+              decimals={2}
+              step={0.5}
+              min={0.01}
+              max={100000}
               required
               value={cages}
-              onChange={(e) => setCages(e.target.value)}
+              onChange={setCages}
             />
-            <Field
-              label={`Ước tính kg (để trống sẽ quy đổi theo ${data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng)`}
-              type="number"
-              min="0.01"
-              step="0.01"
+            <UnitField
+              key="harvest-estimated-kg"
+              label={`Kg ước tính (để trống: hệ thống tính theo ${data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng)`}
+              unit="kg ước tính"
+              decimals={2}
+              min={0.01}
               value={kg}
-              onChange={(e) => setKg(e.target.value)}
+              onChange={setKg}
             />
             <p className={flowStyles.harvestHint}>
               {estimateHint}
-              Thu hoạch tính theo lồng; số kg chỉ là ước tính. Thời điểm thu hoạch được hệ thống ghi khi lưu.
+
             </p>
-            <Field
-              label="Ảnh chuyến thu hoạch (tối đa 10 ảnh JPEG/PNG, 10 MB/ảnh)"
-              type="file"
-              multiple
-              accept="image/jpeg,image/png"
-              onChange={(e) => setPhotos(Array.from(e.target.files ?? []))}
-            />
-            {!!photos.length && (
-              <ul className="text-sm">
-                {photos.map((file, i) => (
-                  <li key={i}>{file.name}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className={flowStyles.harvestFormFooter}>
-            <Button type="submit">Lưu chuyến thu hoạch</Button>
-          </div>
+            <RecordPhotoPicker label="Ảnh chuyến thu hoạch (tối đa 10 ảnh JPEG/PNG, 10 MB/ảnh)" files={photos} onChange={setPhotos} />
+          </CollapsibleSection>
         </fieldset>
+          <div className={flowStyles.harvestFormFooter}>
+            <Button key="discard-harvest" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button><Button key="save-harvest" type="submit" disabled={editor.disabled}>Lưu</Button>
+          </div>
       </form>
     </EditorFrame>
   );

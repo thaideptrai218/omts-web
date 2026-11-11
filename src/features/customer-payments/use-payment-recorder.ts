@@ -1,4 +1,5 @@
 "use client";
+import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { businessToday, operationError, useRemote } from "@/features/operations/ui";
@@ -54,7 +55,7 @@ export function usePaymentRecorder(onRecorded: () => void) {
         if (!body.success) { setError("Thông tin thanh toán chưa hợp lệ. Hãy kiểm tra lại các ô đã nhập."); return; }
         const result = await repository.write(form.kind === "Payment" ? "record" : "pay-back", body.data, paymentSaved);
         if (result.status === "success") {
-          setNotice(`Đã ghi nhận ${result.data.payment.code}${result.data.debtAfter != null ? ` · công nợ còn lại ${new Intl.NumberFormat("vi-VN").format(result.data.debtAfter)} ₫` : ""}.`);
+          setNotice(`Đã ghi nhận ${result.data.payment.code}${result.data.debtAfter != null ? ` · công nợ còn lại ${formatVndWithSymbol(result.data.debtAfter)}` : ""}.`);
           setFormState(blank(form.kind, form.customer)); flags.current = { above: false, duplicate: false }; key.current = crypto.randomUUID(); info.reload(); onRecorded(); return;
         }
         const field = result.invoiceConfirmation?.field;

@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
+import { MoneyField, UnitField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { control, ErrorNotice, Field, Note } from "@/features/operations/ui";
+import { ErrorNotice, Note } from "@/features/operations/ui";
 import { buildCorrection, initialCorrection, type CorrectionFields, type CorrectionForm } from "./invoice-correction-form";
 import { InvoiceChangeQuestionDialog } from "./invoice-change-question-dialog";
 import type { InvoiceDetail } from "./invoice-list-contracts";
@@ -37,7 +38,7 @@ export function InvoiceCorrectionDialog({ invoice, onClose, onDone, onReload }: 
           <label className="flex items-center gap-2 text-sm"><input type="radio" name="correction-kind" checked={priceCut} onChange={() => patch({ kind: "PriceCutAfterClaim" })} />Giảm giá sau khiếu nại chất lượng</label>
         </fieldset>
         {priceCut ? (
-          <div className={s.field}><Field label="Khoản giảm giá (₫)" inputMode="numeric" value={form.cut} disabled={busy} onChange={(e) => patch({ cut: e.target.value })} />
+          <div className={s.field}><MoneyField label="Khoản giảm giá" autoThousands showWords value={form.cut} disabled={busy} onChange={(next) => patch({ cut: next })} />
             <p className={s.muted}>Tổng cộng hiện tại {vnd(invoice.total)}. Các dòng hàng không thay đổi.</p></div>
         ) : (
           <>
@@ -45,8 +46,8 @@ export function InvoiceCorrectionDialog({ invoice, onClose, onDone, onReload }: 
               {form.lines.map((line, index) => (
                 <div key={line.key} className={s.lineEditor}>
                   <div><strong>{line.productName}</strong><span className={s.sub}>Lô {line.lotCode}</span></div>
-                  <label className={s.field}>kg<input className={control} inputMode="decimal" aria-label={`Dòng ${index + 1}: số kg`} value={line.kg} disabled={busy} onChange={(e) => setLine(line.key, { kg: e.target.value })} /></label>
-                  <label className={s.field}>Đơn giá (₫)<input className={control} inputMode="numeric" aria-label={`Dòng ${index + 1}: đơn giá`} value={line.unitPrice} disabled={busy} onChange={(e) => setLine(line.key, { unitPrice: e.target.value })} /></label>
+                  <UnitField label="Số kg" accessibleName={`Dòng ${index + 1}: số kg`} unit="kg" decimals={3} value={line.kg} disabled={busy} onChange={(next) => setLine(line.key, { kg: next })} />
+                  <MoneyField label="Đơn giá" accessibleName={`Dòng ${index + 1}: đơn giá`} value={line.unitPrice} disabled={busy} onChange={(next) => setLine(line.key, { unitPrice: next })} />
                   <Button type="button" className="w-auto" variant="secondary" disabled={busy || form.lines.length === 1} onClick={() => patch({ lines: form.lines.filter((l) => l.key !== line.key) })}>Bỏ dòng</Button>
                 </div>))}
             </div>
@@ -56,8 +57,8 @@ export function InvoiceCorrectionDialog({ invoice, onClose, onDone, onReload }: 
                   onChange={(e) => patch({ notWholeLots: e.target.checked ? form.notWholeLots.filter((x) => x !== lot) : [...form.notWholeLots, lot] })} />Lô {code}</label>))}
             </fieldset>
             <div className={s.formGrid}>
-              <div className={s.field}><Field label="Giảm giá (₫)" inputMode="numeric" value={form.discount} disabled={busy} onChange={(e) => patch({ discount: e.target.value })} /></div>
-              <div className={s.field}><Field label="Thu khác (₫)" inputMode="numeric" value={form.otherCharges} disabled={busy} onChange={(e) => patch({ otherCharges: e.target.value })} /></div>
+              <div className={s.field}><MoneyField label="Giảm giá" autoThousands value={form.discount} disabled={busy} onChange={(next) => patch({ discount: next })} /></div>
+              <div className={s.field}><MoneyField label="Thu khác" autoThousands value={form.otherCharges} disabled={busy} onChange={(next) => patch({ otherCharges: next })} /></div>
             </div>
           </>
         )}

@@ -9,7 +9,6 @@ import { useStickyRemote } from "@/features/farming-management/use-sticky-remote
 import { businessToday, ErrorNotice, Field, Skeleton, useMutation } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import { CycleEditor } from "./cycle-editor";
 import { planBody, planDraftOf, validatePlan, type CycleRow, type PlanDraft, type PlanField } from "./cycle-model";
 import { cycleProgress } from "./contracts";
 import { readCycles, writeCycle } from "./repository";
@@ -17,10 +16,10 @@ import { readCycles, writeCycle } from "./repository";
 export type CycleAccess = { view: boolean; create: boolean; edit: boolean; remove: boolean; logs: boolean; logsCreate: boolean; logsEdit: boolean };
 const day = (value: string | null) => value ? formatVietnameseDate(value) : null;
 const fields = [["startDate", "Ngày bắt đầu", "date"], ["expectedSeedQuantity", "Lượng giống dự kiến", "number"], ["expectedHarvestDate", "Ngày thu hoạch dự kiến", "date"], ["targetYieldKg", "Sản lượng mục tiêu (kg)", "number"]] as const;
-/** "Kế hoạch": the cycle plan, edited in place; starting a cycle is the one pop-up, cancelling a mistaken cycle asks for confirmation. */
+/** "Kế hoạch": the cycle plan, edited in place; cancelling a mistaken cycle asks for confirmation. */
 export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleRow; access: CycleAccess; dirtyRef: RefObject<boolean>; onChanged(notice: string): void }) {
   const current = useStickyRemote(useCallback((signal: AbortSignal) => readCycles({ action: "progress", raftId: row.raftId, ...(row.cycle ? { cycleId: row.cycle.id } : { date: businessToday() }) }, cycleProgress, signal), [row.raftId, row.cycle]));
-  const [editing, setEditing] = useState(false), [starting, setStarting] = useState(false), [draft, setDraft] = useState<PlanDraft>();
+  const [editing, setEditing] = useState(false), [draft, setDraft] = useState<PlanDraft>();
   const [errors, setErrors] = useState<Partial<Record<PlanField, string>>>({}), [reloaded, setReloaded] = useState(false);
   const mutation = useMutation(), confirmation = useActionDialog();
   const cycle = row.cycle ? current.data?.cycle ?? null : null;
@@ -44,8 +43,6 @@ export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleR
   }
   if (!row.cycle) return <>
     <p className={styles.hint}>Bè chưa có chu kỳ nuôi.</p>
-    {access.create && row.canStart && <TabFooter right={<Button key="start" type="button" className="w-auto" onClick={() => setStarting(true)}>Bắt đầu chu kỳ nuôi</Button>} />}
-    {starting && <CycleEditor raftId={row.raftId} raftCode={row.raftCode} canCancel={false} onClose={() => setStarting(false)} onSaved={() => { setStarting(false); onChanged("Đã bắt đầu chu kỳ nuôi."); }} />}
   </>;
   if (current.loading && !current.data) return <Skeleton />;
   if (current.error && !cycle) return <ListStateMessage error={current.error} onRetry={current.reload} retryLabel="Tải lại" />;

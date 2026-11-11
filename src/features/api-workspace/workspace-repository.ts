@@ -18,7 +18,8 @@ async function send<T>(resource: ResourceKey, query: URLSearchParams, body?: unk
 }
 export function createWorkspaceRepository(resource: ResourceKey) {
   return {
-    proposal(signal?: AbortSignal) { return send<{ code: string; seedUnit: string | null }>(resource, new URLSearchParams({ proposal: "1" }), undefined, signal); },
+    /** `zoneId` is required for rafts (their code is built from the zone code). */
+    proposal(signal?: AbortSignal, zoneId?: string) { return send<{ code: string; seedUnit?: string | null }>(resource, new URLSearchParams({ proposal: "1", ...(zoneId ? { zoneId } : {}) }), undefined, signal); },
     list(query: Record<string, string>, signal?: AbortSignal) { return send<ApiPage>(resource, new URLSearchParams(query), undefined, signal); },
     detail(id: string, signal?: AbortSignal) { return send<ApiRecord>(resource, new URLSearchParams({ id }), undefined, signal); },
     mutate(action: "create" | "update" | "discontinue" | "reactivate" | "lock" | "unlock", body: Record<string, unknown>, id?: string, zoneId?: string) {
