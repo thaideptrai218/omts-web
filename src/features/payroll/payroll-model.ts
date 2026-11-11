@@ -1,53 +1,39 @@
-/*
- * Row shapes of the payroll screens. There is no payroll endpoint on the backend yet, so nothing builds these at runtime:
- * the screens receive them through optional props (default: empty) and the component tests inject samples the same way.
- * Replace the props with the real repository read when the API exists.
- */
-export type PayrollStatus = "draft" | "pending" | "returned" | "final";
+import { formatVietnameseDate } from "@/shared/format/date-only";
+import type { PaymentMethod, PayrollStatus, PeriodType } from "./contracts";
 
-export const PAYROLL_STATUSES: readonly (readonly [PayrollStatus, string])[] = [
-  ["draft", "Nháp"], ["pending", "Chờ chốt"], ["returned", "Đã trả lại"], ["final", "Đã chốt"],
-];
-export const payrollStatusLabel = (status: PayrollStatus) => PAYROLL_STATUSES.find(([key]) => key === status)?.[1] ?? status;
+/** Status words follow the KiotViet payroll flow the owner asked for. */
+export const statusLabel: Record<PayrollStatus, string> = { Creating: "Đang tạo", Provisional: "Tạm tính", Finalized: "Đã chốt lương", Cancelled: "Đã hủy" };
+/** Default list filter: every status but "Đã hủy". */
+export const defaultStatuses: readonly PayrollStatus[] = ["Creating", "Provisional", "Finalized"];
+export const statusTone = (status: PayrollStatus) => status === "Finalized" ? "success" : status === "Cancelled" ? "danger" : "neutral";
+export const periodLabel: Record<PeriodType, string> = { Monthly: "Hàng tháng", Custom: "Tùy chọn" };
+export const methodLabel: Record<PaymentMethod, string> = { Cash: "Tiền mặt", BankTransfer: "Chuyển khoản" };
 
-export type PayrollSlip = Readonly<{
-  id: string; employeeName: string; employeeType: string;
-  workLines: readonly Readonly<{ jobName: string; hours: number; hourlyRate: number }>[];
-  subtotal: number; adjustment: number | null; adjustmentReason: string; net: number;
-}>;
-export type PayrollLaborCost = Readonly<{ id: string; raftName: string; zoneName: string; cycleName: string; cost: number }>;
-export type PayrollPayment = Readonly<{ id: string; voucherCode: string; employeeName: string; paidOn: string; amount: number; method: string; status: string }>;
+export const rangeLabel = (from: string, to: string) => `${formatVietnameseDate(from)} - ${formatVietnameseDate(to)}`;
+const pad = (value: number) => String(value).padStart(2, "0");
 
-export type PayrollSheet = Readonly<{
-  id: string; periodLabel: string;
-  /** yyyy-MM-dd */ from: string; /** yyyy-MM-dd */ to: string;
-  status: PayrollStatus; total: number | null; paymentLabel: string;
-  slips: readonly PayrollSlip[]; laborCosts: readonly PayrollLaborCost[]; payments: readonly PayrollPayment[];
-}>;
-
-/** An employee who is still owed pay, for the payment screen. */
-export type PayableLine = Readonly<{ id: string; employeeName: string; pay: number; paid: number; outstanding: number; bankAccount: string }>;
-
-const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").toLowerCase().trim();
-
-export type SheetFilter = Readonly<{ search: string; status: string; from: string; to: string }>;
-
-/** Client-side filter over the rows the screen was given: period text, status, and overlap with the chosen date range. */
-export function filterSheets(sheets: readonly PayrollSheet[], filter: SheetFilter) {
-  const term = normalize(filter.search);
-  return sheets.filter((sheet) =>
-    (!term || normalize(sheet.periodLabel).includes(term))
-    && (!filter.status || sheet.status === filter.status)
-    && (!filter.from || sheet.to >= filter.from)
-    && (!filter.to || sheet.from <= filter.to));
+export type MonthOption = Readonly<{ value: string; from: string; to: string; label: string }>;
+/** The calendar month of `today` (yyyy-MM-dd) and the 12 before it, newest first, each as a whole-month work period. */
+export function monthOptions(today: string, previous = 12): readonly MonthOption[] {
+  const [year, month] = today.split("-").map(Number);
+  return Array.from({ length: previous + 1 }, (_, back) => {
+    const first = new Date(Date.UTC(year, month - 1 - back, 1)), y = first.getUTCFullYear(), m = first.getUTCMonth() + 1;
+    const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate(), from = `${y}-${pad(m)}-01`, to = `${y}-${pad(m)}-${pad(lastDay)}`;
+    return { value: `${y}-${pad(m)}`, from, to, label: rangeLabel(from, to) };
+  });
 }
 
-export type PayableFilter = Readonly<{ search: string; outstandingFrom: string; outstandingTo: string }>;
-
-export function filterPayables(lines: readonly PayableLine[], filter: PayableFilter) {
-  const term = normalize(filter.search);
-  return lines.filter((line) =>
-    (!term || normalize(line.employeeName).includes(term))
-    && (!filter.outstandingFrom || line.outstanding >= Number(filter.outstandingFrom))
-    && (!filter.outstandingTo || line.outstanding <= Number(filter.outstandingTo)));
+/** Month list for the expense-recognition picker of "Chốt lương": the sheet's period end month and its neighbours. */
+export function expenseMonthOptions(periodEnd: string, around = 6): readonly { value: string; label: string }[] {
+  const [year, month] = periodEnd.split("-").map(Number);
+  return Array.from({ length: around * 2 + 1 }, (_, index) => {
+    const date = new Date(Date.UTC(year, month - 1 + around - index, 1)), value = `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}`;
+    return { value, label: `Tháng ${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}` };
+  });
 }
+
+export const monthLabel = (value: string | null) => value ? `Tháng ${value.slice(5)}/${value.slice(0, 4)}` : "—";
+export const formatDateTime = (value: string) => new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+
+export const kindLabel: Record<"Wage" | "Advance", string> = { Wage: "Trả lương", Advance: "Tạm ứng" };
+export const paymentStatusLabel: Record<"Recorded" | "Cancelled", string> = { Recorded: "Đã chi", Cancelled: "Đã hủy" };
