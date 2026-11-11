@@ -45,6 +45,24 @@ it("refuses a new customer without a name or phone before calling the API", asyn
   expect(repo.save).not.toHaveBeenCalled();
 });
 
+it("marks the fields the settings require and asks for them before calling the API", async () => {
+  const user = userEvent.setup();
+  const required = { phoneNumber2: false, email: true, gender: false, birthDate: false, address: true, facebook: false, bank: false, taxCode: true };
+  render(<ToastProvider><CustomerFormDialog record={null} required={required} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
+  expect(screen.getByLabelText("Email *")).toBeTruthy();
+  expect(screen.getByLabelText("Mã số thuế *")).toBeTruthy();
+  expect(screen.getByLabelText("Tỉnh/thành *")).toBeTruthy();
+  expect(screen.queryByLabelText("Facebook *")).toBeNull();
+  await user.type(screen.getByLabelText("Tên khách hàng *"), "Anh Tư");
+  await user.type(screen.getByLabelText("Số điện thoại 1 *"), "0911111111");
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  expect((await screen.findByRole("alert")).textContent).toBe("Nhập email.");
+  expect(repo.save).not.toHaveBeenCalled();
+  await user.type(screen.getByLabelText("Email *"), "tu@b.vn");
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  expect((await screen.findByRole("alert")).textContent).toBe("Nhập địa chỉ.");
+});
+
 it("spreads a payment over the unpaid invoices oldest first", () => {
   const invoices = [{ id: "a", unpaid: 300 }, { id: "b", unpaid: 500 }].map((row) => ({ ...row, code: row.id, invoiceDate: "2026-11-01", total: row.unpaid, covered: 0, ageDays: 1 }));
   expect(spread(400, invoices)).toEqual({ a: 300, b: 100 });

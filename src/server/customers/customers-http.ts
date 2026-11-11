@@ -21,7 +21,7 @@ const page = z.string().regex(/^[1-9]\d{0,6}$/);
 const listParams = {
   search: z.string().max(200), type: z.enum(["Individual", "Company"]), gender: z.enum(["Male", "Female"]), birthdayFrom: day, birthdayTo: day, lastTransactionFrom: day, lastTransactionTo: day,
   totalSalesFrom: money, totalSalesTo: money, salesFrom: day, salesTo: day, currentDebtFrom: money, currentDebtTo: money, province: z.string().max(100), status: z.enum(["InUse", "Discontinued", "All"]),
-  createdById: id, createdFrom: day, createdTo: day,
+  createdById: id, createdFrom: day, createdTo: day, overDebtLimit: z.literal("true"),
   sortBy: z.enum(["code", "name", "phone", "type", "province", "createdAt", "status", "totalSales", "netSales", "currentDebt", "lastTransaction"]), sortDir: z.enum(["asc", "desc"]),
 };
 const optionalList = Object.fromEntries(Object.entries(listParams).map(([key, schema]) => [key, schema.optional()])) as { [K in keyof typeof listParams]: z.ZodOptional<(typeof listParams)[K]> };
@@ -31,6 +31,7 @@ const read = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("list"), ...optionalList, ...paging }),
   z.strictObject({ action: z.literal("export"), ...optionalList }),
   z.strictObject({ action: z.literal("template") }),
+  z.strictObject({ action: z.literal("settings") }),
   z.strictObject({ action: z.literal("detail"), id }),
   z.strictObject({ action: z.literal("merge-preview"), id, mergedCustomerId: id }),
   z.strictObject({ action: z.literal("invoices"), customerId: id, from: day, to: day, ...paging }),
@@ -55,8 +56,13 @@ const paymentBody = z.strictObject({
   deduplicationKey: z.string().max(100).optional(),
 });
 const reason = z.string().trim().min(1).max(1000), rowVersion = z.string().min(1).max(200);
+const settingsBody = z.strictObject({
+  debtWarningEnabled: z.boolean(), maxDebtAmount: z.number().int().positive().max(999_999_999_999).nullable(), maxDebtDays: z.number().int().min(1).max(3650).nullable(), allowMoreDebtOverLimit: z.boolean(),
+  noDebtForWalkIn: z.boolean(), requiredFields: c.requiredFields.strict(), rowVersion,
+});
 const write = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("create"), body: saveBody }),
+  z.strictObject({ action: z.literal("save-settings"), body: settingsBody }),
   z.strictObject({ action: z.literal("update"), id, body: saveBody.required({ rowVersion: true }) }),
   z.strictObject({ action: z.enum(["delete", "discontinue", "resume", "remove-photo"]), id }),
   z.strictObject({ action: z.literal("bulk"), body: z.strictObject({ ids: z.array(id).min(1).max(100), action: z.enum(["Discontinue", "Resume"]) }) }),
@@ -85,6 +91,7 @@ function planRead(q: z.infer<typeof read>): Plan {
     case "list": return { path: `/api/customers${pairs(q)}`, method: "GET", fn: CUSTOMERS, permission: "View", schema: c.customerPage };
     case "export": return { path: `/api/customers/export${pairs(q)}`, method: "GET", fn: CUSTOMERS, permission: "Export", schema: noBody, file: "khach-hang.xlsx" };
     case "template": return { path: "/api/customers/import/template", method: "GET", fn: CUSTOMERS, permission: "Create", schema: noBody, file: "mau-khach-hang.xlsx" };
+    case "settings": return { path: "/api/customer-settings", method: "GET", fn: CUSTOMERS, permission: "View", schema: c.customerSettings };
     case "detail": return { path: `/api/customers/${q.id}`, method: "GET", fn: CUSTOMERS, permission: "View", schema: c.customerDetail, expectedId: q.id };
     case "merge-preview": return { path: `/api/customers/${q.id}/merge-preview?mergedCustomerId=${q.mergedCustomerId}`, method: "GET", fn: CUSTOMERS, permission: "Edit", schema: c.mergePreview };
     case "invoices": return { path: `/api/sales-invoices${pairs(q)}`, method: "GET", fn: "SALES_INVOICES", permission: "View", schema: c.invoicePage };
@@ -99,6 +106,7 @@ function planRead(q: z.infer<typeof read>): Plan {
 function planWrite(p: z.infer<typeof write>): Plan {
   switch (p.action) {
     case "create": return { path: "/api/customers", method: "POST", fn: CUSTOMERS, permission: "Create", schema: c.customerSaved, body: p.body };
+    case "save-settings": return { path: "/api/customer-settings", method: "PUT", fn: CUSTOMERS, permission: "Edit", schema: c.customerSettings, body: p.body };
     case "update": return { path: `/api/customers/${p.id}`, method: "PUT", fn: CUSTOMERS, permission: "Edit", schema: c.customerSaved, body: p.body };
     case "delete": return { path: `/api/customers/${p.id}`, method: "DELETE", fn: CUSTOMERS, permission: "Delete", schema: c.removed, noContent: true };
     case "discontinue":

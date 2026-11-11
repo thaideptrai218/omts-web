@@ -42,9 +42,12 @@ const settingsDescriptions: Partial<Record<ResourceKey, string>> = {
   roles: "Đối chiếu vai trò và quyền hiện hành của hệ thống.",
 };
 
+/** The group whose links are the input catalogue and the two issue lists; they are built from permissions, not from the generic resource list. */
+const INPUT_GROUP = "Vật tư & Giống";
+const inputReaders = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYCLES", "INPUT_ISSUES"];
 const workspaceGroups = [
   { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["cultivation-cycles", "seeding", "material-usages", "harvest", "harvest-yield", "lot-tracing", "water"] },
-  { label: "Vật tư", resources: ["input-items"], operations: [] },
+  { label: INPUT_GROUP, resources: [], operations: [] },
   { label: "Mua hàng", resources: ["suppliers"], operations: [] },
   { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "payroll", "payroll-payments", "payroll-settings", "my-work"] },
   { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoices", "sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests"] },
@@ -80,8 +83,16 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const isOwner = context.identity.subjectType === "CooperativeOwner";
   const holds = (fn: string, action: string) => isOwner || context.identity.subjectType === "Staff" && context.permissions.functionPermissions.some((p) => p.functionCode === fn && p.action === action);
   const cashSettings = holds("CASH_BOOK_SETTINGS", "View"), cashBook = holds("CASH_BOOK", "View");
+  const cashItems: SettingsSection["items"] = cashSettings ? [{ href: "/settings?section=cash-book", panel: "cash-book", label: "Sổ quỹ", icon: "payment", description: "Tài khoản ngân hàng, ví điện tử và loại thu chi dùng cho phiếu thu chi." }] : [];
+  const inputSettings: SettingsSection["items"] = inputReaders.some((fn) => holds(fn, "View")) ? [{ href: "/settings?section=input-inventory", panel: "input-inventory", label: INPUT_GROUP, icon: "material", description: "Đơn vị tính, nhóm hàng, loại xuất, cách tính giá vốn và cho phép xuất khi hết." }] : [];
+  const customerSettings: SettingsSection["items"] = holds("CUSTOMERS", "View") ? [{ href: "/settings?section=customers", panel: "customers", label: "Khách hàng", icon: "users", description: "Cảnh báo công nợ và thông tin bắt buộc khi thêm khách hàng." }] : [];
+  const inputLinks: [string, string, InterfaceIconName][] = [
+    ...(resourceAllowed("input-items", context.identity, context.permissions.functionPermissions) ? [["/inputs/items", "Danh mục", "material"] as [string, string, InterfaceIconName]] : []),
+    ...(holds("INPUT_ISSUES", "View") ? [["/inputs/uses", "Xuất dùng", "work"] as [string, string, InterfaceIconName]] : []),
+    ...(holds("INPUT_DISPOSALS", "View") ? [["/inputs/disposals", "Xuất hủy", "trash"] as [string, string, InterfaceIconName]] : []),
+  ];
   const settingsSections: SettingsSection[] = [
-    { label: "Quản lý", items: cashSettings ? [{ href: "/settings?section=cash-book", panel: "cash-book", label: "Sổ quỹ", icon: "payment", description: "Tài khoản ngân hàng, ví điện tử và loại thu chi dùng cho phiếu thu chi." }] : [] },
+    { label: "Quản lý", items: [...cashItems, ...inputSettings, ...customerSettings] },
     { label: "Phân quyền", items: (["accounts", "roles"] as const).filter((key) => visible.includes(key)).map((key) => ({ href: `/workspace/${key}`, label: resources[key].title, icon: resourceIcons[key], description: settingsDescriptions[key] })) },
     { label: "Hợp tác xã", items: isOwner ? [{ href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã." }, { href: "/cooperative/receiving-bank-account", label: "Ngân hàng nhận tiền", icon: "payment", description: "Tài khoản dùng để nhận chuyển khoản và tạo mã VietQR." }] : [] },
     { label: "Cấu hình nghiệp vụ", items: operationModules.filter((entry) => entry.key === "job-types" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => ({ href: `/operations/${entry.key}`, label: entry.title, icon: operationIcons[entry.key], description: "Đơn giá theo giờ và lịch sử ngày hiệu lực của từng loại công việc." })) },
@@ -102,8 +113,10 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
         const rows = visible.filter((key) => group.resources.includes(key));
         const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).sort((a, b) => group.operations.indexOf(a.key) - group.operations.indexOf(b.key));
         const purchasing = operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions);
-        return rows.length || modules.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
+        const inputs = group.label === INPUT_GROUP ? inputLinks : [];
+        return rows.length || modules.length || inputs.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
+          {inputs.map(([href, label, icon]) => link(href, label, icon))}
           {modules.map((entry) => link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]))}
           {group.label === "Mua hàng" && purchasing && <>{link("/operations/purchase-receipts", "Nhập hàng", "receipt")}{link("/operations/purchase-returns", "Trả hàng nhập", "upload")}</>}
         </div></NavigationGroup> : null;

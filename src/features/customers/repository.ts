@@ -77,6 +77,8 @@ export const customerRepository = {
   import: (file: File) => upload("import", file, c.importResult),
   exportList: (values: ListQuery) => download({ action: "export", ...values }, "khach-hang.xlsx"),
   template: () => download({ action: "template" }, "mau-khach-hang.xlsx"),
+  settings: (signal?: AbortSignal) => read({ action: "settings" }, c.customerSettings, signal),
+  saveSettings: (body: SettingsBody) => json("save-settings", { body }, c.customerSettings),
 
   invoices: (values: { customerId: string; from: string; to: string; page: number; pageSize: number }, signal?: AbortSignal) =>
     read({ action: "invoices", customerId: values.customerId, from: values.from, to: values.to, page: String(values.page), pageSize: String(values.pageSize) }, c.invoicePage, signal),
@@ -95,6 +97,10 @@ export const customerRepository = {
   cancelPayment: (id: string, reason: string, rowVersion: string) => json("cancel-payment", { id, body: { reason, rowVersion } }, c.paymentSaved),
   adjust: (body: { customerId: string; amount: number; reason: string; occurredAt: string }) => json("adjust", { body }, c.adjustmentSaved),
   cancelAdjustment: (id: string, reason: string, rowVersion?: string | null) => json("cancel-adjustment", { id, body: { reason, ...(rowVersion ? { rowVersion } : {}) } }, c.adjustmentSaved),
+};
+
+export type SettingsBody = {
+  debtWarningEnabled: boolean; maxDebtAmount: number | null; maxDebtDays: number | null; allowMoreDebtOverLimit: boolean; noDebtForWalkIn: boolean; requiredFields: c.RequiredFields; rowVersion: string;
 };
 
 export type PaymentBody = {

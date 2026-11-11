@@ -2,6 +2,7 @@
 .totalRow td { position:sticky; top:33px; z-index:3; font-weight:700; background:var(--omts-color-surface)!important; border-bottom:2px solid var(--omts-color-border)!important; }
 .num { text-align:right!important; font-variant-numeric:tabular-nums; }
 .neg { color:var(--omts-color-danger, #b42318); }
+.over { color:var(--omts-color-danger, #b42318); font-weight:600; }
 .muted { color:var(--omts-color-text-muted); }
 .badge { display:inline-block; margin-left:6px; padding:1px 8px; border-radius:999px; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:11px; font-weight:600; white-space:nowrap; }
 .badgeWarn { background:#fef3c7; color:#92400e; }
@@ -10,7 +11,13 @@
 .link:hover { text-decoration:underline; }
 
 /* Profile photo */
-.photoBox { display:flex; align-items:center; gap:14px; grid-column:1 / -1; }
+/* Customer form head: four fields on the left, the photo column at the far right. */
+.identity { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) 150px; gap:16px; align-items:start; }
+.identityFields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; }
+.photoBox { display:flex; flex-direction:column; align-items:center; gap:8px; padding-top:4px; text-align:center; }
+.photoBox .photo { width:88px; height:88px; }
+.photoBox > div > div { justify-content:center; }
+@media (max-width:700px) { .identity, .identityFields { grid-template-columns:minmax(0,1fr); } }
 .photo { display:grid; place-items:center; flex:none; width:72px; height:72px; overflow:hidden; border:1px solid var(--omts-color-border); border-radius:50%; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:22px; font-weight:700; }
 .photo img { width:100%; height:100%; object-fit:cover; }
 .photoActions { display:grid; gap:4px; font-size:12px; color:var(--omts-color-text-muted); }

@@ -19,11 +19,12 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { listCollectors } from "@/features/cash-book/repository";
 import { ErrorNotice, Money, useMutation, useRemote } from "@/features/operations/ui";
 import { viDate, viDateTime } from "@/features/purchase-documents/document-parts";
-import { IN_USE, genderLabel, typeLabel, customerTypes, genders, type BulkResult, type CustomerDetail, type CustomerPage, type CustomerRow } from "./contracts";
+import { IN_USE, genderLabel, typeLabel, customerTypes, genders, noRequiredFields, overLimitReason, type BulkResult, type CustomerDetail, type CustomerPage, type CustomerRow } from "./contracts";
 import { CustomerDetailPanel, type CustomerAccess } from "./customer-detail";
 import { CustomerFormDialog } from "./customer-form-dialog";
 import { CustomerImportDialog } from "./customer-import-dialog";
 import { customerRepository, errorText, type ListQuery } from "./repository";
+import { useCustomerSettings } from "./use-customer-settings";
 import styles from "./customers.module.css";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 
@@ -45,15 +46,18 @@ const columns: readonly Column[] = [
   { key: "company", label: "Tên đơn vị", defaultHidden: true, render: (row) => dash(row.companyName) },
   { key: "taxCode", label: "Mã số thuế", defaultHidden: true, render: (row) => dash(row.taxCode) },
   { key: "last", label: "Ngày giao dịch cuối", sort: "lastTransaction", render: (row) => row.lastTransactionAt ? viDateTime(row.lastTransactionAt) : "—" },
-  { key: "debt", label: "Nợ hiện tại", sort: "currentDebt", numeric: true, gate: "debt", render: (row) => <Figure value={row.currentDebt} /> },
+  { key: "debt", label: "Nợ hiện tại", sort: "currentDebt", numeric: true, gate: "debt", render: (row) => <Figure value={row.currentDebt} over={overLimitReason(row)} /> },
   { key: "total", label: "Tổng bán", sort: "totalSales", numeric: true, gate: "debt", render: (row) => <Figure value={row.totalSales} /> },
   { key: "net", label: "Tổng bán trừ trả hàng", sort: "netSales", numeric: true, gate: "debt", render: (row) => <Figure value={row.netSales} /> },
   { key: "createdBy", label: "Người tạo", defaultHidden: true, render: (row) => dash(row.createdBy) },
   { key: "createdAt", label: "Ngày tạo", sort: "createdAt", defaultHidden: true, render: (row) => viDateTime(row.createdAt) },
   { key: "status", label: "Trạng thái", sort: "status", render: (row) => <StatusPill tone={row.statusId === IN_USE ? "success" : "neutral"}>{row.statusId === IN_USE ? "Đang hoạt động" : "Ngừng hoạt động"}</StatusPill> },
 ];
-function Figure({ value }: { value: number | null | undefined }) { return <span className={value != null && value < 0 ? styles.neg : undefined}><Money value={value} /></span>; }
-const emptyFilters = { type: "", gender: "", province: "", status: "InUse", createdById: "", totalFrom: "", totalTo: "", debtFrom: "", debtTo: "" };
+/** `over` is the reason the customer is beyond the debt limit: the figure is then red, with the reason as its tooltip. */
+function Figure({ value, over }: { value: number | null | undefined; over?: string }) {
+  return <span className={over ? styles.over : value != null && value < 0 ? styles.neg : undefined} title={over || undefined}><Money value={value} /></span>;
+}
+const emptyFilters = { type: "", gender: "", province: "", status: "InUse", createdById: "", totalFrom: "", totalTo: "", debtFrom: "", debtTo: "", overLimit: "" };
 const reversed = (from: string, to: string) => from !== "" && to !== "" && Number(from) > Number(to);
 const statuses = [["InUse", "Đang hoạt động"], ["Discontinued", "Ngừng hoạt động"], ["All", "Tất cả"]] as const;
 
@@ -84,6 +88,8 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const bulk = useMutation(), exportFile = useMutation(), confirmation = useActionDialog();
   // The people who may have made a customer come from the cash book's list of staff, which only its readers can see.
   const canPeople = can("CASH_BOOK", "View");
+  // The settings tell which fields the form requires and whether the debt warning (and so its filter) is on; a failed read changes nothing else on the screen.
+  const settings = useCustomerSettings(canView).data;
   const creators = useRemote(useCallback((signal: AbortSignal) => canPeople ? listCollectors(signal) : Promise.resolve({ status: "success" as const, data: undefined }), [canPeople]));
 
   const offered = useMemo(() => columns.filter((column) => column.gate === "debt" ? canDebt : true), [canDebt]);
@@ -94,7 +100,7 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const rangeError = reversed(filters.totalFrom, filters.totalTo) || reversed(filters.debtFrom, filters.debtTo);
   const query = useMemo<ListQuery>(() => {
     const values: Record<string, string> = { search: search.trim(), type: filters.type, gender: filters.gender, province: filters.province.trim(), status: filters.status, createdById: filters.createdById, sortBy: sort.key, sortDir: sort.direction,
-      lastTransactionFrom: lastTransaction.from, lastTransactionTo: lastTransaction.to, createdFrom: created.from, createdTo: created.to, birthdayFrom: birthday.from, birthdayTo: birthday.to };
+      lastTransactionFrom: lastTransaction.from, lastTransactionTo: lastTransaction.to, createdFrom: created.from, createdTo: created.to, birthdayFrom: birthday.from, birthdayTo: birthday.to, overDebtLimit: filters.overLimit };
     // The debt and sales figures belong to the debt permission: without it neither their filters nor their sort are asked for.
     if (canDebt) Object.assign(values, { totalSalesFrom: filters.totalFrom, totalSalesTo: filters.totalTo, salesFrom: salesTime.from, salesTo: salesTime.to, currentDebtFrom: filters.debtFrom, currentDebtTo: filters.debtTo });
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ""));
@@ -151,6 +157,9 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
     {canDebt && <FilterGroup legend="Tổng bán"><NumberRangeFilter label="Tổng bán" from={filters.totalFrom} to={filters.totalTo} onFromChange={setFilter("totalFrom")} onToChange={setFilter("totalTo")} /></FilterGroup>}
     {canDebt && <TimeRangeFilter legend="Thời gian bán" value={salesTime} onChange={changed<TimeRangeValue>(setSalesTime)} />}
     {canDebt && <FilterGroup legend="Nợ hiện tại"><NumberRangeFilter label="Nợ hiện tại" allowNegative from={filters.debtFrom} to={filters.debtTo} onFromChange={setFilter("debtFrom")} onToChange={setFilter("debtTo")} /></FilterGroup>}
+    {settings?.debtWarningEnabled && <FilterGroup legend="Hạn mức nợ"><div className={layoutStyles.pills}>
+      <label className={layoutStyles.pill}><input type="checkbox" className="sr-only" checked={filters.overLimit === "true"} onChange={(event) => setFilter("overLimit")(event.target.checked ? "true" : "")} />Vượt hạn mức nợ</label>
+    </div></FilterGroup>}
     {rangeError && <p role="alert" className={listStyles.rangeError}>Giá trị &quot;từ&quot; phải nhỏ hơn hoặc bằng giá trị &quot;đến&quot;.</p>}
     <FilterGroup legend="Tỉnh/thành"><input type="search" aria-label="Tỉnh/thành" className="h-[30px] w-full rounded-md border border-border-strong px-2 text-[13px]" maxLength={100} placeholder="Nhập tỉnh/thành" value={filters.province} onChange={(event) => setFilter("province")(event.target.value)} /></FilterGroup>
     <FilterGroup legend="Trạng thái"><div className={layoutStyles.pills}>{statuses.map(([key, label]) => <label key={key} className={layoutStyles.pill}><input type="radio" className="sr-only" name="customer-status" checked={filters.status === key} onChange={() => setFilter("status")(key)} />{label}</label>)}</div></FilterGroup>
@@ -206,7 +215,7 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>
-    {editor !== undefined && <CustomerFormDialog record={editor} onClose={() => setEditor(undefined)} onSaved={(saved) => { const created = editor === null; setEditor(undefined); notify({ tone: "success", title: `Đã ${created ? "tạo" : "lưu"} khách hàng ${saved.code}.` }); if (created) setExpanded(undefined); reload(); }} />}
+    {editor !== undefined && <CustomerFormDialog record={editor} required={settings?.requiredFields ?? noRequiredFields} onClose={() => setEditor(undefined)} onSaved={(saved) => { const created = editor === null; setEditor(undefined); notify({ tone: "success", title: `Đã ${created ? "tạo" : "lưu"} khách hàng ${saved.code}.` }); if (created) setExpanded(undefined); reload(); }} />}
     {importing && <CustomerImportDialog onClose={() => setImporting(false)} onImported={(count) => { setImporting(false); notify({ tone: "success", title: `Đã nhập ${count} khách hàng.` }); reload(); }} />}
   </ManagementLayout>;
 }

@@ -99,6 +99,9 @@ export const messageCatalog = {
   "MSG-SALE-04": "Cần xác nhận chủ hợp tác xã đã đồng ý việc gộp hồ sơ này. Thao tác không thể hoàn tác.",
   "MSG-SALE-05": "Chưa gộp được: hồ sơ bị gộp có tài khoản thương lái mà hồ sơ giữ lại chưa có. Hãy giữ hồ sơ có tài khoản và gộp hồ sơ còn lại vào đó.",
   "MSG-CLAIM-03": "Hóa đơn đã bị hủy hoặc đã trả hàng nên chưa thể chấp nhận khiếu nại này.",
+  "MSG-INPUT-01": "Số lượng còn lại không đủ để xuất: có mặt hàng hoặc lô giống sẽ xuống dưới 0. Hãy giảm số lượng, nhập thêm hàng hoặc bật cho phép xuất khi hết trong Thiết lập.",
+  "MSG-INPUT-02": "Loại xuất của hệ thống không thể sửa hoặc xóa.",
+  "MSG-CUSTOMER-01": "Khách hàng đang vượt hạn mức công nợ nên hóa đơn này không được để lại công nợ. Hãy thu đủ tiền, hoặc thu bớt công nợ cũ của khách trước.",
 } as const;
 
 export type MessageCode = keyof typeof messageCatalog;

@@ -13,6 +13,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: (href: string) => { nav.section = new URL(href, "http://x").searchParams.get("section"); } }),
 }));
 vi.mock("@/features/cash-book/cash-settings", () => ({ CashBookSettings: () => <p>Nội dung sổ quỹ</p> }));
+vi.mock("@/features/input-items/inventory-settings", () => ({ InputInventorySettings: () => <p>Nội dung vật tư</p> }));
 afterEach(() => { cleanup(); nav.section = null; });
 
 const sections: SettingsSection[] = [

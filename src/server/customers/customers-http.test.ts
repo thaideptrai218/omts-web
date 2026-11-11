@@ -33,4 +33,21 @@ describe("customer BFF", () => {
     expect((await handleCustomers(get("action=export"))).status).toBe(403);
     expect(fetcher).not.toHaveBeenCalled();
   });
+  it("forwards the over-limit filter only as true", async () => {
+    setup([["CUSTOMERS", "View"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 15, total: 0, summary: null }));
+    expect((await handleCustomers(get("action=list&overDebtLimit=true"))).status).toBe(200);
+    expect(String(fetcher.mock.calls[0][0])).toContain("/api/customers?overDebtLimit=true");
+    expect((await handleCustomers(get("action=list&overDebtLimit=false"))).status).toBe(400);
+  });
+  it("reads the customer settings with the right to view customers", async () => {
+    setup([["CUSTOMERS", "View"]]);
+    const settings = { debtWarningEnabled: true, maxDebtAmount: 500000, maxDebtDays: null, allowMoreDebtOverLimit: true, noDebtForWalkIn: true, rowVersion: "v1",
+      requiredFields: { phoneNumber2: false, email: true, gender: false, birthDate: false, address: false, facebook: false, bank: false, taxCode: false } };
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(settings));
+    const answer = await handleCustomers(get("action=settings"));
+    expect(answer.status).toBe(200);
+    expect(String(fetcher.mock.calls[0][0])).toContain("/api/customer-settings");
+    expect((await answer.json()).data.requiredFields.email).toBe(true);
+  });
 });

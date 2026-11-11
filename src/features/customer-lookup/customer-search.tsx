@@ -1,11 +1,14 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { createWorkspaceRepository } from "@/features/api-workspace/workspace-repository";
+import { overLimitReason } from "@/features/customers/contracts";
 import { control, useRemote } from "@/features/operations/ui";
 import s from "./customer-search.module.css";
 
-export type PickedCustomer = { id: string; name: string; phoneNumber: string | null };
+/** `debtWarning` is why the customer is beyond the debt limit of the settings (empty when it is not); it is shown in red. */
+export type PickedCustomer = { id: string; name: string; phoneNumber: string | null; debtWarning?: string };
 const customers = createWorkspaceRepository("customers");
+const warningOf = (row: Record<string, unknown>) => overLimitReason({ overDebtLimit: row.overDebtLimit === true, overDebtAmount: row.overDebtAmount === true, overDebtDays: row.overDebtDays === true, debtDays: typeof row.debtDays === "number" ? row.debtDays : null });
 
 /** Ô tìm và chọn một khách hàng có hồ sơ (tìm theo tên hoặc số điện thoại, có trì hoãn gõ). Dùng chung cho hóa đơn và thanh toán. */
 export function CustomerSearch({ value, disabled, onSelect }: { value: PickedCustomer | null; disabled?: boolean; onSelect(customer: PickedCustomer | null): void }) {
@@ -16,7 +19,8 @@ export function CustomerSearch({ value, disabled, onSelect }: { value: PickedCus
   if (value) {
     return (
       <p className={s.picked}>
-        <span><strong>{value.name}</strong><small>{value.phoneNumber ?? "Chưa có số điện thoại"}</small></span>
+        <span><strong className={value.debtWarning ? s.over : undefined}>{value.name}</strong><small>{value.phoneNumber ?? "Chưa có số điện thoại"}</small>
+          {value.debtWarning && <small className={s.over} role="alert">{value.debtWarning}</small>}</span>
         <button type="button" disabled={disabled} onClick={() => onSelect(null)}>Đổi</button>
       </p>
     );
@@ -27,8 +31,9 @@ export function CustomerSearch({ value, disabled, onSelect }: { value: PickedCus
       {found.loading ? <p className={s.hint} role="status">Đang tìm…</p> : found.error ? <p role="alert" className={s.error}>{found.error}</p> : (
         <ul className={s.list}>
           {(found.data?.items ?? []).map((c) => {
-            const phone = typeof c.phoneNumber === "string" ? c.phoneNumber : null;
-            return <li key={c.id}><button type="button" disabled={disabled} onClick={() => onSelect({ id: c.id, name: String(c.name), phoneNumber: phone })}><strong>{String(c.name)}</strong><small>{phone ?? "Chưa có số điện thoại"}</small></button></li>;
+            const phone = typeof c.phoneNumber === "string" ? c.phoneNumber : null, warning = warningOf(c);
+            return <li key={c.id}><button type="button" disabled={disabled} onClick={() => onSelect({ id: c.id, name: String(c.name), phoneNumber: phone, ...(warning ? { debtWarning: warning } : {}) })}>
+              <strong className={warning ? s.over : undefined}>{String(c.name)}</strong><small>{phone ?? "Chưa có số điện thoại"}</small>{warning && <small className={s.over}>{warning}</small>}</button></li>;
           })}
           {!found.data?.items.length && <li className={s.hint}>Không tìm thấy khách hàng.</li>}
         </ul>

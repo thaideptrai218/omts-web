@@ -2,7 +2,7 @@ import type { CreateInvoice, LotForSale } from "./contracts";
 
 /** Bản nháp hóa đơn trên giao diện và các phép tính thuần (không gọi mạng), khớp quy tắc tiền của backend (InvoiceMoney). */
 export type DraftLine = { key: string; lot: LotForSale; productId: string; kg: string; unitPrice: string };
-export type DraftCustomer = { id: string; name: string; phoneNumber: string | null };
+export type DraftCustomer = { id: string; name: string; phoneNumber: string | null; debtWarning?: string };
 export type Draft = {
   lines: DraftLine[]; walkIn: boolean; customer: DraftCustomer | null; requestId: string | null;
   discount: string; otherCharges: string; cash: string; payLater: boolean;

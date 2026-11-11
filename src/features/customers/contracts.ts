@@ -18,6 +18,7 @@ export const customerRow = z.object({
   id, code: text, name: text, phoneNumber: opt, address: opt, hasTraderAccount: z.boolean(), rowVersion: text, statusId: count, status: text,
   customerType: text, gender: opt, birthDate: opt, phoneNumber2: opt, email: opt, facebook: opt, province: opt, ward: opt, companyName: opt, taxCode: opt, note: opt,
   photoUrl: opt, lastTransactionAt: opt, createdAt: text, createdBy: opt, currentDebt: money.nullish(), totalSales: money.nullish(), netSales: money.nullish(),
+  overDebtLimit: z.boolean().nullish(), overDebtAmount: z.boolean().nullish(), overDebtDays: z.boolean().nullish(), debtDays: count.nullish(),
 });
 export const customerPage = z.object({
   items: z.array(customerRow), page: count, pageSize: count, total: count,
@@ -33,6 +34,26 @@ export const customerSaved = z.object({ customer: customerDetail });
 export const bulkResult = z.object({ succeeded: count, failed: count, outcomes: z.array(z.object({ id, succeeded: z.boolean(), code: opt, message: opt })) });
 export const importResult = z.object({ imported: count, errors: z.array(z.object({ row: count, fields: z.array(text), message: text })) });
 export const removed = z.object({ done: z.literal(true) });
+
+/** Optional fields of a profile the cooperative may make required; the name and the first phone number always are. */
+export const requiredFieldKeys = [
+  ["phoneNumber2", "Số điện thoại 2"], ["email", "Email"], ["gender", "Giới tính"], ["birthDate", "Ngày sinh"], ["address", "Địa chỉ"], ["facebook", "Facebook"], ["bank", "Ngân hàng"], ["taxCode", "Mã số thuế"],
+] as const;
+export type RequiredFieldKey = (typeof requiredFieldKeys)[number][0];
+export const requiredFields = z.object({ phoneNumber2: z.boolean(), email: z.boolean(), gender: z.boolean(), birthDate: z.boolean(), address: z.boolean(), facebook: z.boolean(), bank: z.boolean(), taxCode: z.boolean() });
+export const customerSettings = z.object({
+  debtWarningEnabled: z.boolean(), maxDebtAmount: money.nullish(), maxDebtDays: count.nullish(), allowMoreDebtOverLimit: z.boolean(), noDebtForWalkIn: z.boolean(), requiredFields, rowVersion: text,
+});
+export type CustomerSettings = z.infer<typeof customerSettings>;
+export type RequiredFields = z.infer<typeof requiredFields>;
+export const noRequiredFields: RequiredFields = { phoneNumber2: false, email: false, gender: false, birthDate: false, address: false, facebook: false, bank: false, taxCode: false };
+
+/** Why a customer is flagged against the debt limit, for a tooltip or a line under the name; empty when it is not. */
+export function overLimitReason(row: { overDebtLimit?: boolean | null; overDebtAmount?: boolean | null; overDebtDays?: boolean | null; debtDays?: number | null }) {
+  if (!row.overDebtLimit) return "";
+  const parts = [row.overDebtAmount && "vượt hạn mức số tiền nợ", row.overDebtDays && `nợ quá hạn mức số ngày nợ${row.debtDays != null ? ` (${row.debtDays} ngày)` : ""}`].filter(Boolean);
+  return `Khách hàng ${parts.join(" và ") || "vượt hạn mức nợ"}.`;
+}
 
 const mergeParty = z.object({ id, code: opt, name: text, phoneNumber: opt, hasTraderAccount: z.boolean(), currentDebt: money, rowVersion: text });
 export const mergePreview = z.object({

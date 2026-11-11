@@ -1,0 +1,20 @@
+.block { padding-block: 1rem; border-top: 1px solid var(--omts-color-border); }
+.block:first-child { border-top: 0; padding-top: 0; }
+.head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.head h3 { margin: 0; font-size: .9375rem; font-weight: 600; }
+.head p, .hint { margin: .25rem 0 0; color: var(--omts-color-text-muted); font-size: .8125rem; }
+.summaryRow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .75rem; font-size: .875rem; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2.5rem; margin-top: .5rem; }
+@media (max-width: 720px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 2.5rem; font-size: .875rem; cursor: pointer; }
+.row[data-locked="true"] { cursor: default; }
+.limits { display: grid; gap: .875rem; margin-top: 1rem; }
+.limitRow { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; font-size: .875rem; }
+.limitRow label { display: inline-flex; align-items: center; gap: .5rem; min-width: 8.5rem; }
+.option input { margin-top: .125rem; }
+.amount { width: 11rem; text-align: right; }
+.days { width: 6rem; text-align: right; }
+.option { display: flex; align-items: flex-start; gap: .5rem; font-size: .875rem; }
+.option small { display: block; color: var(--omts-color-text-muted); }
+.section { margin: 1.25rem 0 .25rem; font-weight: 600; font-size: .875rem; }
+.foot { display: flex; justify-content: flex-end; gap: .75rem; margin-top: 1.25rem; }
