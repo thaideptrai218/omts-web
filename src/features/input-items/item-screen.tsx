@@ -18,7 +18,7 @@ import { ErrorNotice, useMutation, useRemote } from "@/features/operations/ui";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import { usePurchaseLookups } from "@/features/purchase-documents/repository";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
-import { DISCONTINUED, itemTypes, typeLabel, type InputGroup, type ItemPage, type ItemRow, type ItemView } from "./contracts";
+import { DISCONTINUED, itemTypes, typeLabel, type InputGroup, type ItemPage, type ItemRow, type ItemType, type ItemView } from "./contracts";
 import { ItemDetailPanel, type ItemAccess } from "./item-detail";
 import { ItemFormDialog } from "./item-form-dialog";
 import { chosenUnit, groupLabel, groupTree, inUnitPrice, inUnitQuantity } from "./item-helpers";
@@ -58,6 +58,29 @@ const statuses = [["InUse", "Đang sử dụng"], ["Discontinued", "Ngừng sử
 const viewFunctions = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYCLES", "INPUT_ISSUES"];
 
 /**
+ * "+ Tạo mới": with a type filtered in the rail (Giống, Vật tư, Khác) it opens the form for that type at once; with "Tất cả"
+ * it drops down the three types to pick from first.
+ */
+function NewItemMenu({ filtered, onPick }: { filtered?: ItemType; onPick(group: ItemType): void }) {
+  const [open, setOpen] = useState(false), root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", close); document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", escape); };
+  }, [open]);
+  return <div ref={root} className={styles.menuWrap}>
+    <Button className="w-auto" aria-haspopup={filtered ? undefined : "menu"} aria-expanded={filtered ? undefined : open}
+      onClick={() => filtered ? onPick(filtered) : setOpen((value) => !value)}>
+      <InterfaceIcon name="add" className="mr-1 size-4" />Tạo mới{!filtered && <InterfaceIcon name="chevron-down" className="ml-1 size-4" />}
+    </Button>
+    {open && <div role="menu" className={styles.menu}>{itemTypes.map(([key, label]) =>
+      <button key={key} type="button" role="menuitem" onClick={() => { setOpen(false); onPick(key); }}>{label}</button>)}</div>}
+  </div>;
+}
+
+/**
  * A link opens this list on one item by its code (`?code=VT000001`). The list is keyed by that code so a link followed while the
  * list is already open starts it again: the search box shows the code and that item's row opens.
  */
@@ -77,7 +100,7 @@ function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<ItemPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [units, setUnits] = useState<Record<string, string>>({});
-  const [editor, setEditor] = useState<{ record: ItemView | null; copy: boolean }>(), [importing, setImporting] = useState(false), { notify } = useToast(), exportFile = useMutation();
+  const [editor, setEditor] = useState<{ record: ItemView | null; copy: boolean; group?: ItemType }>(), [importing, setImporting] = useState(false), { notify } = useToast(), exportFile = useMutation();
   const groups = useRemote<InputGroup[]>(useCallback((signal: AbortSignal) => canView ? inputRepository.groups(signal) : Promise.resolve({ status: "success" as const, data: [] }), [canView]));
   const lookups = usePurchaseLookups();
 
@@ -137,7 +160,7 @@ function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="mặt hàng" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm hàng" placeholder="Theo mã, tên hàng hoặc mã đơn vị" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      {owner && <Button className="w-auto" onClick={() => setEditor({ record: null, copy: false })}><InterfaceIcon name="add" className="mr-1 size-4" />Tạo mới</Button>}
+      {owner && <NewItemMenu filtered={itemTypes.find(([key]) => key === filters.group)?.[0]} onPick={(group) => setEditor({ record: null, copy: false, group })} />}
       {owner && <Button className="w-auto" variant="secondary" onClick={() => setImporting(true)}><InterfaceIcon name="upload" className="mr-1 size-4" />Import file</Button>}
       {access.exportFile && <Button className="w-auto" variant="secondary" isPending={exportFile.pending} onClick={() => void exportFile.run(() => inputRepository.exportList(query), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
       <ColumnPicker columns={columns} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
@@ -166,7 +189,7 @@ function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>
-    {editor && <ItemFormDialog record={editor.record} copy={editor.copy} onClose={() => setEditor(undefined)} onSaved={(saved, again) => {
+    {editor && <ItemFormDialog record={editor.record} copy={editor.copy} group={editor.group} onClose={() => setEditor(undefined)} onSaved={(saved, again) => {
       const edited = editor.record !== null && !editor.copy;
       if (!again) setEditor(undefined);
       notify({ tone: "success", title: `Đã ${edited ? "lưu" : "tạo"} vật tư ${saved.code}.` });

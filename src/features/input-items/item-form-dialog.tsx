@@ -8,7 +8,7 @@ import { SelectBox } from "@/components/ui/select-box";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Field, Note, Select, control, useRemote } from "@/features/operations/ui";
-import { itemTypes, type InputGroup, type InputUnit, type ItemView } from "./contracts";
+import { itemTypes, type ItemType, type InputGroup, type InputUnit, type ItemView } from "./contracts";
 import { MAX_PHOTOS, buildSaveBody, groupLabel, groupTree, initialValues, validateForm, type FormValues } from "./item-helpers";
 import { NameDialog, UnitFields } from "./item-unit-fields";
 import { errorText, inputRepository, problemText } from "./repository";
@@ -22,9 +22,12 @@ const decimalOnly = (value: string) => value.replace(/[^\d.,]/g, "");
  * "+ Tạo mới", "Sao chép" and "Chỉnh sửa": one form for the item. A copy starts from the record without its code, photos or unit codes.
  * `onSaved(saved, again)` runs after every save; with `again` the form stays open, emptied, for the next item.
  */
-export function ItemFormDialog({ record, copy, onClose, onSaved }: { record: ItemView | null; copy: boolean; onClose(): void; onSaved(saved: ItemView, again: boolean): void }) {
+export function ItemFormDialog({ record, copy, group, onClose, onSaved }: {
+  record: ItemView | null; copy: boolean; /** The type a new item starts with: the one picked from "+ Tạo mới" or filtered in the list. */ group?: ItemType;
+  onClose(): void; onSaved(saved: ItemView, again: boolean): void;
+}) {
   const editing = record !== null && !copy, confirmation = useActionDialog(), { notify } = useToast(), fileInput = useRef<HTMLInputElement>(null);
-  const [initial] = useState(() => initialValues(record, copy));
+  const [initial] = useState(() => { const values = initialValues(record, copy); return record === null && group ? { ...values, group } : values; });
   const [values, setValues] = useState<FormValues>(initial), [tab, setTab] = useState<Tab>("info"), [pending, setPending] = useState(false), [error, setError] = useState<string>();
   const [newPhotos, setNewPhotos] = useState<File[]>([]), [removedPhotos, setRemovedPhotos] = useState<string[]>([]);
   const [nextCode, setNextCode] = useState(""), [extraGroups, setExtraGroups] = useState<InputGroup[]>([]), [extraUnits, setExtraUnits] = useState<InputUnit[]>([]);

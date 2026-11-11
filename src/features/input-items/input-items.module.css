@@ -91,3 +91,9 @@
 .iconBtn svg { width:15px; height:15px; }
 .formFoot { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; margin-top:16px; }
 @media (max-width:700px) { .formGrid { grid-template-columns:minmax(0,1fr); } .unitRow, .unitRowBase { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .infoBody { flex-direction:column; } }
+
+/* "+ Tạo mới" type menu (Giống / Vật tư / Khác) under the toolbar button. */
+.menuWrap { position:relative; }
+.menu { position:absolute; right:0; top:calc(100% + 4px); z-index:45; min-width:160px; padding:4px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); box-shadow:0 12px 32px #142b3826; }
+.menu button { display:flex; align-items:center; width:100%; min-height:32px; padding:0 10px; border-radius:6px; font-size:13px; text-align:left; }
+.menu button:hover { background:var(--omts-color-primary-soft); color:var(--omts-color-primary); }
