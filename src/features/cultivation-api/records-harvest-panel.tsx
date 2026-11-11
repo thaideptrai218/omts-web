@@ -10,6 +10,7 @@ import { matchesSelection } from "@/shared/presentation/filter-selection";
 import { CagesWithEstimatedKg, KgWithApproxCages } from "./harvest-quantity-cell";
 import flowStyles from "./cultivation-flow.module.css";
 import { HarvestLotPreview } from "./harvest-lot-preview";
+import { HarvestLotButton } from "./harvest-detail";
 import { HarvestSettings } from "./harvest-settings";
 import * as c from "./records-contracts";
 import { HarvestForm } from "./records-harvest-form";
@@ -181,6 +182,19 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                       </td>
                       <td data-label="Trạng thái">
                         <span className={flowStyles.state}>{statusLabel(lot.status)}</span>
+                        {lot.canCorrect && allowed("Edit") && (
+                          <div className="mt-2 text-sm">
+                            <HarvestLotButton
+                              id={lot.id}
+                              zoneId={zoneId}
+                              label="Sửa lô"
+                              onSaved={() => {
+                                setSelectedLot(undefined);
+                                remote.reload();
+                              }}
+                            />
+                          </div>
+                        )}
                       </td>
                     </OpenableTableRow>
                     {selectedLot === lot.id && (

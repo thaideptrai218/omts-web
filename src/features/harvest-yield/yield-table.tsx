@@ -1,5 +1,6 @@
 "use client";
 import { Fragment, useState } from "react";
+import Link from "next/link";
 import { StatusPill } from "@/components/ui/management-page";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { formatVietnameseDate } from "@/shared/format/date-only";
@@ -26,7 +27,13 @@ function Lots({ lots, kgPerCage }: { lots: YieldLot[]; kgPerCage?: number }) {
       <thead><tr><th scope="col">Mã lô</th><th scope="col">Ngày thu hoạch</th><th scope="col">Trạng thái lô</th><th scope="col" className={s.num}>Ước tính</th><th scope="col" className={s.num}>Đã bán</th><th scope="col" className={s.num}>Hao hụt</th><th scope="col" className={s.num}>Chênh lệch</th></tr></thead>
       <tbody>{lots.map((lot) => (
         <tr key={lot.id}>
-          <td className={s.code}>{lot.lotCode}</td>
+          <td className={s.code}>
+            <Link
+              className="text-primary underline underline-offset-4"
+              href={`/operations/harvest?zoneId=${encodeURIComponent(lot.zoneId)}&raftId=${encodeURIComponent(lot.raftId)}`}
+              aria-label={`Mở thu hoạch bè ${lot.raftCode} để xem lô ${lot.lotCode}`}
+            >{lot.lotCode}</Link>
+          </td>
           <td>{formatVietnameseDate(lot.harvestDate)}{!lot.inPeriod && <span className={s.muted}> · ngoài kỳ</span>}</td>
           <td>{lotStatus[lot.status] ?? lot.status}{lot.notFinal && <> <StatusPill>Chưa chốt</StatusPill></>}</td>
           <td className={s.num}>{q(lot.estimatedKg)}</td><td className={s.num}>{q(lot.soldKg)}</td><td className={s.num}>{q(lot.lostKg)}</td>
