@@ -84,7 +84,8 @@ export function PaymentEditor({
     const verb = kind === "Payment" ? "Chi trả" : "Nhận lại";
     const advanceNote = confirmAdvance ? "(đã xác nhận trả trước)" : "";
     const duplicateNote = confirmDuplicate ? " (đã xác nhận mã ngân hàng trùng)" : "";
-    const discountNote = kind === "Payment" && Number(discount) > 0 ? `, chiết khấu ${Number(discount).toLocaleString("vi-VN")} đồng` : "";
+    const discountNote =
+      kind === "Payment" && Number(discount) > 0 ? `, chiết khấu ${Number(discount).toLocaleString("vi-VN")} đồng` : "";
     const question = `${verb} ${Number(amount || 0).toLocaleString("vi-VN")} đồng${discountNote} ${advanceNote}${duplicateNote}?`;
     if (await editor.submit(question, () => payments.write("create", parsed.data, c.payment))) onSaved();
   }

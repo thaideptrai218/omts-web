@@ -5,6 +5,8 @@ import { ApiResourceScreen } from "@/features/api-workspace/api-resource-screen"
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { connection } from "next/server";
 
+// Session-dependent (cookie-restored) segment: same blocking opt-out as operations/[area].
+export const instant = false;
 export default async function WorkspaceResourcePage({ params }: { params: Promise<{ resource: string }> }) {
   await connection();
   const { resource } = await params;

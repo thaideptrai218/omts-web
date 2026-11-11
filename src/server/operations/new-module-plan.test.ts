@@ -90,9 +90,26 @@ describe("new real modules read contracts", () => {
     expect(operationAllowed("workforce", { subjectType: "Staff" }, [p], "AttendanceCreate", ids.otherZone)).toBe(false);
     expect(operationAllowed("workforce", { subjectType: "Staff" }, [p], "Owner")).toBe(false);
   });
-  it("serializes browser break times to TimeOnly with paired valid bounds", () => {
-    expect(planOperation("workforce", "POST", q(), { action: "settings", body: { effectiveFrom: "2026-10-31", breakFrom: "12:00", breakTo: "13:00", roundingMinutes: 15 } })).toMatchObject({ body: { breakFrom: "12:00:00", breakTo: "13:00:00" }, permission: "Owner" });
-    expect(planOperation("workforce", "POST", q(), { action: "settings", body: { effectiveFrom: "2026-10-31", breakFrom: "25:00", breakTo: "26:00", roundingMinutes: 15 } })).toBeUndefined();
+  it("uses the real attendance overview and save envelope, with versioned TimeOnly input", () => {
+    const version = { effectiveFrom: "2026-10-31", breakStart: "12:00:00", breakEnd: "13:00:00", roundingUnit: "Minutes15" };
+    const overview = { current: version, versions: [version], rowVersion: "AAAA" };
+    const read = planOperation("workforce", "GET", q("action=settings"))!;
+    expect(read).toMatchObject({ method: "GET", path: "/api/attendance-settings", permission: "Owner" });
+    expect(read.schema.parse(overview)).toEqual(overview);
+    expect(read.schema.safeParse([version]).success).toBe(false);
+    const write = planOperation("workforce", "POST", q(), { action: "settings", body: { ...version, breakStart: "12:00", breakEnd: "13:00", rowVersion: "AAAA" } })!;
+    expect(write).toMatchObject({ method: "POST", path: "/api/attendance-settings", body: { ...version, rowVersion: "AAAA" }, permission: "Owner" });
+    expect(write.schema.parse({ settings: overview, message: "Saved", messageCode: "MSG-GEN-05" })).toEqual({ settings: overview, message: "Saved", messageCode: "MSG-GEN-05" });
+    expect(write.schema.safeParse(overview).success).toBe(false);
+  });
+  it("rejects invalid attendance bounds, rounding and missing concurrency versions", () => {
+    const body = { effectiveFrom: "2026-10-31", breakStart: "12:00", breakEnd: "13:00", roundingUnit: "Minutes15", rowVersion: "AAAA" };
+    for (const invalid of [{ breakStart: "25:00" }, { breakEnd: null }, { breakEnd: "12:00" }, { breakEnd: "11:00" }, { roundingUnit: 15 }, { rowVersion: "" }, { roundingMinutes: 15 }]) {
+      expect(planOperation("workforce", "POST", q(), { action: "settings", body: { ...body, ...invalid } })).toBeUndefined();
+    }
+    for (const roundingUnit of ["None", "Minutes15", "Minutes30", "Hour1"]) {
+      expect(planOperation("workforce", "POST", q(), { action: "settings", body: { ...body, breakStart: null, breakEnd: null, roundingUnit } })).toMatchObject({ body: { breakStart: null, breakEnd: null, roundingUnit } });
+    }
   });
   it("never infers personal or Owner access from a staff role label", () => {
     expect(operationAllowed("purchase-requests", { subjectType: "Trader" }, [], "Mine")).toBe(true);

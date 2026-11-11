@@ -23,7 +23,7 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
     columns: [["code", "Mã vùng"], ["name", "Tên vùng"], ["status", "Trạng thái"], ["inUseRaftCount", "Bè đang dùng"]],
     fields: [{ key: "code", label: "Mã vùng", required: true }, { key: "name", label: "Tên vùng", required: true },
       { key: "location", label: "Vị trí", required: true }, { key: "latitude", label: "Vĩ độ", type: "number", required: true }, { key: "longitude", label: "Kinh độ", type: "number", required: true },
-      { key: "area", label: "Diện tích (ha)", type: "number", required: true }, { key: "waterMeasurementPoint", label: "Điểm đo nước", required: true }] },
+      { key: "area", label: "Diện tích (ha)", type: "number", required: true }] },
   suppliers: { title: "Nhà cung cấp", functionCode: "SUPPLIERS", editable: true,
     columns: [["name", "Tên nhà cung cấp"], ["supplierType", "Loại"], ["phoneNumber", "Số điện thoại"], ["status", "Trạng thái"]],
     fields: [{ key: "name", label: "Tên nhà cung cấp", required: true }, { key: "supplierType", label: "Loại nhà cung cấp", type: "select", required: true,
@@ -61,7 +61,7 @@ const customerView = z.object({ id: apiIdSchema, name: text, phoneNumber: nullab
   phoneLocked: z.boolean(), traderAccount: z.object({ accountId: apiIdSchema, username: nullableText, displayName: text }).nullable(), mergedIntoCustomerId: apiIdSchema.nullable(), currentDebt: z.number(), ...version });
 const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, phoneNumber: text, ...usage });
 const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: z.enum(["Seed", "Material", "Other"]), unit: text, ...usage });
-const raftRow = z.object({ id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
+const raftRow = z.object({ id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), size: nullableText.optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
 const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), status: text.optional() }).refine((row) => row.code !== undefined || row.status !== undefined);
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
   subjectType: text.optional(), mustChangePassword: z.boolean().optional(), ...version });

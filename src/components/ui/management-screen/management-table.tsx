@@ -81,7 +81,7 @@ export function ManagementPagination({ page, pageSize, total, pageSizes = [15, 3
   </nav>;
 }
 
-export function Subtabs<T extends string>({ label, tabs, value, onChange }: { label: string; tabs: readonly { key: T; label: string }[]; value: T; onChange(key: T): void }) {
+export function Subtabs<T extends string>({ label, tabs, value, onChange, idPrefix, errors = [] }: { label: string; tabs: readonly { key: T; label: string }[]; value: T; onChange(key: T): void; idPrefix?: string; errors?: readonly T[] }) {
   const move = (event: KeyboardEvent<HTMLDivElement>) => {
     const index = tabs.findIndex((tab) => tab.key === value);
     const next = event.key === "ArrowRight" ? index + 1 : event.key === "ArrowLeft" ? index - 1 : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : undefined;
@@ -92,7 +92,7 @@ export function Subtabs<T extends string>({ label, tabs, value, onChange }: { la
     event.currentTarget.querySelector<HTMLButtonElement>(`[data-tab="${target.key}"]`)?.focus();
   };
   return <div role="tablist" aria-label={label} className={styles.subtabs} onKeyDown={move}>{tabs.map((tab) =>
-    <button key={tab.key} type="button" role="tab" data-tab={tab.key} aria-selected={tab.key === value} tabIndex={tab.key === value ? 0 : -1} onClick={() => onChange(tab.key)}>{tab.label}</button>)}</div>;
+    <button key={tab.key} type="button" role="tab" id={idPrefix ? `${idPrefix}-tab-${tab.key}` : undefined} aria-controls={idPrefix ? `${idPrefix}-panel-${tab.key}` : undefined} data-tab={tab.key} aria-selected={tab.key === value} tabIndex={tab.key === value ? 0 : -1} onClick={() => onChange(tab.key)}>{tab.label}{errors.includes(tab.key) && <span> · Có lỗi</span>}</button>)}</div>;
 }
 
 /**

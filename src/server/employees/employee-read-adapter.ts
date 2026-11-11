@@ -6,8 +6,7 @@ import { projectBackendDiagnostic } from "../backend/backend-diagnostic";
 import type { BackendTransportResult } from "../backend/backend-result";
 import { resolveEmployeeSession, sameEmployeeSession, type EmployeeAdapterDependencies } from "./employee-session";
 
-type ReadTarget = { endpoint: "employeeList" } | { endpoint: "employeeRead"; employeeId: unknown }
-  | { endpoint: "employeeLinkableAccounts" };
+type ReadTarget = { endpoint: "employeeList" } | { endpoint: "employeeRead"; employeeId: unknown };
 
 function readInput(request: Request, target: ReadTarget) {
   const query = new URL(request.url).searchParams;
@@ -54,6 +53,5 @@ export function createEmployeeReadAdapter(environment: Readonly<Record<string, u
   return Object.freeze({
     list: (request: Request) => load(request, { endpoint: "employeeList" }),
     detail: (request: Request, employeeId: unknown) => load(request, { endpoint: "employeeRead", employeeId }),
-    linkableAccounts: (request: Request) => load(request, { endpoint: "employeeLinkableAccounts" }),
   });
 }

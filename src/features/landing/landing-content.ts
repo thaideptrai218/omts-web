@@ -44,3 +44,13 @@ export const sampleTrace = {
     ["Thu hoạch", "Cân tại bè, ghi người phụ trách"],
   ],
 } as const;
+
+/**
+ * Ảnh thực tế của HTX Trung Nam (để trống cho tới khi có ảnh thuộc quyền sử dụng của nhóm).
+ * Cách thêm: chép ảnh vào `public/landing/` (JPG/WebP, cạnh dài 1600–2000 px), rồi thêm một mục như
+ * { src: "/landing/be-hau-binh-minh.jpg", alt: "Mô tả ảnh cho người dùng đọc màn hình", caption: "Chú thích ngắn" }.
+ * Ảnh đầu tiên được hiển thị lớn nhất. Khi mảng có ảnh, mục "Hình ảnh thực tế" tự xuất hiện trên trang.
+ * Chỉ dùng ảnh do nhóm hoặc HTX tự chụp, hoặc ảnh có giấy phép cho phép dùng lại.
+ */
+export type LandingPhoto = { src: string; alt: string; caption: string };
+export const landingPhotos: readonly LandingPhoto[] = [];

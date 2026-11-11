@@ -4,7 +4,6 @@ import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { DataGrid } from "@/components/ui/data-grid";
 import { StatusPill } from "@/components/ui/management-page";
 import { directoryActions, resourceValueLabel, text } from "./api-resource-presentation";
-import { SupplierInlineProfile } from "./api-resource-supplier-inline-profile";
 import catalogStyles from "./catalog.module.css";
 import { resources, type ResourceKey } from "./resources";
 import type { ApiRecord } from "./workspace-repository";
@@ -69,53 +68,32 @@ export function ResourceGridCards({
   );
 }
 
-/**
- * Table view. Supplier rows expand an inline profile instead of opening the editor;
- * every other resource opens the record editor.
- */
+/** Table view; every row opens the record editor. */
 export function ResourceTable({
   resource,
   definition,
   items,
   opening,
   usesFilterRail,
-  expandedSupplier,
-  onToggleSupplier,
   onOpen,
-  canEdit,
-  refresh,
-  onEditSupplier,
-  onSupplierSaved,
 }: {
   resource: ResourceKey;
   definition: ResourceDefinition;
   items: ApiRecord[] | undefined;
   opening: boolean;
   usesFilterRail: boolean;
-  expandedSupplier: string | undefined;
-  onToggleSupplier(id: string): void;
   onOpen(row: ApiRecord): void;
-  canEdit: boolean;
-  /** List refresh counter; remounts the inline supplier profile after saves. */
-  refresh: number;
-  onEditSupplier(record: ApiRecord): void;
-  onSupplierSaved(): void;
 }) {
-  const isCatalog = resource === "suppliers" || resource === "input-items";
+  const isCatalog = resource === "input-items";
   const customerDirectory = resource === "customers";
   const actions = directoryActions[resource];
-  const activate = (row: ApiRecord) => (resource === "suppliers" ? onToggleSupplier(row.id) : onOpen(row));
 
   return (
     <div className="mt-4">
       <DataGrid responsive headings={[...definition.columns.map(([, label]) => label), "Hồ sơ"]} empty={!items?.length}>
         {items?.map((row) => (
           <Fragment key={row.id}>
-            <OpenableTableRow
-              disabled={opening}
-              data-selected={expandedSupplier === row.id || undefined}
-              onOpen={() => activate(row)}
-            >
+            <OpenableTableRow disabled={opening} onOpen={() => onOpen(row)}>
               {definition.columns.map(([key, label]) => (
                 <td
                   key={key}
@@ -149,31 +127,13 @@ export function ResourceTable({
                 <button
                   className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover"
                   aria-label={isCatalog ? `Xem hồ sơ ${text(row.name ?? row.code)}` : undefined}
-                  aria-expanded={resource === "suppliers" ? expandedSupplier === row.id : undefined}
                   disabled={opening}
-                  onClick={() => activate(row)}
+                  onClick={() => onOpen(row)}
                 >
-                  {resource === "suppliers" && expandedSupplier === row.id
-                    ? "Thu gọn"
-                    : isCatalog
-                      ? "Xem chi tiết"
-                      : (actions?.open ?? "Mở hồ sơ")}
+                  {isCatalog ? "Xem chi tiết" : (actions?.open ?? "Mở hồ sơ")}
                 </button>
               </td>
             </OpenableTableRow>
-            {resource === "suppliers" && expandedSupplier === row.id && (
-              <tr>
-                <td colSpan={definition.columns.length + 1} className={catalogStyles.expandedCell}>
-                  <SupplierInlineProfile
-                    key={`${row.id}-${refresh}`}
-                    id={row.id}
-                    canEdit={canEdit}
-                    onEdit={onEditSupplier}
-                    onSaved={onSupplierSaved}
-                  />
-                </td>
-              </tr>
-            )}
           </Fragment>
         ))}
       </DataGrid>

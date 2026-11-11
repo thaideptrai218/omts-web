@@ -14,12 +14,12 @@ import { salesInvoiceListPlan } from "./sales-invoice-list-plan";
 import { claimReportsPlan, qualityClaimsPlan } from "./quality-claims-plan";
 import { waterOverviewPlan } from "./water-overview-plan";
 import { lotTracingPlan } from "./lot-tracing-plan";
-import { payrollSettingsPlan } from "./payroll-settings-plan";
+import { payrollPlan } from "./payroll-plan";
 
 const id = z.guid(), empty = z.strictObject({});
 const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
   raftId: id.optional(), itemId: id.optional(), itemGroup: z.enum(["Seed", "Material", "Other"]).optional(), method: c.paymentMethod.optional(),
-  statusId: z.string().regex(/^[1-9]\d{2,3}$/).optional(), status: z.enum(["Draft", "Confirmed", "Corrected", "Voided", "All"]).optional(),
+  statusId: z.string().regex(/^[1-9]\d{2,3}$/).optional(), status: z.enum(["Active", "Draft", "Confirmed", "Corrected", "Voided", "All"]).optional(),
   from: z.iso.date().optional(), to: z.iso.date().optional(), code: z.string().max(100).optional(), groupBy: z.enum(["day", "month"]).optional(),
   page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.string().regex(/^[1-9]\d{0,2}$/).refine((v) => Number(v) <= 100).optional(),
   index: z.string().regex(/^\d{1,3}$/).optional() });
@@ -38,7 +38,7 @@ export function planOperation(areaName: string, method: string, query: URLSearch
   if (area.data === "claim-reports") return claimReportsPlan(method, query, input);
   if (area.data === "quality-claims") return qualityClaimsPlan(method, query, input);
   if (area.data === "lot-tracing") return lotTracingPlan(method, query, input);
-  if (area.data === "payroll-settings") return payrollSettingsPlan(method, query, input);
+  if (area.data === "payroll" || area.data === "payroll-payments") return payrollPlan(area.data, method, query, input);
   if (area.data === "water" && query.get("action") === "zones-overview") return waterOverviewPlan(method, query);
   if (area.data === "job-types") return jobTypesPlan(method, query, input);
   if (area.data === "cultivation-cycles") return cultivationPlan(method, query, input);
@@ -79,7 +79,7 @@ export function planOperation(areaName: string, method: string, query: URLSearch
       if (action === "list" && zoneId) return make(action, filtered(path, ["from", "to", "status", "page", "pageSize"]), c.waterHistorySchema);
       if (action === "detail" && recordId) return make(action, `/api/water-measurements/${recordId}`, c.waterSchema);
       if (action === "photo" && recordId) return { ...make(action, `/api/water-measurements/${recordId}`, c.waterSchema), file: "photo" };
-      if (action === "chart" && zoneId) return make(action, filtered(path + "/chart", ["from", "to", "groupBy"]), c.waterChartSchema);
+      if (action === "chart" && zoneId) return make(action, filtered(path + "/chart", ["from", "to"]), c.waterChartSchema);
       if (action === "thresholds") return make(action, zoneId ? `/api/zones/${zoneId}/water-thresholds` : "/api/water-thresholds", zoneId ? c.zoneThresholdsSchema : z.array(c.zoneThresholdsSchema));
       if (action === "export" && zoneId) return { ...make(action, filtered(path + "/export", ["from", "to", "status"]), empty, "Export"), file: "export" };
     }
@@ -119,12 +119,8 @@ export function planOperation(areaName: string, method: string, query: URLSearch
       zoneId ? c.zoneThresholdsSchema : z.array(c.zoneThresholdsSchema), "Thresholds", "PUT");
     if (!recordId) return undefined;
     const path = `/api/water-measurements/${recordId}`;
-    if (action === "confirm") return write(path + "/confirm", c.confirmWaterSchema, c.waterSchema, "Create");
     if (action === "correct") return write(path + "/corrections", c.correctWaterSchema, c.waterSchema, "Edit");
     if (action === "void") return write(path + "/void", c.voidWaterSchema, c.waterSchema, "Edit");
-    if (action === "recognize-again") return write(path + "/recognize", empty, c.recognitionSchema, "Create", "POST", true);
-    if (action === "editing") return write(path + "/editing", empty, c.editingSchema, "Edit", "POST", true);
-    if (action === "stop-editing") return write(path + "/editing", empty, z.object({ stopped: z.literal(true) }), "Edit", "DELETE", true);
   }
   return undefined;
 }

@@ -34,7 +34,7 @@ const operationIcons: Record<OperationArea, InterfaceIconName> = {
   seeding: "product", "material-usages": "material", harvest: "work",
   "cultivation-cycles": "raft",
   "purchase-receipts": "receipt", "supplier-payments": "payment", water: "water",
-  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "payroll-settings": "settings", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "purchase-requests": "request", workforce: "attendance", "my-work": "work",
+  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "purchase-requests": "request", workforce: "attendance", "my-work": "work",
 };
 
 const settingsDescriptions: Partial<Record<ResourceKey, string>> = {
@@ -48,8 +48,8 @@ const inputReaders = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYC
 const workspaceGroups = [
   { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["cultivation-cycles", "seeding", "material-usages", "harvest", "harvest-yield", "lot-tracing", "water"] },
   { label: INPUT_GROUP, resources: [], operations: [] },
-  { label: "Mua hàng", resources: ["suppliers"], operations: [] },
-  { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "payroll", "payroll-payments", "payroll-settings", "my-work"] },
+  { label: "Mua hàng", resources: ["suppliers"], operations: ["supplier-payments"] },
+  { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "my-work"] },
   { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoices", "sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests"] },
   { label: "Báo cáo", resources: [], operations: ["sales-report", "price-trend-report", "after-sales-report"] },
 ];

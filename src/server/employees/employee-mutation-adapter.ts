@@ -1,7 +1,6 @@
 import "server-only";
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
 import { employeeUpdateRequestSchema } from "@/features/employee-management/api/employee-update.schema";
-import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 import { mapEmployeeMutationSuccess } from "@/features/employee-management/api/map-employee-mutation-success";
 import { mapEmployeeProblem } from "@/features/employee-management/api/map-employee-problem";
 import { createCsrfGuard } from "../auth/csrf-guard";
@@ -18,10 +17,7 @@ function mutationInput(request: Request, employeeId: string, body: unknown) {
     return parsed.success && query.size === 0
       ? { endpoint: "employeeUpdate" as const, employeeId, body: parsed.data } : undefined;
   }
-  const versions = query.getAll("rowVersion");
-  const version = employeeRowVersionSchema.safeParse(versions[0]);
-  return query.size === 1 && versions.length === 1 && version.success
-    ? { endpoint: "employeeUnlink" as const, employeeId, recordVersion: version.data } : undefined;
+  return undefined;
 }
 
 // Unmounted server factory, not a Route Handler or a browser repository.
@@ -34,7 +30,7 @@ export function createEmployeeMutationAdapter(environment: Readonly<Record<strin
     async mutate(request: Request, employeeId: unknown) {
       if (config.status !== "valid" || csrf.status !== "available") return { status: "unavailable" } as const;
       if (config.config.source !== "api") return { status: "disabled" } as const;
-      if (request.method !== "PUT" && request.method !== "DELETE") return { status: "rejected", httpStatus: 405 } as const;
+      if (request.method !== "PUT") return { status: "rejected", httpStatus: 405 } as const;
       if (request.signal.aborted) return { status: "unavailable" } as const;
       const checked = await csrf.guard.check(request, request.method === "PUT"
         ? { method: "PUT", body: "json", maxBytes: MAX_REQUEST_BYTES, timeoutMs: 5000 }

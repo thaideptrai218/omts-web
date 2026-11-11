@@ -6,7 +6,7 @@ import { createOperationsRepository } from "./repository";
 export const waterRepository = createOperationsRepository("water");
 
 export type WaterRecognition = z.infer<typeof c.recognitionSchema>["ocr"];
-export type WaterChartData = z.infer<typeof c.waterChartSchema>;
+export type { WaterChartData } from "./water-chart-periods";
 export type WaterZoneThresholds = z.infer<typeof c.zoneThresholdsSchema>;
 
 /** Converts optional numeric form text to the API value: empty string means "not measured". */

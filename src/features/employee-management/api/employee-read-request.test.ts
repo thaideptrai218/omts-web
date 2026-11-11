@@ -60,9 +60,7 @@ describe("employee GET requests and wire query", () => {
     expect(prepareEmployeeReadRequest({ endpoint: "employeeRead", employeeId })).toEqual({ status: "prepared", request: {
       method: "GET", path: `/api/employees/${employeeId}`, headers: { Accept: "application/json" },
     } });
-    expect(prepareEmployeeReadRequest({ endpoint: "employeeLinkableAccounts" })).toEqual({ status: "prepared", request: {
-      method: "GET", path: "/api/employees/linkable-accounts", headers: { Accept: "application/json" },
-    } });
+    expect(prepareEmployeeReadRequest({ endpoint: "employeeLinkableAccounts" })).toEqual({ status: "invalid-input" });
   });
 
   it("refuses an Int32 overflow in backend Skip without clamping a requested page", () => {

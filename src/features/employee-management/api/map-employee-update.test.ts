@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { employeeUpdateRequestSchema } from "./employee-update.schema";
 import { employeeRecordToEditorValues, mapEmployeeUpdate } from "./map-employee-update";
-import { mapEmployeeDetailResponse, mapEmployeeSavedResponse } from "./map-employee-response";
-import { employeeDetailFixture, employeeId, linkedAccountId } from "./employee-wire.fixtures";
+import { mapEmployeeDetailResponse } from "./map-employee-response";
+import { employeeDetailFixture, employeeId } from "./employee-wire.fixtures";
 
 function recordFrom(input: unknown = employeeDetailFixture()) {
   const result = mapEmployeeDetailResponse(input, employeeId);
@@ -40,7 +40,7 @@ describe("employee personal-data PUT mapping", () => {
         fullName: draft.fullName, phoneNumber: dto.phoneNumber, birthday: dto.birthday,
         address: dto.address, area: dto.area, ward: dto.ward, otherInformation: dto.otherInformation,
         notes: dto.notes, workingZoneIds: dto.workingZones.map((zone) => zone.id),
-        bankAccount: dto.bankAccount, accountId: linkedAccountId, rowVersion: dto.rowVersion,
+        bankAccount: dto.bankAccount, rowVersion: dto.rowVersion,
       },
     });
     expect({ record, draft }).toEqual(before);
@@ -55,7 +55,7 @@ describe("employee personal-data PUT mapping", () => {
     expect(draft).toMatchObject({ birthday: "", area: "", accountId: "" });
     expect(mapEmployeeUpdate(record, draft)).toMatchObject({ status: "ready", request: {
       birthday: null, address: "", area: null, ward: null, otherInformation: null, notes: null,
-      workingZoneIds: [], bankAccount: null, accountId: null,
+      workingZoneIds: [], bankAccount: null,
     } });
     const populated = recordFrom();
     expect(mapEmployeeUpdate(populated, { ...employeeRecordToEditorValues(populated), address: "" }))
@@ -75,31 +75,12 @@ describe("employee personal-data PUT mapping", () => {
       .toEqual({ status: "unlink-required" });
   });
 
-  it("uses the new server version after unlink while retaining the personal draft", () => {
-    const record = recordFrom();
-    const draft = { ...employeeRecordToEditorValues(record), fullName: "Tên còn đang nhập", notes: "Ghi chú mới" };
-    const input = {
-      employee: { ...employeeDetailFixture(), account: null, rowVersion: "AAAAAAAB+/8=" },
-      message: "Saved",
-    };
-    const unlinked = mapEmployeeSavedResponse(input, employeeId);
-    if (unlinked.status !== "mapped") throw new Error("Expected unlink response");
-    // Matches the existing editor: only clear the removed link in the draft.
-    const next = mapEmployeeUpdate(unlinked.value, { ...draft, accountId: "" });
-    expect(next).toMatchObject({ status: "ready", request: {
-      fullName: draft.fullName, notes: draft.notes, accountId: null,
-      rowVersion: "AAAAAAAB+/8=", bankAccount: input.employee.bankAccount,
-      workingZoneIds: input.employee.workingZones.map((zone) => zone.id),
-    } });
-    expect(draft.accountId).toBe(linkedAccountId);
-    expect(record.recordVersion).toBe("AAAAAAAA+/8=");
-  });
 
   it("requires a separate employment action and never puts status/end date into PUT", () => {
     const record = recordFrom();
     expect(mapEmployeeUpdate(record, { ...employeeRecordToEditorValues(record), status: "left" }))
       .toEqual({ status: "employment-action-required" });
-    const left = recordFrom({ ...employeeDetailFixture(), status: "Left", employmentEndDate: "2026-10-20" });
+    const left = recordFrom({ ...employeeDetailFixture(), status: "Left", lastWorkingDay: "2026-10-20" });
     expect(mapEmployeeUpdate(left, { ...employeeRecordToEditorValues(left), status: "employed" }))
       .toEqual({ status: "employment-action-required" });
     const unchanged = mapEmployeeUpdate(left, employeeRecordToEditorValues(left));
@@ -119,7 +100,7 @@ describe("employee personal-data PUT mapping", () => {
   it.each([
     { fullName: " " }, { fullName: "a".repeat(101) }, { phone: "abc" }, { phone: "123" },
     { birthday: "2025-02-29" }, { birthday: "1996-02-29T00:00:00Z" },
-    { accountId: "mock-account" }, { address: "a".repeat(501) },
+    { address: "a".repeat(501) },
   ])("refuses an incompatible request without changing the draft: %j", (change) => {
     const record = recordFrom();
     const draft = { ...employeeRecordToEditorValues(record), ...change };
@@ -135,9 +116,15 @@ describe("employee personal-data PUT mapping", () => {
     for (const field of ["status", "employmentEndDate", "account", "id", "message"]) {
       expect(employeeUpdateRequestSchema.safeParse({ ...result.request, [field]: "unsupported" }).success).toBe(false);
     }
-    expect(employeeUpdateRequestSchema.safeParse({ ...result.request, accountId: null }).success).toBe(true);
+    expect(employeeUpdateRequestSchema.safeParse({ ...result.request, accountId: null }).success).toBe(false);
     const withoutAccount = { ...result.request };
-    delete withoutAccount.accountId;
     expect(employeeUpdateRequestSchema.safeParse(withoutAccount).success).toBe(true);
+  });
+  it("accepts omitted optional personal fields and bank account in update requests", () => {
+    const input = { fullName: "Nguy?n V?n An", workingZoneIds: [], rowVersion: "AQID" };
+    expect(employeeUpdateRequestSchema.parse(input)).toEqual(input);
+    for (const field of ["phoneNumber", "birthday", "address", "area", "ward", "otherInformation", "notes", "bankAccount"]) {
+      expect(employeeUpdateRequestSchema.parse({ ...input, [field]: null })).toEqual({ ...input, [field]: null });
+    }
   });
 });

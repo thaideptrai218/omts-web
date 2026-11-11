@@ -1,0 +1,15 @@
+# 08 — Biện pháp bảo mật hiện có
+
+- **Ranh giới `server-only`**: mọi module `src/server/**` và module cấu hình import `server-only`. Fixture `test:boundary` chứng minh Client Component import chúng sẽ làm build fail, ở cả hai bundler.
+- **Ranh giới serialize**: `ServerAuthTokens`, `PreparedSessionCookie`, `PreparedContextCookie`, `GuardedMutationBody`, `ResolvedServerSession` ném lỗi khi serialize. `test:serialization` quét output RSC và client tìm canary và kiểm một DTO không an toàn. `browser-dto.ts` chỉ chiếu định danh (accountId, username, subjectType), hồ sơ và quyền; `sessionId` backend bị bỏ.
+- **Token**: trình duyệt không bao giờ giữ access/refresh token. Token mã hóa khi lưu trong Redis (AES-256-GCM, keyring xoay được). Khóa Redis dùng định danh đã hash. Bearer token giới hạn 16.384 ký tự và bộ ký tự hạn chế.
+- **Cookie**: tiền tố `__Host-` trên HTTPS, `HttpOnly`, `SameSite=Lax`, không Domain. Profile dev bị từ chối ở production.
+- **CSRF**: origin + header tùy chỉnh + `Sec-Fetch-Site` + content type có giới hạn (xem 05).
+- **Gia cố gọi ra ngoài**: `credentials:"omit"`, `redirect:"error"`, `cache:"no-store"`, timeout và `AbortSignal`. Origin backend chỉ lấy từ cấu hình và phải giữ nguyên origin sau khi dựng URL. Body phản hồi có giới hạn; không chuyển tiếp header, body, nguyên nhân upstream.
+- **Vệ sinh cấu hình**: biến `NEXT_PUBLIC_*` của API base, web origin, Redis, keyring bị từ chối bằng `z.never()` nên không thể đặt. Bộ parse cấu hình chỉ trả tên trường, không trả giá trị.
+- **Header phản hồi**: no-store, `Vary: Cookie`, nosniff trên phản hồi BFF. Tải nhị phân thêm `Content-Security-Policy: sandbox; default-src 'none'`. Proxy ảnh: `default-src 'none'; sandbox`. **Không** có cấu hình header toàn cục trong `next.config.ts` và không có `middleware`/`proxy` → không có CSP, HSTS, X-Frame-Options toàn app (xem 09).
+- **Ủy quyền**: cổng frontend chỉ cải thiện UX (`AGENTS.md`). BFF kiểm lại `subjectType` và quyền chức năng (và phạm vi vùng) cho mỗi request; backend vẫn là thẩm quyền cuối. `guardFunctionCapability` trả phạm vi dữ liệu được cấp (`OwnRecords` hoặc `AssignedZone`).
+- **Nhất quán phiên**: BFF kiểm `sameEmployeeSession` sau mỗi lần gọi upstream và yêu cầu account/subject trong token khớp `/api/me`. Cache chỉ theo request (React `cache`), không có cache người dùng xuyên request.
+- **Upload**: allowlist loại tệp (jpeg/png/webp, pdf cho chứng nhận), giới hạn kích thước (2/5/8/10/11/12 MiB và 32 MiB cho export), giới hạn số tệp (10), mục tiêu ảnh chỉ cùng backend origin qua `localFileTarget` hoặc `resolvePhotoSource`.
+- **Chuỗi cung ứng / bí mật**: gitleaks trên mọi PR; action bên thứ ba ghim theo SHA (`gitleaks-action`, `action-semantic-pull-request`; `actions/checkout@v7` và `setup-node@v7` theo tag); quyền workflow tối thiểu; `pull_request_target` không checkout code PR. `.env*` và `.env.api.local` bị ignore; fixture đặt `NEXT_TELEMETRY_DISABLED`.
+- **Kỷ luật**: ESLint cấm adapter test trong code production. `AGENTS.md` yêu cầu xác nhận trước khi đổi lưu phiên, xử lý refresh, ranh giới SSR/CSR, bảo vệ route, payload quyền, caching.

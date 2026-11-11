@@ -7,7 +7,7 @@ export const licenseTypes = [
   ["FOOD_SAFETY_COMMITMENT", "Cam kết an toàn thực phẩm"], ["OTHER", "Giấy tờ khác"],
 ] as const;
 const documentType = z.enum(licenseTypes.map(([code]) => code));
-const state = z.enum(["Valid", "ExpiringSoon", "Expired", "NotYetEffective", "Superseded", "Missing"]);
+const state = z.enum(["Valid", "ExpiringSoon", "Expired", "NotYetEffective", "Replaced", "Missing"]);
 export const licenseSchema = z.object({ id, documentType, documentTypeName: text, documentNumber: text,
   effectiveDate: day.nullable(), expiryDate: day.nullable(), issuingAuthority: nullableText, holder: nullableText, legalScope: nullableText,
   asOf: day, state, zones: z.array(zone), replacesDocumentId: id.nullable(), replacedByDocumentId: id.nullable(), fileUrl: nullableText, rowVersion: text.min(1) });
@@ -20,17 +20,12 @@ export const saveLicenseSchema = z.strictObject({ documentType, documentNumber: 
   zoneIds: z.array(id).min(1).refine((ids) => new Set(ids).size === ids.length), rowVersion: text.min(1).optional() })
   .refine((value) => !value.expiryDate || value.expiryDate > value.effectiveDate, { path: ["expiryDate"], message: "Ngày hết hạn phải sau ngày hiệu lực." });
 export const raftSchema = z.object({ id, zone, code: text, latitude: z.number().nullable(), longitude: z.number().nullable(), location: nullableText, size: nullableText,
-  conditionNotes: nullableText, photoUrl: nullableText, statusId: z.number().int(), status: text, layoutVersion: z.number().int().nonnegative(),
-  lanes: z.array(z.object({ id, laneNumber: z.number().int().positive(), length: z.number().nullable(), markerA: nullableText, markerB: nullableText })),
-  layoutDrawing: z.json().nullable(), layoutVersions: z.array(z.object({ versionNumber: z.number().int(), laneCount: z.number().int(), validFrom: day, validTo: day.nullable() })),
+  conditionNotes: nullableText, photos: z.array(z.object({ id, sortOrder: z.number().int(), url: text })).max(3), statusId: z.number().int(), status: text, laneCount: z.number().int().nonnegative(),
+  lanes: z.array(z.object({ id, laneNumber: z.number().int().positive(), statusId: z.number().int(), status: text })),
   materialCost: z.number().nullable(), rowVersion: text.min(1) });
 export type Raft = z.infer<typeof raftSchema>;
-const segment = z.object({ id, type: z.enum(["Seeded", "PlannedHarvest", "Harvested", "WrittenOff"]), from: z.number(), to: z.number(), date: day,
-  recordedBy: nullableText, confirmedBy: nullableText, seedingEventId: id.nullable(), seedLotCode: nullableText, writeOffReason: nullableText });
-export const conditionSchema = z.object({ raftId: id, raftCode: text, date: day, cycleId: id.nullable(), layoutVersion: z.number().int().nonnegative(),
-  lanes: z.array(z.object({ laneNumber: z.number().int().positive(), length: z.number().nonnegative(), summary: z.enum(["NotSeeded", "Growing", "PartiallyHarvested", "FullyHarvested"]),
-    portions: z.array(z.object({ from: z.number().nonnegative(), to: z.number().nonnegative(), condition: z.enum(["NotSeeded", "Growing", "Harvested", "WrittenOff"]), segments: z.array(segment) })), plannedHarvests: z.array(segment) })) });
-export type Condition = z.infer<typeof conditionSchema>;
-export const stateLabel = (value: string) => ({ Valid: "Còn hiệu lực", ExpiringSoon: "Sắp hết hạn", Expired: "Hết hạn", NotYetEffective: "Chưa có hiệu lực", Superseded: "Đã thay thế", Missing: "Thiếu hồ sơ",
+/** Answer of a raft photo add: the raft plus the message the backend attaches to every save. */
+export const raftSavedSchema = z.object({ raft: raftSchema, message: text, messageCode: text });
+export const stateLabel = (value: string) => ({ Valid: "Còn hiệu lực", ExpiringSoon: "Sắp hết hạn", Expired: "Hết hạn", NotYetEffective: "Chưa có hiệu lực", Replaced: "Đã thay thế", Missing: "Thiếu hồ sơ",
   NotSeeded: "Chưa thả", Growing: "Đang nuôi", Harvested: "Đã thu", WrittenOff: "Đã ghi giảm", PartiallyHarvested: "Thu một phần", FullyHarvested: "Đã thu hết", Seeded: "Thả giống", PlannedHarvest: "Dự kiến thu" }[value] ?? value);
 export const licenseTypeLabel = (value: string) => licenseTypes.find(([code]) => code === value)?.[1] ?? value;

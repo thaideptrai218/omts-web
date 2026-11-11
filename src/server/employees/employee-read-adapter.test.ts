@@ -23,9 +23,7 @@ describe("unmounted employee read adapter", () => {
       query: { page: 2, pageSize: 20, statusId: 401, zoneId: workingZoneId } });
     expect(await adapter.detail(request(), employeeId)).toMatchObject({ status: "loaded", employee: { id: employeeId } });
     expect(transport.request.mock.calls[1][0]).toEqual({ endpoint: "employeeRead", employeeId, accessToken: accessCanary });
-    expect(await adapter.linkableAccounts(request())).toEqual({ status: "loaded", accounts: [] });
-    expect(transport.request.mock.calls[2][0]).toEqual({ endpoint: "employeeLinkableAccounts", accessToken: accessCanary });
-    expect(resolve).toHaveBeenCalledTimes(6);
+    expect(resolve).toHaveBeenCalledTimes(4);
     expect(transport.request.mock.calls[0][1]?.signal).toBe(input.signal);
   });
 
@@ -38,14 +36,13 @@ describe("unmounted employee read adapter", () => {
     const adapter = createEmployeeReadAdapter(environment, { resolve, backend: transport });
     expect((await adapter.list(request())).status).not.toBe("loaded");
     expect((await adapter.detail(request(), employeeId)).status).not.toBe("loaded");
-    expect((await adapter.linkableAccounts(request())).status).not.toBe("loaded");
     expect(transport.request).not.toHaveBeenCalled();
   });
 
   it("does not publish data when the API refuses an account that still owes onboarding", async () => {
     const transport = backend(); transport.request.mockResolvedValue({ status: "http-error", httpStatus: 403, code: "MSG-ACCOUNT-04" });
     const adapter = createEmployeeReadAdapter(environment, { resolve: resolver(), backend: transport });
-    for (const result of [await adapter.list(request()), await adapter.detail(request(), employeeId), await adapter.linkableAccounts(request())]) {
+    for (const result of [await adapter.list(request()), await adapter.detail(request(), employeeId)]) {
       expect(result.status).not.toBe("loaded"); expect(result).not.toHaveProperty("employee"); expect(result).not.toHaveProperty("accounts");
     }
   });
@@ -56,7 +53,6 @@ describe("unmounted employee read adapter", () => {
     expect(await adapter.list(request("?page=0"))).toEqual({ status: "invalid-input" });
     expect(await adapter.detail(request(), "../accounts")).toEqual({ status: "invalid-input" });
     expect(await adapter.detail(request("?page=1"), employeeId)).toEqual({ status: "invalid-input" });
-    expect(await adapter.linkableAccounts(request("?zoneId=" + workingZoneId))).toEqual({ status: "invalid-input" });
     expect(await adapter.list(request("", { method: "POST" }))).toEqual({ status: "rejected", httpStatus: 405 });
     const controller = new AbortController(); controller.abort();
     expect(await adapter.list(request("", { signal: controller.signal }))).toEqual({ status: "unavailable" });

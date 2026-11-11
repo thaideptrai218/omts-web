@@ -8,7 +8,7 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { DataTable, ErrorNotice, Field, Note, Skeleton, businessToday, displayTime, useMutation, useRemote } from "@/features/operations/ui";
 import type { CultivationLog } from "./log-contracts";
 import { logListSchema, logRequest, logSavedSchema } from "./log-repository";
-function photoHref(raw: string) { try { const url = new URL(raw, window.location.origin); return ["https:","http:"].includes(url.protocol) ? url.href : undefined; } catch { return undefined; } }
+export function photoHref(raw: string) { try { const url = new URL(raw, window.location.origin); return ["https:","http:"].includes(url.protocol) ? url.href : undefined; } catch { return undefined; } }
 export function CultivationLogsDialog({ cycleId, openCycle, onClose }: { cycleId: string; openCycle: boolean; onClose(): void }) {
   const context = useApiWorkspace(), confirmation = useActionDialog(), mutation = useMutation();
   const allowed = (action: string) => context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_LOGS" && p.action === action);
@@ -22,7 +22,7 @@ export function CultivationLogsDialog({ cycleId, openCycle, onClose }: { cycleId
     {editor !== undefined && <LogEditor cycleId={cycleId} record={editor} onClose={() => setEditor(undefined)} onSaved={() => { setEditor(undefined); remote.reload(); setNotice("Đã lưu nhật ký chăm sóc."); }} />}
   </Dialog>;
 }
-function LogEditor({ cycleId, record, onClose, onSaved }: { cycleId: string; record: CultivationLog | null; onClose(): void; onSaved(): void }) {
+export function LogEditor({ cycleId, record, onClose, onSaved }: { cycleId: string; record: CultivationLog | null; onClose(): void; onSaved(): void }) {
   const [date, setDate] = useState(record?.visitDate ?? businessToday()), [notes, setNotes] = useState(record?.notes ?? ""), [reason, setReason] = useState(""), [files, setFiles] = useState<File[]>([]), [keep, setKeep] = useState(record?.photos.map(photo => photo.key) ?? []), [error, setError] = useState<string>();
   const mutation = useMutation(), confirmation = useActionDialog();
   const dirty = date !== (record?.visitDate ?? businessToday()) || notes !== (record?.notes ?? "") || !!reason || !!files.length || keep.length !== (record?.photos.length ?? 0);

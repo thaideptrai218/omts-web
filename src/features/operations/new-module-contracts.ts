@@ -34,6 +34,11 @@ export const workforceLookupsSchema = z.object({ jobs: z.array(z.object({ id: z.
 const employeeIds = z.array(z.guid()).min(1).max(100).refine((v) => new Set(v).size === v.length);
 export const assignWorkSchema = z.strictObject({ raftId: z.guid(), jobTypeId: z.guid(), date: z.iso.date(), employeeIds, moveExisting: z.boolean() });
 export const crewWorkSchema = z.strictObject({ raftId: z.guid(), jobTypeId: z.guid(), employeeIds });
-export const attendanceSettingsSchema = z.object({ id: z.guid(), effectiveFrom: z.iso.date(), breakFrom: z.string().nullable(), breakTo: z.string().nullable(), roundingMinutes: z.number().int() });
 const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).transform((v) => v.length === 5 ? `${v}:00` : v);
-export const saveAttendanceSettingsSchema = z.strictObject({ effectiveFrom: z.iso.date(), breakFrom: clockTime.nullable(), breakTo: clockTime.nullable(), roundingMinutes: z.union([z.literal(0), z.literal(15), z.literal(30), z.literal(60)]) }).refine((v) => v.breakFrom === null && v.breakTo === null || v.breakFrom !== null && v.breakTo !== null && v.breakFrom < v.breakTo);
+export const attendanceRoundingSchema = z.enum(["None", "Minutes15", "Minutes30", "Hour1"]);
+export const attendanceRoundingMinutes = { None: 0, Minutes15: 15, Minutes30: 30, Hour1: 60 } as const;
+export const attendanceSettingsVersionSchema = z.object({ effectiveFrom: z.iso.date(), breakStart: clockTime.nullable(), breakEnd: clockTime.nullable(), roundingUnit: attendanceRoundingSchema });
+export const attendanceSettingsSchema = z.object({ current: attendanceSettingsVersionSchema, versions: z.array(attendanceSettingsVersionSchema), rowVersion: z.string().min(1) });
+export const attendanceSettingsSavedSchema = z.object({ settings: attendanceSettingsSchema, message: z.string(), messageCode: z.string() });
+export const saveAttendanceSettingsSchema = z.strictObject({ effectiveFrom: z.iso.date(), breakStart: clockTime.nullable(), breakEnd: clockTime.nullable(), roundingUnit: attendanceRoundingSchema, rowVersion: z.string().min(1) })
+  .refine((v) => v.breakStart === null && v.breakEnd === null || v.breakStart !== null && v.breakEnd !== null && v.breakStart < v.breakEnd);

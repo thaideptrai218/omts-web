@@ -29,6 +29,8 @@ KiotViet là tham chiếu bố cục; không dùng logo, tên hoặc nội dung 
 
 Nút nào người dùng không có quyền thì ẩn.
 
+Import/Export chỉ xuất hiện khi backend hỗ trợ.
+
 ### 1.3 Cột lọc (bên trái)
 
 - Mục đầu tiên là **nhóm phân loại** của chức năng (ví dụ Nhà cung cấp: Giống, Vật tư, Khác).
@@ -136,6 +138,11 @@ Kiểm thử: màn hình có gọi toast phải được bọc trong `ToastProvi
 Người dùng chọn màu chủ đạo trong menu avatar → `Chủ đề` (lưu theo trình duyệt). Màu chọn được đặt vào biến `--omts-brand`, `--omts-brand-hover`, `--omts-brand-soft` và `--omts-color-primary*` trên `<html>`.
 - Không viết cứng màu navy `#315a96` / `#294d82` / `#edf3fc` cho thanh menu, nút chính, tab đang chọn, nền hover: dùng `var(--omts-brand, #315a96)` (hoặc `--omts-color-primary` trong `.theme` của màn hình quản lý) để đổi theo chủ đề.
 - Màu trạng thái (toast, nhãn Hoàn thành/Đã hủy, số âm) **không** đổi theo chủ đề.
+
+### 1.12 Chỉnh sửa tại chỗ (quyết định 10/11/2026)
+
+- Chỉnh sửa bản ghi hiện có ngay trong dòng đã mở, theo từng subtab; chân subtab có `Bỏ qua` / `Lưu`.
+- Pop-up chỉ giữ cho tạo bản ghi, xác nhận đổi trạng thái/thao tác phá hủy và bí mật chỉ hiển thị một lần.
 
 ## 2. Nguyên tắc chung
 

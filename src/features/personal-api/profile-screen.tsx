@@ -37,6 +37,10 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
     setSecurityVisited(true);
     setTab("security");
   }
+  function showDevices() {
+    setDevicesVisited(true);
+    setTab("devices");
+  }
 
   return (
     <section className={styles.page}>
@@ -65,7 +69,7 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
         <button
           type="button"
           aria-current={tab === "devices" ? "page" : undefined}
-          onClick={() => { setDevicesVisited(true); setTab("devices"); }}
+          onClick={showDevices}
           className={tabClass}
         >
           Thiết bị đăng nhập

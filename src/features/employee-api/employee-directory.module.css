@@ -1,0 +1,24 @@
+﻿.railHead { display:flex; align-items:center; justify-content:space-between; font-size:13px; }
+.zoneSelect { width:100%; min-width:0; height:30px; padding:0 6px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; }
+.feedback { flex:none; padding:8px 12px; border-bottom:1px solid var(--omts-color-border); font-size:13px; }
+.table { width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:13px; }
+.table thead th { position:sticky; top:0; z-index:4; padding:8px; background:var(--omts-color-primary-soft); border-bottom:1px solid var(--omts-color-border); font-size:12px; font-weight:650; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.table tbody td { padding:8px; border-bottom:1px solid var(--omts-color-border); vertical-align:middle; }
+.table tbody tr[data-selected] > td { background:var(--omts-color-primary-soft); }
+.checkCell { width:28px; padding-inline:4px!important; }
+.expandCell { width:28px; padding-inline:2px!important; }
+.expandCell button { display:grid; place-items:center; width:26px; height:26px; color:var(--omts-color-text-muted); }
+.expandCell svg { width:15px; height:15px; }
+.truncated { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.name { font-weight:600; }
+.typeChip { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; padding:2px 6px; border-radius:999px; background:var(--omts-color-surface-subtle); font-size:12px; white-space:nowrap; vertical-align:middle; }
+.meta { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; margin-top:3px; color:var(--omts-color-text-muted); }
+.status { display:block; overflow:hidden; white-space:nowrap; }
+.status > span { max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; font-size:11px; padding-inline:6px; }
+.detailCell { padding:0!important; white-space:normal!important; background:var(--omts-color-surface); }
+.detailWidth { max-width:100%; min-width:0; box-sizing:border-box; }
+.skeleton { display:grid; gap:8px; padding:12px; }
+.skeleton > div { height:40px; border-radius:6px; background:var(--omts-color-surface-subtle); animation:pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.5; } }
+@media (prefers-reduced-motion:reduce) { .skeleton > div { animation:none; } }
+@media (max-width:900px) { .table { min-width:650px; } }

@@ -46,7 +46,7 @@ export function BrandMark({
               : "whitespace-nowrap"
         }
       >
-        <span className={`block text-lg font-bold tracking-tight ${styles.name}`}>
+        <span data-brand-name className={`block text-lg font-bold tracking-tight ${styles.name}`}>
           HTX Trung Nam
         </span>
         {!compact && (

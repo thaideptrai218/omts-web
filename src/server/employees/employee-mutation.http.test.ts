@@ -7,7 +7,7 @@ import { employeeRecordToEditorValues, mapEmployeeUpdate } from "@/features/empl
 import { accessCanary, employeeDetailFixture, employeeId, environment, request, resolver } from "./__tests__/employee-fixture";
 
 describe("employee BFF adapter with disposable loopback HTTP peers, not .NET", () => {
-  it("sends DELETE then PUT with raw decoded/new versions, draft and private bearer", async () => {
+  it("sends successive PUTs with returned versions, draft and private bearer", async () => {
     const received: Array<{ method?: string; path?: string; version: string | null; body: string;
       cookie?: string; bearer?: string; contentType?: string }> = [];
     await withHttpFixture(async (incoming, response) => {
@@ -19,13 +19,13 @@ describe("employee BFF adapter with disposable loopback HTTP peers, not .NET", (
       response.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
         employee: { ...employeeDetailFixture(), account: null,
           fullName: incoming.method === "PUT" ? JSON.parse(body).fullName : employeeDetailFixture().fullName,
-          rowVersion: incoming.method === "PUT" ? "AAAAAAAC+/8=" : "AAAAAAAB+/8=" },
-        message: "Saved upstream", temporaryPassword: crypto.randomUUID(),
+          rowVersion: received.length === 1 ? "AAAAAAAB+/8=" : "AAAAAAAC+/8=" },
+        message: "Saved upstream", messageCode: "MSG-GEN-05", temporaryPassword: crypto.randomUUID(),
       }));
     }, async (origin) => {
       const env = { ...environment, ...fixtureEnvironment(origin) };
       const adapter = createEmployeeMutationAdapter(env, { resolve: resolver(), backend: createBackendTransport(env) });
-      const unlinked = await adapter.mutate(request("DELETE", { headers: { Cookie: "browser-session-marker", Authorization: "Bearer browser-only" } }), employeeId);
+      const unlinked = await adapter.mutate(request("PUT", { headers: { Cookie: "browser-session-marker", Authorization: "Bearer browser-only" } }), employeeId);
       if (unlinked.status !== "saved") throw new Error("Expected saved unlink");
       expect(unlinked.employee.recordVersion).toBe("AAAAAAAB+/8=");
       const mapped = mapEmployeeUpdate(unlinked.employee, { ...employeeRecordToEditorValues(unlinked.employee), fullName: "Tên đang nhập" });
@@ -35,12 +35,12 @@ describe("employee BFF adapter with disposable loopback HTTP peers, not .NET", (
       expect(JSON.stringify(saved)).not.toMatch(new RegExp(`${accessCanary}|upstream-only|temporaryPassword|Saved upstream`));
     });
     expect(received).toHaveLength(2);
-    expect(received[0]).toEqual({ method: "DELETE", path: `/api/employees/${employeeId}/account?rowVersion=AAAAAAAA%2B%2F8%3D`,
-      version: "AAAAAAAA+/8=", body: "", cookie: undefined, bearer: `Bearer ${accessCanary}`, contentType: undefined });
+    expect(received[0]).toMatchObject({ method: "PUT", path: `/api/employees/${employeeId}`, version: null, cookie: undefined, bearer: `Bearer ${accessCanary}`, contentType: "application/json" });
+    expect(JSON.parse(received[0].body).rowVersion).toBe("AAAAAAAA+/8=");
     expect(received[1]).toMatchObject({ method: "PUT", path: `/api/employees/${employeeId}`, version: null, cookie: undefined,
       bearer: `Bearer ${accessCanary}`, contentType: "application/json" });
     expect(JSON.parse(received[1].body)).toMatchObject({ fullName: "Tên đang nhập", rowVersion: "AAAAAAAB+/8=",
-      accountId: null, bankAccount: employeeDetailFixture().bankAccount,
+      bankAccount: employeeDetailFixture().bankAccount,
       workingZoneIds: employeeDetailFixture().workingZones.map((zone) => zone.id) });
   });
 
@@ -71,7 +71,7 @@ describe("employee BFF adapter with disposable loopback HTTP peers, not .NET", (
     expect(sourceHits).toBe(1); expect(destinationHits).toBe(0);
   });
 
-  it("rejects actual empty 204 success instead of claiming that unlink was saved", async () => {
+  it("rejects actual empty 204 success instead of claiming that PUT was saved", async () => {
     await withHttpFixture((_req, res) => { res.writeHead(204).end(); }, async (origin) => {
       const env = { ...environment, ...fixtureEnvironment(origin) };
       expect(await createEmployeeMutationAdapter(env, { resolve: resolver(), backend: createBackendTransport(env) }).mutate(request(), employeeId))

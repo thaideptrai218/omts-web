@@ -1,5 +1,6 @@
 import { REQUEST_STATUS_IDS } from "@/features/trader-purchases/contracts";
 import { formatDate, formatKg, parseKgInput } from "@/features/trader-purchases/presentation";
+import { approxCagesLabel } from "@/shared/format/cage-quantity";
 import { acceptRequestSchema, declineRequestSchema, requestSendingSchema, type PurchaseRequest } from "./new-module-contracts";
 import type { z } from "zod";
 
@@ -29,13 +30,22 @@ export function sendingSummary(sending: ReviewSending): { channel: string; statu
   };
 }
 
+/**
+ * Số lượng theo kg (API chỉ trả kg) kèm quy đổi gần đúng ra lồng khi biết kg/lồng trung bình của HTX:
+ * "≈ 3,6 lồng · 180 kg"; không có tỷ lệ thì chỉ "180 kg".
+ */
+export function quantityWithCages(kg: number, kgPerCage?: number): string {
+  const approx = approxCagesLabel(kg, kgPerCage);
+  return approx ? `${approx} · ${formatKg(kg)}` : formatKg(kg);
+}
+
 /** Tóm tắt phản hồi của Chủ HTX cho một dòng danh sách (kg chấp nhận, ngày lấy, trả sau hoặc lý do từ chối/hủy). */
-export function reviewResponseSummary(request: PurchaseRequest): { headline: string; note: string | null } {
+export function reviewResponseSummary(request: PurchaseRequest, kgPerCage?: number): { headline: string; note: string | null } {
   const response = request.response;
   if (request.statusId === REQUEST_STATUS_IDS.cancelled) return { headline: "Thương lái đã hủy", note: request.cancelReason };
   if (!response) return { headline: "Chưa có phản hồi", note: null };
   if (response.acceptedKg === null) return { headline: "Đã từ chối", note: response.note };
-  const parts = [formatKg(response.acceptedKg)];
+  const parts = [quantityWithCages(response.acceptedKg, kgPerCage)];
   if (response.pickupDate) parts.push(`lấy ngày ${formatDate(response.pickupDate)}`);
   parts.push(response.payLaterAgreed ? "cho trả sau" : "không trả sau");
   return { headline: parts.join(" · "), note: response.note };

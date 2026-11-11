@@ -16,7 +16,7 @@ const nowTime = () => { const now = new Date(); return `${pad(now.getHours())}:$
  * One date picked from the same calendar as the time filter. The value is `yyyy-mm-dd`, or `yyyy-mm-ddTHH:mm` with
  * `withTime` (local wall time of the cooperative).
  */
-export function DatePickerField({ label, value, max, disabled, withTime, className, onChange }: { label: string; value: string; max?: string; disabled?: boolean; withTime?: boolean; className?: string; onChange(value: string): void }) {
+export function DatePickerField({ label, value, max, disabled, withTime, className, name, invalid, describedBy, onChange }: { label: string; value: string; max?: string; disabled?: boolean; withTime?: boolean; className?: string; name?: string; invalid?: boolean; describedBy?: string; onChange(value: string): void }) {
   const anchor = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [datePart, timePart = ""] = value.split("T");
@@ -29,7 +29,7 @@ export function DatePickerField({ label, value, max, disabled, withTime, classNa
   const today = new Date(), todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const shown = datePart ? `${toDisplayDate(datePart)}${withTime && timePart ? ` ${timePart.slice(0, 5)}` : ""}` : withTime ? "dd/mm/yyyy hh:mm" : "dd/mm/yyyy";
   return <>
-    <button ref={anchor} type="button" className={`${styles.input} ${className ?? ""}`} aria-label={`${label}: ${datePart ? shown : "chưa chọn"}`} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
+    <button ref={anchor} type="button" name={name} data-invalid={invalid || undefined} aria-describedby={describedBy} className={`${styles.input} ${className ?? ""}`} aria-label={`${label}: ${datePart ? shown : "chưa chọn"}`} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
       <span>{shown}</span><InterfaceIcon name="calendar" />
     </button>
     {open && <Popover anchor={anchor} label={label} placement="below" onClose={close}>

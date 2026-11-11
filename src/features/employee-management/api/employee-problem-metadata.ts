@@ -6,6 +6,8 @@ import { semanticMessageCode } from "@/shared/messages/backend-message-code";
 export const employeeBackendFieldSchema = z.enum([
   "Full name", "Phone number", "Birthday", "Address", "Area", "Ward",
   "Other information", "Notes", "Working zones", "Bank account", "Account", "RowVersion",
+  // Added with the employee code and profile fields (backend feature/web-hr-api-gaps).
+  "Code", "Gender", "ID number", "Start date",
 ]);
 
 export const employeeProblemMetadataSchema = z.discriminatedUnion("kind", [
@@ -21,6 +23,7 @@ const modelStateAliases: Readonly<Record<string, string>> = Object.freeze({
   fullName: "Full name", phoneNumber: "Phone number", birthday: "Birthday", address: "Address",
   area: "Area", ward: "Ward", otherInformation: "Other information", notes: "Notes",
   workingZoneIds: "Working zones", bankAccount: "Bank account", accountId: "Account", rowVersion: "RowVersion",
+  code: "Code", gender: "Gender", idNumber: "ID number", startDate: "Start date",
 });
 const wireFieldSchema = z.string().max(64).transform((field) =>
   Object.hasOwn(modelStateAliases, field) ? modelStateAliases[field] : field,

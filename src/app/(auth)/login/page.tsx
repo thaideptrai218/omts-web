@@ -33,5 +33,8 @@ async function LoginContent() {
 }
 
 export default function LoginPage() {
-  return <Suspense fallback={<BootScreen message="Đang tải trang đăng nhập..." />}><LoginContent /></Suspense>;
+  return <>
+    <span data-login-scene hidden />
+    <Suspense fallback={<BootScreen message="Đang tải trang đăng nhập..." />}><LoginContent /></Suspense>
+  </>;
 }

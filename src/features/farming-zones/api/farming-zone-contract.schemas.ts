@@ -2,8 +2,7 @@ import { z } from "zod";
 import { apiIdSchema, apiTextSchema } from "@/features/auth/api/auth-contract.schemas";
 
 // Wire snapshot: omts-backend develop@953f597, FarmingZoneDtos.cs.
-// A list row is not a detail: only detail carries coordinates, measurement
-// point, and rowVersion. Keep that distinction before binding the UI.
+// A list row is not a detail: only detail carries coordinates and rowVersion. Keep that distinction before binding the UI.
 const zoneBaseSchema = z.object({
   id: apiIdSchema,
   code: apiTextSchema,
@@ -13,7 +12,7 @@ const zoneBaseSchema = z.object({
   statusId: z.union([z.literal(101), z.literal(102)]),
   status: apiTextSchema,
   inUseRaftCount: z.number().int().nonnegative(),
-  licenseState: z.enum(["Valid", "ExpiringSoon", "Expired", "NotYetEffective", "Superseded", "Missing"]).nullable(),
+  licenseState: z.enum(["Valid", "ExpiringSoon", "Expired", "NotYetEffective", "Replaced", "Missing"]).nullable(),
 });
 
 export const farmingZoneListItemSchema = zoneBaseSchema;
@@ -28,7 +27,6 @@ export const farmingZonePageSchema = z.object({
 export const farmingZoneViewSchema = zoneBaseSchema.extend({
   latitude: z.number().min(-90).max(90).nullable(),
   longitude: z.number().min(-180).max(180).nullable(),
-  waterMeasurementPoint: z.string().nullable(),
   rowVersion: apiTextSchema,
 });
 

@@ -1,21 +1,21 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
-import { businessToday, control, ErrorNotice } from "@/features/operations/ui";
+import { toDisplayDate } from "@/components/ui/management-screen/time-range-model";
+import { businessToday } from "@/features/operations/ui";
 import type { Employee } from "./contracts";
 
-export type EmployeeStatusAction = "unlink" | "end-employment" | "reinstate";
+export type EmployeeStatusAction = "end-employment" | "resume";
 
-/** Confirmation for unlinking the account, ending employment (with end date) or reinstating. */
+/**
+ * One-step confirmation for ending or resuming employment (DESIGN_GUIDELINES 1.6: status changes are confirmed).
+ * There is no date to pick: ending employment records today as the last working day, resuming takes effect today.
+ */
 export function EmployeeStatusActionDialog({
   action,
   baseline,
   pending,
   busy,
-  endDate,
-  actionError,
-  onEndDateChange,
   onCancel,
   onConfirm,
 }: {
@@ -24,57 +24,43 @@ export function EmployeeStatusActionDialog({
   pending: boolean;
   /** Reads whether a mutation is in flight at the moment the dialog is dismissed. */
   busy(): boolean;
-  endDate: string;
-  actionError: string | undefined;
-  onEndDateChange(value: string): void;
   onCancel(): void;
   onConfirm(): void;
 }) {
-  const title =
-    action === "unlink" ? "Bỏ liên kết tài khoản?" : action === "end-employment" ? "Nghỉ việc?" : "Đi làm lại?";
-  const message =
-    action === "unlink"
-      ? `Bỏ liên kết @${baseline.account?.username} khỏi ${baseline.fullName}? Các thay đổi khác đang nhập vẫn được giữ.`
-      : `${baseline.fullName} sẽ chuyển sang ${action === "end-employment" ? "Đã nghỉ việc" : "Đang làm việc"}. Tài khoản và quyền truy cập được kiểm tra riêng.`;
+  const ending = action === "end-employment";
+  const today = toDisplayDate(businessToday());
 
   return (
     <Dialog
       open
-      title={title}
+      title={ending ? "Nghỉ việc?" : "Cho làm việc lại?"}
       dismissible={!pending}
       onOpenChange={(open) => {
         if (!open && !busy()) onCancel();
       }}
     >
-      <p>{message}</p>
       <form
-        className="mt-4 space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
           onConfirm();
         }}
       >
-        {action === "end-employment" && (
-          <label className="block text-sm font-semibold">
-            Ngày nghỉ việc *
-            <VietnameseDateInput
-              className={control}
-              required
-              max={businessToday()}
-              value={endDate}
-              disabled={pending}
-              onValueChange={onEndDateChange}
-              calendarLabel="Chọn ngày nghỉ việc"
-            />
-          </label>
-        )}
-        <ErrorNotice error={actionError} />
-        <div className="flex flex-wrap gap-3">
+        <p className="text-sm text-text">
+          {ending
+            ? <><strong>{baseline.fullName}</strong> nghỉ việc từ hôm nay ({today}).</>
+            : <><strong>{baseline.fullName}</strong> được cho làm việc lại từ hôm nay ({today}).</>}
+        </p>
+        <p className="mt-2 text-xs text-text-muted">
+          {ending
+            ? "Ngày làm cuối là hôm nay. Hồ sơ chuyển sang Đã nghỉ việc khi hết ngày. Có thể cho làm việc lại sau."
+            : "Hồ sơ chuyển sang Đang làm việc."}
+        </p>
+        <div className="mt-5 flex justify-end gap-3">
           <Button className="w-auto" variant="secondary" disabled={pending} onClick={onCancel}>
-            Hủy
+            Bỏ qua
           </Button>
           <Button className="w-auto" type="submit" isPending={pending}>
-            Xác nhận {action === "unlink" ? "bỏ liên kết" : action === "end-employment" ? "nghỉ việc" : "đi làm lại"}
+            {ending ? "Xác nhận nghỉ việc" : "Xác nhận cho làm việc lại"}
           </Button>
         </div>
       </form>

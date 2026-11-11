@@ -37,10 +37,10 @@ export function LoginForm({ formError, onSubmit }: LoginFormProps) {
         autoComplete="username"
         autoCapitalize="none"
         error={errors.identifier?.message}
-        hint="Nhập số điện thoại đã đăng ký với hợp tác xã."
+        hint="Dùng số điện thoại hoặc tên đăng nhập đã đăng ký."
         id="identifier"
-        inputMode="tel"
-        label="Số điện thoại"
+        label="Số điện thoại hoặc tên đăng nhập"
+        placeholder="Số điện thoại hoặc tên đăng nhập"
         required
         spellCheck={false}
         {...register("identifier")}
@@ -51,6 +51,7 @@ export function LoginForm({ formError, onSubmit }: LoginFormProps) {
         error={errors.password?.message}
         id="password"
         label="Mật khẩu"
+        placeholder="Nhập mật khẩu"
         required
         {...register("password")}
       />

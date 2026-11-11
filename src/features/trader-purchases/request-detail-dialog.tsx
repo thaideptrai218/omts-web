@@ -14,7 +14,7 @@ export function RequestDetailDialog({ request, onClose, onCancel }: { request: T
   const loaded = useRemote(useMemo(() => (signal: AbortSignal) => purchaseRepository.read("mine-detail", { id: request.id }, traderRequestSchema, signal), [request.id]));
   const current = loaded.data ?? request, response = current.response;
   const rows: [string, string][] = [
-    ["Sản phẩm", current.productName], ["Số kg yêu cầu", formatKg(current.requestedKg)], ["Ngày lấy hàng", formatDate(current.pickupDate)], ["Gửi lúc", formatDateTime(current.sentAt)],
+    ["Sản phẩm", current.productName], ["Số lượng yêu cầu (kg)", formatKg(current.requestedKg)], ["Ngày lấy hàng", formatDate(current.pickupDate)], ["Gửi lúc", formatDateTime(current.sentAt)],
   ];
   return (
     <Dialog open title="Chi tiết đơn mua" size="md" onOpenChange={(open) => { if (!open) onClose(); }}>

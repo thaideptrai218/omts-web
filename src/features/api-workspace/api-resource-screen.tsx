@@ -15,6 +15,8 @@ import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./works
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
 import { SupplierScreen } from "@/features/suppliers-api/supplier-screen";
 import { CustomerScreen } from "@/features/customers/customer-screen";
+import { ZoneScreen } from "@/features/zones-api/zone-screen";
+import { RaftScreen } from "@/features/rafts-api/raft-screen";
 import { useScopedZones } from "./selected-zones";
 import { workspaceError } from "./workspace-error";
 import { GlobalZoneMap } from "@/features/farming-api/global-zone-map";
@@ -40,6 +42,8 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
   if (resource === "suppliers") return <SupplierScreen />;
   if (resource === "customers") return <CustomerScreen />;
+  if (resource === "zones") return <ZoneScreen />;
+  if (resource === "rafts") return <RaftScreen />;
   return resource === "employees" ? <EmployeeApiScreen /> : <GenericResourceScreen resource={resource} />;
 }
 
@@ -70,7 +74,6 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
   const [zoneLoading, setZoneLoading] = useState(false);
   const [zoneRefresh, setZoneRefresh] = useState(0);
   const [zoneChoice, setZoneId] = useState("");
-  const [expandedSupplier, setExpandedSupplier] = useState<string>();
   // undefined = editor closed, null = new record.
   const [selected, setSelected] = useState<ApiRecord | null>();
   // The header zone picker narrows the zones offered for a new record.
@@ -357,16 +360,7 @@ function GenericResourceScreen({ resource }: { resource: ResourceKey }) {
           items={page?.items}
           opening={opening}
           usesFilterRail={usesFilterRail}
-          expandedSupplier={expandedSupplier}
-          onToggleSupplier={(id) => setExpandedSupplier((value) => (value === id ? undefined : id))}
           onOpen={(row) => void open(row)}
-          canEdit={canEdit}
-          refresh={refresh}
-          onEditSupplier={(record) => {
-            setSelected(record);
-            setEditorId((value) => value + 1);
-          }}
-          onSupplierSaved={() => setRefresh((value) => value + 1)}
         />
       )}
       {page && (

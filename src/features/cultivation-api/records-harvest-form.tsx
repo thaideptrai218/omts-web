@@ -29,6 +29,12 @@ export function HarvestForm({
   const [error, setError] = useState<string>();
   const [photos, setPhotos] = useState<File[]>([]);
   const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length);
+  // Live hint: the kg the backend will store when the estimate is left blank.
+  const cageNumber = Number(cages);
+  const estimateHint =
+    !kg && Number.isInteger(cageNumber) && cageNumber > 0
+      ? `${cageNumber.toLocaleString("vi-VN")} lồng ≈ ${(cageNumber * data.averageKgPerCage).toLocaleString("vi-VN")} kg. `
+      : "";
   async function save() {
     const parsed = c.harvestValues.safeParse({
       laneNumbers: lanes,
@@ -94,10 +100,11 @@ export function HarvestForm({
             />
           </div>
           <div className={flowStyles.harvestFormSection}>
-            <h3>Sản lượng và ảnh</h3>
+            <h3>Số lồng và ảnh</h3>
             <Field
               label="Số lồng thu hoạch *"
               type="number"
+              inputMode="numeric"
               min={1}
               step={1}
               required
@@ -105,7 +112,7 @@ export function HarvestForm({
               onChange={(e) => setCages(e.target.value)}
             />
             <Field
-              label="Sản lượng ước tính (kg)"
+              label={`Ước tính kg (để trống sẽ quy đổi theo ${data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng)`}
               type="number"
               min="0.01"
               step="0.01"
@@ -113,8 +120,8 @@ export function HarvestForm({
               onChange={(e) => setKg(e.target.value)}
             />
             <p className={flowStyles.harvestHint}>
-              Để trống sản lượng để quy đổi theo {data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng. Thời điểm thu
-              hoạch được hệ thống ghi khi lưu.
+              {estimateHint}
+              Thu hoạch tính theo lồng; số kg chỉ là ước tính. Thời điểm thu hoạch được hệ thống ghi khi lưu.
             </p>
             <Field
               label="Ảnh chuyến thu hoạch (tối đa 10 ảnh JPEG/PNG, 10 MB/ảnh)"

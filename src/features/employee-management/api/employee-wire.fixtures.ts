@@ -6,8 +6,14 @@ export const workingZoneId = "e4cc1e23-71cb-45c7-be03-fb03d4ac8796";
 export function employeeListItemFixture() {
   return {
     id: employeeId,
+    code: "NV000001",
     fullName: "Nguyễn Văn An",
     phoneNumber: "0900000000",
+    employeeType: "Staff",
+    jobTypes: [],
+    lastWorkingDay: null,
+    canMaintain: true,
+    rowVersion: "AAAAAAAA+/8=",
     workingZones: [{ id: workingZoneId, code: "V01", name: "Vùng Đông" }],
     account: {
       id: linkedAccountId,
@@ -23,6 +29,9 @@ export function employeeDetailFixture() {
   return {
     ...employeeListItemFixture(),
     birthday: "1996-02-29",
+    gender: "Male",
+    idNumber: "012345678901",
+    startDate: "2025-03-01",
     address: "Địa chỉ mẫu",
     area: "Khu vực mẫu",
     ward: "Phường mẫu",
@@ -33,7 +42,8 @@ export function employeeDetailFixture() {
       accountNumber: "000000123456",
       accountHolderName: "NGUYEN VAN AN",
     },
-    employmentEndDate: null,
+    typeHistory: [{ type: "Staff", effectiveFrom: "2026-01-01" }],
+    hasStaffAccount: true,
     rowVersion: "AAAAAAAA+/8=",
   };
 }

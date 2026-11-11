@@ -5,7 +5,6 @@ import { employeeDetailFixture, employeeId, employeeListItemFixture } from "./em
 
 const list = employeeReadRequestSchema.parse({ endpoint: "employeeList", query: { page: 2 } });
 const detail = employeeReadRequestSchema.parse({ endpoint: "employeeRead", employeeId });
-const picker = employeeReadRequestSchema.parse({ endpoint: "employeeLinkableAccounts" });
 const page = () => ({ items: [employeeListItemFixture()], page: 2, pageSize: 20, total: 21 });
 
 describe("employee GET success projection", () => {
@@ -37,18 +36,9 @@ describe("employee GET success projection", () => {
       .toEqual({ status: "employee-mismatch" });
   });
 
-  it("keeps the picker phone nullable and drops unrelated response fields", () => {
-    const account = employeeListItemFixture().account;
-    expect(mapEmployeeReadSuccess(picker, 200, [{ ...account, phoneNumber: null, accessToken: crypto.randomUUID() }]))
-      .toEqual({ status: "loaded", accounts: [{ ...account, status: "active", phone: null }] });
-    expect(mapEmployeeReadSuccess(picker, 200, [])).toEqual({ status: "loaded", accounts: [] });
-    expect(mapEmployeeReadSuccess(picker, 200, [account])).toEqual({ status: "invalid-response" });
-    expect(mapEmployeeReadSuccess(picker, 200, { items: [] })).toEqual({ status: "invalid-response" });
-  });
 
   it.each([201, 202, 204, 206, 304, 401, 403, 404, 500])("never accepts HTTP%s as a loaded read", (status) => {
     expect(mapEmployeeReadSuccess(detail, status, employeeDetailFixture())).toEqual({ status: "unexpected-status" });
     expect(mapEmployeeReadSuccess(list, status, page())).toEqual({ status: "unexpected-status" });
-    expect(mapEmployeeReadSuccess(picker, status, [])).toEqual({ status: "unexpected-status" });
   });
 });

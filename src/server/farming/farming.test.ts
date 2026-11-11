@@ -5,7 +5,7 @@ vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => ga
 import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 import { handleFarmingRequest } from "./farming-http";
 import { planFarming } from "./farming-plan";
-import { farmingIds as ids, licenseFixture, raftFixture, conditionFixture } from "@/features/farming-api/fixtures";
+import { farmingIds as ids, licenseFixture, raftFixture } from "@/features/farming-api/fixtures";
 import { saveLicenseSchema } from "@/features/farming-api/contracts";
 function configure(subjectType = "CooperativeOwner") {
   vi.stubEnv("NODE_ENV", "test"); vi.stubEnv("OMTS_DATA_SOURCE", "api"); vi.stubEnv("OMTS_API_BASE_URL", "http://127.0.0.1:8080"); vi.stubEnv("OMTS_API_TIMEOUT_MS", "1000");
@@ -24,9 +24,10 @@ describe("farming API plans and validation", () => {
   it.each(["action=detail&id=bad", `action=detail&id=${ids.license}&url=https://evil.test`, `action=list&zoneId=${ids.zone}&asOf=2026-02-30`, `action=detail&id=${ids.license}&id=${ids.raft}`, `action=update&id=${ids.license}&asOf=2026-01-01`])("rejects invalid or ambiguous query %s", (query) => {
     expect(planFarming("zone-licenses", query.startsWith("action=update") ? "POST" : "GET", new URLSearchParams(query))).toBeUndefined();
   });
-  it("maps as-of licenses and explicit cycle condition to fixed read paths", () => {
+  it("maps as-of licenses to fixed read paths and drops the removed condition action", () => {
     expect(planFarming("zone-licenses", "GET", new URLSearchParams({ action: "list", zoneId: ids.zone, asOf: "2026-01-01" }))?.path).toBe(`/api/zones/${ids.zone}/licenses?asOf=2026-01-01`);
-    expect(planFarming("raft-details", "GET", new URLSearchParams({ action: "condition", id: ids.raft, cycleId: ids.lane }))?.path).toBe(`/api/rafts/${ids.raft}/condition?cycleId=${ids.lane}`);
+    expect(planFarming("raft-details", "GET", new URLSearchParams({ action: "condition", id: ids.raft }))).toBeUndefined();
+    expect(planFarming("raft-details", "POST", new URLSearchParams({ action: "upload-photo", id: ids.raft }))?.path).toBe(`/api/rafts/${ids.raft}/photos`);
   });
   it.each([{ ...payload, expiryDate: "2025-01-01" }, { ...payload, zoneIds: [] }, { ...payload, zoneIds: [ids.zone, ids.zone] }, { ...payload, secret: "bad" }])("rejects invalid dates, scopes and extra write fields", (body) => expect(saveLicenseSchema.safeParse(body).success).toBe(false));
 });
@@ -44,12 +45,12 @@ describe("farming BFF authorization, uploads and file projection", () => {
   });
   it("does not read files when the backend refuses a staff raft in another zone", async () => {
     configure("Staff"); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ code: "MSG02" }, { status: 403 }));
-    expect((await handleFarmingRequest(get(`action=photo&id=${ids.raft}`), "raft-details")).status).toBe(403); expect(fetcher).toHaveBeenCalledTimes(1);
+    expect((await handleFarmingRequest(get(`action=photo&id=${ids.raft}&photoId=${ids.lane}`), "raft-details")).status).toBe(403); expect(fetcher).toHaveBeenCalledTimes(1);
   });
-  it("allows scoped raft condition reads only through the protected backend endpoint", async () => {
-    configure("Staff"); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(conditionFixture()));
-    expect((await handleFarmingRequest(get(`action=condition&id=${ids.raft}&date=2026-10-29`), "raft-details")).status).toBe(200);
-    expect(fetcher.mock.calls[0][0].toString()).toBe(`http://127.0.0.1:8080/api/rafts/${ids.raft}/condition?date=2026-10-29`);
+  it("allows scoped raft detail reads only through the protected backend endpoint", async () => {
+    configure("Staff"); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(raftFixture()));
+    expect((await handleFarmingRequest(get(`action=detail&id=${ids.raft}`), "raft-details")).status).toBe(200);
+    expect(fetcher.mock.calls[0][0].toString()).toBe(`http://127.0.0.1:8080/api/rafts/${ids.raft}`);
   });
   it("checks CSRF before consuming a multipart body", async () => {
     configure(); const request = upload("create", payload, [], "zone-licenses", "https://evil.test"), read = vi.spyOn(request.body!, "getReader"), fetcher = vi.spyOn(globalThis, "fetch");
@@ -72,10 +73,20 @@ describe("farming BFF authorization, uploads and file projection", () => {
     expect((await handleFarmingRequest(upload("create", payload, [file, file]), "zone-licenses")).status).toBe(400);
     expect((await handleFarmingRequest(upload("upload-photo", {}, [file], "raft-details"), "raft-details")).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
   });
-  it("uploads raft photo and projects its URL without exposing the signature", async () => {
-    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(raftFixture({ photoUrl: "/api/files/local/a.png?sig=private&expires=123" })));
+  it("uploads raft photo to the photos route, unwraps RaftSaved and projects photo URLs without the signature", async () => {
+    const raft = raftFixture({ photos: [{ id: ids.lane, sortOrder: 1, url: "/api/files/local/a.png?sig=private&expires=123" }] });
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ raft, message: "Raft saved.", messageCode: "MSG-GEN-05" }));
     const response = await handleFarmingRequest(upload("upload-photo", {}, [new File(["png"], "qa.png", { type: "image/png" })], "raft-details"), "raft-details");
-    expect(response.status).toBe(200); expect((fetcher.mock.calls[0][1]?.body as FormData).has("file")).toBe(true); expect(await response.text()).not.toContain("private");
+    expect(response.status).toBe(200); expect((fetcher.mock.calls[0][1]?.body as FormData).has("file")).toBe(true);
+    expect(fetcher.mock.calls[0][0].toString()).toBe(`http://127.0.0.1:8080/api/rafts/${ids.license}/photos`);
+    const text = await response.text(); expect(text).not.toContain("private"); expect(text).toContain(`/api/operations/raft-details?action=photo&id=${ids.raft}&photoId=${ids.lane}`);
+  });
+  it("proxies one raft photo chosen by its id", async () => {
+    const raft = raftFixture({ photos: [{ id: ids.lane, sortOrder: 1, url: "/api/files/local/a.png?sig=private&expires=123" }] });
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(raft)).mockResolvedValueOnce(new Response(new Uint8Array([1]), { headers: { "Content-Type": "image/png" } }));
+    expect((await handleFarmingRequest(get(`action=photo&id=${ids.raft}&photoId=${ids.lane}`), "raft-details")).status).toBe(200); expect(fetcher).toHaveBeenCalledTimes(2);
+    fetcher.mockResolvedValueOnce(Response.json(raft));
+    expect((await handleFarmingRequest(get(`action=photo&id=${ids.raft}&photoId=${ids.raft}`), "raft-details")).status).toBe(404);
   });
   it("loads the authorized parent, then proxies only a local file without bearer", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(licenseFixture({ fileUrl: "/api/files/local/qa.pdf?expires=123&sig=private" })))

@@ -58,8 +58,8 @@ export function ReceiptScreen() {
   const zones = useRemote(loadZones);
   const suppliers = useRemote(loadSuppliers);
   const items = useRemote(loadItems);
-  // The header zone picker narrows the zones offered and, when it names one zone, filters by it.
-  const { zones: offeredZones, zoneId: zoneFilter } = useScopedZones(zones.data ?? [], chosen.zoneId);
+  // The zone picker narrows the zone filter; "all zones" is only offered while nothing is narrowed.
+  const { zones: offeredZones, zoneId: zoneFilter, narrowed } = useScopedZones(zones.data ?? [], chosen.zoneId);
   const filters = useMemo(() => ({ ...chosen, zoneId: zoneFilter }), [chosen, zoneFilter]);
   const query = useMemo<Query>(() => ({ ...filters, page: String(page), pageSize: "20" }), [filters, page]);
   const list = useRemote(
@@ -135,6 +135,7 @@ export function ReceiptScreen() {
         filters={filters}
         filter={filter}
         zones={offeredZones}
+        narrowed={narrowed}
         suppliers={suppliers.data}
         items={items.data}
         rafts={rafts.data}

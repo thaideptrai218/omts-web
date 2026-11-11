@@ -6,6 +6,9 @@ import * as c from "./new-module-contracts";
 export const workforceRepository = createOperationsRepository("workforce");
 
 export type Assignment = z.infer<typeof c.assignmentSchema>;
+/** The two views of the day board: who is assigned where, and the recorded check-in/out times. */
+export type WorkforceTab = "assignments" | "attendance";
+export type AssignmentAction = "remove" | "check-in" | "check-out";
 
 /** Derives the attendance state of one assignment from its check-in / check-out timestamps. */
 export const attendanceState = (row: Assignment) =>
