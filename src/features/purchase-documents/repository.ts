@@ -136,7 +136,10 @@ export async function download(kind: "receipts" | "returns", query: ReceiptQuery
   } catch { return failed(0); }
 }
 
-/** Pickers shared by the lists and editors: loaded once per page view, suppliers reloadable after a quick add. */
+/**
+ * Pickers shared by the lists and editors. A screen that mounts shows what is already loaded at once and loads again in the
+ * background, so an item or supplier created on another screen of the same session appears without reloading the page.
+ */
 let cached: Promise<{ suppliers: SupplierOption[]; items: ItemOption[]; rafts: RaftOption[]; receivers: { id: string; name: string }[] }> | undefined;
 async function loadLookups() {
   const signal = AbortSignal.timeout(30_000);
@@ -153,7 +156,16 @@ async function loadLookups() {
 const itemsPromise = () => (cached ??= loadLookups()).then((value) => value.items);
 export function usePurchaseLookups() {
   const [value, setValue] = useState<Awaited<ReturnType<typeof loadLookups>>>();
-  useEffect(() => { let live = true; void (cached ??= loadLookups()).then((data) => { if (live) setValue(data); }); return () => { live = false; }; }, []);
+  useEffect(() => {
+    let live = true;
+    let fresh = false;
+    const show = (data: Awaited<ReturnType<typeof loadLookups>>) => { if (live) setValue(data); };
+    // The earlier load only fills the pickers until the new one answers; it never overwrites newer data.
+    if (cached) void cached.then((data) => { if (!fresh) show(data); });
+    cached = loadLookups();
+    void cached.then((data) => { fresh = true; show(data); });
+    return () => { live = false; };
+  }, []);
   return {
     suppliers: value?.suppliers ?? [], items: value?.items ?? [], rafts: value?.rafts ?? [], receivers: value?.receivers ?? [], loading: !value,
     refresh: () => { cached = loadLookups(); void cached.then(setValue); },
