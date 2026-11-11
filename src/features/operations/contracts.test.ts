@@ -10,13 +10,26 @@ describe("purchasing and water contracts", () => {
     const water = c.waterSchema.parse({ ...waterFixture(), accessToken: "must-not-leave", measuredBy: { id: ids.supplier, name: "QA", phoneNumber: "must-not-leave" } });
     expect(JSON.stringify({ receipt, water })).not.toContain("must-not-leave");
   });
-  it("requires a version and reason for a correction; rejects extra mutation fields", () => {
-    const values = { measuredAt: "2026-10-01T08:00:00+07:00", ph: 7.5, salinity: 25 };
+  it("requires a reason for a correction (no row version in the v2 model); rejects extra mutation fields", () => {
+    const values = { raftId: ids.raft, measuredAt: "2026-10-01T08:00:00+07:00", ph: 7.5, salinity: 25, temperature: 26 };
     expect(c.correctWaterSchema.safeParse(values).success).toBe(false);
-    expect(c.correctWaterSchema.safeParse({ ...values, reason: "Đối chiếu ảnh", recordVersion: 1 }).success).toBe(true);
-    expect(c.correctWaterSchema.safeParse({ ...values, reason: "Đối chiếu ảnh", recordVersion: 1, zoneId: ids.zone }).success).toBe(false);
+    expect(c.correctWaterSchema.safeParse({ ...values, reason: "Đối chiếu ảnh" }).success).toBe(true);
+    expect(c.correctWaterSchema.safeParse({ ...values, reason: "Đối chiếu ảnh", recordVersion: 1 }).success).toBe(false);
+    expect(c.correctWaterSchema.safeParse({ ...values, reason: "Đối chiếu ảnh", zoneId: ids.zone }).success).toBe(false);
   });
-  it.each([{ phMin: null, phMax: 8, salinityMin: null, salinityMax: null }, { phMin: 9, phMax: 8, salinityMin: null, salinityMax: null }])("does not accept partial or reversed threshold pairs", (thresholds) => {
+  it("accepts the v2 history row and raw chart points the backend returns", () => {
+    const thresholdsUsed = { phMin: 7.5, phMax: 8.5, salinityMin: 18, salinityMax: 32, temperatureMin: 15, temperatureMax: 32 };
+    const row = { id: ids.water, measuredAt: "2026-10-29T06:30:00+07:00", raftId: ids.raft, raftCode: "B1-05", ph: 8.72, salinity: 27.5, temperature: 25.75, status: "Active", statusCode: "ACTIVE",
+      alertState: "Active", violatedValues: "pH 8.72 > 8.50", measuredBy: { id: ids.supplier, name: "QA" }, thresholdsUsed,
+      valuesOutside: [{ indicator: "PH", value: 8.72, unit: null, direction: "High", min: 7.5, max: 8.5 }], voidReason: null };
+    expect(c.waterHistorySchema.safeParse({ items: [row], page: 1, pageSize: 20, total: 1, from: "2026-08-01", to: "2026-11-01", message: null, messageCode: null }).success).toBe(true);
+    expect(c.waterHistorySchema.safeParse({ items: [{ ...row, alertState: "Corrected" }], page: 1, pageSize: 20, total: 1 }).success).toBe(false);
+    const chart = { zoneId: ids.zone, from: "2026-08-01", to: "2026-11-01", thresholds: thresholdsUsed, points: [{ id: ids.water, measuredAt: "2026-10-11T06:50:00+07:00", ph: 8, salinity: 27, temperature: 25.5 }] };
+    expect(c.waterChartSchema.safeParse(chart).success).toBe(true);
+    expect(c.waterChartSchema.safeParse({ ...chart, points: undefined }).success).toBe(false);
+  });
+  it.each([{ phMin: null, phMax: 8, salinityMin: null, salinityMax: null, temperatureMin: null, temperatureMax: null }, { phMin: 9, phMax: 8, salinityMin: null, salinityMax: null, temperatureMin: null, temperatureMax: null },
+    { phMin: null, phMax: null, salinityMin: null, salinityMax: null, temperatureMin: 30, temperatureMax: null }])("does not accept partial or reversed threshold pairs", (thresholds) => {
     expect(c.setThresholdsSchema.safeParse(thresholds).success).toBe(false);
   });
   it("keeps Vietnam wall time across the client/server boundary", () => {

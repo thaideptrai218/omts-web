@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useState } from "react";
 import { StatusPill } from "@/components/ui/management-page";
+import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import type { YieldGroup, YieldLot } from "./contracts";
 import { differenceNote, type Sort, type SortKey } from "./yield-logic";
@@ -59,7 +60,7 @@ export function YieldTable({ groups, sort, showZone, kgPerCage, onSort }: Props)
             const expanded = open.has(g.key), detailId = `lots-${g.key}`;
             return (
               <Fragment key={g.key}>
-                <tr className={expanded ? s.rowOpen : undefined}>
+                <OpenableTableRow className={expanded ? s.rowOpen : undefined} data-selected={expanded || undefined} onOpen={() => toggle(g.key)}>
                   <th scope="row" className={s.rowHead}>
                     <button type="button" className={s.expand} aria-expanded={expanded} aria-controls={detailId} onClick={() => toggle(g.key)}>
                       <span aria-hidden="true">{expanded ? "▾" : "▸"}</span><span>{g.label}</span>
@@ -70,7 +71,7 @@ export function YieldTable({ groups, sort, showZone, kgPerCage, onSort }: Props)
                   <td className={s.num}>{g.lotCount}</td><td className={s.num}>{q(g.estimatedKg)}</td><td className={s.num}>{q(g.soldKg)}</td>
                   <td className={s.num}>{q(g.lostKg)}</td><td className={s.num}><Difference value={g.differenceKg} kgPerCage={kgPerCage} /></td>
                   <td>{g.notFinal ? <StatusPill>Chưa chốt</StatusPill> : <span className={s.muted}>Đã chốt</span>}</td>
-                </tr>
+                </OpenableTableRow>
                 {expanded && <tr id={detailId} className={s.detail}><td colSpan={columns.length + 1}><Lots lots={g.lots} kgPerCage={kgPerCage} /></td></tr>}
               </Fragment>);
           })}

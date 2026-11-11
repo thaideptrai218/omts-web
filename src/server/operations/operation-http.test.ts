@@ -72,7 +72,7 @@ describe("operations BFF authorization and evidence boundary", () => {
   });
   it("blocks wrong-origin multipart uploads before consuming the body or calling backend", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch");
-    const form = new FormData(); form.set("photo", new File(["image"], "qa.png", { type: "image/png" })); form.set("payload", JSON.stringify({ clientOperationId: ids.water }));
+    const form = new FormData(); form.set("photo", new File(["image"], "qa.png", { type: "image/png" })); form.set("payload", JSON.stringify({}));
     const request = new Request(`http://localhost:3002/api/operations/water?action=recognize&zoneId=${ids.zone}`, { method: "POST", headers: { Origin: "https://evil.test", "X-OMTS-Request": "web" }, body: form });
     const reader = vi.spyOn(request.body!, "getReader");
     expect((await handleOperationRequest(request, "water")).status).toBe(403); expect(reader).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();

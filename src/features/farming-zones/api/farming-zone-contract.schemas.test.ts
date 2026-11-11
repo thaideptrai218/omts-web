@@ -24,7 +24,7 @@ describe("farming zone API contract", () => {
   });
 
   it("requires a detail row version and preserves nullable coordinates", () => {
-    const detail = { ...row, latitude: null, longitude: null, waterMeasurementPoint: null, rowVersion: "AQID" };
+    const detail = { ...row, latitude: null, longitude: null, rowVersion: "AQID" };
     expect(farmingZoneViewSchema.safeParse(detail).success).toBe(true);
     expect(farmingZoneViewSchema.safeParse({ ...detail, rowVersion: "" }).success).toBe(false);
     expect(farmingZoneViewSchema.safeParse({ ...detail, latitude: 91 }).success).toBe(false);

@@ -20,7 +20,7 @@ export { localFileTarget } from "./evidence-target";
 
 const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: responseHeaders });
-const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", "record-photo", "harvest-record", "harvest-correct", "log-record", "log-correct", ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
+const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", "harvest-record", "harvest-correct", "log-record", "log-correct", ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
 
 function browserFiles(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
@@ -78,9 +78,9 @@ export async function handleOperationRequest(request: Request, areaName: string)
         }
         if (area.data === "purchase-receipts" && upload.action === "invoice-photos" && upload.id) {
           plan = { area: area.data, action: upload.action, path: `/api/purchase-receipts/${upload.id}/invoice-photos`, method: "POST", permission: "Edit", schema: c.receiptSchema };
-        } else if (area.data === "water" && ["recognize", "record-photo"].includes(upload.action) && upload.zoneId) {
-          plan = { area: area.data, action: upload.action, zoneId: upload.zoneId, path: `/api/zones/${upload.zoneId}/water-measurements/${upload.action === "recognize" ? "recognize" : "with-photo"}`,
-            method: "POST", permission: "Create", schema: upload.action === "recognize" ? c.recognitionSchema : c.waterSchema };
+        } else if (area.data === "water" && upload.action === "recognize" && upload.zoneId) {
+          plan = { area: area.data, action: upload.action, zoneId: upload.zoneId, path: `/api/zones/${upload.zoneId}/water-measurements/recognize`,
+            method: "POST", permission: "Create", schema: c.recognitionSchema };
         }
       } else {
         const checked = await guard.guard.check(request, { method: "POST", body: "json", maxBytes: 65_536, timeoutMs: 5000 });
@@ -134,8 +134,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
       const logUpload = upload.action === "log-record" || upload.action === "log-correct";
       const input = await readOperationUpload(request, area.data === "water", area.data === "harvest" || logUpload ? { optionalFile: upload.action !== "log-record", maxFiles: 10 } : {});
       if (!input) return json({ status: "invalid-input", code: "MSG01" }, 400);
-      const validator = upload.action === "recognize" ? z.strictObject({ clientOperationId: z.uuid() })
-        : upload.action === "record-photo" ? c.recordWaterSchema : upload.action === "harvest-record" ? harvestValues : upload.action === "harvest-correct" ? harvestCorrection : upload.action === "log-record" ? logValues : upload.action === "log-correct" ? logCorrection : z.strictObject({});
+      const validator = upload.action === "harvest-record" ? harvestValues : upload.action === "harvest-correct" ? harvestCorrection : upload.action === "log-record" ? logValues : upload.action === "log-correct" ? logCorrection : z.strictObject({});
       const values = validator.safeParse(input.payload);
       if (!values.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
       if ((area.data === "harvest" || logUpload) && input.files.some(file => !["image/jpeg", "image/png"].includes(file.type))) return json({ status: "invalid-input", code: "MSG01" }, 400);
@@ -171,7 +170,6 @@ export async function handleOperationRequest(request: Request, areaName: string)
         if (contentType !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") return json({ status: "invalid-response" }, 502);
         bytes = await readBoundedBytes(upstream.body, controller.signal, 32 * 1024 * 1024, budget);
       } else if (plan.noContent && upstream.status === 204) data = { done: true };
-      else if (plan.action === "stop-editing" && upstream.status === 204) data = { stopped: true };
       else {
         const result = await readBackendResponse(upstream, "profileRead", false, ["sales-invoices", "customer-payments", "sales-invoice-list"].includes(area.data));
         if (result.status === "http-error") return json({ status: "rejected", code: result.code, ...(result.invoiceConfirmation ? { invoiceConfirmation: result.invoiceConfirmation } : {}) }, result.httpStatus);
@@ -200,7 +198,9 @@ export async function handleOperationRequest(request: Request, areaName: string)
       if (request.signal.aborted || controller.signal.aborted) return json({ status: "unavailable" }, 503);
       if (bytes) {
         const extension = plan.file === "export" ? "xlsx" : contentType === "application/pdf" ? "pdf" : contentType === "image/png" ? "png" : "jpg";
-        return new Response(bytes as BodyInit, { headers: { ...responseHeaders, "Content-Type": contentType!, "Content-Disposition": `${plan.file === "photo" ? "inline" : "attachment"}; filename="${exportFileName(area.data, query, plan.file === "export")}.${extension}"`,
+        // Payroll exports keep the file name the backend chose (period in the name), limited to safe characters.
+        const backendName = area.data === "payroll" && plan.file === "export" ? /filename="?([A-Za-z0-9._-]{1,80})\.xlsx"?/.exec(upstream.headers.get("content-disposition") ?? "")?.[1] : undefined;
+        return new Response(bytes as BodyInit, { headers: { ...responseHeaders, "Content-Type": contentType!, "Content-Disposition": `${plan.file === "photo" ? "inline" : "attachment"}; filename="${backendName ?? exportFileName(area.data, query, plan.file === "export")}.${extension}"`,
           "Content-Security-Policy": "sandbox; default-src 'none'" } });
       }
       return json({ status: "success", data: browserFiles(data) });

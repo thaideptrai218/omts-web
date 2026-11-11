@@ -58,10 +58,11 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
       if (result.status !== "success" || ![200, 201].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
       const parsed = plan.schema.safeParse(result.data);
       if (!parsed.success) return json({ status: "invalid-response" }, 502);
-      const record = parsed.data as Record<string, unknown>;
+      const record = (plan.unwrap ? (parsed.data as Record<string, unknown>)[plan.unwrap] : parsed.data) as Record<string, unknown>;
       let bytes: Uint8Array | undefined, contentType: string | undefined;
       if (plan.file) {
-        const target = localFileTarget(record[plan.file], backend.config.origin);
+        const source = plan.photoId ? (record.photos as { id: string; url: string }[]).find((photo) => photo.id === plan.photoId)?.url : record[plan.file];
+        const target = localFileTarget(source, backend.config.origin);
         if (!target) return json({ status: "not-found" }, 404);
         const file = await fetch(target, { cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal });
         contentType = file.headers.get("content-type")?.split(";")[0];
@@ -76,7 +77,7 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
         "Content-Disposition": `${area === "raft-details" ? "inline" : "attachment"}; filename="${area}.${contentType === "application/pdf" ? "pdf" : contentType === "image/png" ? "png" : "jpg"}"`, "Content-Security-Policy": "sandbox; default-src 'none'" } });
       if (typeof record.id === "string") {
         if ("fileUrl" in record) record.fileUrl = record.fileUrl ? `/api/operations/zone-licenses?action=file&id=${record.id}` : null;
-        if ("photoUrl" in record) record.photoUrl = record.photoUrl ? `/api/operations/raft-details?action=photo&id=${record.id}` : null;
+        if (Array.isArray(record.photos)) record.photos = (record.photos as { id: string }[]).map((photo) => ({ ...photo, url: `/api/operations/raft-details?action=photo&id=${record.id}&photoId=${photo.id}` }));
       }
       return json({ status: "success", data: record });
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); }

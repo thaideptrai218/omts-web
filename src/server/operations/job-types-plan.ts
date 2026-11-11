@@ -6,11 +6,11 @@ export function jobTypesPlan(method: string, query: URLSearchParams, input?: unk
   if (new Set(query.keys()).size !== query.size) return;
   const base = { area: "job-types" as const };
   if (method === "GET") {
-    const q = z.strictObject({ action: z.enum(["list", "detail"]), id: z.guid().optional(), search: z.string().optional(), statusId: z.enum(["101", "102"]).optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "20", "50", "100"]).optional() }).safeParse(Object.fromEntries(query));
+    const q = z.strictObject({ action: z.enum(["list", "detail"]), id: z.guid().optional(), search: z.string().optional(), statusId: z.enum(["101", "102"]).optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "20", "50", "100"]).optional(), sortBy: z.enum(["name", "rate", "effectiveFrom", "status"]).optional(), sortDir: z.enum(["asc", "desc"]).optional() }).safeParse(Object.fromEntries(query));
     if (!q.success || (q.data.action === "detail") !== !!q.data.id) return;
-    if (q.data.action === "detail" && ["search", "statusId", "page", "pageSize"].some(v => query.has(v))) return;
+    if (q.data.action === "detail" && ["search", "statusId", "page", "pageSize", "sortBy", "sortDir"].some(v => query.has(v))) return;
     const search = new URLSearchParams();
-    for (const k of ["search", "statusId", "page", "pageSize"]) if (query.has(k)) search.set(k, query.get(k)!);
+    for (const k of ["search", "statusId", "page", "pageSize", "sortBy", "sortDir"]) if (query.has(k)) search.set(k, query.get(k)!);
     return { ...base, action: q.data.action, method: "GET", permission: "View", path: q.data.id ? `/api/job-types/${q.data.id}` : `/api/job-types?${search}`, schema: q.data.id ? jobType : jobsPage, expectedId: q.data.id };
   }
   if (method !== "POST" || query.size) return;

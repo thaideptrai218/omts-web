@@ -90,7 +90,7 @@ describe("manual lookup recovery without losing drafts or writing", () => {
     render(<WaterScreen />);
     fireEvent.click(await screen.findByRole("button", { name: "Tải lại danh sách vùng" }));
     await screen.findByRole("option", { name: record.zone.name });
-    expect((screen.getByLabelText("Vùng nuôi *") as HTMLSelectElement).value).toBe("");
+    expect((screen.getByRole("combobox", { name: "Vùng nuôi" }) as HTMLSelectElement).value).toBe("");
     expect(mocks.options).toHaveBeenCalledTimes(2); expect(mocks.write).not.toHaveBeenCalled();
   });
 });

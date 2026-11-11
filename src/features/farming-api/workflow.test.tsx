@@ -9,8 +9,8 @@ vi.mock("@/features/operations/repository", () => ({ createOperationsRepository:
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" }, permissions: { functionPermissions: [] } }) }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children, dismissible, onOpenChange }: { title: string; children: ReactNode; dismissible?: boolean; onOpenChange(open: boolean): void }) => <div role="dialog" aria-label={title}><button disabled={!dismissible} onClick={() => onOpenChange(false)}>Fermer test dialog</button>{children}</div> }));
 import { LicenseEditor } from "./license-screen";
-import { ConditionDiagram, RaftMaterialCosts } from "./raft-screen";
-import { farmingIds as ids, licenseFixture, conditionFixture } from "./fixtures";
+import { RaftMaterialCosts } from "./raft-screen";
+import { farmingIds as ids, licenseFixture } from "./fixtures";
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 const props = () => ({ zoneId: ids.zone, zones: licenseFixture().zones, onClose: vi.fn(), onMode: vi.fn(), onNavigate: vi.fn(), onSaved: vi.fn() });
@@ -50,7 +50,7 @@ describe("license editor draft and history behavior", () => {
     expect((screen.getByRole("button", { name: "Lưu giấy tờ" }) as HTMLButtonElement).disabled).toBe(true);
   });
   it("shows replaced documents as read only and navigates the historical chain", async () => {
-    const callbacks = props(), old = licenseFixture({ replacedByDocumentId: ids.raft, state: "Superseded" }), next = licenseFixture({ id: ids.raft });
+    const callbacks = props(), old = licenseFixture({ replacedByDocumentId: ids.raft, state: "Replaced" }), next = licenseFixture({ id: ids.raft });
     repository.read.mockResolvedValue({ status: "success", data: next });
     render(<LicenseEditor {...callbacks} record={old} mode="view" />);
     expect(screen.queryByRole("button", { name: "Sửa giấy tờ" })).toBeNull(); expect(screen.queryByRole("button", { name: "Gia hạn / thay thế" })).toBeNull();
@@ -103,34 +103,5 @@ describe("raft cost evidence", () => {
       usages: [{ usageId: ids.license, date: "2026-10-29", itemCode: "VT-QA", itemName: "Phao QA", unit: "cái", quantity: 2, unitPrice: 0, amount: 0, unpriced: false }] }] } });
     render(<RaftMaterialCosts raftId={ids.raft} zoneId={ids.zone} />);
     expect(await screen.findByText(/Tổng chi phí tháng này: 0/)).toBeTruthy(); expect(screen.getByText(/Phao QA/)).toBeTruthy();
-  });
-});
-describe("raft condition sources", () => {
-  it("totals mixed portion lengths across multiple lanes", () => {
-    const fixture = conditionFixture();
-    fixture.lanes[0].portions = [
-      { from: 0, to: 10.5, condition: "Growing", segments: [] },
-      { from: 10.5, to: 23, condition: "Harvested", segments: [] },
-      { from: 23, to: 30, condition: "WrittenOff", segments: [] },
-    ];
-    fixture.lanes.push({ laneNumber: 2, length: 5, summary: "NotSeeded", portions: [{ from: 0, to: 5, condition: "NotSeeded", segments: [] }], plannedHarvests: [] });
-    render(<ConditionDiagram condition={fixture} />);
-    const summary = screen.getByLabelText("Tổng chiều dài theo tình trạng");
-    expect(summary.textContent).toContain("Đang nuôi10,5 m");
-    expect(summary.textContent).toContain("Đã thu12,5 m");
-    expect(summary.textContent).toContain("Đã ghi giảm7 m");
-    expect(summary.textContent).toContain("Chưa thả5 m");
-  });
-  it("shows no cycle as not seeded, and does not infer material cost or production", () => {
-    render(<ConditionDiagram condition={conditionFixture()} />);
-    expect(screen.getByText("Bè chưa có chu kỳ tại ngày xem.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Làn 1, 0–30 m, Chưa thả" }));
-    expect(screen.getByText("Chưa có sự kiện thả, thu hoặc ghi giảm cho đoạn này.")).toBeTruthy();
-  });
-  it("shows the source, recorder and confirmer for the selected colored portion", () => {
-    const fixture = conditionFixture(); fixture.cycleId = ids.license;
-    fixture.lanes[0].summary = "Growing"; fixture.lanes[0].portions[0] = { from: 0, to: 30, condition: "Growing", segments: [{ id: ids.lane, type: "Seeded", from: 0, to: 30, date: "2026-10-01", recordedBy: "Người ghi QA", confirmedBy: "Người xác nhận QA", seedingEventId: ids.raft, seedLotCode: "LOT-QA", writeOffReason: null }] };
-    render(<ConditionDiagram condition={fixture} />); fireEvent.click(screen.getByRole("button", { name: "Làn 1, 0–30 m, Đang nuôi" }));
-    expect(screen.getByText("Người ghi QA / Người xác nhận QA")).toBeTruthy(); expect(screen.getByText("LOT-QA")).toBeTruthy(); expect(screen.getByText(ids.raft)).toBeTruthy();
   });
 });

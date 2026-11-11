@@ -16,13 +16,12 @@ import { SalesPerformanceScreen } from "@/features/sales-reports/sales-performan
 import { PriceTrendScreen } from "@/features/sales-reports/price-trend-screen";
 import { AfterSalesIssuesScreen } from "@/features/sales-reports/after-sales-issues-screen";
 import { LotTracingScreen } from "@/features/lot-tracing/lot-tracing-screen";
-import { PayrollSettingsScreen } from "@/features/payroll-settings/payroll-settings-screen";
 import { HarvestYieldScreen } from "@/features/harvest-yield/yield-screen";
 import { SalesInvoiceScreen } from "@/features/sales-invoices/invoice-screen";
 import { ProductsScreen } from "@/features/sales-api/products-screen";
 import { WorkforceScreen } from "./workforce-screen";
 import { MyWorkScreen } from "./my-work-screen";
-import { CyclesScreen } from "@/features/cultivation-api/screen";
+import { CyclesScreen } from "@/features/cycles-api/cycles-screen";
 import { CultivationRecordsScreen } from "@/features/cultivation-api/records-screen";
 import { JobTypesScreen } from "@/features/labor-api/job-types-screen";
 import { PaymentsV2Screen } from "@/features/purchasing-v2/screens";
@@ -44,12 +43,11 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "claim-reports") return <ClaimReportScreen />;
   if (area === "quality-claims") return <QualityClaimsScreen />;
   if (area === "sales-returns") return <SalesReturnsScreen />;
-  if (area === "payroll") return <PayrollScreen />;
+  if (area === "payroll") return <Suspense><PayrollScreen /></Suspense>;
   if (area === "payroll-payments") return <PayrollPaymentsScreen />;
   if (area === "sales-report") return <SalesPerformanceScreen />;
   if (area === "price-trend-report") return <PriceTrendScreen />;
   if (area === "after-sales-report") return <AfterSalesIssuesScreen />;
-  if (area === "payroll-settings") return <PayrollSettingsScreen />;
   if (area === "purchase-requests") return <PurchaseRequestsScreen />;
   if (area === "workforce") return <WorkforceScreen />;
   if (area === "my-work") return <MyWorkScreen />;

@@ -13,6 +13,8 @@ import { resources, resourceCategoryFilters, resourceAllowed, type ResourceKey }
 import { createWorkspaceRepository, type ApiPage, type ApiRecord } from "./workspace-repository";
 import { EmployeeApiScreen } from "@/features/employee-api/employee-screen";
 import { SupplierScreen } from "@/features/suppliers-api/supplier-screen";
+import { ZoneScreen } from "@/features/zones-api/zone-screen";
+import { RaftScreen } from "@/features/rafts-api/raft-screen";
 import { workspaceError } from "./workspace-error";
 import { GlobalZoneMap } from "@/features/farming-api/global-zone-map";
 import { loadOptions } from "@/features/operations/lookups";
@@ -37,6 +39,8 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 /** Directory screen for a workspace resource; employees have their own dedicated screen. */
 export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
   if (resource === "suppliers") return <SupplierScreen />;
+  if (resource === "zones") return <ZoneScreen />;
+  if (resource === "rafts") return <RaftScreen />;
   return resource === "employees" ? <EmployeeApiScreen /> : <GenericResourceScreen resource={resource} />;
 }
 function GenericResourceScreen({ resource }: { resource: ResourceKey }) {

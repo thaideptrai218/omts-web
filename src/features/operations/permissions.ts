@@ -1,5 +1,5 @@
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
-export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "payroll-settings", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "purchase-requests", "workforce", "my-work"] as const;
+export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "purchase-requests", "workforce", "my-work"] as const;
 export type OperationArea = typeof operationAreas[number];
 export const operationModules: readonly { key: OperationArea; title: string; functionCode: string }[] = [
   { key: "job-types", title: "Loại công việc và đơn giá", functionCode: "PAY_RULES" },
@@ -15,7 +15,6 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "customer-payments", title: "Thanh toán của khách", functionCode: "CUSTOMER_PAYMENTS" },
   { key: "lot-tracing", title: "Truy xuất lô hàng", functionCode: "LOT_TRACING" },
   { key: "harvest-yield", title: "Sản lượng nuôi", functionCode: "HARVEST_LOTS" },
-  { key: "payroll-settings", title: "Thiết lập kỳ lương", functionCode: "" },
   { key: "claim-reports", title: "Báo vấn đề chất lượng", functionCode: "QUALITY_CLAIMS" },
   { key: "quality-claims", title: "Khiếu nại chất lượng", functionCode: "QUALITY_CLAIMS" },
   { key: "sales-returns", title: "Phiếu trả hàng bán", functionCode: "SALES_RETURNS" },
@@ -31,8 +30,8 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
 ];
 export function operationAllowed(area: OperationArea, identity: { subjectType: string }, permissions: readonly FunctionPermission[], action = "View", zoneId?: string) {
   if (area === "my-work") return identity.subjectType === "Staff";
-  // Thiết lập kỳ lương: backend chỉ cho Chủ hợp tác xã (không có chức năng phân quyền cho nhân viên).
-  if (area === "payroll-settings") return identity.subjectType === "CooperativeOwner";
+  // Bảng lương và Thanh toán lương: luật cứng chỉ dành cho Chủ hợp tác xã, không theo quyền chức năng đã chọn.
+  if (area === "payroll" || area === "payroll-payments") return identity.subjectType === "CooperativeOwner";
   // Báo vấn đề chất lượng chỉ dành cho thương lái: Chủ HTX không có hồ sơ khách hàng nên backend trả 403.
   if (area === "claim-reports") return identity.subjectType === "Trader";
   // Thanh toán của khách là chức năng toàn HTX (không theo vùng): Chủ HTX hoặc nhân viên có quyền CUSTOMER_PAYMENTS đúng hành động.

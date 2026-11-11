@@ -56,17 +56,15 @@ describe("tester workflow safeguards", () => {
     expect(repository.write.mock.calls[1][1]).toMatchObject({ rowVersion: latest.rowVersion, reason: "Lý do đang nhập" });
     expect(onSaved).toHaveBeenCalledOnce();
   });
-  it.each([
-    ["Thời điểm đo (giờ Việt Nam)", "2026-01-01T08:15"],
-    ["Cách ghi", "ocr"],
-  ])("keeps a measurement draft when only %s changed until explicit discard", async (label, value) => {
+  it("keeps a chosen measurement photo until explicit discard", async () => {
     const onClose = vi.fn();
     render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={onClose} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    const picker = screen.getByLabelText("Ảnh máy đo * (JPEG/PNG, tối đa 10 MB)");
+    await userEvent.upload(picker, new File(["png"], "qa.png", { type: "image/png" }));
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
-    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(label === "Ngày trả *" ? value.split("-").reverse().join("/") : value);
+    expect((picker as HTMLInputElement).files?.[0]?.name).toBe("qa.png");
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
@@ -94,8 +92,6 @@ describe("tester workflow safeguards", () => {
   it("closes untouched or restored measurement and payment forms without a discard prompt", async () => {
     const closeMeasurement = vi.fn();
     const measurement = render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={closeMeasurement} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("Cách ghi"), { target: { value: "ocr" } });
-    fireEvent.change(screen.getByLabelText("Cách ghi"), { target: { value: "manual" } });
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(closeMeasurement).toHaveBeenCalledOnce(); measurement.unmount();
     const closePayment = vi.fn(); repository.read.mockResolvedValue({ status: "success", data: undefined });
@@ -164,33 +160,60 @@ describe("tester workflow safeguards", () => {
     await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(2));
     expect(repository.write.mock.calls[1][1]).toEqual(originalPayload);
   });
-  it("keeps failed OCR as a saved draft and waits for human confirmation", async () => {
-    const draft = waterFixture({ ph: null, salinity: null, photoUrl: "/api/operations/water?action=photo" });
-    const ocr = { status: "Failed" as const, ph: null, salinity: null, measuredAt: null }, onSaved = vi.fn();
-    repository.upload.mockResolvedValue({ status: "success", data: { measurement: draft, ocr } });
-    const view = render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={vi.fn()} onSaved={onSaved} />);
-    fireEvent.change(screen.getByLabelText("Cách ghi"), { target: { value: "ocr" } });
+  it("reads the photo first, then records the confirmed values with the returned photo key", async () => {
+    const { loadOptions } = await import("./lookups");
+    vi.mocked(loadOptions).mockResolvedValueOnce({ status: "success", data: [{ id: ids.raft, code: "B-QA" }] });
+    const ocr = { status: "Failed" as const, ph: null, salinity: null, temperature: null, measuredAt: null, unread: ["PH", "SALINITY", "TEMPERATURE"],
+      warning: { code: "MSG-WATER-01", text: "Chưa đọc được pH, độ mặn, nhiệt độ." } };
+    const recognition = { photoKey: "photo-key-qa", measuredAt: "2026-10-01T08:00:00+07:00", ocr, valuesOutside: [], thresholdWarning: null };
+    const recorded = waterFixture(), onSaved = vi.fn();
+    repository.upload.mockResolvedValue({ status: "success", data: recognition });
+    repository.write.mockResolvedValue({ status: "success", data: recorded });
+    render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={vi.fn()} onSaved={onSaved} />);
     await userEvent.upload(screen.getByLabelText("Ảnh máy đo * (JPEG/PNG, tối đa 10 MB)"), new File(["png"], "qa.png", { type: "image/png" }));
-    expect((screen.getByLabelText("Ảnh máy đo * (JPEG/PNG, tối đa 10 MB)") as HTMLInputElement).files?.length).toBe(1);
-    // jsdom's native file-required validator does not observe user-event's FileList.
-    // Submit the real handler here; native file submission is checked in the browser.
-    fireEvent.submit(screen.getByRole("button", { name: "Nhận dạng và lưu nháp" }).closest("form")!);
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(draft, ocr));
-    expect(repository.write).not.toHaveBeenCalled(); view.unmount();
-    repository.write.mockResolvedValue({ status: "success", data: waterFixture({ statusCode: "CONFIRMED" }) });
-    render(<MeasurementEditor record={draft} ocr={ocr} onClose={vi.fn()} onSaved={onSaved} onOpen={vi.fn()} />);
-    expect(screen.getByText(/Ảnh và bản nháp đã được lưu/)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("pH *"), { target: { value: "7.5" } });
-    fireEvent.change(screen.getByLabelText("Độ mặn (‰) *"), { target: { value: "25" } });
+    // jsdom's native file-required validator does not observe user-event's FileList; submit the real handler.
+    fireEvent.submit(screen.getByRole("button", { name: "Nhận dạng từ ảnh" }).closest("form")!);
+    expect(await screen.findByText("Chưa đọc được pH, độ mặn, nhiệt độ.")).toBeTruthy();
+    expect(repository.upload.mock.calls[0].slice(0, 3)).toEqual(["recognize", [expect.any(File)], {}]);
     expect(repository.write).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Xác nhận số đo" }));
-    await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
-    expect(repository.write.mock.calls[0].slice(0, 2)).toEqual(["confirm", { ph: 7.5, salinity: 25, measuredAt: "2026-10-01T08:00:00+07:00" }]);
+    await screen.findByRole("option", { name: "B-QA" });
+    fireEvent.change(screen.getByLabelText("Bè đo *"), { target: { value: ids.raft } });
+    fireEvent.change(screen.getByLabelText("pH (0–14) *"), { target: { value: "7.5" } });
+    fireEvent.change(screen.getByLabelText("Độ mặn (0–100 ‰) *"), { target: { value: "25" } });
+    fireEvent.change(screen.getByLabelText("Nhiệt độ (°C) *"), { target: { value: "26" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Lưu phép đo" }).closest("form")!);
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(recorded, ocr));
+    expect(repository.write.mock.calls[0].slice(0, 2)).toEqual(["record", expect.objectContaining({
+      raftId: ids.raft, measuredAt: "2026-10-01T08:00:00+07:00", ph: 7.5, salinity: 25, temperature: 26, photoKey: "photo-key-qa", clientOperationId: expect.any(String),
+    })]);
   });
-  it("does not offer editing or voiding a replaced water version", () => {
-    render(<MeasurementEditor record={waterFixture({ statusCode: "SUPERSEDED", isLatestVersion: false })} onClose={vi.fn()} onSaved={vi.fn()} onOpen={vi.fn()} />);
+  it("corrects an active measurement in place with a reason and no version", async () => {
+    const record = waterFixture(), onSaved = vi.fn();
+    repository.write.mockResolvedValue({ status: "success", data: waterFixture({ ph: 7.8 }) });
+    render(<MeasurementEditor record={record} onClose={vi.fn()} onSaved={onSaved} onOpen={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Hiệu chỉnh" }));
+    fireEvent.change(screen.getByLabelText("pH *"), { target: { value: "7.8" } });
+    fireEvent.change(screen.getByLabelText("Lý do hiệu chỉnh *"), { target: { value: "Đọc lại ảnh" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu bản hiệu chỉnh" }));
+    await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
+    expect(repository.write.mock.calls[0].slice(0, 3)).toEqual(["correct", { raftId: ids.raft, measuredAt: "2026-10-01T08:00:00+07:00", ph: 7.8, salinity: 25, temperature: 26, reason: "Đọc lại ảnh" }, expect.anything()]);
+    expect(onSaved).toHaveBeenCalledOnce();
+  });
+  it("voids an active measurement with only a reason after confirmation", async () => {
+    repository.write.mockResolvedValue({ status: "success", data: waterFixture({ statusCode: "VOIDED", status: "Voided", voidReason: "Đo nhầm bè" }) });
+    render(<MeasurementEditor record={waterFixture()} onClose={vi.fn()} onSaved={vi.fn()} onOpen={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Hủy phép đo" }));
+    fireEvent.change(screen.getByLabelText("Lý do hủy *"), { target: { value: "Đo nhầm bè" } });
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận hủy phép đo" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
+    expect(repository.write.mock.calls[0].slice(0, 2)).toEqual(["void", { reason: "Đo nhầm bè" }]);
+  });
+  it("does not offer editing or voiding a voided measurement", () => {
+    render(<MeasurementEditor record={waterFixture({ statusCode: "VOIDED", status: "Voided", voidReason: "Đo nhầm bè" })} onClose={vi.fn()} onSaved={vi.fn()} onOpen={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "Hiệu chỉnh" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Hủy phép đo" })).toBeNull();
+    expect(screen.getByText("Lý do hủy: Đo nhầm bè")).toBeTruthy();
     expect(repository.write).not.toHaveBeenCalled();
   });
 });
