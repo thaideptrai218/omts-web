@@ -22,7 +22,7 @@ afterEach(cleanup);
 
 describe("attendance settings against the backend contract", () => {
   it.each([["0", "None"], ["15", "Minutes15"], ["30", "Minutes30"], ["60", "Hour1"]])("maps the %s minute choice to %s and sends rowVersion", async (minutes, roundingUnit) => {
-    render(<WorkforceSetupDialog mode="settings" onClose={vi.fn()} />);
+    render(<WorkforceSetupDialog onClose={vi.fn()} />);
     await waitFor(() => expect((screen.getByLabelText("Nghỉ từ") as HTMLInputElement).value).toBe("11:30"));
     expect((screen.getByLabelText("Làm tròn (phút)") as HTMLSelectElement).value).toBe("15");
     expect(screen.getByText("2026-08-01")).toBeTruthy();
@@ -36,7 +36,7 @@ describe("attendance settings against the backend contract", () => {
     expect(mocks.write.mock.calls[0][2].safeParse({ settings: overview, message: "Saved", messageCode: "MSG-GEN-05" }).success).toBe(true);
   });
   it("sends both absent break bounds as null", async () => {
-    render(<WorkforceSetupDialog mode="settings" onClose={vi.fn()} />);
+    render(<WorkforceSetupDialog onClose={vi.fn()} />);
     await waitFor(() => expect((screen.getByLabelText("Nghỉ từ") as HTMLInputElement).value).toBe("11:30"));
     for (const label of ["Nghỉ từ", "Nghỉ đến"]) fireEvent.change(screen.getByLabelText(label), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));
@@ -46,7 +46,7 @@ describe("attendance settings against the backend contract", () => {
   });
   it("keeps backend second precision when saving the current break", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: { ...overview, current: { ...version, breakStart: "11:30:45" } } });
-    render(<WorkforceSetupDialog mode="settings" onClose={vi.fn()} />);
+    render(<WorkforceSetupDialog onClose={vi.fn()} />);
     await waitFor(() => expect((screen.getByLabelText("Nghỉ từ") as HTMLInputElement).value).toBe("11:30:45"));
     fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
@@ -54,7 +54,7 @@ describe("attendance settings against the backend contract", () => {
     expect(mocks.write.mock.calls[0][1]).toMatchObject({ breakStart: "11:30:45", breakEnd: "12:30:00" });
   });
   it("blocks mismatched break bounds without sending a mutation", async () => {
-    render(<WorkforceSetupDialog mode="settings" onClose={vi.fn()} />);
+    render(<WorkforceSetupDialog onClose={vi.fn()} />);
     await waitFor(() => expect((screen.getByLabelText("Nghỉ từ") as HTMLInputElement).value).toBe("11:30"));
     fireEvent.change(screen.getByLabelText("Nghỉ đến"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));
@@ -63,7 +63,7 @@ describe("attendance settings against the backend contract", () => {
   });
   it("preserves the draft after a stale response and reads the new rowVersion before retry", async () => {
     mocks.write.mockResolvedValueOnce({ status: "error", httpStatus: 409, code: "MSG06", uncertain: false });
-    render(<WorkforceSetupDialog mode="settings" onClose={vi.fn()} />);
+    render(<WorkforceSetupDialog onClose={vi.fn()} />);
     await waitFor(() => expect((screen.getByLabelText("Nghỉ từ") as HTMLInputElement).value).toBe("11:30"));
     fireEvent.change(screen.getByLabelText("Làm tròn (phút)"), { target: { value: "60" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));

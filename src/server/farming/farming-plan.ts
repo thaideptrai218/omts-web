@@ -2,9 +2,9 @@ import "server-only";
 import { z } from "zod";
 import { licenseOverviewSchema, licenseSchema, raftSavedSchema, raftSchema } from "@/features/farming-api/contracts";
 export type FarmingArea = "zone-licenses" | "raft-details";
-const querySchema = z.strictObject({ action: z.enum(["list", "detail", "file", "create", "update", "replace", "photo", "upload-photo"]),
+const querySchema = z.strictObject({ action: z.enum(["list", "detail", "file", "create", "update", "replace", "photo", "upload-photo", "delete-photo"]),
   id: z.guid().optional(), zoneId: z.guid().optional(), asOf: z.iso.date().optional(), photoId: z.guid().optional() });
-export type FarmingPlan = { action: string; path: string; method: "GET" | "POST" | "PUT"; schema: z.ZodType; file?: string; photoId?: string; unwrap?: "raft"; upload?: "license" | "photo"; ownerOnly: boolean };
+export type FarmingPlan = { action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE"; schema: z.ZodType; file?: string; photoId?: string; unwrap?: "raft"; upload?: "license" | "photo"; ownerOnly: boolean };
 export function planFarming(area: FarmingArea, method: string, query: URLSearchParams): FarmingPlan | undefined {
   if ([...query.keys()].length !== new Set(query.keys()).size) return;
   const parsed = querySchema.safeParse(Object.fromEntries(query));
@@ -22,6 +22,8 @@ export function planFarming(area: FarmingArea, method: string, query: URLSearchP
     if (method === "GET" && action === "detail" && !photoId) return make(`/api/rafts/${id}`, raftSchema);
     // The backend serves up to three photos per raft; a photo is fetched by its own id.
     if (method === "GET" && action === "photo" && photoId) return { ...make(`/api/rafts/${id}`, raftSchema), file: "photos", photoId };
+    // The browser POSTs (CSRF-guarded, the route has no DELETE); the BFF sends DELETE /api/rafts/{id}/photos/{photoId} and returns the saved raft.
+    if (method === "POST" && action === "delete-photo" && photoId) return { ...make(`/api/rafts/${id}/photos/${photoId}`, raftSavedSchema, "DELETE"), unwrap: "raft" };
     if (method === "POST" && action === "upload-photo" && !photoId) return { ...make(`/api/rafts/${id}/photos`, raftSavedSchema, "POST"), upload: "photo", unwrap: "raft" };
   }
 }

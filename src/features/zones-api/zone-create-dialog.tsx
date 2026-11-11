@@ -7,6 +7,7 @@ import { CollapsibleSection } from "@/components/ui/management-screen/management
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { createWorkspaceRepository } from "@/features/api-workspace/workspace-repository";
 import { ErrorNotice, useMutation } from "@/features/operations/ui";
+import { useCoordinateWarnings } from "@/features/farming-api/use-coordinate-warnings";
 import { ZoneFormFields } from "./zone-form-fields";
 import { emptyZoneDraft, validateZoneDraft, zoneBody, type ZoneDraft, type ZoneField } from "./zone-model";
 
@@ -14,7 +15,7 @@ const repository = createWorkspaceRepository("zones");
 /** Creating a zone is one of the few pop-ups: grouped fields, `Bỏ qua` and `Lưu` in the footer. */
 export function ZoneCreateDialog({ onClose, onCreated }: { onClose(): void; onCreated(): void }) {
   const [draft, setDraft] = useState<ZoneDraft>(emptyZoneDraft), [errors, setErrors] = useState<Partial<Record<ZoneField, string>>>({});
-  const mutation = useMutation(), confirmation = useActionDialog();
+  const mutation = useMutation(), confirmation = useActionDialog(), warnCoordinates = useCoordinateWarnings();
   // The next free code (KV01...) is prefilled but stays editable; it does not count as a user change.
   const proposed = useCodeProposal(repository, code => setDraft(current => current.code ? current : { ...current, code }));
   const dirty = JSON.stringify(draft) !== JSON.stringify({ ...emptyZoneDraft, code: proposed });
@@ -25,7 +26,7 @@ export function ZoneCreateDialog({ onClose, onCreated }: { onClose(): void; onCr
     setErrors(found);
     if (Object.keys(found).length) return;
     const created = await mutation.run(() => repository.mutate("create", zoneBody(draft)));
-    if (created) onCreated();
+    if (created) { warnCoordinates(created); onCreated(); }
   }
   return <Dialog open size="lg" title="Thêm vùng nuôi" dismissible={!mutation.pending} onOpenChange={open => { if (!open) void close(); }}>
     {confirmation.dialog}

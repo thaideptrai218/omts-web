@@ -6,7 +6,7 @@ import type { harvestLane } from "./records-contracts";
 type Lane = z.infer<typeof harvestLane>;
 type Tone = "success" | "neutral";
 
-const stateChip: Record<string, { label: string; tone: Tone }> = {
+export const laneStateChip: Record<string, { label: string; tone: Tone }> = {
   NotSeeded: { label: "Chưa thả giống", tone: "neutral" },
   Growing: { label: "Đang nuôi", tone: "neutral" },
   BeingHarvested: { label: "Đang thu hoạch", tone: "success" },
@@ -31,7 +31,7 @@ export function HarvestLaneChoices({ lanes, values, onChange, label }: { lanes: 
       <legend className="text-sm font-medium">{label}</legend>
       <div className="grid gap-2 sm:grid-cols-2">
         {lanes.map((lane) => {
-          const blocked = laneBlockedReason(lane), chip = lane.state ? stateChip[lane.state] : undefined;
+          const blocked = laneBlockedReason(lane), chip = lane.state ? laneStateChip[lane.state] : undefined;
           return (
             <label key={lane.laneNumber} className={`flex items-start gap-2 rounded-control border border-border px-3 py-2 text-sm ${blocked ? "opacity-70" : ""}`}>
               <input

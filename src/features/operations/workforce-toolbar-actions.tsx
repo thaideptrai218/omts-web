@@ -28,6 +28,7 @@ function MoreMenu({ board }: { board: WorkforceBoard }) {
     ...(isOwner ? [["settings", "Thiết lập chấm công"] as [WorkforceForm, string], ["leaves", "Duyệt nghỉ phép"] as [WorkforceForm, string]] : []),
   ];
   const jobTypes = operationAllowed("job-types", context.identity, context.permissions.functionPermissions);
+  if (operationAllowed("job-types", context.identity, context.permissions.functionPermissions, "Create")) dialogs.push(["job", "Thêm loại công việc"]);
   if (!dialogs.length && !jobTypes) return null;
   return <div ref={root} className={managementStyles.picker} onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}>
     <button type="button" className={managementStyles.iconButton} aria-label="Thao tác khác" title="Thao tác khác" aria-haspopup="true" aria-expanded={open} aria-controls={panel} onClick={() => setOpen((value) => !value)}>

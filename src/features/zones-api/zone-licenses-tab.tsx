@@ -11,6 +11,8 @@ import { createOperationsRepository } from "@/features/operations/repository";
 import { businessToday, Field, Skeleton, useRemote } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { Switch } from "@/components/ui/switch";
+import { licenseReminders, newestLicensePerType } from "./zone-license-display";
 import { ZoneLicenseDetail } from "./zone-license-detail";
 
 type Editor = { mode: "create" | "update" | "replace"; record: License | null };
@@ -19,18 +21,23 @@ const day = (value: string | null) => value ? formatVietnameseDate(value) : "—
 export function ZoneLicensesTab({ zoneId, zones, guard: providedGuard }: { zoneId: string; zones: ApiRecord[]; guard?: UnsavedGuard }) {
   const localGuard = useUnsavedGuard(), guard = providedGuard ?? localGuard;
   const repository = useMemo(() => createOperationsRepository("zone-licenses"), []);
-  const [asOf, setAsOf] = useState(businessToday), [opened, setOpened] = useState<string>(), [editor, setEditor] = useState<Editor>(), [serial, setSerial] = useState(0);
+  const [asOf, setAsOf] = useState(businessToday), [opened, setOpened] = useState<string>(), [showReplaced, setShowReplaced] = useState(false), [editor, setEditor] = useState<Editor>(), [serial, setSerial] = useState(0);
   const overview = useRemote(useCallback((signal: AbortSignal) => repository.read("list", { zoneId, asOf }, licenseOverviewSchema, signal), [repository, zoneId, asOf]));
   const open = (mode: Editor["mode"], record: License | null) => { setEditor({ mode, record }); setSerial(value => value + 1); };
+  // Display: the newest document of each type; replaced documents stay one switch away. Reminders are notices only.
+  const shown = overview.data ? showReplaced ? overview.data.licenses : newestLicensePerType(overview.data.licenses) : [];
+  const reminders = overview.data ? licenseReminders(overview.data.licenses, asOf, licenseTypeLabel) : [];
   const saved = (record: License) => { setEditor(undefined); setOpened(record.id); overview.reload(); };
   return <>
     {!providedGuard && localGuard.dialog}
     <div className={styles.subToolbar}><Field label="Ngày xem tình trạng" type="date" required value={asOf} onChange={event => { if (event.target.value) { void guard.leave(() => { setAsOf(event.target.value); setOpened(undefined); setEditor(undefined); }); } }} /></div>
     {overview.loading ? <Skeleton /> : overview.error || !overview.data ? <ListStateMessage error={overview.error ?? "Không tải được hồ sơ giấy tờ."} onRetry={overview.reload} retryLabel="Tải lại hồ sơ" />
       : <>
+        {reminders.length > 0 && <ul aria-label="Nhắc hạn giấy phép" className={styles.alert}>{reminders.map(item => <li key={item.key}>{item.text}</li>)}</ul>}
+        <label className="mb-2 flex items-center gap-2 text-xs"><Switch checked={showReplaced} onChange={event => setShowReplaced(event.target.checked)} aria-label="Hiện cả giấy tờ đã thay thế" />Hiện cả giấy tờ đã thay thế</label>
         {overview.data.licenses.some(row => row.state === "Missing") && <p className={styles.alert}>Thiếu hồ sơ còn hiệu lực tại ngày {day(overview.data.asOf)}.</p>}
         <table className={styles.subTable}><thead><tr><th scope="col">Loại giấy tờ</th><th scope="col">Số</th><th scope="col">Hiệu lực từ</th><th scope="col">Hết hạn</th><th scope="col">Tình trạng</th></tr></thead>
-          <tbody>{overview.data.licenses.map((row, index) => <Fragment key={row.documentId ?? `${row.documentType}-${index}`}>
+          <tbody>{shown.map((row, index) => <Fragment key={row.documentId ?? `${row.documentType}-${index}`}>
             <tr><td>{licenseTypeLabel(row.documentType)}</td>
               <td>{row.documentId ? <button type="button" className={styles.link} aria-expanded={opened === row.documentId} onClick={() => void guard.leave(() => { setOpened(current => current === row.documentId ? undefined : row.documentId!); setEditor(undefined); })}>{row.documentNumber ?? "Xem giấy tờ"}</button> : "—"}</td>
               <td>{day(row.effectiveDate)}</td><td>{day(row.expiryDate)}</td><td>{stateLabel(row.state)}</td></tr>

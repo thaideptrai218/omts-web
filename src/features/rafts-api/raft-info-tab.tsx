@@ -9,6 +9,8 @@ import { Facts, TabFooter } from "@/features/farming-management/detail-parts";
 import { ErrorNotice, useMutation } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { RaftFormFields } from "./raft-form-fields";
+import { formatRaftSize } from "./raft-size";
+import { useCoordinateWarnings } from "@/features/farming-api/use-coordinate-warnings";
 import { DISCONTINUED, laneStatusLabel, parseRaftDetail, raftBody, raftDraftOf, raftStatusLabel, validateRaftDraft, type RaftDetail, type RaftDraft, type RaftField } from "./raft-model";
 
 const repository = createWorkspaceRepository("rafts");
@@ -19,7 +21,7 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState<RaftDraft>(() => raftDraftOf(raft));
   const [errors, setErrors] = useState<Partial<Record<RaftField, string>>>({}), [reloaded, setReloaded] = useState(false);
-  const mutation = useMutation();
+  const mutation = useMutation(), warnCoordinates = useCoordinateWarnings();
   const dirty = editing && JSON.stringify(draft) !== JSON.stringify(raftDraftOf(raft));
   useEffect(() => { dirtyRef.current = dirty; return () => { dirtyRef.current = false; }; }, [dirty, dirtyRef]);
   const discontinued = raft.statusId === DISCONTINUED, locked = busy || mutation.pending;
@@ -33,6 +35,7 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
     if (Object.keys(found).length) return;
     const result = await mutation.run(() => repository.mutate("update", raftBody(draft, raft.rowVersion), raft.id));
     if (!result) return;
+    warnCoordinates(result);
     const record = parseRaftDetail(result);
     setEditing(false);
     if (record) onSaved(record); else onReload();
@@ -40,7 +43,7 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
   return <form noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
     <fieldset disabled={locked || mutation.blocked} className="min-w-0 border-0 p-0">
       {editing ? <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={raft.id} /> : <Facts items={[
-        ["Mã bè", raft.code], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId })}>{zoneLabel}</Link>], ["Kích thước", raft.size], ["Số làn đang dùng", raft.laneCount ?? raft.lanes.length], ["Trạng thái", raftStatusLabel(raft.statusId)],
+        ["Mã bè", raft.code], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId })}>{zoneLabel}</Link>], ["Kích thước", formatRaftSize(raft.size)], ["Số làn đang dùng", raft.laneCount ?? raft.lanes.length], ["Trạng thái", raftStatusLabel(raft.statusId)],
         ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude], ["Tình trạng bè", raft.conditionNotes],
       ]} />}
     </fieldset>

@@ -121,6 +121,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Like useToast, but undefined outside a ToastProvider: for optional notices that must not break a screen rendered without one. */
+export function useOptionalToast(): ToastContextValue | undefined {
+  return useContext(ToastContext) ?? undefined;
+}
+
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
   if (!context) throw new Error("useToast must be used inside ToastProvider.");

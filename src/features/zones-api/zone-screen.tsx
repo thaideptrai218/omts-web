@@ -18,6 +18,7 @@ import { operationAllowed } from "@/features/operations/permissions";
 import styles from "@/features/farming-management/farming-management.module.css";
 import type { ZoneAccess } from "./zone-detail-panel";
 import { ZoneCreateDialog } from "./zone-create-dialog";
+import { useZoneLicenseFlags } from "./zone-license-flags";
 import { emptyZoneFilters, filterZones, licenseFilterOptions, readAllZones, sortZones, type ZoneFilters, type ZoneSortKey } from "./zone-model";
 import { useZoneLatestWater } from "./zone-latest-water";
 import { ZoneTable, zoneColumns } from "./zone-table";
@@ -49,7 +50,10 @@ function ZoneDirectory({ helpHref }: { helpHref?: string }) {
   const list = useStickyRemote(readAllZones);
   const latestWater = useZoneLatestWater(canWater && visible.includes("water"));
   const latestTimes = useMemo(() => latestWater.byZone && new Map([...latestWater.byZone].map(([id, item]) => [id, item.latestMeasuredAt] as const)), [latestWater.byZone]);
-  const rows = useMemo(() => sortZones(filterZones(list.data ?? [], filters), sort.key as ZoneSortKey, sort.direction, latestTimes), [list.data, filters, sort, latestTimes]);
+  // The list has no "missing" flag (only an expiry badge): compute it from each zone's licence overview while the column, sort or filter needs it.
+  const needLicense = owner && (visible.includes("license") || !!filters.license || sort.key === "license");
+  const licenseFlags = useZoneLicenseFlags(useMemo(() => (list.data ?? []).map(zone => zone.id), [list.data]), needLicense);
+  const rows = useMemo(() => sortZones(filterZones(list.data ?? [], filters, licenseFlags.flags), sort.key as ZoneSortKey, sort.direction, latestTimes, licenseFlags.flags), [list.data, filters, sort, latestTimes, licenseFlags.flags]);
   // A link from another screen opens its zone on whichever page it sits on, once the list is known.
   if (!linkPlaced && list.data) { setLinkPlaced(true); const index = rows.findIndex(row => row.id === linkedId); if (index >= 0) setPage(Math.floor(index / pageSize) + 1); }
   useEffect(() => {
@@ -86,7 +90,7 @@ function ZoneDirectory({ helpHref }: { helpHref?: string }) {
         : list.error && !list.data ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại" />
         : !list.data ? <ListSkeleton />
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có vùng nuôi phù hợp bộ lọc." : "Chưa có vùng nuôi."}</ListStateMessage>
-        : <ZoneTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} canLicense={owner} canWater={canWater} water={latestWater.byZone} accessFor={accessFor} guard={guard} zones={list.data}
+        : <ZoneTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} canLicense={owner} canWater={canWater} water={latestWater.byZone} licenses={licenseFlags.flags} accessFor={accessFor} guard={guard} zones={list.data}
           onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))} onChanged={changed} />}
     </ManagementScroller>
     {creating && <ZoneCreateDialog onClose={() => setCreating(false)} onCreated={() => { setCreating(false); notify({ tone: "success", title: "Đã thêm vùng nuôi." }); list.reload(); }} />}

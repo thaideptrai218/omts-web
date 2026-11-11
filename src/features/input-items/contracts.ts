@@ -35,6 +35,8 @@ export const movementKinds = ["Opening", "Receipt", "PurchaseReturn", "Issue", "
 export const movement = z.object({
   id, sequence: count.nullish(), kind: text, documentId: id.nullish(), documentCode: opt, occurredAt: text, quantity: num, balanceAfter: numOpt, unitCost: numOpt, transactionPrice: numOpt,
   partyName: opt, seedLotLineId: id.nullish(), seedLotCode: opt, reversesMovementId: id.nullish(),
+  // Issues posted by a farming record (11/11/2026): which record, so the movement can link back to it. All optional.
+  sourceKind: z.enum(["Seeding", "MaterialUsage"]).nullish().catch(undefined), sourceRecordId: id.nullish().catch(undefined), cycleId: id.nullish().catch(undefined), raftId: id.nullish().catch(undefined), zoneId: id.nullish().catch(undefined),
 });
 export const movementPage = z.object({ items: z.array(movement), page: count, pageSize: count, total: count, unit: opt });
 export const seedLots = z.object({

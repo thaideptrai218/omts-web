@@ -50,7 +50,6 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
         const plan = write(`/api/workforce/assignments/${id}/${action}`, z.strictObject({ qrCode: z.string().max(200).nullable() }), c.assignmentSchema, "AttendanceCreate"); return plan && { ...plan, expectedId: id };
       }
       if (action === "review-leave" && id && !zoneId) { const plan = write(`/api/workforce/leave-requests/${id}/review`, c.reviewLeaveSchema, c.leaveSchema, "Owner"); return plan && { ...plan, expectedId: id }; }
-      if (action === "job" && !id && !zoneId) return write("/api/workforce/job-types", z.strictObject({ name: z.string().trim().min(1).max(200) }), z.object({ id: z.guid(), name: z.string() }), "Owner");
       if (action === "settings" && !id && !zoneId) return write("/api/attendance-settings", c.saveAttendanceSettingsSchema, c.attendanceSettingsSavedSchema, "Owner");
     }
     return undefined;

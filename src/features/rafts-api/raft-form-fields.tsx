@@ -5,6 +5,7 @@ import { Field, Note, Skeleton } from "@/features/operations/ui";
 import { LocationPicker } from "@/features/farming-api/location-picker";
 import styles from "@/features/farming-management/farming-management.module.css";
 import type { RaftDraft, RaftField } from "./raft-model";
+import { RaftSizeFields } from "./raft-size-fields";
 import { useRaftLocationPins } from "./use-raft-location-pins";
 
 const labels: readonly (readonly [RaftField, string, boolean])[] = [["code", "Mã bè", true], ["size", "Kích thước", true], ["laneCount", "Số làn đang dùng", true], ["location", "Vị trí", false],
@@ -27,9 +28,10 @@ export function RaftFormFields({ draft, setDraft, errors, only, zoneId, selfId }
     {shown.length > 0 && <div className={styles.fields}>{shown.map(([key, label, required]) => {
       const common = { name: key, value: draft[key], "aria-invalid": !!errors[key], "aria-describedby": errors[key] ? `raft-error-${key}` : undefined,
         onChange: (event: { target: { value: string } }) => setDraft(current => ({ ...current, [key]: event.target.value })) };
+      if (key === "size") return <div key={key}><RaftSizeFields value={draft.size} error={errors.size} onChange={size => setDraft(current => ({ ...current, size }))} /></div>;
       return <div key={key}>
         {key === "conditionNotes" ? <Note label={label} maxLength={1000} {...common} />
-          : <Field label={required ? `${label} *` : label} required={required} maxLength={key === "location" || key === "size" ? 300 : 100} inputMode={key === "laneCount" ? "numeric" : undefined} {...common} />}
+          : <Field label={required ? `${label} *` : label} required={required} maxLength={key === "location" ? 300 : 100} inputMode={key === "laneCount" ? "numeric" : undefined} {...common} />}
         {errors[key] && <p id={`raft-error-${key}`} role="alert" className={styles.fieldError}>{errors[key]}</p>}
       </div>;
     })}</div>}

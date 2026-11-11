@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { voucherLink } from "@/features/farming-management/entity-links";
 import { Dialog } from "@/components/ui/dialog";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
@@ -102,7 +103,7 @@ function PaymentsTab({ receipt }: { receipt: Receipt }) {
   if (remote.error) return <ListStateMessage error={remote.error} onRetry={remote.reload} />;
   if (!remote.data?.length) return <p className={styles.empty}>Chưa có khoản thanh toán nào phủ phiếu này. Thanh toán tại Nhà cung cấp, mục Nợ cần trả.</p>;
   return <><div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>Mã phiếu</th><th>Thời gian</th><th>Người tạo</th><th>Phương thức</th><th>Trạng thái</th><th className={styles.num}>Tiền áp vào phiếu</th></tr></thead>
-    <tbody>{remote.data.map((payment) => <tr key={payment.id}><td>{payment.code}</td><td>{viDate(payment.date)}</td><td>{payment.createdBy}</td><td>{methodLabel[payment.method]}</td><td>{payment.statusLabel}</td><td className={styles.num}>{fmt(payment.amount)}</td></tr>)}</tbody></table></div>
+    <tbody>{remote.data.map((payment) => <tr key={payment.id}><td><Link href={voucherLink(payment.code) ?? "#"}>{payment.code}</Link></td><td>{viDate(payment.date)}</td><td>{payment.createdBy}</td><td>{methodLabel[payment.method]}</td><td>{payment.statusLabel}</td><td className={styles.num}>{fmt(payment.amount)}</td></tr>)}</tbody></table></div>
     <p className={styles.hint}>Thanh toán ghi theo nhà cung cấp và phủ các phiếu cũ trước; số tiền ở đây là phần áp vào phiếu này.</p></>;
 }
 

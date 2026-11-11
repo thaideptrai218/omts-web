@@ -20,7 +20,8 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
   try {
     const plan = planFarming(area, request.method, new URL(request.url).searchParams);
     if (!plan) return json({ status: "invalid-input", code: "MSG01" }, 400);
-    if (plan.upload) {
+    // Every write (upload or delete) is CSRF-guarded; only reads skip it.
+    if (plan.method !== "GET") {
       const guard = createCsrfGuard(process.env);
       if (guard.status !== "available") return json({ status: "unavailable" }, 503);
       const check = guard.guard.checkHeaders(request, "POST");

@@ -1,6 +1,7 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { FilterPills } from "@/components/ui/management-screen/management-layout";
 
@@ -12,11 +13,18 @@ import { CagesWithEstimatedKg } from "./harvest-quantity-cell";
 import flowStyles from "./cultivation-flow.module.css";
 import { HarvestLotPreview } from "./harvest-lot-preview";
 import { HarvestRecordsTable } from "./harvest-records-table";
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
+import { HarvestLanesBoard } from "./harvest-lanes-board";
+import { HarvestPlanSummary } from "./harvest-plan-summary";
 
 
 import * as c from "./records-contracts";
 import { HarvestForm } from "./records-harvest-form";
 import { harvestRepo, useAllowed } from "./records-shared";
+
+/** Every lane that has seed is Harvested (and at least one lane was seeded): the cycle can be closed. */
+const everySeededLaneHarvested = (lanes: z.infer<typeof c.harvestLane>[]) => lanes.some(lane => lane.state === "Harvested") && lanes.every(lane => lane.state === "Harvested" || lane.state === "NotSeeded");
 
 /** Harvest lots of a raft with search/status filters, filtered totals and an inline lot preview. */
 export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {
@@ -90,6 +98,9 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 <strong>{remote.data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng</strong>
               </span>
             </p>
+            <HarvestPlanSummary data={remote.data} />
+            <HarvestLanesBoard data={remote.data} zoneId={zoneId} raftId={raftId} canFinish={remote.data.canRecordHarvest && allowed("Create")} onChanged={remote.reload} />
+            {remote.data.cycle && everySeededLaneHarvested(remote.data.lanes) && <p role="status" className="mb-3 rounded-control border border-success/30 bg-success/5 p-3 text-sm">Tất cả làn đã thu xong. <Link href={farmingReferenceHref("cycle", { zoneId, raftId, cycleId: remote.data.cycle.id, tab: "journey" })}>Kết thúc chu kỳ</Link></p>}
             <div className={flowStyles.harvestFilters}>
               <Field
                 label="Tìm mã lô"

@@ -22,7 +22,11 @@ export function DatePickerField({ label, value, min, max, disabled, withTime, in
   const [datePart, timePart = ""] = value.split("T");
   const selected = datePart ? fromQueryDate(datePart) : undefined, limit = max ? fromQueryDate(max.slice(0, 10)) : undefined;
   const earliest = min ? fromQueryDate(min.slice(0, 10)) : undefined;
-  const [month, setMonth] = useState(() => selected ?? new Date());
+  // A birth date starts near 30 years ago; any picker whose limits span more than a year (or have no lower limit) gets year and month dropdowns.
+  const birthday = name === "birthday" || /ngày sinh/i.test(label);
+  const spanMonths = earliest && limit ? (limit.getFullYear() - earliest.getFullYear()) * 12 + limit.getMonth() - earliest.getMonth() : Infinity;
+  const dropdowns = spanMonths > 12, firstMonth = earliest ?? new Date(1940, 0, 1), lastMonth = limit ?? new Date(new Date().getFullYear() + 5, 11, 1);
+  const [month, setMonth] = useState(() => selected ?? (birthday ? new Date(new Date().getFullYear() - 30, 0, 1) : new Date()));
   const [timeDraft, setTime] = useState(timePart.slice(0, 5) || nowTime());
   const time = timePart.slice(0, 5) || timeDraft;
   const close = (returnFocus: boolean) => { setOpen(false); if (returnFocus) anchor.current?.focus(); };
@@ -37,7 +41,7 @@ export function DatePickerField({ label, value, min, max, disabled, withTime, in
     {open && <CalendarSurface inline={inlineCalendar} anchor={anchor} label={label} onClose={close}>
       <div className={styles.calendar}>
         <div className={styles.dateTime}>
-        <DayPicker mode="single" navLayout="around" locale={vi} weekStartsOn={1} month={month} onMonthChange={setMonth} selected={selected} fixedWeeks
+        <DayPicker mode="single" navLayout="around" {...(dropdowns ? { captionLayout: "dropdown" as const, startMonth: firstMonth, endMonth: lastMonth } : {})} locale={vi} weekStartsOn={1} month={month} onMonthChange={setMonth} selected={selected} fixedWeeks
           disabled={[...(limit ? [{ after: limit }] : []), ...(earliest ? [{ before: earliest }] : [])]} onSelect={(day) => { if (day) pick(day); }} />
         {withTime && <TimeColumns value={time} onChange={(clock) => { setTime(clock); if (datePart) emit(datePart, clock); }} />}
         </div>

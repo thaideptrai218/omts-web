@@ -9,9 +9,11 @@ const PERIOD_TABLE_HEADINGS = [
   "Lượt đo",
   "Độ mặn TB / thấp nhất / cao nhất (‰)",
   "Lượt đo",
+  "Nhiệt độ TB / thấp nhất / cao nhất (°C)",
+  "Lượt đo",
 ];
 
-/** Trend summary, pH + salinity charts and the per-period breakdown table. */
+/** Trend summary, pH + salinity + temperature charts and the per-period breakdown table. */
 export function WaterQualityChart({ data }: { data: WaterChartData }) {
   const readings = data.periods.reduce((sum, period) => sum + period.ph.count + period.salinity.count, 0);
   const missing = data.periods.filter((period) => period.missing).length;
@@ -52,6 +54,13 @@ export function WaterQualityChart({ data }: { data: WaterChartData }) {
           min={data.thresholds.salinityMin}
           max={data.thresholds.salinityMax}
         />
+        <IndicatorChart
+          data={data}
+          indicator="temperature"
+          title="Nhiệt độ (°C)"
+          min={data.thresholds.temperatureMin}
+          max={data.thresholds.temperatureMax}
+        />
       </div>
       <details className={styles.periodTable}>
         <summary>Số liệu chi tiết theo kỳ · {data.periods.length} kỳ</summary>
@@ -70,6 +79,10 @@ export function WaterQualityChart({ data }: { data: WaterChartData }) {
                 {period.salinity.average ?? "—"} / {period.salinity.minimum ?? "—"} / {period.salinity.maximum ?? "—"}
               </td>
               <td className="tabular-nums">{period.salinity.count}</td>
+              <td className="tabular-nums">
+                {period.temperature.average ?? "—"} / {period.temperature.minimum ?? "—"} / {period.temperature.maximum ?? "—"}
+              </td>
+              <td className="tabular-nums">{period.temperature.count}</td>
             </tr>
           ))}
         </DataTable>
@@ -80,7 +93,7 @@ export function WaterQualityChart({ data }: { data: WaterChartData }) {
 
 type IndicatorChartProps = {
   data: WaterChartData;
-  indicator: "ph" | "salinity";
+  indicator: "ph" | "salinity" | "temperature";
   title: string;
   min: number | null;
   max: number | null;

@@ -49,7 +49,9 @@ const reversed = (from: string, to: string) => from !== "" && to !== "" && Numbe
  * followed while the list is already open starts it again: the search box shows the code and that supplier's row opens.
  */
 export function SupplierScreen(props: { helpHref?: string }) {
-  const linkedCode = useSearchParams().get("code") ?? "";
+  const params = useSearchParams();
+  // ?code=NCC000002 opens that supplier; ?search=<name> (a link that only knows the name) just fills the search box.
+  const linkedCode = params.get("code") ?? params.get("search") ?? "";
   return <SupplierList key={linkedCode} linkedCode={linkedCode} {...props} />;
 }
 

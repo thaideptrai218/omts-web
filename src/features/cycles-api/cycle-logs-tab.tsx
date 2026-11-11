@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { useToast } from "@/components/ui/toast-provider";
+import { RecordHistory } from "@/features/history/record-history";
 import { TabFooter } from "@/features/farming-management/detail-parts";
 import { displayTime, ErrorNotice, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
@@ -14,7 +15,7 @@ import { logListSchema, logRequest } from "./log-repository";
 import { LogEditor, photoHref } from "./log-screen";
 
 /** One opened log at a time; its correction and removal actions belong to that detail. */
-export function CycleLogsTab({ cycleId, openCycle, canCreate, canEdit, dirtyRef }: { cycleId: string; openCycle: boolean; canCreate: boolean; canEdit: boolean; dirtyRef?: RefObject<boolean> }) {
+export function CycleLogsTab({ cycleId, zoneId, openCycle, canCreate, canEdit, dirtyRef }: { cycleId: string; zoneId?: string; openCycle: boolean; canCreate: boolean; canEdit: boolean; dirtyRef?: RefObject<boolean> }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => logRequest("list", cycleId, logListSchema, undefined, undefined, signal), [cycleId]));
   const [editor, setEditor] = useState<CultivationLog | null>(), [opened, setOpened] = useState<string>();
   const mutation = useMutation(), confirmation = useActionDialog(), { notify } = useToast();
@@ -42,6 +43,7 @@ export function CycleLogsTab({ cycleId, openCycle, canCreate, canEdit, dirtyRef 
           {opened === log.id && <tr><td colSpan={3}><section aria-label={`Nhật ký ngày ${formatVietnameseDate(log.visitDate)}`}>
             {editor?.id === log.id ? <LogEditor key={log.id} cycleId={cycleId} dirtyRef={dirtyRef} record={log} onClose={() => setEditor(undefined)} onSaved={saved} /> : <>
               <p className="whitespace-pre-wrap">{log.notes ?? "—"}</p>
+              {zoneId && <RecordHistory kind="care-log" id={log.id} zoneId={zoneId} />}
               <div>{log.photos.map((photo, index) => { const href = photoHref(photo.url); return href ? <a key={photo.key} className={`${styles.link} mr-2`} href={href} target="_blank" rel="noopener noreferrer">Ảnh {index + 1}</a> : <span key={photo.key}>Ảnh {index + 1} không khả dụng</span>; })}</div>
               {log.canCorrect && canEdit && <TabFooter left={<Button key="remove-log" type="button" className="w-auto" variant="ghost" disabled={mutation.pending || mutation.blocked} onClick={() => void remove(log)}>Gỡ nhật ký</Button>} right={<Button key="edit-log" type="button" className="w-auto" disabled={mutation.pending || mutation.blocked} onClick={() => setEditor(log)}>Chỉnh sửa</Button>} />}
             </>}

@@ -1,5 +1,6 @@
 "use client";
 import { useToast } from "@/components/ui/toast-provider";
+import { useActionDialog } from "@/components/ui/use-action-dialog";
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ const MAX_PHOTO = 10 * 1024 * 1024, MAX_PHOTOS = 3;
 export function RaftPhotoTab({ raftId, canEdit }: { raftId: string; canEdit: boolean }) {
   const repository = useMemo(() => createOperationsRepository("raft-details"), []), mutation = useMutation();
   const [saved, setSaved] = useState<Raft>(), [latest, setLatest] = useState<Raft>(), [file, setFile] = useState<File>(), [fileError, setFileError] = useState<string>(), [fileKey, setFileKey] = useState(0);
-  const { notify } = useToast();
+  const { notify } = useToast(), confirmation = useActionDialog();
   const detail = useRemote(useCallback((signal: AbortSignal) => repository.read("detail", { id: raftId }, raftSchema, signal), [repository, raftId]));
   const record = saved ?? detail.data;
   async function upload() {
@@ -24,14 +25,21 @@ export function RaftPhotoTab({ raftId, canEdit }: { raftId: string; canEdit: boo
     const result = await mutation.run(() => repository.upload("upload-photo", [file], {}, raftSchema, raftId));
     if (result) { notify({ tone: "success", title: `Đã thêm ảnh bè ${result.code}.` }); setSaved(result); setFile(undefined); setFileKey(value => value + 1); }
   }
+  async function removePhoto(photo: Raft["photos"][number]) {
+    if (!canEdit || mutation.busy() || mutation.blocked) return;
+    if (!(await confirmation.confirm(`Xóa ảnh ${photo.sortOrder} của bè? Ảnh bị xóa khỏi hồ sơ bè và không khôi phục được.`))) return;
+    const result = await mutation.run(() => repository.post("delete-photo", { id: raftId, photoId: photo.id }, raftSchema));
+    if (result) { notify({ tone: "success", title: `Đã xóa ảnh bè ${result.code}.` }); setSaved(result); setFile(undefined); setFileKey(value => value + 1); }
+  }
   if (detail.loading) return <Skeleton />;
   if (detail.error || !record) return <ListStateMessage error={detail.error ?? "Không tải được ảnh và làn của bè."} onRetry={detail.reload} retryLabel="Tải lại" />;
   const canAdd = canEdit && record.photos.length < MAX_PHOTOS;
   return <form noValidate onSubmit={event => { event.preventDefault(); void upload(); }}>
+    {confirmation.dialog}
     <ErrorNotice error={mutation.error || fileError} />
     {saved && <p role="status" className={styles.hint}>Đã cập nhật ảnh bè.</p>}
     {record.photos.length ? <ul className="grid gap-3 sm:grid-cols-3" aria-label="Ảnh bè">{record.photos.map(photo => <li key={photo.id}><a href={photo.url} target="_blank" rel="noreferrer" className={styles.link}>
-      <Image key={record.rowVersion} src={photo.url} alt={`Ảnh ${photo.sortOrder} của bè ${record.code}`} width={600} height={400} unoptimized className="max-h-48 w-full rounded-control object-contain" />Xem ảnh gốc</a></li>)}</ul>
+      <Image key={record.rowVersion} src={photo.url} alt={`Ảnh ${photo.sortOrder} của bè ${record.code}`} width={600} height={400} unoptimized className="max-h-48 w-full rounded-control object-contain" />Xem ảnh gốc</a>{canEdit && <Button key={`delete-photo-${photo.id}`} type="button" variant="ghost" className="mt-1 w-auto" disabled={mutation.pending || mutation.blocked} onClick={() => void removePhoto(photo)}>Xóa ảnh {photo.sortOrder}</Button>}</li>)}</ul>
       : <p className={styles.hint}>Chưa có ảnh bè.</p>}
     {canEdit && !canAdd && <p className={styles.hint}>Bè đã có đủ {MAX_PHOTOS} ảnh.</p>}
     {canAdd && <fieldset disabled={mutation.pending || mutation.blocked} className="mt-3 min-w-0 border-0 p-0">

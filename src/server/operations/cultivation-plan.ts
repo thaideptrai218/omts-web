@@ -3,6 +3,7 @@ import { z } from "zod";
 import { cycle, cycleSummary, cycleValues, zoneCycle } from "@/features/cultivation-api/contracts";
 import { raftProgress, laneProgress } from "@/features/cultivation-api/records-contracts";
 import { cultivationLog } from "@/features/cultivation-api/logs-contracts";
+import { historyList } from "@/features/history/history-contracts";
 import type { OperationPlan } from "./operation-plan";
 export function cultivationPlan(method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   const base = { area: "cultivation-cycles" as const };
@@ -10,6 +11,11 @@ export function cultivationPlan(method: string, query: URLSearchParams, input?: 
   if (method === "POST" && !query.size) {
     const remove = z.strictObject({ action: z.literal("log-remove"), id: z.guid(), zoneId: z.guid(), body: z.strictObject({ reason: z.string().trim().min(1).max(1000) }) }).safeParse(input);
     if (remove.success) return { ...base, action: "log-remove", method: "POST", zoneId: remove.data.zoneId, permission: "LogsEdit", path: `/api/cultivation-logs/${remove.data.id}/remove`, body: remove.data.body, schema: z.object({ done: z.literal(true) }), noContent: true };
+  }
+  if (method === "GET" && query.get("action") === "log-history") {
+    const q = z.strictObject({ action: z.literal("log-history"), id: z.guid(), zoneId: z.guid() }).safeParse(Object.fromEntries(query));
+    if (!q.success) return;
+    return { ...base, action: "log-history", zoneId: q.data.zoneId, permission: "LogsView", method: "GET", path: `/api/cultivation-logs/${q.data.id}/history`, schema: historyList };
   }
   if (method === "GET" && ["logs", "log-photo"].includes(query.get("action") ?? "")) {
     const q = z.strictObject({ action: z.enum(["logs", "log-photo"]), id: z.guid(), zoneId: z.guid(), index: z.string().regex(/^[0-9]$/).optional() }).safeParse(Object.fromEntries(query));

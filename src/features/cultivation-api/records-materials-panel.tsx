@@ -2,8 +2,10 @@
 import { useSearchParams } from "next/navigation";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { z } from "zod";
+import { RecordHistory } from "@/features/history/record-history";
 import Link from "next/link";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
+import { cycleJourneyLink } from "@/features/farming-management/entity-links";
 import { Button } from "@/components/ui/button";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { DataTable, ErrorNotice, Paging, Skeleton, displayTime, useRemote } from "@/features/operations/ui";
@@ -160,6 +162,14 @@ function MaterialGroup({
                         <dt>Bè sử dụng</dt>
                         <dd><Link href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>{row.raftCode}</Link></dd>
                       </div>
+                      {row.issueCode && <div>
+                        <dt>Phiếu xuất kho</dt>
+                        <dd><Link href={farmingReferenceHref("inputUse", { code: row.issueCode })}>{row.issueCode}</Link></dd>
+                      </div>}
+                      {row.cycleId && <div>
+                        <dt>Chu kỳ nuôi</dt>
+                        <dd><Link href={cycleJourneyLink({ zoneId, raftId: row.raftId, cycleId: row.cycleId }) ?? "#"}>Xem hành trình chu kỳ</Link></dd>
+                      </div>}
                       <div>
                         <dt>Số lượng</dt>
                         <dd>
@@ -180,6 +190,7 @@ function MaterialGroup({
                       </div>
                     </dl>
                     {!row.canEdit && <p>Bản ghi này hiện chỉ được xem.</p>}
+                    <RecordHistory kind="material-usages" id={row.id} zoneId={zoneId} />
                     <footer>
                       {canEdit && row.canEdit && (
                         <Button type="button" className="w-auto" onClick={() => onSelect(row)}>

@@ -14,12 +14,14 @@ import { lotTracingUpload, lotTracingUploadActions } from "./lot-tracing-upload-
 import { claimUpload, claimUploadActions } from "./claim-upload-plan";
 import { handleFarmingRequest } from "../farming/farming-http";
 import { handleEmployeeApi } from "../employees/employee-api-http";
-import { harvestValues, harvestCorrection, harvestDetail } from "@/features/cultivation-api/records-contracts";
+import { readFarmingProblem } from "../backend/farming-problem-copy";
+import { harvestValues, harvestCorrection, harvestSaved, harvestCorrected } from "@/features/cultivation-api/records-contracts";
 import { cultivationLog, logValues, logCorrection } from "@/features/cultivation-api/logs-contracts";
 export { localFileTarget } from "./evidence-target";
 
 const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: responseHeaders });
+const farmingAreas = new Set<string>(["harvest", "seeding", "material-usages", "cultivation-cycles"]);
 const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", "harvest-record", "harvest-correct", "log-record", "log-correct", ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
 
 function browserFiles(value: unknown): unknown {
@@ -71,10 +73,10 @@ export async function handleOperationRequest(request: Request, areaName: string)
         if (area.data === "lot-tracing" && upload.id) plan = lotTracingUpload(upload.action, upload.id)?.plan;
         if (area.data === "claim-reports" && upload.id) plan = claimUpload(upload.action, upload.id)?.plan;
         if (area.data === "harvest" && upload.action === "harvest-record" && upload.id && upload.zoneId) {
-          plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/rafts/${upload.id}/harvest-lots`, method: "POST", permission: "Create", schema: z.object({ lot: z.object({ id: z.guid(), lotCode: z.string() }) }) };
+          plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/rafts/${upload.id}/harvest-lots`, method: "POST", permission: "Create", schema: harvestSaved };
         }
         if (area.data === "harvest" && upload.action === "harvest-correct" && upload.id && upload.zoneId) {
-          plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/harvest-lots/${upload.id}`, method: "PUT", permission: "Edit", schema: z.object({ lot: harvestDetail }) };
+          plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/harvest-lots/${upload.id}`, method: "PUT", permission: "Edit", schema: harvestCorrected };
         }
         if (area.data === "purchase-receipts" && upload.action === "invoice-photos" && upload.id) {
           plan = { area: area.data, action: upload.action, path: `/api/purchase-receipts/${upload.id}/invoice-photos`, method: "POST", permission: "Edit", schema: c.receiptSchema };
@@ -164,6 +166,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
         headers: { Accept: plan.file === "export" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/json",
           Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(typeof payload === "string" ? { "Content-Type": "application/json" } : {}) }, body: payload });
       let data: unknown;
+      const failedCopy = upstream.ok ? undefined : upstream.clone();
       let bytes: Uint8Array | undefined;
       let contentType = upstream.headers.get("content-type")?.split(";")[0];
       if (plan.file === "export" && upstream.ok) {
@@ -172,7 +175,11 @@ export async function handleOperationRequest(request: Request, areaName: string)
       } else if (plan.noContent && upstream.status === 204) data = { done: true };
       else {
         const result = await readBackendResponse(upstream, "profileRead", false, ["sales-invoices", "customer-payments", "sales-invoice-list"].includes(area.data));
-        if (result.status === "http-error") return json({ status: "rejected", code: result.code, ...(result.invoiceConfirmation ? { invoiceConfirmation: result.invoiceConfirmation } : {}) }, result.httpStatus);
+        if (result.status === "http-error") {
+          // Nuôi trồng questions and stock checks (MSG-GEN-04, MSG-CYCLE-01/07, MSG-INPUT-01) travel as an allow-listed problem.
+          const problem = farmingAreas.has(area.data) ? await readFarmingProblem(failedCopy) : undefined;
+          return json({ status: "rejected", code: result.code, ...(problem ? { problem } : {}), ...(result.invoiceConfirmation ? { invoiceConfirmation: result.invoiceConfirmation } : {}) }, result.httpStatus);
+        }
         if (result.status !== "success" || ![200, 201, 202].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
         const parsed = plan.schema.safeParse(result.data);
         if (!parsed.success) return json({ status: "invalid-response" }, 502);

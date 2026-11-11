@@ -83,6 +83,7 @@ export function projectResource(resource: ResourceKey, data: unknown, detail: bo
   query?: { page: number; pageSize: number; search?: string }): unknown | undefined {
   if (detail) {
     const value = data && typeof data === "object" && resource === "employees" && "employee" in data ? data.employee
+      : data && typeof data === "object" && resource === "zones" && "zone" in data ? data.zone
       : data && typeof data === "object" && resource === "rafts" && "raft" in data ? data.raft
       : data && typeof data === "object" && resource === "customers" && "customer" in data ? data.customer : data;
     const parsed = detailSchemas[resource].safeParse(value);

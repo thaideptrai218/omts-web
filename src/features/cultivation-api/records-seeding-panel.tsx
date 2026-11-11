@@ -10,6 +10,7 @@ import { DataTable, ErrorNotice, Paging, Skeleton, displayTime, useRemote } from
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import flowStyles from "./cultivation-flow.module.css";
 import * as c from "./records-contracts";
+import { RecordHistory } from "@/features/history/record-history";
 import { CompleteSeeding } from "./records-complete-seeding-dialog";
 import { SeedingForm } from "./records-seeding-form";
 import { seedRepo, useAllowed } from "./records-shared";
@@ -104,7 +105,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
                             <div>
                               <dt>Lô giống</dt>
                               <dd>
-                                {v.seedLot.code} · {v.seedLot.itemName ?? "Giống"}
+                                {v.seedLot.code} · {v.seedLot.itemCode ? <Link href={farmingReferenceHref("inputItem", { code: v.seedLot.itemCode })}>{v.seedLot.itemName ?? v.seedLot.itemCode}</Link> : v.seedLot.itemName ?? "Giống"}
                               </dd>
                             </div>
                             <div>
@@ -113,8 +114,12 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
                             </div>
                             <div>
                               <dt>Nhà cung cấp</dt>
-                              <dd>{v.seedLot.supplierName}</dd>
+                              <dd><Link href={farmingReferenceHref("supplier", { search: v.seedLot.supplierName })}>{v.seedLot.supplierName}</Link></dd>
                             </div>
+                            {v.issueCode && <div>
+                              <dt>Phiếu xuất kho</dt>
+                              <dd><Link href={farmingReferenceHref("inputUse", { code: v.issueCode })}>{v.issueCode}</Link></dd>
+                            </div>}
                             <div>
                               <dt>Làn đã thả</dt>
                               <dd>{v.laneNumbers.join(", ")}</dd>
@@ -136,6 +141,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
                           {!v.canCorrect && (
                             <p>Bản ghi đã khóa theo trạng thái chu kỳ hoặc lô thu hoạch; hiện chỉ được xem.</p>
                           )}
+                          <RecordHistory kind="seeding" id={v.id} zoneId={zoneId} />
                           <footer>
                             {v.canCorrect && (allowed("Edit") || allowed("Delete")) && (
                               <Button type="button" className="w-auto" onClick={() => setSelected(v)}>

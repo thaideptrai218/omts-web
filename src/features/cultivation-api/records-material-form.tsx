@@ -8,6 +8,7 @@ import { loadOptions } from "@/features/operations/lookups";
 import { Field, Note, Select, businessToday, useRemote } from "@/features/operations/ui";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import * as c from "./records-contracts";
+import { farmingErrorText } from "./farming-error-text";
 import { EditorFrame, materialRepo } from "./records-shared";
 
 /** Records several material lines for one repair job, or corrects a single saved line (with a reason). */
@@ -51,6 +52,8 @@ export function MaterialForm({
   const unitOf = (itemId: string) => String(items.data?.find((v) => v.id === itemId)?.unit ?? (record?.itemId === itemId ? record.unit : "đơn vị"));
   const { notify } = useToast();
   const editor = useOperationEditor(onClose, dirty);
+  // Stock check (409 MSG-INPUT-01): on hand and balance after, in the unit of the item the backend names.
+  const stockError = editor.mutation.failure ? farmingErrorText(editor.mutation.failure, editor.mutation.failure.problem?.itemId ? unitOf(editor.mutation.failure.problem.itemId) : undefined) : undefined;
   const editable = record ? record.canEdit && allowed("Edit") : allowed("Create");
   async function save() {
     const parsed = c.materialValues.safeParse({
@@ -90,7 +93,7 @@ export function MaterialForm({
       inline={!!record}
       title={record ? "Bản ghi sử dụng vật tư" : "Ghi nhận sử dụng vật tư"}
       editor={editor}
-      error={error || items.error}
+      error={error || stockError || items.error}
     >
       <form
         onSubmit={(e) => {
@@ -169,6 +172,9 @@ export function MaterialForm({
             </Button>
           )}</div>
       </form>
+      {record?.canEdit && allowed("Delete") && <Button type="button" className="mt-3" variant="secondary" disabled={editor.disabled || !reason.trim()} onClick={async () => {
+        if (await editor.submit(`Xóa lần sử dụng ${record.itemCode}? Vật tư được trả về kho và lý do được lưu trong nhật ký.`, () => materialRepo.write("remove", { reason, rowVersion: record.rowVersion }, z.object({ done: z.literal(true) }), record.id, zoneId))) { notify({ tone: "success", title: `Đã xóa lần sử dụng ${record.itemCode}.` }); onSaved(); }
+      }}>Xóa lần sử dụng</Button>}
       {items.error && (
         <Button type="button" variant="secondary" onClick={items.reload}>
           Tải lại vật tư

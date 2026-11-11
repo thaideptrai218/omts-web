@@ -9,6 +9,7 @@ import { useStickyRemote } from "@/features/farming-management/use-sticky-remote
 import { businessToday, ErrorNotice, Field, Skeleton, useMutation } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { RecordHistory } from "@/features/history/record-history";
 import { planBody, planDraftOf, validatePlan, type CycleRow, type PlanDraft, type PlanField } from "./cycle-model";
 import { cycleProgress } from "./contracts";
 import { readCycles, writeCycle } from "./repository";
@@ -58,6 +59,7 @@ export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleR
           ["Ngày thu hoạch dự kiến", day(cycle.expectedHarvestDate) ?? "Chưa lập"], ["Sản lượng mục tiêu", cycle.targetYieldKg === null ? "Chưa lập" : `${cycle.targetYieldKg.toLocaleString("vi-VN")} kg`],
           ["Thả giống hoàn tất", day(cycle.seedingCompletedOn)], ["Ngày đóng", day(cycle.closeDate)], ["Đánh giá", cycle.assessment]]} />}
     </fieldset>
+    {cycle && <RecordHistory kind="cycle" id={cycle.id} zoneId="" />}
     <ErrorNotice error={mutation.error || current.error} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Hãy tải lại chu kỳ và đối chiếu trước khi lưu lại. Nội dung đang nhập vẫn được giữ.</p><div>
       <Button key="reload" type="button" className="w-auto" variant="secondary" disabled={current.loading} onClick={() => { current.reload(); setReloaded(true); }}>Tải chu kỳ mới để đối chiếu</Button>

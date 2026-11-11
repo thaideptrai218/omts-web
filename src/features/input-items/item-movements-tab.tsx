@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { movementSourceLink } from "@/features/farming-management/entity-links";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -38,9 +39,9 @@ export function ItemMovementsTab({ itemId, canExport }: { itemId: string; canExp
       </tr></thead><tbody>{data.items.map((row) => {
         const href = movementHref(row.kind, row.documentCode);
         // The opening row has no document: its stored code is the item's own.
-        const code = row.kind === "Opening" ? undefined : row.documentCode;
+        const code = row.kind === "Opening" ? undefined : row.documentCode, source = movementSourceLink(row);
         return <tr key={row.id} className={row.reversesMovementId ? styles.reversed : undone.has(row.id) ? styles.undone : undefined}>
-          <td>{href ? <Link className={styles.link} href={href}>{code}</Link> : code ?? "—"}</td>
+          <td>{href ? <Link className={styles.link} href={href}>{code}</Link> : code ?? "—"}{source && <><br /><Link className={styles.link} href={source.href}>{source.label}</Link></>}</td>
           <td>{viDateTime(row.occurredAt)}</td><td>{movementKindLabel[row.kind] ?? row.kind}</td><td>{row.partyName || "—"}</td><td>{row.seedLotCode || "—"}</td>
           <td className={styles.num}>{row.transactionPrice == null ? "—" : fmt(row.transactionPrice)}</td><td className={styles.num}>{row.unitCost == null ? "—" : fmt(row.unitCost)}</td>
           <td className={`${styles.num} ${row.quantity < 0 ? styles.neg : ""}`}>{signed(row.quantity, fmt)}</td><td className={styles.num}>{row.balanceAfter == null ? "—" : fmt(row.balanceAfter)}</td>
