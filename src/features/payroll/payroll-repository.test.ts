@@ -26,6 +26,8 @@ it("passes the employee filter and the slip status to the BFF query", async () =
   state.read.mockResolvedValue({ status: "success", data: {} });
   await payrollRepository.payments({ search: "", from: "", to: "", page: 1, pageSize: 15, employeeId: "e1" });
   expect(state.read).toHaveBeenLastCalledWith("list", expect.objectContaining({ employeeId: "e1" }), expect.anything(), undefined);
+  await payrollRepository.payments({ search: "", from: "", to: "", page: 1, pageSize: 100, payrollId: "p1", method: "Cash", kind: "", status: "Recorded" });
+  expect(state.read).toHaveBeenLastCalledWith("list", expect.objectContaining({ payrollId: "p1", method: "Cash", kind: undefined, status: "Recorded", pageSize: "100" }), expect.anything(), undefined);
   await payrollRepository.employeeSlips("e1", { status: "Finalized", page: 1, pageSize: 100 });
   expect(state.read).toHaveBeenLastCalledWith("employee-slips", { id: "e1", status: "Finalized", page: "1", pageSize: "100" }, expect.anything(), undefined);
 });

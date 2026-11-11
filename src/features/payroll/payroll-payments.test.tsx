@@ -27,7 +27,9 @@ it("pay pop-up: default amount is what is owed, finished slips are disabled, par
   const onPaid = vi.fn(), user = userEvent.setup();
   render(<PayrollPayDialog sheet={finalized} onClose={vi.fn()} onPaid={onPaid} />);
   const dialog = screen.getByRole("dialog", { name: "Thanh toán lương" });
-  for (const heading of ["Mã phiếu lương", "Nhân viên", "Còn cần trả", "Tiền trả nhân viên"]) expect(within(dialog).getByRole("columnheader", { name: heading })).toBeTruthy();
+  for (const heading of ["Mã phiếu lương", "Nhân viên", "Lương thực nhận", "Đã trả", "Còn cần trả", "Tiền trả nhân viên"]) expect(within(dialog).getByRole("columnheader", { name: heading })).toBeTruthy();
+  expect(within(dialog).getByLabelText("Bảng lương cần thanh toán").textContent).toContain("BL000001 · Bảng lương tháng 5/2026");
+  expect(within(dialog).getByLabelText("Bảng lương cần thanh toán").textContent).toContain("01/05/2026 - 31/05/2026");
   expect(within(dialog).getByLabelText("Tiền trả Nguyễn Văn A")).toHaveProperty("value", "2000000");
   expect((within(dialog).getByLabelText("Tiền trả Trần Thị B") as HTMLInputElement).disabled).toBe(true);
   expect((within(dialog).getByRole("checkbox", { name: "Trả Trần Thị B" }) as HTMLInputElement).disabled).toBe(true);
@@ -94,9 +96,11 @@ it("payments list shows wage payments and advances, searches and reports API err
   const user = userEvent.setup();
   render(<PayrollPaymentsScreen />);
   const table = await screen.findByRole("table", { name: "Phiếu chi lương" });
-  for (const heading of ["Mã phiếu chi", "Thời gian", "Nhân viên", "Bảng lương", "Phương thức", "Số tiền", "Trạng thái"]) expect(within(table).getByRole("columnheader", { name: heading })).toBeTruthy();
+  for (const heading of ["Mã phiếu chi", "Thời gian", "Nhân viên", "Bảng lương", "Loại", "Phương thức", "Số tiền", "Trạng thái"]) expect(within(table).getByRole("columnheader", { name: heading })).toBeTruthy();
   expect(within(table).getByText("BL000001")).toBeTruthy();
   expect(within(table).getByText("Tạm ứng")).toBeTruthy();
+  expect(within(table).getByText("Trả lương")).toBeTruthy();
+  expect(screen.getByTestId("payments-totals").textContent).toContain("500.000");
   expect(within(table).getByText("Tiền mặt")).toBeTruthy();
   expect(within(table).getByText("Chuyển khoản")).toBeTruthy();
   expect(within(table).getByText("Đã chi")).toBeTruthy();
@@ -139,4 +143,47 @@ it("standalone payment: server search by name, and the advance option lists ever
   await waitFor(() => expect(state.repo.payStandalone).toHaveBeenCalledWith(expect.objectContaining({ employeeId: ids.empB, amount: 300_000, method: "Cash", note: "" })));
   expect(await screen.findByText("Đã tạo phiếu chi. Phiếu chi xuất hiện trong Sổ quỹ.")).toBeTruthy();
   await waitFor(() => expect(state.repo.payments.mock.calls.length).toBeGreaterThan(1));
+});
+
+it("payments list: filters by loại, phương thức and trạng thái go to the server, and reset clears them", async () => {
+  state.repo.payments.mockResolvedValue(ok({ items: [payment()], total: 1, page: 1, pageSize: 15 }));
+  const user = userEvent.setup();
+  render(<PayrollPaymentsScreen />);
+  await screen.findByRole("table", { name: "Phiếu chi lương" });
+  await user.selectOptions(screen.getByRole("combobox", { name: "Loại" }), "Advance");
+  await waitFor(() => expect(state.repo.payments.mock.calls.at(-1)![0]).toMatchObject({ kind: "Advance", page: 1 }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Phương thức" }), "BankTransfer");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Trạng thái" }), "Cancelled");
+  await waitFor(() => expect(state.repo.payments.mock.calls.at(-1)![0]).toMatchObject({ kind: "Advance", method: "BankTransfer", status: "Cancelled" }));
+  await user.click(screen.getByRole("button", { name: "Đặt lại" }));
+  await waitFor(() => expect(state.repo.payments.mock.calls.at(-1)![0]).toMatchObject({ kind: "", method: "", status: "" }));
+});
+
+it("payments list: the totals row uses the backend summary, else sums the recorded vouchers of the page", async () => {
+  const items = [payment(), payment({ id: ids.b, voucherCode: "PC000002", amount: 300_000, status: "Cancelled" })];
+  state.repo.payments.mockResolvedValue(ok({ items, total: 2, page: 1, pageSize: 15 }));
+  const first = render(<PayrollPaymentsScreen />);
+  expect((await screen.findByTestId("payments-totals")).textContent).toContain("500.000");
+  expect(screen.getByTestId("payments-totals").textContent).toContain("trang này");
+  first.unmount();
+  state.repo.payments.mockResolvedValue(ok({ items, total: 2, page: 1, pageSize: 15, summary: { amount: 9_000_000 } }));
+  render(<PayrollPaymentsScreen />);
+  await waitFor(() => expect(screen.getByTestId("payments-totals").textContent).toContain("9.000.000"));
+  expect(screen.getByTestId("payments-totals").textContent).not.toContain("trang này");
+});
+
+it("payments list: a row opens its voucher in place with links to the sheet and the employee; an advance names no sheet", async () => {
+  state.repo.payments.mockResolvedValue(ok({ items: [payment(), payment({ id: ids.b, voucherCode: "PC000002", kind: "Advance", payrollId: null, payrollCode: null })], total: 2, page: 1, pageSize: 15 }));
+  const user = userEvent.setup();
+  render(<PayrollPaymentsScreen />);
+  const open = await screen.findByRole("button", { name: "Mở phiếu chi PC000001" });
+  expect(open.getAttribute("aria-expanded")).toBe("false");
+  await user.click(open);
+  const detailPanel = await screen.findByRole("region", { name: "Chi tiết phiếu chi PC000001" });
+  expect(within(detailPanel).getByRole("link", { name: "BL000001" }).getAttribute("href")).toBe(`/operations/payroll?recordId=${ids.a}&search=BL000001`);
+  expect(within(detailPanel).getByRole("link", { name: "Nguyễn Văn A" }).getAttribute("href")).toContain(`/workspace/employees?recordId=${ids.empA}`);
+  await user.click(screen.getByRole("button", { name: "Mở phiếu chi PC000002" }));
+  expect((await screen.findByRole("region", { name: "Chi tiết phiếu chi PC000002" })).textContent).toContain("Tạm ứng ngoài bảng lương");
+  await user.click(screen.getByRole("button", { name: "Thu gọn phiếu chi PC000002" }));
+  expect(screen.queryByRole("region", { name: "Chi tiết phiếu chi PC000002" })).toBeNull();
 });

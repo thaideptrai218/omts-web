@@ -12,6 +12,10 @@ const payments = createOperationsRepository("payroll-payments");
 export type SheetQuery = Readonly<{
   search: string; periodType: "" | c.PeriodType; statuses: readonly c.PayrollStatus[]; sortBy: string; sortDir: "asc" | "desc"; page: number; pageSize: number;
 }>;
+export type PaymentQuery = Readonly<{
+  search: string; from: string; to: string; page: number; pageSize: number; employeeId?: string; payrollId?: string;
+  method?: "" | c.PaymentMethod; kind?: "" | c.PaymentKind; status?: "" | c.PaymentStatus;
+}>;
 const filters = (q: Pick<SheetQuery, "search" | "periodType" | "statuses" | "sortBy" | "sortDir">): Query => ({
   search: q.search.trim() || undefined, periodType: q.periodType || undefined, status: q.statuses.join(",") || undefined, sortBy: q.sortBy, sortDir: q.sortDir,
 });
@@ -39,8 +43,9 @@ export const payrollRepository = {
   exportSheet: (id: string) => sheets.download({ id }),
   exportList: (q: SheetQuery) => sheets.download(filters(q)),
 
-  payments: (query: { search: string; from: string; to: string; page: number; pageSize: number; employeeId?: string }, signal?: AbortSignal) =>
-    orEmpty(payments.read("list", { search: query.search.trim() || undefined, employeeId: query.employeeId, from: query.from || undefined, to: query.to || undefined, page: String(query.page), pageSize: String(query.pageSize) }, c.paymentPage, signal),
+  payments: (query: PaymentQuery, signal?: AbortSignal) =>
+    orEmpty(payments.read("list", { search: query.search.trim() || undefined, employeeId: query.employeeId, payrollId: query.payrollId, method: query.method || undefined, kind: query.kind || undefined, status: query.status || undefined,
+      from: query.from || undefined, to: query.to || undefined, page: String(query.page), pageSize: String(query.pageSize) }, c.paymentPage, signal),
       { ...emptyPage, pageSize: query.pageSize }),
   payable: (search: string, includeAll: boolean, signal?: AbortSignal) => payments.read("payable", { search: search.trim() || undefined, includeAll: includeAll ? "true" : undefined }, c.payableEmployees, signal),
   payStandalone: (body: c.StandalonePaymentBody) => payments.write("create", body, c.standalonePaymentResult),

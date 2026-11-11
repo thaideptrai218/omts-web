@@ -17,6 +17,7 @@ import styles from "@/features/farming-management/farming-management.module.css"
 import type { ZoneAccess } from "./zone-detail-panel";
 import { ZoneCreateDialog } from "./zone-create-dialog";
 import { emptyZoneFilters, filterZones, licenseFilterOptions, readAllZones, sortZones, type ZoneFilters, type ZoneSortKey } from "./zone-model";
+import { useZoneLatestWater } from "./zone-latest-water";
 import { ZoneTable, zoneColumns } from "./zone-table";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -26,18 +27,23 @@ export function ZoneScreen({ helpHref }: { helpHref?: string }) {
   const functions = permissions.functionPermissions, owner = identity.subjectType === "CooperativeOwner";
   const canView = resourceAllowed("zones", identity, functions), canCreate = resourceAllowed("zones", identity, functions, "Create");
   const accessFor = (zoneId: string): ZoneAccess => ({ edit: resourceAllowed("zones", identity, functions, "Edit"), rafts: resourceAllowed("rafts", identity, functions),
-    licenses: owner, staff: owner, cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), water: operationAllowed("water", identity, functions, "View", zoneId) });
+    licenses: owner, staff: owner, cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), water: operationAllowed("water", identity, functions, "View", zoneId), yield: operationAllowed("harvest-yield", identity, functions, "View", zoneId),
+    raft: { edit: resourceAllowed("rafts", identity, functions, "Edit"), photoEdit: owner, cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), costs: operationAllowed("purchase-receipts", identity, functions, "View", zoneId) } });
   const params = useSearchParams(), recordId = params.get("recordId") ?? "", linkedId = UUID.test(recordId) ? recordId : undefined;
   const [filters, setFilters] = useState<ZoneFilters>({ ...emptyZoneFilters, search: params.get("search") ?? "" });
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "asc" });
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
   const [creating, setCreating] = useState(false), [mapOpen, setMapOpen] = useState(false), [notice, setNotice] = useState<string>();
   const guard = useUnsavedGuard();
-  const offered = zoneColumns.filter(column => !column.licenseOnly || owner);
-  const [storedColumns, storeColumns] = useStoredValue("omts-columns-zones", offered.map(column => column.key).join(","));
+  const canWater = operationAllowed("water", identity, functions, "View");
+  const offered = zoneColumns.filter(column => (!column.licenseOnly || owner) && (!column.waterOnly || canWater));
+  // Extra columns start hidden; the chooser remembers what the user turns on.
+  const [storedColumns, storeColumns] = useStoredValue("omts-columns-zones", offered.filter(column => !column.waterOnly).map(column => column.key).join(","));
   const visible = offered.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);
   const list = useStickyRemote(readAllZones);
-  const rows = useMemo(() => sortZones(filterZones(list.data ?? [], filters), sort.key as ZoneSortKey, sort.direction), [list.data, filters, sort]);
+  const latestWater = useZoneLatestWater(canWater && visible.includes("water"));
+  const latestTimes = useMemo(() => latestWater.byZone && new Map([...latestWater.byZone].map(([id, item]) => [id, item.latestMeasuredAt] as const)), [latestWater.byZone]);
+  const rows = useMemo(() => sortZones(filterZones(list.data ?? [], filters), sort.key as ZoneSortKey, sort.direction, latestTimes), [list.data, filters, sort, latestTimes]);
   // A link from another screen opens its zone on whichever page it sits on, once the list is known.
   if (!linkPlaced && list.data) { setLinkPlaced(true); const index = rows.findIndex(row => row.id === linkedId); if (index >= 0) setPage(Math.floor(index / pageSize) + 1); }
   useEffect(() => {
@@ -75,7 +81,7 @@ export function ZoneScreen({ helpHref }: { helpHref?: string }) {
         : list.error && !list.data ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại" />
         : !list.data ? <ListSkeleton />
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có vùng nuôi phù hợp bộ lọc." : "Chưa có vùng nuôi."}</ListStateMessage>
-        : <ZoneTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} canLicense={owner} accessFor={accessFor} guard={guard} zones={list.data}
+        : <ZoneTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} canLicense={owner} canWater={canWater} water={latestWater.byZone} accessFor={accessFor} guard={guard} zones={list.data}
           onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))} onChanged={changed} />}
     </ManagementScroller>
     {creating && <ZoneCreateDialog onClose={() => setCreating(false)} onCreated={() => { setCreating(false); setNotice("Đã thêm vùng nuôi."); list.reload(); }} />}

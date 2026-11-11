@@ -22,10 +22,10 @@ export function ZoneStaffTab({ zoneId }: { zoneId: string }) {
     {remote.loading ? <Skeleton /> : remote.error || !remote.data ? <ListStateMessage error={remote.error ?? "Không tải được danh sách nhân viên."} onRetry={remote.reload} retryLabel="Tải lại" />
       : remote.data.items.length === 0 ? <p className={styles.hint}>Chưa có nhân viên {statusId === "401" ? "đang làm việc" : "đã nghỉ việc"} ở vùng này.</p>
       : <>
-        <table className={styles.subTable}><thead><tr><th scope="col">Họ và tên</th><th scope="col">Số điện thoại</th><th scope="col">Loại nhân viên</th><th scope="col">Tình trạng</th></tr></thead>
+        <table className={styles.subTable}><thead><tr><th scope="col">Họ và tên</th><th scope="col">Số điện thoại</th><th scope="col">Loại nhân viên</th><th scope="col">Công việc</th><th scope="col">Tình trạng</th></tr></thead>
           <tbody>{remote.data.items.map(employee => <tr key={employee.id}>
             <td><Link className={styles.link} href={`/employees?recordId=${encodeURIComponent(employee.id)}&search=${encodeURIComponent(employee.fullName)}`}>{employee.fullName}</Link></td>
-            <td>{employee.phoneNumber ?? "—"}</td><td>{employeeTypeLabel(employee.employeeType)}</td>
+            <td>{employee.phoneNumber ?? "—"}</td><td>{employeeTypeLabel(employee.employeeType)}</td><td>{employee.jobTypes.map(job => job.name).join(", ") || "—"}</td>
             <td><StatusPill tone={employee.status === "Employed" ? "success" : "neutral"}>{employmentLabel(employee.status)}</StatusPill></td>
           </tr>)}</tbody></table>
         <ManagementPagination page={remote.data.page} pageSize={pageSize} total={remote.data.total} unit="nhân viên" onPage={setPage} onPageSize={size => { setPageSize(size); setPage(1); }} />

@@ -123,4 +123,11 @@ describe("employee payslips (KiotViet section 7)", () => {
     expect(planOperation("payroll-payments", "GET", q("action=list&employeeId=bad"))).toBeUndefined();
     expect(planOperation("payroll-payments", "GET", q(`action=slip&id=${slip}`))).toBeUndefined();
   });
+  it("filters payments by sheet, method, kind and status like the other filters", () => {
+    const sheetId = "4b0a1c6e-5a1e-4f4b-9c5e-0a7f6a1c9d01";
+    expect(planOperation("payroll-payments", "GET", q(`action=list&payrollId=${sheetId}&pageSize=100`))).toMatchObject({ path: `/api/payroll-payments?payrollId=${sheetId}&pageSize=100`, permission: "View" });
+    expect(planOperation("payroll-payments", "GET", q("action=list&method=BankTransfer&kind=Advance&status=Cancelled&page=2"))?.path).toBe("/api/payroll-payments?method=BankTransfer&kind=Advance&status=Cancelled&page=2");
+    for (const bad of ["payrollId=nope", `payrollId=${sheetId}&payrollId=${sheetId}`, "method=Card", "kind=Other", "status=Recorded,Cancelled", "status=Pending"]) expect(planOperation("payroll-payments", "GET", q(`action=list&${bad}`)), bad).toBeUndefined();
+    expect(planOperation("payroll", "GET", q(`action=list&payrollId=${sheetId}`))).toBeUndefined();
+  });
 });

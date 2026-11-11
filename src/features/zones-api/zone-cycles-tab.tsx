@@ -17,9 +17,10 @@ export function ZoneCyclesTab({ zoneId }: { zoneId: string }) {
   if (remote.error || !remote.data) return <ListStateMessage error={remote.error ?? "Không tải được chu kỳ nuôi."} onRetry={remote.reload} retryLabel="Tải lại" />;
   return <>
     {remote.data.length === 0 ? <p className={styles.hint}>Vùng chưa có bè nên chưa có chu kỳ.</p>
-      : <table className={styles.subTable}><thead><tr><th scope="col">Bè</th><th scope="col">Chu kỳ gần nhất</th><th scope="col">Bắt đầu</th><th scope="col">Đóng</th></tr></thead>
+      : <table className={styles.subTable}><thead><tr><th scope="col">Bè</th><th scope="col">Số làn</th><th scope="col">Chu kỳ gần nhất</th><th scope="col">Bắt đầu</th><th scope="col">Đóng</th></tr></thead>
         <tbody>{remote.data.map(row => <tr key={row.raftId}>
           <td><Link className={styles.link} href={`${listHref}&raftId=${encodeURIComponent(row.raftId)}`}>{row.raftCode}</Link></td>
+          <td>{row.laneCount}</td>
           <td>{row.cycle ? row.cycle.closeDate ? "Đã đóng" : "Đang mở" : "Chưa có chu kỳ"}</td>
           <td>{row.cycle ? formatVietnameseDate(row.cycle.startDate) : "—"}</td>
           <td>{row.cycle?.closeDate ? formatVietnameseDate(row.cycle.closeDate) : "—"}</td>

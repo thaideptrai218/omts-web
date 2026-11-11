@@ -12,9 +12,13 @@ export const payrollStatuses = ["Creating", "Provisional", "Finalized", "Cancell
 export const periodType = z.enum(periodTypes);
 export const payrollStatus = z.enum(payrollStatuses);
 export const paymentMethod = z.enum(["Cash", "BankTransfer"]);
+export const paymentKind = z.enum(["Wage", "Advance"]);
+export const paymentStatus = z.enum(["Recorded", "Cancelled"]);
 export type PeriodType = z.infer<typeof periodType>;
 export type PayrollStatus = z.infer<typeof payrollStatus>;
 export type PaymentMethod = z.infer<typeof paymentMethod>;
+export type PaymentKind = z.infer<typeof paymentKind>;
+export type PaymentStatus = z.infer<typeof paymentStatus>;
 
 export const sheetRow = z.object({ id, code: text, name: text, periodType, from: date, to: date, total: money, paid: money, outstanding: money, status: payrollStatus, createdAt: text });
 export const sheetPage = z.object({
@@ -36,9 +40,9 @@ export const voucherResult = z.object({ vouchers: z.array(z.object({ id, code: t
 
 export const paymentRow = z.object({
   id, voucherCode: text, paidAt: text, employeeId: id, employeeName: text, payrollId: id.nullable(), payrollCode: text.nullable(), method: paymentMethod, amount: money,
-  kind: z.enum(["Wage", "Advance"]), status: z.enum(["Recorded", "Cancelled"]),
+  kind: paymentKind, status: paymentStatus,
 });
-const slipPayment = z.object({ id, voucherCode: text, paidAt: text, method: paymentMethod, amount: money, kind: z.enum(["Wage", "Advance"]), status: z.enum(["Recorded", "Cancelled"]) });
+const slipPayment = z.object({ id, voucherCode: text, paidAt: text, method: paymentMethod, amount: money, kind: paymentKind, status: paymentStatus });
 /** KiotViet section 7: the payslips of one employee, and one payslip with its income lines, payments and attendance. */
 export const employeeSlipRow = z.object({ id, code: text, payrollId: id, payrollCode: text, payrollName: text, from: date, to: date, income: money, net: money, paid: money, outstanding: money, status: payrollStatus });
 export const employeeSlipPage = z.object({
@@ -50,7 +54,8 @@ export const slipDetail = z.object({
   attendance: z.array(z.object({ date, jobName: text, hours: z.number() })),
 });
 export const standalonePaymentResult = z.object({ id });
-export const paymentPage = z.object({ items: z.array(paymentRow), total: z.number().int(), page: z.number().int(), pageSize: z.number().int() });
+/** `summary.amount` (optional) = total of the `Recorded` payments of the whole filtered set; without it the screen sums the loaded page. */
+export const paymentPage = z.object({ items: z.array(paymentRow), total: z.number().int(), page: z.number().int(), pageSize: z.number().int(), summary: z.object({ amount: money }).optional() });
 export const payableEmployees = z.object({ items: z.array(z.object({ employeeId: id, code: text, name: text, outstanding: money })) });
 
 /** Request bodies (strict). */

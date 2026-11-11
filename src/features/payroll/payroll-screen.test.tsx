@@ -4,11 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { businessToday } from "@/features/operations/ui";
 import { monthOptions } from "./payroll-model";
-import { detail, fail, ids, ok, polyfillDialog, row } from "./payroll-test-fixtures";
+import { detail, fail, ids, ok, payment, polyfillDialog, row, slipDetail } from "./payroll-test-fixtures";
 
 const state = vi.hoisted(() => ({
   context: { identity: { subjectType: "CooperativeOwner" }, permissions: { functionPermissions: [] as unknown[] } },
-  repo: { list: vi.fn(), detail: vi.fn(), create: vi.fn(), reload: vi.fn(), finalize: vi.fn(), cancel: vi.fn(), pay: vi.fn(), exportSheet: vi.fn(), exportList: vi.fn(), payments: vi.fn(), payable: vi.fn(), payStandalone: vi.fn() },
+  repo: { list: vi.fn(), detail: vi.fn(), create: vi.fn(), reload: vi.fn(), finalize: vi.fn(), cancel: vi.fn(), pay: vi.fn(), exportSheet: vi.fn(), exportList: vi.fn(), payments: vi.fn(), payable: vi.fn(), payStandalone: vi.fn(), slip: vi.fn() },
   employees: vi.fn(),
 }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
@@ -24,6 +24,7 @@ beforeEach(() => {
   polyfillDialog(); localStorage.clear();
   state.repo.list.mockResolvedValue(page());
   state.repo.detail.mockResolvedValue(ok(detail()));
+  state.repo.payments.mockResolvedValue(ok({ items: [], total: 0, page: 1, pageSize: 15 }));
   state.employees.mockResolvedValue(ok({ items: [{ id: ids.empA, fullName: "Nguyễn Văn A" }, { id: ids.empB, fullName: "Trần Thị B" }], page: 1, pageSize: 100, total: 2 }));
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.useRealTimers(); });
@@ -91,6 +92,10 @@ it("opens a row in place with the tabs Thông tin and Phiếu lương", async ()
   expect(state.repo.detail).toHaveBeenCalledWith(ids.a, expect.anything());
   expect(screen.getByText("Chủ hợp tác xã")).toBeTruthy();
   expect(screen.getByText("Tất cả nhân viên")).toBeTruthy();
+  expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Thông tin", "Phiếu lương", "Lịch sử thanh toán"]);
+  for (const label of ["Số nhân viên", "Người tạo", "Ngày tạo", "Ghi chú", "Tháng ghi nhận chi phí", "Trạng thái"]) expect(screen.getByText(label, { selector: "dt" })).toBeTruthy();
+  const totals = screen.getByTestId("payroll-sheet-totals").textContent ?? "";
+  expect(totals).toContain("3.000.000"); expect(totals).toContain("1.000.000"); expect(totals).toContain("2.000.000");
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
   for (const heading of ["Mã phiếu lương", "Tên nhân viên", "Lương chính", "Thưởng", "Giảm trừ", "Tổng thu nhập", "Lương thực nhận", "Đã trả", "Còn cần trả"]) {
     expect(screen.getAllByRole("columnheader", { name: heading }).length).toBeGreaterThan(0);
@@ -116,6 +121,8 @@ it("offers footer actions by status: Tạm tính, Đã chốt lương, Đã hủ
   expect(screen.getByText("Tháng 05/2026")).toBeTruthy();
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
   expect(names()).toEqual(["Xuất file", "Thanh toán"]);
+  await user.click(screen.getByRole("tab", { name: "Lịch sử thanh toán" }));
+  expect(names()).toEqual(["Xuất file", "Thanh toán"]);
   cleanup();
 
   state.repo.detail.mockResolvedValue(ok(detail({ status: "Cancelled" })));
@@ -124,6 +131,57 @@ it("offers footer actions by status: Tạm tính, Đã chốt lương, Đã hủ
   await waitFor(() => expect(names()).toEqual(["Xuất file"]));
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
   expect(names()).toEqual(["Xuất file"]);
+  await user.click(screen.getByRole("tab", { name: "Lịch sử thanh toán" }));
+  expect(names()).toEqual(["Xuất file"]);
+});
+
+it("opens a payslip from its code: income lines, payments and attendance", async () => {
+  state.repo.slip.mockResolvedValue(ok(slipDetail()));
+  const user = userEvent.setup();
+  render(<PayrollScreen />);
+  await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
+  await user.click(await screen.findByRole("tab", { name: "Phiếu lương" }));
+  const code = screen.getByRole("button", { name: "PL000001" });
+  expect(code.getAttribute("aria-expanded")).toBe("false");
+  await user.click(code);
+  const panel = await screen.findByRole("region", { name: "Chi tiết phiếu lương PL000001" });
+  expect(state.repo.slip).toHaveBeenCalledWith(ids.slipA, expect.anything());
+  expect(within(panel).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Thu nhập và giảm trừ", "Thanh toán", "Chấm công chi tiết"]);
+  expect(within(panel).getByText("Thu hoạch")).toBeTruthy();
+  await user.click(within(panel).getByRole("tab", { name: "Chấm công chi tiết" }));
+  expect(within(panel).getByText("8")).toBeTruthy();
+  await user.click(code);
+  expect(screen.queryByRole("region", { name: "Chi tiết phiếu lương PL000001" })).toBeNull();
+});
+
+it("lists the payments of the sheet on Lịch sử thanh toán, asked by payrollId", async () => {
+  state.repo.detail.mockResolvedValue(ok(detail({ status: "Finalized", paid: 700_000 })));
+  state.repo.payments.mockResolvedValue(ok({ items: [payment(), payment({ id: ids.b, voucherCode: "PC000002", method: "BankTransfer", amount: 200_000, status: "Cancelled" }),
+    payment({ id: ids.slipB, voucherCode: "PC999999", payrollId: ids.b })], total: 3, page: 1, pageSize: 15 }));
+  const user = userEvent.setup();
+  render(<PayrollScreen />);
+  await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
+  await user.click(await screen.findByRole("tab", { name: "Lịch sử thanh toán" }));
+  const table = await screen.findByRole("table", { name: "Lịch sử thanh toán của bảng lương" });
+  for (const heading of ["Mã phiếu chi", "Thời gian", "Nhân viên", "Phương thức", "Số tiền", "Trạng thái"]) expect(within(table).getByRole("columnheader", { name: heading })).toBeTruthy();
+  expect(state.repo.payments).toHaveBeenLastCalledWith(expect.objectContaining({ payrollId: ids.a, page: 1 }), expect.anything());
+  expect(within(table).getByText("PC000001")).toBeTruthy();
+  expect(within(table).getByText("Chuyển khoản")).toBeTruthy();
+  expect(within(table).getByText("Đã hủy")).toBeTruthy();
+  expect(within(table).queryByText("PC999999")).toBeNull();
+  expect(within(table).getAllByRole("link", { name: "Nguyễn Văn A" })[0].getAttribute("href")).toContain(`/workspace/employees?recordId=${ids.empA}`);
+  expect(screen.getByTestId("payroll-sheet-payment-totals").textContent).toContain("700.000");
+});
+
+it("shows the API error of the history with a retry, then the empty state", async () => {
+  state.repo.payments.mockResolvedValueOnce(fail(503));
+  const user = userEvent.setup();
+  render(<PayrollScreen />);
+  await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
+  await user.click(await screen.findByRole("tab", { name: "Lịch sử thanh toán" }));
+  expect((await screen.findByRole("alert")).textContent).toContain("Chưa kết nối được dịch vụ");
+  await user.click(screen.getByRole("button", { name: "Tải lại" }));
+  expect(await screen.findByText("Bảng lương chưa có thanh toán.")).toBeTruthy();
 });
 
 it("reloads data with the chosen mode from the inline menu", async () => {

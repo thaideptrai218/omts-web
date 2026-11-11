@@ -23,7 +23,7 @@ const sheetQuery = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("employee-slips"), id, status: c.payrollStatus.optional(), page: page.optional(), pageSize: pageSize.optional() }),
 ]);
 const paymentQuery = z.discriminatedUnion("action", [
-  z.strictObject({ action: z.literal("list"), search: z.string().max(200).optional(), employeeId: id.optional(), from: z.iso.date().optional(), to: z.iso.date().optional(), page: page.optional(), pageSize: pageSize.optional() }),
+  z.strictObject({ action: z.literal("list"), search: z.string().max(200).optional(), employeeId: id.optional(), payrollId: id.optional(), method: c.paymentMethod.optional(), kind: c.paymentKind.optional(), status: c.paymentStatus.optional(), from: z.iso.date().optional(), to: z.iso.date().optional(), page: page.optional(), pageSize: pageSize.optional() }),
   z.strictObject({ action: z.literal("payable"), search: z.string().max(200).optional(), includeAll: z.literal("true").optional() }),
 ]);
 const mutation = z.strictObject({ action: z.string(), id: id.optional(), zoneId: z.undefined().optional(), body: z.unknown().default({}) });
@@ -82,6 +82,6 @@ function readPayments(query: URLSearchParams): OperationPlan | undefined {
   if (!q.success || values.from && values.to && values.from > values.to) return;
   const base = { area: "payroll-payments" as const, action: q.data.action, method: "GET" as const, permission: "View" };
   return q.data.action === "list"
-    ? { ...base, path: withQuery("/api/payroll-payments", backendFilters(values, ["search", "employeeId", "from", "to", "page", "pageSize"])), schema: c.paymentPage }
+    ? { ...base, path: withQuery("/api/payroll-payments", backendFilters(values, ["search", "employeeId", "payrollId", "method", "kind", "status", "from", "to", "page", "pageSize"])), schema: c.paymentPage }
     : { ...base, path: withQuery("/api/payrolls/payable-employees", backendFilters(values, ["search", "includeAll"])), schema: c.payableEmployees };
 }

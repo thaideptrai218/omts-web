@@ -31,7 +31,7 @@ export const parseZoneDetail = (value: unknown): ZoneDetail | undefined => {
   return parsed.success ? parsed.data : undefined;
 };
 
-export type ZoneSortKey = "code" | "name" | "location" | "area" | "rafts" | "license" | "status";
+export type ZoneSortKey = "code" | "name" | "location" | "area" | "rafts" | "license" | "status" | "water";
 export type ZoneFilters = { search: string; statusId: string; license: string };
 export const emptyZoneFilters: ZoneFilters = { search: "", statusId: "", license: "" };
 
@@ -48,13 +48,15 @@ const sortValue = (row: ZoneRow, key: ZoneSortKey): string | number => {
     case "license": return row.licenseState ?? "Missing";
     case "status": return row.statusId;
     case "location": return row.location ?? "";
-    default: return row[key];
+    default: return row[key as "code" | "name"];
   }
 };
-export function sortZones(rows: readonly ZoneRow[], key: ZoneSortKey, direction: "asc" | "desc"): ZoneRow[] {
+/** `latestWater` maps zone id to its newest measurement time; it only matters for the `water` column. */
+export function sortZones(rows: readonly ZoneRow[], key: ZoneSortKey, direction: "asc" | "desc", latestWater?: ReadonlyMap<string, string | null>): ZoneRow[] {
   const sign = direction === "asc" ? 1 : -1;
+  const value = (row: ZoneRow) => key === "water" ? Date.parse(latestWater?.get(row.id) ?? "") || 0 : sortValue(row, key);
   return [...rows].sort((a, b) => {
-    const left = sortValue(a, key), right = sortValue(b, key);
+    const left = value(a), right = value(b);
     const order = typeof left === "number" && typeof right === "number" ? left - right : String(left).localeCompare(String(right), "vi", { numeric: true });
     return sign * (order || a.code.localeCompare(b.code, "vi", { numeric: true }));
   });

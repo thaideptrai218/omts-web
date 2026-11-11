@@ -21,9 +21,9 @@ describe("zone list", () => {
 });
 
 describe("zone draft", () => {
-  const valid = { code: "V01", name: "Vùng A", location: "Cô Tô", latitude: "20,9", longitude: "107.4", area: "12,5", waterMeasurementPoint: "Điểm 1" };
+  const valid = { code: "V01", name: "Vùng A", location: "Cô Tô", latitude: "20,9", longitude: "107.4", area: "12,5" };
   it("requires every field", () => {
-    expect(Object.keys(validateZoneDraft(emptyZoneDraft)).sort()).toEqual(["area", "code", "latitude", "location", "longitude", "name", "waterMeasurementPoint"]);
+    expect(Object.keys(validateZoneDraft(emptyZoneDraft)).sort()).toEqual(["area", "code", "latitude", "location", "longitude", "name"]);
     expect(validateZoneDraft(valid)).toEqual({});
   });
   it("keeps coordinates inside their ranges", () => {
@@ -31,7 +31,11 @@ describe("zone draft", () => {
     expect(validateZoneDraft({ ...valid, longitude: "abc" }).longitude).toBeTruthy();
   });
   it("builds the write body with numbers and the row version for updates only", () => {
-    expect(zoneBody(valid)).toEqual({ code: "V01", name: "Vùng A", location: "Cô Tô", waterMeasurementPoint: "Điểm 1", latitude: 20.9, longitude: 107.4, area: 12.5 });
+    expect(zoneBody(valid)).toEqual({ code: "V01", name: "Vùng A", location: "Cô Tô", latitude: 20.9, longitude: 107.4, area: 12.5 });
     expect(zoneBody(valid, "v7")).toMatchObject({ rowVersion: "v7" });
+  });
+  it("sorts by the newest water measurement, zones without one last when descending", () => {
+    const latest = new Map<string, string | null>([[rows[0].id, "2026-11-09T06:40:00+07:00"], [rows[1].id, null], [rows[2].id, "2026-11-10T06:40:00+07:00"]]);
+    expect(sortZones(rows, "water", "desc", latest).map(zone => zone.code)).toEqual(["V01", "V10", "V02"]);
   });
 });

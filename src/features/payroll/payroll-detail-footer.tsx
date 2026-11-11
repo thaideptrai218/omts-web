@@ -10,7 +10,7 @@ import { PayrollReloadMenu } from "./payroll-reload-menu";
 import { payrollRepository } from "./repository";
 import s from "./payroll-screen.module.css";
 
-export type DetailTab = "info" | "slips";
+export type DetailTab = "info" | "slips" | "payments";
 type Dialogs = "finalize" | "cancel" | "pay" | undefined;
 
 /**
@@ -37,7 +37,7 @@ export function PayrollDetailFooter({ sheet, tab, onChanged }: { sheet: SheetDet
     </div>
     <div>
       {provisional && <Button key="finalize" className="w-auto" type="button" onClick={() => { change.reviewed(); setDialog("finalize"); }}><InterfaceIcon name="lock" className="size-4" />Chốt lương</Button>}
-      {finalized && tab === "slips" && <Button key="pay" className="w-auto" type="button" disabled={sheet.outstanding <= 0} title={sheet.outstanding <= 0 ? "Không còn khoản cần trả" : undefined} onClick={() => setDialog("pay")}><InterfaceIcon name="payment" className="size-4" />Thanh toán</Button>}
+      {finalized && tab !== "info" && <Button key="pay" className="w-auto" type="button" disabled={sheet.outstanding <= 0} title={sheet.outstanding <= 0 ? "Không còn khoản cần trả" : undefined} onClick={() => setDialog("pay")}><InterfaceIcon name="payment" className="size-4" />Thanh toán</Button>}
     </div>
     </footer>
     {dialog === "finalize" && <FinalizeDialog periodEnd={sheet.to} pending={change.pending} error={change.error} onClose={close} onConfirm={(month) => void run(() => payrollRepository.finalize(sheet.id, month), "Đã chốt lương. Dữ liệu trong kỳ đã được khóa.")} />}
