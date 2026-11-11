@@ -38,10 +38,9 @@ export function SupplierFormDialog({ record, onClose, onSaved }: { record: Suppl
     <form onSubmit={submit}>
       <ErrorNotice error={error} />
       <fieldset disabled={pending} className="min-w-0">
-        <CollapsibleSection title="Thông tin nhà cung cấp">
+        <CollapsibleSection title="Thông tin nhà cung cấp" description="Mã, tên và cách liên hệ.">
           <Field label="Mã nhà cung cấp" maxLength={30} placeholder="Mã tự động" title="Để trống để hệ thống tự cấp mã NCC…" value={values.code} onChange={(event) => setValues((current) => ({ ...current, code: event.target.value.replace(/\s/g, "") }))} />
           <Field label="Tên nhà cung cấp *" required maxLength={200} value={values.name} onChange={set("name")} />
-          <Field label="Mã nhà cung cấp" readOnly disabled value={record?.code ?? "Tự động"} onChange={() => undefined} />
           <Field label="Điện thoại *" required maxLength={20} inputMode="tel" value={values.phoneNumber} onChange={set("phoneNumber")} />
           <Field label="Email" type="email" maxLength={256} value={values.email} onChange={set("email")} />
         </CollapsibleSection>
@@ -54,7 +53,7 @@ export function SupplierFormDialog({ record, onClose, onSaved }: { record: Suppl
           <Select label="Nhóm *" required value={values.supplierType} onChange={set("supplierType")}><option value="">Chọn nhóm</option>{supplierTypes.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select>
           <Note label="Ghi chú" maxLength={2000} value={values.note} onChange={set("note")} />
         </CollapsibleSection>
-        <CollapsibleSection title="Thông tin xuất hóa đơn" defaultOpen={!!record?.companyName || !!record?.taxCode || !!record?.identityNumber}>
+        <CollapsibleSection title="Thông tin xuất hóa đơn" description="Chỉ cần khi nhà cung cấp xuất hóa đơn đỏ." defaultOpen={!!record?.companyName || !!record?.taxCode || !!record?.identityNumber}>
           <Field label="Tên công ty" maxLength={200} value={values.companyName} onChange={set("companyName")} />
           <Field label="Mã số thuế" maxLength={14} value={values.taxCode} onChange={set("taxCode")} />
           <Field label="Số CCCD" maxLength={12} inputMode="numeric" autoComplete="off" value={values.identityNumber} onChange={set("identityNumber")} />

@@ -219,6 +219,39 @@ textarea.omts-control { min-height: 64px; resize: vertical; }
 input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; margin: 0; accent-color: var(--omts-brand, var(--omts-color-primary)); cursor: pointer; vertical-align: middle; }
 input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: not-allowed; }
 
+/* Switch (components/ui/switch.tsx), and the drawn check box and radio of settings panels. The control is drawn at full strength even when
+   disabled: a locked value reads as a lighter brand colour, never as a faded control (native disabled boxes turn pale grey). */
+input[type="checkbox"].omts-switch {
+  appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 40px; height: 22px; border: 0; border-radius: 999px;
+  background: #b9c3d0; cursor: pointer; transition: background-color 160ms ease;
+}
+input[type="checkbox"].omts-switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgb(20 43 56 / 0.35); transition: transform 160ms ease;
+}
+input[type="checkbox"].omts-switch:checked { background: var(--omts-brand, var(--omts-color-primary)); }
+input[type="checkbox"].omts-switch:checked::after { transform: translateX(18px); }
+input[type="checkbox"].omts-switch:disabled { cursor: not-allowed; }
+input[type="checkbox"].omts-switch:disabled:checked { background: color-mix(in srgb, var(--omts-brand, var(--omts-color-primary)) 55%, #fff); }
+input[type="checkbox"].omts-switch:disabled:not(:checked) { background: #d3dae3; }
+input[type="checkbox"].omts-switch:focus-visible { outline: 2px solid var(--omts-brand, var(--omts-color-primary)); outline-offset: 2px; }
+
+input[type="checkbox"].omts-check, input[type="radio"].omts-check {
+  appearance: none; -webkit-appearance: none; flex: none; display: inline-grid; place-content: center; width: 18px; height: 18px;
+  border: 1.5px solid var(--omts-color-border-strong, #8496ad); border-radius: 4px; background: #fff; cursor: pointer;
+}
+input[type="radio"].omts-check { border-radius: 50%; }
+input[type="checkbox"].omts-check::after { content: ""; width: 10px; height: 10px; background: #fff; transform: scale(0); transition: transform 120ms ease;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); }
+input[type="radio"].omts-check::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; transform: scale(0); transition: transform 120ms ease; }
+input.omts-check:checked { border-color: var(--omts-brand, var(--omts-color-primary)); background: var(--omts-brand, var(--omts-color-primary)); }
+input.omts-check:checked::after { transform: scale(1); }
+input.omts-check:disabled { cursor: not-allowed; }
+input.omts-check:disabled:checked { border-color: color-mix(in srgb, var(--omts-brand, var(--omts-color-primary)) 55%, #fff); background: color-mix(in srgb, var(--omts-brand, var(--omts-color-primary)) 55%, #fff); }
+input.omts-check:disabled:not(:checked) { background: #eef1f5; }
+input.omts-check:focus-visible { outline: 2px solid var(--omts-brand, var(--omts-color-primary)); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { input.omts-switch, input.omts-switch::after, input.omts-check::after { transition: none; } }
+
 /* SelectBox (components/ui/select-box.tsx): the native select stays for keyboard, screen readers and forms but is
    hidden; the button shows the value and opens the styled list. The wrapper takes no box, so the trigger sits in the
    layout exactly where the select was. */
@@ -245,7 +278,8 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: not-allo
 .omts-select-trigger > svg { flex: none; width: 14px; height: 14px; fill: none; stroke: #63768c; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 120ms ease; }
 .omts-select-trigger[data-open] > svg { transform: rotate(180deg); }
 .omts-select-menu {
-  position: fixed; z-index: 1000; max-height: 280px; margin: 0; padding: 4px; overflow-y: auto; list-style: none;
+  /* Shown as a popover (top layer): `inset: auto` undoes the popover default `inset: 0` so the inline left/top/bottom place it. */
+  position: fixed; inset: auto; z-index: 1000; max-height: 280px; margin: 0; padding: 4px; color: inherit; overflow-y: auto; list-style: none;
   border: 1px solid var(--omts-color-border, #dce3ed); border-radius: 8px; background: #fff;
   box-shadow: 0 12px 32px rgb(20 43 56 / 0.16); animation: omts-select-in 120ms ease-out both;
 }

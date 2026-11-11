@@ -95,8 +95,15 @@ export function Subtabs<T extends string>({ label, tabs, value, onChange }: { la
     <button key={tab.key} type="button" role="tab" data-tab={tab.key} aria-selected={tab.key === value} tabIndex={tab.key === value ? 0 : -1} onClick={() => onChange(tab.key)}>{tab.label}</button>)}</div>;
 }
 
-export function CollapsibleSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: ReactNode }) {
-  return <details className={styles.section} open={defaultOpen}><summary>{title}<InterfaceIcon name="chevron-down" /></summary><div className={styles.sectionBody}>{children}</div></details>;
+/**
+ * One group of form fields: a bordered card with a title, an optional one-line description, and a chevron that folds it.
+ * Long forms are split into these so the user sees what belongs together (see DESIGN_GUIDELINES "Form sections").
+ */
+export function CollapsibleSection({ title, description, defaultOpen = true, columns = 2, children }: { title: string; description?: string; defaultOpen?: boolean; columns?: 1 | 2 | 3; children: ReactNode }) {
+  return <details className={styles.section} open={defaultOpen}>
+    <summary><span className={styles.sectionHead}><strong>{title}</strong>{description && <small>{description}</small>}</span><InterfaceIcon name="chevron-down" /></summary>
+    <div className={styles.sectionBody} data-columns={columns}>{children}</div>
+  </details>;
 }
 
 export function ListStateMessage({ error, onRetry, retryLabel = "Thử lại", children }: { error?: string; onRetry?(): void; retryLabel?: string; children?: ReactNode }) {

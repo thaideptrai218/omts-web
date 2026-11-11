@@ -71,6 +71,13 @@ Thanh thấp, là một khối riêng **nằm ngoài** khung danh sách, cách k
 
 Modal, các trường chia nhóm thu gọn được, chân modal có `Bỏ qua` và `Lưu`.
 
+**Nhóm trường (form sections), bắt buộc cho mọi form có quá ~5 trường:**
+- Không đổ mọi trường vào một lưới. Mỗi chủ đề là một `CollapsibleSection` (`components/ui/management-screen/management-table.tsx`): thẻ có viền, bo 8px, tiêu đề đậm + một dòng mô tả ngắn (`description`) + chevron để thu gọn/mở; các thẻ cách nhau 12px.
+- `columns` = 1 | 2 | 3 tùy độ dài trường (số ngắn dùng 3, bảng như đơn vị quy đổi dùng 1). Nhóm hay dùng mở sẵn; nhóm phụ (xuất hóa đơn, ngân hàng) đóng sẵn, chỉ mở khi đã có dữ liệu hoặc khi thiết lập bắt buộc.
+- Phần định danh (mã, tên, loại, nhóm) đứng đầu, không bọc thẻ; ảnh đặt khung riêng bên phải (KiotViet "Tạo hàng hóa").
+- Nút "Tạo mới" cạnh một ô chọn là link nhỏ ở bên phải nhãn, không phải nút to cạnh ô (gây lệch hàng).
+- Áp dụng: Nhà cung cấp, Khách hàng, Danh mục vật tư; module mới làm theo.
+
 Ngoại lệ: chứng từ có nhiều dòng hàng (phiếu nhập, phiếu trả) mở **trang riêng**: nút quay lại + tiêu đề + ô tìm hàng ở hàng đầu, bảng dòng hàng bên trái, cột thông tin phiếu bên phải với `Lưu tạm` và `Hoàn thành` ở chân cột. Thao tác phá hủy (Xóa phiếu tạm) nằm trong menu `...` ở góc phải.
 
 ### 1.9 Lỗi đã gặp, không lặp lại ở module sau
@@ -85,8 +92,9 @@ Link sang bản ghi khác:
 
 Ô nhập và hiệu năng form:
 - Ô nhập trong form dùng `Field` / `Select` / `Note` (class `omts-control`: cao 34px, chữ 13px, viền bo 6px, vòng focus màu chủ đạo, mũi tên select tự vẽ). Không để `<input>`/`<select>` trần không class.
-- Không dùng thẻ `<select>` trực tiếp: dùng `Select` (có nhãn) hoặc `SelectBox` (`src/components/ui/select-box.tsx`, cùng props và `<option>` như `<select>`). Danh sách chọn tự vẽ, mở trên `body` (không bị dialog cắt), mục đang chọn có dấu ✓; select gốc vẫn còn nhưng ẩn để bàn phím, trình đọc màn hình, form và test dùng.
+- Không dùng thẻ `<select>` trực tiếp: dùng `Select` (có nhãn) hoặc `SelectBox` (`src/components/ui/select-box.tsx`, cùng props và `<option>` như `<select>`). Danh sách chọn tự vẽ, mở trên `body`, còn trong `<dialog>` modal thì mở **bên trong chính dialog đó** (dialog nằm ở top layer nên danh sách để trên `body` bị che, trông như danh sách rỗng); mục đang chọn có dấu ✓; select gốc vẫn còn nhưng ẩn để bàn phím, trình đọc màn hình, form và test dùng.
 - Ô tích và radio dùng chung cỡ 16px, màu chủ đạo; cột ô tích và cột nút mở dòng trong danh sách căn giữa theo cùng một trục.
+- Bật/tắt (thiết lập, lọc tab) dùng `Switch` (`src/components/ui/switch.tsx`, input checkbox `role="switch"` vẽ bằng `.omts-switch`): rộng 40px, cao 22px, theo mẫu KiotViet. Mục khóa luôn bật vẫn hiện đủ đậm, chỉ nhạt màu chủ đạo, **không** làm mờ bằng `opacity`. Ô tích/radio trong hộp thiết lập dùng class `omts-check` (vẽ lại: ô 18px, tick trắng trên nền màu chủ đạo, khi vô hiệu vẫn đủ rõ); không dùng ô tích/radio gốc bị vô hiệu vì trình duyệt tô xám gần như vô hình.
 - Màn quản lý không được cuộn trang chính: chỉ cột lọc và danh sách tự cuộn. Phần tử ẩn (`sr-only`, select gốc của `SelectBox`) phải nằm trong một khối `position:relative` có cuộn riêng (`railScroll`, `scroller` đã có sẵn) hoặc `position:fixed`; phần tử `absolute` ẩn nằm thấp trong cột lọc sẽ kéo dài trang và làm trang cuộn.
 - Không dùng `backdrop-filter`/blur cho nền dialog hay vùng phủ: trình duyệt vẽ lại cả trang phía sau mỗi lần gõ phím, gây lag.
 

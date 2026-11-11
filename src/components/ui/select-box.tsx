@@ -30,8 +30,8 @@ const setNativeValue = Object.getOwnPropertyDescriptor(typeof HTMLSelectElement 
 
 /**
  * Drop-in replacement for `<select>` with the same props and `<option>` children. A visually hidden native select keeps
- * keyboard use, screen readers, forms and tests working; the visible button opens a styled list (rendered on `body`,
- * so dialogs and scrolling lists never clip it). Picking an item sets the native select and fires its real change
+ * keyboard use, screen readers, forms and tests working; the visible button opens a styled list (fixed to the viewport and rendered on `body`,
+ * or inside the modal dialog the box sits in, so scrolling lists never clip it and a dialog never hides it). Picking an item sets the native select and fires its real change
  * event, so `onChange={(event) => event.target.value}` handlers work unchanged.
  */
 export function SelectBox({ className = "", children, style, ref, onChange, ...props }: ComponentProps<"select">) {
@@ -40,13 +40,15 @@ export function SelectBox({ className = "", children, style, ref, onChange, ...p
   const [uncontrolled, setUncontrolled] = useState(() => String(props.defaultValue ?? options[0]?.value ?? ""));
   const current = props.value !== undefined ? String(props.value) : uncontrolled;
   const shown = options.find((option) => option.value === current) ?? (props.value === undefined ? options[0] : undefined);
-  const [open, setOpen] = useState(false), [box, setBox] = useState<{ left: number; top: number; width: number; up: boolean }>();
+  const [open, setOpen] = useState(false), [box, setBox] = useState<{ left: number; top: number; width: number; up: boolean; host: HTMLElement }>();
 
   useLayoutEffect(() => {
     if (!open || !trigger.current) return;
+    // A modal <dialog> sits in the top layer, above everything on `body`: inside one the list must be a child of that dialog or it opens out of sight.
+    const host = trigger.current.closest("dialog") ?? document.body;
     const place = () => {
-      const rect = trigger.current!.getBoundingClientRect(), below = window.innerHeight - rect.bottom;
-      setBox({ left: rect.left, top: below < 240 && rect.top > below ? rect.top : rect.bottom, width: Math.max(rect.width, 160), up: below < 240 && rect.top > below });
+      const rect = trigger.current!.getBoundingClientRect(), below = window.innerHeight - rect.bottom, up = below < 240 && rect.top > below;
+      setBox({ left: rect.left, top: up ? rect.top : rect.bottom, width: Math.max(rect.width, 160), up, host });
     };
     place();
     window.addEventListener("resize", place);
@@ -62,6 +64,14 @@ export function SelectBox({ className = "", children, style, ref, onChange, ...p
     list.current?.querySelector<HTMLElement>("[data-selected]")?.scrollIntoView({ block: "nearest" });
     return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
   }, [open]);
+
+  // The list is a popover in the top layer: placed against the viewport, above a modal dialog, and never clipped by the
+  // dialog's scrolling box or shifted by its open animation's transform. Inside a dialog it stays in the dialog's subtree,
+  // so the modal does not make it inert.
+  function showInTopLayer(element: HTMLUListElement | null) {
+    list.current = element;
+    if (element && !element.matches(":popover-open")) { try { element.showPopover(); } catch { /* no popover support: stays a fixed element */ } }
+  }
 
   function pick(value: string) {
     setOpen(false);
@@ -84,14 +94,14 @@ export function SelectBox({ className = "", children, style, ref, onChange, ...p
       <span className="omts-select-value" data-placeholder={!shown?.value || undefined}>{shown?.label ?? ""}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
-    {open && box && createPortal(<ul ref={list} aria-hidden="true" className="omts-select-menu" data-up={box.up || undefined}
-      style={{ left: box.left, width: box.width, ...(box.up ? { bottom: window.innerHeight - box.top + 4 } : { top: box.top + 4 }) }}>
+    {open && box && createPortal(<ul ref={showInTopLayer} popover="manual" aria-hidden="true" className="omts-select-menu" data-up={box.up || undefined}
+      style={{ left: box.left, width: box.width, ...(box.up ? { top: box.top - 4, translate: "0 -100%" } : { top: box.top + 4 }) }}>
       {options.map((option) => <li key={option.value}>
         <button type="button" tabIndex={-1} disabled={option.disabled} data-selected={option.value === current || undefined} onClick={() => pick(option.value)}>
           <span>{option.label}</span>
           {option.value === current && <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>}
         </button>
       </li>)}
-    </ul>, document.body)}
+    </ul>, box.host)}
   </span>;
 }
