@@ -19,6 +19,14 @@ describe("server-only backend configuration, no runtime activation", () => {
     expect(Object.isFrozen(result.config)).toBe(true);
     expect(parseServerBackendConfig({ ...api, OMTS_DATA_SOURCE: "mock" }).status).toBe("invalid-config");
   });
+  it("refuses a plain-HTTP API in production unless the staging switch is exactly true", () => {
+    const remote = { ...api, NODE_ENV: "production", OMTS_API_BASE_URL: "http://3.0.49.251:8080" };
+    expect(parseServerBackendConfig(remote).status).toBe("invalid-config");
+    expect(parseServerBackendConfig({ ...remote, OMTS_API_ALLOW_INSECURE_HTTP: "false" }).status).toBe("invalid-config");
+    expect(parseServerBackendConfig({ ...remote, OMTS_API_ALLOW_INSECURE_HTTP: "yes" }).status).toBe("invalid-config");
+    expect(parseServerBackendConfig({ ...remote, OMTS_API_ALLOW_INSECURE_HTTP: "true" }))
+      .toEqual({ status: "valid", config: { source: "api", origin: "http://3.0.49.251:8080", timeoutMs: 5000 } });
+  });
   it("parses explicit local API settings without performing network I/O", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected network call"));
     try {

@@ -7,6 +7,9 @@ const environmentInput = z.object({
   OMTS_DATA_SOURCE: z.enum(["mock", "api"]),
   OMTS_API_BASE_URL: z.string().optional(),
   OMTS_API_TIMEOUT_MS: z.string().regex(/^[1-9]\d{0,4}$/).refine((v) => Number(v) <= 60_000).optional(),
+  // Staging escape hatch: lets a deployed BFF reach an API that has no TLS yet. Passwords and tokens then cross the
+  // network in clear text, so only the exact value "true" turns it on and it should be removed once the API has HTTPS.
+  OMTS_API_ALLOW_INSECURE_HTTP: z.enum(["true", "false"]).optional(),
   NEXT_PUBLIC_API_BASE_URL: z.never().optional(),
   NEXT_PUBLIC_OMTS_API_BASE_URL: z.never().optional(),
 });
@@ -16,14 +19,14 @@ export type ServerBackendConfig = Readonly<{ source: "mock" }>
 type ConfigResult = Readonly<{ status: "valid"; config: ServerBackendConfig }>
   | Readonly<{ status: "invalid-config"; fields: readonly ConfigField[] }>;
 
-function backendOrigin(value: string, environment: z.infer<typeof environmentSchema>): string | undefined {
+function backendOrigin(value: string, environment: z.infer<typeof environmentSchema>, allowInsecureHttp: boolean): string | undefined {
   // Origin only. Reject paths, credentials, queries, fragments, escaping and backslash normalization.
   if (!/^https?:\/\/[^/?#\\\s]+\/?$/iu.test(value) || value.includes("%") || value.includes("@")) return undefined;
   try {
     const url = new URL(value);
     if (url.username || url.password || !url.hostname) return undefined;
     const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
-    if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback && environment !== "production")) {
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && (allowInsecureHttp || (loopback && environment !== "production")))) {
       return undefined;
     }
     return url.origin;
@@ -46,7 +49,7 @@ export function parseServerBackendConfig(environment: Readonly<Record<string, un
     return fields.length ? { status: "invalid-config", fields }
       : { status: "valid", config: Object.freeze({ source: "mock" }) };
   }
-  const origin = env.OMTS_API_BASE_URL === undefined ? undefined : backendOrigin(env.OMTS_API_BASE_URL, env.NODE_ENV);
+  const origin = env.OMTS_API_BASE_URL === undefined ? undefined : backendOrigin(env.OMTS_API_BASE_URL, env.NODE_ENV, env.OMTS_API_ALLOW_INSECURE_HTTP === "true");
   const fields: ConfigField[] = [];
   if (!origin) fields.push("OMTS_API_BASE_URL");
   if (env.OMTS_API_TIMEOUT_MS === undefined) fields.push("OMTS_API_TIMEOUT_MS");
