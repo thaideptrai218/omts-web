@@ -54,7 +54,7 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
   }
   async function cancel() {
     if (!batch || !edit || mutation.busy() || busy) return;
-    const reason = await confirmation.prompt(`Xóa đợt ươm ${batch.code} (vùng ${batch.zoneCode} · ${batch.zoneName})? ${quantityText(batch.quantityIn)} sẽ được hoàn lại lô giống ${batch.seedLot.code} trong kho. Đợt chuyển sang "Đã hủy" và vẫn lưu trong lịch sử. Nhập lý do xóa:`);
+    const reason = await confirmation.prompt(`Xóa đợt ươm ${batch.code}? Vùng ${batch.zoneCode} · ${batch.zoneName}: ${quantityText(batch.quantityIn)} sẽ được hoàn lại lô giống ${batch.seedLot.code} trong kho. Đợt chuyển sang "Đã hủy" và vẫn lưu trong lịch sử. Nhập lý do xóa bên dưới.`);
     if (!reason) return;
     const result = await mutation.run(() => nurseryService.save("cancel", batch.zoneId, { reason, rowVersion: batch.rowVersion }, batch.id));
     if (result) saved(result);

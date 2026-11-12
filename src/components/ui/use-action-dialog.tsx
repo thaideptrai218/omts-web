@@ -17,11 +17,15 @@ export function useActionDialog() {
   function finish(result: string | null) {
     const done = resolve.current; resolve.current = undefined; setRequest(undefined); done?.(result);
   }
+  // A reason prompt reads "Heading? details. Ask:" — the first question is the title, the rest is body text.
+  const cut = request?.reason ? request.message.indexOf("? ") : -1;
+  const title = request ? (request.reason ? (cut > 0 ? request.message.slice(0, cut + 1) : request.message) : "Xác nhận thao tác") : "";
+  const detail = request ? (request.reason ? (cut > 0 ? request.message.slice(cut + 2) : "") : request.message) : "";
   return {
     confirm: async (message: string) => (await ask(message, false)) !== null,
     prompt: (message: string) => ask(message, true),
-    dialog: request && <Dialog open title={request.reason ? request.message : "Xác nhận thao tác"} mobileLayout="compact" onOpenChange={(open) => { if (!open) finish(null); }}>
-      {!request.reason && <p>{request.message}</p>}
+    dialog: request && <Dialog open title={title} mobileLayout="compact" onOpenChange={(open) => { if (!open) finish(null); }}>
+      {detail && <p className="mb-3">{detail}</p>}
       {request.reason && <label className="block">Lý do<textarea className="mt-2 min-h-24 w-full rounded-control border border-border-strong p-3" maxLength={1000} value={value} onChange={(event) => setValue(event.target.value)} autoFocus /></label>}
       <div className="mt-5 flex flex-wrap gap-3"><Button className="w-auto" disabled={request.reason && !value.trim()} onClick={() => finish(request.reason ? value.trim() : "confirmed")}>Đồng ý</Button>
         <Button className="w-auto" variant="secondary" onClick={() => finish(null)}>Quay lại</Button></div>

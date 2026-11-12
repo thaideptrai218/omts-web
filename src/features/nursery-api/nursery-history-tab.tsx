@@ -8,8 +8,12 @@ import { nurseryDisplayText } from "./nursery-display-text";
 import { nurseryHistoryAction, nurseryHistoryChangeLabel, nurseryHistorySummary, nurseryHistoryValue, type NurseryHistoryEntry } from "./nursery-history-presentation";
 import { nurseryService } from "./service";
 
-function HistoryRow({ entry }: { entry: NurseryHistoryEntry }) {
+const blank = (value: unknown) => value === null || value === undefined || value === "";
+
+function HistoryRow({ entry: raw }: { entry: NurseryHistoryEntry }) {
   const [open, setOpen] = useState(false), detailId = useId();
+  // A field that is empty before and after carries no information ("— → —"), so it is not listed.
+  const entry = { ...raw, changes: raw.changes.filter(change => !(blank(change.from) && blank(change.to))) };
   const time = entry.at.length > 10 ? displayTime(entry.at) : formatVietnameseDate(entry.at);
   const actor = entry.byName || "Hệ thống", summary = nurseryHistorySummary(entry);
   return <li className="min-w-0 rounded-control border border-border bg-surface text-xs">

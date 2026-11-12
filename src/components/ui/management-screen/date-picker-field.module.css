@@ -16,8 +16,8 @@
 .calendar :global(.rdp-months) { width:100%; max-width:100%; }
 .calendar :global(.rdp-month) { width:100%; min-width:0; }
 .calendar :global(.rdp-month_grid) { width:100%; table-layout:fixed; border-collapse:collapse; }
-.calendar :global(.rdp-month_caption) { height:38px; justify-content:center; padding:0 32px; min-width:0; }
-.calendar :global(.rdp-dropdowns) { display:grid; grid-template-columns:minmax(0, 1fr) 84px; gap:6px; width:100%; align-items:center; }
+.calendar :global(.rdp-month_caption) { height:38px; justify-content:center; padding:0; min-width:0; }
+.calendar :global(.rdp-dropdowns) { display:grid; grid-template-columns:minmax(0, 1fr) 84px; gap:6px; flex:1; min-width:0; align-items:center; }
 .calendar :global(.rdp-dropdowns) > * { min-width:0; }
 .calendar :global(.rdp-dropdown_root) { width:100%; }
 .calendar :global(.omts-select-trigger) { width:100%; }
