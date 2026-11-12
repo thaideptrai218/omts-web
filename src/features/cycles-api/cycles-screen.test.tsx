@@ -20,12 +20,12 @@ it("opens the raft record in place and ignores late progress after it is collaps
   render(<CyclesScreen />);
   await screen.findByRole("option", { name: "Z1 · Vùng A" });
   fireEvent.click(await screen.findByRole("button", { name: "Xem bè B1-01" }));
-  expect(screen.getByRole("region", { name: "Chi tiết chu kỳ của bè" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Chi tiết hành trình của bè" })).toBeTruthy();
   expect(screen.getByRole("tab", { name: "Tiến độ làn" })).toBeTruthy();
   expect(screen.queryByRole("dialog")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Thu gọn bè B1-01" }));
   await act(async () => { finish({ status: "success", data: { raftId, raftCode: "B1-01", cycle: null, lanes: [], notSeededLanes: [], date: "2026-11-06" } }); });
-  expect(screen.queryByRole("region", { name: "Chi tiết chu kỳ của bè" })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Chi tiết hành trình của bè" })).toBeNull();
   expect((screen.getByRole("combobox", { name: "Vùng nuôi" }) as HTMLSelectElement).value).toBe(zoneId);
 });
 
@@ -33,7 +33,7 @@ it("opens a linked raft without applying the child lot search to the raft direct
   state.params = new URLSearchParams({ zoneId, raftId, recordId: "00000000-0000-4000-8000-0000000000b1", search: "LO-THU-001", cycleId: "00000000-0000-4000-8000-0000000000c1" }).toString();
   state.read.mockImplementation(async (query: { action: string }) => ({ status: "success", data: query.action === "zone" ? [{ raftId, raftCode: "B1-01", raftStatusId: 101, raftStatus: "In Use", laneCount: 3, cycle: null, lastCloseDate: null, canStart: false, canEdit: false, canCancel: false }] : query.action === "history" ? [] : { raftId, raftCode: "B1-01", cycle: null, lanes: [], notSeededLanes: [], date: "2026-11-06" } }));
   render(<CyclesScreen />);
-  await screen.findByRole("region", { name: "Chi tiết chu kỳ của bè" });
+  await screen.findByRole("region", { name: "Chi tiết hành trình của bè" });
   expect((screen.getByRole("searchbox", { name: "Tìm bè nuôi" }) as HTMLInputElement).value).toBe("");
   expect(state.read).toHaveBeenCalledWith(expect.objectContaining({ action: "progress", cycleId: "00000000-0000-4000-8000-0000000000c1" }), expect.anything(), expect.anything());
 });

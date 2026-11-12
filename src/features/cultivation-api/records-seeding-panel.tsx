@@ -15,6 +15,7 @@ import * as c from "./records-contracts";
 import { RecordHistory } from "@/features/history/record-history";
 import { CompleteSeeding } from "./records-complete-seeding-dialog";
 import { SeedingForm } from "./records-seeding-form";
+import { SeedingSummaryStrip } from "./seeding-summary-strip";
 import { seedRepo, useAllowed } from "./records-shared";
 
 /** Seeding records of the raft's current cycle, per-lot totals and the "mark seeding complete" action. */
@@ -61,6 +62,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
       ) : (
         data && (
           <>
+            <SeedingSummaryStrip data={data} />
             <div className={flowStyles.completion}>
               <span>
                 {data.seedingCompletedOn

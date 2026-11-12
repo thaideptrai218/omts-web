@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
-import { FarmingStepBar } from "@/features/farming-management/farming-step-bar";
 import { CycleProgressTab } from "@/features/cycles-api/cycle-progress-tab";
 import { useMemo, useState, type ReactNode } from "react";
 import { StatusPill } from "@/components/ui/management-page";
@@ -30,7 +29,8 @@ function HistoricalHarvestRecord({ id, zoneId }: { id: string; zoneId: string })
 
 /** Opened raft row of the seeding, material-use and harvest screens: the area's records and the lane progress, in place. */
 export function RecordsRaftPanel({ area, row, zoneId }: { area: RecordsArea; row: CycleRow; zoneId: string }) {
-  const params = useSearchParams(), selectedCycleId = params.get("cycleId") ?? row.cycle?.id;
+  // The screen writes raftId and cycleId of the open row itself; the URL can lag a render behind, so only this raft's cycleId counts.
+  const params = useSearchParams(), selectedCycleId = (params.get("raftId") ?? row.raftId) === row.raftId ? params.get("cycleId") ?? row.cycle?.id : row.cycle?.id;
   const [tab, setTab] = useState<TabKey>("records"), prefix = `records-${area}-${row.raftId}`;
   const tabs = useMemo(() => [{ key: "records" as const, label: recordsLabel[area] }, ...(area === "material-usages" ? [] : [{ key: "progress" as const, label: "Tiến độ làn" }])], [area]);
   const state = cycleStateOf(row);
@@ -43,8 +43,7 @@ export function RecordsRaftPanel({ area, row, zoneId }: { area: RecordsArea; row
   };
   return <section id={`cycle-preview-${row.raftId}`} className={styles.detail} aria-label="Hồ sơ vận hành của bè">
     <header className={styles.header}><h3><Link href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>Bè {row.raftCode}</Link></h3><StatusPill tone={state === "open" ? "success" : "neutral"}>{cycleStateLabel(state)}</StatusPill>
-      <span className={styles.hint}>{row.laneCount} làn nuôi{row.cycle ? <> · <Link href={farmingReferenceHref("cycle", { zoneId, raftId: row.raftId, cycleId: row.cycle.id })}>Chu kỳ từ {formatVietnameseDate(row.cycle.startDate)}</Link></> : ""}</span></header>
-    <FarmingStepBar current={area === "material-usages" ? "material" : area} zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} />
+      <span className={styles.hint}>{row.laneCount} làn nuôi{row.cycle ? <> · <Link href={farmingReferenceHref("cycle", { zoneId, raftId: row.raftId, cycleId: row.cycle.id, tab: "journey" })}>Hành trình chu kỳ từ {formatVietnameseDate(row.cycle.startDate)}</Link></> : ""}</span></header>
     <Subtabs<TabKey> label="Hồ sơ vận hành của bè" tabs={tabs} value={tab} idPrefix={prefix} onChange={setTab} />
     <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={`${styles.body} ${flowStyles.page}`}>{content[tab]}</div>
   </section>;

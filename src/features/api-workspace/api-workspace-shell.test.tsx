@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { ApiWorkspaceShell } from "./api-workspace-shell";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard", useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/features/auth/api/api-auth-client", () => ({ logoutWithApi: vi.fn() }));
 vi.mock("@/features/inbox-api/inbox-bell", () => ({ InboxBell: () => null }));
 vi.mock("@/features/trader-requests-api/requests-dialog", () => ({ TraderRequestsDialog: () => null }));
@@ -22,7 +22,7 @@ describe("shared API navigation shell", () => {
     const nav = within(view.container).getByRole("navigation", { name: "Chức năng" });
     const cultivation = within(nav).getByText("Nuôi trồng", { exact: true }).closest("details")!;
     fireEvent.click(cultivation.querySelector("summary")!);
-    expect(within(cultivation).getByRole("link", { name: "Chu kỳ nuôi" }).getAttribute("href")).toBe("/farming/cycles");
+    expect(within(cultivation).getByRole("link", { name: "Hành trình" }).getAttribute("href")).toBe("/farming/cycles");
     expect(nav.querySelectorAll('a[href="/farming/cycles"]')).toHaveLength(1);
     const personnel = within(nav).getByText("Nhân sự", { exact: true }).closest("details")!;
     fireEvent.click(personnel.querySelector("summary")!);

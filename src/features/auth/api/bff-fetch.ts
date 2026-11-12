@@ -2,7 +2,6 @@ import {
   AUTH_REJECTION_BEFORE_EXECUTION, AUTH_REJECTION_HEADER, AUTH_REJECTION_RELOAD_REQUIRED, DISPLAYED_ACCOUNT_HEADER,
 } from "@/shared/http/session-headers";
 import { readDisplayedAccount } from "./displayed-account";
-import { announceMutation } from "./mutation-event";
 
 // Shared with login, logout and verification so a renewal never overlaps a sign-in or sign-out.
 export const AUTH_LOCK_NAME = "omts-auth-lifecycle-v1";
@@ -62,9 +61,7 @@ function replayable(body: BodyInit | null | undefined): boolean {
  * anything; every other write keeps its uncertain outcome for the caller to report.
  */
 export async function bffFetch(input: string, init: RequestInit = {}, options: Readonly<{ lockHeld?: boolean }> = {}): Promise<Response> {
-  const response = await bffFetchRequest(input, init, options);
-  announceMutation(init.method, response);
-  return response;
+  return bffFetchRequest(input, init, options);
 }
 
 async function bffFetchRequest(input: string, init: RequestInit, options: Readonly<{ lockHeld?: boolean }>): Promise<Response> {

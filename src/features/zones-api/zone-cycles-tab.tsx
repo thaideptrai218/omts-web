@@ -26,6 +26,6 @@ export function ZoneCyclesTab({ zoneId }: { zoneId: string }) {
           <td>{row.cycle ? <Link className={styles.link} href={farmingReferenceHref("cycle", { zoneId, raftId: row.raftId, cycleId: row.cycle.id })}>{formatVietnameseDate(row.cycle.startDate)}</Link> : "—"}</td>
           <td>{row.cycle?.closeDate ? formatVietnameseDate(row.cycle.closeDate) : "—"}</td>
         </tr>)}</tbody></table>}
-    <TabFooter right={<Link className={styles.footerLink} href={listHref}>Mở màn Chu kỳ nuôi</Link>} />
+    <TabFooter right={<Link className={styles.footerLink} href={listHref}>Mở màn Hành trình</Link>} />
   </>;
 }

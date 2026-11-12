@@ -3,7 +3,7 @@ import type { CycleFigures } from "./close-contracts";
 import type { CycleView } from "./cycle-model";
 import { buildJourney, laneIs, type JourneyLane, type JourneyStep } from "./cycle-journey-model";
 
-/** The six steps of the farming journey bar. */
+/** Farming steps a figure can be given for (water and material have none: the strip model only marks material optional). */
 export type StripKind = "nursery" | "cycle" | "seeding" | "harvest" | "material" | "water";
 /** done = finished, active = in progress, todo = not started, neutral = no state to claim (optional step, no nursery). */
 export type StripMark = "done" | "active" | "todo" | "neutral";
@@ -12,6 +12,8 @@ export type StripItems = Partial<Record<StripKind, StripItem>>;
 export type StripInput = { cycle: CycleView; lanes: readonly JourneyLane[]; figures: CycleFigures };
 
 const num = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+/** Nursery pieces are estimates: whole pieces only, so a raft's share never reads "1.777,78". */
+const whole = (value: number) => Math.round(value).toLocaleString("vi-VN");
 const markLabels: Record<StripMark, string> = { done: "Đã xong", active: "Đang thực hiện", todo: "Chưa bắt đầu", neutral: "" };
 const item = (mark: StripMark, figure: string, plan?: { actual: number; target: number | null | undefined }): StripItem => {
   const percent = plan ? planPercent(plan.actual, plan.target) : undefined;
@@ -19,9 +21,8 @@ const item = (mark: StripMark, figure: string, plan?: { actual: number; target: 
 };
 
 /**
- * What each step of the top journey bar shows for ONE cycle: a state mark, a one-line figure and, where a plan exists, plan progress.
- * Step states come from `buildJourney` (the per-cycle journey), so the bar and the cycle's journey tab never disagree.
- * Water has no per-cycle plan and is left out on purpose; the bar then shows the plain link.
+ * The one-line figures of ONE cycle (nursery, days of farming, seeding, harvest) for the figures row at the top of the Tổng hợp tab:
+ * a state mark, a figure and, where a plan exists, plan progress. Step states come from `buildJourney`, so the row and the step cards never disagree.
  */
 export function buildStripItems({ cycle, lanes, figures: f }: StripInput): StripItems {
   const steps = buildJourney({ cycle, lanes, figures: f, today: "", canClose: false, canEditPlan: false, canLog: false, canRecord: false });
@@ -30,7 +31,7 @@ export function buildStripItems({ cycle, lanes, figures: f }: StripInput): Strip
 
   const nursery = f.nursery;
   const nurseryItem = cycle.nurseryBatchId || nursery
-    ? item("done", `${cycle.nurseryCode ?? nursery?.batchCode ?? "Đợt ươm"} · ${nursery?.survivors != null && nursery.quantityIn != null ? `${num(nursery.survivors)}/${num(nursery.quantityIn)} sống sót (ước tính)` : "đã hoàn tất ươm"}`)
+    ? item("done", `${cycle.nurseryCode ?? nursery?.batchCode ?? "Đợt ươm"} · ${nursery?.survivors != null && nursery.quantityIn != null ? `${whole(nursery.survivors)}/${whole(nursery.quantityIn)} sống sót (ước tính)` : "đã hoàn tất ươm"}`)
     : item("neutral", "Không qua ươm");
 
   const days = cycle.daysOfFarming;

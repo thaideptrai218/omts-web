@@ -20,6 +20,6 @@ export function RaftCyclesTab({ raftId, zoneId }: { raftId: string; zoneId: stri
     {remote.data.length === 0 ? <p className={styles.hint}>Bè chưa có chu kỳ nuôi.</p>
       : <table className={styles.subTable}><thead><tr><th scope="col">Bắt đầu</th><th scope="col">Đóng</th><th scope="col">Tình trạng</th></tr></thead>
         <tbody>{remote.data.map(cycle => <tr key={cycle.id}><td><Link className={styles.link} href={farmingReferenceHref("cycle", { zoneId, raftId, cycleId: cycle.id })}>{formatVietnameseDate(cycle.startDate)}</Link></td><td>{cycle.closeDate ? formatVietnameseDate(cycle.closeDate) : "—"}</td><td>{cycle.closeDate ? "Đã đóng" : "Đang mở"}</td></tr>)}</tbody></table>}
-    <TabFooter right={<Link className={styles.footerLink} href={href}>Mở màn Chu kỳ nuôi</Link>} />
+    <TabFooter right={<Link className={styles.footerLink} href={href}>Mở màn Hành trình</Link>} />
   </>;
 }

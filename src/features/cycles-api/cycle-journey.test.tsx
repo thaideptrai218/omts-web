@@ -62,18 +62,18 @@ describe("journey model: five steps, plan vs actual, one primary action each", (
 const access = { view: true, create: true, edit: true, remove: true, logs: true, logsCreate: true, logsEdit: true };
 const row = { raftId, raftCode: "B1-01", raftStatusId: 101, raftStatus: "In Use", laneCount: 3, cycle: { id: cycleId, startDate: "2026-10-02", closeDate: null, statusId: 1, status: "Open", rowVersion: "AAAA" }, lastCloseDate: null, canStart: false, canEdit: true, canCancel: false };
 const preview = (patch: object = {}) => ({ summary: figures({ notHarvestedLanes: [1] }), isEarly: true, needsOwnerApproval: false, earlyCloseMessage: "Early", confirmMessage: "Sure?", cycleRowVersion: "AAAA", ...patch });
-function mount(onJump = vi.fn(), onChanged = vi.fn()) {
+function mount(part: "overview" | "summary" = "overview", onJump = vi.fn(), onChanged = vi.fn()) {
   repo.readCycles.mockResolvedValue({ status: "success", data: { raftId, raftCode: "B1-01", date: "2026-11-12", cycle: cycle(), lanes: [{ id: cycleId, laneNumber: 1, statusId: 1, status: "x", state: "Growing" }, { id: cycleId, laneNumber: 2, statusId: 1, status: "x", state: "BeingHarvested" }], notSeededLanes: [] } });
   repo.readCycleSummary.mockResolvedValue({ status: "success", data: figures({ notHarvestedLanes: [1, 2] }) });
-  render(<ToastProvider><CycleJourneyTab row={row} zoneId={zoneId} access={access} onJump={onJump} onChanged={onChanged} /></ToastProvider>);
+  render(<ToastProvider><CycleJourneyTab part={part} row={row} zoneId={zoneId} access={access} onJump={onJump} onChanged={onChanged} /></ToastProvider>);
   return { onJump, onChanged };
 }
 
 describe("journey tab", () => {
   it("renders the stepper with status chips and jumps to the care-log tab from its action", async () => {
-    const { onJump } = mount();
+    const { onJump } = mount("overview");
     const list = await screen.findByRole("list", { name: "Hành trình chu kỳ" });
-    expect(within(list).getAllByRole("heading", { level: 4 }).map(heading => heading.textContent)).toEqual(["✓Kế hoạch", "2Thả giống", "3Thu hoạch", "4Tổng kết"]);
+    expect(within(list).getAllByRole("heading", { level: 4 }).map(heading => heading.textContent)).toEqual(["✓Kế hoạch", "2Thả giống", "3Thu hoạch"]);
     const optional = screen.getByRole("complementary", { name: "Hoạt động tùy chọn" });
     expect(optional.textContent).toContain("Chăm sóc");
     expect(optional.textContent).toContain("Vật tư");
@@ -82,10 +82,26 @@ describe("journey tab", () => {
     expect(onJump).toHaveBeenCalledWith("logs");
     expect(within(list).getByRole("link", { name: "Thu hoạch và hoàn tất làn" }).getAttribute("href")).toBe(`/operations/harvest?zoneId=${zoneId}&raftId=${raftId}&cycleId=${cycleId}`);
   });
+  it("puts the figures at a glance above the cards and keeps the closing step for the Tổng kết tab", async () => {
+    mount("overview");
+    const figuresRow = await screen.findByRole("list", { name: "Hành trình chu kỳ" }).then(() => screen.getByLabelText("Tiến độ chính của đợt nuôi"));
+    expect(within(figuresRow).getByText("Ươm giống").nextElementSibling?.textContent).toBe("Không qua ươm");
+    expect(within(figuresRow).getByText("Đợt nuôi").nextElementSibling?.textContent).toContain("Ngày");
+    expect(within(figuresRow).getByText("Thả giống")).toBeTruthy();
+    expect(within(figuresRow).getByText("Thu hoạch")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Kết thúc chu kỳ" })).toBeNull();
+  });
+  it("shows only the closing step with its action in the summary part", async () => {
+    mount("summary");
+    const list = await screen.findByRole("list", { name: "Tổng kết chu kỳ" });
+    expect(within(list).getAllByRole("heading", { level: 4 }).map(heading => heading.textContent)).toEqual(["4Tổng kết"]);
+    expect(screen.queryByLabelText("Tiến độ chính của đợt nuôi")).toBeNull();
+    expect(screen.queryByRole("complementary", { name: "Hoạt động tùy chọn" })).toBeNull();
+  });
   it("closes directly for the Owner: preview, required assessment, one confirmation, toast", async () => {
     repo.readClosePreview.mockResolvedValue({ status: "success", data: preview() });
     repo.closeCycle.mockResolvedValue({ status: "success", data: { cycle: cycle({ closeDate: "2026-11-12" }), summary: figures() } });
-    const { onChanged } = mount();
+    const { onChanged } = mount("summary");
     fireEvent.click(await screen.findByRole("button", { name: "Kết thúc chu kỳ" }));
     const form = await screen.findByRole("form", { name: "Kết thúc chu kỳ" });
     expect(within(form).queryByRole("checkbox")).toBeNull();
@@ -103,7 +119,7 @@ describe("journey tab", () => {
   it("makes a Zone Manager confirm the Owner's approval of an early close and sends ownerApproved", async () => {
     repo.readClosePreview.mockResolvedValue({ status: "success", data: preview({ needsOwnerApproval: true }) });
     repo.closeCycle.mockResolvedValue({ status: "success", data: { cycle: cycle({ closeDate: "2026-11-12" }), summary: figures() } });
-    mount();
+    mount("summary");
     fireEvent.click(await screen.findByRole("button", { name: "Kết thúc chu kỳ" }));
     const form = await screen.findByRole("form", { name: "Kết thúc chu kỳ" });
     fireEvent.change(within(form).getByLabelText("Đánh giá chu kỳ *"), { target: { value: "Sớm vì dịch" } });
@@ -118,7 +134,7 @@ describe("journey tab", () => {
   it("answers a MSG-CYCLE-07 from the backend by asking for the approval instead of showing an error", async () => {
     repo.readClosePreview.mockResolvedValue({ status: "success", data: preview({ needsOwnerApproval: false }) });
     repo.closeCycle.mockResolvedValueOnce({ status: "error", httpStatus: 409, uncertain: false, problem: { code: "MSG-CYCLE-07", confirmFlag: "ownerApproved" } });
-    mount();
+    mount("summary");
     fireEvent.click(await screen.findByRole("button", { name: "Kết thúc chu kỳ" }));
     const form = await screen.findByRole("form", { name: "Kết thúc chu kỳ" });
     fireEvent.change(within(form).getByLabelText("Đánh giá chu kỳ *"), { target: { value: "Sớm" } });
@@ -130,11 +146,11 @@ describe("journey tab", () => {
   it("shows the load error with a retry", async () => {
     repo.readCycles.mockResolvedValue({ status: "error", httpStatus: 500, uncertain: false });
     repo.readCycleSummary.mockResolvedValue({ status: "error", httpStatus: 500, uncertain: false });
-    render(<ToastProvider><CycleJourneyTab row={row} zoneId={zoneId} access={access} onJump={vi.fn()} onChanged={vi.fn()} /></ToastProvider>);
+    render(<ToastProvider><CycleJourneyTab part="overview" row={row} zoneId={zoneId} access={access} onJump={vi.fn()} onChanged={vi.fn()} /></ToastProvider>);
     expect(await screen.findByRole("button", { name: "Tải lại hành trình" })).toBeTruthy();
   });
   it("explains a raft without a cycle", () => {
-    render(<ToastProvider><CycleJourneyTab row={{ ...row, cycle: null }} zoneId={zoneId} access={access} onJump={vi.fn()} onChanged={vi.fn()} /></ToastProvider>);
+    render(<ToastProvider><CycleJourneyTab part="overview" row={{ ...row, cycle: null }} zoneId={zoneId} access={access} onJump={vi.fn()} onChanged={vi.fn()} /></ToastProvider>);
     expect(screen.getByText(/Bè chưa có chu kỳ nuôi/)).toBeTruthy();
   });
 });
