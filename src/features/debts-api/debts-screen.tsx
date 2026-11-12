@@ -1,14 +1,17 @@
 "use client";
-import { Fragment, useCallback, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
+import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
+import { boundedRange } from "@/components/ui/management-screen/time-range-limits";
+import { isAllTime, presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "@/features/operations/permissions";
-import { DataTable, ErrorNotice, Field, Money, OperationHeading, Paging, Select, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
+import { DataTable, ErrorNotice, Field, Money, OperationHeading, Paging, Select, Skeleton, businessToday, useMutation, useRemote } from "@/features/operations/ui";
 import { ReceiptDialog, PaymentRecordDialog, SupplierPaymentDialog, UnpaidReceiptQueue, type SupplierPaymentDraft } from "@/features/purchasing-v2/screens";
-import { formatVietnameseDate, isDateOnly } from "@/shared/format/date-only";
+import { formatVietnameseDate } from "@/shared/format/date-only";
 import { debtList, debtStatement } from "./contracts";
 import { readDebt, downloadDebt } from "./repository";
 import styles from "./debts-screen.module.css";
@@ -16,14 +19,15 @@ const kindLabels={Receipt:"Nhập hàng",Return:"Trả hàng nhập",ReturnRefun
 type Statement=z.infer<typeof debtStatement>;
 export function DebtsScreen() {
  const context=useApiWorkspace(),allowed=(action:string)=>operationAllowed("supplier-payments",context.identity,context.permissions.functionPermissions,action),canView=!!allowed("View");
- const [search,setSearch]=useState(""),[applied,setApplied]=useState(""),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(20),[supplier,setSupplier]=useState<string>(),[from,setFrom]=useState(""),[to,setTo]=useState(""),[period,setPeriod]=useState({from:"",to:""}),[periodError,setPeriodError]=useState<string>(),[version,setVersion]=useState(0),[draft,setDraft]=useState<SupplierPaymentDraft>(),[notice,setNotice]=useState<string>();
+ const [search,setSearch]=useState(""),[applied,setApplied]=useState(""),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(20),[supplier,setSupplier]=useState<string>(),[time,setTime]=useState<TimeRangeValue>(()=>presetValue("thisMonth")),[today]=useState(businessToday),[version,setVersion]=useState(0),[draft,setDraft]=useState<SupplierPaymentDraft>(),[notice,setNotice]=useState<string>();
  const remote=useRemote(useCallback((signal:AbortSignal)=>canView?readDebt({action:"list",search:applied,page:String(page),pageSize:String(pageSize)},debtList,signal):Promise.resolve({status:"error" as const,httpStatus:403,uncertain:false}),[canView,applied,page,pageSize])),exportFile=useMutation();
  const visibleSupplier=remote.data?.page.items.some(row=>row.supplier.id===supplier)?supplier:undefined;
  function saved(){setDraft(undefined);setVersion(value=>value+1);remote.reload();setNotice("Đã cập nhật giao dịch và công nợ nhà cung cấp.");}
- function applyPeriod(){if((from&&!isDateOnly(from))||(to&&!isDateOnly(to))||from&&to&&from>to){setPeriodError("Kiểm tra ngày bắt đầu và ngày kết thúc của kỳ đối chiếu.");return;}setPeriodError(undefined);setPeriod({from,to});}
+ // The statement needs both dates: "Toàn thời gian" becomes the widest window the ledger covers (5 years back from today).
+ const period=useMemo(()=>boundedRange(time,today,5),[time,today]);
  if(!canView)return <p role="alert">Bạn không có quyền xem công nợ nhà cung cấp.</p>;
- return <section className={styles.page}><OperationHeading title="Công nợ nhà cung cấp" description="Đối chiếu số còn nợ, tiền trả trước và từng chứng từ phát sinh." icon="payment">{allowed("Export")&&<Button className="w-auto" variant="secondary" disabled={exportFile.pending||remote.loading||!!remote.error||from!==period.from||to!==period.to} onClick={()=>void exportFile.run(()=>downloadDebt({search:applied,...period,...(visibleSupplier?{supplierId:visibleSupplier}:{})}),true)}>{exportFile.pending?"Đang xuất…":"Xuất Excel"}</Button>}</OperationHeading>
- <FilterWorkspace label="Kỳ xem sổ đối chiếu" filters={<form className={styles.period} onSubmit={event=>{event.preventDefault();applyPeriod();}}><Field label="Từ ngày" type="date" value={from} onChange={event=>setFrom(event.target.value)}/><Field label="Đến ngày" type="date" value={to} onChange={event=>setTo(event.target.value)}/><ErrorNotice error={periodError}/><Button className="w-auto" type="submit">Áp dụng kỳ</Button><p>Kỳ chỉ áp dụng cho sổ đối chiếu. Công nợ hiện tại và phiếu chưa thanh toán được theo dõi đến hôm nay.</p></form>}>
+ return <section className={styles.page}><OperationHeading title="Công nợ nhà cung cấp" description="Đối chiếu số còn nợ, tiền trả trước và từng chứng từ phát sinh." icon="payment">{allowed("Export")&&<Button className="w-auto" variant="secondary" disabled={exportFile.pending||remote.loading||!!remote.error} onClick={()=>void exportFile.run(()=>downloadDebt({search:applied,...period,...(visibleSupplier?{supplierId:visibleSupplier}:{})}),true)}>{exportFile.pending?"Đang xuất…":"Xuất Excel"}</Button>}</OperationHeading>
+ <FilterWorkspace label="Kỳ xem sổ đối chiếu" filters={<div className={styles.period}><TimeRangeFilter legend="Kỳ đối chiếu" value={time} onChange={setTime}/><p>Kỳ chỉ áp dụng cho sổ đối chiếu{isAllTime(time)?" (Toàn thời gian: tối đa 5 năm gần nhất)":""}. Công nợ hiện tại và phiếu chưa thanh toán được theo dõi đến hôm nay.</p></div>}>
  <form className={styles.search} onSubmit={event=>{event.preventDefault();setApplied(search.trim());setPage(1);setSupplier(undefined);}}><Field label="Tìm nhà cung cấp" type="search" placeholder="Theo tên nhà cung cấp" maxLength={200} value={search} onChange={event=>setSearch(event.target.value)}/><Button className="w-auto" type="submit">Tra cứu</Button><Button className="w-auto" type="button" variant="secondary" disabled={remote.loading} onClick={()=>{remote.reload();setVersion(value=>value+1);}}>Tải lại</Button></form>
  <ErrorNotice error={remote.error||exportFile.error}/>{notice&&<p role="status" className={styles.notice}>{notice}</p>}
  {remote.data&&<dl className={styles.summary}><div><dt>Tổng còn phải trả</dt><dd><Money value={remote.data.totalOwed}/></dd></div><div><dt>Tổng trả trước</dt><dd><Money value={remote.data.totalAdvance}/></dd></div><div><dt>Nhà cung cấp có công nợ</dt><dd>{remote.data.page.total}</dd></div></dl>}

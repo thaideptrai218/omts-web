@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import * as c from "./contracts";
 import { type Query } from "./repository";
@@ -18,7 +19,6 @@ import {
   OperationHeading,
   Paging,
   Skeleton,
-  businessToday,
   statusLabel,
   useMutation,
   useRemote,
@@ -42,10 +42,9 @@ export function ReceiptScreen() {
     itemId: "",
     itemGroup: "",
     statusId: "",
-    // Default period: from 1 January of the current business year until today.
-    from: businessToday().slice(0, 4) + "-01-01",
-    to: businessToday(),
   });
+  // Default period: the current year, the same range as the list always started with.
+  const [time, setTime] = useState<TimeRangeValue>(() => presetValue("thisYear"));
   const [page, setPage] = useState(1);
   // undefined = editor closed, null = creating a new receipt.
   const [selected, setSelected] = useState<c.Receipt | null>();
@@ -61,7 +60,7 @@ export function ReceiptScreen() {
   // The zone picker narrows the zone filter; "all zones" is only offered while nothing is narrowed.
   const { zones: offeredZones, zoneId: zoneFilter, narrowed } = useScopedZones(zones.data ?? [], chosen.zoneId);
   const filters = useMemo(() => ({ ...chosen, zoneId: zoneFilter }), [chosen, zoneFilter]);
-  const query = useMemo<Query>(() => ({ ...filters, page: String(page), pageSize: "20" }), [filters, page]);
+  const query = useMemo<Query>(() => ({ ...filters, from: time.from, to: time.to, page: String(page), pageSize: "20" }), [filters, time.from, time.to, page]);
   const list = useRemote(
     useMemo(() => (signal: AbortSignal) => repository.read("list", query, c.receiptSearchSchema, signal), [query]),
   );
@@ -134,6 +133,11 @@ export function ReceiptScreen() {
       <ReceiptListFilters
         filters={filters}
         filter={filter}
+        time={time}
+        onTime={(value) => {
+          setTime(value);
+          setPage(1);
+        }}
         zones={offeredZones}
         narrowed={narrowed}
         suppliers={suppliers.data}

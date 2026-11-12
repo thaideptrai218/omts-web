@@ -38,18 +38,18 @@ export function ReceiptsV2Screen() {
   const exportFile = useMutation();
   const supplierOptions = useRemote(loadSuppliers);
   const raftOptions = useRemote(loadReceiptRafts);
-  const { code, from, to, status, supplier, raft, group } = filters;
+  const { code, time, status, supplier, raft, group } = filters;
   const query = useMemo(
     () => ({
       page: String(page),
       pageSize: String(pageSize),
       code: code || undefined,
-      from: from || undefined,
-      to: to || undefined,
+      from: time.from || undefined,
+      to: time.to || undefined,
       supplierId: supplier || undefined,
       raftId: raft || undefined,
     }),
-    [page, pageSize, code, from, to, supplier, raft],
+    [page, pageSize, code, time.from, time.to, supplier, raft],
   );
   // Status and item group are multi-selections, expanded into several requests by the selection repository.
   const remote = useRemote(
@@ -58,7 +58,6 @@ export function ReceiptsV2Screen() {
       [query, status, group],
     ),
   );
-  const invalidPeriod = !!(from && to && from > to);
 
   // Every filter change returns to page 1.
   const changeFilters = (changes: Partial<ReceiptListFilterValues>) => {
@@ -84,7 +83,7 @@ export function ReceiptsV2Screen() {
             className="w-auto"
             variant="secondary"
             disabled={
-              exportFile.pending || remote.loading || !!remote.error || invalidPeriod || status === "-" || group === "-"
+              exportFile.pending || remote.loading || !!remote.error || status === "-" || group === "-"
             }
             onClick={() =>
               void exportFile.run(() => downloadSelectedReceipts(query, { statusId: status, itemGroup: group }), true)
@@ -131,13 +130,7 @@ export function ReceiptsV2Screen() {
             onChange={(e) => changeFilters({ code: e.target.value })}
           />
         </div>
-        <ErrorNotice
-          error={
-            invalidPeriod
-              ? "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc."
-              : exportFile.error || supplierOptions.error || raftOptions.error
-          }
-        />
+        <ErrorNotice error={exportFile.error || supplierOptions.error || raftOptions.error} />
         {(supplierOptions.error || raftOptions.error) && (
           <Button
             variant="secondary"

@@ -40,7 +40,7 @@ export function SalesPerformanceScreen() {
       filters={
         <>
           {/* TODO(api): filter values feed the report query once the endpoint exists. */}
-          <PeriodFilter name="sales-performance-period" />
+          <PeriodFilter />
           <RadioFilter legend="Nhóm theo" name="sales-performance-group" options={GROUP_OPTIONS} value={groupBy} onChange={setGroupBy} />
           {/* TODO(api): zone, customer and product options come from the backend lists. */}
           <ChecklistFilter legend="Vùng nuôi" />
