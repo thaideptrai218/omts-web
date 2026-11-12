@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Children, useCallback, useState, type ReactNode } from "react";
 import { StatusPill } from "@/components/ui/management-page";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
-import { farmingStepLink } from "@/features/farming-management/entity-links";
+import { farmingStepLink, nurseryLink } from "@/features/farming-management/entity-links";
 import { PlanBar } from "@/features/farming-management/plan-bar";
 import { businessToday, Skeleton, useRemote } from "@/features/operations/ui";
 import { cycleProgress } from "./contracts";
@@ -32,9 +32,10 @@ export function CycleJourneyTab({ row, zoneId, access, onJump, onChanged }: { ro
   const current = currentStep(mainSteps);
   const act = (action: JourneyAction) => action.close ? setClosing(true) : action.tab ? onJump(action.tab) : undefined;
   return <><nav aria-label="Các mốc hành trình" className="mb-3 flex flex-wrap gap-1 rounded-control bg-surface-subtle p-2 text-xs font-medium">
-    {mainSteps.map((step, index) => <span key={step.key} className="flex items-center gap-1">{index > 0 && <span aria-hidden className="px-1 text-text-muted">→</span>}{step.key === "seeding" || step.key === "harvest" ? <Link className="rounded-control px-2 py-2 text-primary hover:bg-surface" href={farmingStepLink(step.key, { zoneId, raftId: row.raftId, cycleId })}>{step.label}</Link> : <button type="button" className="rounded-control px-2 py-2 text-primary hover:bg-surface" onClick={() => step.key === "plan" ? onJump("plan") : document.getElementById(`journey-summary-${cycleId}`)?.scrollIntoView({ block: "nearest" })}>{step.label}</button>}</span>)}
+    {mainSteps.map((step, index) => <span key={step.key} className="flex items-center gap-1">{index > 0 && <span aria-hidden className="px-1 text-text-muted">→</span>}{step.key === "seeding" || step.key === "harvest" ? <Link className="rounded-control px-2 py-2 text-primary hover:bg-surface" href={farmingStepLink(step.key, { zoneId, raftId: row.raftId, cycleId })}>{step.label}</Link> : <button type="button" className="rounded-control px-2 py-2 text-primary hover:bg-surface" onClick={() => step.key === "plan" ? onJump("plan") : document.getElementById(`journey-${step.key}-${cycleId}`)?.scrollIntoView({ block: "nearest" })}>{step.label}</button>}</span>)}
   </nav><ol aria-label="Hành trình chu kỳ" className="grid gap-3">
     {mainSteps.map((step, index) => <StepCard key={step.key} id={`journey-${step.key}-${cycleId}`} step={step} index={index + 1} current={step.key === current}>
+      {step.key === "nursery" && nurseryLink(cycle.nurseryCode, zoneId) && <Link key="view-nursery" className={linkAction} href={nurseryLink(cycle.nurseryCode, zoneId)!}>Xem đợt ươm {cycle.nurseryCode}</Link>}
       {step.action && (step.action.screen
         ? <Link key={step.action.key} className={linkAction} href={farmingStepLink(step.action.screen, { zoneId, raftId: row.raftId, cycleId })}>{step.action.label}</Link>
         : !step.action.close || !closing ? <button key={step.action.key} type="button" className={linkAction} onClick={() => act(step.action!)}>{step.action.label}</button> : null)}

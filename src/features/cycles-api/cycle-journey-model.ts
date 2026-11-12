@@ -3,7 +3,7 @@ import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import type { CycleFigures } from "./close-contracts";
 import type { CycleView } from "./cycle-model";
 
-export type JourneyKey = "plan" | "seeding" | "care" | "harvest" | "summary";
+export type JourneyKey = "nursery" | "plan" | "seeding" | "care" | "harvest" | "summary";
 export type JourneyStatus = "done" | "active" | "todo";
 export type JourneyBar = { label: string; actual: number; plan: number | null; unit: string; estimate?: boolean; note?: string };
 /** The ONE primary action of a step: a tab of the same page, a screen of the flow, or the close panel. */
@@ -70,7 +70,10 @@ export function buildJourney(input: JourneyInput): JourneyStep[] {
       ...(f.lostLanes ?? []).map(item => `Làn ${item.laneNumber} ngừng hoạt động${item.date ? ` ngày ${formatVietnameseDate(item.date)}` : ""}${item.reason ? `: ${item.reason}` : ""}. Ghi nhận mất giống, không có số lượng; làn được tính là đã kết thúc.`),
       ...(!closed && f.damagedLanes?.length ? [`Làn ${list(f.damagedLanes)} đang hỏng, chưa sửa.`] : []), ...(!closed && early ? [early] : []), ...(closed && cycle.assessment ? [`Đánh giá: ${cycle.assessment}`] : [])],
     ...(!closed && input.canClose ? { action: { key: "journey-close", label: "Kết thúc chu kỳ", close: true as const } } : {}) };
-  return [plan, seeding, care, harvest, summary];
+  const nursery: JourneyStep[] = cycle.nurseryBatchId ? [{ key: "nursery", label: "Ươm", status: "done", chip: cycle.nurseryCode ?? "Đã hoàn tất ươm", bars: [],
+    lines: [...(cycle.nurseryAllocated != null ? [`Phân bổ từ ươm: ${kg(cycle.nurseryAllocated)} mảnh`] : []),
+      ...(cycle.nurserySeeded != null ? [`Đã thả: ${kg(cycle.nurserySeeded)} mảnh`] : []), ...(cycle.nurseryRemaining != null ? [`Còn được thả: ${kg(cycle.nurseryRemaining)} mảnh`] : [])] }] : [];
+  return [...nursery, plan, seeding, care, harvest, summary];
 }
 
 /** The step the owner should look at now: first one that is "active", else the first "todo", else the last. */

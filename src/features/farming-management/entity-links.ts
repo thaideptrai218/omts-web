@@ -24,6 +24,9 @@ export const issueLink = (issueCode: Maybe) => issueCode ? farmingReferenceHref(
 /** The Hành trình of a cycle on the cycle screen (the raft opens on that cycle). */
 export const cycleJourneyLink = (ref: { zoneId: Maybe; raftId: Maybe; cycleId: Maybe }) => ref.cycleId ? farmingReferenceHref("cycle", { ...ref, tab: "journey" }) : undefined;
 
+/** Open the nursery batch by its readable NU code. */
+export const nurseryLink = (code: Maybe, zoneId?: Maybe) => code ? farmingReferenceHref("nursery", { code, zoneId }) : undefined;
+
 /** The yield report narrowed to a zone (and, when known, the raft or cycle). */
 export const yieldLink = (ref: { zoneId: Maybe; raftId?: Maybe; cycleId?: Maybe }) => farmingReferenceHref("yield", ref);
 

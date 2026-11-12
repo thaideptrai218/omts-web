@@ -1,5 +1,5 @@
 const routes = {
-  zone: "/farming/zones", raft: "/farming/rafts", cycle: "/farming/cycles",
+  zone: "/farming/zones", raft: "/farming/rafts", nursery: "/farming/nursery", cycle: "/farming/cycles",
   seeding: "/operations/seeding", material: "/operations/material-usages", harvest: "/operations/harvest",
   yield: "/operations/harvest-yield", lot: "/operations/lot-tracing", water: "/operations/water",
   employee: "/employees", supplier: "/workspace/suppliers", purchaseReceipt: "/operations/purchase-receipts",

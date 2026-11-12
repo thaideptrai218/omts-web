@@ -116,6 +116,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
         const inputs = group.label === INPUT_GROUP ? inputLinks : [];
         return rows.length || modules.length || inputs.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
+          {group.label === "Nuôi trồng" && operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions) && link("/farming/nursery", "Ươm giống", "product")}
           {inputs.map(([href, label, icon]) => link(href, label, icon))}
           {modules.map((entry) => link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]))}
           {group.label === "Mua hàng" && purchasing && <>{link("/operations/purchase-receipts", "Nhập hàng", "receipt")}{link("/operations/purchase-returns", "Trả hàng nhập", "upload")}</>}
