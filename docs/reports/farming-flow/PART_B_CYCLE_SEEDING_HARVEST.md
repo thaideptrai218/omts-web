@@ -1,6 +1,6 @@
 # PHẦN B – Chuỗi sản xuất: Lô giống, Thả giống, Chu kỳ nuôi, Nhật ký, Vật tư, Thu hoạch, Sản lượng, Truy xuất (và Vật tư & Giống)
 
-Ngày lập: 11/11/2026. Người đọc: Chủ hợp tác xã (cần xem logic nghiệp vụ có đúng không để quyết định sửa).
+Ngày lập: 11/11/2026. **Cập nhật 12/11/2026:** thêm ươm giống và thả giống từ đợt ươm (mục 2.8), thu hoạch theo quyết định của Owner (mục 6.8). Chỗ ghi "12/11" là thay đổi mới; còn lại mô tả hành vi 11/11. Người đọc: Chủ hợp tác xã (cần xem logic nghiệp vụ có đúng không để quyết định sửa).
 Phạm vi: các màn trong menu **Nuôi trồng** thuộc chuỗi sản xuất (Phần A viết riêng về Vùng nuôi, Bè nuôi, Làn, Nước). Báo cáo CHỈ MÔ TẢ, không sửa mã nguồn, không đổi dữ liệu.
 
 ---
@@ -33,7 +33,8 @@ Danh mục Vật tư & Giống (item nhóm Giống / Vật tư / Khác)
 Phiếu nhập (Draft -> Completed)         <- mỗi dòng "Giống" của phiếu Completed = 1 LÔ GIỐNG  (mã PN000001-1)
         |                                  trả hàng NCC <= nhập - đã thả
         v
-Vùng -> Bè (có N làn) -> CHU KỲ NUÔI (Open) --- kế hoạch (3 ước tính, tùy chọn)
+UƠM GIỐNG (12/11, mới) -> đợt ươm (vùng, một lô, kho trừ lúc bắt đầu) -> hoàn tất: chia số sống sót cho bè -> tạo chu kỳ
+Vùng -> Bè (có N làn) -> CHU KỲ NUÔI (Open) --- kế hoạch (ước tính, tùy chọn; 12/11: bỏ ngày thu dự kiến)
                               |
                               +-- THẢ GIỐNG: nhiều "lần thả" (1 lô giống, >=1 làn, 1 tổng số lượng) -> làn thành "Đang nuôi"
                               |      "Hoàn tất thả giống" (1 lần/chu kỳ, báo Owner)
@@ -180,7 +181,7 @@ Ghi lại **giống nào (lô nào, nhà cung cấp nào) thả lên những là
 Quản lý vùng của vùng và Owner (`CULTIVATION_CYCLES` Create/Edit; kiểm ở `SeedingRecordService.cs:AllowsAsync`). Sửa/xóa chỉ người đã ghi hoặc Owner (`SeedingViews.cs:26`). Kế toán: không.
 
 ### 2.3 Luồng từng bước
-**Luồng 1 – Ghi nhận thả giống**
+**Luồng 1 – Ghi nhận thả giống** (12/11: với chu kỳ từ ươm, không chọn lô, không kiểm 110%/150%, giới hạn cứng theo phần chia; xem 2.8)
 1. Menu Nuôi trồng → **Thả giống** (`/operations/seeding`) → chọn vùng → bấm vào hàng bè → tab **Thả giống** → khu "Các lần thả giống". Nếu bè chưa có chu kỳ: "Bè chưa có chu kỳ nuôi. Mở chu kỳ trước khi ghi nhận thả giống."
 2. Bấm **Ghi nhận thả giống** (chỉ hiện khi chu kỳ đang mở, bè và vùng đang sử dụng, có quyền) → hộp thoại "Ghi nhận thả giống": Ngày thả giống (mặc định hôm nay), Lô giống (menu "mã · tên hàng · NCC · đơn vị"; lô mua cho bè này xếp trước, rồi lô mới nhận), Số lượng giống, Làn (ô tick: chỉ làn "thả được").
 3. **Lưu thả giống** → hộp xác nhận "Ghi nhận lần thả giống này?" → `POST /api/cultivation-cycles/{cycleId}/seeding-records` `{seedingDate, seedLotId, laneNumbers[], quantity}`.
@@ -221,7 +222,7 @@ Danh sách lô giống (`seed-lots`): id, code PN…-n, receiptCode, receivedDat
 | # | Quy tắc | Cờ |
 |---|---|---|
 | S1 | Chỉ thả từ lô giống của phiếu nhập Completed chưa trả hết; lô của vật tư/NCC đã ngừng vẫn thả được | ✔ GBR-04 |
-| S2 | **Không so số thả với số còn lại của lô** (có thể thả 99.999 từ lô 20.000) | ✔ GBR-04 (SRS cố ý: "OMTS does not track the seed left over") – (đang triển khai: sổ kho kiểm khi thả, D6) |
+| S2 | **Không so số thả với số còn lại của lô** (có thể thả 99.999 từ lô 20.000) | ✔ GBR-04 (SRS cố ý: "OMTS does not track the seed left over") – (12/11: đã làm cho thả thường, sổ kho kiểm tồn khi thả, G.4 của nhật ký; thả từ đợt ươm không trừ kho lần nữa) |
 | S3 | Mỗi lần thả = 1 lô + ≥1 làn + **1 tổng số lượng cho cả lần**; không có số lượng theo làn; hai lô cùng ngày = hai lần thả | ✔ BR-CYCLE-02, BR-FARM-03 |
 | S4 | Thả lại cho làn Đang nuôi (thay giống chết) chỉ **trước** khi hoàn tất; số lượng cộng dồn vào tổng giống đã thả | ✔ BR-CYCLE-02 |
 | S5 | Sau hoàn tất chỉ thả cho làn còn Chưa thả (không thông báo lần nữa) | ✔ |
@@ -246,6 +247,28 @@ Phiếu nhập (mã PN) ← lô giống; Chu kỳ (kế hoạch "Lượng giốn
 
 ---
 
+### 2.8 Ươm giống và thả giống từ đợt ươm (cập nhật 12/11/2026)
+
+Nguồn: `FARMING_NURSERY_STEP_SPEC_2026-11-12.md` (mục 2, 3, 10) và `FARMING_NURSERY_API_CONTRACT_2026-11-12.md`. Mục này là **thiết kế đã chốt**; trạng thái từng phần ghi ở cuối mục. Luồng đầy đủ theo bước: `docs/USER_FLOWS.md`, mục Nuôi trồng.
+
+| Bước | Ai | Nhập | Ảnh | Kết quả |
+|---|---|---|---|---|
+| 1. Mua giống | Quản lý vùng, Owner (Phiếu nhập) | như 1.3 A | — | Lô giống `PN000123-1` khi phiếu Completed |
+| 2. Bắt đầu ươm | Owner, Quản lý vùng (quyền Create) | vùng, lô giống (chỉ lô còn tồn), số mảnh ≤ tồn, ngày bắt đầu, ghi chú | 1–3 | Đợt `NU000001` Đang ươm; kho trừ ngay bằng phiếu Xuất dùng mục đích Nursery; luôn chặn tồn âm |
+| 3. Theo dõi, sửa, hủy | Owner, Quản lý vùng (Edit) | chỉ khi Đang ươm | ảnh vẫn 1–3 | Hủy hoàn kho. Đợt đã hoàn tất **không** hủy được |
+| 4. Hoàn tất ươm | Owner, Quản lý vùng (Create) | sống sót (ước tính bằng mắt, 0 đến số vào), ngày hoàn tất, chia bè, sản lượng dự kiến từng bè (tùy chọn) | 1–3 | Đợt Đã hoàn tất; mỗi bè một chu kỳ, ngày bắt đầu = ngày hoàn tất; sống sót 0 thì không tạo chu kỳ |
+| 5. Thả giống | Owner, Quản lý vùng (Create) | làn, số mảnh | bắt buộc (chờ B2/W3) | Chọn làn; "Còn X trên Y mảnh đã phân bổ"; chặn 409 `NURSERY_SEEDING_ABOVE_ALLOCATION`; không phiếu Xuất dùng |
+| 6. Sửa sống sót, chia lại | Owner, Quản lý vùng (Edit) | sống sót mới kèm lý do; phần chia mới | — | Ghi cũ → mới; không dưới số đã thả; bè đã thả không gỡ được |
+| 7. Tổng kết | — | — | — | Khối `nursery`: số vào, sống sót (ước tính), hao hụt (ước tính, %) |
+
+**Quy tắc chính:** hao hụt ươm = vào − sống sót, luôn ghi nhãn ước tính; không có tỷ lệ dự kiến, không cảnh báo hao hụt cao. Chia bè: cùng vùng, bè không có chu kỳ mở, tổng bằng đúng số sống sót, mỗi phần > 0. Dữ liệu thả giống cũ không có đợt ươm, giữ nguyên, không backfill.
+
+**Thông báo:** khi Quản lý vùng bắt đầu, sửa, hủy, hoàn tất ươm, sửa sống sót hoặc chia lại, Chủ HTX nhận thông báo `NURSERY_RECORDED` (mã chung `MINI_APP_NOTIFICATION`). Chủ tự làm thì không báo. Thả giống không gửi thông báo (như cũ).
+
+**Cảnh báo:** đường tạo chu kỳ **không qua ươm** vẫn còn (dữ liệu cũ và bè chưa chuyển): thả theo đường đó còn chọn lô, còn 110%/150% và trừ kho như mục 2.3. PM quyết định có khóa đường này không (`SRS_DEVIATIONS.md` Q21).
+
+**Trạng thái (12/11):** Backend đã commit (`01c73cf9`, `7099ae60`), gồm đợt ươm, hoàn tất, chia lại, sửa sống sót, thả giống từ phần chia. Web W2 đã triển khai (`/farming/nursery`), chưa kiểm chứng với API thật. Web W3 (thả giống từ phần chia trong form) và ảnh bắt buộc cho thả giống: chờ.
+
 ## 3. Chu kỳ nuôi (Cultivation cycle)
 
 ### 3.1 Mục đích
@@ -256,7 +279,7 @@ Quản lý vùng của vùng và Owner (`CULTIVATION_CYCLES`; bắt đầu = Cre
 
 ### 3.3 Luồng từng bước
 **Luồng 1 – Bắt đầu chu kỳ** (menu Nuôi trồng → **Chu kỳ nuôi** `/farming/cycles` → chọn vùng → bấm bè → nút **Bắt đầu chu kỳ nuôi** ở đầu khung chi tiết → hộp "Mở chu kỳ nuôi · {bè}")
-1. Nhập Ngày bắt đầu (mặc định hôm nay, không quá hôm nay), Lượng giống dự kiến, Ngày thu hoạch dự kiến, Sản lượng mục tiêu (kg) (3 ô cuối tùy chọn) → **Lưu chu kỳ**.
+1. Nhập Ngày bắt đầu (mặc định hôm nay, không quá hôm nay), Lượng giống dự kiến, Ngày thu hoạch dự kiến (12/11: đã bỏ), Sản lượng mục tiêu (kg) (tùy chọn) → **Lưu chu kỳ**.
 2. `POST /api/rafts/{raftId}/cultivation-cycles` (`CultivationCycleService.cs:38`). Điều kiện: bè In Use và vùng In Use; **bè chưa có chu kỳ Open** (409 MSG-GEN-06: "Cannot proceed because 1 records are still in use: cultivation cycle started 02/10/2026. Please handle these records first."); ngày bắt đầu **sau ngày đóng của chu kỳ trước** (bè đóng chu kỳ hôm nay thì bắt đầu mới từ ngày mai; nút chỉ hiện khi `lastClose < hôm nay`). Tạo chu kỳ Open (601) với mọi làn "Chưa thả"; đánh dấu dòng bè "đã đổi" để tránh đua với đổi số làn; audit `CultivationCycle.Started`; **không thông báo**.
 3. Có chỉ mục duy nhất lọc "một chu kỳ Open/bè" ở DB chống hai lần bấm đồng thời.
 
@@ -276,7 +299,7 @@ Quản lý vùng của vùng và Owner (`CULTIVATION_CYCLES`; bắt đầu = Cre
 |---|---|---|---|---|---|
 | startDate | ngày | có (trống = hôm nay khi bắt đầu) | ≤ hôm nay; > ngày đóng chu kỳ trước; khi sửa ≤ bản ghi đầu tiên (`CultivationCycleValues.cs:29-32`); web: `validatePlan` "Ngày bắt đầu không được sau hôm nay" (`cycle-model.ts`) | hôm nay | "Ngày bắt đầu" |
 | expectedSeedQuantity | số | không | > 0; làm tròn 3 chữ số (`FieldCheck.PositiveOptional`, KHÔNG báo lỗi khi dư chữ số, chỉ làm tròn); web zod `positive` | rỗng ("Chưa lập") | "Lượng giống dự kiến"; **không có đơn vị** |
-| expectedHarvestDate | ngày | không | > ngày bắt đầu (`CultivationCycleValues.cs:23`) | rỗng | "Ngày thu hoạch dự kiến" |
+| expectedHarvestDate (12/11: đã bỏ khỏi form và đọc, cột CSDL giữ) | ngày | không | > ngày bắt đầu (`CultivationCycleValues.cs:23`) | rỗng | "Ngày thu hoạch dự kiến" |
 | targetYieldKg | số | không | > 0; 2 chữ số thập phân | rỗng | "Sản lượng mục tiêu (kg)" |
 | rowVersion | chuỗi | khi sửa/hủy/đóng | – | – | – |
 | assessment | chuỗi | khi đóng | 1–2000 | – | "Đánh giá" |
@@ -454,7 +477,7 @@ Ghi: quản lý vùng của vùng và Owner (`HARVESTS` Create). Sửa/gỡ: ng�
 | H4 | Một làn có thể ở nhiều lô; "thu hết" → Đã thu hoạch → không chọn lại | ✔ BR-HARVEST-01 |
 | H5 | **Số lồng**: nguyên > 0, **không trần**; ví dụ 5.000 lồng = 250.000 kg vẫn lưu | ✔ SRS không nêu trần / ⚠ rủi ro gõ nhầm (đang triển khai D8: ≤100.000 và thập phân) |
 | H6 | **kg ước tính** = lồng × kg/lồng (cài đặt hiện hành, sao chép vào lô) hoặc số nhập tay bất kỳ >0 | ✔ BR-HARVEST-02 (SRS: sửa được) / ⚠ kg có thể vênh xa số lồng; (đang triển khai: 0,2–2 lần) |
-| H7 | **Không so kg/lồng thu với giống đã thả, kế hoạch hay lượng đã thu**: có thể thu nhiều hơn đã thả; (đang triển khai: trần theo mục tiêu: >110% cảnh báo + lý do; >150% từ chối) | ✔ SRS (không giới hạn) / ⚠ chủ đã duyệt thay đổi (D1) |
+| H7 | **Không so kg/lồng thu với giống đã thả, kế hoạch hay lượng đã thu**: có thể thu nhiều hơn đã thả; (12/11: Owner bỏ trần cho thu hoạch, không chặn theo mục tiêu; xem 6.8) | ✔ SRS (không giới hạn) / ⚠ chủ đã duyệt thay đổi (D1) |
 | H8 | **Không có số kg theo từng làn**: lô nhiều làn chỉ có tổng; thu hoạch không biết lấy bao nhiêu từ làn nào | ✔ BR-FARM-03 ("never estimates kg on a lane") |
 | H9 | Gỡ lô chặn khi lô nằm trên hóa đơn hoặc đơn chờ chuyển khoản; sửa lô không chặn (Owner sửa cả lô đã bán) | ✔ BR-HARVEST-05 |
 | H10 | Sau khi chu kỳ đóng: không sửa ở màn Thu hoạch; sửa ở Truy xuất lô (cần lý do, Quản lý vùng cần Owner đồng ý) | ✔ BR-CYCLE-04, TRACE-03 |
@@ -469,7 +492,7 @@ Ghi: quản lý vùng của vùng và Owner (`HARVESTS` Create). Sửa/gỡ: ng�
 Chu kỳ (bắt buộc Open; MSG-CYCLE-08); Làn (trạng thái); Hóa đơn bán (chọn lô còn bán `GET /api/harvest-lots/for-sale`; kg bán không bị chặn bởi lô); Truy xuất (mọi lô); Sản lượng nuôi; Công bố nguồn gốc (QR). Khoảng trống: web không có đóng lô tay, không có "thu xong làn" (đang làm), không có chọn **ngày thu hoạch**; không có so sánh với giống đã thả.
 
 ### 6.7 Câu hỏi cho chủ (quan trọng nhất của báo cáo)
-1. **Thu nhiều hơn đã thả** (H7): lô 8 lồng = 400 kg trong khi thả 5.000 con; không có đối chiếu nào. Kỳ vọng: cảnh báo khi tổng kg chu kỳ vượt mục tiêu (đã duyệt D1: +10% cảnh báo, +50% chặn). Hỏi thêm: so với **giống đã thả** có muốn thêm không (cần khối lượng/con và hao hụt – D3/D4 đã bỏ)?
+1. **Thu nhiều hơn đã thả** (H7): lô 8 lồng = 400 kg trong khi thả 5.000 con; không có đối chiếu nào. Kỳ vọng: cảnh báo khi tổng kg chu kỳ vượt mục tiêu (đã duyệt D1 ngày 11/11, nhưng 12/11 Owner bỏ trần cho thu hoạch: thu hoạch không bị chặn theo mục tiêu). Hỏi thêm: so với **giống đã thả** có muốn thêm không (cần khối lượng/con và hao hụt – D3/D4 đã bỏ)?
 2. **Làn Đang thu hoạch vẫn chọn được**: đúng SRS (thu nhiều ngày) nhưng người dùng không phân biệt được làn nào gần thu xong; (đang triển khai: nút "thu xong làn", nhóm "Đang thu" lên đầu, làn Đã thu hoạch/Chưa thả hiển thị xám kèm lý do).
 3. **Không bắt buộc kế hoạch**: chu kỳ không có "mục tiêu" thì thu bao nhiêu cũng được. Có muốn bắt buộc nhập mục tiêu khi bắt đầu chu kỳ?
 4. **Số lồng nguyên**: chuyến thu nửa lồng phải làm tròn (đang triển khai thập phân).
@@ -480,6 +503,20 @@ Chu kỳ (bắt buộc Open; MSG-CYCLE-08); Làn (trạng thái); Hóa đơn bá
 9. **Một lô nhiều làn không có kg từng làn**: có chấp nhận mất khả năng so sánh năng suất từng làn không?
 
 ---
+
+### 6.8 Thay đổi thu hoạch (cập nhật 12/11/2026)
+
+Nguồn: `SRS_CHANGE_LOG_HR_2026-11-11.md` mục G.1 dòng 3 và G.7; đặc tả nursery mục 10.6.
+
+| Nội dung | Trạng thái (12/11) |
+|---|---|
+| **Không bị chặn theo mục tiêu chu kỳ** (Owner 12/11). Màn hiện `targetPercent`, `overTarget`; kg còn lại có thể âm. Mục 6.5 H7 và 6.7 Q1 là mô tả 11/11 | Backend đã commit; Web chờ xác nhận UI |
+| **Gắn yêu cầu mua đã chấp nhận** (`PurchaseRequestId`, bắt buộc khi ghi lô). Đã có từ nhóm bán hàng, giữ nguyên. Demo có sẵn một yêu cầu đã chấp nhận (`YC-20261112-EC3809E2E1EA`) để test | Backend đã; chưa có trong SRS (chờ PM, Q24 SRS_DEVIATIONS) |
+| **Nhóm nhân viên cùng thu** (`crew`, tùy chọn, nhiều người, trên lô). Không chỉ tiêu theo người, không liên kết đơn | Backend đã commit (`a3cb154f`) |
+| **% thu theo làn** nhập ngay trong form thu hoạch; % độc lập với số lồng; cộng dồn không vượt 100% | Chờ B2 (API `PUT /api/rafts/{id}/lanes/{n}/progress`) và W3 |
+| **Ảnh 1–3 bắt buộc** cho lô mới (thay "tùy chọn, tối đa 10" ở 6.3 Luồng 1) | Chờ B2 và W3 |
+| **Sự cố làn** (báo hỏng): ghi chú bắt buộc và ảnh bắt buộc 1–3 (thay ảnh tùy chọn ở G.7) | Chờ B2 |
+| Thông báo: `MSG-HARVEST-01` cho Owner và `MSG-CYCLE-08` khi làn có giống cuối cùng được thu xong: không đổi | Đã có |
 
 ## 7. Sản lượng nuôi (Harvest yield – báo cáo)
 
@@ -643,7 +680,7 @@ Lấy trực tiếp từ `127.0.0.1:8082` ngày 11/11/2026 (chỉ đọc, đăng
 ## 10. Tổng hợp câu hỏi cho chủ – theo mức ưu tiên
 
 **Nhóm A – Cần chủ quyết (ảnh hưởng quy tắc nghiệp vụ lớn)**
-1. **Thu hoạch có bị giới hạn không?** Hiện không giới hạn nào (số lồng, kg, so với mục tiêu, so với giống đã thả). Đã duyệt D1: cảnh báo >110% mục tiêu (cần lý do), chặn >150%. Còn câu hỏi: chu kỳ **không có mục tiêu** thì xử lý sao (bắt buộc nhập mục tiêu khi bắt đầu?); có thêm trần theo giống đã thả không?
+1. **Thu hoạch có bị giới hạn không?** Hiện không giới hạn nào (số lồng, kg, so với mục tiêu, so với giống đã thả). Đã duyệt D1 (11/11), 12/11 Owner bỏ trần cho thu hoạch (chỉ còn trần thả giống 110%/150%). Còn câu hỏi: chu kỳ **không có mục tiêu** thì xử lý sao (bắt buộc nhập mục tiêu khi bắt đầu?); có thêm trần theo giống đã thả không?
 2. **Thả giống vượt lô / kho** (GBR-04 cố ý không kiểm): có muốn kiểm tồn lô khi thả (D6) và chặn hay chỉ cảnh báo? Đồng nghĩa phải để thả giống **tự trừ kho** (hiện hai sổ tách rời).
 3. **Sử dụng vật tư vs Xuất dùng "Sửa chữa bè"**: một nguồn sự thật hay hai? Có kiểm tồn khi dùng vật tư?
 4. **Kế hoạch chu kỳ không bắt buộc, không có đơn vị, không kiểm hợp lý** (250 con vs 5.000; 1,7 kg/con). Muốn: đơn vị rõ + cảnh báo mềm; hay bỏ qua?
@@ -685,6 +722,7 @@ Lấy trực tiếp từ `127.0.0.1:8082` ngày 11/11/2026 (chỉ đọc, đăng
 | Thu hoạch | `GET/POST /api/rafts/{r}/harvest-lots`; `GET/PUT /api/harvest-lots/{id}`; `POST .../remove`; `POST .../close`; `GET /api/harvest-lots/for-sale`(+`/count`); `GET/PUT /api/harvest-settings`; `GET /api/harvest-settings/auto-close-preview`; (đang triển khai) `POST /api/rafts/{r}/lanes/{n}/finish-harvest` |
 | Sản lượng | `GET /api/harvest-yield`; `GET /api/harvest-yield/export` |
 | Truy xuất | `GET /api/harvest-lots/trace-search`; `GET /api/harvest-lots/{id}/trace`(+`/export`); `POST /api/harvest-lots/{id}/publish`, `/withdraw`; sửa: `GET /api/rafts/{r}/trace-corrections`, `GET /api/cultivation-cycles/{c}/trace-corrections`, `POST/PUT /api/seeding-records/{id}/trace-correction(/preview)`, `.../cultivation-logs/{id}/...`, `.../harvest-lots/{id}/...` |
+| Ươm giống (12/11) | `GET /api/nursery-batches/seed-lots`, `GET /api/nursery-batches` (+`/{id}`, `/available`, `/{id}/history`); `POST /api/zones/{z}/nursery-batches`; `PUT /api/nursery-batches/{id}` (sửa); `POST /api/nursery-batches/{id}/cancel`, `/complete`, `/survivors`, `/allocations` |
 | Vật tư & Giống | `/api/farming-input-items`; `/api/purchase-receipts` (+returns); `/api/input-issues`; `/api/input-inventory-settings` |
 
 Câu hỏi chưa giải quyết (cho đội kỹ thuật): (1) máy demo cần cập nhật bản backend mới để kiểm sổ kho trực tiếp; (2) ràng buộc "mọi vật tư giống dùng một đơn vị" chưa tìm thấy trong mã; (3) kiểm tra lại sau khi các thay đổi D1..D10 phát hành để cập nhật các mục "(đang triển khai)" thành hiện tại.

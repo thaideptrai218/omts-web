@@ -325,3 +325,34 @@ Nguồn: `FARMING_RAFT_LANES_HARVEST_OWNER_DECISIONS_2026-11-12.md` (ghi đè đ
 | HARVEST-01 (hoàn tất nhiều làn, mới) | chỉ hoàn tất từng làn | Thêm `POST /api/rafts/{raftId}/finish-harvest` `{laneNumbers[1..200], rowVersion?}`: hoàn tất nhiều làn trong một giao dịch, **tất cả hoặc không gì cả** (409 MSG-GEN-09 kèm danh sách làn lỗi); làn đã Harvested chỉ được báo lại. Một dòng audit mỗi làn + một dòng tổng `Raft.HarvestLanesFinished`; nhắc đóng chu kỳ gửi một lần. Quyền như hoàn tất một làn. Xem `FARMING_API_CONTRACT_2026-11-11.md` mục 3b. |
 
 **Chưa làm / ghi chú:** (1) Không có audit tổng `Raft.GeometryBackfilled` cho migration điền số (chỉ là câu SQL; số bè điền được/không điền được xem bằng truy vấn `LengthM IS NULL`). (2) Tin nhắn thông báo hai loại mới dùng mã chung `MINI_APP_NOTIFICATION` vì SRS chưa có mã riêng. (3) **Đã làm theo chủ dự án:** `POST /api/rafts/{id}/lanes/{n}/restore-service` đưa làn ngừng hoạt động vào lại, chỉ khi không còn chu kỳ mở nào giữ giống trên làn (409 `LANE_HOLDS_SEED`, thông báo tiếng Việt); làn về NotSeeded, sự kiện `Restored`, vật tư tùy chọn kiểm tồn như sửa làn. Sửa làn không bắt buộc lý do. Hai thông báo làn giữ mã chung `MINI_APP_NOTIFICATION`, chờ mã SRS riêng. (4) Gợi ý bè để thu theo chỉ số thật (làn đang nuôi, không hỏng, ngày nuôi) chưa làm ở backend; màn đọc `lanes/today` và màn thu hoạch đã có đủ dữ liệu. (5) Số lồng theo người mua, đơn, kế hoạch theo đơn: đồng đội.
+
+### G.8 Ươm giống, ảnh, % làn (12/11, đặc tả `FARMING_NURSERY_STEP_SPEC_2026-11-12.md`)
+
+Trạng thái ghi theo bằng chứng 12/11: **Backend** nhánh `feature/OMTS-132-nursery` (commit `01c73cf9`, `7099ae60`); **Web** nhánh `feature/OMTS-132-web-login-farming` (`e3517c8`, `e4f5174`, chưa kiểm chứng với API thật); **PM** chờ xác nhận SRS. "Chờ B2/W3" là phần chưa có mã. Chi tiết đối chiếu: `SRS_DEVIATIONS.md` mục 13-14.
+
+| # | Thay đổi so với SRS v8 | Dòng/BR bị ảnh hưởng | Backend | Web | PM |
+|---|---|---|---|---|---|
+| 1 | Bước ươm bắt buộc trước thả giống mới (NUR-01) | dòng 446; CYCLE-01 | Đã làm; đường chu kỳ cũ còn mở (Q21) | W2 đã triển khai | Chờ |
+| 2 | Đợt ươm: một vùng, một lô giống, trạng thái Đang ươm / Đã hoàn tất / Đã hủy (NUR-02) | thực thể mới | Đã làm (`NurseryBatches`) | Đã làm | Chờ |
+| 3 | Kho trừ khi bắt đầu ươm bằng phiếu Xuất dùng mục đích Nursery; luôn chặn tồn âm (NUR-03) | BR-PURCHASE-07 | Đã làm | Hiện tồn trước/sau | Chờ |
+| 4 | Sống sót nhập lúc hoàn tất, ước tính; hao hụt ươm = vào − sống sót; không cảnh báo (NUR-04) | BR-CYCLE-07 | Đã làm | Đã làm, nhãn ước tính | Chờ |
+| 5 | Hoàn tất chia số sống sót cho bè cùng vùng, tạo một chu kỳ mỗi bè (NUR-05) | CYCLE-01 | Đã làm | Đã làm (hai bước) | Chờ |
+| 6 | Sản lượng dự kiến nhập ở hoàn tất ươm, không ở bắt đầu (NUR-06) | CYCLE-01 | Đã làm | Đã làm | Chờ |
+| 7 | Đợt đã hoàn tất không hủy; sửa sống sót và chia lại có nhật ký cũ → mới (NUR-05, NUR-07) | mới | Đã làm (`/survivors`, `/allocations`) | Sửa sống sót đã làm; chia lại sau hoàn tất chờ QA | Chờ |
+| 8 | Thả giống từ phần chia: không lô, chặn cứng, không phiếu xuất, bỏ 110%/150% (NUR-08) | CYCLE-02, GBR-04 | Đã làm | Chờ W3 | Chờ |
+| 9 | Quản lý vùng ghi thì báo Chủ HTX (`NURSERY_RECORDED`, mã chung) (NUR-10) | BR-NURSERY-06 | Đã làm | Hiển thị theo mã | Chờ mã SRS (Q22) |
+| 10 | Quyền dùng chung `CultivationCycles`, không mã riêng (NUR-11) | Q6 mục 8 đặc tả | Đã làm | Đã làm | Chờ (Q23) |
+| 11 | Lỗi tạm `MSG-GEN-09` + `reasonCode` `NURSERY_*` (NUR-12) | Message | Đã làm | Đã làm | Chờ mã SRS |
+| 12 | Bỏ ngày thu hoạch dự kiến khỏi kế hoạch chu kỳ (NUR-14) | CYCLE-01, CYCLE-06 | Đã làm (cột CSDL giữ) | Đọc tương thích; form chu kỳ chưa bỏ (W2 ghi "module tiếp theo") | Chờ |
+| 13 | Thu hoạch không bị chặn theo mục tiêu; `targetPercent`, `overTarget` (FARM-04) | BR-HARVEST-07, CYCLE-06 | Đã làm | Chờ xác nhận UI | Chờ xác nhận |
+| 14 | Thu hoạch gắn yêu cầu mua đã chấp nhận (HAR-01); đã có từ nhóm bán hàng | HARVEST-01 | Đã làm (bắt buộc `PurchaseRequestId` khi ghi) | Theo API | Chờ (Q24) |
+| 15 | Ảnh bắt buộc 1-3: bắt đầu và hoàn tất ươm | mới | Đã làm (ươm) | Đã làm (ươm) | Chờ (Q25) |
+| 16 | Ảnh bắt buộc 1-3: thả giống, thu hoạch, kế hoạch nuôi, sự cố làn (PHO-01, HAR-03, LANE-04) | SEEDING, HARVEST-01 | Chờ B2 | Chờ W3 | Chờ (Q25) |
+| 17 | % thả và % thu theo làn, cộng dồn ≤ 100, nhật ký (LANE-01, LANE-02) | BR-FARM-03 | Chờ B2 | W1 đã làm (sơ đồ, hàm thuần 7/7) | Chờ (Q27) |
+| 18 | Ảnh lưu local tạm qua `IFileStorage`; cloud bằng cấu hình (PHO-03) | — | Đã làm | — | Thông báo |
+| 19 | Nhóm nhân viên cùng thu (`crew`, tùy chọn) (HAR-02) | HARVEST-01 | Đã làm (`a3cb154f`) | Chờ xác nhận | — |
+| 20 | Dữ liệu cũ không backfill; báo cáo ghi "không có ươm" (NUR-09) | — | Đã làm | Chờ W3 | — |
+
+Không đổi: truy xuất công khai (QR), bán hàng, đơn khách, kế hoạch làm việc của đồng đội (OMTS-223).
+
+**Câu hỏi mở bổ sung 12/11:** Q21 đến Q28 trong `SRS_DEVIATIONS.md` mục 11.

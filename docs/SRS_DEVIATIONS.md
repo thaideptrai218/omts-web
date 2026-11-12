@@ -1,6 +1,6 @@
 # Khác biệt so với SRS v8 - OMTS
 
-**Cập nhật:** 11/11/2026. **Phạm vi:** Web (`omts-web`, nhánh `feature/OMTS-132-web-login-farming`) và Backend (`omts-backend`, nhánh `feature/OMTS-132-farming-rules`).
+**Cập nhật:** 12/11/2026 (bổ sung ươm giống, ảnh bắt buộc, % tiến độ làn; xem mục 13-14). **Phạm vi:** Web (`omts-web`, nhánh `feature/OMTS-132-web-login-farming`) và Backend (`omts-backend`, nhánh `feature/OMTS-132-nursery`; các nhánh farming/raft-lanes đã gộp vào đó).
 **Tài liệu chủ:** file này là danh sách duy nhất các điểm sản phẩm khác SRS v8 hoặc không có trong SRS. README không ghi thay đổi; mọi ghi chú đã chuyển từ README nằm ở Phụ lục A (Web) và Phụ lục B (Backend), giữ nguyên văn.
 **Backend:** `omts-backend/docs/SRS_DEVIATIONS.md` chỉ tóm tắt các mục phía backend.
 
@@ -43,18 +43,42 @@
 | PAY-06 | Bảng lương | Hồ sơ nhân viên có tab Phiếu lương và Nợ và tạm ứng; bảng lương có tab Lịch sử thanh toán | HR-A13, HR-A14 (11/11) | Cả hai | Web đã làm theo hợp đồng; backend trên nhánh | §5 |
 | PAY-07 | Bảng lương | Chỉ tính giờ × đơn giá loại công việc; không ca, làm thêm, thưởng, điều chỉnh, phụ cấp, giảm trừ, bảo hiểm, thuế | Mức A, chủ dự án 11/11 | Cả hai | Chờ quyết định (Q5, Q6) | §5 |
 | PAY-08 | Bảng lương | Thiết lập kỳ lương và cờ "Tự động tạo bảng lương" lưu được nhưng chưa có tác dụng; GFR-07 chưa làm | Nhật ký giai đoạn 3 | Backend | Chờ backend | §5 |
-| FARM-01 | Nuôi trồng | Số lồng là số thập phân; khối lượng ước tính = số lồng × kg mỗi lồng của HTX | Đề xuất Owner, 11/11 (theo báo cáo) | Cả hai | Đang làm (backend, chưa commit) | §6 |
-| FARM-02 | Nuôi trồng | Không có khối lượng mỗi con, hao hụt, tỷ lệ sống (chỉ có tỷ lệ sống suy ra nếu được chấp nhận) | Đề xuất D3, D4 (11/11) | Cả hai | Chờ quyết định | §6 |
-| FARM-03 | Nuôi trồng | Không có thực thể kế hoạch thu hoạch; kế hoạch là ước tính của chu kỳ (mục tiêu sản lượng, ngày thu dự kiến) | SRS đã bỏ UC30; đề xuất D5 | Cả hai | Chờ xác nhận | §6 |
-| FARM-04 | Nuôi trồng | Vượt mục tiêu chu kỳ: cảnh báo mềm có lý do quá 110%; từ chối quá 150% | Đề xuất D1 (11/11), đã cài trong working tree | Cả hai | Đang làm (backend, chưa commit); ngưỡng do chủ dự án xác nhận (Q7) | §6 |
-| FARM-05 | Nuôi trồng | "Thu xong làn" là hành động riêng (endpoint `finish-harvest`) | Đề xuất D7 (11/11), đã cài trong working tree | Cả hai | Đang làm (backend, chưa commit) | §6 |
+| FARM-01 | Nuôi trồng | Số lồng là số thập phân (2 chữ số, 0,5 = nửa lồng); khối lượng ước tính = số lồng × kg mỗi lồng của HTX | Đề xuất Owner, 11/11 | Cả hai | Đã commit (backend `d534d829`, nhánh farming-rules) | §6 |
+| FARM-02 | Nuôi trồng | Không có khối lượng mỗi con, hao hụt của nuôi, tỷ lệ sống. Ngoại lệ 12/11: ươm ghi số sống sót ước tính và hao hụt ươm (xem NUR-04) | Đề xuất D3, D4 (11/11); quyết định 12/11 cho ươm | Cả hai | Ươm: đã làm (backend, Web W2). Nuôi: chờ quyết định | §6, §13 |
+| FARM-03 | Nuôi trồng | Không có thực thể kế hoạch thu hoạch; kế hoạch là ước tính của chu kỳ (mục tiêu sản lượng). **Ngày thu dự kiến đã bỏ (12/11)** | SRS đã bỏ UC30; quyết định 12/11 | Cả hai | Đã làm (backend, Web); PM chưa xác nhận | §6, NUR-14 |
+| FARM-04 | Nuôi trồng | **Thu hoạch không bị chặn theo mục tiêu chu kỳ** (Owner, 12/11): kế hoạch chỉ là kế hoạch; màn thu hoạch hiện `targetPercent`, `overTarget`. Trần 110%/150% chỉ còn ở **thả giống** (hỏi xác nhận/chặn) và vật tư. Thả giống chu kỳ từ ươm: chặn cứng theo phần chia | Quyết định Owner 12/11 (thay đề xuất D1 cho thu hoạch) | Cả hai | Đã làm (backend `6628e663`, `917405de`); ngưỡng thả giống chờ Q7 | §6, §12 |
+| FARM-05 | Nuôi trồng | "Thu xong làn" là hành động riêng (endpoint `finish-harvest`); hoàn tất nhiều làn một lần (`finish-harvest` của lô, tất cả hoặc không gì) | Đề xuất D7 (11/11); yêu cầu 12/11 | Cả hai | Đã commit (backend `ade8a6d1`) | §6 |
 | FARM-06 | Nuôi trồng | Tọa độ chọn trên bản đồ, chỉ đọc; quy tắc kiểm tra (0,0, hoán đổi, khung Việt Nam, cách vùng 5 km) | Đề xuất D9 (11/11) | Cả hai | Web đang làm (chưa commit). Backend: chờ quyết định | §6 |
-| FARM-07 | Nuôi trồng | Số giống đã thả không đối chiếu với lô giống còn lại; xem STK-02 | GBR-04, BR-PURCHASE-07; đề xuất D6 | Cả hai | Chờ quyết định | §6 |
+| FARM-07 | Nuôi trồng | Số giống đã thả so với lô giống còn lại: thả thường kiểm tồn; thả từ đợt ươm giới hạn theo phần chia (NUR-08). Xem STK-02 | GBR-04, BR-PURCHASE-07; G.4 | Cả hai | Đã làm (backend); Web hiển thị còn lại | §6, §13 |
 | FARM-08 | Nuôi trồng | Kế hoạch chu kỳ chỉ nhắc theo dõi, không cảnh báo (báo cáo 07/11), mâu thuẫn với đề xuất cảnh báo mềm (11/11) | Chưa thống nhất | Cả hai | Chờ xác nhận (Q7) | §6 |
 | FARM-09 | Nuôi trồng | Phép đo nước: Web chỉ xem; ghi nhận trên điện thoại; quyền backend không đổi | Yêu cầu họp 07/11 (theo báo cáo) | Web | Đã làm | §6 |
+| NUR-01 | Nuôi trồng (ươm) | **Bước ươm bắt buộc** trước thả giống cho lần thả mới; SRS dòng 446 ghi "không được ghi nhận trong OMTS" | Quyết định chủ dự án 12/11 | Cả hai | Đã làm (backend, Web W2). Chưa cưỡng chế ở đường chu kỳ cũ (Q21) | §13 |
+| NUR-02 | Nuôi trồng (ươm) | Đợt ươm: một lô giống, một vùng (không chọn bè khi bắt đầu), trạng thái Đang ươm / Đã hoàn tất / Đã hủy | Quyết định 12/11 | Cả hai | Đã làm | §13 |
+| NUR-03 | Vật tư (ươm) | Kho trừ khi bắt đầu ươm (phiếu Xuất dùng mục đích Nursery); **luôn chặn tồn âm** cho ươm, kể cả HTX cho phép tồn âm | Quyết định 12/11 | Cả hai | Đã làm | §13 |
+| NUR-04 | Nuôi trồng (ươm) | Số sống sót nhập một lần lúc hoàn tất, **ước tính bằng mắt**; hao hụt ươm = vào − sống sót, nhãn ước tính; không có tỷ lệ dự kiến, không cảnh báo hao hụt cao; sửa sống sót ghi cũ → mới | Quyết định 12/11 | Cả hai | Đã làm | §13 |
+| NUR-05 | Nuôi trồng (ươm) | Hoàn tất ươm chia số sống sót cho các bè cùng vùng, tổng bằng đúng sống sót; dồn một bè hoặc chia nhiều bè; chuyển phần chia sau hoàn tất, không gỡ bè đã thả hoặc có nhật ký, đóng băng khi chu kỳ đã chốt | Quyết định 12/11 (câu hỏi 7 mục 8 đã chốt "có") | Cả hai | Đã làm (backend); Web W2 | §13 |
+| NUR-06 | Nuôi trồng (ươm) | Sản lượng dự kiến nhập ở bước hoàn tất ươm (theo từng bè), không nhập khi bắt đầu ươm | Quyết định 12/11 | Cả hai | Đã làm | §13 |
+| NUR-07 | Nuôi trồng (ươm) | Đợt đã hoàn tất **không hủy được** (chỉ đợt Đang ươm sửa/hủy). Đây là kết luận của câu hỏi mở đợt 12/11 | Quyết định chủ dự án 12/11 | Cả hai | Đã làm | §13 |
+| NUR-08 | Thả giống (ươm) | Thả giống từ đợt ươm: không cần lô giống, **chặn cứng** theo phần còn lại của phần chia (`NURSERY_SEEDING_ABOVE_ALLOCATION`), không có 110%/150%, không tạo phiếu Xuất dùng. Thay GBR-04 cho lần thả này | Quyết định 12/11 | Cả hai | Đã làm (backend); Web W3 chờ | §13 |
+| NUR-09 | Dữ liệu cũ | Chu kỳ và thả giống cũ không có đợt ươm; giữ nguyên, không backfill; báo cáo ghi "không có ươm" | Quyết định 12/11 | Cả hai | Đã làm | §13 |
+| NUR-10 | Thông báo (ươm) | Quản lý vùng bắt đầu, sửa, hủy, hoàn tất, sửa sống sót hoặc chia lại thì báo Chủ HTX (`NURSERY_RECORDED`, mã chung `MINI_APP_NOTIFICATION`). Chủ tự làm thì không báo | Quyết định 12/11 | Cả hai | Đã làm (backend) | §13 |
+| NUR-11 | Quyền (ươm) | Dùng quyền sẵn có `CultivationCycles` (View/Create/Edit theo vùng), không có mã quyền riêng NURSERY | Quyết định 12/11 (thay câu hỏi 6 mục 8) | Cả hai | Đã làm; PM xác nhận | §13 |
+| NUR-12 | Mã lỗi (ươm) | Lỗi ươm dùng `MSG-GEN-09` kèm `reasonCode` `NURSERY_*`, chờ SRS đặt `MSG-NURSERY-xx` | Quyết định 12/11 | Cả hai | Tạm thời | §13 |
+| NUR-13 | Truy xuất (ươm) | Không thêm ươm vào truy xuất công khai (QR). Lô giống của chu kỳ từ ươm vẫn truy được tới phiếu nhập và nhà cung cấp | Đặc tả mục 2 (quyết định 10) | Cả hai | Đã làm | §13 |
+| NUR-14 | Kế hoạch chu kỳ | **Bỏ ngày thu hoạch dự kiến** khỏi kế hoạch chu kỳ (form, đọc, tổng kết). Cột CSDL giữ, không hiển thị | Quyết định chủ dự án 12/11 (thay GBR/CYCLE-01) | Cả hai | Đã làm (backend); Web W2 đọc tương thích | §13 |
+| PHO-01 | Ảnh (bước) | Ảnh 1 đến 3 **bắt buộc** cho bắt đầu ươm, hoàn tất ươm (đã có); kế hoạch nuôi (tạo chu kỳ riêng), thả giống, thu hoạch, sự cố làn (chờ B2 và W3). Chỉ áp dụng cho bản ghi mới | Quyết định 12/11 (mục 10.2, 10.6) | Cả hai | Ươm: đã làm. Các bước còn lại: chờ B2 và W3 | §14 |
+| PHO-02 | Ảnh (bước) | Nhật ký chăm sóc và sử dụng vật tư: ảnh tùy chọn (nhật ký tối đa 3) | Quyết định 12/11 (mục 10.6) | Cả hai | Giữ như hiện tại | §14 |
+| PHO-03 | Lưu trữ ảnh | Ảnh lưu local tạm (`IFileStorage`, `Storage:Provider=Local`); cloud làm sau bằng cấu hình (`AzureBlob` đã có trong code) | Quyết định 12/11 | Backend | Đã làm (local) | §14 |
+| LANE-01 | Làn | Mỗi làn có `seededPercent` và `harvestedPercent` (0-100), cộng dồn không vượt 100% trong cùng chu kỳ; trạng thái làn suy ra từ %; chỉnh % có nhật ký (cũ → mới, lý do). Mở rộng BR-FARM-03 | Quyết định 12/11 (mục 10.3) | Cả hai | Web W1 đã làm (chờ B2). Backend B2 đang làm | §14 |
+| LANE-02 | Làn | % thu hoạch **không liên kết** với số lồng (hai số nhập độc lập) | Quyết định 12/11 (mục 10.6 số 4) | Cả hai | Chờ B2 | §14 |
+| LANE-03 | Làn | Sơ đồ làn dạng cột đứng xếp ngang, màu đậm có chú giải, nhập % ngay trong form thả và thu | Quyết định 12/11 (mục 10.6 số 3) | Web | W1 đã làm (sơ đồ); nhập % trong form chờ W3 | §14 |
+| LANE-04 | Sự cố làn | Báo hỏng: ghi chú bắt buộc và **ảnh bắt buộc 1-3** (trước đây ảnh tùy chọn) | Quyết định 12/11 (mục 10.6 số 2) | Cả hai | Chờ B2 | §14 |
+| HAR-01 | Thu hoạch | Thu hoạch **gắn yêu cầu mua đã chấp nhận** (một lô gắn một yêu cầu). Đã có từ nhánh đồng đội (#78, OMTS-223); giữ nguyên, không đổi luồng bán | Nhóm bán hàng; giữ 12/11 | Cả hai | Đã làm; **SRS chưa có, cần PM xác nhận** (Q24) | §14 |
+| HAR-02 | Thu hoạch | Nhóm nhân viên cùng thu (`crew`, tùy chọn, nhiều người, trên lô) | Yêu cầu 12/11 (ghi trong G.7) | Cả hai | Đã làm (backend `a3cb154f`) | §14 |
+| HAR-03 | Thu hoạch | Ảnh thu hoạch bắt buộc 1-3 cho lô mới (trước: tùy chọn, tối đa 10) | Quyết định 12/11 (mục 10.6 số 5) | Cả hai | Chờ B2 | §14 |
 | FARM-10 | Nuôi trồng | Giấy tờ vùng: Chủ HTX đọc được; Quản lý vùng chờ backend | Báo cáo 29/10 (theo báo cáo) | Cả hai | Chờ xác nhận | §6 |
-| STK-01 | Vật tư, kho & mua hàng | Sổ kho: danh mục vật tư và giống; Xuất dùng; Xuất hủy; đơn vị và giá trên phiếu nhập | Commit `ad3b9db`; thay BR-PURCHASE-07 và GBR-04 nếu được chốt | Cả hai | Đã làm; cần quyết định chính thức (Q8) | §7 |
-| STK-02 | Vật tư, kho & mua hàng | Thả giống độc lập với sổ kho; mục tiêu: thả giống tạo phiếu xuất dùng | GBR-04, BR-PURCHASE-07; đề xuất D6 | Cả hai | Chờ quyết định (Q8) | §7 |
+| STK-01 | Vật tư, kho & mua hàng | Sổ kho: danh mục vật tư và giống; Xuất dùng; Xuất hủy; đơn vị và giá trên phiếu nhập. **12/11: bắt đầu ươm trừ kho** bằng phiếu Xuất dùng mục đích Nursery (NUR-03) | Commit `ad3b9db`; thay BR-PURCHASE-07 và GBR-04 (G.4 nhật ký) | Cả hai | Đã làm; PM xác nhận thay quy tắc (Q8) | §7, §13 |
+| STK-02 | Vật tư, kho & mua hàng | Thả giống thường: tạo phiếu Xuất dùng liên kết, kiểm tồn lô (G.4 bước 2). Thả giống từ đợt ươm: **không** tạo phiếu, giới hạn theo phần chia (NUR-08) | GBR-04, BR-PURCHASE-07; G.4 | Cả hai | Thả giống thường: đã làm (backend). Chỉ thả giống không qua ươm còn chờ quyết định về việc bắt buộc ươm (Q21) | §7, §13 |
 | STK-03 | Vật tư, kho & mua hàng | Phiếu nhập V2: không có khu vực, chiết khấu, trả trước, ảnh hóa đơn; dòng có số thứ tự và bè | PURCHASE-01 đến 06 (SRS 27/10) | Cả hai | Đã làm; đối chiếu phiên bản SRS (Q1) | §7 |
 | STK-04 | Vật tư, kho & mua hàng | Thanh toán nhà cung cấp ghi theo nhà cung cấp, không gắn phiếu nhập; trả hàng có mã TH | Purchasing V2 | Cả hai | Đã làm | §7 |
 | STK-05 | Vật tư, kho & mua hàng | Yêu cầu mua theo số lồng hay kg chưa thống nhất | Báo cáo 05/11 và 09/11 | Cả hai | Chờ quyết định (Q10) | §7 |
@@ -137,10 +161,10 @@ Ghi chú: nhật ký nhân sự không có mục G; các điểm nuôi trồng l
 | ID | Mã SRS v8 | Khác biệt và chi tiết | Đề xuất sửa SRS (một dòng) | Nguồn |
 |---|---|---|---|---|
 | FARM-01 | HARVEST-01 (số lồng); BR-HARVEST-02 | Trước: số lồng là số nguyên (`int`). Working tree backend: `CageCount` là `decimal`, migration `20261111120000_HarvestLotFractionalCagesAndOverPlanReason` (chưa commit). Khối lượng ước tính = số lồng × kg mỗi lồng của HTX (`HarvestLotFieldReader`); Web tự tính trên form là đề xuất, chưa xác minh. | HARVEST-01: số lồng có thể là số thập phân; kg ước tính = số lồng × kg mỗi lồng của HTX. | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P3, P4); kiểm tra code ngày 11/11 |
-| FARM-02 | BR-FARM-03 (không ước tính kg theo làn); BR-CYCLE-07 (không có sổ hao hụt) | Không có khối lượng mỗi con, hao hụt, tỷ lệ sống trong code. Đề xuất: tỷ lệ sống suy ra = kg thu ÷ (số con × khối lượng mỗi con); không có sổ hao hụt (đề xuất D4 chọn cách suy ra). Khối lượng mỗi con là dữ liệu chủ HTX chưa cung cấp. | Ghi "không ghi hao hụt; tỷ lệ sống chỉ là ước tính suy ra" nếu chủ dự án chấp nhận D4. | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P4, D3, D4) |
-| FARM-03 | UC30 (đã bỏ khỏi SRS: "Plan harvest") | Không có thực thể kế hoạch thu hoạch (grep không có HarvestPlan hay WorkPlan). Kế hoạch là `TargetYieldKg` và `ExpectedHarvestDate` của chu kỳ. | Kế hoạch thu hoạch là ước tính của chu kỳ; không có thực thể kế hoạch riêng (nếu chốt D5-a). | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (finding 3, D5) |
-| FARM-04 | BR-HARVEST-07 (ước tính, so sánh với mục tiêu) | Mềm: vượt 110% mục tiêu chu kỳ (tức +10%) thì hỏi xác nhận bằng MSG-GEN-04; client gửi lại với `confirmOverPlan` và lý do (`OverPlanReason`). Cứng: vượt 150% (+50%) bị từ chối. Ngưỡng 10% và 50% là mặc định đề xuất D1, chủ dự án chỉnh được. Chưa có ngưỡng cho cảnh báo theo số giống đã thả (P3). | Vượt mục tiêu: cảnh báo mềm có lý do ở 110%, từ chối ở 150%; ngưỡng do chủ dự án xác nhận (Q7). | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P3, D1, D2); `HarvestQuantityRules.cs`, `HarvestLotCorrectionService.cs` (working tree) |
-| FARM-05 | HARVEST-01 (bước 3: đánh dấu làn đã thu xong) | Hiện có trong working tree: `POST /api/rafts/{raftId}/lanes/{laneNumber}/finish-harvest` (`HarvestLotsController`), đánh dấu làn ở lô mới nhất, không cần migration (D7-a). Trước đó chỉ đánh dấu bằng `finishedLaneNumbers` khi tạo lô hoặc khi sửa lô có lý do. Web: nút "Thu xong" theo dòng là đề xuất. | HARVEST-01: đánh dấu một làn đã thu xong bằng một thao tác riêng, không cần sửa lô. | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P1, D7); `FARMING_WEB_FLOW_REVIEW_2026-11-11.md` (F5); kiểm tra code ngày 11/11 |
+| FARM-02 | BR-FARM-03 (không ước tính kg theo làn); BR-CYCLE-07 (không có sổ hao hụt) | Không có khối lượng mỗi con, hao hụt của nuôi, tỷ lệ sống trong code. **12/11: ươm có số sống sót ước tính và hao hụt ươm (NUR-04).** Đề xuất: tỷ lệ sống suy ra = kg thu ÷ (số con × khối lượng mỗi con); không có sổ hao hụt (đề xuất D4 chọn cách suy ra). Khối lượng mỗi con là dữ liệu chủ HTX chưa cung cấp. | Ghi "không ghi hao hụt; tỷ lệ sống chỉ là ước tính suy ra" nếu chủ dự án chấp nhận D4. | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P4, D3, D4) |
+| FARM-03 | UC30 (đã bỏ khỏi SRS: "Plan harvest") | Không có thực thể kế hoạch thu hoạch (grep không có HarvestPlan hay WorkPlan). Kế hoạch là `TargetYieldKg` của chu kỳ (12/11: bỏ `ExpectedHarvestDate`, NUR-14). | Kế hoạch thu hoạch là ước tính của chu kỳ; không có thực thể kế hoạch riêng (nếu chốt D5-a). | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (finding 3, D5) |
+| FARM-04 | BR-HARVEST-07 (ước tính, so sánh với mục tiêu) | **12/11: thu hoạch không bị chặn theo mục tiêu (Owner); mô tả dưới là của 11/11, chỉ còn đúng cho thả giống.** Mềm: vượt 110% mục tiêu chu kỳ (tức +10%) thì hỏi xác nhận bằng MSG-GEN-04; client gửi lại với `confirmOverPlan` và lý do (`OverPlanReason`). Cứng: vượt 150% (+50%) bị từ chối. Ngưỡng 10% và 50% là mặc định đề xuất D1, chủ dự án chỉnh được. Chưa có ngưỡng cho cảnh báo theo số giống đã thả (P3). | Vượt mục tiêu: cảnh báo mềm có lý do ở 110%, từ chối ở 150%; ngưỡng do chủ dự án xác nhận (Q7). | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P3, D1, D2); `HarvestQuantityRules.cs`, `HarvestLotCorrectionService.cs` (working tree) |
+| FARM-05 | HARVEST-01 (bước 3: đánh dấu làn đã thu xong) | Đã commit trên nhánh backend: `POST /api/rafts/{raftId}/lanes/{laneNumber}/finish-harvest` (`HarvestLotsController`), đánh dấu làn ở lô mới nhất, không cần migration (D7-a). Trước đó chỉ đánh dấu bằng `finishedLaneNumbers` khi tạo lô hoặc khi sửa lô có lý do. Web: nút "Thu xong" theo dòng là đề xuất. | HARVEST-01: đánh dấu một làn đã thu xong bằng một thao tác riêng, không cần sửa lô. | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P1, D7); `FARMING_WEB_FLOW_REVIEW_2026-11-11.md` (F5); kiểm tra code ngày 11/11 |
 | FARM-06 | - (SRS chưa đối chiếu được mục tọa độ) | Web: chọn tọa độ trên bản đồ, tọa độ chỉ đọc (working tree, chưa commit: `location-picker*`). Backend (đề xuất P6, D9): từ chối (0,0) và hoán đổi vĩ độ, kinh độ; cảnh báo ngoài khung Việt Nam (vĩ 8 đến 24,5; kinh 102 đến 110) và khi điểm cách tọa độ vùng quá 5 km. | Tọa độ lấy từ bản đồ; hệ thống từ chối (0,0) và hoán đổi, cảnh báo khi điểm nằm ngoài Việt Nam hoặc cách vùng quá 5 km (chờ Q20). | `FARMING_WEB_FLOW_REVIEW_2026-11-11.md` (E); `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P6, D9) |
 | FARM-07 | BR-PURCHASE-07, GBR-04 | Không đối chiếu số giống thả với lô giống còn lại. Xem STK-02. | Xem STK-02. | `FARMING_BACKEND_RULES_REVIEW_2026-11-11.md` (P8, D6) |
 | FARM-08 | BR-CYCLE (kế hoạch chu kỳ); HARVEST-01 | Báo cáo 07/11 ghi kế hoạch chu kỳ chỉ nhắc theo dõi, không cảnh báo và không chặn vượt mục tiêu. Đề xuất 11/11 (FARM-04) có cảnh báo mềm. Hai đề xuất mâu thuẫn. | Chờ Q7. | `reports/WEB_MEETING_MAP_PAGING_WATER_2026-11-07.md` |
@@ -220,6 +244,14 @@ Cần chủ dự án hoặc PM trả lời. Mục nào đã có quyết định 
 18. **Q18. [Đã quyết 11/11: bỏ email khỏi tài khoản là đúng; email dùng cho mục đích liên hệ khác, không để đăng ký hay đăng nhập]** Module tài khoản backend: nhật ký 11/11 ghi email chưa bỏ, nhưng code nhánh hiện tại từ chối email khi đăng ký và README mô tả đã bỏ. Cần kiểm tra trên `develop` để xác nhận.
 19. **Q19.** Mục tọa độ: ngưỡng 5 km và khung Việt Nam (vĩ 8 đến 24,5; kinh 102 đến 110) đã chốt chưa (D9)?
 20. **Q20.** Sau khi nhóm backend đẩy nhánh `feature/web-hr-api-gaps` lên, cần đối chiếu lại HR-03, HR-04, PAY-06 với API đã push (hiện Web đã nối nhưng API chưa push).
+21. **Q21. [Mới 12/11]** Ươm "bắt buộc" có cưỡng chế không? Hiện đường **tạo chu kỳ cũ** (không từ ươm) vẫn chạy: thả giống qua đường đó còn 110%/150%, không chọn lô bị kiểm, trừ kho như trước. Chọn: (a) bắt buộc ươm cho mọi bè mới (khóa đường cũ, chỉ dữ liệu cũ giữ nguyên); (b) cho cả hai đường, ươm là khuyến nghị.
+22. **Q22. [Mới 12/11]** Mã SRS cho thông báo ươm (bắt đầu, sửa, hủy, hoàn tất, sửa sống sót, chia lại) và mã lỗi `NURSERY_*` (hiện `MSG-GEN-09` tạm). Đề nghị PM đặt `MSG-NURSERY-xx`.
+23. **Q23. [Mới 12/11]** Quyền ươm: dùng chung `CultivationCycles` (đã chốt 12/11: không mã riêng). PM xác nhận đưa vào SRS như thế.
+24. **Q24. [Mới 12/11]** Thu hoạch gắn yêu cầu mua đã chấp nhận (HAR-01): đã có trong code từ nhóm bán hàng. Đưa vào SRS HARVEST-01 như bước bắt buộc, hay để ngoài SRS?
+25. **Q25. [Mới 12/11]** Ảnh bắt buộc 1-3 ở thả giống, thu hoạch, kế hoạch nuôi, sự cố làn (PHO-01, LANE-04, HAR-03): PM xác nhận đưa vào SRS. Chăm sóc và vật tư giữ tùy chọn.
+26. **Q26. [Mới 12/11]** Sửa sống sót hoặc chia lại sau khi đã thả một phần: chấp nhận chia lại miễn không dưới số đã thả (NUR-05)? Đề xuất: có.
+27. **Q27. [Mới 12/11]** Thông báo cho Chủ HTX khi Quản lý vùng sửa % làn (LANE-01)? Đề xuất: có, thông báo thường. Hiện backend chưa có.
+28. **Q28. [Mới 12/11]** Cảnh báo hao hụt ươm cao (NUR-04): chốt không cảnh báo. PM xác nhận.
 
 ## 12. Quyết định của chủ dự án ngày 11/11/2026 (bổ sung)
 
@@ -227,6 +259,39 @@ Cần chủ dự án hoặc PM trả lời. Mục nào đã có quyết định 
 - **Số lồng cho phép số lẻ** (nửa lồng): khác SRS nếu SRS ghi số nguyên; cần ghi vào mục Nuôi trồng.
 - **Kho tồn được kiểm tra thật:** thả giống và sử dụng vật tư đi qua sổ kho, thay BR-PURCHASE-07 và GBR-04 (xem STK-01).
 - **Mọi thực thể liên kết và tham chiếu được với nhau** giữa các màn.
+
+**Quyết định 12/11/2026 (ươm giống và làn, chi tiết mục 13-14):** ươm là bước bắt buộc cho lần thả mới; đợt ươm một lô giống, một vùng; kho trừ khi bắt đầu ươm và luôn chặn tồn âm; sống sót ước tính nhập lúc hoàn tất; đợt đã hoàn tất không hủy; bỏ ngày thu hoạch dự kiến; thu hoạch không bị chặn theo mục tiêu; ảnh bắt buộc 1-3 ở bước quan trọng; % làn nhập ngay trong form thả và thu; ảnh lưu local tạm; thông báo cho Chủ HTX khi Quản lý vùng ghi ươm.
+
+## 13. Ươm giống (12/11/2026): đối chiếu SRS
+
+Nguồn: `FARMING_NURSERY_STEP_SPEC_2026-11-12.md` (mục 2, 4, 5, 10), `FARMING_NURSERY_API_CONTRACT_2026-11-12.md`. Mã dòng SRS theo `.hallmark/srs-v8/srs-v8-full.txt` (bản v8, không đổi).
+
+| SRS v8 | Thay đổi đề xuất | Ghi chú |
+|---|---|---|
+| Dòng 446 (quy trình, mô tả "acclimatize the seed") | Bỏ câu "this step is not recorded in OMTS"; thêm bước ươm bắt buộc (NUR-01) | Câu gốc còn nguyên trong SRS v8 |
+| Use case mới | NURSERY-01 bắt đầu, -02 theo dõi/sửa/hủy, -03 hoàn tất và tạo chu kỳ, -04 sửa sống sót và chia lại | Đề xuất mã, PM đặt số |
+| CYCLE-01 (bắt đầu chu kỳ) | Chu kỳ từ ươm bắt đầu từ NURSERY-03, mang phần chia và sản lượng dự kiến; chu kỳ cũ giữ nguyên | Đường cũ còn mở (Q21) |
+| CYCLE-02 (ghi thả giống) | Chu kỳ từ ươm: nguồn là phần chia, bỏ chọn lô, bỏ so 110%/150%, chặn cứng theo phần còn lại | NUR-08 |
+| CYCLE-06, tóm tắt, xem trước đóng | Thêm khối `nursery` (vào, sống sót ước tính, hao hụt ước tính) | Mục 5.2 đặc tả |
+| BR-CYCLE-07 ("no loss record") | Ghi số sống sót khi hoàn tất ươm (ước tính bằng mắt). Hao hụt trong nuôi vẫn không ghi. Câu "no loss record" chỉ áp cho nuôi | Dòng SRS về làn Growing khi đóng sớm (no loss record) giữ cho nuôi |
+| GBR-04 (không so với giống còn lại) | Thả giống thuộc đợt ươm bị giới hạn theo phần chia (cứng). Thả thường: đã đổi thành kiểm tồn lô (G.4) | NUR-08, STK-02 |
+| BR-PURCHASE-07 ("OMTS keeps no stock") | Thay: kho trừ lúc bắt đầu ươm (phiếu Xuất dùng mục đích Nursery) | NUR-03, G.4 |
+| Quy tắc mới BR-NURSERY-01..07 | 01 nơi ươm là vùng; 02 vào không vượt tồn; 03 một đợt một lô; 04 hoàn tất: sống sót ≤ vào, tổng phần chia = sống sót, bè cùng vùng, không chu kỳ mở; 05 sửa sống sót ghi cũ → mới; 06 Quản lý vùng ghi thì báo Chủ HTX; 07 ươm bắt buộc cho thả mới | Đặc tả mục 4 |
+| Message | MSG-NURSERY-xx (tạm: `MSG-GEN-09` + `reasonCode`) | NUR-12 |
+| Thực thể | NurseryBatch; liên kết SeedingRecord, CultivationCycle; NurseryBatchRaftAllocation; trạng thái Đang ươm, Đã hoàn tất, Đã hủy | Backend `20261112124320_NurseryBatches` |
+| Màn hình | SCR-NURSERY-01 danh sách và chi tiết; -02 bắt đầu; -03 hoàn tất | Web `/farming/nursery` |
+| Từ điển | Ươm (Nursery), Sống sót (Survivors, ước tính), Hao hụt ươm | — |
+| Truy xuất công khai | Không đổi | NUR-13 |
+
+## 14. Ảnh, % làn và thu hoạch (12/11/2026)
+
+**Ảnh.** Đặc tả 10.2 và 10.6 (chủ dự án): ảnh là ảnh chụp tại hiện trường, 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh tối đa 10 MB, áp dụng cho bản ghi mới. Lỗi ảnh là 400 gắn trường `Photos`. Lưu local tạm qua `IFileStorage` (PHO-03); cloud về sau bằng cấu hình `Storage`. Khóa lưu giữ dạng `{category}/{yyyy}/{MM}/{guid}.{ext}`.
+
+**% làn.** Mỗi làn có `seededPercent` và `harvestedPercent`. Cộng dồn không vượt 100% trong cùng chu kỳ. Trạng thái làn suy ra từ %: 0 là chưa thả, giữa 0 và 100 là đang nuôi hoặc đang thu một phần, 100 là thả đầy hoặc thu xong. Nút "hoàn tất thu hoạch" đặt `harvestedPercent` = 100. Mỗi lần chỉnh ghi nhật ký (cũ → mới, lý do, người sửa). Số lồng và % thu là hai số độc lập. Web W1 đã vẽ sơ đồ; API `PUT /api/rafts/{raftId}/lanes/{n}/progress` chờ B2.
+
+**Thu hoạch.** Không bị chặn theo mục tiêu chu kỳ (Owner, 12/11). Phải gắn một yêu cầu mua đã chấp nhận (HAR-01, đã có từ nhóm bán hàng). Có nhóm nhân viên cùng thu (`crew`). Ảnh 1 đến 3 cho lô mới (HAR-03, chờ B2).
+
+**Sự cố làn.** Ghi chú bắt buộc (khi nào, làn nào, hỏng thế nào), ảnh bắt buộc 1 đến 3 (LANE-04, chờ B2). Hiện backend vẫn coi ảnh là tùy chọn.
 
 ## Phụ lục A - Ghi chú chuyển từ README Web (nguyên văn)
 
@@ -447,3 +512,8 @@ Checklist theo chương SRS. Mỗi dòng là một thay đổi cần đưa vào 
 - [ ] PurchaseReceipt V2, PurchaseReturn, SupplierPayment: mã PN, TH, TT (STK-03, STK-04).
 - [ ] Supplier và Cooperative: email liên hệ (Q3).
 - [ ] CustomerSettings (giới hạn công nợ, trường bắt buộc) (SAL-01).
+- [ ] NurseryBatch và các liên kết (mục 13) (NUR-01 đến NUR-02).
+- [ ] Ảnh bắt buộc 1-3 ở các bước quan trọng và sự cố làn (PHO-01, LANE-04, HAR-03).
+- [ ] Làn: % thả và % thu theo làn (LANE-01, LANE-02).
+- [ ] Thu hoạch gắn yêu cầu mua và nhóm nhân viên cùng thu (HAR-01, HAR-02).
+- [ ] Kế hoạch chu kỳ bỏ ngày thu hoạch dự kiến (NUR-14).
