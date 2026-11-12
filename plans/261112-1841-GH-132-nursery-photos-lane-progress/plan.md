@@ -74,7 +74,12 @@ Quy tắc file để khỏi đè nhau: backend chỉ một agent mỗi lúc trê
 | Docker sập vì bộ nhớ | Một container test mỗi lúc, giới hạn bộ nhớ, kiểm tra stack của chủ trước mỗi đợt |
 | Hạn mức Claude/Codex | Đợt nhỏ, báo cáo ngắn, tiếp quản có quy trình |
 
-## Câu hỏi chưa giải quyết
-1. Đợt ươm hủy sau khi đã hoàn tất: không cho (đề xuất) hay cho với điều kiện chưa thả?
-2. Mã thông báo SRS cho ươm và quyền chức năng riêng: dùng mã chung và quyền thả giống tạm.
-3. Thông báo tiến độ làn có cần đẩy cho chủ khi Quản lý sửa %? (đề xuất: có, thông báo thường.)
+## Quyết định đã chốt (12/11)
+1. Ươm hoàn tất không hủy; mã thông báo/quyền ươm dùng chung (thả giống); thông báo chủ khi Quản lý sửa % làn: có.
+2. **Đường tạo chu kỳ cũ bị khóa** (1A): chu kỳ mới chỉ sinh khi hoàn tất ươm. Chu kỳ đang chạy giữ nguyên, nhãn "Không qua ươm", vẫn thả thêm bằng form cũ (2A).
+3. Dữ liệu hiện tại là demo (3): không migrate; dữ liệu thật tổng hợp sau. Seed demo thêm một đợt ươm đang ươm để chủ thử luồng mới.
+4. Thu hoạch vẫn bắt buộc yêu cầu mua đã chấp nhận (4A).
+5. Không cảnh báo khi hao hụt ươm cao (5A).
+
+## Việc B3 (sau B2, backend): khóa đường cũ
+Backend từ chối tạo chu kỳ thủ công mới và thả giống chọn lô cho chu kỳ mới (400 nêu "tạo chu kỳ qua ươm"); chu kỳ cũ không đổi; seed demo thêm đợt ươm Đang ươm (idempotent, không âm kho); test lớp liên quan; cập nhật hợp đồng và SRS_DEVIATIONS Q21.
