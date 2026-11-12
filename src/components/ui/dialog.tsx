@@ -116,8 +116,9 @@ export function Dialog({
         // React also propagates cancel to ancestor dialogs. Escape belongs only
         // to the topmost dialog; closing its parent would discard the editor.
         event.stopPropagation();
+        // Escape is deliberate (unlike a stray backdrop click), so it behaves like the × button even when the dialog is not dismissible by backdrop.
         if (onCloseRequest) onCloseRequest();
-        else if (dismissible) onOpenChange(false);
+        else onOpenChange(false);
       }}
       onClick={(event) => {
         if (dismissible && event.target === event.currentTarget) {
