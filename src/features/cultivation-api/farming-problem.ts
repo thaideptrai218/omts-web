@@ -11,6 +11,10 @@ const guid = z.guid(), num = z.number().finite();
  */
 export const farmingProblem = z.object({
   code: z.string().regex(/^MSG-[A-Z]+-\d{2}$/).optional().catch(undefined),
+  reasonCode: z.string().max(100).optional().catch(undefined),
+  hint: z.string().max(1000).optional().catch(undefined),
+  laneNumber: num.optional().catch(undefined), remainingPercent: num.optional().catch(undefined),
+  allocated: num.optional().catch(undefined), seeded: num.optional().catch(undefined), remaining: num.optional().catch(undefined),
   field: z.string().max(60).optional().catch(undefined),
   fields: z.array(z.string().max(60)).max(20).optional().catch(undefined),
   message: z.string().max(400).optional().catch(undefined),
@@ -29,11 +33,20 @@ export function projectFarmingProblem(value: unknown): FarmingProblem | undefine
   if (!value || typeof value !== "object") return undefined;
   const parsed = farmingProblem.safeParse(Array.isArray(value) ? { lanes: value } : value);
   if (!parsed.success) return undefined;
-  const keys = Object.entries(parsed.data).filter(([, entry]) => entry !== undefined && entry !== null);
+  const keys = Object.entries(parsed.data).filter(([, entry]) => entry !== undefined && entry !== null && !(Array.isArray(entry) && !entry.length));
   return keys.length ? (Object.fromEntries(keys) as FarmingProblem) : undefined;
 }
 
 const area = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+/** Match a backend refusal to its input, keeping Vietnamese hints. */
+export function farmingFieldError(problem: FarmingProblem | undefined, ...fields: string[]): string | undefined {
+  if (!problem || !fields.some(field => problem.field?.toLowerCase() === field.toLowerCase() || problem.fields?.some(value => value.toLowerCase() === field.toLowerCase()))) return;
+  const hint = problem.hint ?? problem.message;
+  if (hint && /[À-ỹ]/.test(hint)) return hint;
+  if (fields.includes("Photos")) return "Ảnh chưa hợp lệ. Chọn từ 1 đến 3 ảnh JPEG/PNG, mỗi ảnh tối đa 10 MB.";
+  if (fields.includes("LanePercent")) return `Phần trăm làn${problem.laneNumber ? ` ${problem.laneNumber}` : ""} chưa hợp lệ${problem.remainingPercent != null ? `; còn ${area(problem.remainingPercent)}% có thể ghi thêm` : "; nhập số lớn hơn 0 đến 100, tối đa 2 số lẻ"}.`;
+  return "Kiểm tra lại giá trị đã nhập.";
+}
 /** Vietnamese sentence for the stock check of seeding / material usage; unit comes from the item. */
 export function stockShortageText(problem: FarmingProblem, unit?: string): string {
   const suffix = unit ? ` ${unit}` : "";

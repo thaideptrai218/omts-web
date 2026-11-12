@@ -84,7 +84,7 @@ function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có bè phù hợp bộ lọc." : <div className="space-y-3"><p>Vùng này chưa có bè nuôi.</p><RaftSetupLinks zoneId={zoneId} /></div>}</ListStateMessage>
         : <CycleTable zoneId={zoneId} rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))}
           renderDetail={row => renderDetail({ row, zoneId, guard, refresh })} />}
-      {storageKey === "cycles" && !!list.data?.length && !list.data.some(row => row.canStart || row.cycle && !row.cycle.closeDate) && !hasFilter && <div className="space-y-3 border-t border-border p-4 text-sm"><p>Chưa có bè sẵn sàng bắt đầu chu kỳ nuôi trong vùng này.</p><RaftSetupLinks zoneId={zoneId} /></div>}
+      {storageKey === "cycles" && !!list.data?.length && !list.data.some(row => row.canStart || row.cycle && !row.cycle.closeDate) && !hasFilter && <div className="space-y-3 border-t border-border p-4 text-sm"><p>Chưa có bè sẵn sàng nhận chu kỳ mới trong vùng này. Chu kỳ mới được tạo khi hoàn tất ươm.</p><RaftSetupLinks zoneId={zoneId} /></div>}
     </ManagementScroller>
   </ManagementLayout>;
 }

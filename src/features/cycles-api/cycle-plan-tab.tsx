@@ -11,20 +11,21 @@ import styles from "@/features/farming-management/farming-management.module.css"
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { RecordHistory } from "@/features/history/record-history";
 import { planBody, planDraftOf, validatePlan, type CycleRow, type PlanDraft, type PlanField } from "./cycle-model";
+import { CyclePlanPhotos } from "./cycle-plan-photos";
 import { cycleProgress } from "./contracts";
 import { readCycles, writeCycle } from "./repository";
 
 export type CycleAccess = { view: boolean; create: boolean; edit: boolean; remove: boolean; logs: boolean; logsCreate: boolean; logsEdit: boolean };
 const day = (value: string | null) => value ? formatVietnameseDate(value) : null;
-const fields = [["startDate", "Ngày bắt đầu", "date"], ["expectedSeedQuantity", "Lượng giống dự kiến (mảnh)", "number"], ["expectedHarvestDate", "Ngày thu hoạch dự kiến", "date"], ["targetYieldKg", "Sản lượng mục tiêu (kg)", "number"]] as const;
+const fields = [["startDate", "Ngày bắt đầu", "date"], ["expectedSeedQuantity", "Lượng giống dự kiến (mảnh)", "number"], ["targetYieldKg", "Sản lượng mục tiêu (kg)", "number"]] as const;
 /** "Kế hoạch": the cycle plan, edited in place; cancelling a mistaken cycle asks for confirmation. */
 export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleRow; access: CycleAccess; dirtyRef: RefObject<boolean>; onChanged(notice: string): void }) {
   const current = useStickyRemote(useCallback((signal: AbortSignal) => readCycles({ action: "progress", raftId: row.raftId, ...(row.cycle ? { cycleId: row.cycle.id } : { date: businessToday() }) }, cycleProgress, signal), [row.raftId, row.cycle]));
-  const [editing, setEditing] = useState(false), [draft, setDraft] = useState<PlanDraft>();
+  const [editing, setEditing] = useState(false), [draft, setDraft] = useState<PlanDraft>(), [photoDirty, setPhotoDirty] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<PlanField, string>>>({}), [reloaded, setReloaded] = useState(false);
   const mutation = useMutation(), confirmation = useActionDialog();
   const cycle = row.cycle ? current.data?.cycle ?? null : null;
-  const dirty = editing && !!cycle && !!draft && JSON.stringify(draft) !== JSON.stringify(planDraftOf(cycle));
+  const dirty = photoDirty || editing && !!cycle && !!draft && JSON.stringify(draft) !== JSON.stringify(planDraftOf(cycle));
   useEffect(() => { dirtyRef.current = dirty; return () => { dirtyRef.current = false; }; }, [dirty, dirtyRef]);
   const locked = current.loading || mutation.pending;
 
@@ -56,9 +57,10 @@ export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleR
           value={draft[key]} aria-invalid={!!errors[key]} onChange={event => setDraft(previous => previous && { ...previous, [key]: event.target.value })} />
         {errors[key] && <p role="alert" className={styles.fieldError}>{errors[key]}</p>}</div>)}</div>
         : <Facts items={[["Ngày bắt đầu", day(cycle.startDate)], ["Tình trạng", cycle.closeDate ? "Đã đóng" : "Đang nuôi"], ["Số ngày nuôi", cycle.daysOfFarming], ["Lượng giống dự kiến (mảnh)", cycle.expectedSeedQuantity?.toLocaleString("vi-VN") ?? "Chưa lập"],
-          ["Ngày thu hoạch dự kiến", day(cycle.expectedHarvestDate) ?? "Chưa lập"], ["Sản lượng mục tiêu", cycle.targetYieldKg === null ? "Chưa lập" : `${cycle.targetYieldKg.toLocaleString("vi-VN")} kg`],
+          ["Sản lượng mục tiêu", cycle.targetYieldKg === null ? "Chưa lập" : `${cycle.targetYieldKg.toLocaleString("vi-VN")} kg`],
           ["Thả giống hoàn tất", day(cycle.seedingCompletedOn)], ["Ngày đóng", day(cycle.closeDate)], ["Đánh giá", cycle.assessment]]} />}
     </fieldset>
+    <CyclePlanPhotos key={cycle.id} cycle={cycle} canEdit={access.edit && cycle.canEdit && !editing} onDirtyChange={setPhotoDirty} onSaved={() => { current.reload(); onChanged("Đã cập nhật ảnh kế hoạch nuôi."); }} />
     {cycle && <RecordHistory kind="cycle" id={cycle.id} zoneId="" />}
     <ErrorNotice error={mutation.error || current.error} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Hãy tải lại chu kỳ và đối chiếu trước khi lưu lại. Nội dung đang nhập vẫn được giữ.</p><div>

@@ -22,6 +22,7 @@ export const yieldGroup = z.object({
   lotCount: z.number().int(), estimatedKg: kg, soldKg: kg, lostKg: kg, differenceKg: kg, notFinal: z.boolean(),
   harvestedCages: z.number().nullable().optional(), targetYieldKg: optionalKg, remainingKg: optionalKg, availableKg: optionalKg,
   seedQuantity: optionalKg, seedUnit: z.string().nullable().optional(),
+  nurseryQuantityIn: optionalKg, nurserySurvivors: optionalKg, nurseryLossPieces: optionalKg, nurseryLossPercent: optionalKg,
   lots: z.array(yieldLot),
 });
 

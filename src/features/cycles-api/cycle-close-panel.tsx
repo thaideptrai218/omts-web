@@ -7,6 +7,7 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { PlanBar } from "@/features/farming-management/plan-bar";
 import { ErrorNotice, Note, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { CycleNurserySummary } from "./cycle-nursery-summary";
 import { closeCycle, readClosePreview } from "./repository";
 
 const kg = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
@@ -42,6 +43,7 @@ export function CycleClosePanel({ cycleId, raftCode, onDismiss, onClosed }: { cy
     <h4 className="text-sm font-semibold">Kết thúc chu kỳ từ {formatVietnameseDate(f.startDate)}</h4>
     <PlanBar label="Giống đã thả" actual={f.seedHung} plan={f.expectedSeedQuantity} unit={f.seedUnit ?? ""} />
     <PlanBar label="Sản lượng thu hoạch" actual={f.kgHarvested} plan={f.targetYieldKg} unit="kg" estimate note={`${f.harvestLotCount} chuyến · ${(f.harvestedCages ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} lồng · ${f.daysOfFarming} ngày nuôi`} />
+    <CycleNurserySummary nursery={f.nursery} />
     {data.isEarly && <p role="status" className="rounded-control border border-warning/30 bg-warning-soft p-2 text-sm">
       Kết thúc sớm{f.notHarvestedLanes.length ? `: còn làn ${compressLaneNumbers(f.notHarvestedLanes)} chưa thu xong và sẽ kết thúc không có sản lượng` : f.earlyReason === "NoSeedingSession" ? ": chu kỳ chưa có lần thả giống nào" : ""}.
       {" "}{needsApproval ? "Cần Chủ hợp tác xã đồng ý." : "Chủ hợp tác xã chỉ cần xác nhận."}</p>}

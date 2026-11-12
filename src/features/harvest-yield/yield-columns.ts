@@ -2,7 +2,7 @@
 import { useCallback, useState } from "react";
 import type { SortKey } from "./yield-rows";
 
-export type ColumnKey = "lotCount" | "cages" | "estimatedKg" | "kgPerCage" | "target" | "soldKg" | "remainingKg" | "lastHarvest" | "daysToLast" | "status";
+export type ColumnKey = "lotCount" | "cages" | "estimatedKg" | "kgPerCage" | "target" | "soldKg" | "remainingKg" | "lastHarvest" | "daysToLast" | "nurseryQuantityIn" | "nurseryLossPieces" | "status";
 export type ColumnDef = { key: ColumnKey; label: string; sort?: SortKey; num?: boolean };
 
 /** Các cột chọn được của bảng (cột nhóm luôn hiện). `sort` là khóa sắp xếp tương ứng; cột trạng thái không sắp xếp. */
@@ -16,6 +16,8 @@ export const yieldColumns: readonly ColumnDef[] = [
   { key: "remainingKg", label: "Còn để bán", sort: "remainingKg", num: true },
   { key: "lastHarvest", label: "Thu gần nhất", sort: "lastHarvest", num: true },
   { key: "daysToLast", label: "Ngày nuôi đến lần thu cuối", sort: "daysToLast", num: true },
+  { key: "nurseryQuantityIn", label: "Mảnh vào ươm (ước tính)", sort: "nurseryQuantityIn", num: true },
+  { key: "nurseryLossPieces", label: "Hao hụt ươm (ước tính)", sort: "nurseryLossPieces", num: true },
   { key: "status", label: "Trạng thái số liệu" },
 ];
 export const allColumnKeys = yieldColumns.map((column) => column.key);

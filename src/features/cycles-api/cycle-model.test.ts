@@ -20,7 +20,7 @@ describe("cycle rows", () => {
 });
 
 describe("cycle plan draft", () => {
-  const draft = { startDate: "2026-09-01", expectedSeedQuantity: "1000,5", expectedHarvestDate: "", targetYieldKg: "" };
+  const draft = { startDate: "2026-09-01", expectedSeedQuantity: "1000,5", targetYieldKg: "" };
   it("needs a start date that is not in the future and positive optional quantities", () => {
     expect(validatePlan(draft, "2026-11-11")).toEqual({});
     expect(validatePlan({ ...draft, startDate: "" }, "2026-11-11").startDate).toBeTruthy();
@@ -28,6 +28,6 @@ describe("cycle plan draft", () => {
     expect(validatePlan({ ...draft, targetYieldKg: "0" }, "2026-11-11").targetYieldKg).toBeTruthy();
   });
   it("sends empty optional fields as null together with the row version", () => {
-    expect(planBody(draft, "v3")).toEqual({ startDate: "2026-09-01", expectedSeedQuantity: 1000.5, expectedHarvestDate: null, targetYieldKg: null, rowVersion: "v3" });
+    expect(planBody(draft, "v3")).toEqual({ startDate: "2026-09-01", expectedSeedQuantity: 1000.5, targetYieldKg: null, rowVersion: "v3" });
   });
 });

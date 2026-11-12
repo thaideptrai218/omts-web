@@ -28,7 +28,7 @@ describe("lane incident plans and BFF", () => {
     expect(damageValues.safeParse({ rowVersion: "v1", reason: " " }).success).toBe(false);
     expect(repairValues.safeParse({ rowVersion: "v1", reason: "x", materials: [] }).success).toBe(false);
     expect(repairValues.safeParse({ rowVersion: "v1", reason: "x" }).success).toBe(true);
-    expect(repairValues.safeParse({ rowVersion: "v1", materials: [{ itemId: id, quantity: 2 }] }).success).toBe(false);
+    expect(repairValues.safeParse({ rowVersion: "v1", materials: [{ itemId: id, quantity: 2 }] }).success).toBe(true);
     expect(repairValues.safeParse({ rowVersion: "v1", reason: "x", materials: [{ itemId: id, quantity: 0 }] }).success).toBe(false);
     expect(repairValues.safeParse({ rowVersion: "v1", reason: "x", materials: [{ itemId: id, quantity: 2 }], extra: true }).success).toBe(false);
     expect(laneIncidentHistory.safeParse({ incidents: [{ id, laneNumber: 1, kind: "Damaged", occurredAt: "bad-date" }] }).success).toBe(false);
@@ -45,7 +45,9 @@ describe("lane incident plans and BFF", () => {
   it("returns a missing new endpoint as 404 and carries safe stock messages", async () => {
     const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({}, { status: 404 }))
       .mockResolvedValueOnce(Response.json({ code: "MSG-INPUT-01", message: "Kho chỉ còn 1 m.", onHand: 1, secret: "no" }, { status: 409 }));
-    expect((await handleFarmingRequest(request("damage", { rowVersion: "v1", reason: "Đứt" }), "raft-details")).status).toBe(404);
+    const form = new FormData(); form.set("payload", JSON.stringify({ rowVersion: "v1", reason: "Đứt" })); form.append("files", new File(["a"], "a.png", { type: "image/png" }));
+    const damage = new Request(`http://localhost:3002/api/operations/raft-details?${query("damage")}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form });
+    expect((await handleFarmingRequest(damage, "raft-details")).status).toBe(404);
     const response = await handleFarmingRequest(request("repair", { rowVersion: "v1", reason: "Buoc day", materials: [{ itemId: id, quantity: 2 }] }), "raft-details");
     expect(response.status).toBe(409); const text = await response.text(); expect(text).toContain("Kho chỉ còn 1 m."); expect(text).not.toContain("secret");
     expect(fetcher).toHaveBeenCalledTimes(2);

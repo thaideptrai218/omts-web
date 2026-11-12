@@ -21,7 +21,7 @@ export function CycleJourneyTab({ row, zoneId, access, onJump, onChanged }: { ro
   const progress = useRemote(useCallback((signal: AbortSignal) => cycleId ? readCycles({ action: "progress", raftId: row.raftId, cycleId }, cycleProgress, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [row.raftId, cycleId]));
   const summary = useRemote(useCallback((signal: AbortSignal) => cycleId ? readCycleSummary(cycleId, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [cycleId]));
   const [closing, setClosing] = useState(false);
-  if (!row.cycle) return <p className="text-sm text-text-muted">Bè chưa có chu kỳ nuôi. Bắt đầu chu kỳ để theo dõi hành trình từ kế hoạch đến tổng kết.</p>;
+  if (!row.cycle) return <p className="text-sm text-text-muted">Bè chưa có chu kỳ nuôi. Chu kỳ mới được tạo khi hoàn tất ươm.</p>;
   if (progress.loading || summary.loading) return <Skeleton />;
   const cycle = progress.data?.cycle, figures = summary.data;
   if (progress.error || summary.error || !cycle || !figures) return <ListStateMessage error={progress.error ?? summary.error ?? "Không tải được hành trình chu kỳ."} onRetry={() => { progress.reload(); summary.reload(); }} retryLabel="Tải lại hành trình" />;

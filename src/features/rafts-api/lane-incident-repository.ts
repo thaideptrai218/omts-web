@@ -22,7 +22,12 @@ async function send<T>(action: string, target: Target, schema: z.ZodType<T>, bod
 }
 export const laneIncidentRepository = {
   history: (target: Target, signal?: AbortSignal) => send("history", target, laneIncidentHistory, undefined, signal),
-  save: (action: IncidentAction, target: Target, body: unknown) => send(action, target, laneIncidentSaved, body),
+  save: (action: IncidentAction, target: Target, body: unknown, photos?: File[]) => {
+    if (action !== "damage") return send(action, target, laneIncidentSaved, body);
+    const form = new FormData(); form.set("payload", JSON.stringify(body));
+    for (const file of photos ?? []) form.append("files", file, file.name);
+    return send(action, target, laneIncidentSaved, form);
+  },
   async photo(target: Target, incidentId: string, file: File) {
     const form = new FormData(); form.set("payload", "{}"); form.append("photo", file, file.name);
     // A successful upload is deliberately independent of the mutation, so a failed photo never repeats stock deduction.

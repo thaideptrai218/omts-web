@@ -15,21 +15,14 @@ export type JourneyInput = { cycle: CycleView; lanes: readonly JourneyLane[]; fi
 export const statusLabel: Record<JourneyStatus, string> = { done: "Xong", active: "Đang làm", todo: "Chưa tới" };
 const list = compressLaneNumbers;
 const kg = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
-const days = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 export const laneIs = (lane: JourneyLane, state: string) => lane.state === state;
-
-/** "còn 264 ngày" / "quá hạn 3 ngày" / "hôm nay" against the planned harvest date. */
-export function daysToPlan(expected: string, today: string): string {
-  const diff = days(today, expected);
-  return diff > 0 ? `còn ${diff} ngày` : diff === 0 ? "đến hạn hôm nay" : `quá hạn ${-diff} ngày`;
-}
 
 /**
  * The five steps of a cycle (Kế hoạch, Thả giống, Chăm sóc, Thu hoạch, Tổng kết) as a pure function of the cycle, its lanes and the summary figures.
  * Every step carries plan vs actual bars, a status and at most one primary action; nothing here asks the user for new input.
  */
 export function buildJourney(input: JourneyInput): JourneyStep[] {
-  const { cycle, figures: f, today } = input, closed = !!cycle.closeDate;
+  const { cycle, figures: f } = input, closed = !!cycle.closeDate;
   // A removed lane (status 2002) is not part of the raft any more; an out-of-service lane without seed is never "still to seed".
   const lanes = input.lanes.filter(lane => lane.statusId !== 2002);
   const seeded = lanes.filter(lane => !laneIs(lane, "NotSeeded")), notSeeded = lanes.filter(lane => laneIs(lane, "NotSeeded") && !lane.isOutOfService);
@@ -37,11 +30,10 @@ export function buildJourney(input: JourneyInput): JourneyStep[] {
   // BR-CYCLE-07: every lane with seed is Harvested or out of service (a lane out of service is finished, not "not harvested").
   const allHarvested = seeded.length > 0 && harvested.length + lost.length === seeded.length;
   const unit = f.seedUnit ?? "mảnh";
-  const planned = cycle.expectedSeedQuantity !== null || cycle.expectedHarvestDate !== null || cycle.targetYieldKg !== null;
+  const planned = cycle.expectedSeedQuantity !== null || cycle.targetYieldKg !== null;
 
   const plan: JourneyStep = { key: "plan", label: "Kế hoạch", status: "done", chip: `Bắt đầu ${formatVietnameseDate(cycle.startDate)}`, bars: [],
     lines: [cycle.expectedSeedQuantity !== null ? `Giống dự kiến: ${kg(cycle.expectedSeedQuantity)}${unit ? ` ${unit}` : ""}` : "Chưa lập lượng giống dự kiến",
-      cycle.expectedHarvestDate ? `Ngày thu dự kiến ${formatVietnameseDate(cycle.expectedHarvestDate)}${closed ? "" : ` (${daysToPlan(cycle.expectedHarvestDate, today)})`}` : "Chưa lập ngày thu dự kiến",
       cycle.targetYieldKg !== null ? `Sản lượng mục tiêu: ${kg(cycle.targetYieldKg)} kg` : "Chưa lập sản lượng mục tiêu"],
     ...(!closed && !planned && input.canEditPlan ? { action: { key: "journey-plan", label: "Lập kế hoạch", tab: "plan" as const } } : {}) };
 
@@ -60,13 +52,13 @@ export function buildJourney(input: JourneyInput): JourneyStep[] {
   const harvest: JourneyStep = { key: "harvest", label: "Thu hoạch", status: harvestStatus,
     chip: allHarvested ? lost.length ? "Đã thu xong, có làn ngừng hoạt động" : "Đã thu xong" : being.length ? `Đang thu: làn ${list(being.map(lane => lane.laneNumber))}` : f.harvestLotCount ? "Đã có chuyến thu" : "Chưa thu hoạch",
     bars: [{ label: "Sản lượng thu hoạch", actual: f.kgHarvested, plan: f.targetYieldKg ?? null, unit: "kg", estimate: true, note: `${f.harvestLotCount} chuyến · ${(f.harvestedCages ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} lồng` }],
-    lines: [...(cycle.expectedHarvestDate ? [`Thu gần nhất ${f.lastHarvestDate ? formatVietnameseDate(f.lastHarvestDate) : "—"}, dự kiến ${formatVietnameseDate(cycle.expectedHarvestDate)}`] : []),
+    lines: [...(f.lastHarvestDate ? [`Thu gần nhất ${formatVietnameseDate(f.lastHarvestDate)}`] : []),
       ...(f.remainingKg !== null && f.remainingKg !== undefined ? [f.remainingKg >= 0 ? `Còn ${kg(f.remainingKg)} kg để đạt mục tiêu` : `Vượt mục tiêu ${kg(-f.remainingKg)} kg`] : [])],
     ...(!closed && !allHarvested && seeded.length && input.canRecord ? { action: { key: "journey-harvest", label: being.length ? "Thu hoạch và hoàn tất làn" : "Ghi nhận thu hoạch", screen: "harvest" as const } } : {}) };
 
   const early = f.notHarvestedLanes.length ? `Còn làn ${list(f.notHarvestedLanes)} chưa thu xong: kết thúc bây giờ là kết thúc sớm.` : f.earlyReason === "NoSeedingSession" ? "Chưa có lần thả giống: kết thúc bây giờ là kết thúc sớm." : undefined;
   const summary: JourneyStep = { key: "summary", label: "Tổng kết", status: closed ? "done" : allHarvested ? "active" : "todo", chip: closed ? `Đã kết thúc ${formatVietnameseDate(cycle.closeDate!)}` : allHarvested ? "Sẵn sàng kết thúc" : "Chưa tới",
-    bars: [], lines: [`Thả ${kg(f.seedHung)}${unit ? ` ${unit}` : ""}, thu ${kg(f.kgHarvested)} kg ước tính, ${f.daysOfFarming} ngày nuôi`,
+    bars: [], lines: [...(f.nursery ? [`Ươm ${f.nursery.batchCode}: vào ${f.nursery.quantityIn == null ? "—" : kg(f.nursery.quantityIn)} mảnh (ước tính), sống sót ${f.nursery.survivors == null ? "—" : kg(f.nursery.survivors)} mảnh (ước tính), hao hụt ${f.nursery.lossPieces == null ? "—" : kg(f.nursery.lossPieces)} mảnh${f.nursery.lossPercent == null ? "" : ` (${kg(f.nursery.lossPercent)}%)`} (ước tính)`] : []), `Thả ${kg(f.seedHung)}${unit ? ` ${unit}` : ""}, thu ${kg(f.kgHarvested)} kg ước tính, ${f.daysOfFarming} ngày nuôi`,
       ...(f.lostLanes ?? []).map(item => `Làn ${item.laneNumber} ngừng hoạt động${item.date ? ` ngày ${formatVietnameseDate(item.date)}` : ""}${item.reason ? `: ${item.reason}` : ""}. Ghi nhận mất giống, không có số lượng; làn được tính là đã kết thúc.`),
       ...(!closed && f.damagedLanes?.length ? [`Làn ${list(f.damagedLanes)} đang hỏng, chưa sửa.`] : []), ...(!closed && early ? [early] : []), ...(closed && cycle.assessment ? [`Đánh giá: ${cycle.assessment}`] : [])],
     ...(!closed && input.canClose ? { action: { key: "journey-close", label: "Kết thúc chu kỳ", close: true as const } } : {}) };

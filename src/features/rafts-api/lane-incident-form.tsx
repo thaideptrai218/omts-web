@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ImageFileInput } from "@/components/form/image-file-input";
+import { PhotoPicker } from "@/components/form/photo-picker";
+import { photoValidationMessage } from "@/components/form/photo-compression";
+import { farmingFieldError } from "@/features/cultivation-api/farming-problem";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Note, useMutation } from "@/features/operations/ui";
@@ -15,13 +18,14 @@ type Props = { action: IncidentAction; raftId: string; raftCode: string; zoneId:
 /** One repair command posts its material lines atomically; photo failures never replay that command. */
 export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber, rowVersion, hasSeed, cycleRowVersion, onClose, onSaved, onStateChange }: Props) {
   const [reason, setReason] = useState(""), [file, setFile] = useState<File>(), [error, setError] = useState<string>();
+  const [photos, setPhotos] = useState<File[]>([]), [photoBusy, setPhotoBusy] = useState(false), [photoError, setPhotoError] = useState<string>();
   const [lines, setLines] = useState<MaterialLine[]>([]), [stock, setStock] = useState<StockItem[]>();
   const [unavailable, setUnavailable] = useState(false), [eventSaved, setEventSaved] = useState(false);
   const [incidentId, setIncidentId] = useState<string>(), [photoFailure, setPhotoFailure] = useState(false), [photoUncertain, setPhotoUncertain] = useState(false), [compared, setCompared] = useState(false);
   const [comparedIncidents, setComparedIncidents] = useState<LaneIncident[]>([]);
   const mutation = useMutation(), confirmation = useActionDialog(), { notify } = useToast();
-  const dirty = !!reason || !!file || !!lines.length || eventSaved;
-  useEffect(() => { onStateChange?.({ dirty, pending: mutation.pending }); }, [dirty, mutation.pending, onStateChange]);
+  const dirty = !!reason || !!file || !!photos.length || !!lines.length || eventSaved;
+  useEffect(() => { onStateChange?.({ dirty, pending: mutation.pending || photoBusy }); }, [dirty, mutation.pending, photoBusy, onStateChange]);
   useEffect(() => () => onStateChange?.({ dirty: false, pending: false }), [onStateChange]);
   const loaded = useCallback((items: StockItem[]) => setStock(items), []);
   const code = mutation.failure?.code;
@@ -41,10 +45,14 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
     await mutation.run(async () => { await uploadPhoto(incidentId); return { status: "success", data: true }; });
   }
   async function cancel() {
-    if (!mutation.busy() && (!dirty || await confirmation.confirm("Bỏ các thay đổi sự cố chưa lưu?"))) onClose();
+    if (!photoBusy && !mutation.busy() && (!dirty || await confirmation.confirm("Bỏ các thay đổi sự cố chưa lưu?"))) onClose();
   }
   async function save() {
-    if (mutation.busy() || mutation.blocked || unavailable || eventSaved) return;
+    if (photoBusy || mutation.busy() || mutation.blocked || unavailable || eventSaved) return;
+    if (action === "damage") {
+      const bad = photoValidationMessage(photos.length); setPhotoError(bad);
+      if (bad) return;
+    }
     const withStock = action === "repair" || action === "restore";
     const schema = action === "damage" ? damageValues : action === "repair" ? repairValues : action === "restore" ? restoreValues : outOfServiceValues;
     const body = { rowVersion, ...(reason.trim() || !withStock ? { reason: reason.trim() } : {}),
@@ -61,7 +69,7 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
     if (action !== "repair" && !await confirmation.confirm(action === "restore" ? `Khôi phục hoạt động làn ${laneNumber}? Làn sẽ lại xuất hiện trong danh sách thả giống và thu hoạch.` : action === "discontinue" ? `Ngừng hoạt động làn ${laneNumber}? ${hasSeed ? "Một sự kiện mất giống không số lượng sẽ được ghi nhận; làn được coi là đã kết thúc khi đóng chu kỳ." : "Làn sẽ không xuất hiện trong danh sách chọn."}` : `Báo hỏng làn ${laneNumber}? Làn sẽ bị chặn thả giống và thu hoạch cho tới khi sửa xong.`)) return;
     let missing = false;
     const saved = await mutation.run(async () => {
-      const result = await laneIncidentRepository.save(action, target, parsed.data);
+      const result = await laneIncidentRepository.save(action, target, parsed.data, action === "damage" ? photos : undefined);
       if (result.status === "error" && result.httpStatus === 404) missing = true;
       return result;
     });
@@ -80,8 +88,9 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
   return <form noValidate aria-label={`${incidentActionLabel[action]} làn ${laneNumber}`} onSubmit={event => { event.preventDefault(); void save(); }} className="mt-3 space-y-3">
     {confirmation.dialog}
     <fieldset disabled={mutation.pending || mutation.blocked || unavailable || eventSaved} className="grid gap-3">
-      <Note label={action === "repair" ? "Nội dung sửa (tùy chọn)" : action === "restore" ? "Lý do khôi phục (tùy chọn)" : "Lý do *"} required={action === "damage" || action === "discontinue"} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} />
+      <Note label={action === "repair" ? "Nội dung sửa (tùy chọn)" : action === "restore" ? "Lý do khôi phục (tùy chọn)" : action === "damage" ? "Ghi chú sự cố: khi nào, làn nào, hỏng thế nào *" : "Lý do *"} required={action === "damage" || action === "discontinue"} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} />
       {action === "repair" || action === "restore" ? <LaneIncidentStock lines={lines} onChange={setLines} onLoaded={loaded} />
+        : action === "damage" ? <PhotoPicker files={photos} onChange={value => { setPhotos(value); setPhotoError(undefined); }} onBusyChange={setPhotoBusy} error={photoError || farmingFieldError(mutation.failure?.problem, "Photos")} />
         : <ImageFileInput label="Ảnh sự cố (tùy chọn, JPEG/PNG, tối đa 10 MB)" accept="image/jpeg,image/png" onChange={event => setFile(event.target.files?.[0])} />}
       {action === "discontinue" && hasSeed && <p className="text-sm">Làn đang có giống: sẽ ghi sự kiện mất giống không số lượng và coi làn đã kết thúc khi đóng chu kỳ.</p>}
     </fieldset>
@@ -98,7 +107,7 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
     <div className="flex flex-wrap justify-end gap-2">
       {eventSaved || mutation.blocked ? <Button key="reload-incident" type="button" variant="secondary" className="w-auto" disabled={mutation.pending} onClick={onSaved}>Tải lại làn</Button>
         : <Button key="cancel-incident" type="button" variant="secondary" className="w-auto" disabled={mutation.pending} onClick={() => void cancel()}>Bỏ qua</Button>}
-      <Button key="save-incident" type="submit" className="w-auto" isPending={mutation.pending} disabled={mutation.blocked || unavailable || eventSaved || lines.length > 0 && !stock}>Lưu</Button>
+      <Button key="save-incident" type="submit" className="w-auto" isPending={mutation.pending} disabled={photoBusy || mutation.blocked || unavailable || eventSaved || lines.length > 0 && !stock}>Lưu</Button>
     </div>
   </form>;
 }

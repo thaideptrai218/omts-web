@@ -40,6 +40,8 @@ export function YieldTable({ groups, sort, showZone, linkedRecordId, visible = a
       target: <YieldTargetCell harvestedKg={row.targetedKg ?? row.estimatedKg} targetKg={row.targetYieldKg} />,
       soldKg: kgOrDash(row.soldKg), remainingKg: kgOrDash(row.availableKg), lastHarvest: last ? formatVietnameseDate(last) : "—",
       daysToLast: days == null ? "—" : `${days} ngày`, status: <StatusCell row={row} />,
+      nurseryQuantityIn: row.nurseryQuantityIn == null ? "—" : formatKg(row.nurseryQuantityIn),
+      nurseryLossPieces: row.nurseryLossPieces == null ? "—" : `${formatKg(row.nurseryLossPieces)} mảnh${row.nurseryLossPercent == null ? "" : ` · ${formatKg(row.nurseryLossPercent)}%`}`,
     };
   };
   const totalCells: Partial<Record<ColumnKey, ReactNode>> | undefined = totals && {

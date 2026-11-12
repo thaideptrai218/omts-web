@@ -11,9 +11,11 @@ export async function readCycles<T>(query: Record<string,string>, schema: z.ZodT
     return response.ok && body.status === "success" && parsed.success ? { status: "success", data: parsed.data } : { status: "error", httpStatus: response.status, code: body.code, uncertain: false };
   } catch { return { status: "error", httpStatus: 0, uncertain: false }; }
 }
-export async function writeCycle(action: "start" | "edit" | "cancel" | "close", id: string, body: unknown): Promise<WorkspaceResult<unknown>> {
+export async function writeCycle(action: "start" | "edit" | "cancel" | "close" | "plan-photos", id: string, body: unknown): Promise<WorkspaceResult<unknown>> {
   try {
-    const response = await bffFetch("/api/cultivation-cycles", { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30_000), headers: { "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action, id, body }) });
+    const form = body instanceof FormData ? body : undefined;
+    if (form) { form.set("action", action); form.set("id", id); }
+    const response = await bffFetch("/api/cultivation-cycles", { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000), headers: { ...(!form ? { "Content-Type": "application/json" } : {}), "X-OMTS-Request": "web" }, body: form ?? JSON.stringify({ action, id, body }) });
     const value = await response.json();
     const problem = projectFarmingProblem(value.problem);
     return response.ok && value.status === "success" ? { status: "success", data: value.data } : { status: "error", httpStatus: response.status, code: value.code, ...(problem ? { problem } : {}), uncertain: response.ok || response.status >= 500 || response.status === 401 };

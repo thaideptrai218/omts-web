@@ -1,4 +1,5 @@
 "use client";
+import { PhotoGallery } from "@/components/form/photo-gallery";
 import { useSearchParams } from "next/navigation";
 import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import { Fragment, useMemo, useState } from "react";
@@ -149,6 +150,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
                           {!v.canCorrect && (
                             <p>Bản ghi đã khóa theo trạng thái chu kỳ hoặc lô thu hoạch; hiện chỉ được xem.</p>
                           )}
+                          <PhotoGallery photos={v.photos ?? []} label="Ảnh thả giống" />
                           <RecordHistory kind="seeding" id={v.id} zoneId={zoneId} />
                           <footer>
                             {v.canCorrect && (allowed("Edit") || allowed("Delete")) && (

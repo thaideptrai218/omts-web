@@ -10,7 +10,7 @@ export type YieldRow = YieldGroup & {
 };
 export type StatusKey = "open" | "closed" | "notFinal";
 export const statusLabel: Record<StatusKey, string> = { open: "Đang mở", closed: "Đã đóng", notFinal: "Chưa chốt" };
-export type SortKey = "label" | "lotCount" | "cages" | "estimatedKg" | "kgPerCage" | "targetPct" | "soldKg" | "remainingKg" | "lastHarvest" | "daysToLast";
+export type SortKey = "label" | "lotCount" | "cages" | "estimatedKg" | "kgPerCage" | "targetPct" | "soldKg" | "remainingKg" | "lastHarvest" | "daysToLast" | "nurseryQuantityIn" | "nurseryLossPieces";
 
 /** Tổng cho phép thiếu: toàn bộ thiếu thì kết quả thiếu (null), không phải 0. */
 export function sumNullable(values: readonly (number | null | undefined)[]): number | null {
@@ -43,6 +43,8 @@ export function metricOf(row: YieldRow, key: Exclude<SortKey, "label">): number 
     case "remainingKg": return row.availableKg ?? null;
     case "lastHarvest": return lastHarvestOf(row);
     case "daysToLast": return daysToLastOf(row);
+    case "nurseryQuantityIn": return row.nurseryQuantityIn ?? null;
+    case "nurseryLossPieces": return row.nurseryLossPieces ?? null;
   }
 }
 
@@ -91,6 +93,9 @@ function merge(key: string, label: string, parts: readonly YieldGroup[], keep: P
     harvestedCages: sumNullable(parts.map((part) => part.harvestedCages)),
     targetYieldKg: sumNullable(withTarget.map((part) => part.targetYieldKg)), targetedKg: total(withTarget.map((part) => part.estimatedKg)),
     remainingKg: sumNullable(parts.map((part) => part.remainingKg)), availableKg: sumNullable(parts.map((part) => part.availableKg)),
+    nurseryQuantityIn: sumNullable(parts.map(part => part.nurseryQuantityIn)), nurserySurvivors: sumNullable(parts.map(part => part.nurserySurvivors)),
+    nurseryLossPieces: sumNullable(parts.map(part => part.nurseryLossPieces)),
+    nurseryLossPercent: (() => { const input = sumNullable(parts.map(part => part.nurseryQuantityIn)), loss = sumNullable(parts.map(part => part.nurseryLossPieces)); return input && loss != null ? loss / input * 100 : null; })(),
     lots: parts.flatMap((part) => part.lots).sort(byDateDesc),
   };
 }

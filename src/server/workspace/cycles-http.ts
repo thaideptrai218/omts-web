@@ -8,6 +8,7 @@ import { readBackendResponse } from "../backend/backend-response";
 import { readFarmingProblem } from "../backend/farming-problem-copy";
 import { sameEmployeeSession } from "../employees/employee-session";
 import { planCycleClose, planCycleCloseRead, type CycleClosePlan } from "./cycles-close-plan";
+import { readCyclePhotoUpload } from "./cycles-photo-upload";
 
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "private, no-store", Vary: "Cookie" } });
 const allowedFor = (context: { identity: { subjectType: string }; permissions: { functionPermissions: readonly { functionCode: string; action: string }[] } }, permission: string) =>
@@ -83,9 +84,19 @@ export async function handleCycleWrite(request: Request) {
   if (gateway.mode !== "api" || backend.status !== "valid" || backend.config.source !== "api") return json({ status: "unavailable" }, 503);
   try {
     const csrf = createCsrfGuard(process.env); if (csrf.status !== "available") return json({ status: "unavailable" }, 503);
-    const check = await csrf.guard.check(request, { method: "POST", body: "json", maxBytes: 8192, timeoutMs: 5000 });
-    if (check.status !== "allowed") return json({ status: "rejected" }, check.status === "rejected" ? check.httpStatus : 503);
-    const input = check.body.readForValidation();
+    const multipart = request.headers.get("content-type")?.startsWith("multipart/form-data");
+    let input: unknown, upload: Awaited<ReturnType<typeof readCyclePhotoUpload>> | undefined;
+    if (multipart) {
+      const check = csrf.guard.checkHeaders(request, "POST");
+      if (check.status !== "allowed") return json({ status: "rejected" }, check.status === "rejected" ? check.httpStatus : 503);
+      upload = await readCyclePhotoUpload(request);
+      if (!upload.command) return json({ status: "invalid-input", code: "MSG-GEN-01", problem: upload.problem }, 400);
+      input = upload.command;
+    } else {
+      const check = await csrf.guard.check(request, { method: "POST", body: "json", maxBytes: 8192, timeoutMs: 5000 });
+      if (check.status !== "allowed") return json({ status: "rejected" }, check.status === "rejected" ? check.httpStatus : 503);
+      input = check.body.readForValidation();
+    }
     if (new URL(request.url).search) return json({ status: "invalid-input" }, 400);
     if ((input as { action?: unknown } | null)?.action === "close") {
       const plan = planCycleClose(input);
@@ -95,23 +106,26 @@ export async function handleCycleWrite(request: Request) {
       z.strictObject({ action: z.literal("start"), id: z.guid(), body: cycleInput }),
       z.strictObject({ action: z.literal("edit"), id: z.guid(), body: cycleInput.extend({ rowVersion: z.string().min(1) }) }),
       z.strictObject({ action: z.literal("cancel"), id: z.guid(), body: z.strictObject({ rowVersion: z.string().min(1) }) }),
+      z.strictObject({ action: z.literal("plan-photos"), id: z.guid(), body: z.strictObject({ rowVersion: z.string().min(1), keepPhotoIds: z.array(z.guid()).max(3).optional() }) }),
     ]).safeParse(input);
     if (!command.success) return json({ status: "invalid-input" }, 400);
+    if (["start", "plan-photos"].includes(command.data.action) && !upload?.body) return json({ status: "invalid-input", code: "MSG-GEN-01", problem: { field: "Photos", hint: "Cần từ 1 đến 3 ảnh JPEG hoặc PNG." } }, 400);
     const initial = await gateway.resolve(request.headers.get("cookie")); if (initial.status !== "resolved") return json({ status: "session-expired" }, 401);
     const application = await gateway.application(request.headers.get("cookie")); if (application.status !== "ready") return json({ status: "unavailable" }, 503);
-    const q = command.data, permission = q.action === "start" ? "Create" : q.action === "edit" ? "Edit" : "Delete";
+    const q = command.data, permission = q.action === "start" ? "Create" : q.action === "cancel" ? "Delete" : "Edit";
     if (!allowedFor(application.context, permission)) return json({ status: "forbidden", code: "MSG02" }, 403);
-    const path = q.action === "start" ? `/api/rafts/${q.id}/cultivation-cycles` : `/api/cultivation-cycles/${q.id}${q.action === "cancel" ? "/cancel" : ""}`;
+    const path = q.action === "start" ? `/api/rafts/${q.id}/cultivation-cycles` : `/api/cultivation-cycles/${q.id}${q.action === "cancel" ? "/cancel" : q.action === "plan-photos" ? "/plan-photos" : ""}`;
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(backend.config.timeoutMs)]);
-    const response = await fetch(new URL(path, backend.config.origin), { method: q.action === "edit" ? "PUT" : "POST", body: JSON.stringify(q.body), headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` }, cache: "no-store", redirect: "error", credentials: "omit", signal });
+    const response = await fetch(new URL(path, backend.config.origin), { method: q.action === "edit" || q.action === "plan-photos" ? "PUT" : "POST", body: upload?.body ?? JSON.stringify(q.body), headers: { ...(!upload?.body ? { "Content-Type": "application/json" } : {}), Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` }, cache: "no-store", redirect: "error", credentials: "omit", signal });
+    const problemCopy = response.ok ? undefined : response.clone();
     const result = response.status === 204 && q.action === "cancel" ? undefined : await readBackendResponse(response, "profileRead");
     const current = await gateway.resolve(request.headers.get("cookie")); if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
     if (signal.aborted) return json({ status: "unavailable" }, 503);
     if (!result) return json({ status: "success", data: { cancelled: true } });
-    if (result.status === "http-error") return json({ status: "rejected", code: result.code }, result.httpStatus);
+    if (result.status === "http-error") return json({ status: "rejected", code: result.code, problem: await readFarmingProblem(problemCopy) }, result.httpStatus);
     if (result.status !== "success") return json({ status: "unavailable" }, 503);
     const saved = z.object({ cycle: cycleView }).safeParse(result.data);
-    if (!saved.success || q.action === "edit" && saved.data.cycle.id !== q.id || q.action === "start" && saved.data.cycle.raftId !== q.id) return json({ status: "invalid-response" }, 502);
+    if (!saved.success || (q.action === "edit" || q.action === "plan-photos") && saved.data.cycle.id !== q.id || q.action === "start" && saved.data.cycle.raftId !== q.id) return json({ status: "invalid-response" }, 502);
     return json({ status: "success", data: saved.data });
   } catch { return json({ status: "unavailable" }, 503); }
 }

@@ -26,7 +26,8 @@ describe("yield screen is kg-first without loss wording", () => {
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("25");
     expect(screen.getByText("150 kg")).toBeTruthy();
     expect(screen.getByText("5 lồng")).toBeTruthy();
-    expect(screen.queryByText(/Hao hụt|Chênh lệch/)).toBeNull();
+    // The nursery loss column is a nursery figure, not harvest loss wording.
+    expect(screen.queryByText(/Hao hụt(?! ươm)|Chênh lệch/)).toBeNull();
   });
   it("shows a dash instead of an invented number when the target or remaining kg are missing", () => {
     render(<YieldTable groups={[group({})]} sort={{ key: "label", dir: "asc" }} showZone={false} onSort={() => {}} />);

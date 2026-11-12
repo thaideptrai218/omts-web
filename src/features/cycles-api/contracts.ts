@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { laneProgressReadFields } from "@/features/farming-management/lane-progress-contracts";
+import { stepPhotosSchema } from "@/components/form/photo-contracts";
 export const cycleSummary = z.object({ id: z.guid(), startDate: z.string(), closeDate: z.string().nullable(), statusId: z.number(), status: z.string(), rowVersion: z.string(), nurseryBatchId: z.string().nullish() });
 export const zoneCycles = z.array(z.object({ raftId: z.guid(), raftCode: z.string(), raftStatusId: z.number(), raftStatus: z.string(), laneCount: z.number(), cycle: cycleSummary.nullable(), lastCloseDate: z.string().nullable(), canStart: z.boolean(), canEdit: z.boolean(), canCancel: z.boolean() }));
 export const cycleHistory = z.array(cycleSummary);
-export const cycleInput = z.strictObject({ startDate: z.iso.date().nullable(), expectedSeedQuantity: z.number().nullable(), expectedHarvestDate: z.iso.date().nullable(), targetYieldKg: z.number().nullable() });
-export const cycleView = cycleSummary.extend({ raftId: z.guid(), raftCode: z.string(), expectedSeedQuantity: z.number().nullable(), expectedHarvestDate: z.string().nullable().default(null), targetYieldKg: z.number().nullable(), seedingCompletedOn: z.string().nullable(), assessment: z.string().nullable(), closedEarly: z.boolean(), daysOfFarming: z.number(), canEdit: z.boolean(), canCancel: z.boolean(),
+export const cycleInput = z.strictObject({ startDate: z.iso.date().nullable(), expectedSeedQuantity: z.number().nullable(), targetYieldKg: z.number().nullable() });
+export const cycleView = cycleSummary.extend({ raftId: z.guid(), raftCode: z.string(), expectedSeedQuantity: z.number().nullable(), targetYieldKg: z.number().nullable(), seedingCompletedOn: z.string().nullable(), assessment: z.string().nullable(), closedEarly: z.boolean(), daysOfFarming: z.number(), canEdit: z.boolean(), canCancel: z.boolean(),
+  planPhotos: stepPhotosSchema.optional(), planPhotosFromNursery: z.boolean().nullish(),
   nurseryCode: z.string().nullish(), nurseryAllocated: z.number().nullish(), nurserySeeded: z.number().nullish(), nurseryRemaining: z.number().nullish() });
 export const cycleProgress = z.object({ raftId: z.guid(), raftCode: z.string(), date: z.string(), cycle: cycleView.nullable(), lanes: z.array(z.object({ ...laneProgressReadFields, id: z.guid(), laneNumber: z.number(), statusId: z.number(), status: z.string(), state: z.string(), isDamaged: z.boolean().optional(), isOutOfService: z.boolean().optional() })), notSeededLanes: z.array(z.number()) });

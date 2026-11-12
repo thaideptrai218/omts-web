@@ -4,10 +4,9 @@ const states = ["NotSeeded", "Growing", "BeingHarvested", "Harvested", "OutOfSer
 export function LaneBoard({ lanes, selected, onSelect }: { lanes: readonly { id?: string; laneNumber: number; state: string | number; statusId?: number; isDamaged?: boolean; isOutOfService?: boolean }[]; selected?: number; onSelect(lane: number): void }) {
   return <LaneOverview lanes={lanes.map(lane => ({ ...lane, state: typeof lane.state === "number" ? states[lane.state] : lane.state }))} opened={selected} onLaneClick={onSelect} label="Sơ đồ làn nuôi" />;
 }
-export function CyclePlanSummary({ plan }: { plan: { expectedSeedQuantity: number | null; expectedHarvestDate: string | null; targetYieldKg: number | null; assessment?: string | null; closeDate?: string | null } }) {
+export function CyclePlanSummary({ plan }: { plan: { expectedSeedQuantity: number | null; targetYieldKg: number | null; assessment?: string | null; closeDate?: string | null } }) {
   const facts = [
     ["Lượng giống dự kiến", plan.expectedSeedQuantity == null ? "Chưa lập" : `${plan.expectedSeedQuantity.toLocaleString("vi-VN")} mảnh`],
-    ["Ngày thu hoạch dự kiến", plan.expectedHarvestDate?.split("-").reverse().join("/") ?? "Chưa lập"],
     ["Sản lượng mục tiêu", plan.targetYieldKg == null ? "Chưa lập" : `${plan.targetYieldKg.toLocaleString("vi-VN")} kg`],
   ];
   return <section className="rounded-card border border-border p-4">

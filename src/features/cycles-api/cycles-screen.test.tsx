@@ -21,7 +21,7 @@ it("opens the raft record in place and ignores late progress after it is collaps
   await screen.findByRole("option", { name: "Z1 · Vùng A" });
   fireEvent.click(await screen.findByRole("button", { name: "Xem bè B1-01" }));
   expect(screen.getByRole("region", { name: "Chi tiết chu kỳ của bè" })).toBeTruthy();
-  expect(screen.getByRole("tab", { name: "Tiến độ" })).toBeTruthy();
+  expect(screen.getByRole("tab", { name: "Tiến độ làn" })).toBeTruthy();
   expect(screen.queryByRole("dialog")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Thu gọn bè B1-01" }));
   await act(async () => { finish({ status: "success", data: { raftId, raftCode: "B1-01", cycle: null, lanes: [], notSeededLanes: [], date: "2026-11-06" } }); });

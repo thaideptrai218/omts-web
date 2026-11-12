@@ -83,7 +83,7 @@ describe("workspace BFF routing and authorization", () => {
     const request = new Request("http://localhost:3002/api/workspace/zones", { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web", "Content-Type": "application/json" },
       body: JSON.stringify({ action: "create", body: { code: "KV01", name: "A", location: "B", latitude: 0, longitude: 0, area: 1 } }) });
     const response = await handleResourceRequest(request, "zones"), text = await response.text();
-    expect(response.status).toBe(400); expect(JSON.parse(text).problem).toEqual({ code: "MSG-GEN-01", field: "Latitude", fields: ["Latitude", "Longitude"] });
+    expect(response.status).toBe(400); expect(JSON.parse(text).problem).toEqual({ code: "MSG-GEN-01", field: "Latitude", fields: ["Latitude", "Longitude"], hint: "(0, 0) is not a place on the farm." });
     expect(text).not.toContain("trace");
   });
   it("rejects a foreign-origin write before calling upstream", async () => {

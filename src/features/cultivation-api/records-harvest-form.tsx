@@ -5,7 +5,11 @@ import { z } from "zod";
 import { useToast } from "@/components/ui/toast-provider";
 import { CollapsibleSection } from "@/components/ui/management-screen/management-table";
 import { Button } from "@/components/ui/button";
-import { RecordPhotoPicker } from "./record-photo-picker";
+import { PhotoPicker } from "@/components/form/photo-picker";
+import { photoValidationMessage } from "@/components/form/photo-compression";
+import { farmingFieldError } from "./farming-problem";
+import { RecordLanePercentFields } from "./record-lane-percent-fields";
+import { selectedLanePercents, lanePercentsProblem } from "./record-lane-percents";
 import { UnitField } from "@/components/form/number-fields";
 import { HarvestLaneChoices } from "./harvest-lane-choices";
 import { HarvestEstimateHint, harvestEstimate } from "./harvest-estimate-hint";
@@ -42,15 +46,17 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
   const [cages, setCages] = useState(""), [kg, setKg] = useState("");
   const [orderId, setOrderId] = useState(() => defaultHarvestOrderId(data.orders));
   const [error, setError] = useState<string>(), [photos, setPhotos] = useState<File[]>([]);
+  const [photoBusy, setPhotoBusy] = useState(false), [photoError, setPhotoError] = useState<string>();
+  const [percents, setPercents] = useState<Record<string, string>>({}), [percentError, setPercentError] = useState<string>();
   const [crew, setCrew] = useState<string[]>([]);
   const [laneDirty, setLaneDirty] = useState(false), [lanePending, setLanePending] = useState(false);
   const { notify } = useToast();
-  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length || !!crew.length || laneDirty, lanePending);
+  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length || !!crew.length || Object.keys(percents).length > 0 || laneDirty, lanePending || photoBusy);
   // With the finish-lane endpoint (canFinish is reported) the lane is finished by its own action; an older backend still takes it with the trip.
   const finishesWithTrip = !data.lanes.some(lane => lane.canFinish !== undefined && lane.canFinish !== null);
   const estimate = harvestEstimate(Number(cages), kg, data.averageKgPerCage);
 
-  const values = () => c.harvestValues.safeParse({ purchaseRequestId: orderId, laneNumbers: lanes, finishedLaneNumbers: finishesWithTrip ? finished : [], cageCount: Number(cages), estimatedKg: kg ? Number(kg) : null,
+  const values = () => c.harvestValues.safeParse({ purchaseRequestId: orderId, lanePercents: selectedLanePercents(lanes, percents), laneNumbers: lanes, finishedLaneNumbers: finishesWithTrip ? finished : [], cageCount: Number(cages), estimatedKg: kg ? Number(kg) : null,
     ...(crew.length ? { crew } : {}) });
   const send = (parsed: z.infer<typeof c.harvestValues>) => harvestRepo.upload("harvest-record", photos, parsed, c.harvestSaved, raftId, zoneId);
   function done(saved: z.infer<typeof c.harvestSaved>) {
@@ -59,12 +65,13 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
     onSaved();
   }
   function invalid() {
-    if (photos.length > 10 || photos.some(file => !["image/jpeg", "image/png"].includes(file.type) || file.size < 1 || file.size > 10 * 1024 * 1024)) return "Chọn tối đa 10 ảnh JPEG hoặc PNG, mỗi ảnh tối đa 10 MB.";
-    return undefined;
+    return photoValidationMessage(photos.length);
   }
   async function save() {
     if (lanePending || laneDirty) { setError("Lưu hoặc bỏ thay đổi của làn trước khi lưu chuyến thu hoạch."); return; }
-    const parsed = values(), bad = invalid();
+    const parsed = values(), bad = invalid(), percentBad = lanePercentsProblem(lanes, percents);
+    setPhotoError(bad); setPercentError(percentBad);
+    if (bad || percentBad || photoBusy) return;
     if (!parsed.success) { setError(harvestInvalidFieldText(parsed.error)); return; }
     if (bad) { setError(bad); return; }
     setError(undefined);
@@ -81,6 +88,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
         <CollapsibleSection title="Làn thu hoạch" description="Các làn trong chuyến thu." columns={1}>
           <HarvestLaneChoices lanes={data.lanes} values={lanes} label="Làn thu hoạch *" onChange={next => { setLanes(next); setFinished(current => current.filter(n => next.includes(n))); }}
             onDirty={setLaneDirty} onPending={setLanePending} scope={{ raftId, zoneId, cycleId: data.cycle?.id, cycleRowVersion: data.cycle?.rowVersion, readOnly: editor.mutation.pending || !data.canRecordHarvest, onChanged: () => {} }} />
+          <RecordLanePercentFields lanes={lanes} values={percents} onChange={value => { setPercents(value); setPercentError(undefined); }} kind="harvest" error={percentError || farmingFieldError(editor.mutation.failure?.problem, "LanePercent")} />
           {finishesWithTrip && <div>
             <h4 className="mb-1 text-sm font-semibold">Xác nhận làn đã thu xong</h4>
             <p className={flowStyles.harvestHint}>{lanes.length ? "Tích những làn không còn hàu để thu. Làn không tích vẫn ở trạng thái Đang thu hoạch sau khi lưu." : "Chọn làn thu hoạch ở trên để hiện các ô xác nhận đã thu xong."}</p>
@@ -94,7 +102,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
           <HarvestEstimateHint cages={Number(cages)} typedKg={kg} kgPerCage={data.averageKgPerCage} />
           <p className="text-xs text-text-muted">kg/lồng hiện tại: {data.averageKgPerCage.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}{" "}
             ({canConfigure ? <Link className="underline underline-offset-2 focus-visible:outline-2" href="/settings?section=harvest">Cài đặt → Thiết lập thu hoạch</Link> : "Cài đặt → Thiết lập thu hoạch"})</p>
-          <RecordPhotoPicker label="Ảnh chuyến thu hoạch (tối đa 10 ảnh JPEG/PNG, 10 MB/ảnh)" files={photos} onChange={setPhotos} />
+          <PhotoPicker label="Ảnh chuyến thu hoạch" files={photos} onChange={value => { setPhotos(value); setPhotoError(undefined); }} onBusyChange={setPhotoBusy} error={photoError || farmingFieldError(editor.mutation.failure?.problem, "Photos")} />
         </CollapsibleSection>
       </fieldset>
       <div className={flowStyles.harvestFormFooter}>

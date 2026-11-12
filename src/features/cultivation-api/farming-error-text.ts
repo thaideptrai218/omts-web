@@ -4,7 +4,7 @@ const harvestFieldText: Record<string, string> = {
   "Purchase request": "Chưa chọn yêu cầu mua cho chuyến thu hoạch này. Hãy chọn một yêu cầu mua đã chấp nhận và còn đang thu hoạch.",
   "Lanes": "Làn thu hoạch chưa hợp lệ: chọn ít nhất một làn đang nuôi hoặc đang thu hoạch, không chọn trùng.",
   "Finished lanes": "Làn đánh dấu thu xong phải nằm trong các làn của chuyến thu này.",
-  "Photos": "Ảnh chưa hợp lệ: tối đa 10 ảnh JPEG hoặc PNG, mỗi ảnh tối đa 10 MB.",
+  "Photos": "Ảnh chưa hợp lệ: từ 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh tối đa 10 MB.",
   "Reason": "Nhập lý do điều chỉnh (tối đa 1.000 ký tự).",
 };
 type FailedResult = { httpStatus: number; code?: string; problem?: FarmingProblem };
@@ -15,6 +15,8 @@ type FailedResult = { httpStatus: number; code?: string; problem?: FarmingProble
 export function farmingErrorText(result: FailedResult, unit?: string): string | undefined {
   const problem = result.problem;
   if (!problem) return undefined;
+  if ([result.code, problem.code, problem.reasonCode].includes("NURSERY_SEEDING_ABOVE_ALLOCATION")) return `Vượt phần phân bổ ươm. Còn ${problem.remaining?.toLocaleString("vi-VN") ?? "số mảnh đã được phân bổ"} mảnh có thể thả; hãy giảm số mảnh hoặc tải lại để đối chiếu.`;
+  if (problem.hint && /[À-ỹ]/.test(problem.hint)) return problem.hint;
   // A question the backend asks (over plan, empty seeding, owner approval) is answered in the form; it is not an error to show.
   if (result.httpStatus === 409 && problem.confirmFlag) return "";
   if (result.code === "MSG-INPUT-01" || problem.code === "MSG-INPUT-01") return `Không đủ hàng trong kho để ghi nhận. ${stockShortageText(problem, unit)}`;

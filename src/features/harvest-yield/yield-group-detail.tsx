@@ -26,6 +26,9 @@ export function YieldGroupDetail({ group }: { group: YieldRow }) {
         {group.cycleId && <Link className="text-primary underline" href={farmingReferenceHref("cycle", { zoneId: group.zoneId, raftId: group.raftId, cycleId: group.cycleId, tab: "journey" })} aria-label="Mở hành trình của chu kỳ">Hành trình chu kỳ</Link>}
         {latest && <Link className="text-primary underline" href={farmingReferenceHref("lot", { search: latest.lotCode })}>Xem truy xuất lô gần nhất</Link>}
       </p>
+      {group.nurseryQuantityIn != null && <section aria-label="Ươm" className="my-3 grid gap-1 text-sm"><h4 className="font-semibold">Ươm (ước tính)</h4>
+        <p>Mảnh vào ươm: {group.nurseryQuantityIn.toLocaleString("vi-VN")} · Sống sót: {group.nurserySurvivors?.toLocaleString("vi-VN") ?? "—"} mảnh · Hao hụt: {group.nurseryLossPieces?.toLocaleString("vi-VN") ?? "—"} mảnh{group.nurseryLossPercent == null ? "" : ` (${group.nurseryLossPercent.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%)`}.</p>
+      </section>}
       {!lots.length ? <p className={s.muted}>Nhóm này chưa có lô thu hoạch.</p> : <div className={s.tableScroll}>
         <table className={s.lots}>
           <caption className={s.srOnly}>Các lô của nhóm</caption>

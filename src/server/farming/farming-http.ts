@@ -49,12 +49,16 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
       body = JSON.stringify(values.data);
     }
     if (plan.upload) {
-      const input = await readOperationUpload(request, plan.upload !== "license", { maxFiles: 1, optionalFile: plan.action === "update", maxBytes: 12 * 1024 * 1024 });
-      if (!input) return json({ status: "invalid-input", code: "MSG01" }, 400);
-      const values = (plan.upload === "license" ? saveLicenseSchema : z.strictObject({})).safeParse(input.payload);
-      if (!values.success || plan.action === "update" && !("rowVersion" in values.data)) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      const damage = plan.upload === "lane-damage";
+      const input = await readOperationUpload(request, !damage && plan.upload !== "license", { maxFiles: damage ? 3 : 1, optionalFile: plan.action === "update", maxBytes: (damage ? 31 : 12) * 1024 * 1024 });
+      if (!input) return json({ status: "invalid-input", code: damage ? "MSG-GEN-01" : "MSG01", ...(damage ? { problem: { field: "Photos", hint: "Cần từ 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh không quá 10 MB." } } : {}) }, 400);
+      const values = (plan.uploadBody ?? (plan.upload === "license" ? saveLicenseSchema : z.strictObject({}))).safeParse(input.payload);
+      if (!values.success || plan.action === "update" && !("rowVersion" in (values.data as object))) return json({ status: "invalid-input", code: "MSG01" }, 400);
       body = new FormData();
-      for (const file of input.files) body.append("file", file, file.name);
+      for (const file of input.files) {
+        if (damage && !["image/jpeg", "image/png"].includes(file.type)) return json({ status: "invalid-input", code: "MSG-GEN-01", problem: { field: "Photos", hint: "Chỉ nhận ảnh JPEG hoặc PNG." } }, 400);
+        body.append(damage ? "photos" : "file", file, file.name);
+      }
       for (const [key, value] of Object.entries(values.data as Record<string, unknown>)) {
         if (Array.isArray(value)) for (const entry of value) body.append(key, String(entry));
         else if (value !== null && value !== undefined) body.set(key, String(value));

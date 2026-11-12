@@ -23,5 +23,6 @@ export function planLaneIncidents(area: FarmingArea, method: string, query: URLS
   const commands = { "lane-damage": ["report-damage", damageValues], "lane-repair": ["repair", repairValues], "lane-discontinue": ["out-of-service", outOfServiceValues], "lane-restore": ["restore-service", restoreValues] } as const;
   if (!(action in commands)) return;
   const [command, jsonBody] = commands[action as keyof typeof commands];
+  if (action === "lane-damage") return { ...base, method: "POST", path: `${lane}/${command}`, upload: "lane-damage", uploadBody: jsonBody, schema: laneIncidentSaved };
   return { ...base, method: "POST", path: `${lane}/${command}`, jsonBody, schema: laneIncidentSaved };
 }

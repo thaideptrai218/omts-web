@@ -7,16 +7,16 @@ const repo = vi.hoisted(() => ({ readCycles: vi.fn(), readCycleSummary: vi.fn(),
 vi.mock("./repository", () => repo);
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
 import { CycleJourneyTab } from "./cycle-journey-tab";
-import { buildJourney, currentStep, daysToPlan, type JourneyInput } from "./cycle-journey-model";
+import { buildJourney, currentStep, type JourneyInput } from "./cycle-journey-model";
 import type { CycleFigures } from "./close-contracts";
 import type { CycleView } from "./cycle-model";
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const raftId = "00000000-0000-4000-8000-0000000000a1", cycleId = "00000000-0000-4000-8000-0000000000c1", zoneId = "00000000-0000-4000-8000-000000000001";
-const cycle = (patch: Partial<CycleView> = {}): CycleView => ({ id: cycleId, startDate: "2026-10-02", closeDate: null, statusId: 1, status: "Open", rowVersion: "AAAA", raftId, raftCode: "B1-01", expectedSeedQuantity: 250, expectedHarvestDate: "2027-08-02", targetYieldKg: 8500,
+const cycle = (patch: Partial<CycleView> = {}): CycleView => ({ id: cycleId, startDate: "2026-10-02", closeDate: null, statusId: 1, status: "Open", rowVersion: "AAAA", raftId, raftCode: "B1-01", expectedSeedQuantity: 250, targetYieldKg: 8500,
   seedingCompletedOn: null, assessment: null, closedEarly: false, daysOfFarming: 41, canEdit: true, canCancel: false, ...patch });
 const figures = (patch: Partial<CycleFigures> = {}): CycleFigures => ({ cycleId, raftCode: "B1-01", startDate: "2026-10-02", closeDate: null, asOf: "2026-11-12", seedingSessionCount: 2, seedHung: 5000, seedUnit: "con", harvestLotCount: 3, kgHarvested: 580,
-  lastHarvestDate: "2026-11-11", daysOfFarming: 41, expectedSeedQuantity: 250, expectedHarvestDate: "2027-08-02", targetYieldKg: 8500, closedEarly: false, earlyReason: null, notHarvestedLanes: [], assessment: null, harvestedCages: 12, remainingKg: 7920, ...patch });
+  lastHarvestDate: "2026-11-11", daysOfFarming: 41, expectedSeedQuantity: 250, targetYieldKg: 8500, closedEarly: false, earlyReason: null, notHarvestedLanes: [], assessment: null, harvestedCages: 12, remainingKg: 7920, ...patch });
 const lanes = (...states: string[]) => states.map((state, index) => ({ laneNumber: index + 1, state }));
 const input = (patch: Partial<JourneyInput> = {}): JourneyInput => ({ cycle: cycle(), lanes: lanes("Growing", "BeingHarvested", "Harvested"), figures: figures(), today: "2026-11-12", canClose: true, canEditPlan: true, canLog: true, canRecord: true, ...patch });
 const step = (steps: ReturnType<typeof buildJourney>, key: string) => steps.find(entry => entry.key === key)!;
@@ -27,7 +27,7 @@ describe("journey model: five steps, plan vs actual, one primary action each", (
     expect(steps.map(entry => entry.key)).toEqual(["plan", "seeding", "care", "harvest", "summary"]);
     expect(step(steps, "seeding").bars[0]).toMatchObject({ actual: 5000, plan: 250, unit: "con" });
     expect(step(steps, "harvest").bars[0]).toMatchObject({ actual: 580, plan: 8500, unit: "kg", estimate: true });
-    expect(step(steps, "plan").lines.join(" ")).toContain("còn 263 ngày");
+    expect(step(steps, "plan").lines.join(" ")).not.toContain("Ngày thu dự kiến");
   });
   it("sends each step to the right place with a distinct key", () => {
     const steps = buildJourney(input({ cycle: cycle({ seedingCompletedOn: null }), lanes: lanes("NotSeeded", "Growing") }));
@@ -41,7 +41,7 @@ describe("journey model: five steps, plan vs actual, one primary action each", (
     expect(new Set(keys).size).toBe(keys.length);
   });
   it("invites the plan only when nothing is planned, and closes only when allowed", () => {
-    expect(step(buildJourney(input({ cycle: cycle({ expectedSeedQuantity: null, expectedHarvestDate: null, targetYieldKg: null }), figures: figures({ expectedSeedQuantity: null, targetYieldKg: null }) })), "plan").action).toMatchObject({ tab: "plan" });
+    expect(step(buildJourney(input({ cycle: cycle({ expectedSeedQuantity: null, targetYieldKg: null }), figures: figures({ expectedSeedQuantity: null, targetYieldKg: null }) })), "plan").action).toMatchObject({ tab: "plan" });
     expect(step(buildJourney(input()), "plan").action).toBeUndefined();
     expect(step(buildJourney(input({ canClose: false })), "summary").action).toBeUndefined();
   });
@@ -56,9 +56,6 @@ describe("journey model: five steps, plan vs actual, one primary action each", (
     const closed = buildJourney(input({ cycle: cycle({ closeDate: "2026-11-12", assessment: "Tốt" }), figures: figures({ closeDate: "2026-11-12" }) }));
     expect(closed.every(entry => entry.status === "done" && !entry.action)).toBe(true);
     expect(step(closed, "summary").lines.join(" ")).toContain("Đánh giá: Tốt");
-  });
-  it("words days against the planned harvest date", () => {
-    expect(daysToPlan("2026-11-14", "2026-11-12")).toBe("còn 2 ngày"); expect(daysToPlan("2026-11-12", "2026-11-12")).toBe("đến hạn hôm nay"); expect(daysToPlan("2026-11-09", "2026-11-12")).toBe("quá hạn 3 ngày");
   });
 });
 
