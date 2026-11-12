@@ -18,6 +18,13 @@ describe("phân bổ ươm giống", () => {
   it("dồn hết vào một bè và xử lý số sống sót bằng 0", () => {
     expect(putAllOnRaft(9.99, "b")).toEqual([{ raftId: "b", quantity: 9.99 }]);
     expect(putAllOnRaft(0, "b")).toEqual([]);
+    expect(putAllOnRaft(NaN, "b")).toEqual([]);
+    expect(putAllOnRaft(95, "")).toEqual([]);
+  });
+  it("chia số lượng lớn theo làn mà không đổi giá trị hàng nghìn", () => {
+    const result = divideByLaneCount(95000, [{ raftId: "a", laneCount: 2 }, { raftId: "b", laneCount: 3 }]);
+    expect(result).toEqual([{ raftId: "a", quantity: 38000 }, { raftId: "b", quantity: 57000 }]);
+    expect(allocationDifference(95000, result)).toBe(0);
   });
   it("báo thiếu, thừa và không lỗi dấu phẩy động", () => {
     expect(allocationDifference(10, [{ quantity: 9.5 }])).toBe(0.5);
