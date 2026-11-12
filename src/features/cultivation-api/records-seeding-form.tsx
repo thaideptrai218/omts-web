@@ -23,6 +23,7 @@ import * as c from "./records-contracts";
 import { EditorFrame, RecordFormFooter, seedRepo } from "./records-shared";
 import { useSeedingPlan } from "./use-seeding-plan";
 import { laneIsUnavailable } from "./lane-availability";
+import { seedingLaneChoices } from "./seeding-lane-choices";
 
 const labels: Record<string, string> = { seedingDate: "Ngày thả giống phải đúng ngày/tháng/năm", seedLotId: "Chọn lô giống", laneNumbers: "Chọn ít nhất một làn", quantity: "Số lượng giống phải lớn hơn 0" };
 const n = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
@@ -47,8 +48,8 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   const [kept, setKept] = useState(record?.photos ?? []), [photoError, setPhotoError] = useState<string>();
   const [percents, setPercents] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(record?.lanePercents ?? {}).map(([lane, value]) => [lane, String(value)])));
   const [percentError, setPercentError] = useState<string>();
-  const remaining = data.nurseryRemaining ?? (data.nurseryAllocated != null && data.nurserySeeded != null ? data.nurseryAllocated - data.nurserySeeded : null);
-  // From a nursery the session hangs the whole share left (plus what the session being corrected already holds): the quantity is not typed, and that same figure is sent.
+  const remaining = data.nurseryRemaining ?? null;
+  // A correction first releases its own quantity, then takes the replacement from the shared pool.
   const capacityNursery = remaining == null ? null : remaining + (record?.quantity ?? 0);
   const nurseryExhausted = fromNursery && capacityNursery !== null && capacityNursery <= 0;
   const dirty = !!photos.length || kept.length !== (record?.photos?.length ?? 0) || JSON.stringify(percents) !== JSON.stringify(Object.fromEntries(Object.entries(record?.lanePercents ?? {}).map(([lane, value]) => [lane, String(value)]))) || date !== (record?.seedingDate ?? businessToday()) || lot !== (record?.seedLot.id ?? "") || quantity !== String(record?.quantity ?? "") || JSON.stringify(lanes) !== JSON.stringify(record?.laneNumbers ?? []) || !!reason;
@@ -63,22 +64,25 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   const noNegative = settings.data?.allowNegativeQuantity === false, over = capacity !== null && Number(quantity) > capacity;
   // Stock check (409 MSG-INPUT-01): on hand and balance after, in the lot's own unit.
   const stockError = editor.mutation.failure ? farmingErrorText(editor.mutation.failure, seedUnit) : undefined;
-  const editable = record ? record.canCorrect && allowed("Edit") : data.canRecord && allowed("Create");
+  const editable = !data.seedingCompletedOn && (record ? record.canCorrect && allowed("Edit") : data.canRecord && allowed("Create"));
   const blockedLanes = data.lanes.filter(laneIsUnavailable).map(lane => lane.laneNumber);
-  const choices = Array.from(new Set([...data.lanes.filter(v => v.canSeed && !laneIsUnavailable(v)).map(v => v.laneNumber), ...(record?.laneNumbers ?? [])])).sort((a, b) => a - b);
+  const choices = seedingLaneChoices(data.lanes, record?.laneNumbers, data.seedableLaneNumbers);
+  const poolExceeded = fromNursery && capacityNursery !== null && Number(quantity) > capacityNursery;
+  const quantityError = poolExceeded ? `Chỉ còn ${n(capacityNursery!)} mảnh trong kho ươm${record ? " (đã tính số mảnh của bản ghi đang sửa)" : ""}.` : farmingFieldError(editor.mutation.failure?.problem, "Quantity");
   const edited = <T,>(set: (value: T) => void) => (value: T) => { setAsked(false); if (editor.mutation.failure) editor.mutation.reviewed(); set(value); };
 
-  const values = (confirmed: boolean) => c.seedValues.safeParse({ seedingDate: date, ...(!fromNursery ? { seedLotId: lot } : {}), lanePercents: selectedLanePercents(lanes, percents, record ? undefined : 100), quantity: fromNursery ? capacityNursery ?? 0 : Number(quantity), laneNumbers: lanes, ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
+  const values = (confirmed: boolean) => c.seedValues.safeParse({ cycleId, seedingDate: date, ...(!fromNursery ? { seedLotId: lot } : {}), lanePercents: selectedLanePercents(lanes, percents, record ? undefined : 100), quantity: Number(quantity), laneNumbers: lanes, ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
   const send = (parsed: z.infer<typeof c.seedValues>) => seedRepo.upload(record ? "seeding-correct" : "seeding-record", photos, { ...parsed, ...(record ? { reason, rowVersion: record.rowVersion, ...(photos.length || kept.length !== (record.photos?.length ?? 0) ? { keepPhotoIds: kept.map(photo => photo.id).filter((id): id is string => !!id) } : {}) } : {}) }, z.object({ record: c.seedingRecord }), record?.id ?? cycleId, zoneId);
-  const done = () => { notify({ tone: "success", title: `Đã lưu thả giống ${record?.seedLot.code ?? selectedLot?.code ?? ""}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } }); onSaved(); };
+  const done = () => { notify({ tone: "success", title: `Đã lưu lần thả giống${fromNursery ? ` từ ${data.nurseryCode ?? "đợt ươm"}` : ` ${record?.seedLot.code ?? selectedLot?.code ?? ""}`}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } }); onSaved(); };
   /** Date, fields, reason, stock and the 150% ceiling: the problem text, or undefined when the form may be sent. */
   function problem(parsed: ReturnType<typeof values>) {
     const dateProblem = date !== record?.seedingDate ? backdateProblem(date, dateWindow, "Ngày thả giống", !!cycleStartDate) : undefined;
     if (dateProblem) return dateProblem;
-    if (fromNursery && capacityNursery === null) return "Chưa tải được phần đã chuyển từ ươm. Tải lại chu kỳ trước khi ghi nhận.";
-    if (nurseryExhausted) return "Đã thả hết phần đã chuyển sang bè, không còn mảnh nào để thả thêm.";
+    if (nurseryExhausted) return "Kho ươm không còn mảnh nào để thả thêm.";
+    if (poolExceeded) return quantityError;
     if (!parsed.success) return `${[...new Set(parsed.error.issues.map(issue => labels[String(issue.path[0])] ?? "Kiểm tra thông tin thả giống"))].join(". ")}.`;
     if (lanes.some(lane => blockedLanes.includes(lane))) return "Không thể thả giống trên làn đang hỏng, đã mất giống hoặc ngừng hoạt động.";
+    if (lanes.some(lane => !choices.includes(lane))) return "Làn đã đủ 100% hoặc không còn được thả thêm. Chọn lại làn có thể thả giống.";
     if (record && !reason.trim()) return "Nhập lý do điều chỉnh hoặc xóa bản ghi.";
     if (!fromNursery && !lot) return "Chọn lô giống.";
     if (!fromNursery && noNegative && over) return `Số lượng vượt tồn kho: lô còn ${n(capacity!)} ${seedUnit} và hợp tác xã không cho xuất âm kho. Hãy giảm số lượng hoặc nhập thêm giống.`;
@@ -113,12 +117,14 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     {record && !record.canCorrect && <p className="mb-4 text-sm text-text-muted">Bản ghi đang được khóa theo trạng thái chu kỳ hoặc lô thu hoạch. Không thể sửa hoặc xóa ở trạng thái này.</p>}
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset disabled={!editable || editor.disabled || laneDirty} className="grid min-w-0 items-start gap-4 sm:grid-cols-2">
-        {fromNursery ? <SeedingNurseryQuantitySummary code={data.nurseryCode} quantity={capacityNursery} allocated={data.nurseryAllocated} /> : <div className="min-w-0 sm:col-span-2"><Select label="Lô giống *" required value={lot} onChange={event => edited(setLot)(event.target.value)}>
+        {fromNursery ? <SeedingNurseryQuantitySummary code={data.nurseryCode} name={data.seedLot?.itemName ?? record?.seedLot.itemName} remaining={remaining} /> : <div className="min-w-0 sm:col-span-2"><p className="mb-2 text-xs text-text-muted">Không qua ươm</p><Select label="Lô giống *" required value={lot} onChange={event => edited(setLot)(event.target.value)}>
           <option value="">Chọn lô giống</option>
           {record && !lots.data?.lots.some(v => v.id === record.seedLot.id) && <option value={record.seedLot.id}>{record.seedLot.code}</option>}
           {lots.data?.lots.map(v => <option key={v.id} value={v.id}>{v.code} · {v.itemName ?? "Giống"} · {v.supplierName}{v.onHand != null ? ` · còn ${n(v.onHand)} ${v.unit}` : ` · ${v.unit}`}</option>)}
         </Select></div>}
         <div className="min-w-0"><Field label="Ngày thả giống *" type="date" required min={dateWindow.min} max={dateWindow.max} value={date} onChange={event => edited(setDate)(event.target.value)} /></div>
+        {fromNursery && <div className="min-w-0"><UnitField key="nursery-seeding-quantity" label="Số mảnh lấy hôm nay *" unit="mảnh" decimals={3} min={0.001} max={capacityNursery ?? undefined} required value={quantity} onChange={edited(setQuantity)} error={quantityError}
+          hint={record ? "Khi sửa, số mảnh cũ được hoàn kho trước khi trừ số mới (ước tính)." : "Số mảnh lấy từ kho ươm (ước tính)."} /></div>}
         {!fromNursery && <div className="min-w-0"><UnitField key="seeding-quantity" label="Số lượng giống *" unit={seedUnit} decimals={3} min={0.001} max={noNegative && capacity !== null ? capacity : undefined} required value={quantity} onChange={edited(setQuantity)}
           hint={onHand !== null ? `Còn ${n(onHand)} ${seedUnit} trong lô${over ? (noNegative ? ". Không được vượt tồn kho" : ". Số nhập đang lớn hơn tồn kho") : ""}` : undefined} /></div>}
         <div className="min-w-0 space-y-4 sm:col-span-2">
@@ -138,8 +144,8 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
       </RecordFormFooter>
     </form>
     {lots.error && <Button type="button" variant="secondary" onClick={lots.reload}>Tải lại lô giống</Button>}
-    {record?.canCorrect && allowed("Delete") && <Button type="button" className="mt-3" variant="secondary" disabled={editor.disabled || laneDirty || !reason.trim()} onClick={async () => {
-      if (await editor.submit(`Xóa lần thả giống ${record.seedLot.code}? Lượng giống được trả về kho và lý do được lưu trong nhật ký.`, () => seedRepo.write("remove", { reason, rowVersion: record.rowVersion }, z.object({ done: z.literal(true) }), record.id, zoneId))) { notify({ tone: "success", title: `Đã xóa lần thả giống ${record.seedLot.code}.` }); onSaved(); }
+    {!data.seedingCompletedOn && record?.canCorrect && allowed("Delete") && <Button type="button" className="mt-3" variant="secondary" disabled={editor.disabled || laneDirty || !reason.trim()} onClick={async () => {
+      if (await editor.submit(`Xóa lần thả giống ${record.seedLot.code}? ${fromNursery ? "Số mảnh sẽ được hoàn lại kho ươm" : "Lượng giống được trả về kho"} và lý do được lưu trong nhật ký.`, () => seedRepo.write("remove", { reason, rowVersion: record.rowVersion }, z.object({ done: z.literal(true) }), record.id, zoneId))) { notify({ tone: "success", title: `Đã xóa lần thả giống ${record.seedLot.code}.` }); onSaved(); }
     }}>Xóa lần thả</Button>}
   </EditorFrame>;
 }

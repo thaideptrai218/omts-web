@@ -10,7 +10,7 @@ const guid = z.guid(), num = z.number().finite();
  * Every key is optional and unknown or malformed ones are dropped, so an older or newer backend never breaks the form.
  */
 export const farmingProblem = z.object({
-  code: z.string().regex(/^MSG-[A-Z]+-\d{2}$/).optional().catch(undefined),
+  code: z.string().regex(/^(?:MSG-[A-Z]+-\d{2}|NURSERY_POOL_EXCEEDED)$/).optional().catch(undefined),
   reasonCode: z.string().max(100).optional().catch(undefined),
   hint: z.string().max(1000).optional().catch(undefined),
   laneNumber: num.optional().catch(undefined), remainingPercent: num.optional().catch(undefined),
@@ -38,13 +38,21 @@ export function projectFarmingProblem(value: unknown): FarmingProblem | undefine
 }
 
 const area = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+export function nurseryPoolExceededText(problem?: Pick<FarmingProblem, "remaining">): string {
+  return problem?.remaining != null
+    ? `Chỉ còn ${area(problem.remaining)} mảnh trong kho ươm (ước tính). Hãy giảm số mảnh hoặc tải lại để đối chiếu.`
+    : "Số mảnh vượt kho ươm còn lại. Hãy tải lại để đối chiếu.";
+}
 /** Match a backend refusal to its input, keeping Vietnamese hints. */
 export function farmingFieldError(problem: FarmingProblem | undefined, ...fields: string[]): string | undefined {
+  const quantityField = fields.some(field => field.toLowerCase() === "quantity");
+  if (quantityField && [problem?.code, problem?.reasonCode].includes("NURSERY_POOL_EXCEEDED")) return nurseryPoolExceededText(problem);
   if (!problem || !fields.some(field => problem.field?.toLowerCase() === field.toLowerCase() || problem.fields?.some(value => value.toLowerCase() === field.toLowerCase()))) return;
   const hint = problem.hint ?? problem.message;
   if (hint && /[À-ỹ]/.test(hint)) return hint;
   if (fields.includes("Photos")) return "Ảnh chưa hợp lệ. Chọn từ 1 đến 3 ảnh JPEG/PNG, mỗi ảnh tối đa 10 MB.";
   if (fields.includes("LanePercent")) return `Phần trăm làn${problem.laneNumber ? ` ${problem.laneNumber}` : ""} chưa hợp lệ${problem.remainingPercent != null ? `; còn ${area(problem.remainingPercent)}% có thể ghi thêm` : "; nhập số lớn hơn 0 đến 100, tối đa 2 số lẻ"}.`;
+  if (quantityField) return "Số mảnh lấy hôm nay phải lớn hơn 0. Kiểm tra lại số mảnh đã nhập.";
   return "Kiểm tra lại giá trị đã nhập.";
 }
 /** Vietnamese sentence for the stock check of seeding / material usage; unit comes from the item. */

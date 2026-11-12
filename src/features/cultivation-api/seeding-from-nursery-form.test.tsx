@@ -14,65 +14,77 @@ vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
 import { attachPhoto, selectLane } from "./record-form-test-helpers";
 import { SeedingForm } from "./records-seeding-form";
+import { seedingList } from "./records-contracts";
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const cycleId = "00000000-0000-4000-8000-000000000022";
-const base = { cycleId, raftId: "r", raftCode: "B1", seedingCompletedOn: null, laneCount: 2, seededCount: 0, notSeededLanes: [1, 2], canRecord: true, canMarkComplete: true, lanes: [{ laneNumber: 1, canSeed: true }], records: [], lots: [], cycleRowVersion: "v" };
-const nursery = { ...base, nurseryBatchId: "b", nurseryCode: "NU000001", nurseryAllocated: 4800, nurserySeeded: 0, nurseryRemaining: 4800 };
+const lanes = [{ laneNumber: 1, seededPercent: 100, remainingPercent: 0 }, { laneNumber: 2, seededPercent: 40, remainingPercent: 60 }, { laneNumber: 3 }];
+const base = { cycleId, raftId: "00000000-0000-4000-8000-000000000033", raftCode: "B1", laneCount: 3, seededCount: 2, notSeededLanes: [3], canRecord: true, canMarkComplete: true, lanes, cycleRowVersion: "v" };
+const nursery = seedingList.parse({ ...base, nurseryBatchId: "b", nurseryCode: "NU000008", nurseryRemaining: 6000, nurserySeeded: 500, seedLot: { itemName: "Hàu giống" }, seedableLaneNumbers: [2, 3] });
 
-function open(data: typeof nursery) {
+function open(data = nursery) {
   render(<ToastProvider><SeedingForm zoneId="z" raftId="r" cycleId={cycleId} data={data} record={null} allowed={() => true} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
 }
+const type = (value: string) => fireEvent.change(screen.getByLabelText("Số mảnh lấy hôm nay *"), { target: { value } });
+const save = async () => { fireEvent.click(screen.getByRole("button", { name: "Lưu" })); fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" })); };
 
-// Owner decision of 13/11/2026: a seeding from a nursery hangs the whole share transferred to the raft, so its quantity is not chosen.
-describe("seeding from a nursery cycle uses the full transferred quantity", () => {
-  it("shows the quantity read-only, has no quantity input or seed lot, and sends the whole remaining share", async () => {
+// Model V2 (13/11/2026): the daily quantity is free, capped only by the nursery pool; lanes at 100% are not offered again.
+describe("seeding from a nursery cycle takes a free daily quantity from the batch pool", () => {
+  it("shows the read-only source line, asks for the pieces taken today and sends them without a seed lot", async () => {
     upload.mockResolvedValue({ status: "success", data: { record: { id: cycleId } } });
-    open(nursery);
+    open();
 
-    expect(screen.getByText("Số lượng thả: 4.800 mảnh · toàn bộ phần đã chuyển sang bè (không chọn số lượng)")).toBeTruthy();
-    expect(screen.getByText("Đợt ươm NU000001 · Còn 4.800 trên 4.800 mảnh đã chuyển")).toBeTruthy();
-    expect(screen.queryByLabelText(/Số lượng giống/)).toBeNull();
+    expect(screen.getByText("Giống: NU000008 · Hàu giống · kho ươm còn 6.000 mảnh (ước tính)")).toBeTruthy();
     expect(screen.queryByLabelText(/Lô giống/)).toBeNull();
-    await selectLane(1);
+    type("500");
+    await selectLane(2);
     await attachPhoto();
-    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await save();
 
     await vi.waitFor(() => expect(upload).toHaveBeenCalled());
     const sent = upload.mock.calls[0][2];
-    expect(sent.quantity).toBe(4800);
+    expect(sent).toMatchObject({ quantity: 500, laneNumbers: [2] });
     expect(sent.seedLotId).toBeUndefined();
-    expect(sent.laneNumbers).toEqual([1]);
   });
 
-  it("says everything was hung and disables saving when nothing is left of the transferred share", () => {
-    open({ ...nursery, nurserySeeded: 4800, nurseryRemaining: 0 });
-
-    expect(screen.getByText("Đã thả hết phần đã chuyển sang bè")).toBeTruthy();
-    expect(screen.queryByText(/Số lượng thả:/)).toBeNull();
-    expect((screen.getByRole("button", { name: "Lưu" }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("shows the refusal of the backend when it says the whole share must be used", async () => {
-    upload.mockResolvedValue({ status: "error", httpStatus: 400, code: "MSG-GEN-09", uncertain: false, problem: { code: "MSG-GEN-09", reasonCode: "NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION", field: "Quantity", remaining: 4750 } });
-    open(nursery);
-    await selectLane(1);
+  it("refuses more pieces than the pool holds, in the quantity field, and sends nothing", async () => {
+    open();
+    type("6500");
+    await selectLane(2);
     await attachPhoto();
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
 
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Thả giống phải dùng đủ phần đã chuyển sang bè: còn 4.750 mảnh");
-    expect(alert.textContent).toContain("sửa số sống sót hoặc chuyển lại số mảnh giữa các bè");
+    expect((await screen.findAllByText(/Chỉ còn 6\.000 mảnh trong kho ươm/)).length).toBeGreaterThan(0);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("does not offer a lane already at 100% but keeps the partly seeded and untouched ones", async () => {
+    open();
+    fireEvent.click(screen.getByRole("button", { name: "Chọn" }));
+    expect(await screen.findByRole("checkbox", { name: /^Làn 2:/ })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: /^Làn 3:/ })).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: /^Làn 1:/ })).toBeNull();
+  });
+
+  it("shows the pool refusal of the backend at the quantity field with what is left", async () => {
+    upload.mockResolvedValue({ status: "error", httpStatus: 409, code: "MSG-GEN-09", uncertain: false, problem: { code: "MSG-GEN-09", reasonCode: "NURSERY_POOL_EXCEEDED", field: "Quantity", remaining: 400 } });
+    open();
+    type("500");
+    await selectLane(2);
+    await attachPhoto();
+    await save();
+
+    expect((await screen.findAllByText(/Chỉ còn 400 mảnh trong kho ươm/)).length).toBeGreaterThan(0);
   });
 
   it("keeps the free quantity and the seed lot for a cycle that has no nursery", async () => {
     read.mockResolvedValue({ status: "success", data: { raftId: "r", lots: [] } });
-    render(<ToastProvider><SeedingForm zoneId="z" raftId="r" cycleId={cycleId} data={base} record={null} allowed={() => true} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
+    open(seedingList.parse(base));
 
     expect(await screen.findByLabelText("Số lượng giống *")).toBeTruthy();
     expect(screen.getByLabelText("Lô giống *")).toBeTruthy();
-    expect(screen.queryByText(/toàn bộ phần đã chuyển sang bè/)).toBeNull();
+    expect(screen.getByText("Không qua ươm")).toBeTruthy();
+    expect(screen.queryByLabelText("Số mảnh lấy hôm nay *")).toBeNull();
   });
 });

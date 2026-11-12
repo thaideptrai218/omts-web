@@ -1,22 +1,13 @@
 import { z } from "zod";
 import { stepPhotosSchema } from "@/components/form/photo-contracts";
 import { lanePercentValues, lanePercentRead } from "./record-lane-percents";
+import { seedLot } from "./seeding-contracts";
 import { cycleSummary } from "./contracts";
 import { crewIds, crewReadFields } from "./harvest-crew-contracts";
 import { laneProgressReadFields } from "@/features/farming-management/lane-progress-contracts";
 const numbers = z.array(z.number().int().positive());
 const incidentLaneFields = { ...laneProgressReadFields, isDamaged: z.boolean().optional(), isOutOfService: z.boolean().optional(), statusId: z.number().int().optional(), lineLengthM: z.number().positive().nullish() };
-// Ids/codes of the receipt, supplier and item let every seed lot link to its own record (cross-reference ids of 11/11/2026; all optional).
-const seedLot = z.object({ id: z.guid(), code: z.string(), receiptCode: z.string(), supplierName: z.string(), unit: z.string(), itemName: z.string().nullable(), receiptId: z.guid().nullish(), supplierId: z.guid().nullish(), itemId: z.guid().nullish(), itemCode: z.string().nullish() });
-export const seedLots = z.object({ raftId: z.guid(), lots: z.array(seedLot.extend({ quantityReceived: z.number(), quantitySeeded: z.number(), boughtForThisRaft: z.boolean(), onHand: z.number().nullable().optional(), quantityReturned: z.number().nullish(), quantityConsumed: z.number().nullish() })) });
-export const seedingRecord = z.object({ photos: stepPhotosSchema, lanePercents: lanePercentRead, id: z.guid(), cycleId: z.guid(), raftId: z.guid(), raftCode: z.string(), seedingDate: z.iso.date(), seedLot, quantity: z.number(), laneNumbers: numbers, recordedByName: z.string().nullable(), recordedAt: z.string(), canCorrect: z.boolean(), rowVersion: z.string(), issueId: z.guid().nullish(), issueCode: z.string().nullish() });
-export const seedingList = z.object({ nurseryBatchId: z.string().nullish(), nurseryCode: z.string().nullish(), nurseryAllocated: z.number().nullish(), nurserySeeded: z.number().nullish(), nurseryRemaining: z.number().nullish(), cycleId: z.guid(), raftId: z.guid(), raftCode: z.string(), seedingCompletedOn: z.iso.date().nullable(), laneCount: z.number(), seededCount: z.number(), notSeededLanes: numbers, canRecord: z.boolean(), canMarkComplete: z.boolean(), lanes: z.array(z.object({ ...incidentLaneFields, laneNumber: z.number().int(), canSeed: z.boolean(), state: z.string().optional() })), records: z.array(seedingRecord), lots: z.array(z.object({ seedLotId: z.guid(), code: z.string(), unit: z.string(), quantity: z.number() })), cycleRowVersion: z.string() });
-// confirmOverPlan + overPlanReason answer the over-plan question (over 110% of the planned seed; refused over 150%); a harvest has no such cap.
-export const seedValues = z.strictObject({ seedingDate: z.iso.date(), seedLotId: z.guid().optional(), lanePercents: lanePercentValues.optional(), laneNumbers: numbers.min(1).refine(v => new Set(v).size === v.length), quantity: z.number().positive(),
-  confirmOverPlan: z.boolean().optional(), overPlanReason: z.string().trim().min(1).max(1000).optional() })
-  .refine(v => !v.confirmOverPlan || !!v.overPlanReason, { path: ["overPlanReason"] }).refine(v => !!v.confirmOverPlan || v.overPlanReason === undefined, { path: ["confirmOverPlan"] });
-export const seedCorrection = seedValues.safeExtend({ reason: z.string().trim().min(1).max(1000), rowVersion: z.string().min(1), keepPhotoIds: z.array(z.string().min(1)).max(3).optional() });
-export const seedingPreview = z.object({ cycleId: z.guid(), laneCount: z.number(), seededCount: z.number(), notSeededLanes: numbers, cycleRowVersion: z.string() });
+export { seedLots, seedingRecord, seedingList, seedValues, seedCorrection, seedingPreview } from "./seeding-contracts";
 export const materialRecord = z.object({ id: z.guid(), raftId: z.guid(), raftCode: z.string(), cycleId: z.guid().nullable(), usageDate: z.iso.date(), repairReason: z.string(), itemId: z.guid(), itemCode: z.string(), itemName: z.string(), unit: z.string(), quantity: z.number(), recordedByName: z.string().nullable(), recordedAt: z.string(), canEdit: z.boolean(), rowVersion: z.string(), issueId: z.guid().nullish(), issueCode: z.string().nullish() });
 export const materialList = z.object({ raftId: z.guid(), raftCode: z.string(), canRecord: z.boolean(), groups: z.array(z.object({ cycle: cycleSummary.nullable(), locked: z.boolean(), repairs: z.array(z.object({ usageDate: z.iso.date(), repairReason: z.string(), records: z.array(materialRecord) })) })) });
 export const materialValues = z.strictObject({ usageDate: z.iso.date(), repairReason: z.string().trim().min(1), items: z.array(z.strictObject({ itemId: z.guid(), quantity: z.number().positive() })).min(1) });

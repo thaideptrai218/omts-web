@@ -36,8 +36,12 @@ export function RecordsRaftPanel({ area, row, zoneId }: { area: RecordsArea; row
   const state = cycleStateOf(row);
   const unavailableHarvestCycle = area === "harvest" && !!selectedCycleId && selectedCycleId !== row.cycle?.id;
   const harvestRecordId = area === "harvest" ? params.get("recordId") : null;
+  const journeyQuery = new URLSearchParams(params.toString());
+  journeyQuery.set("zoneId", zoneId); journeyQuery.set("raftId", row.raftId);
+  journeyQuery.delete("cycleId"); journeyQuery.delete("recordId");
+  const noOpenCycle = !selectedCycleId || state !== "open";
   const content: Record<TabKey, ReactNode> = {
-    records: area === "seeding" ? selectedCycleId ? <SeedingPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} cycleStartDate={row.cycle?.id === selectedCycleId ? row.cycle.startDate : undefined} /> : <p className={flowStyles.empty}>Bè chưa có chu kỳ nuôi. Mở chu kỳ trước khi ghi nhận thả giống.</p>
+    records: area === "seeding" ? !noOpenCycle && selectedCycleId ? <SeedingPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} cycleStartDate={row.cycle?.id === selectedCycleId ? row.cycle.startDate : undefined} /> : <div className={flowStyles.empty}><p>Bè chưa có chu kỳ nuôi. Hãy bắt đầu chu kỳ nuôi trước</p><Link className="mt-2 inline-block font-medium text-primary underline" href={`/farming/cycles?${journeyQuery}`}>Bắt đầu chu kỳ nuôi</Link></div>
       : area === "material-usages" ? <MaterialsPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} /> : unavailableHarvestCycle && harvestRecordId ? <HistoricalHarvestRecord key={harvestRecordId} id={harvestRecordId} zoneId={zoneId} /> : unavailableHarvestCycle ? <div className="space-y-2 p-3 text-sm"><p>Chu kỳ đã chọn không phải chu kỳ gần nhất của bè. Màn ghi nhận thu hoạch chỉ hỗ trợ chu kỳ gần nhất; chọn một lô trong Sản lượng nuôi để xem thu hoạch cũ.</p><Link className="text-primary underline" href={farmingReferenceHref("yield", { zoneId, raftId: row.raftId, cycleId: selectedCycleId })}>Xem thu hoạch của chu kỳ đã chọn</Link><br /><Link className="text-primary underline" href={farmingReferenceHref("harvest", { zoneId, raftId: row.raftId })}>Mở thu hoạch chu kỳ gần nhất</Link></div> : <HarvestPanel zoneId={zoneId} raftId={row.raftId} />,
     progress: <CycleProgressTab row={row} zoneId={zoneId} canSeeFlow={true} />,
   };

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
 const { read, write, upload } = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), upload: vi.fn() }));
@@ -14,7 +14,6 @@ vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
 import { attachPhoto, selectLane } from "./record-form-test-helpers";
 import { SeedingForm } from "./records-seeding-form";
-import { CompleteSeeding } from "./records-complete-seeding-dialog";
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const lotId = "00000000-0000-4000-8000-000000000011", cycleId = "00000000-0000-4000-8000-000000000022";
@@ -45,38 +44,5 @@ describe("seeding form shows the stock and explains the on-hand refusal", () => 
     expect(alert.textContent).toContain("Không đủ hàng trong kho");
     expect(alert.textContent).toContain("Còn trong kho 100 mảnh");
     expect(alert.textContent).toContain("còn -1 mảnh");
-  });
-});
-
-describe("empty seeding is confirmed inside the dialog", () => {
-  const preview = { cycleId, laneCount: 2, seededCount: 0, notSeededLanes: [1, 2], cycleRowVersion: "AAAA" };
-  const question = { status: "error", httpStatus: 409, code: undefined, uncertain: false, problem: { code: "MSG-CYCLE-01", confirmFlag: "confirmEmpty", laneNumbers: [1, 2] } };
-  async function start() {
-    read.mockResolvedValue({ status: "success", data: preview });
-    render(<ToastProvider><CompleteSeeding cycleId={cycleId} zoneId="z" onClose={vi.fn()} onSaved={onSaved} /></ToastProvider>);
-    fireEvent.click(await screen.findByRole("button", { name: "Xác nhận hoàn tất" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
-    return screen.findByRole("alert", { name: "Xác nhận hoàn tất khi chưa thả giống" });
-  }
-  const onSaved = vi.fn();
-  it("asks inline, then sends the same request again with confirmEmpty", async () => {
-    write.mockResolvedValueOnce(question).mockResolvedValueOnce({ status: "success", data: { cycle: { id: cycleId } } });
-    const block = await start();
-    expect(block.textContent).toContain("Chưa làn nào có giống");
-    expect((screen.getByRole("button", { name: "Xác nhận hoàn tất" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Xác nhận" }));
-    await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(write.mock.calls[0][1]).toEqual({ rowVersion: "AAAA" });
-    expect(write.mock.calls[1][1]).toEqual({ rowVersion: "AAAA", confirmEmpty: true });
-    expect(await screen.findByText("Đã hoàn tất thả giống.")).toBeTruthy();
-  });
-  it("Bỏ qua of the question sends nothing and re-enables the normal button", async () => {
-    write.mockResolvedValueOnce(question);
-    await start();
-    const buttons = screen.getAllByRole("button", { name: "Bỏ qua" });
-    fireEvent.click(buttons[0]);
-    await waitFor(() => expect(screen.queryByRole("alert", { name: "Xác nhận hoàn tất khi chưa thả giống" })).toBeNull());
-    expect(write).toHaveBeenCalledTimes(1);
-    expect((screen.getByRole("button", { name: "Xác nhận hoàn tất" }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { stockShortageText, type FarmingProblem } from "./farming-problem";
+import { nurseryPoolExceededText, stockShortageText, type FarmingProblem } from "./farming-problem";
 
 const harvestFieldText: Record<string, string> = {
   "Purchase request": "Chưa chọn yêu cầu mua cho chuyến thu hoạch này. Hãy chọn một yêu cầu mua đã chấp nhận và còn đang thu hoạch.",
@@ -14,12 +14,9 @@ type FailedResult = { httpStatus: number; code?: string; problem?: FarmingProble
  */
 export function farmingErrorText(result: FailedResult, unit?: string): string | undefined {
   const problem = result.problem;
+  if ([result.code, problem?.code, problem?.reasonCode].includes("NURSERY_POOL_EXCEEDED")) return nurseryPoolExceededText(problem);
   if (!problem) return undefined;
-  if ([result.code, problem.code, problem.reasonCode].includes("NURSERY_SEEDING_ABOVE_ALLOCATION")) return `Vượt phần phân bổ ươm. Còn ${problem.remaining?.toLocaleString("vi-VN") ?? "số mảnh đã được phân bổ"} mảnh có thể thả; hãy giảm số mảnh hoặc tải lại để đối chiếu.`;
-  const reason = [result.code, problem.code, problem.reasonCode];
-  // Seeding from a nursery hangs the whole share transferred to the raft (owner decision of 13/11/2026); the backend answers 400 if a client ever sends another quantity.
-  if (reason.includes("NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION")) return `Thả giống phải dùng đủ phần đã chuyển sang bè${problem.remaining != null ? `: còn ${problem.remaining.toLocaleString("vi-VN")} mảnh` : ""}. Nếu số lượng thay đổi, hãy sửa số sống sót hoặc chuyển lại số mảnh giữa các bè trước.`;
-  if (reason.includes("NURSERY_SEEDING_ALREADY_COMPLETE")) return "Đã thả hết phần đã chuyển sang bè, không còn mảnh nào để thả thêm. Tải lại để đối chiếu.";
+  if (problem.reasonCode === "SEEDING_COMPLETED") return "Chu kỳ đã đánh dấu hoàn tất thả giống nên không thể ghi nhận, sửa hoặc xóa lần thả. Hãy tải lại để xem trạng thái mới.";
   if (problem.hint && /[À-ỹ]/.test(problem.hint)) return problem.hint;
   // A question the backend asks (over plan, empty seeding, owner approval) is answered in the form; it is not an error to show.
   if (result.httpStatus === 409 && problem.confirmFlag) return "";
