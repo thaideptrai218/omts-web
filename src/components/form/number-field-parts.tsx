@@ -4,7 +4,7 @@ import { useImperativeHandle, useLayoutEffect, useRef, type ReactNode, type Ref 
 /**
  * Building blocks shared by MoneyInput and UnitInput: the field shell (input + unit suffix inside the
  * border, captions and inline error below) and a ref hook for native validity and caller access.
- * Typed text is never regrouped, so the browser keeps the caret without manual repositioning.
+ * Live grouping and caret restoration are handled separately by useGroupedNumberEditing.
  */
 export const NUMBER_INPUT_CLASS =
   "omts-control text-right tabular-nums aria-invalid:border-danger aria-invalid:focus:border-danger";

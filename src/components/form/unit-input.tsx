@@ -2,6 +2,8 @@
 import { useId, useState, type KeyboardEvent, type Ref } from "react";
 import { formatDecimal, parseDecimalText } from "./decimal-text";
 import { NUMBER_INPUT_CLASS, NumberFieldShell, useNumberInputRef } from "./number-field-parts";
+import { groupNumberText, ungroupNumberText } from "./grouped-number-text";
+import { useGroupedNumberEditing } from "./use-grouped-number-editing";
 
 /**
  * Quantity / measurement field with its unit shown as a chip inside the box.
@@ -14,7 +16,7 @@ import { NUMBER_INPUT_CLASS, NumberFieldShell, useNumberInputRef } from "./numbe
  * "0.5" are both accepted. ArrowUp / ArrowDown change the value by `step`. It is a text input (inputMode
  * "decimal"), so the mouse wheel never changes the value. `decimals` (0..3) is the maximum number of
  * fraction digits; `allowFraction={false}` forces whole numbers. `className` styles the <input>.
- * Typing preserves the draft verbatim; grouping and precision formatting happen only on blur.
+ * Groups thousands while typing, preserving every fraction digit and the caret. Blur only drops a final comma.
  */
 export type UnitInputProps = {
   value: number | null;
@@ -53,29 +55,29 @@ export function UnitInput({
   const places = allowFraction === false ? 0 : decimals;
   const negative = min !== undefined && min < 0;
   const uid = useId();
-  const textOf = (next: number | null) => (next == null ? "" : formatDecimal(next, places));
-  // Keep an ungrouped draft even when blurred; presentation must never change how it parses.
-  const [text, setText] = useState(() => value == null ? "" : String(value).replace(".", ","));
+  const textOf = (next: number | null) => next == null ? "" : groupNumberText(String(next).replace(".", ","), places);
+  const [text, setText] = useState(() => textOf(value));
   const [seen, setSeen] = useState(value);
   const [touched, setTouched] = useState(false);
   const [editing, setEditing] = useState(false);
 
-  const parsed = parseDecimalText(text, places, negative, false);
+  const parse = (draft: string) => parseDecimalText(ungroupNumberText(draft), places, negative, false);
+  const parsed = parse(text);
   const current = parsed.kind === "ok" ? parsed.value : null;
   if (value !== seen) {
     setSeen(value);
     // Some numeric parents echo Number("") as 0. Keep the empty/unfinished draft visible.
     if (current !== value && !(editing && current === null && value === 0)) {
-      setText(value == null ? "" : String(value).replace(".", ","));
+      setText(textOf(value));
     }
   }
 
   const emit = (next: string) => {
-    const result = parseDecimalText(next, places, negative, false);
+    const result = parse(next);
     onChange?.(result.kind === "ok" ? result.value : null);
   };
   const settle = () => {
-    if (parsed.kind === "ok") setText(String(parsed.value).replace(".", ","));
+    if (parsed.kind === "ok") setText(text.replace(/,$/, ""));
     else if (parsed.kind === "empty") setText("");
   };
   const stepBy = (direction: 1 | -1) => {
@@ -84,7 +86,7 @@ export function UnitInput({
     let next = Math.round((base + direction * step) * factor) / factor;
     if (min !== undefined) next = Math.max(min, next);
     if (max !== undefined) next = Math.min(max, next);
-    setText(String(next).replace(".", ","));
+    setText(textOf(next));
     onChange?.(next);
   };
 
@@ -97,6 +99,7 @@ export function UnitInput({
   const shown = problem && (touched || (current !== null && max !== undefined && current > max));
   const message = error ?? (shown ? problem : undefined);
   const setRef = useNumberInputRef(ref, error ? "" : problem);
+  const grouped = useGroupedNumberEditing(setRef, text, places, (next) => { setText(next); emit(next); });
   const notes = hint ? [{ id: `${uid}-hint`, text: hint }] : [];
   const errorId = `${uid}-error`;
   const describedBy = [describedByProp, ...notes.map((note) => note.id), message ? errorId : undefined]
@@ -127,16 +130,14 @@ export function UnitInput({
           required={required}
           style={{ paddingRight: `calc(${unit.length}ch + 1.75rem)` }}
           type="text"
-          value={!editing && parsed.kind === "ok" ? textOf(parsed.value) : text}
+          value={text}
           onFocus={() => { if (!readOnly) setEditing(true); }}
           onBlur={() => { setEditing(false); setTouched(true); settle(); onBlur?.(); }}
-          onChange={(event) => {
-            const next = event.target.value;
-            setText(next);
-            emit(next);
-          }}
+          onChange={grouped.onChange}
           onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
             if (readOnly || disabled) return;
+            grouped.onKeyDown(event);
+            if (event.defaultPrevented) return;
             if (event.key === "ArrowUp" || event.key === "ArrowDown") {
               event.preventDefault();
               stepBy(event.key === "ArrowUp" ? 1 : -1);

@@ -40,12 +40,12 @@ function Host(props: Partial<MoneyInputProps> & { onValue?(value: number | null)
 }
 
 describe("MoneyInput", () => {
-  it("groups digits only on blur and always shows the ₫ suffix", async () => {
+  it("groups digits while typing and always shows the ₫ suffix", async () => {
     const onValue = vi.fn();
     render(<Host onValue={onValue} />);
     const input = screen.getByLabelText("Số tiền") as HTMLInputElement;
     await userEvent.type(input, "1250000");
-    expect(input.value).toBe("1250000");
+    expect(input.value).toBe("1.250.000");
     expect(onValue).toHaveBeenLastCalledWith(1250000);
     expect(screen.getByText("₫")).toBeTruthy();
     await userEvent.tab();

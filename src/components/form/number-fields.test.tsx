@@ -19,9 +19,9 @@ describe("Bản nháp ô nhập số dùng chung", () => {
     render(<Host numericEcho={numericEcho} />);
     const input = screen.getByLabelText("Số lượng") as HTMLInputElement;
     await userEvent.type(input, "95000");
-    expect(input.value).toBe("95000");
+    expect(input.value).toBe("95.000");
     expect(screen.getByRole("alert").textContent).toContain("Tối đa");
-    for (const expected of ["9500", "950", "95", "9", ""]) {
+    for (const expected of ["9.500", "950", "95", "9", ""]) {
       await userEvent.keyboard("{Backspace}");
       expect(input.value).toBe(expected);
     }
@@ -33,13 +33,13 @@ describe("Bản nháp ô nhập số dùng chung", () => {
     expect(input.value).toBe("");
   });
 
-  it.each(["95,50", "95.50", "1.25", "0012,00"])("chỉ định dạng %s khi blur", async (raw) => {
+  it.each([["95,50", "95,50"], ["95.50", "95,50"], ["1.25", "1,25"], ["0012,00", "0.012,00"]])("giữ phần lẻ của %s khi blur", async (raw, expected) => {
     render(<Host />);
     const input = screen.getByLabelText("Số lượng") as HTMLInputElement;
     await userEvent.type(input, raw);
-    expect(input.value).toBe(raw);
+    expect(input.value).toBe(expected);
     await userEvent.tab();
-    expect(input.value).toBe(Number(raw.replace(",", ".")).toLocaleString("vi-VN"));
+    expect(input.value).toBe(expected);
   });
 
   it("không nhảy con trỏ khi chèn hoặc xóa ở giữa", async () => {
@@ -48,24 +48,24 @@ describe("Bản nháp ô nhập số dùng chung", () => {
     await userEvent.type(input, "95000");
     input.setSelectionRange(2, 2);
     await userEvent.keyboard("1");
-    expect(input.value).toBe("951000");
+    expect(input.value).toBe("951.000");
     expect(input.selectionStart).toBe(3);
     await userEvent.keyboard("{Backspace}");
-    expect(input.value).toBe("95000");
+    expect(input.value).toBe("95.000");
     expect(input.selectionStart).toBe(2);
   });
 
-  it("giữ bản nháp tiền khi gõ/xóa và chỉ nhóm nghìn khi blur", async () => {
+  it("nhóm nghìn tiền khi gõ/xóa và giữ nhóm khi focus/blur", async () => {
     render(<Host money numericEcho />);
     const input = screen.getByLabelText("Số lượng") as HTMLInputElement;
     await userEvent.type(input, "95000");
-    expect(input.value).toBe("95000");
+    expect(input.value).toBe("95.000");
     await userEvent.tab();
     expect(input.value).toBe("95.000");
     await userEvent.click(input);
-    expect(input.value).toBe("95000");
+    expect(input.value).toBe("95.000");
     fireEvent.change(input, { target: { value: "9500" } });
-    expect(input.value).toBe("9500");
+    expect(input.value).toBe("9.500");
     await userEvent.clear(input);
     await userEvent.tab();
     expect(input.value).toBe("");
@@ -78,9 +78,9 @@ describe("Bản nháp ô nhập số dùng chung", () => {
     await userEvent.tab();
     expect(input.value).toBe("95.000");
     await userEvent.click(input);
-    expect(input.value).toBe("95000");
+    expect(input.value).toBe("95.000");
     await userEvent.keyboard("{End}{Backspace}");
-    expect(input.value).toBe("9500");
+    expect(input.value).toBe("9.500");
     expect(screen.getByLabelText("Giá trị chuẩn").textContent).toBe("9500");
   });
 
@@ -88,19 +88,19 @@ describe("Bản nháp ô nhập số dùng chung", () => {
     render(<Host />);
     const input = screen.getByLabelText("Số lượng") as HTMLInputElement;
     await userEvent.type(input, "1.250");
-    expect(input.value).toBe("1.250");
+    expect(input.value).toBe("1,250");
     expect(screen.getByLabelText("Giá trị chuẩn").textContent).toBe("1.25");
     await userEvent.tab();
-    expect(input.value).toBe("1,25");
+    expect(input.value).toBe("1,250");
   });
 
-  it.each([false, true])("không ghi đè dấu thập phân cuối và bản nháp sai, tiền: %s", async (money) => {
+  it.each([false, true])("giữ bản nháp sai và xử lý dấu cuối theo loại ô, tiền: %s", async (money) => {
     render(<Host money={money} numericEcho />);
     const input = screen.getByLabelText("Số lượng") as HTMLInputElement;
     await userEvent.type(input, "95,");
-    expect(input.value).toBe("95,");
+    expect(input.value).toBe(money ? "95" : "95,");
     await userEvent.keyboard("50");
-    expect(input.value).toBe("95,50");
+    expect(input.value).toBe(money ? "9.550" : "95,50");
     await userEvent.clear(input);
     await userEvent.type(input, "abc");
     expect(input.value).toBe("abc");
