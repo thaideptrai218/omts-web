@@ -3,7 +3,118 @@
 Nguồn: `FARMING_NURSERY_STEP_SPEC_2026-11-12.md` (mục 2-7, 10) cộng quyết định chủ dự án đợt cuối: **đợt ươm đã hoàn tất không hủy được** (chỉ "Đang ươm" mới sửa/hủy); Quản lý vùng ghi ươm hoặc sửa thì **thông báo chủ**; dùng quyền thả giống sẵn có (`CultivationCycles`) và mã thông báo chung.
 Nhánh backend: `feature/OMTS-132-nursery`. Mọi đường dẫn có tiền tố `/api`. JSON camelCase, ngày `yyyy-MM-dd`, số là number, enum là chuỗi, `rowVersion` là chuỗi base64. Lỗi theo dạng problem hiện có (`status`, `code`, `message`, các trường chi tiết nằm ngang hàng, ví dụ `field`, `hint`, `reasonCode`).
 
-## 1. Quyền và phạm vi
+## 0. V2 (13/11/2026): THAY THẾ phân bổ bè bằng kho ươm. ĐỌC MỤC NÀY TRƯỚC
+
+Nguồn: `FARMING_NURSERY_MODEL_V2_2026-11-13.md`. Mục 0 **thay thế** mọi chỗ còn lại của tài liệu nói về `allocations`, tạo chu kỳ lúc hoàn tất ươm, chuyển phần chia (4.7, 4.9, 4.11, 3.4, 3.6, 3.7 và các đoạn 13/11 trong mục 5/6). Phần còn lại (bắt đầu ươm, sửa, hủy, lịch sử, lô giống, quyền) giữ nguyên. Mọi chuỗi tiếng Việt trong `message` dùng thẳng được.
+
+### 0.1 Trạng thái và số liệu kho ươm
+
+| `statusId` | `status` (danh mục) | `statusLabel` | Ý nghĩa |
+|---|---|---|---|
+| 4001 | `Nursing` | Đang ươm | còn sửa/hủy/hoàn tất |
+| 4002 | `Completed` | **Đã ươm xong** (trước: Đã hoàn tất) | kho ươm sẵn sàng thả dần |
+| 4003 | `Cancelled` | Đã hủy | |
+| 4004 | `Closed` | **Đã đóng** (mới) | đã đóng, phần dư ghi là hao hụt |
+
+Chuyển trạng thái: 4001 → 4002 (hoàn tất) hoặc 4003 (hủy); 4002 → 4004 (đóng đợt). Không có đường lui. Đợt 4002 **không** hủy/xóa được.
+Số liệu (trên danh sách `items[]` và chi tiết, đều là số mảnh, `null` khi chưa áp dụng):
+- `survivors`: sống sót ước tính (4002/4004).
+- `seeded`: tổng số mảnh đã thả từ đợt này qua **mọi chu kỳ/bè** (trừ bản ghi đã xóa). `0` khi chưa thả; `null` khi 4001/4003.
+- `remaining`: `survivors − seeded` khi **4002**; `0` khi 4004; `null` khi 4001/4003.
+- `closedOn` (ngày), `closeLossPieces`: có khi 4004 (`closeLossPieces` = `remaining` lúc đóng, ước tính).
+- `lossPieces` (hao hụt ước tính, luôn `estimated: true`) = `quantityIn − survivors + (closeLossPieces ?? 0)`; `lossPercent` = `lossPieces / quantityIn` (1 số thập phân). `null` khi 4001/4003.
+- **Đã bỏ**: `allocations` (chi tiết), `allocationCount` (danh sách), cờ phân bổ. Thêm cờ `canClose` (chi tiết): 4002, `remaining > 0`, người gọi có quyền Edit trong vùng.
+- Chi tiết thêm `usage` (các bè/chu kỳ đang lấy giống từ đợt này, bè nhiều nhất trước):
+```json
+"usage": [ { "cycleId": "…", "cycleStartDate": "2026-11-13", "cycleStatus": "Open", "raftId": "…", "raftCode": "B1-11", "seeded": 3000, "lastSeedingOn": "2026-11-13" } ]
+```
+  (`cycleCode` không có: chu kỳ không có mã nghiệp vụ; dùng `raftCode` + `cycleStartDate`.) Chỉ liệt kê chu kỳ có ít nhất một bản ghi thả từ đợt; `seeded` là phần riêng của chu kỳ đó.
+- Danh sách: `GET /api/nursery-batches?status=` nhận thêm `closed`; `completed` = chỉ 4002. `summary`: `completedQuantityIn`/`completedCount` tính **cả 4002 và 4004** (đã ươm xong), thêm `closedCount`, `remaining` (tổng `remaining` các đợt 4002).
+
+### 0.2 Hoàn tất ươm (không phân bổ, không tạo chu kỳ)
+`POST /api/nursery-batches/{id}/complete` — `multipart/form-data`, quyền Create. Trường: `survivors` (0 → số vào), `completedOn` (mặc định hôm nay, không trước ngày bắt đầu, không sau hôm nay), `rowVersion` (bắt buộc), `photos` lặp 1-3. **Không** có `allocations`/`targetYieldKg` (trường gửi thừa bị bỏ qua).
+200:
+```json
+{ "batch": { "id": "…", "code": "NU000002", "statusId": 4002, "status": "Completed", "statusLabel": "Đã ươm xong", "quantityIn": 10000, "survivors": 9500,
+             "seeded": 0, "remaining": 9500, "lossPieces": 500, "lossPercent": 5.0, "estimated": true, "closedOn": null, "closeLossPieces": null,
+             "usage": [], "canClose": true, "canCorrectSurvivors": true, "…": "các trường như chi tiết 4.3 trừ allocations" },
+  "message": "Nursery batch saved.", "messageCode": "MSG-GEN-05" }
+```
+Lỗi: 400 `MSG-GEN-01` (`Survivors`, `Completed on`, `Photos`), 409 `NURSERY_NOT_NURSING`, 409 `MSG06`. `survivors = 0` được: đợt sang 4002 với `remaining = 0` (không có gì để thả; vẫn đóng được bằng cách… không cần đóng, `canClose = false`).
+
+### 0.3 Sửa số sống sót (4002)
+`POST /api/nursery-batches/{id}/survivors` JSON `{ "survivors": 9200, "reason": "Đếm lại", "rowVersion": "…" }` (`allocations` bị bỏ qua). Không nhỏ hơn `seeded` (409 `NURSERY_SURVIVORS_BELOW_SEEDED`, kèm `seeded`), không lớn hơn `quantityIn` (400 `Survivors`). Lịch sử ghi cũ → mới + lý do. 200 `NurseryBatchSaved`. Gửi đúng số cũ: 200, không ghi gì. Quản lý vùng sửa thì báo chủ.
+
+### 0.4 Đóng đợt ươm
+`POST /api/nursery-batches/{id}/close` JSON `{ "reason": "Hết nhu cầu thả" /* tùy chọn, ≤ 1000 */, "rowVersion": "…" }`, quyền Edit. Chỉ khi 4002 và `remaining > 0`. 200 `NurseryBatchSaved`: `statusId` 4004, `statusLabel` "Đã đóng", `closedOn` = hôm nay, `closeLossPieces` = `remaining` lúc đóng, `remaining` = 0. Quản lý vùng đóng thì **báo chủ** (`NURSERY_RECORDED`). Lỗi: 409 `NURSERY_NOT_COMPLETED` (không phải 4002), 409 `NURSERY_NOTHING_TO_CLOSE` (`remaining = 0`), 409 `MSG06`. Lịch sử có hành động `Closed` ("Đóng đợt ươm").
+
+### 0.5 Bỏ chuyển phân bổ
+`POST /api/nursery-batches/{id}/allocations` → **410 Gone** (`reasonCode: NURSERY_ALLOCATIONS_REMOVED`). Xóa khỏi web.
+
+### 0.6 Đợt ươm sẵn sàng để chọn (form bắt đầu chu kỳ)
+`GET /api/nursery-batches/available?zoneId={zoneId}` (quyền View; `zoneId` tùy chọn, không có thì mọi vùng được xem). Chỉ đợt **4002** có `remaining > 0`, mới hoàn tất trước:
+```json
+{ "batches": [ { "id": "…", "code": "NU000002", "zoneId": "…", "zoneCode": "DEMO-01", "seedLotCode": "PN000123-1", "itemName": "Hàu giống", "unit": "mảnh",
+                 "quantityIn": 10000, "survivors": 9500, "seeded": 3000, "remaining": 6500, "completedOn": "2026-11-12" } ] }
+```
+Nhãn gợi ý: `"{code} · {itemName} · còn {remaining} mảnh đã ươm"`.
+
+### 0.7 Bắt đầu chu kỳ nuôi (thủ công, bắt buộc đợt ươm)
+`POST /api/cultivation-cycles` — `multipart/form-data`, quyền Create trong vùng của bè (cũng nhận `POST /api/rafts/{raftId}/cultivation-cycles`, khi đó `raftId` lấy từ đường dẫn). Trường:
+`raftId` (guid), `nurseryBatchId` (guid, **bắt buộc**), `targetYieldKg` (**bắt buộc**, > 0, 2 chữ số thập phân; sản lượng dự kiến tổng), `startDate` (`yyyy-MM-dd`, mặc định hôm nay; không sau hôm nay, sau ngày chốt chu kỳ trước của bè), `note` (≤ 1000, tùy chọn), `photos` lặp **1-3** (ảnh kế hoạch, JPEG/PNG ≤ 10 MB). Không còn `expectedSeedQuantity`/`expectedHarvestDate`.
+201:
+```json
+{ "cycle": { "id": "…", "raftId": "…", "raftCode": "B1-11", "startDate": "2026-11-13", "targetYieldKg": 2000, "note": null,
+             "statusId": 601, "status": "Open", "canEdit": true, "canCancel": true, "canChangeNursery": true, "rowVersion": "…",
+             "nurseryBatchId": "…", "nurseryCode": "NU000002", "nurseryRemaining": 9500, "nurserySeeded": 0,
+             "seedLot": { "id": "…", "code": "PN000123-1", "receiptId": "…", "receiptCode": "PN000123", "receivedDate": "2026-11-10", "itemId": "…", "itemCode": "GI000001", "itemName": "Hàu giống", "unit": "mảnh", "supplierId": "…", "supplierName": "Cơ sở giống A" },
+             "planPhotos": [ { "id": "…", "sortOrder": 1, "url": "…" } ], "…": "các trường CycleView khác" },
+  "previousCloseDate": null, "lanes": [ /* LaneView của bè */ ], "message": "Cultivation cycle saved.", "messageCode": "MSG-GEN-05" }
+```
+Lỗi: 400 `MSG-GEN-01` (`Nursery batch`, `Target yield`, `Start date`, `Note`, `Photos`, `Raft`); 404 (bè/đợt không thấy); 403; 409 `MSG-GEN-06` bè đang có chu kỳ mở (đường cũ, kèm `cycleId`); 409 `MSG-GEN-09` + `reasonCode`: `NURSERY_NOT_COMPLETED` (đợt không ở 4002), `NURSERY_RAFT_OTHER_ZONE`, `NURSERY_POOL_EMPTY` (`remaining = 0`), bè không dùng/ngừng; 409 `MSG06`; 502 `MSG-GEN-03` upload. Không có chu kỳ nào tạo ra ngoài đường này (đường chọn lô giống từ vật tư **đóng hẳn**; `CYCLE_REQUIRES_NURSERY` và cấu hình `Cultivation:AllowManualStart` đã bỏ).
+
+### 0.8 Sửa chu kỳ
+`PUT /api/cultivation-cycles/{id}` JSON (chu kỳ đang mở, bè/vùng đang dùng):
+```json
+{ "startDate": "2026-11-12", "targetYieldKg": 2200, "note": "Đổi kế hoạch", "nurseryBatchId": "…", "rowVersion": "…" }
+```
+Chu kỳ có đợt ươm: trường **bỏ trống/null = giữ nguyên** (gửi `note: ""` để xóa ghi chú); `targetYieldKg` > 0; `startDate` kiểm như bắt đầu và không sau ngày bản ghi đầu tiên của chu kỳ. `nurseryBatchId` **khác** đợt hiện tại chỉ được khi chu kỳ **chưa có bản ghi thả giống**: nếu đã có → 409 `MSG-GEN-09` `reasonCode: CYCLE_SEED_LOCKED`; đợt mới phải 4002, cùng vùng, `remaining > 0` (cùng mã lỗi mục 0.7). Gửi đúng đợt hiện tại là không đổi. 200 `{ "cycle": <CycleView>, "message", "messageCode" }`. Ảnh kế hoạch sửa ở `PUT /api/cultivation-cycles/{id}/plan-photos` như cũ (nay áp cho mọi chu kỳ; bỏ lỗi `PLAN_PHOTOS_FROM_NURSERY`).
+Chu kỳ **cũ không qua ươm** (`nurseryBatchId = null`): đọc, thu hoạch, đóng, sửa như trước (sửa theo luật cũ: `expectedSeedQuantity`, `targetYieldKg`, `startDate`; có thể gán đợt ươm nếu chưa thả).
+
+### 0.9 Đọc chu kỳ (mọi chỗ có `CycleView`: `GET /api/cultivation-cycles/{id}`, `GET /api/rafts/{raftId}/progress`, bắt đầu/sửa)
+Trường mới/đổi: `note`, `nurseryBatchId`, `nurseryCode`, **`nurseryRemaining`** (kho ươm còn lại của đợt, **mọi bè**), **`nurserySeeded`** (đã thả **riêng chu kỳ này**), **`seedLot`** (`SeedLotRef` của lô giống gốc của đợt, chỉ đọc), `canChangeNursery` (đang mở và chưa có bản ghi thả), `planPhotos` (ảnh kế hoạch của chính chu kỳ; chu kỳ cũ không có ảnh kế hoạch mà có đợt thì hiện ảnh hoàn tất của đợt và `planPhotosFromNursery: true`). **Bỏ** `nurseryAllocated`. `expectedSeedQuantity` chỉ còn giá trị ở chu kỳ cũ (`null` chu kỳ mới). Không có `expectedHarvestDate`. `CycleListItem` có `nurseryBatchId`.
+
+### 0.10 Thả giống (đường hiện có)
+`POST /api/cultivation-cycles/{cycleId}/seeding-records` — `multipart/form-data`, quyền Create. Trường: `seedingDate` (`yyyy-MM-dd`; không trước ngày bắt đầu chu kỳ, không sau hôm nay), **`quantity`** (**bắt buộc**, > 0, tối đa 3 số thập phân; **số mảnh lấy hôm nay**, chọn tự do), `laneNumbers` (lặp; mỗi làn một phần), `lanePercents` (một trường JSON `{"1":60,"2":100}`, mặc định 100, cộng dồn ≤ 100 mỗi làn; **độc lập với `quantity`**), `photos` lặp **1-3**. **Không gửi `seedLotId`** (gửi cũng bỏ qua): lô lấy từ đợt ươm của chu kỳ. Không còn `quantity` bỏ trống/phải bằng phần còn lại.
+Chặn thêm: `quantity > remaining` của **đợt ươm** (cộng mọi bè) → **409** `MSG-GEN-09`, `reasonCode: NURSERY_POOL_EXCEEDED`, `field: "Quantity"`, `remaining`, `quantity`, `seeded`, `survivors`, `message` tiếng Việt ("Kho ươm NU… chỉ còn X mảnh, không thể thả Y mảnh."); chu kỳ đã đóng 409 `MSG-GEN-09`; chu kỳ đã hoàn tất thả giống: làn không thả được (400 `Lanes`); làn đầy 100%: 400 `LanePercent` (`remainingPercent`); thiếu ảnh 400 `Photos`. Không động tới sổ kho (đã trừ lúc bắt đầu ươm). `issueId` luôn `null`.
+201 `{ "record": <SeedingRecordView>, "offerMarkComplete": bool, "cycleRowVersion": "…", "message", "messageCode" }`; `record.seedLot` là lô của đợt ươm.
+Sửa `PUT /api/seeding-records/{id}` (multipart, `reason` + `rowVersion` như cũ) và xóa `POST /api/seeding-records/{id}/remove`: với bản ghi từ ươm, **số mảnh của đợt được trả/lấy theo chênh lệch** (xóa trả cả bản ghi); `quantity` mới vẫn không vượt `remaining + số cũ của bản ghi` (409 `NURSERY_POOL_EXCEEDED`); **bị chặn (409 `MSG-GEN-09`, `reasonCode: SEEDING_COMPLETED`)** khi chu kỳ đã hoàn tất thả giống. Đợt ươm đã đóng (4004) không chặn sửa/xóa bản ghi cũ nhưng không cho tăng quá `remaining` (= 0) cộng số cũ.
+
+### 0.11 Màn Thả giống: `GET /api/cultivation-cycles/{cycleId}/seeding-records`
+Có sẵn (giữ): `lanes[]` (`laneNumber`, `canSeed`, `seededPercent`, `state`…), `records[]`, `laneCount`, `seededCount`, `notSeededLanes`, `seedingCompletedOn`, `canRecord`, `canMarkComplete`, `cycleRowVersion`. Thêm/đổi:
+```json
+{ "nurseryBatchId": "…", "nurseryCode": "NU000002", "nurseryRemaining": 6500, "nurserySeeded": 3000,
+  "seedLot": { "id": "…", "code": "PN000123-1", "itemName": "Hàu giống", "unit": "mảnh", "…": "SeedLotRef" },
+  "seedableLaneNumbers": [ 6, 7, 8, 9 ],
+  "lanes": [ { "laneNumber": 1, "seededPercent": 100, "canSeed": true, "remainingPercent": 0, "…": "…" } ] }
+```
+- `seedableLaneNumbers`: làn **có thể chọn ở lần thả tiếp theo** = `canSeed` và `seededPercent < 100` (làn 100% **ẩn** khỏi danh sách chọn nhưng vẫn có trong `lanes[]` để vẽ sơ đồ tổng quan). `remainingPercent` = `100 − seededPercent`.
+- `plannedSeedQuantity`/`percent` là `null` ở chu kỳ có đợt ươm; `nurseryAllocated` đã bỏ; chu kỳ chưa hoàn tất `canRecord = true` khi chưa hoàn tất thả giống.
+- Dòng chỉ đọc đầu form: `"Giống: {nurseryCode} · {seedLot.itemName} · kho ươm còn {nurseryRemaining} mảnh"`.
+- Hoàn tất thả giống (`POST …/seeding-complete`) như cũ: nút hiện khi `seededCount ≥ 1` hoặc đã có bản ghi; không cần 100% làn.
+
+### 0.12 Tổng kết chu kỳ, xem trước chốt, `GET /api/harvest-yield`
+Khối `nursery` (summary/close preview): `{ "batchId", "batchCode", "quantityIn", "survivors", "lossPieces", "lossPercent", "estimated": true }`. **Quyết định**: một đợt có thể nuôi nhiều bè nên số liệu hao hụt của đợt **chia theo tỉ lệ số mảnh đã thả của chu kỳ**: `share = seeded(cycle) / seeded(batch)`; `quantityIn` = `quantityIn(batch) × share`, `survivors` = `survivors(batch) × share`, `lossPieces` = hao hụt toàn đợt (gồm cả `closeLossPieces`) × `share`; `lossPercent` của **cả đợt**. Chu kỳ chưa thả gì: `share = 0` (các số 0). `harvest-yield`: `nurseryQuantityIn`/`nurserySurvivors`/`nurseryLossPieces`/`nurseryLossPercent` cộng các `nursery` của chu kỳ trong nhóm, như cũ. Đều là ước tính.
+
+### 0.13 Mã `reasonCode` mới/đổi
+`NURSERY_POOL_EXCEEDED` (409), `NURSERY_POOL_EMPTY` (409), `NURSERY_NOTHING_TO_CLOSE` (409), `NURSERY_ALLOCATIONS_REMOVED` (410), `CYCLE_SEED_LOCKED` (409), `SEEDING_COMPLETED` (409). **Bỏ**: `NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION`, `NURSERY_SEEDING_ALREADY_COMPLETE`, `NURSERY_SEEDING_ABOVE_ALLOCATION`, `NURSERY_ALLOCATION_BELOW_SEEDED`, `NURSERY_ALLOCATION_FROZEN`, `NURSERY_CYCLE_STARTS_BEFORE_CLOSE`, `CYCLE_REQUIRES_NURSERY`, `PLAN_PHOTOS_FROM_NURSERY`. Giữ: `NURSERY_NOT_NURSING`, `NURSERY_NOT_COMPLETED`, `NURSERY_RAFT_OTHER_ZONE`, `NURSERY_SURVIVORS_BELOW_SEEDED`. Hành động lịch sử đợt ươm: `Created`, `Edited`, `Cancelled`, `Completed`, `SurvivorsCorrected`, **`Closed`** (bỏ `AllocationsChanged` ở sự kiện mới; sự kiện cũ vẫn đọc được).
+
+### 0.14 Dữ liệu demo (DEMO-01) sau khi áp dụng V2
+2 đợt ươm 4002 sẵn sàng thả (sống sót 9.500 và 6.000; hai lô giống khác nhau; chưa thả), 1 đợt 4001 đang ươm (3.500 mảnh), ≥ 5 bè trống đang dùng có làn (B1-08, B1-11 … B1-14, 12-24 làn), 4 đơn mua đã chấp nhận còn mở thu hoạch (800/1.500/2.000 kg và đơn 5 lồng). Chu kỳ demo cũ không qua ươm có thể còn; vẫn đọc được.
+
+---
+
+## 1. Quyền và phạm vi (V1, còn đúng trừ chỗ mục 0 thay thế)
 
 | Việc | Quyền (chức năng `CultivationCycles`, trong vùng của đợt ươm) |
 |---|---|
