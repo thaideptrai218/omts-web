@@ -7,6 +7,7 @@ import { operationAllowed, type OperationArea } from "@/features/operations/perm
 import { createOperationsRepository } from "@/features/operations/repository";
 import { ErrorNotice } from "@/features/operations/ui";
 import type { useOperationEditor } from "@/features/operations/use-operation-editor";
+import flowStyles from "./cultivation-flow.module.css";
 
 /** Shared pieces of the seeding, material-usage and harvest record screens. */
 export type RecordsArea = "seeding" | "material-usages" | "harvest";
@@ -30,7 +31,10 @@ export function EditorFrame({
   error,
   children,
   inline = false,
+  size = "lg",
 }: {
+  /** Dialogs that hold a lane strip use "xl" so the lane details can open in a side panel. */
+  size?: "lg" | "xl";
   title: string;
   editor: ReturnType<typeof useOperationEditor>;
   error?: string;
@@ -40,7 +44,12 @@ export function EditorFrame({
   const content = <>{editor.dialog}<ErrorNotice error={error || editor.mutation.error} />{children}
     {editor.mutation.blocked && <p role="alert" className="mt-3 text-sm">Kết quả cần được đối chiếu. Bản nháp vẫn được giữ; hãy đọc dữ liệu mới trước khi gửi lệnh tiếp.</p>}</>;
   if (inline) return <section aria-label={title} className="min-w-0"><h4 className="mb-3 font-semibold">{title}</h4>{content}</section>;
-  return <Dialog open size="lg" dismissible={false} onCloseRequest={() => void editor.close()} title={title} onOpenChange={() => {}}>{content}</Dialog>;
+  return <Dialog open size={size} dismissible={false} onCloseRequest={() => void editor.close()} title={title} onOpenChange={() => {}}>{content}</Dialog>;
+}
+
+/** Action row of a record form (Bỏ qua / Lưu): pinned to the bottom edge when the form is in a dialog. */
+export function RecordFormFooter({ children }: { children: ReactNode }) {
+  return <div className={flowStyles.recordFormFooter}>{children}</div>;
 }
 
 /** Checkbox group of lane numbers; the selection is kept sorted ascending. */

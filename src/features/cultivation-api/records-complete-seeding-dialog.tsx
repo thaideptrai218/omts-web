@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton, useRemote } from "@/features/operations/ui";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import * as c from "./records-contracts";
-import { EditorFrame, seedRepo } from "./records-shared";
+import { EditorFrame, RecordFormFooter, seedRepo } from "./records-shared";
 
 const completed = z.object({ cycle: z.object({ id: z.guid() }) });
 
@@ -34,11 +34,11 @@ export function CompleteSeeding({ cycleId, zoneId, onClose, onSaved }: { cycleId
             <Button key="empty-confirm" type="button" className="w-auto" isPending={editor.mutation.pending} onClick={async () => { if (await editor.mutation.run(() => send(true))) done(); }}>Xác nhận</Button>
           </div>
         </section>}
-        <div className="flex justify-end gap-2">
+        <RecordFormFooter>
           <Button key="discard-complete" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
           <Button key="confirm-complete" type="button" disabled={editor.disabled || askEmpty}
             onClick={async () => { if (await editor.submit("Đánh dấu hoàn tất thả giống và thông báo cho chủ hợp tác xã?", () => send(false))) done(); }}>Xác nhận hoàn tất</Button>
-        </div>
+        </RecordFormFooter>
       </>}
       {preview.error && <Button type="button" variant="secondary" onClick={preview.reload}>Tải lại thông tin</Button>}
     </EditorFrame>

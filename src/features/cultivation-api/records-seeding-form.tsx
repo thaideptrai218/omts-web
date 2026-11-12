@@ -19,7 +19,7 @@ import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import { farmingErrorText } from "./farming-error-text";
 import { OverPlanConfirm, isOverPlanQuestion } from "./over-plan-confirm";
 import * as c from "./records-contracts";
-import { EditorFrame, seedRepo } from "./records-shared";
+import { EditorFrame, RecordFormFooter, seedRepo } from "./records-shared";
 import { useSeedingPlan } from "./use-seeding-plan";
 import { laneIsUnavailable } from "./lane-availability";
 
@@ -106,31 +106,33 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     const saved = await editor.mutation.run(() => send(parsed.data));
     if (saved) { setAsked(false); done(); }
   }
-  return <EditorFrame inline={!!record} title={record ? "Bản ghi thả giống" : "Ghi nhận thả giống"} editor={editor} error={error || stockError || lots.error}>
+  return <EditorFrame size="xl" inline={!!record} title={record ? "Bản ghi thả giống" : "Ghi nhận thả giống"} editor={editor} error={error || stockError || lots.error}>
     {record && !record.canCorrect && <p className="mb-4 text-sm text-text-muted">Bản ghi đang được khóa theo trạng thái chu kỳ hoặc lô thu hoạch. Không thể sửa hoặc xóa ở trạng thái này.</p>}
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
-      <fieldset disabled={!editable || editor.disabled || laneDirty} className="space-y-4">
-        <Field label="Ngày thả giống *" type="date" required min={dateWindow.min} max={dateWindow.max} value={date} onChange={event => edited(setDate)(event.target.value)} />
-        {fromNursery ? <p className="text-sm" role="status">Đợt ươm {data.nurseryCode ?? ""} · Còn {capacityNursery === null ? "—" : n(capacityNursery)} trên {data.nurseryAllocated == null ? "—" : n(data.nurseryAllocated)} mảnh đã phân bổ</p> : <Select label="Lô giống *" required value={lot} onChange={event => edited(setLot)(event.target.value)}>
+      <fieldset disabled={!editable || editor.disabled || laneDirty} className="grid min-w-0 items-start gap-4 sm:grid-cols-2">
+        {fromNursery ? <p className="rounded-control border border-border bg-surface-subtle px-3 py-2 text-sm sm:col-span-2" role="status">Đợt ươm {data.nurseryCode ?? ""} · Còn {capacityNursery === null ? "—" : n(capacityNursery)} trên {data.nurseryAllocated == null ? "—" : n(data.nurseryAllocated)} mảnh đã phân bổ</p> : <div className="min-w-0 sm:col-span-2"><Select label="Lô giống *" required value={lot} onChange={event => edited(setLot)(event.target.value)}>
           <option value="">Chọn lô giống</option>
           {record && !lots.data?.lots.some(v => v.id === record.seedLot.id) && <option value={record.seedLot.id}>{record.seedLot.code}</option>}
           {lots.data?.lots.map(v => <option key={v.id} value={v.id}>{v.code} · {v.itemName ?? "Giống"} · {v.supplierName}{v.onHand != null ? ` · còn ${n(v.onHand)} ${v.unit}` : ` · ${v.unit}`}</option>)}
-        </Select>}
-        <UnitField key="seeding-quantity" label="Số lượng giống *" unit={seedUnit} decimals={3} min={0.001} max={fromNursery ? capacityNursery ?? undefined : noNegative && capacity !== null ? capacity : undefined} required value={quantity} onChange={edited(setQuantity)}
-          hint={!fromNursery && onHand !== null ? `Còn ${n(onHand)} ${seedUnit} trong lô${over ? (noNegative ? ". Không được vượt tồn kho" : ". Số nhập đang lớn hơn tồn kho") : ""}` : undefined} />
+        </Select></div>}
+        <div className="min-w-0"><Field label="Ngày thả giống *" type="date" required min={dateWindow.min} max={dateWindow.max} value={date} onChange={event => edited(setDate)(event.target.value)} /></div>
+        <div className="min-w-0"><UnitField key="seeding-quantity" label="Số lượng giống *" unit={seedUnit} decimals={3} min={0.001} max={fromNursery ? capacityNursery ?? undefined : noNegative && capacity !== null ? capacity : undefined} required value={quantity} onChange={edited(setQuantity)}
+          hint={!fromNursery && onHand !== null ? `Còn ${n(onHand)} ${seedUnit} trong lô${over ? (noNegative ? ". Không được vượt tồn kho" : ". Số nhập đang lớn hơn tồn kho") : ""}` : undefined} /></div>
+        <div className="min-w-0 space-y-4 sm:col-span-2">
         {!fromNursery && plan.planned !== null && <PlanBar label="Giống đã thả" actual={plan.total} plan={plan.planned} unit={plan.seedUnit ?? seedUnit} hideOverNote note={`Giống đã thả ${n(plan.total)} / kế hoạch ${n(plan.planned)} ${plan.seedUnit ?? seedUnit} (${n(plan.percent!)}%) nếu lưu lần thả này.`} />}
         <SeedingLanePicker lanes={data.lanes} notSeededLanes={data.notSeededLanes} choices={choices} values={lanes} editing={!!record} onChange={edited(setLanes)}
           onDirty={setLaneDirty} onPending={setLanePending} scope={{ raftId, zoneId, cycleId, cycleRowVersion: data.cycleRowVersion, readOnly: !editable || editor.mutation.pending, onChanged: () => {} }} />
         <RecordLanePercentFields lanes={lanes} values={percents} onChange={value => { edited(setPercents)(value); setPercentError(undefined); }} kind="seeding" defaultValue={record ? undefined : 100} error={percentError || farmingFieldError(editor.mutation.failure?.problem, "LanePercent")} />
         <PhotoPicker files={photos} onChange={value => { edited(setPhotos)(value); setPhotoError(undefined); }} existing={kept} onRemoveExisting={id => setKept(kept.filter(photo => (photo.id ?? photo.key ?? photo.url) !== id))} required={!record || !!record.photos?.length} onBusyChange={setPhotoBusy} error={photoError || farmingFieldError(editor.mutation.failure?.problem, "Photos")} />
         {record && <Note label="Lý do điều chỉnh *" required value={reason} onChange={event => setReason(event.target.value)} />}
+        </div>
       </fieldset>
       {question && editable && <OverPlanConfirm reason={overReason} onReason={setOverReason} pending={editor.mutation.pending} dismissLabel="Sửa lại số liệu" confirmLabel="Xác nhận vượt kế hoạch" onDismiss={() => { setAsked(false); editor.mutation.reviewed(); }} onConfirm={() => void confirmOver()}
         message={`Tổng giống thả sẽ là ${n(plan.total)} ${plan.seedUnit ?? seedUnit}${plan.planned !== null ? `, ${n(plan.percent!)}% kế hoạch ${n(plan.planned)}` : ", vượt kế hoạch của chu kỳ"}.`} />}
-      <div className="mt-4 flex justify-end gap-2">
+      <RecordFormFooter>
         <Button className="w-auto" key="discard-seeding" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
         {editable && <Button className="w-auto" key="save-seeding" type="submit" disabled={editor.disabled || laneDirty || lots.loading || !!lots.error || question || !fromNursery && plan.hard}>Lưu</Button>}
-      </div>
+      </RecordFormFooter>
     </form>
     {lots.error && <Button type="button" variant="secondary" onClick={lots.reload}>Tải lại lô giống</Button>}
     {record?.canCorrect && allowed("Delete") && <Button type="button" className="mt-3" variant="secondary" disabled={editor.disabled || laneDirty || !reason.trim()} onClick={async () => {

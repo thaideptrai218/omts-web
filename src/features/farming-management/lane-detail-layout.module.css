@@ -12,3 +12,5 @@
 .more { margin-top: 6px; border: 0; padding: 0; background: none; color: var(--omts-brand, var(--omts-color-primary)); font-size: 12px; font-weight: 600; text-decoration: underline; cursor: pointer; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .actions button, .main button { min-height: 30px; padding: 4px 8px; font-size: 12px; }@media (max-width: 600px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+/* In the side panel of a record dialog (a narrow container) the body is a single column too. */
+@container (max-width: 460px) { .grid { grid-template-columns: minmax(0, 1fr); } }

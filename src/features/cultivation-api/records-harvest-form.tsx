@@ -78,7 +78,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
     const saved = await editor.submit(`Ghi nhận ${cages} lồng từ ${laneSummary(lanes).toLowerCase()}${finishesWithTrip && finished.length ? `; đã thu hết ${laneSummary(finished).toLowerCase()}` : ""}?`, () => send(parsed.data));
     if (saved) done(saved);
   }
-  return <EditorFrame title="Ghi nhận chuyến thu hoạch" editor={editor} error={error}>
+  return <EditorFrame size="xl" title="Ghi nhận chuyến thu hoạch" editor={editor} error={error}>
     <HarvestPlanSummary data={data} extraKg={estimate.effective} />
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset disabled={editor.disabled || laneDirty} className={flowStyles.harvestFormGrid}>

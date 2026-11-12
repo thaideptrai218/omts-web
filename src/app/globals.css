@@ -189,6 +189,9 @@ html { scroll-behavior: smooth; text-rendering: optimizeLegibility; -webkit-font
 /* Phản hồi nhấn nút trong 100ms, không làm xê dịch bố cục xung quanh. */
 button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { touch-action: manipulation; }
 button:not(:disabled):active { transform: scale(0.985); }
+/* Trình duyệt đặt min-width: min-content cho fieldset nên một dải làn hay bảng rộng bên trong làm giãn cả hộp thoại.
+   Cho fieldset co theo khung chứa; phần rộng tự cuộn ngang trong hộp riêng của nó. */
+fieldset { min-width: 0; }
 /* Nội dung vào trang nhẹ nhàng khi chuyển màn. */
 #workspace-main > section { animation: omts-page-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes omts-page-enter { from { transform: translateY(0.5rem); opacity: 0.001; } to { transform: none; opacity: 1; } }

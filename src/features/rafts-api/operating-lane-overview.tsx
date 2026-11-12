@@ -21,7 +21,7 @@ export function OperatingLaneOverview({ scope, raft, onDirty, onPending, ...over
     setOpened(number); return true;
   }
   return <>{confirmation.dialog}<LaneOverview {...overview} lanes={overview.lanes.map(lane => ({ ...lane, ...(savedProgress[lane.laneNumber]?.source === sourceKey(lane) ? savedProgress[lane.laneNumber]?.value : {}) }))} opened={opened} onCloseLane={() => switchLane()}
-    onLaneClick={async (number, event) => { const accepted = await switchLane(opened === number ? undefined : number); if (accepted) await overview.onLaneClick?.(number, event); return accepted; }}
+    onLaneClick={async (number, event) => { const accepted = await switchLane(opened === number && overview.detailPlacement !== "side" ? undefined : number); if (accepted) await overview.onLaneClick?.(number, event); return accepted; }}
     renderLaneDetails={lane => <><LaneOperatingDetails key={lane.laneNumber} scope={scope} lane={lane} raft={raft} onStateChange={report} progressUnsupported={progressUnsupported} onProgressUnsupported={() => setProgressUnsupported(true)} onProgressSaved={saved => setSavedProgress(current => ({ ...current, [saved.laneNumber]: { source: sourceKey(overview.lanes.find(item => item.laneNumber === saved.laneNumber)), value: saved } }))} />{overview.renderLaneDetails?.(lane)}</>} />
   </>;
 }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LanePickerOverview as LaneOverview, type LanePickerDraftProps } from "./lane-picker-overview";
 import type { LaneOperatingScope } from "@/features/rafts-api/lane-operating-details";
 import { formatLaneRanges, parseLaneRanges, uniqueSorted } from "./harvest-lane-ranges";
+import { droppedLanes } from "./lane-range-selection";
 import type { harvestLane } from "./records-contracts";
 
 type Lane = z.infer<typeof harvestLane>;
@@ -51,7 +52,9 @@ export function HarvestLaneChoices({ lanes, values, onChange, label, scope, onDi
   const shown = showAll ? info : info.filter(item => !item.blocked);
   const hidden = info.length - selectable.length;
   const chosen = values.filter(n => selectable.includes(n));
-  const set = (next: number[]) => { setNote(undefined); onChange(uniqueSorted(next)); };
+  // Lanes ticked and then taken out (unticked or excluded), shown in the counter as "bỏ: 15, 18".
+  const [dropped, setDropped] = useState<number[]>([]), [exclude, setExclude] = useState("");
+  const set = (next: number[]) => { const sorted = uniqueSorted(next); setNote(undefined); setDropped(current => sorted.length ? droppedLanes(values, sorted, current) : []); onChange(sorted); };
 
   function click(number: number, shift: boolean) {
     const on = !values.includes(number), from = anchor.current;
@@ -68,11 +71,16 @@ export function HarvestLaneChoices({ lanes, values, onChange, label, scope, onDi
     set(on ? [...values, number] : values.filter(n => n !== number));
   }
   function applyTyped() {
-    const { numbers, invalid } = parseLaneRanges(typed);
-    const ok = numbers.filter(n => selectable.includes(n)), skipped = numbers.filter(n => !selectable.includes(n));
-    if (!typed.trim()) { setNote("Nhập dãy làn, ví dụ 1-10, 15, 20-25."); return; }
-    onChange(ok);
-    setNote([invalid.length ? `Không đọc được: ${invalid.join(", ")}.` : "", skipped.length ? `Bỏ qua làn không thu được: ${formatLaneRanges(skipped)}.` : "", !ok.length ? "Chưa có làn nào được chọn." : ""].filter(Boolean).join(" ") || undefined);
+    const { numbers, invalid } = parseLaneRanges(typed), left = parseLaneRanges(exclude);
+    const out = new Set(left.numbers), ok = numbers.filter(n => selectable.includes(n) && !out.has(n)), skipped = numbers.filter(n => !selectable.includes(n));
+    if (!typed.trim() && !exclude.trim()) { setNote("Nhập dãy làn, ví dụ 1-10, 15, 20-25, hoặc các làn cần bỏ."); return; }
+    // Only the exclusion typed: take those lanes out of the current selection; with a range, the range (minus the exclusion) is the new selection.
+    const next = typed.trim() ? ok : values.filter(n => !out.has(n));
+    const bad = [...invalid, ...left.invalid];
+    const removed = numbers.filter(n => out.has(n) && selectable.includes(n));
+    setDropped(current => next.length ? droppedLanes(values, next, [...current, ...removed]) : []);
+    onChange(next);
+    setNote([bad.length ? `Không đọc được: ${bad.join(", ")}.` : "", skipped.length ? `Bỏ qua làn không thu được: ${formatLaneRanges(skipped)}.` : "", !next.length ? "Chưa có làn nào được chọn." : ""].filter(Boolean).join(" ") || undefined);
   }
 
   return (
@@ -81,15 +89,20 @@ export function HarvestLaneChoices({ lanes, values, onChange, label, scope, onDi
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="secondary" className="w-auto" disabled={!selectable.length} onClick={() => set(selectable)}>Chọn tất cả làn thu được</Button>
         <Button type="button" variant="secondary" className="w-auto" disabled={!values.length} onClick={() => set([])}>Bỏ chọn</Button>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-w-0 items-center gap-2 text-sm">
           <span className="whitespace-nowrap">Chọn theo dãy</span>
-          <input className="omts-control w-44" inputMode="numeric" autoComplete="off" placeholder="1-10, 15, 20-25" value={typed} aria-describedby="harvest-lane-range-note"
+          <input className="omts-control w-40 min-w-0" inputMode="numeric" autoComplete="off" placeholder="1-30" value={typed} aria-describedby="harvest-lane-range-note"
             onChange={event => setTyped(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); applyTyped(); } }} />
+        </label>
+        <label className="flex min-w-0 items-center gap-2 text-sm">
+          <span className="whitespace-nowrap">Bỏ các làn</span>
+          <input className="omts-control w-32 min-w-0" inputMode="numeric" autoComplete="off" placeholder="15, 18" value={exclude} aria-describedby="harvest-lane-range-note"
+            onChange={event => setExclude(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); applyTyped(); } }} />
         </label>
         <Button type="button" variant="secondary" className="w-auto" onClick={applyTyped}>Áp dụng</Button>
       </div>
       <p className="text-sm" role="status" aria-live="polite">
-        <strong>Đã chọn {chosen.length}/{selectable.length} làn</strong>{chosen.length > 0 && <span className="text-text-muted"> · Làn {formatLaneRanges(chosen)}</span>}
+        <strong>Đã chọn {chosen.length}/{selectable.length} làn</strong>{chosen.length > 0 && <span className="text-text-muted"> · Làn {formatLaneRanges(chosen)}</span>}{dropped.length > 0 && <span className="text-text-muted"> · bỏ: {formatLaneRanges(dropped)}</span>}
       </p>
       <p id="harvest-lane-range-note" className="text-xs text-text-muted" role="status">{note ?? "Giữ Shift khi bấm để chọn cả dãy làn."}</p>
       {hidden > 0 && <label className="flex w-fit items-center gap-2 text-sm">

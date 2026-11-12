@@ -10,7 +10,7 @@ import { Field, Note, Select, businessToday, useRemote } from "@/features/operat
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import * as c from "./records-contracts";
 import { farmingErrorText } from "./farming-error-text";
-import { EditorFrame, materialRepo } from "./records-shared";
+import { EditorFrame, RecordFormFooter, materialRepo } from "./records-shared";
 
 /** Records several material lines for one repair job, or corrects a single saved line (with a reason). */
 export function MaterialForm({
@@ -145,6 +145,7 @@ export function MaterialForm({
               />
               {!record && lines.length > 1 && (
                 <Button
+                  className="w-auto justify-self-start sm:col-span-2"
                   variant="secondary"
                   type="button"
                   onClick={() => setLines((v) => v.filter((_, i) => i !== index))}
@@ -156,6 +157,7 @@ export function MaterialForm({
           ))}
           {!record && (
             <Button
+              className="w-auto justify-self-start"
               type="button"
               variant="secondary"
               onClick={() => setLines((v) => [...v, { itemId: "", quantity: "" }])}
@@ -167,13 +169,14 @@ export function MaterialForm({
             <Note label="Lý do điều chỉnh *" required value={reason} onChange={(e) => setReason(e.target.value)} />
           )}
         </fieldset>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button className="w-auto" key="discard-material" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
+        <RecordFormFooter>
+          <Button className="w-auto" key="discard-material" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
           {editable && (
             <Button className="w-auto" key="save-material" type="submit" disabled={editor.disabled || items.loading || !!items.error}>
               Lưu
             </Button>
-          )}</div>
+          )}
+        </RecordFormFooter>
       </form>
       {record?.canEdit && allowed("Delete") && <Button type="button" className="mt-3" variant="secondary" disabled={editor.disabled || !reason.trim()} onClick={async () => {
         if (await editor.submit(`Xóa lần sử dụng ${record.itemCode}? Vật tư được trả về kho và lý do được lưu trong nhật ký.`, () => materialRepo.write("remove", { reason, rowVersion: record.rowVersion }, z.object({ done: z.literal(true) }), record.id, zoneId))) { notify({ tone: "success", title: `Đã xóa lần sử dụng ${record.itemCode}.` }); onSaved(); }

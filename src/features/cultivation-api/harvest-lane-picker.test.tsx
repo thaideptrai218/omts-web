@@ -61,6 +61,20 @@ describe("harvest lane picker", () => {
     expect(screen.getByText("Đã chọn 4/37 làn")).toBeTruthy();
     expect(screen.getByText(/Làn 1–3, 5/)).toBeTruthy();
   });
+  it("drops the excluded lanes from a range and shows them in the counter", () => {
+    render(<Harness />);
+    fireEvent.change(screen.getByLabelText("Chọn theo dãy"), { target: { value: "1-30" } });
+    fireEvent.change(screen.getByLabelText("Bỏ các làn"), { target: { value: "15, 18" } });
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
+    expect(chosen()?.split(",")).toHaveLength(28);
+    expect(chosen()).not.toMatch(/(^|,)(15|18)(,|$)/);
+    expect(screen.getByText("Đã chọn 28/37 làn")).toBeTruthy();
+    expect(screen.getByText(/^· bỏ: 15, 18$/)).toBeTruthy();
+    // Unticking a single lane works at any time too.
+    fireEvent.click(cell(20));
+    expect(chosen()?.split(",")).toHaveLength(27);
+    expect(screen.getByText(/^· bỏ: 15, 18, 20$/)).toBeTruthy();
+  });
   it("Enter in the range box applies it without submitting a surrounding form", () => {
     let submitted = false;
     render(<form onSubmit={event => { event.preventDefault(); submitted = true; }}><HarvestLaneChoices lanes={lanes} values={[]} label="Làn" onChange={() => {}} /></form>);

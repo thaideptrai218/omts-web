@@ -1,5 +1,6 @@
 "use client";
 import { useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { compressLaneNumbers } from "./lane-ranges";
 import { toggleLaneSelection } from "./lane-selection";
 import { laneProgressDisplay, laneStateLabels, type LaneProgressFacts } from "./lane-progress-display";
@@ -8,6 +9,7 @@ import { LaneColumn } from "./lane-column";
 import { LaneFilterChips } from "./lane-filter-chips";
 import { LaneSummaryBar } from "./lane-summary-bar";
 import { LaneDetailPopover } from "./lane-detail-popover";
+import { LaneDetailSidePanel } from "./lane-detail-side-panel";
 import styles from "./lane-overview.module.css";
 
 export type LaneOverviewItem = Omit<LaneProgressFacts, "state"> & Partial<Omit<LaneProgressMetadata, "state">> & { state?: string | number | null; disabled?: boolean; description?: string };
@@ -21,15 +23,18 @@ type Props = {
   onSelectionChange?(numbers: number[]): void; eligibleLaneNumbers?: readonly number[];
   selectionAction?: ReactNode; selectionDisabled?: boolean;
   onDirty?(dirty: boolean): void; onPending?(pending: boolean): void;
+  /** "side": the opened lane's details sit beside the strip (under it on narrow screens) instead of a popover; used inside record dialogs. */
+  detailPlacement?: "popover" | "side";
 };
 
 /** Native horizontal scrolling keeps 100+ columns responsive, without a render on scroll. Only one detail is mounted. */
 export function LaneOverview(props: Props) {
   const { lanes, selected, onLaneClick, label = "Sơ đồ làn", children, loading = false, emptyMessage = "Chưa có thông tin làn.",
-    onSelectionChange, eligibleLaneNumbers, selectionAction, selectionDisabled = false, renderLaneDetails } = props;
+    onSelectionChange, eligibleLaneNumbers, selectionAction, selectionDisabled = false, renderLaneDetails, detailPlacement = "popover" } = props;
+  const side = detailPlacement === "side";
   const [query, setQuery] = useState(""), [filter, setFilter] = useState("");
   const [selecting, setSelecting] = useState(false), [localSelection, setLocalSelection] = useState<number[]>([]);
-  const [localOpened, setLocalOpened] = useState<number>(), [anchor, setAnchor] = useState<HTMLElement>();
+  const [localOpened, setLocalOpened] = useState<number>(), [anchor, setAnchor] = useState<HTMLElement>(), [slot, setSlot] = useState<HTMLElement | null>(null);
   const selectionAnchor = useRef<number | undefined>(undefined), viewport = useRef<HTMLDivElement>(null), searchId = useId();
   const opened = Object.hasOwn(props, "opened") ? props.opened : localOpened;
   const sorted = [...lanes].sort((a, b) => a.laneNumber - b.laneNumber);
@@ -58,6 +63,13 @@ export function LaneOverview(props: Props) {
     setLocalOpened(undefined); return true;
   }
   const openedLane = !selecting && !loading ? visible.find(lane => lane.laneNumber === opened) : undefined;
+  // With a selection supplied, the tick means "chosen"; the opened lane gets its own marker so an unticked lane never looks ticked.
+  const isActive = (number: number) => selecting ? chosen.includes(number) : selected ? selected.includes(number) : opened === number;
+  const detail = openedLane && <>
+    <p className={styles.facts}>{laneProgressDisplay(openedLane).description}</p>
+    {openedLane.description && <p className={styles.facts}>{openedLane.description}</p>}
+    {renderLaneDetails?.(openedLane)}{children}
+  </>;
   return <section className={styles.overview} aria-label={label} aria-busy={loading} data-lane-overview>
     <header className={styles.sticky}>
       <div className={styles.toolbar}><strong>{label} <span>({lanes.length})</span></strong><label htmlFor={searchId} className={styles.search}><span>Tìm làn số</span><input id={searchId} className="omts-control" inputMode="numeric" autoComplete="off" placeholder="Tìm làn số…" disabled={loading || !lanes.length} value={query} onChange={event => find(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); find(query); } }} /></label>
@@ -69,19 +81,22 @@ export function LaneOverview(props: Props) {
         {!!lanes.length && <p className={styles.summary} role="status">{query && !match ? `Không có làn số ${query}.` : `Hiển thị ${visible.length}/${lanes.length} làn · Làn ${compressLaneNumbers(visible.map(lane => lane.laneNumber))}`}{!!selected?.length && ` · Đã chọn ${selected.length} làn`}</p>}
       </div>
     </header>
+    <div className={styles.body} data-detail={side && openedLane ? "side" : undefined}>
+    <div className={styles.stripArea}>
     <div ref={viewport} className={styles.viewport} data-lane-scroller>
       {loading ? <div className={styles.columns} role="status"><span className="sr-only">Đang tải sơ đồ làn…</span>{Array.from({ length: 12 }, (_, index) => <div key={index} className={`omts-skeleton ${styles.skeleton}`} aria-hidden="true" />)}</div>
         : !lanes.length ? <div className={styles.empty} role="status"><strong>Chưa có làn để hiển thị</strong><p>{emptyMessage}</p></div>
           : <div className={styles.columns} role="group" aria-label={label} data-lane-columns>{visible.map(lane => <LaneColumn key={lane.laneNumber} lane={lane} found={lane.laneNumber === found}
-            active={selecting ? chosen.includes(lane.laneNumber) : opened === lane.laneNumber || selected?.includes(lane.laneNumber) === true} expanded={opened === lane.laneNumber} selecting={selecting}
+            active={isActive(lane.laneNumber)} expanded={opened === lane.laneNumber} side={side} selecting={selecting}
             disabled={selecting ? selectionDisabled || !eligible.includes(lane.laneNumber) : !!lane.disabled}
-            onToggle={shift => toggle(lane.laneNumber, shift)} onClick={async event => { const target = event.currentTarget; if (await onLaneClick?.(lane.laneNumber, event) === false) return; setAnchor(target); setLocalOpened(current => current === lane.laneNumber ? undefined : lane.laneNumber); }} />)}</div>}
+            onToggle={shift => toggle(lane.laneNumber, shift)} onClick={async event => { const target = event.currentTarget; if (await onLaneClick?.(lane.laneNumber, event) === false) return; setAnchor(target); setLocalOpened(current => current === lane.laneNumber && !side ? undefined : lane.laneNumber); }} />)}</div>}
     </div>
     {!!lanes.length && <p className={styles.legend}><span>Kéo ngang hoặc dùng phím ← → để xem làn</span><span>Chiều cao cột = % tiến độ</span><span><i aria-hidden="true" />Ngừng hoạt động</span></p>}
-    {openedLane && anchor && <LaneDetailPopover anchor={anchor} number={openedLane.laneNumber} stateLabel={laneProgressDisplay(openedLane).label} colorToken={laneProgressDisplay(openedLane).colorToken} onClose={close}>
-      <p className={styles.facts}>{laneProgressDisplay(openedLane).description}</p>
-      {openedLane.description && <p className={styles.facts}>{openedLane.description}</p>}
-      {renderLaneDetails?.(openedLane)}{children}
-    </LaneDetailPopover>}
+    </div>
+    {/* The record form that hosts the strip is itself a <form>: the panel (which holds its own forms) is mounted through a portal into this slot so the React tree has no nested forms. */}
+    <div ref={setSlot} className={styles.sideSlot} />
+    {side && openedLane && slot && createPortal(<LaneDetailSidePanel number={openedLane.laneNumber} stateLabel={laneProgressDisplay(openedLane).label} colorToken={laneProgressDisplay(openedLane).colorToken} onClose={close}>{detail}</LaneDetailSidePanel>, slot)}
+    </div>
+    {!side && openedLane && anchor && <LaneDetailPopover anchor={anchor} number={openedLane.laneNumber} stateLabel={laneProgressDisplay(openedLane).label} colorToken={laneProgressDisplay(openedLane).colorToken} onClose={close}>{detail}</LaneDetailPopover>}
   </section>;
 }

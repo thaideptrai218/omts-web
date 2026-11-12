@@ -4,8 +4,9 @@ import { laneProgressDisplay } from "./lane-progress-display";
 import type { LaneOverviewItem } from "./lane-overview";
 import styles from "./lane-overview.module.css";
 
-export function LaneColumn({ lane, active, expanded, found, selecting, disabled, onClick, onToggle }: {
-  lane: LaneOverviewItem; active: boolean; expanded: boolean; found: boolean; selecting: boolean; disabled: boolean;
+export function LaneColumn({ lane, active, expanded, found, selecting, disabled, side = false, onClick, onToggle }: {
+  /** `active` = ticked (chosen); `expanded` = its details are open (own marker). `side`: the details are a panel, not a popup. */
+  lane: LaneOverviewItem; active: boolean; expanded: boolean; found: boolean; selecting: boolean; disabled: boolean; side?: boolean;
   onClick(event: MouseEvent<HTMLButtonElement>): void; onToggle(shift: boolean): void;
 }) {
   const shift = useRef(false), display = laneProgressDisplay(lane);
@@ -34,9 +35,9 @@ export function LaneColumn({ lane, active, expanded, found, selecting, disabled,
     </span>
     <span className={styles.stateLabel}>{display.label}</span>
   </>;
-  const props = { "data-lane": lane.laneNumber, "data-state": display.state, "data-active": active || undefined, "data-found": found || undefined,
+  const props = { "data-lane": lane.laneNumber, "data-state": display.state, "data-active": active || undefined, "data-opened": expanded || undefined, "data-found": found || undefined,
     style: { "--lane-color": `var(${display.colorToken})` } as CSSProperties, title: description, onKeyDown: navigate };
   return selecting ? <label className={styles.column} {...props}>
     <input type="checkbox" className={`omts-check ${styles.laneCheck}`} aria-label={description} checked={active} disabled={disabled} onClick={event => { shift.current = event.shiftKey; }} onChange={() => { onToggle(shift.current); shift.current = false; }} />{contents}
-  </label> : <button type="button" className={styles.column} {...props} aria-label={description} aria-pressed={active} aria-expanded={expanded} aria-haspopup="dialog" disabled={disabled} onClick={onClick}>{contents}</button>;
+  </label> : <button type="button" className={styles.column} {...props} aria-label={description} aria-pressed={active} aria-expanded={expanded} aria-haspopup={side ? undefined : "dialog"} disabled={disabled} onClick={onClick}>{contents}</button>;
 }
