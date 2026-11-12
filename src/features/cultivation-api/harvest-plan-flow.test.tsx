@@ -10,6 +10,9 @@ vi.mock("./records-shared", async (importOriginal) => {
   return { ...original, harvestRepo: { read, write, upload }, useAllowed: () => () => true };
 });
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
+// jsdom cannot decode images; the picker only needs the file back.
+vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
+import { attachPhoto, selectLane } from "./record-form-test-helpers";
 import { HarvestForm } from "./records-harvest-form";
 import { HarvestLanesBoard } from "./harvest-lanes-board";
 import { HarvestPlanSummary, harvestProgressOf } from "./harvest-plan-summary";
@@ -113,7 +116,8 @@ describe("the form follows the backend that answers", () => {
 });
 
 const fillTrip = async () => {
-  fireEvent.click(screen.getByRole("button", { name: /^Làn 1 ·/ }));
+  await selectLane(1);
+  await attachPhoto();
   fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "8" } });
   fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
   fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
@@ -126,7 +130,9 @@ describe("recording a trip above the plan (the plan is not a cap)", () => {
     await fillTrip();
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(upload).toHaveBeenCalledTimes(1);
-    expect(upload.mock.calls[0][2]).toEqual({ purchaseRequestId: orderId, laneNumbers: [1], finishedLaneNumbers: [], cageCount: 8, estimatedKg: null });
+    // One mandatory photo goes with the trip; a harvest % stays unknown (empty) until the user types it.
+    expect(upload.mock.calls[0][1]).toHaveLength(1);
+    expect(upload.mock.calls[0][2]).toEqual({ purchaseRequestId: orderId, lanePercents: {}, laneNumbers: [1], finishedLaneNumbers: [], cageCount: 8, estimatedKg: null });
     expect(screen.queryByRole("alert", { name: "Xác nhận vượt kế hoạch" })).toBeNull();
     expect(await screen.findByText(/Kg ước tính \(400 kg\) lệch nhiều so với số lồng/)).toBeTruthy();
   });

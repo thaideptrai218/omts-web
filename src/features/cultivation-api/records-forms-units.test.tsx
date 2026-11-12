@@ -7,10 +7,13 @@ const { read, write, upload } = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("./records-shared", async (importOriginal) => {
   const original = await importOriginal<typeof import("./records-shared")>();
-  return { ...original, seedRepo: { read, write }, harvestRepo: { read, write, upload }, useAllowed: () => () => true };
+  return { ...original, seedRepo: { read, write, upload }, harvestRepo: { read, write, upload }, useAllowed: () => () => true };
 });
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
 vi.mock("./harvest-crew-picker", () => ({ HarvestCrewPicker: ({ onChange }: { onChange(ids: string[]): void }) => <button type="button" onClick={() => onChange(["00000000-0000-4000-8000-000000000001"])}>Chọn An cùng thu</button> }));
+// jsdom cannot decode images; the picker only needs the file back.
+vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
+import { attachPhoto, selectLane } from "./record-form-test-helpers";
 import { SeedingForm } from "./records-seeding-form";
 import { HarvestForm } from "./records-harvest-form";
 
@@ -25,7 +28,8 @@ describe("seeding form units and date window", () => {
     const data = { ...seedData, lanes: [{ laneNumber: 1, canSeed: true, isDamaged: true }, { laneNumber: 2, canSeed: true, statusId: 2002 }, { laneNumber: 3, canSeed: true, state: "OutOfService" }] };
     render(<ToastProvider><SeedingForm zoneId="z" raftId="r" cycleId="c" data={data} record={null} allowed={() => true} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
     expect(await screen.findByText("Không có làn đủ điều kiện.")).toBeTruthy();
-    expect(screen.queryByRole("checkbox", { name: /Làn/ })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /^Làn/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Làn \d+:/ })).toBeNull();
   });
   it("shows the catalogue unit of the chosen seed lot next to the quantity and never a hard-coded word", async () => {
     read.mockResolvedValue({ status: "success", data: { raftId: "r", lots: [{ id: lotId, code: "PN1-1", receiptCode: "PN1", supplierName: "NCC", unit: "mảnh", itemName: "Giống hàu", quantityReceived: 100, quantitySeeded: 0, boughtForThisRaft: true, onHand: 80 }] } });
@@ -42,9 +46,13 @@ describe("seeding form units and date window", () => {
     await screen.findByRole("option", { name: /PN1-1/ });
     fireEvent.change(screen.getByLabelText("Lô giống *"), { target: { value: lotId } });
     fireEvent.change(screen.getByLabelText("Số lượng giống *"), { target: { value: "5" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Làn 1" }));
+    await selectLane(1);
+    await attachPhoto();
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
-    expect(await screen.findAllByText(/không được sau hôm nay|không được trước ngày bắt đầu chu kỳ/)).not.toHaveLength(0);
+    // The date field itself refuses a date outside the window (native validation blocks the submit), before any backdate message of the form.
+    expect(await screen.findByText("Ngày phải từ 01/01/2999.")).toBeTruthy();
+    expect(screen.getByLabelText("Ngày thả giống *").getAttribute("aria-invalid")).toBe("true");
+    expect(upload).not.toHaveBeenCalled();
     expect(write).not.toHaveBeenCalled();
   });
 });
@@ -61,21 +69,22 @@ describe("harvest form lanes and cages", () => {
     upload.mockResolvedValue({ status: "success", data: { lot: { id: lotId, lotCode: "L01" }, warnings: [] } });
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
     fireEvent.click(screen.getByRole("button", { name: "Chọn An cùng thu" }));
-    fireEvent.click(screen.getByRole("button", { name: /^Làn 1 ·/ }));
+    await selectLane(1);
+    await attachPhoto();
     fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "0,5" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
-    await waitFor(() => expect(upload).toHaveBeenCalledWith("harvest-record", [], expect.objectContaining({ purchaseRequestId: orderId, cageCount: 0.5, crew: ["00000000-0000-4000-8000-000000000001"] }), expect.anything(), "r", "z"));
+    await waitFor(() => expect(upload).toHaveBeenCalledWith("harvest-record", [expect.any(File)], expect.objectContaining({ purchaseRequestId: orderId, cageCount: 0.5, crew: ["00000000-0000-4000-8000-000000000001"] }), expect.anything(), "r", "z"));
   });
   it("shows the harvestable lanes first and keeps blocked lanes disabled with the reason once revealed", () => {
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
-    expect((screen.getByRole("button", { name: /^Làn 1 · Đang thu hoạch/ }) as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.queryByRole("button", { name: /^Làn 2 ·/ })).toBeNull();
+    expect((screen.getByRole("button", { name: /^Làn 1: Đang thu/ }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: /^Làn 2:/ })).toBeNull();
     fireEvent.click(screen.getByRole("checkbox", { name: /Hiện cả làn không thu được/ }));
-    expect((screen.getByRole("button", { name: /^Làn 2 ·/ }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: /^Làn 3 ·/ }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByRole("button", { name: /^Làn 2 · Đã thu hoạch · Làn đã thu xong\./ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /^Làn 3 · Chưa thả giống · Làn chưa thả giống nên chưa thể thu hoạch\./ })).toBeTruthy();
+    expect((screen.getByRole("button", { name: /^Làn 2:/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /^Làn 3:/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: /^Làn 2: Đã thu · .*Làn đã thu xong\./ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Làn 3: Chưa thả · .*Làn chưa thả giống nên chưa thể thu hoạch\./ })).toBeTruthy();
   });
   it("accepts half a cage, states the kg is an estimate and keeps Bỏ qua from submitting", () => {
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);

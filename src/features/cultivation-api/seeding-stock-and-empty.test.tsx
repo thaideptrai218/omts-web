@@ -3,13 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
-const { read, write } = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));
+const { read, write, upload } = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), upload: vi.fn() }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("./records-shared", async (importOriginal) => {
   const original = await importOriginal<typeof import("./records-shared")>();
-  return { ...original, seedRepo: { read, write }, useAllowed: () => () => true };
+  return { ...original, seedRepo: { read, write, upload }, useAllowed: () => () => true };
 });
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
+// jsdom cannot decode images; the picker only needs the file back.
+vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
+import { attachPhoto, selectLane } from "./record-form-test-helpers";
 import { SeedingForm } from "./records-seeding-form";
 import { CompleteSeeding } from "./records-complete-seeding-dialog";
 
@@ -25,7 +28,8 @@ describe("seeding form shows the stock and explains the on-hand refusal", () => 
     await screen.findByRole("option", { name: /PN1-1/ });
     fireEvent.change(screen.getByLabelText("Lô giống *"), { target: { value: lotId } });
     fireEvent.change(screen.getByLabelText("Số lượng giống *"), { target: { value: "101" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Làn 1" }));
+    await selectLane(1);
+    await attachPhoto();
   }
   it("puts the on-hand quantity in the lot option and warns while typing more than the stock", async () => {
     await fill();
@@ -33,7 +37,7 @@ describe("seeding form shows the stock and explains the on-hand refusal", () => 
     expect(screen.getByText(/Còn 100 mảnh trong lô. Số nhập đang lớn hơn tồn kho/)).toBeTruthy();
   });
   it("turns the MSG-INPUT-01 refusal into on hand and balance after, in the lot's unit", async () => {
-    write.mockResolvedValue({ status: "error", httpStatus: 409, code: "MSG-INPUT-01", uncertain: false, problem: { code: "MSG-INPUT-01", field: "Quantity", onHand: 100, balanceAfter: -1 } });
+    upload.mockResolvedValue({ status: "error", httpStatus: 409, code: "MSG-INPUT-01", uncertain: false, problem: { code: "MSG-INPUT-01", field: "Quantity", onHand: 100, balanceAfter: -1 } });
     await fill();
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));

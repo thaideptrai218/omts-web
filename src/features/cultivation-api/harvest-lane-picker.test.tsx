@@ -19,33 +19,36 @@ function Harness() {
   const [values, setValues] = useState<number[]>([]);
   return <><HarvestLaneChoices lanes={lanes} values={values} label="Làn thu hoạch *" onChange={setValues} /><output data-testid="chosen">{values.join(",")}</output></>;
 }
-const cell = (n: number) => screen.getByRole("button", { name: new RegExp(`^Làn ${n} ·`) });
+const cell = (n: number) => screen.getByRole("button", { name: new RegExp(`^Làn ${n}:`) });
 const chosen = () => screen.getByTestId("chosen").textContent;
 
 describe("harvest lane picker", () => {
   it("shows only the lanes that can be harvested as compact numbered cells, and a counter", () => {
     render(<Harness />);
-    expect(screen.getAllByRole("button", { name: /^Làn \d+ ·/ })).toHaveLength(37);
-    expect(screen.queryByRole("button", { name: /^Làn 38 ·/ })).toBeNull();
-    expect(cell(1).textContent).toBe("1");
+    expect(screen.getAllByRole("button", { name: /^Làn \d+:/ })).toHaveLength(37);
+    expect(screen.queryByRole("button", { name: /^Làn 38:/ })).toBeNull();
+    // The lane number is the first element of the column; the fill and the state follow it.
+    expect(cell(1).firstElementChild?.textContent).toBe("1");
     expect(screen.getByText("Đã chọn 0/37 làn")).toBeTruthy();
     expect(screen.queryByText(/Làn chưa thả giống nên chưa thể thu hoạch/)).toBeNull();
   });
   it("reveals the lanes that cannot be harvested, disabled, with the reason in the tooltip and a legend", () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("checkbox", { name: "Hiện cả làn không thu được (13)" }));
-    expect(screen.getAllByRole("button", { name: /^Làn \d+ ·/ })).toHaveLength(50);
+    expect(screen.getAllByRole("button", { name: /^Làn \d+:/ })).toHaveLength(50);
     for (const n of [38, 41, 45, 47]) expect((cell(n) as HTMLButtonElement).disabled).toBe(true);
-    expect(cell(41).parentElement?.getAttribute("title")).toContain("Làn chưa thả giống nên chưa thể thu hoạch.");
-    expect(cell(45).parentElement?.getAttribute("title")).toContain("Hỏng");
-    const legend = screen.getByLabelText("Chú giải").textContent ?? "";
-    for (const text of ["Đang nuôi", "Đang thu hoạch", "Đã thu hoạch", "Chưa thả giống", "Hỏng", "Ngừng hoạt động"]) expect(legend).toContain(text);
+    expect(cell(41).getAttribute("title")).toContain("Làn chưa thả giống nên chưa thể thu hoạch.");
+    expect(cell(45).getAttribute("title")).toContain("Hỏng");
+    // The state filter doubles as the legend: one entry per state present on the raft.
+    const legend = screen.getByLabelText("Lọc tình trạng làn").textContent ?? "";
+    for (const text of ["Đang nuôi", "Đang thu", "Đã thu", "Chưa thả", "Hỏng", "Ngừng hoạt động"]) expect(legend).toContain(text);
   });
   it("selects all harvestable lanes, clears, and compresses the summary", () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: "Chọn tất cả làn thu được" }));
     expect(screen.getByText("Đã chọn 37/37 làn")).toBeTruthy();
-    expect(screen.getByText(/Làn 1–37/)).toBeTruthy();
+    // The picker's own summary; the overview header repeats the range inside a longer sentence.
+    expect(screen.getByText(/^· Làn 1–37$/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Bỏ chọn" }));
     expect(chosen()).toBe("");
   });
