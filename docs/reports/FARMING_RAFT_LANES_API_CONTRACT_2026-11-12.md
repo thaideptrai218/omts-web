@@ -73,7 +73,7 @@ Already damaged -> **200** with `changed: false` and the incident that damaged i
 ### 3.2 `POST /api/rafts/{raftId}/lanes/{n}/repair` (alias `/repair-done`) - repaired
 
 ```json
-{ "reason": "New line tied", "materials": [ { "itemId": "...", "quantity": 4, "unit": "m" } ], "rowVersion": "..." }
+{ "reason": "optional, blank reads as Repaired", "materials": [ { "itemId": "...", "quantity": 4, "unit": "m" } ], "rowVersion": "..." }
 ```
 `materials` is optional. Each item must be in the group Material (Vật tư), In Use, listed once, `quantity > 0` with at most 3 decimals, and `unit` (optional) must be the unit of the item (never converted).
 Checks the **stock on hand** first: 409 `MSG-INPUT-01` (`balanceAfter`, `itemId`, `field: "Lines"`) when the cooperative does not allow a negative stock; **nothing is saved**.
@@ -84,11 +84,19 @@ Not told to anybody. The usage record can also be seen and changed on the materi
 ### 3.3 `POST /api/rafts/{raftId}/lanes/{n}/out-of-service` - out of service (ngừng hoạt động)
 
 Body `{ "reason": "...", "reasonCode": "Other", "confirm": true, "rowVersion": "...", "cycleRowVersion": "..." }` (`cycleRowVersion` optional).
-The lane is left out of every list of lanes to seed or harvest and its number is never reused; there is **no way back** and no deletion (history stays).
+The lane is left out of every list of lanes to seed or harvest and its number is never reused; it comes back only through `restore-service` (3.3b), and nothing is deleted (history stays).
 When seed hangs on the lane (`state` Growing or BeingHarvested) the first answer is **409 `MSG-GEN-04`** `{ "confirmFlag": "confirm", "laneNumber", "state", "seedLotCodes": ["PN000001-1"] }` and nothing is saved; send `confirm: true` to record the **loss event of that seed (no quantity)**.
 A lane with no seed needs no confirmation. A damaged lane put out of service resolves its damage report. The raft row and (when a cycle is open) the cycle row are part of the save: a parallel lot/close answers `MSG06`.
 Notifies the Owner (`LANE_OUT_OF_SERVICE`). When this makes every lane with seed Harvested or out of service, the usual close reminder (`MSG-CYCLE-08`) is sent once.
 Already out of service -> **200** `changed: false`.
+
+### 3.3b `POST /api/rafts/{raftId}/lanes/{n}/restore-service` - back in service (owner decision, after the cycle is done)
+
+Body `{ "reason": "optional", "materials": [ { "itemId", "quantity", "unit" } ], "rowVersion": "..." }`. `materials` behave as in a repair: stock on hand checked first (409 `MSG-INPUT-01`, nothing saved), then in one save a usage record and a Completed Xuất dùng linked to the raft and the incident.
+Allowed only when the lane is out of service **and no Open cycle still holds seed on it** (state `NotSeeded` in the Open cycle, or no Open cycle; a usage record is refused on the close day itself, BR-CYCLE-04).
+During an open cycle that holds seed on the lane: 409 `MSG-GEN-09`, `reasonCode: "LANE_HOLDS_SEED"`, Vietnamese `detail` "Làn N chưa thể đưa vào hoạt động lại: chu kỳ đang mở vẫn còn giống trên làn này. Hãy đóng hoặc kết thúc chu kỳ trước." Not out of service: 409 `LANE_NOT_OUT_OF_SERVICE`.
+It clears `isOutOfService` and `isDamaged`; the lane is `NotSeeded` for the next cycle. Incident `kind: "Restored"` (stored as text, no migration), audit `Lane.Restored`, history and lane reads updated. Answer: `LaneIncidentSaved`.
+`repair`: `reason` is now optional (blank reads as `Repaired`); the stock check stays when materials are given.
 
 ### 3.4 `POST /api/rafts/{raftId}/lanes/{n}/incidents/{incidentId}/photos` - optional photo
 

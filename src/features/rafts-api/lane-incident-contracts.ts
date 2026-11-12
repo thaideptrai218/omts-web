@@ -15,11 +15,13 @@ export const laneIncidentSaved = z.object({ incident: laneIncident.optional(), r
   .refine(value => !!value.incident || !!value.raft || !!value.lane);
 const version = { rowVersion: text.min(1) };
 export const damageValues = z.strictObject({ ...version, reason: note.min(1) });
-export const repairValues = z.strictObject({ ...version, reason: note.min(1),
-  materials: z.array(z.strictObject({ itemId: id, quantity: z.number().positive().multipleOf(0.001), unit: text.min(1).optional() })).min(1)
-    .refine(values => new Set(values.map(value => value.itemId)).size === values.length).optional() });
+const materialLines = z.array(z.strictObject({ itemId: id, quantity: z.number().positive().multipleOf(0.001), unit: text.min(1).optional() })).min(1)
+  .refine(values => new Set(values.map(value => value.itemId)).size === values.length).optional();
+/** Repair and restore: the reason is optional; materials, when chosen, are deducted from stock by the backend. */
+export const repairValues = z.strictObject({ ...version, reason: note.min(1).optional(), materials: materialLines });
+export const restoreValues = z.strictObject({ ...version, reason: note.min(1).optional(), materials: materialLines });
 /** `confirm` answers the 409 MSG-GEN-04 question when seed hangs on the lane; `cycleRowVersion` is the open cycle's. */
 export const outOfServiceValues = z.strictObject({ ...version, reason: note.min(1), confirm: z.boolean().optional(), cycleRowVersion: text.min(1).optional() });
 export type LaneIncident = z.infer<typeof laneIncident>;
-export type IncidentAction = "damage" | "repair" | "discontinue";
-export const incidentActionLabel = { damage: "Báo hỏng", repair: "Sửa làn", discontinue: "Ngừng hoạt động" } as const;
+export type IncidentAction = "damage" | "repair" | "discontinue" | "restore";
+export const incidentActionLabel = { damage: "Báo hỏng", repair: "Sửa làn", discontinue: "Ngừng hoạt động", restore: "Khôi phục hoạt động" } as const;

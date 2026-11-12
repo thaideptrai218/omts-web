@@ -54,8 +54,8 @@ function OpenedLane({ raft, lane, onChanged, onDirty, onPending }: { raft: Raft;
   if (!remote.data?.available) return <p className="mt-2 text-xs text-text-muted">Chưa có lịch sử sự cố của làn.</p>;
   const state = facts.data?.lanes.find(value => value.laneNumber === lane.laneNumber)?.state ?? lane.state;
   const hasSeed = state === "Growing" || state === "BeingHarvested";
-  const writable = raft.statusId === 101 && lane.statusId === 2001 && !lane.isOutOfService && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Edit", raft.zone.id);
-  const actions: IncidentAction[] = lane.isDamaged ? ["repair", "discontinue"] : ["damage", "discontinue"];
+  const writable = raft.statusId === 101 && lane.statusId === 2001 && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Edit", raft.zone.id);
+  const actions: IncidentAction[] = lane.isOutOfService ? ["restore"] : lane.isDamaged ? ["repair", "discontinue"] : ["damage", "discontinue"];
   function changed() { setAction(undefined); onChanged(); remote.reload(); facts.reload(); }
   return <div className="mt-3">
     {facts.error && <p className="text-xs text-text-muted">Chưa tải được tình trạng chu kỳ. <button type="button" className="underline" onClick={facts.reload}>Tải lại</button></p>}

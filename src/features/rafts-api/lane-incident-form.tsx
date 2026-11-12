@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Field, Note, useMutation } from "@/features/operations/ui";
 import { messageCatalog } from "@/shared/messages/message-catalog";
-import { damageValues, incidentActionLabel, outOfServiceValues, repairValues, type IncidentAction, type LaneIncident } from "./lane-incident-contracts";
+import { damageValues, incidentActionLabel, outOfServiceValues, repairValues, restoreValues, type IncidentAction, type LaneIncident } from "./lane-incident-contracts";
 import { LaneIncidentHistory } from "./lane-incident-history";
 import { laneIncidentRepository } from "./lane-incident-repository";
 import { LaneIncidentStock, type MaterialLine, type StockItem } from "./lane-incident-stock";
@@ -44,18 +44,20 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
   }
   async function save() {
     if (mutation.busy() || mutation.blocked || unavailable || eventSaved) return;
-    const schema = action === "damage" ? damageValues : action === "repair" ? repairValues : outOfServiceValues;
-    const body = { rowVersion, reason: reason.trim(), ...(action === "repair" ? { materials: lines.map(line => ({ itemId: line.itemId, quantity: Number(line.quantity), unit: stock?.find(item => item.id === line.itemId)?.unit })) }
+    const withStock = action === "repair" || action === "restore";
+    const schema = action === "damage" ? damageValues : action === "repair" ? repairValues : action === "restore" ? restoreValues : outOfServiceValues;
+    const body = { rowVersion, ...(reason.trim() || !withStock ? { reason: reason.trim() } : {}),
+      ...(withStock ? lines.length ? { materials: lines.map(line => ({ itemId: line.itemId, quantity: Number(line.quantity), unit: stock?.find(item => item.id === line.itemId)?.unit })) } : {}
       : action === "discontinue" && hasSeed ? { confirm: true, cycleRowVersion } : {}) };
     const parsed = schema.safeParse(body);
-    if (!parsed.success) { setError(action === "repair" && reason.trim() ? "Chọn vật tư đã dùng và nhập số lượng lớn hơn 0, tối đa 3 số lẻ." : "Nhập lý do (tối đa 500 ký tự)."); return; }
-    if (action === "repair" && (!stock || lines.some(line => !stock.some(item => item.id === line.itemId && item.statusId === 101 && Number(line.quantity) <= item.onHand)))) {
+    if (!parsed.success) { setError(withStock ? "Số lượng vật tư phải lớn hơn 0, tối đa 3 số lẻ; lý do tối đa 500 ký tự." : "Nhập lý do (tối đa 500 ký tự)."); return; }
+    if (withStock && lines.length && (!stock || lines.some(line => !stock.some(item => item.id === line.itemId && item.statusId === 101 && Number(line.quantity) <= item.onHand)))) {
       setError("Số lượng vật tư phải nằm trong tồn kho hiện có."); return;
     }
     if (action === "discontinue" && hasSeed && !cycleRowVersion) { setError("Chưa tải được phiên bản chu kỳ. Tải lại làn trước khi ngừng hoạt động."); return; }
     if (file && (!['image/jpeg', 'image/png'].includes(file.type) || file.size < 1 || file.size > 10 * 1024 * 1024)) { setError("Ảnh phải là JPEG hoặc PNG, tối đa 10 MB."); return; }
     setError(undefined);
-    if (action !== "repair" && !await confirmation.confirm(action === "discontinue" ? `Ngừng hoạt động làn ${laneNumber}? ${hasSeed ? "Một sự kiện mất giống không số lượng sẽ được ghi nhận; làn được coi là đã kết thúc khi đóng chu kỳ." : "Làn sẽ không xuất hiện trong danh sách chọn."}` : `Báo hỏng làn ${laneNumber}? Làn sẽ bị chặn thả giống và thu hoạch cho tới khi sửa xong.`)) return;
+    if (action !== "repair" && !await confirmation.confirm(action === "restore" ? `Khôi phục hoạt động làn ${laneNumber}? Làn sẽ lại xuất hiện trong danh sách thả giống và thu hoạch.` : action === "discontinue" ? `Ngừng hoạt động làn ${laneNumber}? ${hasSeed ? "Một sự kiện mất giống không số lượng sẽ được ghi nhận; làn được coi là đã kết thúc khi đóng chu kỳ." : "Làn sẽ không xuất hiện trong danh sách chọn."}` : `Báo hỏng làn ${laneNumber}? Làn sẽ bị chặn thả giống và thu hoạch cho tới khi sửa xong.`)) return;
     let missing = false;
     const saved = await mutation.run(async () => {
       const result = await laneIncidentRepository.save(action, target, parsed.data);
@@ -65,7 +67,7 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
     if (missing) { setUnavailable(true); return; }
     if (!saved) return;
     setEventSaved(true);
-    notify({ tone: "success", title: `Đã ${action === "damage" ? "báo hỏng" : action === "repair" ? "sửa" : "ngừng hoạt động"} làn ${laneNumber} · ${raftCode}.` });
+    notify({ tone: "success", title: `Đã ${action === "damage" ? "báo hỏng" : action === "repair" ? "sửa" : action === "restore" ? "khôi phục hoạt động" : "ngừng hoạt động"} làn ${laneNumber} · ${raftCode}.` });
     if (file) {
       if (!saved.incident?.id) { setError("Sự cố đã lưu. Chưa có mã sự cố để gửi ảnh; hãy tải lại lịch sử làn trước khi bổ sung ảnh."); return; }
       setIncidentId(saved.incident.id);
@@ -77,8 +79,8 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
   return <form noValidate aria-label={`${incidentActionLabel[action]} làn ${laneNumber}`} onSubmit={event => { event.preventDefault(); void save(); }} className="mt-3 space-y-3">
     {confirmation.dialog}
     <fieldset disabled={mutation.pending || mutation.blocked || unavailable || eventSaved} className="grid gap-3">
-      <Note label={action === "repair" ? "Nội dung sửa *" : "Lý do *"} required maxLength={500} value={reason} onChange={event => setReason(event.target.value)} />
-      {action === "repair" ? <LaneIncidentStock lines={lines} onChange={setLines} onLoaded={loaded} />
+      <Note label={action === "repair" ? "Nội dung sửa (tùy chọn)" : action === "restore" ? "Lý do khôi phục (tùy chọn)" : "Lý do *"} required={action === "damage" || action === "discontinue"} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} />
+      {action === "repair" || action === "restore" ? <LaneIncidentStock lines={lines} onChange={setLines} onLoaded={loaded} />
         : <Field label="Ảnh sự cố (tùy chọn, JPEG/PNG, tối đa 10 MB)" type="file" accept="image/jpeg,image/png" onChange={event => setFile(event.target.files?.[0])} />}
       {action === "discontinue" && hasSeed && <p className="text-sm">Làn đang có giống: sẽ ghi sự kiện mất giống không số lượng và coi làn đã kết thúc khi đóng chu kỳ.</p>}
     </fieldset>
@@ -95,7 +97,7 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
     <div className="flex flex-wrap justify-end gap-2">
       {eventSaved || mutation.blocked ? <Button key="reload-incident" type="button" variant="secondary" className="w-auto" disabled={mutation.pending} onClick={onSaved}>Tải lại làn</Button>
         : <Button key="cancel-incident" type="button" variant="secondary" className="w-auto" disabled={mutation.pending} onClick={() => void cancel()}>Bỏ qua</Button>}
-      <Button key="save-incident" type="submit" className="w-auto" isPending={mutation.pending} disabled={mutation.blocked || unavailable || eventSaved || action === "repair" && !stock}>Lưu</Button>
+      <Button key="save-incident" type="submit" className="w-auto" isPending={mutation.pending} disabled={mutation.blocked || unavailable || eventSaved || lines.length > 0 && !stock}>Lưu</Button>
     </div>
   </form>;
 }
