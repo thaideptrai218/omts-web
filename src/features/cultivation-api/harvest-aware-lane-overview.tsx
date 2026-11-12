@@ -7,6 +7,7 @@ import { FinishHarvestOverview } from "./finish-harvest-overview";
 import { harvestList } from "./records-contracts";
 import { harvestRepo, useAllowed } from "./records-shared";
 import { eligibleToFinish } from "./finish-harvest-model";
+import { OperatingLaneOverview } from "@/features/rafts-api/operating-lane-overview";
 
 /** Raft and progress maps use current backend eligibility; a historical cycle never offers a current-cycle write. */
 export function HarvestAwareLaneOverview({ raftId, zoneId, cycleId, rowVersion, allowFinish = true, onChanged, ...overview }: ComponentProps<typeof LaneOverview> & {
@@ -22,10 +23,11 @@ export function HarvestAwareLaneOverview({ raftId, zoneId, cycleId, rowVersion, 
     const fresh = current.lanes.find(value => value.laneNumber === lane.laneNumber);
     return fresh ? { ...lane, ...fresh, state: fresh.state ?? lane.state } : lane;
   }) : overview.lanes;
+  const scope = { raftId, zoneId, cycleId, readOnly: !allowFinish || !!cycleId && current?.cycle?.id !== cycleId, onChanged: () => { remote.reload(); onChanged?.(); } };
   return <>
-    {canFinish ? <FinishHarvestOverview {...overview} lanes={lanes} raftId={raftId} zoneId={zoneId} rowVersion={rowVersion}
+    {canFinish ? <FinishHarvestOverview {...overview} lanes={lanes} loading={overview.loading || remote.loading} raftId={raftId} zoneId={zoneId} rowVersion={rowVersion} operatingScope={scope}
       eligibleLaneNumbers={current.lanes.filter(eligibleToFinish).map(lane => lane.laneNumber)} onChanged={() => { remote.reload(); onChanged?.(); }} />
-      : <LaneOverview {...overview} lanes={lanes} />}
+      : <OperatingLaneOverview {...overview} lanes={lanes} loading={overview.loading || remote.loading} scope={scope} />}
     {canRead && remote.error && <div className="mt-2 flex flex-wrap items-center gap-2 text-xs" role="alert"><span>{remote.error}</span><Button type="button" className="w-auto" variant="secondary" onClick={remote.reload}>Tải lại tình trạng thu hoạch</Button></div>}
   </>;
 }

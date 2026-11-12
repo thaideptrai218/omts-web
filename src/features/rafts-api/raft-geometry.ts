@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseRaftSize } from "./raft-size";
+import { laneProgressReadFields } from "@/features/farming-management/lane-progress-contracts";
 
 /** Optional additions preserve compatibility with existing raft responses. */
 export const raftGeometryFields = {
@@ -7,6 +8,7 @@ export const raftGeometryFields = {
   areaM2: z.number().nonnegative().nullish(), totalLineLengthM: z.number().nonnegative().nullish(), damagedLaneCount: z.number().int().nonnegative().optional(), outOfServiceLaneCount: z.number().int().nonnegative().optional(),
 };
 export const raftLaneFields = {
+  ...laneProgressReadFields,
   lineLengthM: z.number().positive().nullish(), lineLengthOverridden: z.boolean().optional(), isOutOfService: z.boolean().optional(), outOfServiceOn: z.string().nullish(),
   isDamaged: z.boolean().optional(), state: z.string().optional(),
 };

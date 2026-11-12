@@ -1,13 +1,15 @@
 "use client";
 import { useId, useRef, useState } from "react";
-import { LaneOverview } from "@/features/farming-management/lane-overview";
+import { LanePickerOverview as LaneOverview, type LanePickerDraftProps } from "./lane-picker-overview";
+import type { LaneOverviewItem } from "@/features/farming-management/lane-overview";
+import type { LaneOperatingScope } from "@/features/rafts-api/lane-operating-details";
 import { compressLaneNumbers, parseLaneRanges } from "@/features/farming-management/lane-ranges";
 import { Switch } from "@/components/ui/switch";
 
-type Lane = { laneNumber: number; state?: string; canSeed: boolean; isDamaged?: boolean; isOutOfService?: boolean };
+type Lane = LaneOverviewItem & { canSeed: boolean };
 
 /** Bulk selection only offers lanes allowed by the backend; existing corrections retain their lanes. */
-export function SeedingLanePicker({ lanes: source, notSeededLanes, choices, values, editing, onChange }: { lanes: readonly Lane[]; notSeededLanes: readonly number[]; choices: number[]; values: number[]; editing: boolean; onChange(values: number[]): void }) {
+export function SeedingLanePicker({ lanes: source, notSeededLanes, choices, values, editing, onChange, scope, onDirty, onPending }: { lanes: readonly Lane[]; notSeededLanes: readonly number[]; choices: number[]; values: number[]; editing: boolean; onChange(values: number[]): void; scope?: LaneOperatingScope } & LanePickerDraftProps) {
   const lanes = source.map(lane => ({ ...lane, state: lane.state ?? (notSeededLanes.includes(lane.laneNumber) ? "NotSeeded" : "Growing") }));
   const [supplement, setSupplement] = useState(false), [range, setRange] = useState(""), [error, setError] = useState<string>();
   const anchor = useRef<number | undefined>(undefined), id = useId();
@@ -34,7 +36,7 @@ export function SeedingLanePicker({ lanes: source, notSeededLanes, choices, valu
     <label className="flex items-center gap-2 text-xs"><Switch checked={supplement} onChange={event => setSupplement(event.target.checked)} />Thả bổ sung vào làn đang nuôi</label>
     {!!seeded.length && <p className="text-xs text-text-muted">Đã thả: làn {compressLaneNumbers(seeded)}</p>}
     {!!values.length && <p className="text-xs font-medium text-primary">Đang chọn: làn {compressLaneNumbers(values)}</p>}
-    <LaneOverview lanes={visible} selected={values} onSelectionChange={update} label="Làn có thể thả giống" onLaneClick={(number, event) => {
+    <LaneOverview scope={scope} onDirty={onDirty} onPending={onPending} lanes={visible} selected={values} onSelectionChange={update} label="Làn có thể thả giống" onLaneClick={(number, event) => {
       if (event.shiftKey && anchor.current !== undefined) {
         const low = Math.min(anchor.current, number), high = Math.max(anchor.current, number);
         update([...values, ...visible.filter(lane => lane.laneNumber >= low && lane.laneNumber <= high).map(lane => lane.laneNumber)]);

@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { cycleSummary } from "./contracts";
 import { crewIds, crewReadFields } from "./harvest-crew-contracts";
+import { laneProgressReadFields } from "@/features/farming-management/lane-progress-contracts";
 const numbers = z.array(z.number().int().positive());
-const incidentLaneFields = { isDamaged: z.boolean().optional(), isOutOfService: z.boolean().optional(), statusId: z.number().int().optional(), lineLengthM: z.number().positive().nullish() };
+const incidentLaneFields = { ...laneProgressReadFields, isDamaged: z.boolean().optional(), isOutOfService: z.boolean().optional(), statusId: z.number().int().optional(), lineLengthM: z.number().positive().nullish() };
 // Ids/codes of the receipt, supplier and item let every seed lot link to its own record (cross-reference ids of 11/11/2026; all optional).
 const seedLot = z.object({ id: z.guid(), code: z.string(), receiptCode: z.string(), supplierName: z.string(), unit: z.string(), itemName: z.string().nullable(), receiptId: z.guid().nullish(), supplierId: z.guid().nullish(), itemId: z.guid().nullish(), itemCode: z.string().nullish() });
 export const seedLots = z.object({ raftId: z.guid(), lots: z.array(seedLot.extend({ quantityReceived: z.number(), quantitySeeded: z.number(), boughtForThisRaft: z.boolean(), onHand: z.number().nullable().optional(), quantityReturned: z.number().nullish(), quantityConsumed: z.number().nullish() })) });

@@ -24,11 +24,12 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState<RaftDraft>(() => raftDraftOf(raft));
   const [errors, setErrors] = useState<Partial<Record<RaftField, string>>>({}), [reloaded, setReloaded] = useState(false);
+  const [laneDirty, setLaneDirty] = useState(false), [lanePending, setLanePending] = useState(false);
   const mutation = useMutation(), warnCoordinates = useCoordinateWarnings();
   const laneLock = useRaftLaneLock(raft.id), laneCountLocked = laneLock.reason;
-  const dirty = editing && JSON.stringify(draft) !== JSON.stringify(raftDraftOf(raft));
+  const dirty = laneDirty || lanePending || editing && JSON.stringify(draft) !== JSON.stringify(raftDraftOf(raft));
   useEffect(() => { dirtyRef.current = dirty; return () => { dirtyRef.current = false; }; }, [dirty, dirtyRef]);
-  const discontinued = raft.statusId === DISCONTINUED, locked = busy || mutation.pending;
+  const discontinued = raft.statusId === DISCONTINUED, locked = busy || mutation.pending || lanePending || laneDirty;
 
   function begin() { setDraft(raftDraftOf(raft)); setErrors({}); setReloaded(false); mutation.reviewed(); setEditing(true); }
   function cancel() { if (mutation.busy()) return; setEditing(false); setErrors({}); mutation.reviewed(); }
@@ -51,7 +52,7 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
         ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude], ["Tình trạng bè", raft.conditionNotes],
       ]} />}
     </fieldset>
-    {!editing && <RaftLaneDiagram lanes={raft.lanes} length={geometryOf(raft).length} harvestScope={{ raftId: raft.id, zoneId, rowVersion: raft.rowVersion, onChanged: onReload }} />}
+    {!editing && <RaftLaneDiagram lanes={raft.lanes} length={geometryOf(raft).length} harvestScope={{ raftId: raft.id, zoneId, rowVersion: raft.rowVersion, onChanged: onReload, onDirty: setLaneDirty, onPending: setLanePending }} />}
     {editing && laneLock.failed && <Button key="retry-cycle" type="button" variant="secondary" className="w-auto" onClick={laneLock.reload}>Kiểm tra lại chu kỳ</Button>}
     <ErrorNotice error={mutation.error} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Chưa xác nhận được kết quả lưu. Hãy tải hồ sơ mới để đối chiếu; nội dung đang nhập vẫn được giữ.</p><div>

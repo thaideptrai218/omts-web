@@ -2,30 +2,39 @@
 import { useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { compressLaneNumbers } from "./lane-ranges";
 import { toggleLaneSelection } from "./lane-selection";
+import { laneProgressDisplay, laneStateLabels, type LaneProgressFacts } from "./lane-progress-display";
+import type { LaneProgressMetadata } from "./lane-progress-contracts";
+import { LaneColumn } from "./lane-column";
+import { LaneDetailPopover } from "./lane-detail-popover";
 import styles from "./lane-overview.module.css";
 
-export type LaneOverviewItem = { laneNumber: number; state?: string; statusId?: number; isDamaged?: boolean; isOutOfService?: boolean; disabled?: boolean; description?: string };
-const labels: Record<string, string> = { NotSeeded: "Chưa thả", Growing: "Đang nuôi", BeingHarvested: "Đang thu", Harvested: "Đã thu", Damaged: "Hỏng", OutOfService: "Ngừng hoạt động", Available: "Đang sử dụng" };
-export function laneOverviewState(lane: LaneOverviewItem): string {
-  if (lane.isOutOfService || lane.statusId === 2002 || lane.state === "OutOfService") return "OutOfService";
-  if (lane.isDamaged) return "Damaged";
-  return lane.state && labels[lane.state] ? lane.state : "Available";
-}
-
-/** One physical lane has one numbered cell. Details are rendered once, below the whole grid. */
-export function LaneOverview({ lanes, selected, opened, onLaneClick, label = "Sơ đồ làn", children, loading = false, emptyMessage = "Chưa có thông tin làn.", onSelectionChange, eligibleLaneNumbers, selectionAction, selectionDisabled = false }: {
+export type LaneOverviewItem = Omit<LaneProgressFacts, "state"> & Partial<Omit<LaneProgressMetadata, "state">> & { state?: string | number | null; disabled?: boolean; description?: string };
+export const laneOverviewState = (lane: LaneOverviewItem) => laneProgressDisplay(lane).state;
+type Props = {
   lanes: readonly LaneOverviewItem[]; selected?: readonly number[]; opened?: number;
-  onLaneClick?(laneNumber: number, event: MouseEvent<HTMLButtonElement>): void; label?: string; children?: ReactNode; loading?: boolean; emptyMessage?: string;
-  onSelectionChange?(numbers: number[]): void; eligibleLaneNumbers?: readonly number[]; selectionAction?: ReactNode; selectionDisabled?: boolean;
-}) {
+  onLaneClick?(laneNumber: number, event: MouseEvent<HTMLButtonElement>): void | boolean | Promise<boolean>;
+  onCloseLane?(): void | boolean | Promise<boolean>;
+  label?: string; children?: ReactNode; loading?: boolean; emptyMessage?: string;
+  renderLaneDetails?(lane: LaneOverviewItem): ReactNode;
+  onSelectionChange?(numbers: number[]): void; eligibleLaneNumbers?: readonly number[];
+  selectionAction?: ReactNode; selectionDisabled?: boolean;
+  onDirty?(dirty: boolean): void; onPending?(pending: boolean): void;
+};
+
+/** Native horizontal scrolling keeps 100+ columns responsive, without a render on scroll. Only one detail is mounted. */
+export function LaneOverview(props: Props) {
+  const { lanes, selected, onLaneClick, label = "Sơ đồ làn", children, loading = false, emptyMessage = "Chưa có thông tin làn.",
+    onSelectionChange, eligibleLaneNumbers, selectionAction, selectionDisabled = false, renderLaneDetails } = props;
   const [query, setQuery] = useState(""), [filter, setFilter] = useState("");
   const [selecting, setSelecting] = useState(false), [localSelection, setLocalSelection] = useState<number[]>([]);
-  const selectionAnchor = useRef<number | undefined>(undefined);
-  const selectionShift = useRef(false);
-  const grid = useRef<HTMLDivElement>(null), searchId = useId();
+  const [localOpened, setLocalOpened] = useState<number>(), [anchor, setAnchor] = useState<HTMLElement>();
+  const selectionAnchor = useRef<number | undefined>(undefined), viewport = useRef<HTMLDivElement>(null), searchId = useId();
+  const opened = Object.hasOwn(props, "opened") ? props.opened : localOpened;
   const sorted = [...lanes].sort((a, b) => a.laneNumber - b.laneNumber);
-  const states = ["NotSeeded", "Growing", "BeingHarvested", "Harvested", "Damaged", "OutOfService", "Available"].filter(state => sorted.some(lane => laneOverviewState(lane) === state));
-  const activeFilter = states.includes(filter) ? filter : "";
+  const counts = new Map<string, number>();
+  for (const lane of sorted) { const state = laneOverviewState(lane); counts.set(state, (counts.get(state) ?? 0) + 1); }
+  const states = (Object.keys(laneStateLabels) as (keyof typeof laneStateLabels)[]).filter(state => counts.has(state));
+  const activeFilter = states.includes(filter as keyof typeof laneStateLabels) ? filter : "";
   const found = Number(query), match = sorted.find(lane => lane.laneNumber === found);
   const visible = sorted.filter(lane => !activeFilter || laneOverviewState(lane) === activeFilter || lane.laneNumber === found);
   const eligible = sorted.filter(lane => !lane.disabled && (!eligibleLaneNumbers || eligibleLaneNumbers.includes(lane.laneNumber))).map(lane => lane.laneNumber);
@@ -36,32 +45,38 @@ export function LaneOverview({ lanes, selected, opened, onLaneClick, label = "S�
     selectionAnchor.current = number;
   }
   function find(value: string) {
-    const clean = value.replace(/\D/g, "");
-    setQuery(clean);
-    const number = Number(clean);
-    // Scroll only the map, so finding a lane does not jump the surrounding dialog/page.
+    const clean = value.replace(/\D/g, ""); setQuery(clean);
     requestAnimationFrame(() => {
-      const cell = grid.current?.querySelector<HTMLElement>(`[data-lane="${number}"]`);
-      if (grid.current && cell) grid.current.scrollTop = Math.max(0, cell.offsetTop - (grid.current.querySelector<HTMLElement>("header")?.offsetHeight ?? 0) - 8);
+      const cell = viewport.current?.querySelector<HTMLElement>(`[data-lane="${Number(clean)}"]`);
+      if (viewport.current && cell) viewport.current.scrollTo({ left: Math.max(0, cell.offsetLeft - 12) });
     });
   }
-  return <section className={styles.overview} aria-label={label} aria-busy={loading}>
-    <div ref={grid} className={styles.viewport}>
+  async function close() {
+    if (props.onCloseLane && await props.onCloseLane() === false) return false;
+    setLocalOpened(undefined); return true;
+  }
+  const openedLane = !selecting && !loading ? visible.find(lane => lane.laneNumber === opened) : undefined;
+  return <section className={styles.overview} aria-label={label} aria-busy={loading} data-lane-overview>
     <header className={styles.sticky}>
-      <div className={styles.toolbar}><strong>{label} <span>({lanes.length})</span></strong><label htmlFor={searchId} className={styles.search}><span>Tìm làn số</span><input id={searchId} className="omts-control" inputMode="numeric" autoComplete="off" placeholder="Tìm làn số…" disabled={loading || !lanes.length} value={query} onChange={event => find(event.target.value)} /></label><button type="button" className={styles.selectButton} aria-pressed={selecting} disabled={loading || selectionDisabled || !lanes.length} onClick={() => { if (selecting) updateSelection([]); setSelecting(current => !current); selectionAnchor.current = undefined; }}>{selecting ? "Thoát chế độ chọn" : "Chọn"}</button></div>
+      <div className={styles.toolbar}><strong>{label} <span>({lanes.length})</span></strong><label htmlFor={searchId} className={styles.search}><span>Tìm làn số</span><input id={searchId} className="omts-control" inputMode="numeric" autoComplete="off" placeholder="Tìm làn số…" disabled={loading || !lanes.length} value={query} onChange={event => find(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); find(query); } }} /></label>
+        <button key={selecting ? "exit-lane-selection" : "enter-lane-selection"} type="button" className={styles.selectButton} aria-pressed={selecting} disabled={loading || selectionDisabled || !lanes.length} onClick={async () => { if (!await close()) return; if (selecting) updateSelection([]); setSelecting(current => !current); selectionAnchor.current = undefined; }}>{selecting ? "Thoát chế độ chọn" : "Chọn"}</button></div>
       {selecting && <div className={styles.selectionBar}><label><input type="checkbox" className="omts-check" checked={!!eligible.length && chosen.length === eligible.length} ref={element => { if (element) element.indeterminate = chosen.length > 0 && chosen.length < eligible.length; }} disabled={loading || selectionDisabled || !eligible.length} onChange={event => updateSelection(event.target.checked ? eligible : [])} />Chọn tất cả</label><span role="status">Đã chọn {chosen.length} làn</span>{selectionAction}<span className={styles.selectionHint}>Giữ Shift để chọn một dải làn.</span></div>}
-      <div className={styles.filters} aria-label="Lọc tình trạng làn"><button type="button" aria-pressed={!activeFilter} disabled={loading} onClick={() => setFilter("")}>Tất cả <b>{lanes.length}</b></button>{states.map(state => <button key={state} type="button" data-state={state} disabled={loading} aria-pressed={activeFilter === state} onClick={() => setFilter(activeFilter === state ? "" : state)}><i aria-hidden="true" />{labels[state]} <b>{sorted.filter(lane => laneOverviewState(lane) === state).length}</b></button>)}</div>
+      <div className={styles.filters} aria-label="Lọc tình trạng làn"><button type="button" aria-pressed={!activeFilter} disabled={loading} onClick={async () => { if (await close()) setFilter(""); }}>Tất cả <b>{lanes.length}</b></button>{states.map(state => <button key={state} type="button" data-state={state} disabled={loading} aria-pressed={activeFilter === state} onClick={async () => { if (await close()) setFilter(activeFilter === state ? "" : state); }}><i aria-hidden="true" />{laneStateLabels[state]} <b>{counts.get(state)}</b></button>)}</div>
       {!!lanes.length && <p className={styles.summary} role="status">{query && !match ? `Không có làn số ${query}.` : `Hiển thị ${visible.length}/${lanes.length} làn · Làn ${compressLaneNumbers(visible.map(lane => lane.laneNumber))}`}{!!selected?.length && ` · Đã chọn ${selected.length} làn`}</p>}
     </header>
-    {loading ? <div className={styles.grid} role="status"><span className="sr-only">Đang tải sơ đồ làn…</span>{Array.from({ length: 20 }, (_, index) => <div key={index} className={`omts-skeleton ${styles.skeleton}`} aria-hidden="true" />)}</div> : !lanes.length ? <div className={styles.empty} role="status"><strong>Chưa có làn để hiển thị</strong><p>{emptyMessage}</p></div> : <div className={styles.grid} role="group" aria-label={label}>
-      {visible.map(lane => { const state = laneOverviewState(lane), active = selecting ? chosen.includes(lane.laneNumber) : selected?.includes(lane.laneNumber) ?? opened === lane.laneNumber;
-        const description = `Làn ${lane.laneNumber}: ${labels[state]}${lane.description ? ` · ${lane.description}` : ""}`;
-        const attributes = { "data-lane": lane.laneNumber, "data-state": state, "data-found": lane.laneNumber === found || undefined, "data-active": active || undefined };
-        return selecting ? <label key={lane.laneNumber} className={styles.selectionCell} {...attributes} title={description}><input type="checkbox" className="omts-check" aria-label={description} checked={active} disabled={selectionDisabled || !eligible.includes(lane.laneNumber)} onClick={event => { selectionShift.current = event.shiftKey; }} onChange={() => { toggle(lane.laneNumber, selectionShift.current); selectionShift.current = false; }} /><span>{lane.laneNumber}</span></label>
-          : <button key={lane.laneNumber} type="button" {...attributes} aria-label={description} title={description} aria-pressed={selected ? active : undefined} aria-expanded={onLaneClick && !selected ? active : undefined} disabled={lane.disabled || !onLaneClick} onClick={event => onLaneClick?.(lane.laneNumber, event)}>{lane.laneNumber}{active && <span aria-hidden="true">✓</span>}</button>;
-      })}
-    </div>}
+    <div ref={viewport} className={styles.viewport} data-lane-scroller>
+      {loading ? <div className={styles.columns} role="status"><span className="sr-only">Đang tải sơ đồ làn…</span>{Array.from({ length: 12 }, (_, index) => <div key={index} className={`omts-skeleton ${styles.skeleton}`} aria-hidden="true" />)}</div>
+        : !lanes.length ? <div className={styles.empty} role="status"><strong>Chưa có làn để hiển thị</strong><p>{emptyMessage}</p></div>
+          : <div className={styles.columns} role="group" aria-label={label} data-lane-columns>{visible.map(lane => <LaneColumn key={lane.laneNumber} lane={lane} found={lane.laneNumber === found}
+            active={selecting ? chosen.includes(lane.laneNumber) : opened === lane.laneNumber || selected?.includes(lane.laneNumber) === true} expanded={opened === lane.laneNumber} selecting={selecting}
+            disabled={selecting ? selectionDisabled || !eligible.includes(lane.laneNumber) : !!lane.disabled}
+            onToggle={shift => toggle(lane.laneNumber, shift)} onClick={async event => { const target = event.currentTarget; if (await onLaneClick?.(lane.laneNumber, event) === false) return; setAnchor(target); setLocalOpened(current => current === lane.laneNumber ? undefined : lane.laneNumber); }} />)}</div>}
     </div>
-    {children && <div className={styles.detail}>{children}</div>}
+    {!!lanes.length && <p className={styles.legend}>Kéo ngang hoặc dùng phím ← → để xem làn · Màu đổ theo % · Xám gạch: ngừng hoạt động</p>}
+    {openedLane && anchor && <LaneDetailPopover anchor={anchor} number={openedLane.laneNumber} onClose={close}>
+      <p className={styles.facts}>{laneProgressDisplay(openedLane).description}</p>
+      {openedLane.description && <p className={styles.summary}>{openedLane.description}</p>}
+      {renderLaneDetails?.(openedLane)}{children}
+    </LaneDetailPopover>}
   </section>;
 }

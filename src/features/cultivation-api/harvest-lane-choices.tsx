@@ -2,7 +2,8 @@
 import { useMemo, useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { LaneOverview } from "@/features/farming-management/lane-overview";
+import { LanePickerOverview as LaneOverview, type LanePickerDraftProps } from "./lane-picker-overview";
+import type { LaneOperatingScope } from "@/features/rafts-api/lane-operating-details";
 import { formatLaneRanges, parseLaneRanges, uniqueSorted } from "./harvest-lane-ranges";
 import type { harvestLane } from "./records-contracts";
 
@@ -42,7 +43,7 @@ const cellStateOf = (lane: Lane): CellState => lane.statusId === 2002 || lane.is
  * The lanes of the raft as a compact numbered grid: only lanes that can be harvested are shown by default (a toggle reveals the rest, disabled, with the reason as a tooltip).
  * Quick controls pick all, none, a typed range ("1-10, 15, 20-25") or a shift-click range. Eligible lanes include those already being harvested.
  */
-export function HarvestLaneChoices({ lanes, values, onChange, label }: { lanes: Lane[]; values: number[]; onChange(values: number[]): void; label: string }) {
+export function HarvestLaneChoices({ lanes, values, onChange, label, scope, onDirty, onPending }: { lanes: Lane[]; values: number[]; onChange(values: number[]): void; label: string; scope?: LaneOperatingScope } & LanePickerDraftProps) {
   const [showAll, setShowAll] = useState(false), [typed, setTyped] = useState(""), [note, setNote] = useState<string>();
   const anchor = useRef<number>(undefined);
   const info = useMemo(() => [...lanes].sort((a, b) => a.laneNumber - b.laneNumber).map(lane => ({ lane, blocked: laneBlockedReason(lane), state: cellStateOf(lane) })), [lanes]);
@@ -94,7 +95,7 @@ export function HarvestLaneChoices({ lanes, values, onChange, label }: { lanes: 
       {hidden > 0 && <label className="flex w-fit items-center gap-2 text-sm">
         <input type="checkbox" className="omts-check" checked={showAll} onChange={event => setShowAll(event.target.checked)} />Hiện cả làn không thu được ({hidden})
       </label>}
-      <LaneOverview lanes={shown.map(({ lane, blocked, state }) => ({ ...lane, state, disabled: !!blocked, description: blocked }))}
+      <LaneOverview scope={scope} onDirty={onDirty} onPending={onPending} lanes={shown.map(({ lane, blocked, state }) => ({ ...lane, state, disabled: !!blocked, description: blocked }))}
         selected={values} onSelectionChange={set} label="Danh sách làn" emptyMessage="Chưa có làn nào thu hoạch được. Làn cần được thả giống và đang hoạt động."
         onLaneClick={(number, event) => click(number, event.shiftKey)} />
     </fieldset>

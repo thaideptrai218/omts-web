@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast-provider";
 import { LaneOverview } from "@/features/farming-management/lane-overview";
+import { OperatingLaneOverview } from "@/features/rafts-api/operating-lane-overview";
+import type { LaneOperatingScope } from "@/features/rafts-api/lane-operating-details";
 import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import { ErrorNotice, operationError, useMutation } from "@/features/operations/ui";
 import { finishHarvestLanes, type FinishHarvestOutcome } from "./finish-harvest-repository";
 
 type Props = Omit<ComponentProps<typeof LaneOverview>, "selected" | "onSelectionChange" | "selectionAction"> & {
-  raftId: string; zoneId: string; rowVersion?: string; onChanged(): void;
+  raftId: string; zoneId: string; rowVersion?: string; onChanged(): void; operatingScope?: LaneOperatingScope;
 };
 
 /** The selection is frozen while confirming; one atomic command or a reconciled legacy partial result. */
-export function FinishHarvestOverview({ raftId, zoneId, rowVersion, onChanged, ...overview }: Props) {
+export function FinishHarvestOverview({ raftId, zoneId, rowVersion, onChanged, operatingScope, ...overview }: Props) {
   const [selected, setSelected] = useState<number[]>([]), [confirming, setConfirming] = useState<number[]>();
   const [partial, setPartial] = useState<FinishHarvestOutcome>();
   const mutation = useMutation(), { notify } = useToast();
@@ -35,7 +37,7 @@ export function FinishHarvestOverview({ raftId, zoneId, rowVersion, onChanged, .
   }
   const failure = partial?.failure ?? mutation.failure;
   return <>
-    <LaneOverview {...overview} selected={selectedEligible} onSelectionChange={setSelected} selectionDisabled={overview.selectionDisabled || mutation.pending}
+    <OperatingLaneOverview {...overview} scope={operatingScope ?? { raftId, zoneId, onChanged }} selected={selectedEligible} onSelectionChange={setSelected} selectionDisabled={overview.selectionDisabled || mutation.pending}
       selectionAction={<Button type="button" className="w-auto" variant="secondary" disabled={!selectedEligible.length || overview.selectionDisabled || mutation.pending} onClick={() => { mutation.reviewed(); setPartial(undefined); setConfirming([...selectedEligible]); }}>Hoàn tất thu hoạch</Button>} />
     {confirming && <Dialog open title="Hoàn tất thu hoạch các làn đã chọn?" dismissible={!mutation.pending} mobileLayout="compact" onOpenChange={open => { if (!open) close(); }}>
       <p className="text-sm font-semibold">Làn {compressLaneNumbers(confirming)}</p>

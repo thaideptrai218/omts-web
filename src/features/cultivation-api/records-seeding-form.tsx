@@ -35,12 +35,13 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   const [date, setDate] = useState(record?.seedingDate ?? businessToday()), [lot, setLot] = useState(record?.seedLot.id ?? "");
   const [quantity, setQuantity] = useState(String(record?.quantity ?? "")), [lanes, setLanes] = useState(record?.laneNumbers ?? []);
   const [reason, setReason] = useState(""), [overReason, setOverReason] = useState(""), [asked, setAsked] = useState(false), [error, setError] = useState<string>();
+  const [laneDirty, setLaneDirty] = useState(false), [lanePending, setLanePending] = useState(false);
   const dirty = date !== (record?.seedingDate ?? businessToday()) || lot !== (record?.seedLot.id ?? "") || quantity !== String(record?.quantity ?? "") || JSON.stringify(lanes) !== JSON.stringify(record?.laneNumbers ?? []) || !!reason;
   // The unit always comes from the Vật tư & Giống catalogue (the lot's unit), never a fixed word.
   const selectedLot = lots.data?.lots.find(v => v.id === lot);
   const seedUnit = selectedLot?.unit ?? record?.seedLot.unit ?? "mảnh";
   const { notify } = useToast();
-  const editor = useOperationEditor(onClose, dirty);
+  const editor = useOperationEditor(onClose, dirty || laneDirty, lanePending);
   const plan = useSeedingPlan(cycleId, quantity, record?.quantity ?? 0);
   const question = asked || isOverPlanQuestion(editor.mutation.failure);
   const onHand = selectedLot?.onHand ?? null, capacity = onHand === null ? null : onHand + (record && record.seedLot.id === lot ? record.quantity : 0);
@@ -67,6 +68,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     return undefined;
   }
   async function save() {
+    if (lanePending || laneDirty) { setError("Lưu hoặc bỏ thay đổi của làn trước khi lưu lần thả giống."); return; }
     const parsed = values(false), blocked = problem(parsed);
     if (blocked || !parsed.success) { setError(blocked); return; }
     setError(undefined);
@@ -75,6 +77,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     if (saved) done();
   }
   async function confirmOver() {
+    if (lanePending || laneDirty) return;
     const parsed = values(true), blocked = problem(parsed);
     if (blocked || !parsed.success) { setError(blocked ?? "Nhập lý do vượt kế hoạch (tối đa 1.000 ký tự)."); return; }
     setError(undefined);
@@ -84,7 +87,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   return <EditorFrame inline={!!record} title={record ? "Bản ghi thả giống" : "Ghi nhận thả giống"} editor={editor} error={error || stockError || lots.error}>
     {record && !record.canCorrect && <p className="mb-4 text-sm text-text-muted">Bản ghi đang được khóa theo trạng thái chu kỳ hoặc lô thu hoạch. Không thể sửa hoặc xóa ở trạng thái này.</p>}
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
-      <fieldset disabled={!editable || editor.disabled} className="space-y-4">
+      <fieldset disabled={!editable || editor.disabled || laneDirty} className="space-y-4">
         <Field label="Ngày thả giống *" type="date" required min={dateWindow.min} max={dateWindow.max} value={date} onChange={event => edited(setDate)(event.target.value)} />
         <Select label="Lô giống *" required value={lot} onChange={event => edited(setLot)(event.target.value)}>
           <option value="">Chọn lô giống</option>
@@ -94,18 +97,19 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
         <UnitField key="seeding-quantity" label="Số lượng giống *" unit={seedUnit} decimals={3} min={0.001} max={noNegative && capacity !== null ? capacity : undefined} required value={quantity} onChange={edited(setQuantity)}
           hint={onHand !== null ? `Còn ${n(onHand)} ${seedUnit} trong lô${over ? (noNegative ? ". Không được vượt tồn kho" : ". Số nhập đang lớn hơn tồn kho") : ""}` : undefined} />
         {plan.planned !== null && <PlanBar label="Giống đã thả" actual={plan.total} plan={plan.planned} unit={plan.seedUnit ?? seedUnit} hideOverNote note={`Giống đã thả ${n(plan.total)} / kế hoạch ${n(plan.planned)} ${plan.seedUnit ?? seedUnit} (${n(plan.percent!)}%) nếu lưu lần thả này.`} />}
-        <SeedingLanePicker lanes={data.lanes} notSeededLanes={data.notSeededLanes} choices={choices} values={lanes} editing={!!record} onChange={edited(setLanes)} />
+        <SeedingLanePicker lanes={data.lanes} notSeededLanes={data.notSeededLanes} choices={choices} values={lanes} editing={!!record} onChange={edited(setLanes)}
+          onDirty={setLaneDirty} onPending={setLanePending} scope={{ raftId, zoneId, cycleId, cycleRowVersion: data.cycleRowVersion, readOnly: !editable || editor.mutation.pending, onChanged: () => {} }} />
         {record && <Note label="Lý do điều chỉnh *" required value={reason} onChange={event => setReason(event.target.value)} />}
       </fieldset>
       {question && editable && <OverPlanConfirm reason={overReason} onReason={setOverReason} pending={editor.mutation.pending} dismissLabel="Sửa lại số liệu" confirmLabel="Xác nhận vượt kế hoạch" onDismiss={() => { setAsked(false); editor.mutation.reviewed(); }} onConfirm={() => void confirmOver()}
         message={`Tổng giống thả sẽ là ${n(plan.total)} ${plan.seedUnit ?? seedUnit}${plan.planned !== null ? `, ${n(plan.percent!)}% kế hoạch ${n(plan.planned)}` : ", vượt kế hoạch của chu kỳ"}.`} />}
       <div className="mt-4 flex justify-end gap-2">
         <Button className="w-auto" key="discard-seeding" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
-        {editable && <Button className="w-auto" key="save-seeding" type="submit" disabled={editor.disabled || lots.loading || !!lots.error || question || plan.hard}>Lưu</Button>}
+        {editable && <Button className="w-auto" key="save-seeding" type="submit" disabled={editor.disabled || laneDirty || lots.loading || !!lots.error || question || plan.hard}>Lưu</Button>}
       </div>
     </form>
     {lots.error && <Button type="button" variant="secondary" onClick={lots.reload}>Tải lại lô giống</Button>}
-    {record?.canCorrect && allowed("Delete") && <Button type="button" className="mt-3" variant="secondary" disabled={editor.disabled || !reason.trim()} onClick={async () => {
+    {record?.canCorrect && allowed("Delete") && <Button type="button" className="mt-3" variant="secondary" disabled={editor.disabled || laneDirty || !reason.trim()} onClick={async () => {
       if (await editor.submit(`Xóa lần thả giống ${record.seedLot.code}? Lượng giống được trả về kho và lý do được lưu trong nhật ký.`, () => seedRepo.write("remove", { reason, rowVersion: record.rowVersion }, z.object({ done: z.literal(true) }), record.id, zoneId))) { notify({ tone: "success", title: `Đã xóa lần thả giống ${record.seedLot.code}.` }); onSaved(); }
     }}>Xóa lần thả</Button>}
   </EditorFrame>;

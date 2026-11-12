@@ -27,7 +27,7 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
     if (plan.method !== "GET") {
       const guard = createCsrfGuard(process.env);
       if (guard.status !== "available") return json({ status: "unavailable" }, 503);
-      const check = guard.guard.checkHeaders(request, "POST");
+      const check = guard.guard.checkHeaders(request, request.method === "PUT" ? "PUT" : "POST");
       if (check.status !== "allowed") return json({ status: "rejected" }, check.status === "rejected" ? check.httpStatus : 503);
     }
     const initial = await gateway.resolve(request.headers.get("cookie"));
@@ -42,7 +42,7 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
     if (plan.jsonBody) {
       const guard = createCsrfGuard(process.env);
       if (guard.status !== "available") return json({ status: "unavailable" }, 503);
-      const checked = await guard.guard.check(request, { method: "POST", body: "json", maxBytes: 16_384, timeoutMs: 5000 });
+      const checked = await guard.guard.check(request, { method: request.method === "PUT" ? "PUT" : "POST", body: "json", maxBytes: 16_384, timeoutMs: 5000 });
       if (checked.status !== "allowed") return json({ status: "rejected" }, checked.status === "rejected" ? checked.httpStatus : 503);
       const values = plan.jsonBody.safeParse(checked.body.readForValidation());
       if (!values.success) return json({ status: "invalid-input", code: "MSG01" }, 400);

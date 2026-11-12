@@ -1,49 +1,52 @@
-﻿.overview { min-width: 0; margin-top: 12px; color: var(--omts-color-text); }
-.viewport { position: relative; max-height: 380px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); background: var(--omts-color-surface-subtle); }
-.viewport::-webkit-scrollbar { display: block; width: 6px; }
+.overview { min-width: 0; margin-top: 12px; color: var(--omts-color-text); }
+.viewport { position: relative; max-height: 280px; overflow: auto; scroll-behavior: smooth; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--omts-color-border-strong) var(--omts-color-surface-subtle); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); background: var(--omts-color-surface-subtle); }
+.viewport::-webkit-scrollbar { display: block; width: 8px; height: 8px; }
 .viewport::-webkit-scrollbar-thumb { border-radius: 6px; background: var(--omts-color-border-strong); }
-.sticky { position: sticky; top: 0; z-index: 1; padding: 10px 12px 8px; border-bottom: 1px solid var(--omts-color-border); background: var(--omts-color-surface); }
+.sticky { padding: 10px 0 8px; background: var(--omts-color-surface); }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; font-size: 13px; }
 .toolbar strong { flex: 1 1 140px; }
-.toolbar strong span { color: var(--omts-color-text-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
-.search { display: flex; flex: 0 1 230px; min-width: 0; align-items: center; gap: 8px; font-size: 12px; color: var(--omts-color-text-muted); }
+.toolbar strong span { color: var(--omts-color-text-muted); font-weight: 400; }
+.search { display: flex; flex: 0 1 250px; min-width: 0; align-items: center; gap: 8px; font-size: 12px; color: var(--omts-color-text-muted); }
 .search span { white-space: nowrap; }
 .search input { width: 100%; min-width: 0; }
 .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
-.filters button { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-control); padding: 3px 7px; font-size: 12px; line-height: 18px; background: var(--omts-color-surface); color: var(--omts-color-text-muted); cursor: pointer; }
-.filters button:hover { background: var(--omts-color-surface-subtle); border-color: var(--omts-color-border-strong); }
+.filters button { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-control); padding: 3px 7px; font-size: 12px; line-height: 18px; background: var(--omts-color-surface); color: var(--omts-color-text-muted); cursor: pointer; }
 .filters button[aria-pressed="true"] { border-color: var(--omts-brand, var(--omts-color-primary)); color: var(--omts-brand, var(--omts-color-primary)); background: var(--omts-brand-soft, var(--omts-color-primary-soft)); }
-.filters b { min-width: 16px; padding-left: 4px; border-left: 1px solid var(--omts-color-border); text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
-.filters i { height: 7px; width: 7px; flex: none; border-radius: 2px; background: var(--lane-color, var(--omts-color-border-strong)); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 7px; padding: 12px; }
-.grid button { position: relative; min-width: 0; height: 40px; border: 1px solid color-mix(in srgb, var(--lane-color, var(--omts-color-border-strong)) 45%, var(--omts-color-surface)); border-radius: var(--omts-radius-control); color: var(--lane-ink, var(--omts-color-text-muted)); background: var(--lane-bg, var(--omts-color-surface)); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; scroll-margin-top: 160px; }
-.grid button:not(:disabled) { cursor: pointer; }
-.grid button:disabled { opacity: 1; cursor: default; }
-.grid button:not(:disabled):hover { border-color: var(--lane-color, var(--omts-color-border-strong)); box-shadow: inset 0 0 0 1px currentColor; }
-.grid button[data-found] { outline: 2px solid var(--omts-color-warning); outline-offset: 1px; }
-.grid button[data-active] { outline: 2px solid var(--omts-brand, var(--omts-color-primary)); outline-offset: 1px; background: var(--omts-brand-soft, var(--omts-color-primary-soft)); color: var(--omts-brand, var(--omts-color-primary)); }
-.grid button:focus-visible, .filters button:focus-visible { outline: 3px solid var(--omts-color-focus-ring); outline-offset: 2px; }
-.grid button span { position: absolute; right: 2px; top: 2px; font-size: 9px; }
-.overview [data-state="NotSeeded"] { --lane-color: var(--omts-color-border-strong); --lane-bg: var(--omts-color-surface); --lane-ink: var(--omts-color-text-muted); }
-.overview [data-state="Available"], .overview [data-state="OutOfService"] { --lane-color: var(--omts-color-text-muted); --lane-bg: var(--omts-color-surface-subtle); --lane-ink: var(--omts-color-text-muted); }
-.overview [data-state="Growing"] { --lane-color: var(--omts-color-success); --lane-bg: color-mix(in srgb, var(--omts-color-success) 9%, var(--omts-color-surface)); --lane-ink: var(--omts-color-success); }
-.overview [data-state="BeingHarvested"] { --lane-color: var(--omts-color-warning); --lane-bg: color-mix(in srgb, var(--omts-color-warning-soft) 65%, var(--omts-color-surface)); --lane-ink: var(--omts-color-warning); }
-.overview [data-state="Harvested"] { --lane-color: var(--omts-color-info); --lane-bg: color-mix(in srgb, var(--omts-color-info) 6%, var(--omts-color-surface)); --lane-ink: var(--omts-color-info); }
-.overview [data-state="Damaged"] { --lane-color: var(--omts-color-danger); --lane-bg: var(--omts-color-danger-soft); --lane-ink: var(--omts-color-danger); }
-.overview [data-state="OutOfService"] { border-style: dashed; }
-.summary { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--omts-color-text-muted); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.empty { display: grid; gap: 4px; padding: 24px 16px; text-align: center; font-size: 13px; color: var(--omts-color-text-muted); }
-.empty strong { color: var(--omts-color-text); font-weight: 600; }
-.empty p { margin: 0; line-height: 1.6; }
-.skeleton { height: 40px; border-radius: var(--omts-radius-control); }
-.detail { margin-top: 12px; padding: 12px; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); background: var(--omts-color-surface); }
+.filters b { min-width: 16px; padding-left: 4px; border-left: 1px solid var(--omts-color-border); font-weight: 600; }
+.filters i { height: 10px; width: 10px; flex: none; border-radius: 2px; background: var(--lane-color, var(--omts-lane-empty)); }
+.columns { display: flex; width: max-content; min-width: 100%; gap: 8px; padding: 12px; }
+.column { position: relative; display: flex; flex: 0 0 64px; width: 64px; flex-direction: column; gap: 5px; border: 0; padding: 0; background: transparent; color: var(--omts-color-text); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; }
+.column:disabled { cursor: default; opacity: 1; }
+.laneNumber { position: sticky; top: 0; z-index: 1; display: block; width: 100%; border: 2px solid var(--lane-color); border-radius: 5px; padding: 5px 2px; background: var(--lane-color); color: var(--omts-lane-ink); text-align: center; }
+.track { position: relative; display: block; height: 150px; width: 100%; overflow: hidden; border: 2px solid var(--lane-color); border-radius: 5px; background: var(--omts-lane-track); }
+.fill, .seededFill { position: absolute; inset: auto 0 0; background: var(--lane-color); }
+.seededFill { background: var(--omts-lane-growing); }
+.percent { position: absolute; inset: 50% 2px auto; transform: translateY(-50%); border-radius: 3px; padding: 3px 0; background: var(--omts-lane-track); color: var(--omts-lane-track-ink); font-size: 11px; text-align: center; line-height: 16px; }
+.stateLabel { font-size: 10px; line-height: 14px; min-height: 28px; text-align: center; }
+.column[data-active] .track, .column[data-active] .laneNumber { outline: 2px solid var(--omts-brand, var(--omts-color-primary)); outline-offset: 2px; }
+.column[data-found] .track { outline: 3px solid var(--omts-color-warning); outline-offset: 2px; }
+.column:not(:disabled):hover .track { box-shadow: inset 0 0 0 2px var(--lane-color); }
+.column:focus-visible, .column:focus-within, .filters button:focus-visible, .selectButton:focus-visible { outline: 3px solid var(--omts-color-focus-ring); outline-offset: 3px; border-radius: 5px; }
+.laneCheck { position: absolute; top: 38px; left: 5px; z-index: 2; }
+.overview [data-state="NotSeeded"], .overview [data-state="Available"] { --lane-color: var(--omts-lane-empty); }
+.overview [data-state="Growing"] { --lane-color: var(--omts-lane-growing); }
+.overview [data-state="BeingHarvested"] { --lane-color: var(--omts-lane-harvesting); }
+.overview [data-state="Harvested"] { --lane-color: var(--omts-lane-harvested); }
+.overview [data-state="Damaged"] { --lane-color: var(--omts-lane-damaged); }
+.overview [data-state="OutOfService"] { --lane-color: var(--omts-lane-inactive); }
+.column[data-state="OutOfService"] .fill, .filters [data-state="OutOfService"] i { background: repeating-linear-gradient(135deg, var(--omts-lane-inactive) 0 6px, var(--omts-lane-track) 6px 10px); }
+.summary, .legend { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--omts-color-text-muted); overflow-wrap: anywhere; }
+.legend { font-size: 11px; }
+.empty { padding: 24px 16px; text-align: center; font-size: 13px; color: var(--omts-color-text-muted); }
+.empty strong { color: var(--omts-color-text); }
+.empty p { margin: 4px 0 0; }
+.skeleton { flex: 0 0 64px; height: 210px; border-radius: 5px; }
 .selectButton { min-height: 30px; padding: 3px 10px; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-control); color: var(--omts-brand, var(--omts-color-primary)); background: var(--omts-color-surface); cursor: pointer; }
-.selectButton:focus-visible { outline: 3px solid var(--omts-color-focus-ring); outline-offset: 2px; }
 .selectionBar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; font-size: 12px; }
 .selectionBar label { display: flex; align-items: center; gap: 6px; }
 .selectionHint { color: var(--omts-color-text-muted); font-size: 11px; }
-.selectionCell { display: flex; min-height: 40px; position: relative; align-items: center; justify-content: center; gap: 3px; flex-wrap: wrap; padding: 3px; border: 1px solid var(--lane-color, var(--omts-color-border)); border-radius: var(--omts-radius-control); background: var(--lane-bg, var(--omts-color-surface)); color: var(--lane-ink, var(--omts-color-text)); font-size: 12px; font-weight: 600; }
-.selectionCell[data-active] { outline: 2px solid var(--omts-brand, var(--omts-color-primary)); outline-offset: 1px; }
-.selectionCell[data-found] { outline: 2px solid var(--omts-color-warning); outline-offset: 1px; }
-.selectionCell:focus-within { outline: 3px solid var(--omts-color-focus-ring); outline-offset: 2px; }
-@media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 7px; padding: 10px; } .grid button { height: 44px; } .sticky { padding: 10px; } .filters button { min-height: 32px; } }
+.popover { position: fixed; inset: auto; margin: 0; width: min(440px, calc(100vw - 16px)); max-height: min(640px, calc(100dvh - 16px)); overflow: auto; scrollbar-width: thin; padding: 12px; border: 1px solid var(--omts-color-border-strong); border-radius: var(--omts-radius-card); background: var(--omts-color-surface); color: var(--omts-color-text); box-shadow: var(--omts-shadow-raised); z-index: 100; }
+.popoverHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.facts { margin: 8px 0; font-size: 12px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .viewport { scroll-behavior: auto; } }
+@media (max-width: 600px) { .search { flex: 1 1 180px; } .search span { display: none; } .filters button { min-height: 34px; } .track { height: 132px; } }

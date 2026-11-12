@@ -43,8 +43,9 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
   const [orderId, setOrderId] = useState(() => defaultHarvestOrderId(data.orders));
   const [error, setError] = useState<string>(), [photos, setPhotos] = useState<File[]>([]);
   const [crew, setCrew] = useState<string[]>([]);
+  const [laneDirty, setLaneDirty] = useState(false), [lanePending, setLanePending] = useState(false);
   const { notify } = useToast();
-  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length || !!crew.length);
+  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length || !!crew.length || laneDirty, lanePending);
   // With the finish-lane endpoint (canFinish is reported) the lane is finished by its own action; an older backend still takes it with the trip.
   const finishesWithTrip = !data.lanes.some(lane => lane.canFinish !== undefined && lane.canFinish !== null);
   const estimate = harvestEstimate(Number(cages), kg, data.averageKgPerCage);
@@ -62,6 +63,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
     return undefined;
   }
   async function save() {
+    if (lanePending || laneDirty) { setError("Lưu hoặc bỏ thay đổi của làn trước khi lưu chuyến thu hoạch."); return; }
     const parsed = values(), bad = invalid();
     if (!parsed.success) { setError(harvestInvalidFieldText(parsed.error)); return; }
     if (bad) { setError(bad); return; }
@@ -72,12 +74,13 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
   return <EditorFrame title="Ghi nhận chuyến thu hoạch" editor={editor} error={error}>
     <HarvestPlanSummary data={data} extraKg={estimate.effective} />
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
-      <fieldset disabled={editor.disabled} className={flowStyles.harvestFormGrid}>
+      <fieldset disabled={editor.disabled || laneDirty} className={flowStyles.harvestFormGrid}>
         <CollapsibleSection title="Yêu cầu mua" description="Chuyến thu này phục vụ yêu cầu mua nào." columns={1}>
           <HarvestOrderPicker orders={data.orders} value={orderId} onChange={setOrderId} />
         </CollapsibleSection>
         <CollapsibleSection title="Làn thu hoạch" description="Các làn trong chuyến thu." columns={1}>
-          <HarvestLaneChoices lanes={data.lanes} values={lanes} label="Làn thu hoạch *" onChange={next => { setLanes(next); setFinished(current => current.filter(n => next.includes(n))); }} />
+          <HarvestLaneChoices lanes={data.lanes} values={lanes} label="Làn thu hoạch *" onChange={next => { setLanes(next); setFinished(current => current.filter(n => next.includes(n))); }}
+            onDirty={setLaneDirty} onPending={setLanePending} scope={{ raftId, zoneId, cycleId: data.cycle?.id, cycleRowVersion: data.cycle?.rowVersion, readOnly: editor.mutation.pending || !data.canRecordHarvest, onChanged: () => {} }} />
           {finishesWithTrip && <div>
             <h4 className="mb-1 text-sm font-semibold">Xác nhận làn đã thu xong</h4>
             <p className={flowStyles.harvestHint}>{lanes.length ? "Tích những làn không còn hàu để thu. Làn không tích vẫn ở trạng thái Đang thu hoạch sau khi lưu." : "Chọn làn thu hoạch ở trên để hiện các ô xác nhận đã thu xong."}</p>
@@ -96,7 +99,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
       </fieldset>
       <div className={flowStyles.harvestFormFooter}>
         <Button key="discard-harvest" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
-        <Button key="save-harvest" type="submit" disabled={editor.disabled || !data.orders.length}>Lưu</Button>
+        <Button key="save-harvest" type="submit" disabled={editor.disabled || laneDirty || !data.orders.length}>Lưu</Button>
       </div>
     </form>
   </EditorFrame>;
