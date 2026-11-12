@@ -37,7 +37,7 @@ export function LaneProgressEditor({ lane, target, rowVersion, canEdit, onChange
       <fieldset className="grid grid-cols-2 gap-x-2 gap-y-2" disabled={mutation.pending || mutation.blocked}>
         <Field label="% đã thả" type="number" inputMode="decimal" min={0} max={100} step="any" value={seeded} onChange={event => setSeeded(event.target.value)} />
         <Field label="% đã thu" type="number" inputMode="decimal" min={0} max={100} step="any" placeholder="Chưa ghi %" value={harvested} onChange={event => setHarvested(event.target.value)} />
-        <div className="col-span-2"><Note label="Lý do điều chỉnh *" required maxLength={500} rows={2} value={reason} onChange={event => setReason(event.target.value)} disabled={mutation.pending || mutation.blocked} /></div>
+        <div className="col-span-2">{/* No native `required`: this editor sits inside the seeding/harvest forms, where an empty reason would block saving the record itself. save() validates the reason. */}<Note label="Lý do điều chỉnh *" maxLength={500} rows={2} value={reason} onChange={event => setReason(event.target.value)} disabled={mutation.pending || mutation.blocked} /></div>
       </fieldset>
       <ErrorNotice error={error || mutation.error} />
       {mutation.blocked && <p role="alert">Tải lại làn để đối chiếu kết quả trước khi lưu tiếp.</p>}
