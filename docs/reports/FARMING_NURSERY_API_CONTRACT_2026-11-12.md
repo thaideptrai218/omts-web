@@ -195,3 +195,81 @@ Lỗi dùng lại: `MSG-GEN-01` (400 trường), `MSG-INPUT-01` (thiếu tồn),
 1. Mở **Bắt đầu ươm**: `GET /api/nursery-batches/seed-lots?zoneId` hiện lô và tồn kho; nhập số mảnh, ngày, ghi chú, 1-3 ảnh; bảng xem lại (tồn trước = `onHand`, sau = `onHand - quantity`); `POST /api/zones/{zoneId}/nursery-batches`.
 2. **Hoàn tất ươm**: danh sách bè của vùng và bè nào đang có chu kỳ mở lấy từ `GET /api/zones/{zoneId}/cultivation-cycles` (màn chu kỳ theo vùng, cờ `canStart`); nhập sống sót, chia bè ("chia đều" làm phía web, nhớ phần dư làm tròn để tổng khớp đúng), sản lượng dự kiến từng bè, 1-3 ảnh; bảng xem lại; `POST …/complete`.
 3. Màn thả giống chu kỳ từ ươm: hiện "Còn {nurseryRemaining} trên {nurseryAllocated} mảnh đã phân bổ"; bỏ chọn lô giống; bắt 409 `NURSERY_SEEDING_ABOVE_ALLOCATION`.
+
+## 8. % làn và ảnh bắt buộc các bước (B2), ngày 12/11/2026
+
+Nguồn: đặc tả nursery mục 10.2-10.6 (ghi đè). Cùng nhánh `feature/OMTS-132-nursery`. Quy ước chung như đầu file (camelCase, `rowVersion` base64, lỗi problem có `status`, `code`, `message`, `field`, `hint`).
+
+### 8.1 Mô hình % và đọc làn
+
+- Mỗi làn trong **một chu kỳ** có hai số: `seededPercent` (0-100, phần đã thả nuôi) và `harvestedPercent` (0-100 hoặc `null` = "chưa ghi %": làn đã vào lô thu nhưng chưa ai nhập tỉ lệ; dữ liệu cũ đang thu một phần cũng là `null`). Thả giống/thu hoạch **cộng dồn** theo làn, **không vượt 100** trong cùng chu kỳ.
+- Backfill dữ liệu cũ: làn đã thả = 100; làn đã thu xong (đã bấm hoàn tất) = 100; làn đang thu một phần = `null`.
+- **Trạng thái làn suy ra từ %** (vẫn trả `state` như cũ): `harvestedPercent` = 100 hoặc có lô đánh dấu hoàn tất → `Harvested`; `harvestedPercent` > 0 (hoặc `null` nhưng làn nằm trong lô thu) → `BeingHarvested`; `seededPercent` > 0 → `Growing`; còn lại `NotSeeded`. Hỏng/ngừng hoạt động giữ cờ riêng như hiện nay.
+- Các DTO làn đọc **thêm trường** (thêm cuối, không phá tương thích): `LaneDayView` (làn hôm nay của bè, tiến độ chu kỳ, kết quả sự cố làn), `SeedingLaneView` (màn Thả giống), `HarvestLaneView` (màn Thu hoạch, nguồn `facts.data.lanes` của web), và `GET /api/rafts/{raftId}/lanes/{n}/progress`:
+```json
+{ "seededPercent": 60, "harvestedPercent": null, "lastModifiedByName": "Nguyễn Văn A", "lastModifiedAt": "2026-11-12T09:30:00+07:00",
+  "progressHistory": [ { "at": "…", "byName": "…", "reason": "Đếm lại", "oldSeededPercent": 40, "seededPercent": 60, "oldHarvestedPercent": null, "harvestedPercent": null } ] }
+```
+  `lastModified*` và `progressHistory` chỉ nói về các **lần chỉnh tay** (PUT mục 8.3), mới nhất trước; `null`/`[]` khi chưa ai chỉnh. Tên trường khớp `lane-progress-contracts.ts` của web (W1).
+- **Lệch so với W1:** không có `lane.rowVersion` riêng. `rowVersion` gửi cho PUT là **`rowVersion` của chu kỳ đang mở** (`cycle.rowVersion` trên màn Thu hoạch/Thả giống/tiến độ), vì mọi bản ghi thả/thu và chỉnh % đều di chuyển hàng chu kỳ. Web dùng nhánh dự phòng "phiên bản chu kỳ đang mở" như đã viết.
+
+### 8.2 % trong form thả giống và thu hoạch
+
+Cả hai form nhận trường **`lanePercents`**: **một trường** chuỗi JSON đối tượng `{"<số làn>": phần trăm}`, ví dụ `{"1":60,"2":100}`. Phần trăm là số > 0 và ≤ 100, tối đa 2 chữ số thập phân; chỉ gồm làn có trong `laneNumbers`.
+- **Thả giống**: làn không nêu = **100**. Cộng dồn đã thả + phần này **> 100** thì 400 (mục 8.5). Thả 60% rồi 40% = đủ 100; thêm 10% bị chặn.
+- **Thu hoạch**: làn không nêu thì: nếu làn được đánh dấu **hoàn tất** trong lô, tổng làn thành 100; nếu không hoàn tất, `null` (chưa ghi %, như dữ liệu cũ). Có nêu: cộng dồn đã thu + phần này **> 100** thì 400. Làn hoàn tất trong lô luôn thành 100 dù phần nhập là bao nhiêu. % thu **không liên kết** số lồng (hai số độc lập).
+- Sửa lô thu bỏ dấu "hoàn tất" của một làn mà không nêu % mới: phần % do lần hoàn tất đó tự gán bị xóa (về `null`, như lô không nêu % và không hoàn tất).
+- **Hoàn tất thu hoạch** (`POST /api/rafts/{raftId}/lanes/{n}/finish-harvest` và `POST /api/rafts/{raftId}/finish-harvest`): đặt `harvestedPercent` = 100.
+- Sửa thả giống / lô thu (PUT) nhận lại `lanePercents` (làn giữ nguyên mà không nêu thì giữ % cũ; làn mới mặc định như trên).
+- Đọc lại phần từng làn của một bản ghi: `SeedingRecordView.lanePercents: [{ laneNumber, percent }]` và `HarvestLotView.lanePercents: [{ laneNumber, percent }]` (`percent` là `null` khi chưa ghi). Cờ `canSeed` của làn trên màn Thả giống vẫn theo trạng thái làn như trước; web nên coi làn có `seededPercent` = 100 là đã đầy (backend chặn bằng 400 `LanePercent`, `remainingPercent` 0).
+
+### 8.3 Chỉnh % sau: `PUT /api/rafts/{raftId}/lanes/{n}/progress`
+
+JSON `{ "seededPercent"?: 0-100, "harvestedPercent"?: 0-100, "reason": "…", "rowVersion": "<cycle.rowVersion>" }`: ít nhất một %, `reason` bắt buộc (≤ 500). Quyền chức năng `CultivationCycles` **Edit** trong vùng của bè (Chủ HTX, Quản lý vùng). Chỉ chu kỳ **đang mở** trên bè đang dùng; làn đang dùng, chưa ngừng hoạt động và **đã có thả giống** trong chu kỳ (`state` khác `NotSeeded`).
+- 200 (đối tượng làn phẳng, như W1 giả định):
+```json
+{ "laneNumber": 3, "seededPercent": 100, "harvestedPercent": 40, "state": "BeingHarvested", "rowVersion": "<rowVersion chu kỳ mới>",
+  "lastModifiedByName": "…", "lastModifiedAt": "…", "progressHistory": [ … ], "changed": true, "cycleId": "…", "message": "Lane progress saved.", "messageCode": "MSG-GEN-05" }
+```
+  Gửi đúng giá trị đang có: 200 `changed: false`, không lưu, không ghi lịch sử.
+- Lịch sử: mỗi lần chỉnh ghi **cũ → mới**, người, lúc, lý do vào `progressHistory` và nhật ký chung (nhãn tiếng Việt "Phần trăm đã thả", "Phần trăm đã thu"). Chỉnh tay **thắng** các bản ghi cũ hơn nó; bản ghi thả/thu tạo **sau** đó cộng thêm vào số đã chỉnh.
+- Quản lý vùng chỉnh % thì **thông báo chủ** (loại `LANE_PROGRESS_CHANGED`, nội dung chung `MINI_APP_NOTIFICATION`, mở bè). Chủ tự chỉnh không báo chính mình.
+- Lỗi: 400 `MSG-GEN-01` (`Seeded percent`, `Harvested percent`, `Reason`, thiếu cả hai %); 403 `MSG-GEN-08`; 404; 409 `MSG06` kèm `currentRowVersion`; 409 `MSG-GEN-09` + `reasonCode` `LANE_NOT_SEEDED` / `LANE_OUT_OF_SERVICE` (hoặc chu kỳ không mở, như các lệnh làn khác).
+
+### 8.4 Ảnh bắt buộc 1-3 cho bản ghi MỚI
+
+JPEG/PNG đọc từ nội dung, mỗi ảnh ≤ 10 MB, phần tên `photos` lặp. Thiếu hoặc quá 3 ảnh: 400 `MSG-GEN-01` `field: "Photos"` + `hint` tiếng Việt, **không lưu gì**, ảnh đã tải bị xóa. Upload lỗi: 502 `MSG-GEN-03`. Bản ghi **cũ không ảnh** vẫn đọc và sửa bình thường (sửa không bắt thêm ảnh nếu bản ghi chưa có ảnh); bản ghi có ảnh sửa xong phải còn **1-3**.
+
+| Bước | Endpoint | Đổi so với trước |
+|---|---|---|
+| Thả giống | `POST /api/cultivation-cycles/{id}/seeding-records` | **JSON thành `multipart/form-data`** (bắt buộc ảnh) |
+| Sửa thả giống | `PUT /api/seeding-records/{id}` | **JSON thành `multipart/form-data`**; thêm `keepPhotoIds` |
+| Thu hoạch | `POST /api/rafts/{raftId}/harvest-lots` | đã multipart; ảnh nay **1-3 bắt buộc** (trước 0-10); thêm `lanePercents` |
+| Sửa lô thu | `PUT /api/harvest-lots/{id}` | giữ `keepPhotoKeys` như cũ; ảnh còn **1-3** (lô cũ không ảnh được để 0) |
+| Kế hoạch nuôi (tạo chu kỳ không từ ươm) | `POST /api/rafts/{raftId}/cultivation-cycles` | **JSON thành `multipart/form-data`** (bắt buộc ảnh) |
+| Đổi ảnh kế hoạch | `PUT /api/cultivation-cycles/{id}/plan-photos` (mới) | `rowVersion`, `keepPhotoIds`, `photos`; tổng 1-3; chu kỳ **từ ươm**: 409 `PLAN_PHOTOS_FROM_NURSERY` |
+| Báo hỏng làn | `POST /api/rafts/{raftId}/lanes/{n}/report-damage` | **JSON thành `multipart/form-data`**: `reason` (khi nào/làn nào/hỏng thế nào), `reasonCode?`, `rowVersion` (bè), `photos` 1-3 |
+
+- Thả giống (multipart): `seedingDate` (`yyyy-MM-dd`), `seedLotId` (bỏ qua với chu kỳ từ ươm), `laneNumbers` (lặp), `quantity` (số, dấu chấm), `lanePercents`, `confirmOverPlan`, `overPlanReason`, `photos`. Sửa thêm: `reason`, `rowVersion`, `keepPhotoIds` (lặp, id ảnh giữ lại; có `keepPhotoIds` **hoặc** `photos` thì ảnh được thay đúng theo đó, không gửi cả hai thì ảnh giữ nguyên).
+- Tạo chu kỳ (multipart): `startDate`, `expectedSeedQuantity`, `targetYieldKg` (tùy chọn như cũ), `photos`. Chu kỳ tạo từ ươm (bước hoàn tất ươm, mục 4.7) **không** nhận ảnh riêng: ảnh kế hoạch của chúng là bộ **ảnh hoàn tất ươm** dùng chung.
+- Nhật ký chăm sóc: ảnh **tùy chọn, tối đa 3** (trước 10); sử dụng vật tư không đổi.
+- Hậu quả cho web: form thả giống, tạo chu kỳ và báo hỏng phải gửi `FormData`; BFF chuyển tiếp multipart như đã làm với thu hoạch và ươm.
+
+**Đọc ảnh** (mọi bản đọc): `photos: [ { "id": "…", "url": "…" } ]` (có thể thêm `sortOrder`; thu hoạch giữ thêm `key` cũ), url là liên kết ký sẵn có hạn. Trên: `SeedingRecordView.photos`, `HarvestLotView.photos`, `LaneIncidentView.photos`, và `CycleView.planPhotos` (`[]` khi chu kỳ cũ chưa có) kèm `planPhotosFromNursery: true` khi là bộ ảnh hoàn tất ươm.
+
+### 8.5 Lỗi `LanePercent`
+
+400 `MSG-GEN-01`:
+```json
+{ "status": 400, "code": "MSG-GEN-01", "field": "LanePercent", "laneNumber": 3, "remainingPercent": 40, "hint": "Làn 3 còn 40% có thể thả thêm." }
+```
+`remainingPercent` = 100 trừ phần đã cộng dồn của làn (tối thiểu 0); chỉ có khi `lanePercents` hợp lệ nhưng thả/thu **vượt 100**. `lanePercents` sai (không đọc được JSON, giá trị ≤ 0 hoặc > 100, làn không nằm trong `laneNumbers`) cũng là `LanePercent` nhưng không có `remainingPercent`. Với thu hoạch `hint` nói "đã thu".
+
+### 8.7 Tạo chu kỳ mới chỉ qua ươm (B3, Q21)
+
+`POST /api/rafts/{raftId}/cultivation-cycles` (tạo chu kỳ tay) nay trả **400** `MSG-GEN-09` kèm `reasonCode: "CYCLE_REQUIRES_NURSERY"`, `field: "Cycle"`, `hint` và `detail` "Chu kỳ mới được tạo khi hoàn tất ươm." (sau kiểm quyền và bè chỉ-đọc, không lưu gì, không tải ảnh). Chu kỳ mới chỉ sinh khi hoàn tất ươm (mục 4.7). Chu kỳ **đang chạy** không có `nurseryBatchId` vẫn đọc, sửa, thu hoạch, chốt và nhận phiên thả giống chọn lô giống như cũ. Web nên bỏ/ẩn nút "Bắt đầu chu kỳ" và dẫn tới màn Ươm giống. Dữ liệu demo có sẵn một đợt ươm "Đang ươm" ở vùng 1 để thử hoàn tất.
+
+### 8.6 Ghi chú vận hành
+
+- Thông báo mới `LANE_PROGRESS_CHANGED` (tùy chọn bật/tắt, không bắt buộc đẩy) hiện trong cài đặt thông báo của Chủ HTX.
+- Demo: bản ghi thả/thu do bootstrap tạo vẫn có ảnh mẫu; dữ liệu cũ được backfill % như mục 8.1.
