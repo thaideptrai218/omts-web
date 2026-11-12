@@ -26,7 +26,7 @@ export function CycleJourneyTab({ part, row, zoneId, access, onJump, onChanged }
   const progress = useRemote(useCallback((signal: AbortSignal) => cycleId ? readCycles({ action: "progress", raftId: row.raftId, cycleId }, cycleProgress, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [row.raftId, cycleId]));
   const summary = useRemote(useCallback((signal: AbortSignal) => cycleId ? readCycleSummary(cycleId, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [cycleId]));
   const [closing, setClosing] = useState(false);
-  if (!row.cycle) return <p className="text-sm text-text-muted">Bè chưa có chu kỳ nuôi. Chu kỳ mới được tạo khi hoàn tất ươm.</p>;
+  if (!row.cycle) return <p className="text-sm text-text-muted">Bè này chưa có chu kỳ nuôi.</p>;
   if (progress.loading || summary.loading) return <Skeleton />;
   const cycle = progress.data?.cycle, figures = summary.data;
   if (progress.error || summary.error || !cycle || !figures) return <ListStateMessage error={progress.error ?? summary.error ?? "Không tải được hành trình chu kỳ."} onRetry={() => { progress.reload(); summary.reload(); }} retryLabel="Tải lại hành trình" />;
@@ -58,7 +58,7 @@ function StepCard({ id, step, index, current, children }: { id: string; step: Jo
       <span className="flex items-center gap-2 text-xs text-text-muted"><StatusPill tone={step.status === "done" ? "success" : "neutral"}>{statusLabel[step.status]}</StatusPill>{step.chip}</span>
     </div>
     {step.bars.map(bar => <PlanBar key={bar.label} {...bar} />)}
-    {step.lines.length > 0 && <ul className="grid gap-0.5 text-xs text-text-muted">{step.lines.map(line => <li key={line}>{step.key === "nursery" ? line.replace("Phân bổ từ ươm:", "Đã chuyển sang bè:") : line}</li>)}</ul>}
+    {step.lines.length > 0 && <ul className="grid gap-0.5 text-xs text-text-muted">{step.lines.map(line => <li key={line}>{line}</li>)}</ul>}
     {Children.toArray(children).length > 0 && <div className="flex flex-wrap justify-end gap-2">{children}</div>}
   </li>;
 }

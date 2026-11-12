@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useCallback, useState } from "react";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
-import { CyclePlanSummary } from "@/features/cultivation-api/lane-board";
+import { CyclePlanSummary } from "./cycle-plan-summary";
 import { HarvestAwareLaneOverview } from "@/features/cultivation-api/harvest-aware-lane-overview";
 import { TabFooter } from "@/features/farming-management/detail-parts";
 import { businessToday, ErrorNotice, Field, Select, Skeleton, useRemote } from "@/features/operations/ui";
@@ -42,7 +42,7 @@ export function CycleProgressTab({ row, zoneId, canSeeFlow }: { row: CycleRow; z
             onDirty={setLaneDirty} onPending={setLanePending}
             renderLaneDetails={item => <CycleLaneDetail key={`${data.cycle?.id}:${item.laneNumber}`} raftId={row.raftId} zoneId={zoneId} cycleId={data.cycle?.id} lane={item.laneNumber} />} />
         </div>
-        {data.cycle && <aside className={cycleStyles.planPanel}><CyclePlanSummary plan={data.cycle} /><CyclePlanTracking cycleId={data.cycle.id} zoneId={zoneId} /></aside>}
+        {data.cycle && <aside className={cycleStyles.planPanel}><CyclePlanSummary cycle={data.cycle} /><CyclePlanTracking cycleId={data.cycle.id} zoneId={zoneId} /></aside>}
       </div>}
     {canSeeFlow && data?.cycle && <TabFooter left={<><Link className={styles.footerLink} href={flow("seeding")}>Thả giống</Link><Link className={styles.footerLink} href={flow("harvest")}>Thu hoạch</Link><Link className={styles.footerLink} href={flow("material")}>Sử dụng vật tư (tùy chọn)</Link></>} />}
   </>;

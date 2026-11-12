@@ -32,11 +32,12 @@ export function buildJourney(input: JourneyInput): JourneyStep[] {
   // BR-CYCLE-07: every lane with seed is Harvested or out of service (a lane out of service is finished, not "not harvested").
   const allHarvested = seeded.length > 0 && harvested.length + lost.length === seeded.length;
   const unit = f.seedUnit ?? "mảnh";
-  const planned = cycle.expectedSeedQuantity !== null || cycle.targetYieldKg !== null;
+  const planned = cycle.targetYieldKg !== null;
 
+  // The planned yield belongs to the cycle (NURSERY MODEL V2); the pieces to seed come from the nursed batch, so a planned seed quantity shows only on an old cycle that has one.
   const plan: JourneyStep = { key: "plan", label: "Kế hoạch", status: "done", chip: `Bắt đầu ${formatVietnameseDate(cycle.startDate)}`, bars: [],
-    lines: [cycle.expectedSeedQuantity !== null ? `Giống dự kiến: ${kg(cycle.expectedSeedQuantity)}${unit ? ` ${unit}` : ""}` : "Chưa lập lượng giống dự kiến",
-      cycle.targetYieldKg !== null ? `Sản lượng mục tiêu: ${kg(cycle.targetYieldKg)} kg` : "Chưa lập sản lượng mục tiêu"],
+    lines: [cycle.targetYieldKg !== null ? `Sản lượng dự kiến: ${kg(cycle.targetYieldKg)} kg` : "Chưa lập sản lượng dự kiến",
+      ...(cycle.expectedSeedQuantity != null ? [`Giống dự kiến: ${kg(cycle.expectedSeedQuantity)}${unit ? ` ${unit}` : ""}`] : [])],
     ...(!closed && !planned && input.canEditPlan ? { action: { key: "journey-plan", label: "Lập kế hoạch", tab: "plan" as const } } : {}) };
 
   const seedingDone = closed || !!cycle.seedingCompletedOn;
@@ -64,9 +65,9 @@ export function buildJourney(input: JourneyInput): JourneyStep[] {
       ...(f.lostLanes ?? []).map(item => `Làn ${item.laneNumber} ngừng hoạt động${item.date ? ` ngày ${formatVietnameseDate(item.date)}` : ""}${item.reason ? `: ${item.reason}` : ""}. Ghi nhận mất giống, không có số lượng; làn được tính là đã kết thúc.`),
       ...(!closed && f.damagedLanes?.length ? [`Làn ${list(f.damagedLanes)} đang hỏng, chưa sửa.`] : []), ...(!closed && early ? [early] : []), ...(closed && cycle.assessment ? [`Đánh giá: ${cycle.assessment}`] : [])],
     ...(!closed && input.canClose ? { action: { key: "journey-close", label: "Kết thúc chu kỳ", close: true as const } } : {}) };
-  const nursery: JourneyStep[] = cycle.nurseryBatchId ? [{ key: "nursery", label: "Ươm", status: "done", chip: cycle.nurseryCode ?? "Đã hoàn tất ươm", bars: [],
-    lines: [...(cycle.nurseryAllocated != null ? [`Phân bổ từ ươm: ${kg(cycle.nurseryAllocated)} mảnh`] : []),
-      ...(cycle.nurserySeeded != null ? [`Đã thả: ${kg(cycle.nurserySeeded)} mảnh`] : []), ...(cycle.nurseryRemaining != null ? [`Còn được thả: ${kg(cycle.nurseryRemaining)} mảnh`] : [])] }] : [];
+  // The nursed batch of the cycle and what is left in its nursery pool (shared by every raft that takes seed from it).
+  const nursery: JourneyStep[] = cycle.nurseryBatchId ? [{ key: "nursery", label: "Ươm", status: "done", chip: [cycle.nurseryCode ?? "Đợt ươm", cycle.seedLot?.itemName].filter(Boolean).join(" · "), bars: [],
+    lines: [...(cycle.nurserySeeded != null ? [`Đã thả: ${pcs(cycle.nurserySeeded)} mảnh`] : []), ...(cycle.nurseryRemaining != null ? [`Còn trong kho ươm: ${pcs(cycle.nurseryRemaining)} mảnh`] : [])] }] : [];
   return [...nursery, plan, seeding, care, harvest, summary];
 }
 

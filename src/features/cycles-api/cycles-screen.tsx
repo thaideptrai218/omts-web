@@ -16,5 +16,5 @@ export function CyclesScreen({ helpHref }: { helpHref?: string }) {
   };
   // useSearchParams (zone and raft links) needs a Suspense boundary on a statically rendered page.
   return <Suspense fallback={<Skeleton />}><RaftCycleWorkspace storageKey="cycles" icon="raft" title="Hành trình" area="cultivation-cycles" helpHref={helpHref} openTab="journey"
-    renderDetail={({ row, zoneId, guard, refresh }) => <CycleDetailPanel row={row} zoneId={zoneId} access={accessFor(zoneId)} guard={guard} onChanged={refresh} />} /></Suspense>;
+    renderDetail={({ row, zoneId, zoneLabel, guard, refresh }) => <CycleDetailPanel row={row} zoneId={zoneId} zoneLabel={zoneLabel} access={accessFor(zoneId)} guard={guard} onChanged={refresh} />} /></Suspense>;
 }

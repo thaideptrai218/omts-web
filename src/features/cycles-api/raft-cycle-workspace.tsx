@@ -23,14 +23,14 @@ import { zoneCycles } from "./contracts";
 import { readCycles } from "./repository";
 import { useRaftUrlSelection } from "./use-raft-url-selection";
 
-export type RaftRowContext = { row: CycleRow; zoneId: string; guard: UnsavedGuard; refresh(notice: string): void };
+export type RaftRowContext = { row: CycleRow; zoneId: string; zoneLabel: string; guard: UnsavedGuard; refresh(notice: string): void };
 type Props = { storageKey: string; icon: InterfaceIconName; title: string; area: OperationArea; helpHref?: string; actions?: ReactNode; renderDetail(context: RaftRowContext): ReactNode;
   /** Reads the rafts of a zone with their latest cycle; must be a stable function. Defaults to the cycle API read. */
   loadRows?(zoneId: string, signal: AbortSignal): Promise<WorkspaceResult<CycleRow[]>>;
   /** Tab the opened row starts on; written to the URL (`?tab=`) with the raft and cycle. */
   openTab?: string };
 const readZoneRows = (zoneId: string, signal: AbortSignal) => readCycles({ action: "zone", zoneId }, zoneCycles, signal);
-const zoneLabelOf = (zone: ZoneRow) => `${zone.code} · ${zone.name}`;
+const zoneLabelOf = (zone: Pick<ZoneRow, "code" | "name">) => zone.code ? `${zone.code} · ${zone.name}` : zone.name;
 
 /**
  * Management frame shared by the screens that work per raft of one zone (cycles, seeding, material use, harvest): the zone is
@@ -72,6 +72,7 @@ function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail
   const setFilter = <K extends keyof CycleFilters>(key: K, value: CycleFilters[K]) => change(() => setFilters(previous => ({ ...previous, [key]: value })));
   const hasFilter = !!(filters.search || filters.state || filters.raftStatus);
   const refresh = (message: string) => { list.reload(); notify({ tone: "success", title: message }); };
+  const zoneLabel = zoneLabelOf(zones.find(zone => zone.id === zoneId) ?? { code: "", name: "" });
   const rail = <>
     <RailHead canReset={hasFilter} onReset={() => change(() => setFilters(emptyCycleFilters))} />
     <FilterGroup legend="Vùng nuôi"><SelectBox aria-label="Vùng nuôi" className={styles.railSelect} value={zoneId} onChange={event => void guard.leave(() => onZone(event.target.value))}>
@@ -90,8 +91,8 @@ function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail
         : !list.data ? <ListSkeleton />
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có bè phù hợp bộ lọc." : <div className="space-y-3"><p>Vùng này chưa có bè nuôi.</p><RaftSetupLinks zoneId={zoneId} /></div>}</ListStateMessage>
         : <CycleTable zoneId={zoneId} rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} onToggle={toggle}
-          renderDetail={row => renderDetail({ row, zoneId, guard, refresh })} />}
-      {storageKey === "cycles" && !!list.data?.length && !list.data.some(row => row.canStart || row.cycle && !row.cycle.closeDate) && !hasFilter && <div className="space-y-3 border-t border-border p-4 text-sm"><p>Chưa có bè sẵn sàng nhận chu kỳ mới trong vùng này. Chu kỳ mới được tạo khi hoàn tất ươm.</p><RaftSetupLinks zoneId={zoneId} /></div>}
+          renderDetail={row => renderDetail({ row, zoneId, zoneLabel, guard, refresh })} />}
+      {storageKey === "cycles" && !!list.data?.length && !list.data.some(row => row.canStart || row.cycle && !row.cycle.closeDate) && !hasFilter && <div className="space-y-3 border-t border-border p-4 text-sm"><p>Chưa có bè sẵn sàng bắt đầu chu kỳ mới trong vùng này. Bè cần đang sử dụng và chưa có chu kỳ đang mở.</p><RaftSetupLinks zoneId={zoneId} /></div>}
     </ManagementScroller>
   </ManagementLayout>;
 }

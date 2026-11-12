@@ -29,6 +29,17 @@ describe("journey model: five steps, plan vs actual, one primary action each", (
     expect(step(steps, "harvest").bars[0]).toMatchObject({ actual: 580, plan: 8500, unit: "kg", estimate: true });
     expect(step(steps, "plan").lines.join(" ")).not.toContain("Ngày thu dự kiến");
   });
+  it("plans the yield, not the seed: the planned yield line leads and a planned seed shows only on an old cycle", () => {
+    const planned = step(buildJourney(input({ cycle: cycle({ expectedSeedQuantity: null, targetYieldKg: 2000 }) })), "plan");
+    expect(planned.lines).toEqual(["Sản lượng dự kiến: 2.000 kg"]); expect(planned.action).toBeUndefined();
+    expect(step(buildJourney(input()), "plan").lines).toEqual(["Sản lượng dự kiến: 8.500 kg", "Giống dự kiến: 250 con"]);
+  });
+  it("shows the nursed batch with what the cycle hung and what is left in the nursery pool, never an allocation", () => {
+    const steps = buildJourney(input({ cycle: cycle({ nurseryBatchId: "n1", nurseryCode: "NU000007", seedLot: { itemName: "Hàu giống" }, nurserySeeded: 3000.4, nurseryRemaining: 6499.6 }) }));
+    expect(steps.map(entry => entry.key)).toEqual(["nursery", "plan", "seeding", "care", "harvest", "summary"]);
+    expect(step(steps, "nursery")).toMatchObject({ chip: "NU000007 · Hàu giống", lines: ["Đã thả: 3.000 mảnh", "Còn trong kho ươm: 6.500 mảnh"] });
+    expect(step(steps, "nursery").lines.join(" ")).not.toMatch(/Phân bổ|chuyển sang bè|Còn được thả/);
+  });
   it("sends each step to the right place with a distinct key", () => {
     const steps = buildJourney(input({ cycle: cycle({ seedingCompletedOn: null }), lanes: lanes("NotSeeded", "Growing") }));
     expect(step(steps, "seeding").action).toMatchObject({ key: "journey-seeding-record", label: "Ghi nhận thả giống", screen: "seeding" });
@@ -151,6 +162,7 @@ describe("journey tab", () => {
   });
   it("explains a raft without a cycle", () => {
     render(<ToastProvider><CycleJourneyTab part="overview" row={{ ...row, cycle: null }} zoneId={zoneId} access={access} onJump={vi.fn()} onChanged={vi.fn()} /></ToastProvider>);
-    expect(screen.getByText(/Bè chưa có chu kỳ nuôi/)).toBeTruthy();
+    expect(screen.getByText("Bè này chưa có chu kỳ nuôi.")).toBeTruthy();
+    expect(screen.queryByText(/hoàn tất ươm/)).toBeNull();
   });
 });

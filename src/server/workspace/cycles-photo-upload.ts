@@ -1,15 +1,15 @@
 import "server-only";
 import { z } from "zod";
-import { cycleInput } from "@/features/cycles-api/contracts";
+import { cycleStartInput } from "@/features/cycles-api/contracts";
 import { readBoundedBytes } from "../operations/bounded-body";
 
 const command = z.discriminatedUnion("action", [
-  z.strictObject({ action: z.literal("start"), id: z.guid(), body: cycleInput }),
+  z.strictObject({ action: z.literal("start"), id: z.guid(), body: cycleStartInput }),
   z.strictObject({ action: z.literal("plan-photos"), id: z.guid(), body: z.strictObject({ rowVersion: z.string().min(1), keepPhotoIds: z.array(z.guid()).max(3).optional() }) }),
 ]);
 const photoProblem = { field: "Photos", hint: "Cần từ 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh không quá 10 MB." };
 
-/** Bounded raw multipart fields for standalone cycle creation and replacement of owned plan photos. */
+/** Bounded raw multipart fields for the manual start of a cycle (raft, nursed batch, planned yield, photos) and replacement of owned plan photos. */
 export async function readCyclePhotoUpload(request: Request) {
   const type = request.headers.get("content-type") ?? "", maxBytes = 31 * 1024 * 1024;
   const length = request.headers.get("content-length");
@@ -26,10 +26,9 @@ export async function readCyclePhotoUpload(request: Request) {
       else {
         if (parts.length !== 1) return { problem: { field: key, hint: "Mỗi trường chỉ gửi một giá trị." } };
         if (key === "action" || key === "id") values[key] = parts[0];
-        else body[key] = ["expectedSeedQuantity", "targetYieldKg"].includes(key) ? Number(parts[0]) : parts[0];
+        else body[key] = key === "targetYieldKg" ? Number(parts[0]) : parts[0];
       }
     }
-    if (values.action === "start") for (const key of ["startDate", "expectedSeedQuantity", "targetYieldKg"]) if (!(key in body)) body[key] = null;
     const parsed = command.safeParse({ ...values, body });
     if (!parsed.success) return { problem: { field: String(parsed.error.issues[0]?.path.at(-1) ?? "Dữ liệu"), hint: "Vui lòng kiểm tra dữ liệu kế hoạch nuôi." } };
     const kept = "keepPhotoIds" in parsed.data.body ? parsed.data.body.keepPhotoIds?.length ?? 0 : 0;
@@ -42,6 +41,8 @@ export async function readCyclePhotoUpload(request: Request) {
       if (!(photo.type === "image/jpeg" ? jpeg : png)) return { problem: photoProblem };
     }
     const upstream = new FormData();
+    // A cycle is created by hand on a raft (POST /api/cultivation-cycles carries the raft in the body).
+    if (parsed.data.action === "start") upstream.set("raftId", parsed.data.id);
     for (const [key, value] of Object.entries(parsed.data.body)) {
       if (Array.isArray(value)) value.forEach(part => upstream.append(key, String(part)));
       else if (value != null) upstream.set(key, String(value));
