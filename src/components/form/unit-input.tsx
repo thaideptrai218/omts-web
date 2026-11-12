@@ -1,7 +1,7 @@
 "use client";
 import { useId, useState, type KeyboardEvent, type Ref } from "react";
-import { formatDecimal, liveDecimalText, parseDecimalText } from "./decimal-text";
-import { NUMBER_INPUT_CLASS, NumberFieldShell, useDigitCaret } from "./number-field-parts";
+import { formatDecimal, parseDecimalText } from "./decimal-text";
+import { NUMBER_INPUT_CLASS, NumberFieldShell, useNumberInputRef } from "./number-field-parts";
 
 /**
  * Quantity / measurement field with its unit shown as a chip inside the box.
@@ -14,6 +14,7 @@ import { NUMBER_INPUT_CLASS, NumberFieldShell, useDigitCaret } from "./number-fi
  * "0.5" are both accepted. ArrowUp / ArrowDown change the value by `step`. It is a text input (inputMode
  * "decimal"), so the mouse wheel never changes the value. `decimals` (0..3) is the maximum number of
  * fraction digits; `allowFraction={false}` forces whole numbers. `className` styles the <input>.
+ * Typing preserves the draft verbatim; grouping and precision formatting happen only on blur.
  */
 export type UnitInputProps = {
   value: number | null;
@@ -53,23 +54,28 @@ export function UnitInput({
   const negative = min !== undefined && min < 0;
   const uid = useId();
   const textOf = (next: number | null) => (next == null ? "" : formatDecimal(next, places));
-  const [text, setText] = useState(() => textOf(value));
+  // Keep an ungrouped draft even when blurred; presentation must never change how it parses.
+  const [text, setText] = useState(() => value == null ? "" : String(value).replace(".", ","));
   const [seen, setSeen] = useState(value);
   const [touched, setTouched] = useState(false);
+  const [editing, setEditing] = useState(false);
 
-  const parsed = parseDecimalText(text, places, negative);
+  const parsed = parseDecimalText(text, places, negative, false);
   const current = parsed.kind === "ok" ? parsed.value : null;
   if (value !== seen) {
     setSeen(value);
-    if (current !== value) setText(textOf(value));
+    // Some numeric parents echo Number("") as 0. Keep the empty/unfinished draft visible.
+    if (current !== value && !(editing && current === null && value === 0)) {
+      setText(value == null ? "" : String(value).replace(".", ","));
+    }
   }
 
   const emit = (next: string) => {
-    const result = parseDecimalText(next, places, negative);
+    const result = parseDecimalText(next, places, negative, false);
     onChange?.(result.kind === "ok" ? result.value : null);
   };
   const settle = () => {
-    if (parsed.kind === "ok") setText(textOf(parsed.value));
+    if (parsed.kind === "ok") setText(String(parsed.value).replace(".", ","));
     else if (parsed.kind === "empty") setText("");
   };
   const stepBy = (direction: 1 | -1) => {
@@ -78,7 +84,7 @@ export function UnitInput({
     let next = Math.round((base + direction * step) * factor) / factor;
     if (min !== undefined) next = Math.max(min, next);
     if (max !== undefined) next = Math.min(max, next);
-    setText(textOf(next));
+    setText(String(next).replace(".", ","));
     onChange?.(next);
   };
 
@@ -90,7 +96,7 @@ export function UnitInput({
   // Too-large values are reported at once; unreadable or too-small ones after leaving the box.
   const shown = problem && (touched || (current !== null && max !== undefined && current > max));
   const message = error ?? (shown ? problem : undefined);
-  const { setRef, keep } = useDigitCaret(ref, error ? "" : problem);
+  const setRef = useNumberInputRef(ref, error ? "" : problem);
   const notes = hint ? [{ id: `${uid}-hint`, text: hint }] : [];
   const errorId = `${uid}-error`;
   const describedBy = [describedByProp, ...notes.map((note) => note.id), message ? errorId : undefined]
@@ -121,12 +127,11 @@ export function UnitInput({
           required={required}
           style={{ paddingRight: `calc(${unit.length}ch + 1.75rem)` }}
           type="text"
-          value={text}
-          onBlur={() => { setTouched(true); settle(); onBlur?.(); }}
+          value={!editing && parsed.kind === "ok" ? textOf(parsed.value) : text}
+          onFocus={() => { if (!readOnly) setEditing(true); }}
+          onBlur={() => { setEditing(false); setTouched(true); settle(); onBlur?.(); }}
           onChange={(event) => {
-            const raw = event.target.value;
-            const next = liveDecimalText(raw, places, negative);
-            keep(raw, event.target.selectionStart, next);
+            const next = event.target.value;
             setText(next);
             emit(next);
           }}
@@ -135,7 +140,7 @@ export function UnitInput({
             if (event.key === "ArrowUp" || event.key === "ArrowDown") {
               event.preventDefault();
               stepBy(event.key === "ArrowUp" ? 1 : -1);
-            } else if (event.key === "Enter") settle();
+            }
           }}
         />
       }

@@ -50,15 +50,3 @@ export function parseMoneyText(text: string, autoThousands = false): MoneyParse 
   if (autoThousands && plain >= 1 && plain <= 999) return { kind: "ok", value: plain * 1000, scaled: "auto" };
   return { kind: "ok", value: plain, scaled: null };
 }
-
-/**
- * Live text while typing: whole numbers are regrouped with dots; anything that may still become a
- * shortcut ("1,5", "1.5", "300k") is left exactly as typed.
- */
-export function liveMoneyText(raw: string): string {
-  if (!/^[\d.\s]*$/.test(raw)) return raw;
-  const lastDot = raw.lastIndexOf(".");
-  if (lastDot >= 0 && raw.length - lastDot - 1 <= 2) return raw;
-  const digits = raw.replace(/\D/g, "");
-  return digits ? groupDigits(digits.replace(/^0+(?=\d)/, "")) : "";
-}

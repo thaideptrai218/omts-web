@@ -51,11 +51,13 @@ describe("UnitInput", () => {
     expect(onValue).toHaveBeenLastCalledWith(0.25);
   });
 
-  it("groups thousands and caps the fraction digits", async () => {
+  it("keeps all typed digits and formats the configured precision only on blur", async () => {
     render(<Host decimals={2} />);
     const input = screen.getByLabelText("Số lượng") as HTMLInputElement;
     await userEvent.type(input, "12500,987");
-    expect(input.value).toBe("12.500,98");
+    expect(input.value).toBe("12500,987");
+    await userEvent.tab();
+    expect(input.value).toBe("12.500,99");
   });
 
   it("steps with arrow keys and clamps to min/max", async () => {
@@ -83,5 +85,27 @@ describe("UnitInput", () => {
     await userEvent.type(input, "150");
     expect(screen.getByRole("alert").textContent).toBe("Tối đa 100 %.");
     expect(input.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("keeps an invalid fraction invalid after blur in a whole-number field", async () => {
+    render(<Host decimals={0} />);
+    const input = screen.getByLabelText("Số lượng") as HTMLInputElement;
+    await userEvent.type(input, "1.250");
+    await userEvent.tab();
+    expect(input.value).toBe("1.250");
+    expect(input.checkValidity()).toBe(false);
+    expect(screen.getByRole("alert").textContent).toBe("Nhập số nguyên.");
+  });
+
+  it("follows a parent reset while editing without parsing its grouped display as a fraction", async () => {
+    const { rerender } = render(<UnitInput unit="kg" label="Số lượng" decimals={2} value={10} />);
+    const input = screen.getByLabelText("Số lượng") as HTMLInputElement;
+    await userEvent.click(input);
+    rerender(<UnitInput unit="kg" label="Số lượng" decimals={2} value={1250.5} />);
+    expect(input.value).toBe("1250,5");
+    await userEvent.tab();
+    expect(input.value).toBe("1.250,5");
+    rerender(<UnitInput unit="kg" label="Số lượng" decimals={2} value={null} />);
+    expect(input.value).toBe("");
   });
 });

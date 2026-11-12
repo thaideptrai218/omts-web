@@ -3,8 +3,8 @@ import { useImperativeHandle, useLayoutEffect, useRef, type ReactNode, type Ref 
 
 /**
  * Building blocks shared by MoneyInput and UnitInput: the field shell (input + unit suffix inside the
- * border, captions and inline error below) and a hook that keeps the caret next to the same digit
- * after the text was regrouped while typing.
+ * border, captions and inline error below) and a ref hook for native validity and caller access.
+ * Typed text is never regrouped, so the browser keeps the caret without manual repositioning.
  */
 export const NUMBER_INPUT_CLASS =
   "omts-control text-right tabular-nums aria-invalid:border-danger aria-invalid:focus:border-danger";
@@ -47,36 +47,14 @@ export function NumberFieldShell({
   );
 }
 
-const SIGNIFICANT = /[\d,]/g;
-
-/** Caret position in `next` after as many digits/commas as `raw` had before `caret`. */
-export function caretAfterReformat(raw: string, caret: number, next: string): number {
-  let count = (raw.slice(0, caret).match(SIGNIFICANT) ?? []).length;
-  if (count === 0) return 0;
-  for (let index = 0; index < next.length; index += 1) {
-    if (/[\d,]/.test(next[index]) && --count === 0) return index + 1;
-  }
-  return next.length;
-}
-
-/** Returns a ref callback (also forwarding the caller's ref) and `keep()` to call from onChange. */
-export function useDigitCaret(forwarded?: Ref<HTMLInputElement>, validity = "") {
+/** Forwards the input element and keeps native form validity in sync with the displayed error. */
+export function useNumberInputRef(forwarded?: Ref<HTMLInputElement>, validity = "") {
   const node = useRef<HTMLInputElement | null>(null);
-  const pending = useRef<number | null>(null);
   // Expose the same element to the caller's ref (object or callback) without mutating props.
   useImperativeHandle(forwarded, () => node.current as HTMLInputElement, []);
   // Out-of-range text blocks a native form submit (replaces the old type="number" min/max checks).
   useLayoutEffect(() => {
     node.current?.setCustomValidity(validity);
   }, [validity]);
-  useLayoutEffect(() => {
-    if (pending.current !== null && node.current) {
-      node.current.setSelectionRange(pending.current, pending.current);
-    }
-    pending.current = null;
-  });
-  const keep = (raw: string, caret: number | null, next: string) => {
-    pending.current = caret !== null && next !== raw && caret < raw.length ? caretAfterReformat(raw, caret, next) : null;
-  };
-  return { setRef: node, keep };
+  return node;
 }
