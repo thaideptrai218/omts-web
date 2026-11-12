@@ -38,7 +38,7 @@ export function RaftCreateDialog({ zoneId, zoneLabel, onClose, onCreated }: { zo
         </CollapsibleSection>
         <CollapsibleSection title="Kích thước và làn nuôi" description="Diện tích được tính từ độ dài dây và chiều rộng bè." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["size", "laneCount"]} /></CollapsibleSection>
         <CollapsibleSection title="Vị trí trên bản đồ" description="Chọn vị trí bè trong vùng nuôi." defaultOpen={false} columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["latitude", "longitude"]} /></CollapsibleSection>
-        <CollapsibleSection title="Tình trạng bè" description="Ghi chú hiện trạng bè, không bắt buộc." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["conditionNotes"]} /></CollapsibleSection>
+        <CollapsibleSection title="Ghi chú hiện trạng" description="Không bắt buộc." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["conditionNotes"]} /></CollapsibleSection>
       </fieldset>
       <ErrorNotice error={mutation.error} />
       {mutation.blocked && <p role="alert" className="text-sm">Chưa xác nhận được kết quả lưu. Hãy đóng cửa sổ này và tải lại danh sách để đối chiếu trước khi thêm lại.</p>}

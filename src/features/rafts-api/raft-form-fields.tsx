@@ -26,7 +26,7 @@ export function RaftFormFields({ draft, setDraft, errors, only, zoneId, selfId, 
     <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} only={["code"]} />
     <CollapsibleSection title="Kích thước và làn nuôi" description="Diện tích tự tính và bố trí các làn." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} only={["size", "laneCount"]} /></CollapsibleSection>
     <CollapsibleSection title="Vị trí trên bản đồ" description="Địa điểm và tọa độ của bè." defaultOpen={false} columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} only={["location", "latitude", "longitude"]} /></CollapsibleSection>
-    <CollapsibleSection title="Tình trạng bè" description="Ghi chú hiện trạng bè, không bắt buộc." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["conditionNotes"]} /></CollapsibleSection>
+    <CollapsibleSection title="Ghi chú hiện trạng" description="Không bắt buộc." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["conditionNotes"]} /></CollapsibleSection>
   </div>;
   const withMap = !only || only.some(isCoordinate), shown = labels.filter(([key]) => key !== "laneCount" && (!only || only.includes(key)));
   return <>
