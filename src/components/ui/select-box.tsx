@@ -61,9 +61,15 @@ export function SelectBox({ className = "", children, style, ref, onChange, ...p
     const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); native.current?.focus(); } };
     document.addEventListener("pointerdown", close);
     document.addEventListener("keydown", escape);
-    list.current?.querySelector<HTMLElement>("[data-selected]")?.scrollIntoView({ block: "nearest" });
     return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
   }, [open]);
+  // Open on the chosen item (centred), not at the top of a long list such as years. The list exists only after the box is placed.
+  const placed = !!box;
+  useLayoutEffect(() => {
+    const menu = list.current, chosen = menu?.querySelector<HTMLElement>("[data-selected]");
+    if (!open || !placed || !menu || !chosen) return;
+    menu.scrollTop += chosen.getBoundingClientRect().top - menu.getBoundingClientRect().top - (menu.clientHeight - chosen.offsetHeight) / 2;
+  }, [open, placed]);
 
   // The list is a popover in the top layer: placed against the viewport, above a modal dialog, and never clipped by the
   // dialog's scrolling box or shifted by its open animation's transform. Inside a dialog it stays in the dialog's subtree,

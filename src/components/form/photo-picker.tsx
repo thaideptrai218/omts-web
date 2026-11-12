@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { compressPhoto, photoValidationMessage } from "./photo-compression";
 import type { StepPhoto } from "./photo-contracts";
 
@@ -18,7 +19,7 @@ export function PhotoPicker({ files, onChange, existing = [], onRemoveExisting, 
   files: File[]; onChange(files: File[]): void; existing?: Array<Pick<Partial<StepPhoto>, "id" | "key"> & { url: string }>; onRemoveExisting?(id: string): void;
   required?: boolean; error?: string; disabled?: boolean; onBusyChange?(busy: boolean): void; label?: string;
 }) {
-  const id = useId(), [busy, setBusy] = useState(false), [localError, setLocalError] = useState<string>();
+  const id = useId(), fileInput = useRef<HTMLInputElement>(null), [busy, setBusy] = useState(false), [localError, setLocalError] = useState<string>();
   const total = existing.length + files.length;
   async function add(inputs: File[]) {
     if (busy || disabled || !inputs.length) return;
@@ -39,7 +40,8 @@ export function PhotoPicker({ files, onChange, existing = [], onRemoveExisting, 
     <legend className="px-1 text-sm font-medium">{label}{required ? " *" : " (tùy chọn)"} · {total}/3</legend>
     <p id={`${id}-help`} className="text-xs text-text-muted">{required ? "Chọn từ 1 đến 3" : "Tối đa 3"} ảnh JPEG/PNG, mỗi ảnh tối đa 10 MB.</p>
     <label htmlFor={id} className="sr-only">Chọn {label.toLowerCase()}</label>
-    <input id={id} type="file" accept="image/jpeg,image/png" multiple className="omts-control mt-2 h-auto w-full" disabled={total >= 3 || disabled || busy} aria-invalid={!!(error || localError)} onChange={event => { const inputs = Array.from(event.target.files ?? []); event.target.value = ""; void add(inputs); }} />
+    <input id={id} ref={fileInput} type="file" accept="image/jpeg,image/png" multiple className="sr-only" tabIndex={-1} disabled={total >= 3 || disabled || busy} aria-invalid={!!(error || localError)} onChange={event => { const inputs = Array.from(event.target.files ?? []); event.target.value = ""; void add(inputs); }} />
+    <div className="mt-2 flex flex-wrap items-center gap-3"><Button type="button" variant="secondary" className="w-auto" disabled={total >= 3 || disabled || busy} aria-controls={id} onClick={() => fileInput.current?.click()}>{total ? "Thêm ảnh" : "Chọn ảnh"}</Button><span aria-live="polite" className="text-xs text-text-muted">{total ? `Đã chọn ${total}/3 ảnh` : "Chưa chọn ảnh"}</span></div>
     <div className="mt-2 flex flex-wrap gap-3">{existing.map((photo, index) => <figure key={photo.id ?? photo.key ?? photo.url} className="w-24">
       {/* eslint-disable-next-line @next/next/no-img-element -- signed or BFF photo URL */}
       <img src={photo.url} alt={`Ảnh đã lưu ${index + 1}`} className="h-20 w-24 rounded-control object-cover" />

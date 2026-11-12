@@ -10,14 +10,17 @@
 .control svg { width:16px; height:16px; }
 .timeValue { font-size:12px; font-variant-numeric:tabular-nums; }
 .error { font-size:12px; line-height:1.4; color:#b91c1c; }
-.calendar { width:280px; max-width:calc(100vw - 50px); display:grid; gap:12px; }
-.calendar :global(.rdp-root) { --rdp-accent-color:var(--omts-color-primary); --rdp-day-width:40px; --rdp-day-height:36px; --rdp-day_button-width:36px; --rdp-day_button-height:34px; font-size:13px; }
-.calendar :global(.rdp-month) { width:100%; }
-.calendar :global(.rdp-month_grid) { width:100%; border-collapse:collapse; }
-.calendar :global(.rdp-month_caption) { height:38px; justify-content:center; padding:0 30px; }
-.calendar :global(.rdp-dropdowns) { display:flex; gap:6px; width:100%; align-items:center; }
-.calendar :global(.rdp-dropdowns) > :first-child { flex:1; min-width:0; }
-.calendar :global(.rdp-dropdowns) > :last-child { width:78px; }
+/* One fixed calendar width: seven equal day columns (44px) so nothing inside can push the grid wider than the popover and get clipped. */
+.calendar { width:308px; max-width:calc(100vw - 50px); display:grid; gap:12px; box-sizing:border-box; }
+.calendar :global(.rdp-root) { --rdp-accent-color:var(--omts-color-primary); --rdp-day-width:calc(100% / 7); --rdp-day-height:36px; --rdp-day_button-width:36px; --rdp-day_button-height:34px; font-size:13px; width:100%; }
+.calendar :global(.rdp-months) { width:100%; max-width:100%; }
+.calendar :global(.rdp-month) { width:100%; min-width:0; }
+.calendar :global(.rdp-month_grid) { width:100%; table-layout:fixed; border-collapse:collapse; }
+.calendar :global(.rdp-month_caption) { height:38px; justify-content:center; padding:0 32px; min-width:0; }
+.calendar :global(.rdp-dropdowns) { display:grid; grid-template-columns:minmax(0, 1fr) 84px; gap:6px; width:100%; align-items:center; }
+.calendar :global(.rdp-dropdowns) > * { min-width:0; }
+.calendar :global(.rdp-dropdown_root) { width:100%; }
+.calendar :global(.omts-select-trigger) { width:100%; }
 .calendar :global(.omts-select-trigger) { height:30px; font-size:12px; padding-left:8px; }
 .calendar :global(.rdp-button_previous), .calendar :global(.rdp-button_next) { width:26px; height:34px; border-radius:6px; }
 .calendar :global(.rdp-button_previous):hover, .calendar :global(.rdp-button_next):hover { background:var(--omts-color-primary-soft); }

@@ -28,8 +28,11 @@ export function DatePickerField({ id, inputRef, required, readOnly, onBlur, onFo
   const [datePart, timePart = ""] = value.split("T");
   const selected = datePart ? fromQueryDate(datePart) : undefined;
   const earliest = min ? fromQueryDate(min.slice(0, 10)) : undefined, latest = max ? fromQueryDate(max.slice(0, 10)) : undefined;
-  const firstMonth = earliest ?? new Date(1940, 0, 1), lastMonth = latest ?? new Date(new Date().getFullYear() + 5, 11, 31);
   const birthday = name === "birthday" || /ngày sinh/i.test(label);
+  // Year list: a birthday may go back decades; any other date offers the last 10 years (and any older year already chosen) up to 5 years ahead,
+  // so the list never opens on an unreachable 1940.
+  const thisYear = new Date().getFullYear(), selectedYear = selected?.getFullYear();
+  const firstMonth = earliest ?? new Date(birthday ? 1940 : Math.min(thisYear - 10, selectedYear ?? thisYear), 0, 1), lastMonth = latest ?? new Date(Math.max(thisYear + 5, selectedYear ?? 0), 11, 31);
   const [month, setMonth] = useState(() => selected ?? (birthday ? new Date(new Date().getFullYear() - 30, 0, 1) : new Date()));
   const [timeDraft, setTime] = useState(timePart.slice(0, 5) || nowTime());
   const [draft, setDraft] = useState<{ source: string; text: string; error?: string }>();
