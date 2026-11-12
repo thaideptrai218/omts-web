@@ -1,0 +1,14 @@
+/* Body of the lane popover: progress editor on the left, incident actions and history on the right; one column on phones. */
+.grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 12px 18px; align-items: start; font-size: 12px; }
+.grid:has(form) .side { grid-column: 1 / -1; }
+.main, .side { min-width: 0; display: grid; gap: 10px; }
+.history h4 { margin: 0 0 6px; font-size: 12px; font-weight: 650; }
+.historyList { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.historyList[data-expanded] { max-height: 150px; overflow: auto; scrollbar-width: thin; padding-right: 4px; }
+.historyList li { padding-left: 8px; border-left: 2px solid var(--omts-color-border); line-height: 1.45; }
+.historyList p { margin: 0; }
+.historyHead { font-weight: 600; }
+.muted { margin: 0; color: var(--omts-color-text-muted); }
+.more { margin-top: 6px; border: 0; padding: 0; background: none; color: var(--omts-brand, var(--omts-color-primary)); font-size: 12px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.actions button, .main button { min-height: 30px; padding: 4px 8px; font-size: 12px; }@media (max-width: 600px) { .grid { grid-template-columns: minmax(0, 1fr); } }

@@ -37,16 +37,16 @@ function Editor({ locked }: { locked?: string }) {
 }
 it("shows live read-only area and uses explicit non-submit stepper/reset buttons", () => {
   render(<Editor />);
-  const area = screen.getByLabelText("Diện tích") as HTMLInputElement;
-  expect(area.readOnly).toBe(true); expect(area.value).toBe("240");
+  const area = screen.getByLabelText("Diện tích");
+  expect(area.tagName).toBe("OUTPUT"); expect(area.textContent).toContain("240");
   fireEvent.change(screen.getByLabelText("Chiều rộng bè *"), { target: { value: "12" } });
-  expect(area.value).toBe("288");
+  expect(area.textContent).toContain("288");
   const add = screen.getByRole("button", { name: "Thêm làn cuối" }); expect(add.getAttribute("type")).toBe("button");
   fireEvent.click(add); expect((screen.getByLabelText("Số làn *") as HTMLInputElement).value).toBe("4");
-  fireEvent.click(screen.getByText("Độ dài dây từng làn"));
-  fireEvent.change(screen.getByLabelText("Làn 1"), { target: { value: "18" } });
+  fireEvent.click(screen.getByText("Độ dài từng làn (tùy chọn)"));
+  fireEvent.change(screen.getByLabelText("Độ dài làn 1"), { target: { value: "18" } });
   const reset = screen.getAllByRole("button", { name: "Theo bè" })[0]; expect(reset.getAttribute("type")).toBe("button");
-  fireEvent.click(reset); expect((screen.getByLabelText("Làn 1") as HTMLInputElement).value).toBe("24");
+  fireEvent.click(reset); expect((screen.getByLabelText("Độ dài làn 1") as HTMLInputElement).value).toBe("24");
   expect(screen.getByTestId("body").textContent).toContain('"lineLengthM":null');
 });
 it("locks manual count and both steppers with the actual cycle reason", () => {
@@ -58,6 +58,7 @@ it("locks manual count and both steppers with the actual cycle reason", () => {
 });
 it("keeps damage/inactive status readable even on the shortest lane", () => {
   render(<RaftLaneDiagram length={500} lanes={[{ laneNumber: 3, lineLengthM: 1, isDamaged: true }, { laneNumber: 5, lineLengthM: 2, statusId: 2002 }]} />);
-  expect(screen.getByText("Hỏng")).toBeTruthy(); expect(screen.getByText("Ngừng hoạt động")).toBeTruthy();
-  expect(screen.getByText("Làn 3")).toBeTruthy(); expect(screen.queryByText("Làn 1")).toBeNull();
+  // The state is named on the column itself (and again by the filter chip and legend), so address the column.
+  expect(screen.getByRole("button", { name: /^Làn 3: Hỏng/ })).toBeTruthy(); expect(screen.getByRole("button", { name: /^Làn 5: Ngừng hoạt động/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Làn 1:/ })).toBeNull();
 });

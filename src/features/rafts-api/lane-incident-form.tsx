@@ -85,7 +85,7 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
     }
     onSaved();
   }
-  return <form noValidate aria-label={`${incidentActionLabel[action]} làn ${laneNumber}`} onSubmit={event => { event.preventDefault(); void save(); }} className="mt-3 space-y-3">
+  return <form noValidate aria-label={`${incidentActionLabel[action]} làn ${laneNumber}`} onSubmit={event => { event.preventDefault(); void save(); }} className="space-y-3">
     {confirmation.dialog}
     <fieldset disabled={mutation.pending || mutation.blocked || unavailable || eventSaved} className="grid gap-3">
       <Note label={action === "repair" ? "Nội dung sửa (tùy chọn)" : action === "restore" ? "Lý do khôi phục (tùy chọn)" : action === "damage" ? "Ghi chú sự cố: khi nào, làn nào, hỏng thế nào *" : "Lý do *"} required={action === "damage" || action === "discontinue"} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} />

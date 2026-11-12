@@ -13,11 +13,11 @@ function Form({ locked }: { locked?: string }) {
 }
 it("shows live read-only area, units and a non-submitting end stepper", () => {
   render(<Form />);
-  const area = screen.getByLabelText("Diện tích") as HTMLInputElement;
-  expect(area.readOnly).toBe(true);
-  expect(area.value).toBe("240");
+  const area = screen.getByLabelText("Diện tích");
+  expect(area.tagName).toBe("OUTPUT");
+  expect(area.textContent).toContain("240");
   fireEvent.change(screen.getByLabelText("Độ dài dây *"), { target: { value: "20" } });
-  expect(area.value).toBe("200");
+  expect(area.textContent).toContain("200");
   expect(screen.getByText("m²")).toBeTruthy();
   const add = screen.getByRole("button", { name: "Thêm làn cuối" });
   expect(add.getAttribute("type")).toBe("button");
@@ -34,11 +34,11 @@ it("locks both manual lane-count changes and steppers during an open cycle", () 
 });
 it("resets an override to the raft length", () => {
   render(<Form />);
-  fireEvent.click(screen.getByText("Độ dài dây từng làn"));
-  fireEvent.change(screen.getByLabelText("Làn 1"), { target: { value: "12" } });
-  expect((screen.getByLabelText("Làn 1") as HTMLInputElement).value).toBe("12");
+  fireEvent.click(screen.getByText("Độ dài từng làn (tùy chọn)"));
+  fireEvent.change(screen.getByLabelText("Độ dài làn 1"), { target: { value: "12" } });
+  expect((screen.getByLabelText("Độ dài làn 1") as HTMLInputElement).value).toBe("12");
   fireEvent.click(screen.getAllByRole("button", { name: "Theo bè" })[0]);
-  expect((screen.getByLabelText("Làn 1") as HTMLInputElement).value).toBe("24");
+  expect((screen.getByLabelText("Độ dài làn 1") as HTMLInputElement).value).toBe("24");
 });
 it("bounds the preview when a pasted lane count exceeds the limit", () => {
   render(<Form />);
@@ -47,11 +47,11 @@ it("bounds the preview when a pasted lane count exceeds the limit", () => {
 });
 it("keeps overrides through intermediate lane-count keystrokes", () => {
   render(<Form />);
-  fireEvent.click(screen.getByText("Độ dài dây từng làn"));
-  fireEvent.change(screen.getByLabelText("Làn 2"), { target: { value: "12" } });
+  fireEvent.click(screen.getByText("Độ dài từng làn (tùy chọn)"));
+  fireEvent.change(screen.getByLabelText("Độ dài làn 2"), { target: { value: "12" } });
   fireEvent.change(screen.getByLabelText("Số làn *"), { target: { value: "1" } });
   fireEvent.change(screen.getByLabelText("Số làn *"), { target: { value: "2" } });
-  expect((screen.getByLabelText("Làn 2") as HTMLInputElement).value).toBe("12");
+  expect((screen.getByLabelText("Độ dài làn 2") as HTMLInputElement).value).toBe("12");
 });
 it("filters only removed tail overrides when committing and preserves physical numbers after an inactive middle", () => {
   const draft = { ...emptyRaftDraft, code: "B01", lengthM: "24", widthM: "10", laneCount: "2", laneLines: '{"3":"18","4":"16"}' };

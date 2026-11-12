@@ -48,7 +48,7 @@ export function Select({ label, children, ...props }: ComponentProps<"select"> &
   return <label className="block text-xs font-medium text-text-muted">{label}<SelectBox aria-label={label} {...props} className={control}>{children}</SelectBox></label>;
 }
 export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: string }) {
-  return <label className="block text-xs font-medium text-text-muted">{label}<textarea {...props} className={control} rows={3} /></label>;
+  return <label className="block text-xs font-medium text-text-muted">{label}<textarea rows={3} {...props} className={control} /></label>;
 }
 export function ErrorNotice({ error }: { error?: string }) { return error ? <p role="alert" className="my-4 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p> : null; }
 export function Skeleton() { return <div role="status" aria-label="Đang tải dữ liệu" className="my-5 space-y-3">{[1, 2, 3].map((id) => <div key={id} className="omts-skeleton h-14 rounded-control" />)}</div>; }

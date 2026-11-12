@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import styles from "./lane-overview.module.css";
 
 /** The host remains inside a modal dialog; the native popover escapes clipping and transforms. */
-export function LaneDetailPopover({ anchor, number, onClose, children }: {
-  anchor: HTMLElement; number: number; onClose(): void | boolean | Promise<boolean>; children: ReactNode;
+export function LaneDetailPopover({ anchor, number, stateLabel, colorToken, onClose, children }: {
+  anchor: HTMLElement; number: number; stateLabel?: string; colorToken?: string; onClose(): void | boolean | Promise<boolean>; children: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null), titleId = useId();
   useLayoutEffect(() => {
@@ -44,7 +44,9 @@ export function LaneDetailPopover({ anchor, number, onClose, children }: {
     return () => { document.removeEventListener("pointerdown", outside); element?.removeEventListener("keydown", escape); };
   }, [anchor, onClose]);
   return createPortal(<div ref={panel} popover="manual" role="dialog" aria-modal="false" aria-labelledby={titleId} tabIndex={-1} className={styles.popover} onSubmit={event => event.stopPropagation()}>
-    <div className={styles.popoverHeading}><strong id={titleId}>Làn {number}</strong><button key="close-lane" type="button" className={styles.selectButton} aria-label={`Đóng chi tiết làn ${number}`} onClick={async () => { if (await onClose() !== false) anchor.focus({ preventScroll: true }); }}>Đóng</button></div>
+    <div className={styles.popoverHeading} style={colorToken ? { "--lane-color": `var(${colorToken})` } as CSSProperties : undefined}>
+      <strong id={titleId} className={styles.popoverTitle}>Làn <span className={styles.popoverBadge}>{number}</span></strong>
+      {stateLabel && <span className={styles.statePill}>{stateLabel}</span>}<button key="close-lane" type="button" className={styles.selectButton} aria-label={`Đóng chi tiết làn ${number}`} onClick={async () => { if (await onClose() !== false) anchor.focus({ preventScroll: true }); }}>Đóng</button></div>
     {children}
   </div>, anchor.closest("dialog") ?? document.body);
 }

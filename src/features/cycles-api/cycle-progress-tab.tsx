@@ -34,7 +34,7 @@ export function CycleProgressTab({ row, zoneId, canSeeFlow }: { row: CycleRow; z
     </div>
     <ErrorNotice error={history.error} />
     {progress.loading ? <Skeleton /> : progress.error || !data ? <ListStateMessage error={progress.error ?? "Không tải được tiến độ."} onRetry={progress.reload} retryLabel="Tải lại tiến độ" />
-      : <div className={cycleStyles.progressLayout}>
+      : <div className={`${cycleStyles.progressLayout} ${data.cycle ? "" : cycleStyles.progressSolo}`}>
         <div className={cycleStyles.progressMain}>
           <div className={cycleStyles.sectionHeading}><h3>Tiến độ làn nuôi</h3><span>{formatVietnameseDate(data.date)}{data.cycle ? ` · ${data.cycle.daysOfFarming} ngày nuôi` : ""}</span></div>
           {!data.cycle && <p className={styles.hint}>Chưa có chu kỳ trong ngày này.</p>}

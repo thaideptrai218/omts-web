@@ -10,6 +10,8 @@ import { emptyRaftDraft } from "./raft-model";
 
 const { context, mutate } = vi.hoisted(() => ({ context: vi.fn(), mutate: vi.fn() }));
 vi.mock("./use-raft-location-pins", () => ({ useRaftLocationPins: context }));
+// The lane diagram needs the API workspace context; this file only covers the location fields.
+vi.mock("./raft-lane-diagram", () => ({ RaftLaneDiagram: () => null }));
 vi.mock("@/features/api-workspace/workspace-repository", () => ({ createWorkspaceRepository: () => ({ mutate }) }));
 vi.mock("@/features/farming-api/location-picker", () => ({ LocationPicker: ({ latitude, longitude, onChange, pins }: {
   latitude: string; longitude: string; pins: ContextPin[]; onChange(value: { latitude: string; longitude: string }): void;

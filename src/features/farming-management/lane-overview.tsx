@@ -5,6 +5,8 @@ import { toggleLaneSelection } from "./lane-selection";
 import { laneProgressDisplay, laneStateLabels, type LaneProgressFacts } from "./lane-progress-display";
 import type { LaneProgressMetadata } from "./lane-progress-contracts";
 import { LaneColumn } from "./lane-column";
+import { LaneFilterChips } from "./lane-filter-chips";
+import { LaneSummaryBar } from "./lane-summary-bar";
 import { LaneDetailPopover } from "./lane-detail-popover";
 import styles from "./lane-overview.module.css";
 
@@ -61,8 +63,11 @@ export function LaneOverview(props: Props) {
       <div className={styles.toolbar}><strong>{label} <span>({lanes.length})</span></strong><label htmlFor={searchId} className={styles.search}><span>Tìm làn số</span><input id={searchId} className="omts-control" inputMode="numeric" autoComplete="off" placeholder="Tìm làn số…" disabled={loading || !lanes.length} value={query} onChange={event => find(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); find(query); } }} /></label>
         <button key={selecting ? "exit-lane-selection" : "enter-lane-selection"} type="button" className={styles.selectButton} aria-pressed={selecting} disabled={loading || selectionDisabled || !lanes.length} onClick={async () => { if (!await close()) return; if (selecting) updateSelection([]); setSelecting(current => !current); selectionAnchor.current = undefined; }}>{selecting ? "Thoát chế độ chọn" : "Chọn"}</button></div>
       {selecting && <div className={styles.selectionBar}><label><input type="checkbox" className="omts-check" checked={!!eligible.length && chosen.length === eligible.length} ref={element => { if (element) element.indeterminate = chosen.length > 0 && chosen.length < eligible.length; }} disabled={loading || selectionDisabled || !eligible.length} onChange={event => updateSelection(event.target.checked ? eligible : [])} />Chọn tất cả</label><span role="status">Đã chọn {chosen.length} làn</span>{selectionAction}<span className={styles.selectionHint}>Giữ Shift để chọn một dải làn.</span></div>}
-      <div className={styles.filters} aria-label="Lọc tình trạng làn"><button type="button" aria-pressed={!activeFilter} disabled={loading} onClick={async () => { if (await close()) setFilter(""); }}>Tất cả <b>{lanes.length}</b></button>{states.map(state => <button key={state} type="button" data-state={state} disabled={loading} aria-pressed={activeFilter === state} onClick={async () => { if (await close()) setFilter(activeFilter === state ? "" : state); }}><i aria-hidden="true" />{laneStateLabels[state]} <b>{counts.get(state)}</b></button>)}</div>
-      {!!lanes.length && <p className={styles.summary} role="status">{query && !match ? `Không có làn số ${query}.` : `Hiển thị ${visible.length}/${lanes.length} làn · Làn ${compressLaneNumbers(visible.map(lane => lane.laneNumber))}`}{!!selected?.length && ` · Đã chọn ${selected.length} làn`}</p>}
+      <LaneSummaryBar counts={counts} total={lanes.length} />
+      <div className={styles.filterRow}>
+        <LaneFilterChips states={states} counts={counts} total={lanes.length} active={activeFilter} loading={loading} onSelect={async state => { if (await close()) setFilter(state); }} />
+        {!!lanes.length && <p className={styles.summary} role="status">{query && !match ? `Không có làn số ${query}.` : `Hiển thị ${visible.length}/${lanes.length} làn · Làn ${compressLaneNumbers(visible.map(lane => lane.laneNumber))}`}{!!selected?.length && ` · Đã chọn ${selected.length} làn`}</p>}
+      </div>
     </header>
     <div ref={viewport} className={styles.viewport} data-lane-scroller>
       {loading ? <div className={styles.columns} role="status"><span className="sr-only">Đang tải sơ đồ làn…</span>{Array.from({ length: 12 }, (_, index) => <div key={index} className={`omts-skeleton ${styles.skeleton}`} aria-hidden="true" />)}</div>
@@ -72,10 +77,10 @@ export function LaneOverview(props: Props) {
             disabled={selecting ? selectionDisabled || !eligible.includes(lane.laneNumber) : !!lane.disabled}
             onToggle={shift => toggle(lane.laneNumber, shift)} onClick={async event => { const target = event.currentTarget; if (await onLaneClick?.(lane.laneNumber, event) === false) return; setAnchor(target); setLocalOpened(current => current === lane.laneNumber ? undefined : lane.laneNumber); }} />)}</div>}
     </div>
-    {!!lanes.length && <p className={styles.legend}>Kéo ngang hoặc dùng phím ← → để xem làn · Màu đổ theo % · Xám gạch: ngừng hoạt động</p>}
-    {openedLane && anchor && <LaneDetailPopover anchor={anchor} number={openedLane.laneNumber} onClose={close}>
+    {!!lanes.length && <p className={styles.legend}><span>Kéo ngang hoặc dùng phím ← → để xem làn</span><span>Chiều cao cột = % tiến độ</span><span><i aria-hidden="true" />Ngừng hoạt động</span></p>}
+    {openedLane && anchor && <LaneDetailPopover anchor={anchor} number={openedLane.laneNumber} stateLabel={laneProgressDisplay(openedLane).label} colorToken={laneProgressDisplay(openedLane).colorToken} onClose={close}>
       <p className={styles.facts}>{laneProgressDisplay(openedLane).description}</p>
-      {openedLane.description && <p className={styles.summary}>{openedLane.description}</p>}
+      {openedLane.description && <p className={styles.facts}>{openedLane.description}</p>}
       {renderLaneDetails?.(openedLane)}{children}
     </LaneDetailPopover>}
   </section>;

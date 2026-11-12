@@ -9,6 +9,7 @@ import { Facts, TabFooter } from "@/features/farming-management/detail-parts";
 import { ErrorNotice, useMutation } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { RaftFormFields } from "./raft-form-fields";
+import { RaftConditionNoteCard } from "./raft-condition-note";
 import { useRaftLaneLock } from "./use-raft-lane-lock";
 import { RaftLaneDiagram } from "./raft-lane-diagram";
 import { geometryOf } from "./raft-geometry";
@@ -49,8 +50,9 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
     <fieldset disabled={locked || mutation.blocked} className="min-w-0 border-0 p-0">
       {editing ? <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={raft.id} laneCountLocked={laneCountLocked} lanes={raft.lanes} canEditLaneLengths={raft.lanes.some(lane => lane.lineLengthM !== undefined)} /> : <Facts items={[
         ["Mã bè", raft.code], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId })}>{zoneLabel}</Link>], ["Kích thước", formatRaftSize(raft.lengthM && raft.widthM ? `${raft.lengthM} m x ${raft.widthM} m` : raft.size)], ["Số làn đang dùng", `${raft.laneCount ?? raft.lanes.filter(lane => lane.statusId !== 2002).length} làn`], ["Trạng thái", raftStatusLabel(raft.statusId)],
-        ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude], ["Tình trạng bè", raft.conditionNotes],
+        ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude],
       ]} />}
+      {!editing && <RaftConditionNoteCard value={raft.conditionNotes} />}
     </fieldset>
     {!editing && <RaftLaneDiagram lanes={raft.lanes} length={geometryOf(raft).length} harvestScope={{ raftId: raft.id, zoneId, rowVersion: raft.rowVersion, onChanged: onReload, onDirty: setLaneDirty, onPending: setLanePending }} />}
     {editing && laneLock.failed && <Button key="retry-cycle" type="button" variant="secondary" className="w-auto" onClick={laneLock.reload}>Kiểm tra lại chu kỳ</Button>}

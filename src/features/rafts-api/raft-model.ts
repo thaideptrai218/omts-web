@@ -59,10 +59,14 @@ export const raftDraftOf = (raft: RaftDetail): RaftDraft => ({ code: raft.code, 
   conditionNotes: asText(raft.conditionNotes), laneCount: asText(raft.laneCount ?? raft.lanes.filter(lane => lane.statusId !== 2002).length) });
 const toNumber = (value: string) => Number(value.trim().replace(",", "."));
 
-/** Backend permits no location, or a complete coordinate pair; lane count remains a positive integer. */
-export function validateRaftDraft(draft: RaftDraft, lanes?: RaftDetail["lanes"]): Partial<Record<RaftField, string>> {
+/**
+ * Backend permits no location, or a complete coordinate pair; lane count remains a positive integer.
+ * `requireLocation` (raft creation only) also demands the written location; editing never requires it, so old rafts without one stay saveable.
+ */
+export function validateRaftDraft(draft: RaftDraft, lanes?: RaftDetail["lanes"], options: { requireLocation?: boolean } = {}): Partial<Record<RaftField, string>> {
   const errors: Partial<Record<RaftField, string>> = {};
   if (!draft.code.trim()) errors.code = "Nhập mã bè.";
+  if (options.requireLocation && !draft.location.trim()) errors.location = "Nhập vị trí của bè.";
   const shape = geometryOf({ size: draft.size, lengthM: draft.lengthM ? toNumber(draft.lengthM) : undefined, widthM: draft.widthM ? toNumber(draft.widthM) : undefined });
   const kept = retainedLaneNumbers(Number(draft.laneCount), lanes);
   const lines = Object.entries(laneOverrides(draft.laneLines)).filter(([n]) => kept.has(n)).map(([n, length]) => ({ laneNumber: Number(n), lineLengthM: length ? Number(length) : null }));

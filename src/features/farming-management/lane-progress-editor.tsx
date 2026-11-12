@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { ErrorNotice, Field, Note, useMutation } from "@/features/operations/ui";
 import { laneProgressValues, type LaneProgressMetadata } from "./lane-progress-contracts";
-import { laneProgressDisplay, formatLanePercent } from "./lane-progress-display";
+import { laneProgressDisplay } from "./lane-progress-display";
 import { laneProgressRepository, type LaneProgressTarget } from "./lane-progress-repository";
 import type { LaneOverviewItem } from "./lane-overview";
 
@@ -32,12 +32,12 @@ export function LaneProgressEditor({ lane, target, rowVersion, canEdit, onChange
     if (!saved) return;
     notify({ tone: "success", title: `Đã lưu tiến độ làn ${lane.laneNumber}.` }); onChanged(saved);
   }
-  return <section aria-label={`Tiến độ làn ${lane.laneNumber}`} className="space-y-3 text-xs">
+  return <section aria-label={`Tiến độ làn ${lane.laneNumber}`} className="space-y-2 text-xs">
     {canEdit && rowVersion && !unavailable && <>
-      <fieldset className="grid grid-cols-2 gap-3" disabled={mutation.pending || mutation.blocked}>
+      <fieldset className="grid grid-cols-2 gap-x-2 gap-y-2" disabled={mutation.pending || mutation.blocked}>
         <Field label="% đã thả" type="number" inputMode="decimal" min={0} max={100} step="any" value={seeded} onChange={event => setSeeded(event.target.value)} />
         <Field label="% đã thu" type="number" inputMode="decimal" min={0} max={100} step="any" placeholder="Chưa ghi %" value={harvested} onChange={event => setHarvested(event.target.value)} />
-        <div className="col-span-2"><Note label="Lý do điều chỉnh *" required maxLength={500} value={reason} onChange={event => setReason(event.target.value)} disabled={mutation.pending || mutation.blocked} /></div>
+        <div className="col-span-2"><Note label="Lý do điều chỉnh *" required maxLength={500} rows={2} value={reason} onChange={event => setReason(event.target.value)} disabled={mutation.pending || mutation.blocked} /></div>
       </fieldset>
       <ErrorNotice error={error || mutation.error} />
       {mutation.blocked && <p role="alert">Tải lại làn để đối chiếu kết quả trước khi lưu tiếp.</p>}
@@ -47,13 +47,5 @@ export function LaneProgressEditor({ lane, target, rowVersion, canEdit, onChange
       </div>
     </>}
     <p className="text-text-muted">Người sửa gần nhất: {lane.lastModifiedByName ?? "Chưa ghi nhận"}{lane.lastModifiedAt && ` · ${new Date(lane.lastModifiedAt).toLocaleString("vi-VN")}`}</p>
-    <details className="border-t border-border pt-2"><summary className="cursor-pointer font-semibold">Lịch sử tiến độ</summary>
-      {!lane.progressHistory?.length ? <p className="mt-2 text-text-muted">Chưa có lịch sử điều chỉnh %.</p> : <ol className="mt-2 space-y-3">{lane.progressHistory.map((entry, index) => <li key={`${entry.at}-${index}`}>
-        <p>{entry.byName ?? "Chưa ghi nhận người sửa"} · {new Date(entry.at).toLocaleString("vi-VN")}</p>
-        <p>Đã thả: {formatLanePercent(entry.oldSeededPercent ?? null)} → {formatLanePercent(entry.seededPercent ?? null)}</p>
-        <p>Đã thu: {formatLanePercent(entry.oldHarvestedPercent ?? null)} → {formatLanePercent(entry.harvestedPercent ?? null)}</p>
-        {entry.reason && <p>Lý do: {entry.reason}</p>}
-      </li>)}</ol>}
-    </details>
   </section>;
 }

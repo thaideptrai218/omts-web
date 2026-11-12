@@ -24,12 +24,13 @@ export function LaneColumn({ lane, active, expanded, found, selecting, disabled,
       scroller.scrollBy({ left: rect.left < box.left ? rect.left - box.left - 12 : rect.right > box.right ? rect.right - box.right + 12 : 0 });
     }
   }
+  // DOM order stays number, percent, bar, state (the lane number is the first element); CSS `order` shows the percent above the bar and the number in a badge below it.
   const contents = <>
     <span className={styles.laneNumber}>{lane.laneNumber}{active && <span aria-hidden="true"> ✓</span>}</span>
+    <span className={styles.percent} aria-hidden="true">{display.percentLabel}</span>
     <span className={styles.track} aria-hidden="true">
       {display.state === "BeingHarvested" && <span className={styles.seededFill} style={{ height: `${display.seededPercent}%` }} />}
       {display.fillPercent !== null && <span className={styles.fill} style={{ height: `${display.fillPercent}%` }} />}
-      <span className={styles.percent}>{display.percentLabel}</span>
     </span>
     <span className={styles.stateLabel}>{display.label}</span>
   </>;

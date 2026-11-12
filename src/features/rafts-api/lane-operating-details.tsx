@@ -5,6 +5,8 @@ import { operationAllowed } from "@/features/operations/permissions";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { laneProgressDisplay } from "@/features/farming-management/lane-progress-display";
 import { LaneProgressEditor } from "@/features/farming-management/lane-progress-editor";
+import { LaneProgressHistory } from "@/features/farming-management/lane-progress-history";
+import layout from "@/features/farming-management/lane-detail-layout.module.css";
 import type { LaneProgressMetadata } from "@/features/farming-management/lane-progress-contracts";
 import type { LaneOverviewItem } from "@/features/farming-management/lane-overview";
 import { readRaftDetail } from "./raft-model";
@@ -44,11 +46,16 @@ export function LaneOperatingDetails({ lane, scope, raft: suppliedRaft, onStateC
     && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Edit", scope.zoneId);
   function changed(saved?: LaneProgressMetadata) { if (saved) onProgressSaved?.(saved); scope.onChanged(); raft.reload(); facts.reload(); }
   return <div className="space-y-3">
-    {raft.loading || facts.loading ? <Skeleton /> : <>
-      <fieldset disabled={locks.incident} className="min-w-0 border-0 p-0"><LaneProgressEditor key={`${lane.laneNumber}:${version}:${merged.seededPercent}:${merged.harvestedPercent}`} lane={merged} target={{ raftId: scope.raftId, zoneId: scope.zoneId, laneNumber: lane.laneNumber }} rowVersion={version} canEdit={canEdit} onChanged={changed} onStateChange={progressState} onUnsupported={onProgressUnsupported} /></fieldset>
-      {!historical && context && physical && <fieldset disabled={locks.progress} className="min-w-0 border-0 p-0"><LaneIncidentDetails key={`${lane.laneNumber}:${context.rowVersion}`} raft={context} lane={merged} hasSeed={display.state === "Growing" || display.state === "BeingHarvested"} cycleRowVersion={facts.data?.cycle?.rowVersion}
-        canDiscontinue={!facts.loading && !facts.error && !!facts.data} onChanged={changed} onStateChange={incidentState} /></fieldset>}
-    </>}
+    {raft.loading || facts.loading ? <Skeleton /> : <div className={layout.grid}>
+      <div className={layout.main}>
+        <fieldset disabled={locks.incident} className="min-w-0 border-0 p-0"><LaneProgressEditor key={`${lane.laneNumber}:${version}:${merged.seededPercent}:${merged.harvestedPercent}`} lane={merged} target={{ raftId: scope.raftId, zoneId: scope.zoneId, laneNumber: lane.laneNumber }} rowVersion={version} canEdit={canEdit} onChanged={changed} onStateChange={progressState} onUnsupported={onProgressUnsupported} /></fieldset>
+      </div>
+      <div className={layout.side}>
+        {!historical && context && physical && <fieldset disabled={locks.progress} className="min-w-0 border-0 p-0"><LaneIncidentDetails key={`${lane.laneNumber}:${context.rowVersion}`} raft={context} lane={merged} hasSeed={display.state === "Growing" || display.state === "BeingHarvested"} cycleRowVersion={facts.data?.cycle?.rowVersion}
+          canDiscontinue={!facts.loading && !facts.error && !!facts.data} onChanged={changed} onStateChange={incidentState} /></fieldset>}
+        <LaneProgressHistory entries={merged.progressHistory} />
+      </div>
+    </div>}
     <ErrorNotice error={raft.error || facts.error} />
     {(raft.error || facts.error) && <button type="button" className="omts-control px-3 text-xs" disabled={locks.progress || locks.incident} onClick={() => { raft.reload(); facts.reload(); }}>Tải lại chi tiết làn</button>}
   </div>;
