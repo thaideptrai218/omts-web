@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { lanePercentsProblem, selectedLanePercents } from "./record-lane-percents";
+import { lanePercentRead, lanePercentsProblem, selectedLanePercents } from "./record-lane-percents";
+
+describe("lanePercentRead", () => {
+  it("turns the backend array into a lane map and skips unrecorded percents", () => {
+    expect(lanePercentRead.parse([{ laneNumber: 1, percent: 60 }, { laneNumber: 2, percent: null }, { laneNumber: 3, percent: 100 }])).toEqual({ "1": 60, "3": 100 });
+  });
+  it("still accepts a plain map and a missing value", () => {
+    expect(lanePercentRead.parse({ "1": 40 })).toEqual({ "1": 40 });
+    expect(lanePercentRead.parse(null)).toBeNull();
+  });
+});
 
 describe("selectedLanePercents", () => {
   it("defaults every selected seeding lane to 100 unless overridden", () => {
