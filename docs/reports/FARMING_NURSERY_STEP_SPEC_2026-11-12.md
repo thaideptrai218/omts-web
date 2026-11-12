@@ -213,6 +213,15 @@ Không chạm tới đơn khách, bán hàng, kế hoạch làm việc của đ�
 5. Ảnh **bắt buộc 1 đến 3** ở các bước quan trọng: **bắt đầu ươm, hoàn tất ươm, kế hoạch nuôi (tạo chu kỳ), thả giống, thu hoạch, sự cố làn**. **Nhật ký chăm sóc theo từng đợt chỉ tùy chọn** (ghi chú tùy chọn, ảnh tùy chọn tối đa 3). Sử dụng vật tư: tùy chọn.
 6. Ảnh bước hoàn tất ươm dùng chung cho kế hoạch nuôi của các chu kỳ được tạo ở bước đó (mỗi chu kỳ tham chiếu bộ ảnh hoàn tất ươm); khi tạo chu kỳ riêng (không từ ươm, dữ liệu cũ) thì kế hoạch nuôi nhận ảnh riêng 1 đến 3.
 
+### 10.7 Thả giống từ ươm phải đủ 100% phần đã chuyển (chủ dự án, 13/11), GHI ĐÈ mục 3.4, 5.3 mục 5 và quyết định 12 ở trên
+Lời chủ: "ươm xong rồi và chọn bè rồi thì phần ghi nhận thả giống phải thả 100% số đã gửi ươm sang bè, nên số lượng giống từ ghi nhận thả giống không thể tự chọn được, bởi nếu giữ lại phần ươm còn thừa thì có khả năng thừa hoặc vứt bỏ".
+1. Chu kỳ có `nurseryBatchId`: **số lượng thả không được chọn**, bằng đúng phần còn lại của phần chia (`nurseryRemaining`). Người dùng vẫn chọn làn (và % từng làn), ngày, ảnh 1 đến 3 và ghi chú.
+2. Muốn thả số khác thì **trước đó** sửa số sống sót hoặc chuyển phần chia giữa các bè (các luồng này giữ nguyên), rồi mới thả.
+3. API: có thể không gửi `quantity`; gửi khác phần còn lại thì 400 `NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION`; không còn gì để thả thì 400 `NURSERY_SEEDING_ALREADY_COMPLETE`. Chi tiết trong hợp đồng API mục 5 và 6.
+4. Sửa bản ghi thả giống của chu kỳ ươm (cả hiệu chỉnh TRACE-03): số lượng luôn bằng phần chia trừ các bản ghi khác của chu kỳ, không nhập tay; nếu chủ nâng phần chia sau khi thả thì sửa bản ghi sẽ lấy số mới.
+5. Web: ô "Số lượng giống" thay bằng dòng chỉ đọc "Số lượng thả: X mảnh · toàn bộ phần đã chuyển sang bè (không chọn số lượng)"; hết phần thì hiện "Đã thả hết phần đã chuyển sang bè" và khóa nút Lưu. Chu kỳ không qua ươm giữ form cũ.
+6. Câu hỏi cho PM: thả giống từ ươm bắt buộc đủ 100% phần đã chuyển, đúng với SRS (GBR-04, CYCLE-02) chưa? Xem `SRS_DEVIATIONS.md` NUR-15.
+
 ### 10.5 Câu hỏi mở còn lại (đã được trả lời ở 10.6)
 1. "Step thả và thu cần ảnh kế hoạch nuôi hoặc kế hoạch thu hoạch": hiểu đúng là **ảnh phải kèm ở bước thả giống và thu hoạch** (ảnh chụp tại hiện trường)? Hay còn cần **ảnh đính kèm cho chính kế hoạch nuôi** (lúc tạo chu kỳ)?
 2. Ảnh sự cố làn: **bắt buộc ít nhất 1 ảnh** hay vẫn **tùy chọn** (trước đây chủ chọn tùy chọn)?

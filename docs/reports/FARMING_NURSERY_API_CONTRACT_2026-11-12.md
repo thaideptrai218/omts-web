@@ -166,6 +166,7 @@ Chỉ đợt Đã hoàn tất có ít nhất một chu kỳ **còn mở** với 
 - **Mục chu kỳ trong danh sách** (`CycleListItem`: danh sách chu kỳ của bè/vùng): thêm `nurseryBatchId`.
 - **Màn Thả giống** `GET /api/cultivation-cycles/{id}/seeding-records` (kế hoạch): thêm `nurseryBatchId`, `nurseryCode`, `nurseryAllocated`, `nurserySeeded`, `nurseryRemaining`. Với chu kỳ từ ươm `plannedSeedQuantity` = phần chia, `percent` tính trên đó; nhóm `lots` vẫn liệt kê lô giống của đợt.
 - **Thả giống** `POST /api/cultivation-cycles/{id}/seeding-records` (và sửa/hiệu chỉnh TRACE-03): với chu kỳ từ ươm **không gửi `seedLotId`** (gửi cũng bỏ qua, lô lấy từ đợt), 409 `NURSERY_SEEDING_ABOVE_ALLOCATION` khi vượt phần còn lại: `allocated`, `seeded`, `remaining`, `quantity`, `field: "Quantity"`. Không tạo phiếu Xuất dùng, `issueId` null. `confirmOverPlan`/`overPlanReason` bị bỏ qua cho chu kỳ này.
+  **Cập nhật 13/11/2026 (chủ dự án): thả giống từ ươm phải đủ 100% phần đã chuyển, số lượng không chọn được.** Với chu kỳ có `nurseryBatchId`: `quantity` có thể **bỏ trống** (hệ thống đặt bằng `nurseryRemaining`) hoặc gửi đúng bằng số đó (sai số 0,001); gửi số khác thì **400** `MSG-GEN-09` `reasonCode: NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION` kèm `allocated`, `seeded`, `remaining`, `quantity`, `field: "Quantity"`, `detail` tiếng Việt "Thả giống phải dùng đủ phần đã chuyển sang bè: còn X mảnh. Nếu số lượng thay đổi, hãy sửa số sống sót hoặc chuyển lại số mảnh giữa các bè trước."; khi `nurseryRemaining` = 0 thì **400** `NURSERY_SEEDING_ALREADY_COMPLETE` (đã thả hết, bất kể số gửi). Làn, % từng làn, ngày, ảnh 1 đến 3 giữ nguyên. Vì lần thả đầu lấy hết phần chia nên chu kỳ chỉ còn thả tiếp khi chủ nâng phần chia (chuyển giữa các bè hoặc nâng số sống sót): lần sau lấy đúng phần chênh. Sửa bản ghi (`PUT /api/seeding-records/{id}` và TRACE-03): số lượng luôn bằng phần chia trừ các bản ghi khác của chu kỳ; bỏ trống hoặc gửi đúng số đó thì lưu, gửi số khác thì 400 như trên (bản ghi nhận số mới khi phần chia đã được nâng). 409 `NURSERY_SEEDING_ABOVE_ALLOCATION` giữ lại như lớp chặn an toàn. Chu kỳ không có ươm: không đổi.
 - **Tổng kết chu kỳ**, **xem trước chốt**, **đóng chu kỳ** (`summary`): khối `nursery`:
 ```json
 "nursery": { "batchId": "…", "batchCode": "NU000001", "quantityIn": 5000, "survivors": 4750, "lossPieces": 250, "lossPercent": 5.0, "estimated": true }
@@ -183,6 +184,8 @@ Chỉ đợt Đã hoàn tất có ít nhất một chu kỳ **còn mở** với 
 | `NURSERY_RAFT_OTHER_ZONE` | 409 | bè khác vùng với đợt |
 | `NURSERY_CYCLE_STARTS_BEFORE_CLOSE` | 409 | chu kỳ trước của bè chốt cùng/sau ngày bắt đầu chu kỳ mới |
 | `NURSERY_SEEDING_ABOVE_ALLOCATION` | 409 | thả giống vượt phần còn lại của chu kỳ từ ươm |
+| `NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION` | 400 | thả giống/sửa bản ghi thả của chu kỳ từ ươm gửi `quantity` khác phần còn lại (13/11) |
+| `NURSERY_SEEDING_ALREADY_COMPLETE` | 400 | chu kỳ từ ươm đã thả hết phần chia, không còn gì để thả (13/11) |
 | `NURSERY_SURVIVORS_BELOW_SEEDED` | 409 | số sống sót mới nhỏ hơn tổng đã thả |
 | `NURSERY_ALLOCATION_BELOW_SEEDED` | 409 | phần chia nhỏ hơn đã thả, hoặc gỡ bè đã thả/đã có nhật ký |
 | `NURSERY_ALLOCATION_FROZEN` | 409 | đổi/gỡ phần chia của chu kỳ đã chốt |
@@ -194,7 +197,7 @@ Lỗi dùng lại: `MSG-GEN-01` (400 trường), `MSG-INPUT-01` (thiếu tồn),
 
 1. Mở **Bắt đầu ươm**: `GET /api/nursery-batches/seed-lots?zoneId` hiện lô và tồn kho; nhập số mảnh, ngày, ghi chú, 1-3 ảnh; bảng xem lại (tồn trước = `onHand`, sau = `onHand - quantity`); `POST /api/zones/{zoneId}/nursery-batches`.
 2. **Hoàn tất ươm**: danh sách bè của vùng và bè nào đang có chu kỳ mở lấy từ `GET /api/zones/{zoneId}/cultivation-cycles` (màn chu kỳ theo vùng, cờ `canStart`); nhập sống sót, chia bè ("chia đều" làm phía web, nhớ phần dư làm tròn để tổng khớp đúng), sản lượng dự kiến từng bè, 1-3 ảnh; bảng xem lại; `POST …/complete`.
-3. Màn thả giống chu kỳ từ ươm: hiện "Còn {nurseryRemaining} trên {nurseryAllocated} mảnh đã phân bổ"; bỏ chọn lô giống; bắt 409 `NURSERY_SEEDING_ABOVE_ALLOCATION`.
+3. Màn thả giống chu kỳ từ ươm: hiện "Còn {nurseryRemaining} trên {nurseryAllocated} mảnh đã chuyển"; bỏ chọn lô giống **và bỏ ô nhập số lượng** (13/11): hiện dòng chỉ đọc "Số lượng thả: X mảnh · toàn bộ phần đã chuyển sang bè"; `nurseryRemaining` = 0 thì hiện "Đã thả hết phần đã chuyển sang bè" và khóa Lưu; bắt 400 `NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION` và `NURSERY_SEEDING_ALREADY_COMPLETE` (web gửi `quantity` = phần còn lại).
 
 ## 8. % làn và ảnh bắt buộc các bước (B2), ngày 12/11/2026
 

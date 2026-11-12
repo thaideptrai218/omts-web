@@ -93,9 +93,9 @@ Kế toán không dùng các bước 2 đến 7 (SRS và bảng quyền trong PA
 | Mục | Nội dung |
 |---|---|
 | Ai | Owner; Quản lý vùng trong vùng |
-| Trường nhập | Làn (lưới chọn nhanh, chỉ làn thả được); số mảnh; ngày thả. Ảnh 1 đến 3: **bắt buộc**, chờ B2 và W3 |
-| Với chu kỳ từ ươm | **Không chọn lô giống** (lô lấy từ đợt). Hiện "Còn X trên Y mảnh đã phân bổ" |
-| Quy tắc | Tổng đã thả của chu kỳ không vượt phần chia: **chặn cứng** (409 `NURSERY_SEEDING_ABOVE_ALLOCATION`, kèm số còn lại). Không còn mức 110% và 150% cho chu kỳ từ ươm. **Không tạo phiếu Xuất dùng** (đã trừ kho lúc ươm). Làn đang thu hoạch hoặc đã thu hoạch không thả lại. Làn hỏng hoặc ngừng hoạt động bị chặn |
+| Trường nhập | Làn (lưới chọn nhanh, chỉ làn thả được) và % từng làn; ngày thả; số mảnh (chỉ chu kỳ không qua ươm). Ảnh 1 đến 3: **bắt buộc** |
+| Với chu kỳ từ ươm | **Không chọn lô giống** (lô lấy từ đợt) và **không chọn số lượng** (13/11): thả **đủ 100%** phần đã chuyển sang bè. Hiện "Còn X trên Y mảnh đã chuyển" và dòng chỉ đọc "Số lượng thả: X mảnh · toàn bộ phần đã chuyển sang bè (không chọn số lượng)". Hết phần: "Đã thả hết phần đã chuyển sang bè", khóa Lưu. Muốn số khác: sửa số sống sót hoặc chuyển phần chia giữa các bè **trước khi thả** |
+| Quy tắc | Số thả của chu kỳ từ ươm = phần chia còn lại; gửi số khác thì 400 `NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION`, hết phần thì 400 `NURSERY_SEEDING_ALREADY_COMPLETE`; 409 `NURSERY_SEEDING_ABOVE_ALLOCATION` giữ làm lớp chặn an toàn. Sửa bản ghi cũng giữ đủ 100%. Không còn mức 110% và 150% cho chu kỳ từ ươm. **Không tạo phiếu Xuất dùng** (đã trừ kho lúc ươm). Làn đang thu hoạch hoặc đã thu hoạch không thả lại. Làn hỏng hoặc ngừng hoạt động bị chặn |
 | Thông báo | Không (như trước) |
 | Liên kết | Đợt ươm, chu kỳ, lô giống (truy xuất lô) |
 

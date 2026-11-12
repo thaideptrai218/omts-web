@@ -59,13 +59,14 @@
 | NUR-05 | Nuôi trồng (ươm) | Hoàn tất ươm chia số sống sót cho các bè cùng vùng, tổng bằng đúng sống sót; dồn một bè hoặc chia nhiều bè; chuyển phần chia sau hoàn tất, không gỡ bè đã thả hoặc có nhật ký, đóng băng khi chu kỳ đã chốt | Quyết định 12/11 (câu hỏi 7 mục 8 đã chốt "có") | Cả hai | Đã làm (backend); Web W2 | §13 |
 | NUR-06 | Nuôi trồng (ươm) | Sản lượng dự kiến nhập ở bước hoàn tất ươm (theo từng bè), không nhập khi bắt đầu ươm | Quyết định 12/11 | Cả hai | Đã làm | §13 |
 | NUR-07 | Nuôi trồng (ươm) | Đợt đã hoàn tất **không hủy được** (chỉ đợt Đang ươm sửa/hủy). Đây là kết luận của câu hỏi mở đợt 12/11 | Quyết định chủ dự án 12/11 | Cả hai | Đã làm | §13 |
-| NUR-08 | Thả giống (ươm) | Thả giống từ đợt ươm: không cần lô giống, **chặn cứng** theo phần còn lại của phần chia (`NURSERY_SEEDING_ABOVE_ALLOCATION`), không có 110%/150%, không tạo phiếu Xuất dùng. Thay GBR-04 cho lần thả này | Quyết định 12/11 | Cả hai | Đã làm (backend); Web W3 chờ | §13 |
+| NUR-08 | Thả giống (ươm) | Thả giống từ đợt ươm: không cần lô giống, **chặn cứng** theo phần còn lại của phần chia (`NURSERY_SEEDING_ABOVE_ALLOCATION`), không có 110%/150%, không tạo phiếu Xuất dùng. Thay GBR-04 cho lần thả này. **Từ 13/11: thả đủ 100% phần còn lại, xem NUR-15** | Quyết định 12/11 | Cả hai | Đã làm (backend, Web) | §13 |
 | NUR-09 | Dữ liệu cũ | Chu kỳ và thả giống cũ không có đợt ươm; giữ nguyên, không backfill; báo cáo ghi "không có ươm" | Quyết định 12/11 | Cả hai | Đã làm | §13 |
 | NUR-10 | Thông báo (ươm) | Quản lý vùng bắt đầu, sửa, hủy, hoàn tất, sửa sống sót hoặc chia lại thì báo Chủ HTX (`NURSERY_RECORDED`, mã chung `MINI_APP_NOTIFICATION`). Chủ tự làm thì không báo | Quyết định 12/11 | Cả hai | Đã làm (backend) | §13 |
 | NUR-11 | Quyền (ươm) | Dùng quyền sẵn có `CultivationCycles` (View/Create/Edit theo vùng), không có mã quyền riêng NURSERY | Quyết định 12/11 (thay câu hỏi 6 mục 8) | Cả hai | Đã làm; PM xác nhận | §13 |
 | NUR-12 | Mã lỗi (ươm) | Lỗi ươm dùng `MSG-GEN-09` kèm `reasonCode` `NURSERY_*`, chờ SRS đặt `MSG-NURSERY-xx` | Quyết định 12/11 | Cả hai | Tạm thời | §13 |
 | NUR-13 | Truy xuất (ươm) | Không thêm ươm vào truy xuất công khai (QR). Lô giống của chu kỳ từ ươm vẫn truy được tới phiếu nhập và nhà cung cấp | Đặc tả mục 2 (quyết định 10) | Cả hai | Đã làm | §13 |
 | NUR-14 | Kế hoạch chu kỳ | **Bỏ ngày thu hoạch dự kiến** khỏi kế hoạch chu kỳ (form, đọc, tổng kết). Cột CSDL giữ, không hiển thị | Quyết định chủ dự án 12/11 (thay GBR/CYCLE-01) | Cả hai | Đã làm (backend); Web W2 đọc tương thích | §13 |
+| NUR-15 | Thả giống (ươm) | **Thả giống từ ươm phải đủ 100% phần đã chuyển sang bè; số lượng không chọn được** (bằng phần còn lại của phần chia). Vẫn chọn làn, % từng làn, ngày, ảnh 1-3. Gửi số khác: 400 `NURSERY_SEEDING_MUST_USE_FULL_ALLOCATION`; hết phần: 400 `NURSERY_SEEDING_ALREADY_COMPLETE`. Sửa bản ghi và hiệu chỉnh TRACE-03 giữ đủ 100%. Muốn số khác thì sửa số sống sót hoặc chuyển phần chia giữa các bè trước. Thay phần "chặn cứng, có thể thả một phần" của NUR-08. Chu kỳ không qua ươm giữ số lượng tự nhập | Quyết định chủ dự án 13/11: "thả 100% số đã gửi ươm sang bè... nếu giữ lại phần ươm còn thừa thì có khả năng thừa hoặc vứt bỏ" | Cả hai | Đã làm (backend, Web); PM chưa xác nhận (Q29) | §13 |
 | PHO-01 | Ảnh (bước) | Ảnh 1 đến 3 **bắt buộc** cho bắt đầu ươm, hoàn tất ươm (đã có); kế hoạch nuôi (tạo chu kỳ riêng), thả giống, thu hoạch, sự cố làn (chờ B2 và W3). Chỉ áp dụng cho bản ghi mới | Quyết định 12/11 (mục 10.2, 10.6) | Cả hai | Ươm: đã làm. Các bước còn lại: chờ B2 và W3 | §14 |
 | PHO-02 | Ảnh (bước) | Nhật ký chăm sóc và sử dụng vật tư: ảnh tùy chọn (nhật ký tối đa 3) | Quyết định 12/11 (mục 10.6) | Cả hai | Giữ như hiện tại | §14 |
 | PHO-03 | Lưu trữ ảnh | Ảnh lưu local tạm (`IFileStorage`, `Storage:Provider=Local`); cloud làm sau bằng cấu hình (`AzureBlob` đã có trong code) | Quyết định 12/11 | Backend | Đã làm (local) | §14 |
@@ -252,6 +253,7 @@ Cần chủ dự án hoặc PM trả lời. Mục nào đã có quyết định 
 26. **Q26. [Mới 12/11]** Sửa sống sót hoặc chia lại sau khi đã thả một phần: chấp nhận chia lại miễn không dưới số đã thả (NUR-05)? Đề xuất: có.
 27. **Q27. [Mới 12/11]** Thông báo cho Chủ HTX khi Quản lý vùng sửa % làn (LANE-01)? Đề xuất: có, thông báo thường. Hiện backend chưa có.
 28. **Q28. [Mới 12/11]** Cảnh báo hao hụt ươm cao (NUR-04): chốt không cảnh báo. PM xác nhận.
+29. **Q29. [Mới 13/11]** Thả giống từ ươm bắt buộc đủ 100% phần đã chuyển sang bè (NUR-15): PM xác nhận đưa vào SRS (CYCLE-02, thay GBR-04 cho lần thả từ ươm). Hệ quả: một lần thả lấy hết phần chia; chỉ thả tiếp khi chủ nâng phần chia; nuôi ít hơn phần đã chuyển thì phải sửa số sống sót hoặc chuyển phần thừa sang bè khác trước.
 
 ## 12. Quyết định của chủ dự án ngày 11/11/2026 (bổ sung)
 
