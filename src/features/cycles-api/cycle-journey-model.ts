@@ -15,6 +15,8 @@ export type JourneyInput = { cycle: CycleView; lanes: readonly JourneyLane[]; fi
 export const statusLabel: Record<JourneyStatus, string> = { done: "Xong", active: "Đang làm", todo: "Chưa tới" };
 const list = compressLaneNumbers;
 const kg = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+/** Nursery pieces are estimates: shown as whole pieces. */
+const pcs = (value: number) => Math.round(value).toLocaleString("vi-VN");
 export const laneIs = (lane: JourneyLane, state: string) => lane.state === state;
 
 /**
@@ -58,7 +60,7 @@ export function buildJourney(input: JourneyInput): JourneyStep[] {
 
   const early = f.notHarvestedLanes.length ? `Còn làn ${list(f.notHarvestedLanes)} chưa thu xong: kết thúc bây giờ là kết thúc sớm.` : f.earlyReason === "NoSeedingSession" ? "Chưa có lần thả giống: kết thúc bây giờ là kết thúc sớm." : undefined;
   const summary: JourneyStep = { key: "summary", label: "Tổng kết", status: closed ? "done" : allHarvested ? "active" : "todo", chip: closed ? `Đã kết thúc ${formatVietnameseDate(cycle.closeDate!)}` : allHarvested ? "Sẵn sàng kết thúc" : "Chưa tới",
-    bars: [], lines: [...(f.nursery ? [`Ươm ${f.nursery.batchCode}: vào ${f.nursery.quantityIn == null ? "—" : kg(f.nursery.quantityIn)} mảnh (ước tính), sống sót ${f.nursery.survivors == null ? "—" : kg(f.nursery.survivors)} mảnh (ước tính), hao hụt ${f.nursery.lossPieces == null ? "—" : kg(f.nursery.lossPieces)} mảnh${f.nursery.lossPercent == null ? "" : ` (${kg(f.nursery.lossPercent)}%)`} (ước tính)`] : []), `Thả ${kg(f.seedHung)}${unit ? ` ${unit}` : ""}, thu ${kg(f.kgHarvested)} kg ước tính, ${f.daysOfFarming} ngày nuôi`,
+    bars: [], lines: [...(f.nursery ? [`Ươm ${f.nursery.batchCode}: vào ${f.nursery.quantityIn == null ? "—" : pcs(f.nursery.quantityIn)} mảnh (ước tính), sống sót ${f.nursery.survivors == null ? "—" : pcs(f.nursery.survivors)} mảnh (ước tính), hao hụt ${f.nursery.lossPieces == null ? "—" : pcs(f.nursery.lossPieces)} mảnh${f.nursery.lossPercent == null ? "" : ` (${kg(f.nursery.lossPercent)}%)`} (ước tính)`] : []), `Thả ${kg(f.seedHung)}${unit ? ` ${unit}` : ""}, thu ${kg(f.kgHarvested)} kg ước tính, ${f.daysOfFarming} ngày nuôi`,
       ...(f.lostLanes ?? []).map(item => `Làn ${item.laneNumber} ngừng hoạt động${item.date ? ` ngày ${formatVietnameseDate(item.date)}` : ""}${item.reason ? `: ${item.reason}` : ""}. Ghi nhận mất giống, không có số lượng; làn được tính là đã kết thúc.`),
       ...(!closed && f.damagedLanes?.length ? [`Làn ${list(f.damagedLanes)} đang hỏng, chưa sửa.`] : []), ...(!closed && early ? [early] : []), ...(closed && cycle.assessment ? [`Đánh giá: ${cycle.assessment}`] : [])],
     ...(!closed && input.canClose ? { action: { key: "journey-close", label: "Kết thúc chu kỳ", close: true as const } } : {}) };
