@@ -18,7 +18,7 @@ it("restores service with no reason and no materials after an explicit confirmat
   render(<ToastProvider><LaneIncidentForm {...props} /></ToastProvider>);
   fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
   fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
-  await waitFor(() => expect(api.save).toHaveBeenCalledWith("restore", { id, zoneId: id, laneNumber: 2 }, { rowVersion: "v1" }));
+  await waitFor(() => expect(api.save).toHaveBeenCalledWith("restore", { id, zoneId: id, laneNumber: 2 }, { rowVersion: "v1" }, undefined));
 });
 it("shows the backend refusal while a cycle still holds seed on the lane", async () => {
   api.save.mockResolvedValue({ status: "error", httpStatus: 409, code: "MSG-GEN-09", problem: { message: "Làn còn giống trong chu kỳ đang mở." }, uncertain: false });
@@ -34,5 +34,5 @@ it("repair needs no reason when no material is used, and the schemas agree", asy
   render(<ToastProvider><LaneIncidentForm {...props} action="repair" /></ToastProvider>);
   expect(screen.getByLabelText("Nội dung sửa (tùy chọn)")).toBeTruthy();
   fireEvent.click(await screen.findByRole("button", { name: "Lưu" }));
-  await waitFor(() => expect(api.save).toHaveBeenCalledWith("repair", expect.anything(), { rowVersion: "v1" }));
+  await waitFor(() => expect(api.save).toHaveBeenCalledWith("repair", expect.anything(), { rowVersion: "v1" }, undefined));
 });

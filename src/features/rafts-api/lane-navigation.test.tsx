@@ -31,13 +31,14 @@ it("keeps the incident mounted during pending saves and confirms draft discard b
   state.cycle.mockResolvedValue({ status: "success", data: { lanes: [], cycle: null } });
   render(<Frame />);
   fireEvent.click(await screen.findByRole("button", { name: /Làn 1/ }));
-  fireEvent.click(await screen.findByRole("button", { name: "Báo hỏng" }));
-  fireEvent.click(screen.getByRole("button", { name: "Bắt đầu lưu" }));
+  // jsdom never opens a native popover, so the lane detail popover is display:none and only reachable with hidden roles.
+  fireEvent.click(await screen.findByRole("button", { name: "Báo hỏng", hidden: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Bắt đầu lưu", hidden: true }));
   fireEvent.click(screen.getByRole("button", { name: /Làn 2/ }));
   fireEvent.click(screen.getByRole("button", { name: "Đổi tab" }));
   expect(screen.getByLabelText("Bản nháp sự cố")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Đồng ý" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Kết thúc lưu" }));
+  fireEvent.click(screen.getByRole("button", { name: "Kết thúc lưu", hidden: true }));
   fireEvent.click(screen.getByRole("button", { name: /Làn 2/ }));
   fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
   expect(screen.getByLabelText("Bản nháp sự cố")).toBeTruthy();

@@ -5,7 +5,8 @@ import { OperatingLaneOverview } from "./operating-lane-overview";
 export function LaneIncidentsBoard({ raft, onChanged, onDirty, onPending }: {
   raft: Raft; onChanged(): void; onDirty?(dirty: boolean): void; onPending?(pending: boolean): void;
 }) {
-  return <OperatingLaneOverview lanes={raft.lanes} label="Các làn của bè" onDirty={onDirty} onPending={onPending}
+  // A removed lane (status 2002) is no longer part of the raft: it gets no column and no incident actions.
+  return <OperatingLaneOverview lanes={raft.lanes.filter(lane => lane.statusId !== 2002)} label="Các làn của bè" onDirty={onDirty} onPending={onPending}
     scope={{ raftId: raft.id, zoneId: raft.zone.id, onChanged }}
     raft={{ id: raft.id, code: raft.code, zoneId: raft.zone.id, statusId: raft.statusId, rowVersion: raft.rowVersion }}
     renderLaneDetails={lane => {
