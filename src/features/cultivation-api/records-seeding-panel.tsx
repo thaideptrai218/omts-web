@@ -1,5 +1,6 @@
 "use client";
 import { useSearchParams } from "next/navigation";
+import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import { Fragment, useMemo, useState } from "react";
 import { z } from "zod";
 import Link from "next/link";
@@ -90,7 +91,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
                       <Link href={farmingReferenceHref("seeding", { zoneId, raftId, cycleId, recordId: v.id })}>{v.seedLot.code}</Link>
                       <span className="block text-xs text-text-muted">{v.seedLot.supplierName}</span>
                     </td>
-                    <td data-label="Làn">{v.laneNumbers.join(", ")}</td>
+                    <td data-label="Làn">{compressLaneNumbers(v.laneNumbers)}</td>
                     <td data-label="Số lượng" className="whitespace-nowrap text-right tabular-nums">
                       {v.quantity.toLocaleString("vi-VN")} {v.seedLot.unit}
                     </td>
@@ -122,7 +123,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
                             </div>}
                             <div>
                               <dt>Làn đã thả</dt>
-                              <dd>{v.laneNumbers.join(", ")}</dd>
+                              <dd>{compressLaneNumbers(v.laneNumbers)}</dd>
                             </div>
                             <div>
                               <dt>Số lượng cả lần thả</dt>

@@ -1,4 +1,5 @@
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import type { CycleFigures } from "./close-contracts";
 import type { CycleView } from "./cycle-model";
 
@@ -12,7 +13,7 @@ export type JourneyLane = { laneNumber: number; state: string; statusId?: number
 export type JourneyInput = { cycle: CycleView; lanes: readonly JourneyLane[]; figures: CycleFigures; today: string; canClose: boolean; canEditPlan: boolean; canLog: boolean; canRecord: boolean };
 
 export const statusLabel: Record<JourneyStatus, string> = { done: "Xong", active: "Đang làm", todo: "Chưa tới" };
-const list = (numbers: readonly number[]) => numbers.join(", ");
+const list = compressLaneNumbers;
 const kg = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 const days = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 export const laneIs = (lane: JourneyLane, state: string) => lane.state === state;
@@ -35,7 +36,7 @@ export function buildJourney(input: JourneyInput): JourneyStep[] {
   const being = seeded.filter(lane => laneIs(lane, "BeingHarvested")), harvested = seeded.filter(lane => laneIs(lane, "Harvested")), lost = seeded.filter(lane => laneIs(lane, "OutOfService"));
   // BR-CYCLE-07: every lane with seed is Harvested or out of service (a lane out of service is finished, not "not harvested").
   const allHarvested = seeded.length > 0 && harvested.length + lost.length === seeded.length;
-  const unit = f.seedUnit ?? "";
+  const unit = f.seedUnit ?? "mảnh";
   const planned = cycle.expectedSeedQuantity !== null || cycle.expectedHarvestDate !== null || cycle.targetYieldKg !== null;
 
   const plan: JourneyStep = { key: "plan", label: "Kế hoạch", status: "done", chip: `Bắt đầu ${formatVietnameseDate(cycle.startDate)}`, bars: [],

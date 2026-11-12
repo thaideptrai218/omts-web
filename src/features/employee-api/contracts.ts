@@ -4,7 +4,7 @@ import { employeeViewSchema } from "@/features/employee-management/api/employee-
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 import { employeeDateOnlySchema } from "@/features/employee-management/schemas/employee-date-only";
 import { employeeBusinessDate } from "@/features/employee-management/schemas/employee-date-only";
-import { normalizeEmployeePhone } from "@/features/employee-management/schemas/employee-phone";
+import { validVietnamesePhone, vietnamesePhoneMessage } from "@/components/form/phone-input-rules";
 
 export { employeePageSchema, employeeViewSchema, jobTypeOptionsSchema } from "@/features/employee-management/api/employee-contract.schemas";
 export type { EmployeeViewDto as Employee } from "@/features/employee-management/api/employee-contract.schemas";
@@ -19,6 +19,6 @@ export const updateProfileInputSchema = employeeUpdateRequestSchema
   .refine(value => !value.employeeTypeFrom || !!value.employeeType, { path: ["employeeTypeFrom"] });
 export const endEmploymentSchema = z.strictObject({ lastWorkingDay: employeeDateOnlySchema, rowVersion: employeeRowVersionSchema }).refine(value => value.lastWorkingDay <= employeeBusinessDate(new Date()), { path: ["lastWorkingDay"] });
 export const employeeVersionSchema = z.strictObject({ rowVersion: employeeRowVersionSchema });
-export const resumeEmployeeSchema = employeeVersionSchema.extend({ phoneNumber: z.string().refine(value => !value.trim() || normalizeEmployeePhone(value) !== null).nullish() });
+export const resumeEmployeeSchema = employeeVersionSchema.extend({ phoneNumber: z.string().refine(value => !value.trim() || validVietnamesePhone(value), vietnamesePhoneMessage).nullish() });
 export const employmentChangedSchema = z.object({ employee: employeeViewSchema });
 export type EmploymentChange = z.infer<typeof employmentChangedSchema>;

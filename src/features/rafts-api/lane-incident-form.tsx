@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ImageFileInput } from "@/components/form/image-file-input";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
-import { ErrorNotice, Field, Note, useMutation } from "@/features/operations/ui";
+import { ErrorNotice, Note, useMutation } from "@/features/operations/ui";
 import { messageCatalog } from "@/shared/messages/message-catalog";
 import { damageValues, incidentActionLabel, outOfServiceValues, repairValues, restoreValues, type IncidentAction, type LaneIncident } from "./lane-incident-contracts";
 import { LaneIncidentHistory } from "./lane-incident-history";
@@ -81,7 +82,7 @@ export function LaneIncidentForm({ action, raftId, raftCode, zoneId, laneNumber,
     <fieldset disabled={mutation.pending || mutation.blocked || unavailable || eventSaved} className="grid gap-3">
       <Note label={action === "repair" ? "Nội dung sửa (tùy chọn)" : action === "restore" ? "Lý do khôi phục (tùy chọn)" : "Lý do *"} required={action === "damage" || action === "discontinue"} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} />
       {action === "repair" || action === "restore" ? <LaneIncidentStock lines={lines} onChange={setLines} onLoaded={loaded} />
-        : <Field label="Ảnh sự cố (tùy chọn, JPEG/PNG, tối đa 10 MB)" type="file" accept="image/jpeg,image/png" onChange={event => setFile(event.target.files?.[0])} />}
+        : <ImageFileInput label="Ảnh sự cố (tùy chọn, JPEG/PNG, tối đa 10 MB)" accept="image/jpeg,image/png" onChange={event => setFile(event.target.files?.[0])} />}
       {action === "discontinue" && hasSeed && <p className="text-sm">Làn đang có giống: sẽ ghi sự kiện mất giống không số lượng và coi làn đã kết thúc khi đóng chu kỳ.</p>}
     </fieldset>
     {unavailable ? <p className="text-sm text-text-muted">Chưa có thao tác khả dụng cho làn này.</p> : <ErrorNotice error={error || mutation.failure?.problem?.message || knownError || mutation.error} />}

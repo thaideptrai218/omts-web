@@ -1,5 +1,6 @@
 "use client";
 import { useMemo } from "react";
+import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import { z } from "zod";
 import { useToast } from "@/components/ui/toast-provider";
 import { Button } from "@/components/ui/button";
@@ -25,9 +26,9 @@ export function CompleteSeeding({ cycleId, zoneId, onClose, onSaved }: { cycleId
     <EditorFrame title="Hoàn tất thả giống" editor={editor} error={preview.error}>
       {preview.loading ? <Skeleton /> : preview.data && <>
         <p>Đã thả giống {preview.data.seededCount}/{preview.data.laneCount} làn.</p>
-        <p className="my-3">{preview.data.notSeededLanes.length ? `Các làn chưa thả giống: ${preview.data.notSeededLanes.join(", ")}.` : "Tất cả làn đã được thả giống."}</p>
+        <p className="my-3">{preview.data.notSeededLanes.length ? `Các làn chưa thả giống: ${compressLaneNumbers(preview.data.notSeededLanes)}.` : "Tất cả làn đã được thả giống."}</p>
         {askEmpty && <section role="alert" aria-label="Xác nhận hoàn tất khi chưa thả giống" className="my-3 grid gap-3 rounded-control border border-warning/30 bg-warning-soft p-3 text-sm">
-          <p><strong>Chưa làn nào có giống.</strong> Vẫn hoàn tất thả giống{failure?.problem?.laneNumbers?.length ? ` (làn ${failure.problem.laneNumbers.join(", ")} chưa có giống)` : ""}? Việc này được ghi vào nhật ký.</p>
+          <p><strong>Chưa làn nào có giống.</strong> Vẫn hoàn tất thả giống{failure?.problem?.laneNumbers?.length ? ` (làn ${compressLaneNumbers(failure.problem.laneNumbers)} chưa có giống)` : ""}? Việc này được ghi vào nhật ký.</p>
           <div className="flex justify-end gap-2">
             <Button key="empty-dismiss" type="button" className="w-auto" variant="secondary" disabled={editor.mutation.pending} onClick={() => editor.mutation.reviewed()}>Bỏ qua</Button>
             <Button key="empty-confirm" type="button" className="w-auto" isPending={editor.mutation.pending} onClick={async () => { if (await editor.mutation.run(() => send(true))) done(); }}>Xác nhận</Button>

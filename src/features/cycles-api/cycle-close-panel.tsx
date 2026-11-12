@@ -1,4 +1,5 @@
 "use client";
+import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
@@ -42,9 +43,9 @@ export function CycleClosePanel({ cycleId, raftCode, onDismiss, onClosed }: { cy
     <PlanBar label="Giống đã thả" actual={f.seedHung} plan={f.expectedSeedQuantity} unit={f.seedUnit ?? ""} />
     <PlanBar label="Sản lượng thu hoạch" actual={f.kgHarvested} plan={f.targetYieldKg} unit="kg" estimate note={`${f.harvestLotCount} chuyến · ${(f.harvestedCages ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} lồng · ${f.daysOfFarming} ngày nuôi`} />
     {data.isEarly && <p role="status" className="rounded-control border border-warning/30 bg-warning-soft p-2 text-sm">
-      Kết thúc sớm{f.notHarvestedLanes.length ? `: còn làn ${f.notHarvestedLanes.join(", ")} chưa thu xong và sẽ kết thúc không có sản lượng` : f.earlyReason === "NoSeedingSession" ? ": chu kỳ chưa có lần thả giống nào" : ""}.
+      Kết thúc sớm{f.notHarvestedLanes.length ? `: còn làn ${compressLaneNumbers(f.notHarvestedLanes)} chưa thu xong và sẽ kết thúc không có sản lượng` : f.earlyReason === "NoSeedingSession" ? ": chu kỳ chưa có lần thả giống nào" : ""}.
       {" "}{needsApproval ? "Cần Chủ hợp tác xã đồng ý." : "Chủ hợp tác xã chỉ cần xác nhận."}</p>}
-    {!!f.lostLanes?.length && <p className="text-sm text-text-muted">Làn {f.lostLanes.map(item => item.laneNumber).join(", ")} đã ngừng hoạt động khi đang có giống: ghi nhận mất giống không số lượng và được tính là đã kết thúc.</p>}
+    {!!f.lostLanes?.length && <p className="text-sm text-text-muted">Làn {compressLaneNumbers(f.lostLanes.map(item => item.laneNumber))} đã ngừng hoạt động khi đang có giống: ghi nhận mất giống không số lượng và được tính là đã kết thúc.</p>}
     {needsApproval && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="omts-check mt-0.5" checked={approved} disabled={mutation.pending} onChange={event => setApproved(event.target.checked)} />Chủ hợp tác xã đã trực tiếp đồng ý kết thúc sớm chu kỳ này</label>}
     <Note label="Đánh giá chu kỳ *" required maxLength={2000} value={assessment} disabled={mutation.pending} onChange={event => setAssessment(event.target.value)} />
     <p className="text-xs text-text-muted">Sản lượng là kg ước tính theo số lồng đã ghi nhận (chưa phải cân tại cảng). {f.kgHarvested > 0 && f.targetYieldKg ? `Đạt ${kg(Math.round((f.kgHarvested / f.targetYieldKg) * 1000) / 10)}% mục tiêu.` : ""}</p>

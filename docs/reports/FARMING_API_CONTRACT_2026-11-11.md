@@ -17,8 +17,8 @@ Units: kg are decimal with at most 2 decimals; cages are decimal with at most 2 
 | `finishedLaneNumbers` (repeat) | int | as before |
 | `cageCount` | decimal, dot, max 2 decimals | **> 0 and <= 100000**. `0.5` is half a cage. `2,5` (comma) is refused. Was int. |
 | `estimatedKg` | decimal, optional | **Estimated** kg (web label "ước tính"; never billed, never the weight confirmed at the port). Left out: server sets `round(cageCount x kgPerCage, 2)`. The `kgPerCage` used is the cooperative harvest setting read at record time and **copied onto the lot** (`kgPerCage` in the answer); later settings never change it (a correction uses the lot copy; verified). Sent: any value > 0 up to 10x `cageCount x kgPerCage` (and <= 1e9, 2 decimals); outside 0.2x..2x it is saved and a warning is returned (below). |
-| `confirmOverPlan` | bool, optional | answer to the over-plan warning (section 2) |
-| `overPlanReason` | text <= 1000, optional | required with `confirmOverPlan=true` |
+| `purchaseRequestId` | guid, **required when recording** | the Accepted purchase request the trip harvests for (list: `orders[]` of the harvest screen). Missing or unknown: `400 MSG-GEN-01 field:"Purchase request"`. A correction does not read it. |
+| `confirmOverPlan`, `overPlanReason` | optional | **accepted and ignored** (owner decision 12/11/2026, section 2): a harvest is never asked about the plan; the web no longer sends them |
 | `reason`, `rowVersion`, `keepPhotoKeys`, `photos` | | correction only, as before |
 
 Response `201` (record) / `200` (correct): `HarvestLotSaved { lot, everySeededLaneHarvested, cycleRowVersion, message, messageCode }`. In `lot` (and in every `lots[]` item of the screen):
@@ -36,25 +36,14 @@ Errors (all nothing-saved):
 - Naming: the field is `estimatedKg` everywhere (lot, list item, yield `estimatedKg`; summary `kgHarvested` = sum of estimated kg). No older alias exists, so nothing was renamed. Purchase requests are untouched (kg, SALE-01).
 - Corrections: a correction that changes neither cages nor kg is not judged again, so lots saved before the rule can still be corrected.
 
-## 2. Cap against the cycle plan (target yield)
+## 2. The cycle plan is NOT a cap for a harvest (owner decision 12/11/2026)
 
-Plan = the cycle's own `targetYieldKg` (BR-CYCLE-01 estimate). `total = sum(**estimated** kg of the other lots of the cycle) + this lot` (estimate against estimate; the weight confirmed at the port is not involved). Implemented thresholds: warn/confirm when `total > 1.10 x target`; hard stop when `total > 1.50 x target`. No target (null) -> no cap.
+Owner: "the plan is only a plan; the harvest may be lower or higher than the plan (estimate 500 kg, harvested 700 kg): refusing it is WRONG". The plan exists so that the *spending* side (seed, materials) stays within stock and budget.
 
-| total vs target | result |
-|---|---|
-| <= 110 % | saved |
-| > 110 % and <= 150 % (more than +10 % up to +50 % over plan; exactly 150 % is still confirmable) | `409`, code `MSG-GEN-04`, nothing saved. Client asks the user, then re-sends the same form with `confirmOverPlan=true` and `overPlanReason`. |
-| > 150 % of target (= more than +50 % over plan) | `400 MSG-GEN-01 field:"Estimated kg"` hint "The cycle would have T kg, more than 150% of its target of X kg." (cannot be confirmed) |
-
-409 body:
-```json
-{ "code": "MSG-GEN-04", "detail": "Are you sure you want to record this harvest, which takes the cycle to 1200 kg, above its target yield of 1000 kg? This action is recorded in the audit log.",
-  "confirmFlag": "confirmOverPlan", "reasonField": "overPlanReason",
-  "targetYieldKg": 1000, "harvestedKg": 800, "newKg": 400, "totalKg": 1200, "overPlanPercent": 20.0 }
-```
-Confirmed without a reason (blank / > 1000 chars): `400 MSG-GEN-01 field:"Over plan reason"`. The reason is stored on the lot (`overPlanReason`) and in the `HarvestLot.Created` / `HarvestLot.Corrected` audit values.
-A correction is judged only when it raises `estimatedKg` (the corrected lot leaves its own kg out of the total). TRACE-03.2 corrections of a Closed cycle skip the cap (they fix data).
-No per-lane cage capacity exists in the data model, so there is no per-lane cap.
+- Recording or correcting a harvest lot is **never** blocked, asked about or warned about because `sum(estimated kg of the cycle) > targetYieldKg`. The former `409 MSG-GEN-04` (> 110 %) and `400 field:"Estimated kg"` (> 150 %) for harvest lots are **removed**; `confirmOverPlan` / `overPlanReason` on a harvest are accepted and ignored. `overPlanReason` stays readable on lots saved earlier.
+- Plain sanity limits stay: cages > 0 and <= 100000 with 2 decimals, an estimated kg sent by hand above 10x cages x kgPerCage is refused (section 1).
+- The harvest screen reads the progress without clamping: `targetYieldKg`, `harvestedKg`, `remainingKg = target - harvested` (zero or negative when at or over plan), plus `targetPercent` (harvested / target x 100, 1 decimal, null without a target above 0) and `overTarget` (bool). Example 700 of 500 kg: `remainingKg: -200, targetPercent: 140.0, overTarget: true`.
+- **Unchanged:** the SEEDING plan cap (110 % asks `409 MSG-GEN-04` with a reason, 150 % stops, section 16), the MATERIAL plan checks and the stock checks (`MSG-INPUT-01`).
 
 ## 3. Finish harvest on a lane (new)
 
@@ -85,7 +74,7 @@ No per-lane cage capacity exists in the data model, so there is no per-lane cap.
 - `state`: `NotSeeded | Growing | BeingHarvested | Harvested`. BeingHarvested stays selectable (BR-HARVEST-01); Harvested is refused by the write (400 field "Lanes").
 - `reasonCode` (when `canHarvest` is false): `LaneRemoved | NoOpenCycle | ReadOnly | NoPermission | NotSeeded | AlreadyHarvested`; `reason` is an English sentence (translate by code).
 - `lanes[].harvestedCages`: each lot of the lane contributes `lot.cageCount / number of lanes of that lot` (a trip is recorded for several lanes together, so this is an apportionment). Use the cycle totals for exact numbers.
-- `harvestedCages`, `harvestedKg`: all lots of the Open cycle. `targetYieldKg`, `remainingKg = target - harvestedKg` are null without a target or cycle (can be negative when over plan).
+- `harvestedCages`, `harvestedKg`: all lots of the Open cycle. `targetYieldKg`, `remainingKg = target - harvestedKg` are null without a target or cycle (can be zero or negative when at or over plan). Since 12/11: `targetPercent` (nullable, can exceed 100) and `overTarget` (bool); `orders[]` lists the purchase requests a new trip can be recorded for (`id`, `code`, `customerName`, `productName`, `acceptedCages`, `harvestedCages`, `pickupDate`, `workDate`, `plannedOnRaft`; the one planned on this raft first).
 
 ## 5. Seeding - finish with no seeded lane
 
@@ -138,7 +127,7 @@ Closing: the Owner closes directly (`needsOwnerApproval:false`). A Zone Manager 
 
 ## 9. Message codes used
 
-No new catalogue codes: over-plan uses `MSG-GEN-04` (confirmation), empty seeding `MSG-CYCLE-01`, refusals `MSG-GEN-01` / `MSG-GEN-09`.
+No new catalogue codes: the seeding over-plan uses `MSG-GEN-04` (confirmation; the harvest has none since 12/11), empty seeding `MSG-CYCLE-01`, refusals `MSG-GEN-01` / `MSG-GEN-09`.
 
 ## 10. Migration
 
@@ -202,7 +191,7 @@ Only types changed (cages are decimal wherever a harvest lot's cages are shown);
 
 ## 16. Seeding session against the planned seed quantity
 
-Plan = `expectedSeedQuantity` of the cycle (BR-CYCLE-01 estimate). `total = sum(quantity of the other sessions of the cycle) + this session`. Same thresholds as the harvest cap: `<= 110 %` saved; `> 110 %` and `<= 150 %` -> `409 MSG-GEN-04`, nothing saved; `> 150 %` -> `400 MSG-GEN-01 field:"Quantity"` (cannot be confirmed); no plan -> no cap.
+Plan = `expectedSeedQuantity` of the cycle (BR-CYCLE-01 estimate). `total = sum(quantity of the other sessions of the cycle) + this session`. Thresholds (the harvest no longer has them, section 2): `<= 110 %` saved; `> 110 %` and `<= 150 %` -> `409 MSG-GEN-04`, nothing saved; `> 150 %` -> `400 MSG-GEN-01 field:"Quantity"` (cannot be confirmed); no plan -> no cap.
 
 `POST /api/cultivation-cycles/{id}/seeding-records` and `PUT /api/seeding-records/{id}` take two more optional fields: `confirmOverPlan` (bool, send `false` or leave out, not `null`) and `overPlanReason` (text <= 1000, required with `confirmOverPlan: true`, else `400 field:"Over plan reason"`).
 

@@ -17,7 +17,7 @@ const lookups = (...names: [string, string][]) => ok({ jobs: [], employees: name
 it("validates crew ids and the real crew read shape", () => {
   expect(crewIds.safeParse([id1, id1]).success).toBe(false);
   expect(crewIds.safeParse(Array.from({ length: 101 }, (_, index) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`)).success).toBe(false);
-  expect(harvestValues.parse({ laneNumbers: [1], finishedLaneNumbers: [], cageCount: 0.5, estimatedKg: null, crew: [id1, id2] }).crew).toEqual([id1, id2]);
+  expect(harvestValues.parse({ purchaseRequestId: raft, laneNumbers: [1], finishedLaneNumbers: [], cageCount: 0.5, estimatedKg: null, crew: [id1, id2] }).crew).toEqual([id1, id2]);
   expect(harvestCorrection.safeParse({ laneNumbers: [1], finishedLaneNumbers: [], cageCount: 1, estimatedKg: null, replaceCrew: true, keepPhotoKeys: [], reason: "x", rowVersion: "v" }).success).toBe(true);
   expect(crewSuggestions.parse({ raftId: raft, date: "2026-11-12", employees: [{ id: id1, code: "NV000001", name: "An" }] }).employees[0].name).toBe("An");
   expect(harvestDetail.shape.crew.parse([{ id: id1, code: "NV000001", name: "An" }])).toHaveLength(1);

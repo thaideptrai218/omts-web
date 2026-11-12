@@ -1,0 +1,41 @@
+﻿.field { display:grid; min-width:0; gap:4px; }
+.control { display:flex; align-items:center; min-width:0; height:34px; border:1px solid var(--omts-color-border-strong, #cbd5e1); border-radius:6px; background:var(--omts-color-surface, #fff); color:var(--omts-color-text, #243447); }
+.control:focus-within { border-color:var(--omts-color-primary, var(--omts-brand)); box-shadow:0 0 0 2px var(--omts-color-primary-soft, #edf3fc); }
+.control[data-invalid] { border-color:#dc2626; }
+.control input { min-width:0; width:100%; height:100%; border:0; outline:0; background:transparent; padding:0 9px; font-size:13px; color:inherit; font-variant-numeric:tabular-nums; }
+.control input:disabled { opacity:.6; }
+.control button { display:grid; place-items:center; flex:none; width:32px; height:30px; border-radius:4px; color:var(--omts-color-text-muted, #64748b); }
+.control button:hover:not(:disabled) { color:var(--omts-color-primary); background:var(--omts-color-primary-soft); }
+.control button:focus-visible { outline:2px solid var(--omts-color-primary); outline-offset:-2px; }
+.control svg { width:16px; height:16px; }
+.timeValue { font-size:12px; font-variant-numeric:tabular-nums; }
+.error { font-size:12px; line-height:1.4; color:#b91c1c; }
+.calendar { width:280px; max-width:calc(100vw - 50px); display:grid; gap:12px; }
+.calendar :global(.rdp-root) { --rdp-accent-color:var(--omts-color-primary); --rdp-day-width:40px; --rdp-day-height:36px; --rdp-day_button-width:36px; --rdp-day_button-height:34px; font-size:13px; }
+.calendar :global(.rdp-month) { width:100%; }
+.calendar :global(.rdp-month_grid) { width:100%; border-collapse:collapse; }
+.calendar :global(.rdp-month_caption) { height:38px; justify-content:center; padding:0 30px; }
+.calendar :global(.rdp-dropdowns) { display:flex; gap:6px; width:100%; align-items:center; }
+.calendar :global(.rdp-dropdowns) > :first-child { flex:1; min-width:0; }
+.calendar :global(.rdp-dropdowns) > :last-child { width:78px; }
+.calendar :global(.omts-select-trigger) { height:30px; font-size:12px; padding-left:8px; }
+.calendar :global(.rdp-button_previous), .calendar :global(.rdp-button_next) { width:26px; height:34px; border-radius:6px; }
+.calendar :global(.rdp-button_previous):hover, .calendar :global(.rdp-button_next):hover { background:var(--omts-color-primary-soft); }
+.calendar :global(.rdp-chevron) { width:15px; height:15px; }
+.calendar :global(.rdp-weekday) { height:30px; padding:0; color:var(--omts-color-text-muted); font-size:11px; font-weight:600; }
+.calendar :global(.rdp-day) { height:36px; padding:0; font-size:12px; text-align:center; }
+.calendar :global(.rdp-day_button) { margin:auto; border:1px solid transparent; border-radius:7px; font:inherit; color:var(--omts-color-text); }
+.calendar :global(.rdp-day_button):hover:not(:disabled) { background:var(--omts-color-primary-soft); color:var(--omts-color-primary); }
+.calendar :global(.rdp-today) :global(.rdp-day_button) { border-color:var(--omts-color-primary); color:var(--omts-color-primary); font-weight:650; }
+.calendar :global(.rdp-selected) { font-size:12px; font-weight:600; }
+.calendar :global(.rdp-selected) :global(.rdp-day_button) { border-color:var(--omts-color-primary); background:var(--omts-color-primary); color:white; }
+.calendar :global(.rdp-disabled) { opacity:.35; }
+.calendar :global(.rdp-disabled) :global(.rdp-day_button) { cursor:not-allowed; }
+.timePicker { display:flex; align-items:end; gap:8px; padding-top:10px; border-top:1px solid var(--omts-color-border); font-size:12px; }
+.timePicker > span { margin-right:auto; align-self:center; color:var(--omts-color-text-muted); }
+.timePicker label { width:66px; display:grid; gap:3px; color:var(--omts-color-text-muted); }
+.timePicker b { align-self:center; margin-top:16px; color:var(--omts-color-text-muted); }
+.footer { display:flex; align-items:center; gap:12px; padding-top:10px; border-top:1px solid var(--omts-color-border); font-size:12px; }
+.close { margin-left:auto; min-height:30px; padding:0 12px; border:1px solid var(--omts-color-border-strong); border-radius:6px; font-weight:600; }
+.close:hover { color:var(--omts-color-primary); border-color:var(--omts-color-primary); }
+@media (max-width:620px) { .control input { font-size:16px; } }

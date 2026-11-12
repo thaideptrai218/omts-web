@@ -1,5 +1,6 @@
 import { employeeApiEditorSchema, buildEmployeeSaveBody, localFieldLabels, valuesOf, type EmployeeFormValues } from "./employee-editor-model";
 import { employeeFieldGroup, type EmployeeCreateGroup } from "./employee-editor-validation";
+import { issueEmployeeAccountRequestSchema } from "./employee-account-contract";
 
 /** Values of the create dialog: the profile fields plus the optional login account. */
 export type EmployeeCreateValues = EmployeeFormValues & { createAccount: boolean; username: string };
@@ -33,6 +34,10 @@ export function parseEmployeeCreate(values: EmployeeCreateValues, inactiveZoneId
   else if (inactiveZoneIds.length) add("workingZoneIds", "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu.");
   if (values.createAccount) {
     if (!values.username.trim()) add("username", "Nhập tên đăng nhập.");
+    else {
+      const account = issueEmployeeAccountRequestSchema.safeParse({ username: values.username });
+      if (!account.success) add("username", account.error.issues[0].message);
+    }
     // The backend copies the employee's phone number to the account (BR-LABOR-01).
     if (!values.phone.trim()) add("phone", "Nhập số điện thoại để tạo tài khoản đăng nhập.");
   }

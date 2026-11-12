@@ -4,6 +4,8 @@ import { z } from "zod";
 import { useToast } from "@/components/ui/toast-provider";
 import { Button } from "@/components/ui/button";
 import { UnitField } from "@/components/form/number-fields";
+import { farmingStepLink } from "@/features/farming-management/entity-links";
+import { SeedingLanePicker } from "./seeding-lane-picker";
 import { backdateProblem, backdateWindow } from "@/shared/format/backdate-window";
 import { PlanBar } from "@/features/farming-management/plan-bar";
 import { inputRepository } from "@/features/input-items/repository";
@@ -12,7 +14,7 @@ import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import { farmingErrorText } from "./farming-error-text";
 import { OverPlanConfirm, isOverPlanQuestion } from "./over-plan-confirm";
 import * as c from "./records-contracts";
-import { EditorFrame, LaneChoices, seedRepo } from "./records-shared";
+import { EditorFrame, seedRepo } from "./records-shared";
 import { useSeedingPlan } from "./use-seeding-plan";
 import { laneIsUnavailable } from "./lane-availability";
 
@@ -36,7 +38,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   const dirty = date !== (record?.seedingDate ?? businessToday()) || lot !== (record?.seedLot.id ?? "") || quantity !== String(record?.quantity ?? "") || JSON.stringify(lanes) !== JSON.stringify(record?.laneNumbers ?? []) || !!reason;
   // The unit always comes from the Vật tư & Giống catalogue (the lot's unit), never a fixed word.
   const selectedLot = lots.data?.lots.find(v => v.id === lot);
-  const seedUnit = selectedLot?.unit ?? record?.seedLot.unit ?? "đơn vị";
+  const seedUnit = selectedLot?.unit ?? record?.seedLot.unit ?? "mảnh";
   const { notify } = useToast();
   const editor = useOperationEditor(onClose, dirty);
   const plan = useSeedingPlan(cycleId, quantity, record?.quantity ?? 0);
@@ -52,7 +54,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
 
   const values = (confirmed: boolean) => c.seedValues.safeParse({ seedingDate: date, seedLotId: lot, quantity: Number(quantity), laneNumbers: lanes, ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
   const send = (parsed: z.infer<typeof c.seedValues>) => seedRepo.write(record ? "correct" : "record", { ...parsed, ...(record ? { reason, rowVersion: record.rowVersion } : {}) }, z.object({ record: c.seedingRecord }), record?.id ?? cycleId, zoneId);
-  const done = () => { notify({ tone: "success", title: `Đã lưu thả giống ${record?.seedLot.code ?? selectedLot?.code ?? ""}.` }); onSaved(); };
+  const done = () => { notify({ tone: "success", title: `Đã lưu thả giống ${record?.seedLot.code ?? selectedLot?.code ?? ""}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("material", { zoneId, raftId, cycleId }) } }); onSaved(); };
   /** Date, fields, reason, stock and the 150% ceiling: the problem text, or undefined when the form may be sent. */
   function problem(parsed: ReturnType<typeof values>) {
     const dateProblem = date !== record?.seedingDate ? backdateProblem(date, dateWindow, "Ngày thả giống", !!cycleStartDate) : undefined;
@@ -92,7 +94,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
         <UnitField key="seeding-quantity" label="Số lượng giống *" unit={seedUnit} decimals={3} min={0.001} max={noNegative && capacity !== null ? capacity : undefined} required value={quantity} onChange={edited(setQuantity)}
           hint={onHand !== null ? `Còn ${n(onHand)} ${seedUnit} trong lô${over ? (noNegative ? ". Không được vượt tồn kho" : ". Số nhập đang lớn hơn tồn kho") : ""}` : undefined} />
         {plan.planned !== null && <PlanBar label="Giống đã thả" actual={plan.total} plan={plan.planned} unit={plan.seedUnit ?? seedUnit} hideOverNote note={`Giống đã thả ${n(plan.total)} / kế hoạch ${n(plan.planned)} ${plan.seedUnit ?? seedUnit} (${n(plan.percent!)}%) nếu lưu lần thả này.`} />}
-        <LaneChoices lanes={choices} values={lanes} onChange={edited(setLanes)} />
+        <SeedingLanePicker lanes={data.lanes} notSeededLanes={data.notSeededLanes} choices={choices} values={lanes} editing={!!record} onChange={edited(setLanes)} />
         {record && <Note label="Lý do điều chỉnh *" required value={reason} onChange={event => setReason(event.target.value)} />}
       </fieldset>
       {question && editable && <OverPlanConfirm reason={overReason} onReason={setOverReason} pending={editor.mutation.pending} dismissLabel="Sửa lại số liệu" confirmLabel="Xác nhận vượt kế hoạch" onDismiss={() => { setAsked(false); editor.mutation.reviewed(); }} onConfirm={() => void confirmOver()}

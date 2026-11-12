@@ -3,7 +3,6 @@ import Link from "next/link";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
-import { TabFooter } from "@/features/farming-management/detail-parts";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/management-page";
 import { Subtabs } from "@/components/ui/management-screen/management-table";
@@ -26,7 +25,7 @@ export function CycleDetailPanel({ row, zoneId, access, guard, onChanged }: { ro
   const [tab, setTab] = useState<TabKey>(() => tabKeys.find(key => key === requested) ?? (params?.get("cycleId") ? "progress" : "journey")), prefix = `cycle-${row.raftId}`;
   const [starting, setStarting] = useState(false);
   const canStart = access.create && row.canStart;
-  const tabs = useMemo(() => ([["journey", "Hành trình", true], ["progress", "Tiến độ", true], ["plan", "Kế hoạch", true], ["history", "Lịch sử", true], ["logs", "Nhật ký chăm sóc", access.logs && !!row.cycle]] as const)
+  const tabs = useMemo(() => ([["journey", "Hành trình", true], ["progress", "Tiến độ làn", true], ["plan", "Kế hoạch", true], ["logs", "Nhật ký chăm sóc", access.logs && !!row.cycle], ["history", "Lịch sử", true]] as const)
     .filter(entry => entry[2]).map(([key, label]) => ({ key, label })), [access.logs, row.cycle]);
   const state = cycleStateOf(row);
   const jump = (target: "plan" | "logs") => { void guard.leave(() => setTab(target)); };
@@ -39,11 +38,11 @@ export function CycleDetailPanel({ row, zoneId, access, guard, onChanged }: { ro
   };
   return <section id={`cycle-preview-${row.raftId}`} className={styles.detail} aria-label="Chi tiết chu kỳ của bè">
     <header className={styles.header}><h3><Link className={styles.link} href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>Bè {row.raftCode}</Link></h3><StatusPill tone={state === "open" ? "success" : "neutral"}>{cycleStateLabel(state)}</StatusPill>
+      {canStart && <Button key="start-cycle" type="button" className="ml-auto w-auto" onClick={() => { void guard.leave(() => setStarting(true)); }}>Bắt đầu chu kỳ nuôi</Button>}
     </header>
     {canStart && starting && <CycleEditor raftId={row.raftId} raftCode={row.raftCode} canCancel={false} onClose={() => setStarting(false)} onSaved={() => { setStarting(false); setTab("journey"); onChanged("Đã bắt đầu chu kỳ nuôi."); }} />}
     <Subtabs<TabKey> label="Chu kỳ nuôi của bè" tabs={tabs} value={tab} idPrefix={prefix} onChange={key => { if (key !== tab) void guard.leave(() => setTab(key)); }} />
     <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={styles.body}>{content[tab]}
-      {canStart && <TabFooter right={<Button key="start-cycle" type="button" className="w-auto" onClick={() => { void guard.leave(() => setStarting(true)); }}>Bắt đầu chu kỳ nuôi</Button>} />}
     </div>
   </section>;
 }

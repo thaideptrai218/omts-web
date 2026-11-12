@@ -18,16 +18,20 @@ import { harvestEstimate } from "./harvest-estimate-hint";
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const cycle = { id: "00000000-0000-4000-8000-000000000009", startDate: "2026-10-02", closeDate: null, statusId: 1, status: "Open", rowVersion: "v" };
 const lane = (laneNumber: number, patch: object = {}) => ({ laneNumber, canHarvest: true, state: "BeingHarvested" as const, canFinish: true, lotCount: 2, harvestedCages: 4, ...patch });
-const screenData = (patch: object = {}) => ({ raftId: "r", raftCode: "B1", cycle, averageKgPerCage: 50, canRecordHarvest: true, lots: [], lanes: [lane(1), lane(2, { canFinish: false, canHarvest: false, state: "Harvested", reasonCode: "AlreadyHarvested" })],
+const orderId = "00000000-0000-4000-8000-0000000000aa";
+const order = { id: orderId, code: "YC-20261112-AAAA", customerName: "Khách A", productName: "Hàu thương phẩm", acceptedCages: 20, harvestedCages: 4, pickupDate: "2026-11-15", workDate: null, plannedOnRaft: true };
+const screenData = (patch: object = {}) => ({ raftId: "r", raftCode: "B1", cycle, averageKgPerCage: 50, canRecordHarvest: true, lots: [], orders: [order], lanes: [lane(1), lane(2, { canFinish: false, canHarvest: false, state: "Harvested", reasonCode: "AlreadyHarvested" })],
   harvestedCages: 6, harvestedKg: 300, targetYieldKg: 1000, remainingKg: 700, ...patch });
 const wrap = (node: React.ReactNode) => render(<ToastProvider>{node}</ToastProvider>);
 
 describe("planned vs actual vs remaining (kg first, estimate)", () => {
   it("shows the progress bar, the estimate label and the remaining kg", () => {
     wrap(<HarvestPlanSummary data={screenData()} />);
-    expect(screen.getByRole("progressbar", { name: /Sản lượng thu hoạch/ }).getAttribute("aria-valuenow")).toBe("30");
+    expect(screen.getByRole("progressbar", { name: /Sản lượng so với kế hoạch/ }).getAttribute("aria-valuenow")).toBe("30");
     expect(screen.getByText("(ước tính)")).toBeTruthy();
-    expect(screen.getByText(/Đã thu 6 lồng. Còn 700 kg để đạt mục tiêu/)).toBeTruthy();
+    expect(screen.getByText(/300 \/ 1\.000 kg ước tính/)).toBeTruthy();
+    expect(screen.getByText(/Đã thu 6 lồng. Còn 700 kg so với mục tiêu/)).toBeTruthy();
+    expect(screen.queryByText("Vượt kế hoạch")).toBeNull();
   });
   it("falls back to the lots for an older backend and says so when there is no target", () => {
     const old = screenData({ harvestedCages: undefined, harvestedKg: undefined, targetYieldKg: undefined, remainingKg: undefined, lots: [{ cageCount: 2.5, estimatedKg: 125 }] });
@@ -35,9 +39,19 @@ describe("planned vs actual vs remaining (kg first, estimate)", () => {
     wrap(<HarvestPlanSummary data={old as never} />);
     expect(screen.getByText(/Chu kỳ chưa đặt sản lượng mục tiêu/)).toBeTruthy();
   });
-  it("warns, without blocking, that the trip being typed goes over the target", () => {
+  it("shows going over the target as neutral information: 700 of 500 kg is 140%, no warning wording", () => {
+    wrap(<HarvestPlanSummary data={screenData({ harvestedKg: 700, targetYieldKg: 500, remainingKg: -200, targetPercent: 140, overTarget: true })} />);
+    expect(screen.getByText(/700 \/ 500 kg ước tính/)).toBeTruthy();
+    expect(screen.getByText("(140%)")).toBeTruthy();
+    expect(screen.getByText("Vượt kế hoạch")).toBeTruthy();
+    expect(screen.getByText(/Cao hơn mục tiêu 200 kg/)).toBeTruthy();
+    expect(screen.getByTestId("harvest-plan-summary").textContent).not.toMatch(/kiểm tra lại|cảnh báo/i);
+    expect(screen.getByTestId("harvest-plan-summary").innerHTML).not.toContain("text-warning");
+  });
+  it("derives the percent for a backend that does not send it and adds the trip being typed without blocking", () => {
+    expect(harvestProgressOf(screenData({ harvestedKg: 600, targetYieldKg: 500, remainingKg: undefined }) as never)).toMatchObject({ percent: 120, overTarget: true, remainingKg: -100 });
     wrap(<HarvestPlanSummary data={screenData({ harvestedKg: 900 })} extraKg={200} />);
-    expect(screen.getByRole("status").textContent).toContain("vượt mục tiêu 1.000 kg");
+    expect(screen.getByRole("status").textContent).toContain("1.100 kg ước tính (110% kế hoạch)");
   });
 });
 
@@ -99,47 +113,37 @@ describe("the form follows the backend that answers", () => {
 });
 
 const fillTrip = async () => {
-  fireEvent.click(screen.getByRole("checkbox", { name: /Làn 1/ }));
+  fireEvent.click(screen.getByRole("button", { name: /^Làn 1 ·/ }));
   fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "8" } });
   fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
   fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
 };
-describe("over-plan confirmation inside the form", () => {
-  const question = { status: "error", httpStatus: 409, code: "MSG-GEN-04", uncertain: false, problem: { code: "MSG-GEN-04", confirmFlag: "confirmOverPlan", targetYieldKg: 1000, harvestedKg: 800, newKg: 400, totalKg: 1200, overPlanPercent: 20 } };
-  it("asks for a reason in the form (no extra pop-up), sends the same trip again with the confirmation and keeps warnings as notices", async () => {
-    upload.mockResolvedValueOnce(question).mockResolvedValueOnce({ status: "success", data: { lot: { id: "x", lotCode: "KV01-B01-20261112" }, warnings: [{ code: "ESTIMATED_KG_FAR_FROM_CAGES", details: { workedKg: 400, minKg: 80, maxKg: 800 } }] } });
+describe("recording a trip above the plan (the plan is not a cap)", () => {
+  it("sends the purchase request with the trip and saves a 700 kg trip against a 500 kg target with no confirmation, keeping warnings as notices", async () => {
+    upload.mockResolvedValueOnce({ status: "success", data: { lot: { id: "x", lotCode: "KV01-B01-20261112" }, warnings: [{ code: "ESTIMATED_KG_FAR_FROM_CAGES", details: { workedKg: 400, minKg: 80, maxKg: 800 } }] } });
     const onSaved = vi.fn();
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData()} onClose={vi.fn()} onSaved={onSaved} />);
+    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData({ harvestedKg: 500, targetYieldKg: 500, remainingKg: 0 })} onClose={vi.fn()} onSaved={onSaved} />);
     await fillTrip();
-    expect(await screen.findByRole("alert", { name: "Xác nhận vượt kế hoạch" })).toBeTruthy();
-    expect(screen.getByText(/1\.200 kg ước tính, vượt mục tiêu 1\.000 kg \(\+20%\)/)).toBeTruthy();
-    expect(screen.queryByText(/Hãy xác nhận trước khi tiếp tục/)).toBeNull();
-    expect((screen.getByRole("button", { name: "Xác nhận" }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Lưu" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText("Lý do vượt kế hoạch *"), { target: { value: "Hàu lớn nhanh" } });
-    fireEvent.click(screen.getByRole("button", { name: "Xác nhận" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(upload).toHaveBeenCalledTimes(2);
-    expect(upload.mock.calls[0][2]).not.toHaveProperty("confirmOverPlan");
-    expect(upload.mock.calls[1][2]).toMatchObject({ cageCount: 8, confirmOverPlan: true, overPlanReason: "Hàu lớn nhanh", laneNumbers: [1] });
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(upload.mock.calls[0][2]).toEqual({ purchaseRequestId: orderId, laneNumbers: [1], finishedLaneNumbers: [], cageCount: 8, estimatedKg: null });
+    expect(screen.queryByRole("alert", { name: "Xác nhận vượt kế hoạch" })).toBeNull();
     expect(await screen.findByText(/Kg ước tính \(400 kg\) lệch nhiều so với số lồng/)).toBeTruthy();
   });
-  it("Bỏ qua drops the question and returns to editing without sending anything more", async () => {
-    upload.mockResolvedValueOnce(question);
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    await fillTrip();
-    await screen.findByRole("alert", { name: "Xác nhận vượt kế hoạch" });
-    const blocks = screen.getAllByRole("button", { name: "Bỏ qua" });
-    fireEvent.click(blocks[0]);
-    await waitFor(() => expect(screen.queryByRole("alert", { name: "Xác nhận vượt kế hoạch" })).toBeNull());
-    expect(upload).toHaveBeenCalledTimes(1);
-    expect((screen.getByRole("button", { name: "Lưu" }) as HTMLButtonElement).disabled).toBe(false);
+  it("lists the purchase requests, picks the one planned on the raft and cannot save without any", () => {
+    const second = { ...order, id: "00000000-0000-4000-8000-0000000000bb", code: "YC-20261112-BBBB", plannedOnRaft: false };
+    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData({ orders: [second, order] })} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect((screen.getByLabelText("Yêu cầu mua *") as HTMLSelectElement).value).toBe(orderId);
+    cleanup();
+    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData({ orders: [] })} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(screen.getByText(/Chưa có yêu cầu mua nào đang chờ thu hoạch/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Lưu" }) as HTMLButtonElement).disabled).toBe(true);
   });
-  it("shows a hard refusal (over 150%) as an error, not as a question", async () => {
-    upload.mockResolvedValueOnce({ status: "error", httpStatus: 400, code: "MSG01", uncertain: false, problem: { code: "MSG-GEN-01", field: "Estimated kg" } });
+  it("names the field the backend refused instead of the generic message", async () => {
+    upload.mockResolvedValueOnce({ status: "error", httpStatus: 400, code: "MSG-GEN-01", uncertain: false, problem: { code: "MSG-GEN-01", field: "Purchase request", fields: ["Purchase request"] } });
     wrap(<HarvestForm zoneId="z" raftId="r" data={screenData()} onClose={vi.fn()} onSaved={vi.fn()} />);
     await fillTrip();
-    expect((await screen.findByRole("alert")).textContent).toContain("không thể xác nhận");
-    expect(screen.queryByRole("button", { name: "Xác nhận" })).toBeNull();
+    await waitFor(() => expect(screen.getAllByRole("alert").map(a => a.textContent).join(" | ")).toContain("yêu cầu mua"));
+    expect(upload).toHaveBeenCalledTimes(1);
   });
 });

@@ -50,7 +50,9 @@ describe("seeding form units and date window", () => {
 });
 
 describe("harvest form lanes and cages", () => {
-  const data = { raftId: "r", raftCode: "B1", cycle: null, averageKgPerCage: 50, canRecordHarvest: true, lots: [], lanes: [
+  const orderId = "00000000-0000-4000-8000-0000000000aa";
+  const orders = [{ id: orderId, code: "YC-1", customerName: "Khách A", productName: "Hàu", acceptedCages: 10, harvestedCages: 0, pickupDate: "2026-11-15", workDate: null, plannedOnRaft: true }];
+  const data = { raftId: "r", raftCode: "B1", cycle: null, averageKgPerCage: 50, canRecordHarvest: true, lots: [], orders, lanes: [
     { laneNumber: 1, canHarvest: true, state: "BeingHarvested" as const },
     { laneNumber: 2, canHarvest: false, state: "Harvested" as const, reasonCode: "AlreadyHarvested" },
     { laneNumber: 3, canHarvest: false, state: "NotSeeded" as const, reasonCode: "NotSeeded" },
@@ -59,20 +61,21 @@ describe("harvest form lanes and cages", () => {
     upload.mockResolvedValue({ status: "success", data: { lot: { id: lotId, lotCode: "L01" }, warnings: [] } });
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
     fireEvent.click(screen.getByRole("button", { name: "Chọn An cùng thu" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /Làn 1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Làn 1 ·/ }));
     fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "0,5" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
-    await waitFor(() => expect(upload).toHaveBeenCalledWith("harvest-record", [], expect.objectContaining({ cageCount: 0.5, crew: ["00000000-0000-4000-8000-000000000001"] }), expect.anything(), "r", "z"));
+    await waitFor(() => expect(upload).toHaveBeenCalledWith("harvest-record", [], expect.objectContaining({ purchaseRequestId: orderId, cageCount: 0.5, crew: ["00000000-0000-4000-8000-000000000001"] }), expect.anything(), "r", "z"));
   });
-  it("lists every lane with its state, keeps blocked lanes disabled with the reason and leaves BeingHarvested selectable", () => {
+  it("shows the harvestable lanes first and keeps blocked lanes disabled with the reason once revealed", () => {
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
-    expect((screen.getByRole("checkbox", { name: /Làn 1/ }) as HTMLInputElement).disabled).toBe(false);
-    expect((screen.getByRole("checkbox", { name: /Làn 2/ }) as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByRole("checkbox", { name: /Làn 3/ }) as HTMLInputElement).disabled).toBe(true);
-    expect(screen.getByText("Đang thu hoạch")).toBeTruthy();
-    expect(screen.getByText("Làn đã thu xong.")).toBeTruthy();
-    expect(screen.getByText("Làn chưa thả giống nên chưa thể thu hoạch.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: /^Làn 1 · Đang thu hoạch/ }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: /^Làn 2 ·/ })).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Hiện cả làn không thu được/ }));
+    expect((screen.getByRole("button", { name: /^Làn 2 ·/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /^Làn 3 ·/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: /^Làn 2 · Đã thu hoạch · Làn đã thu xong\./ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Làn 3 · Chưa thả giống · Làn chưa thả giống nên chưa thể thu hoạch\./ })).toBeTruthy();
   });
   it("accepts half a cage, states the kg is an estimate and keeps Bỏ qua from submitting", () => {
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);

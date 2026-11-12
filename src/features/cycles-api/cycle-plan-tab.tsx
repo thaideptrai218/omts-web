@@ -16,7 +16,7 @@ import { readCycles, writeCycle } from "./repository";
 
 export type CycleAccess = { view: boolean; create: boolean; edit: boolean; remove: boolean; logs: boolean; logsCreate: boolean; logsEdit: boolean };
 const day = (value: string | null) => value ? formatVietnameseDate(value) : null;
-const fields = [["startDate", "Ngày bắt đầu", "date"], ["expectedSeedQuantity", "Lượng giống dự kiến", "number"], ["expectedHarvestDate", "Ngày thu hoạch dự kiến", "date"], ["targetYieldKg", "Sản lượng mục tiêu (kg)", "number"]] as const;
+const fields = [["startDate", "Ngày bắt đầu", "date"], ["expectedSeedQuantity", "Lượng giống dự kiến (mảnh)", "number"], ["expectedHarvestDate", "Ngày thu hoạch dự kiến", "date"], ["targetYieldKg", "Sản lượng mục tiêu (kg)", "number"]] as const;
 /** "Kế hoạch": the cycle plan, edited in place; cancelling a mistaken cycle asks for confirmation. */
 export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleRow; access: CycleAccess; dirtyRef: RefObject<boolean>; onChanged(notice: string): void }) {
   const current = useStickyRemote(useCallback((signal: AbortSignal) => readCycles({ action: "progress", raftId: row.raftId, ...(row.cycle ? { cycleId: row.cycle.id } : { date: businessToday() }) }, cycleProgress, signal), [row.raftId, row.cycle]));
@@ -55,7 +55,7 @@ export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleR
         <Field label={key === "startDate" ? `${label} *` : label} type={type} name={key} max={key === "startDate" ? businessToday() : undefined} min={type === "number" ? "0" : undefined} step={key === "expectedSeedQuantity" ? "0.001" : key === "targetYieldKg" ? "0.01" : undefined}
           value={draft[key]} aria-invalid={!!errors[key]} onChange={event => setDraft(previous => previous && { ...previous, [key]: event.target.value })} />
         {errors[key] && <p role="alert" className={styles.fieldError}>{errors[key]}</p>}</div>)}</div>
-        : <Facts items={[["Ngày bắt đầu", day(cycle.startDate)], ["Tình trạng", cycle.closeDate ? "Đã đóng" : "Đang nuôi"], ["Số ngày nuôi", cycle.daysOfFarming], ["Lượng giống dự kiến", cycle.expectedSeedQuantity?.toLocaleString("vi-VN") ?? "Chưa lập"],
+        : <Facts items={[["Ngày bắt đầu", day(cycle.startDate)], ["Tình trạng", cycle.closeDate ? "Đã đóng" : "Đang nuôi"], ["Số ngày nuôi", cycle.daysOfFarming], ["Lượng giống dự kiến (mảnh)", cycle.expectedSeedQuantity?.toLocaleString("vi-VN") ?? "Chưa lập"],
           ["Ngày thu hoạch dự kiến", day(cycle.expectedHarvestDate) ?? "Chưa lập"], ["Sản lượng mục tiêu", cycle.targetYieldKg === null ? "Chưa lập" : `${cycle.targetYieldKg.toLocaleString("vi-VN")} kg`],
           ["Thả giống hoàn tất", day(cycle.seedingCompletedOn)], ["Ngày đóng", day(cycle.closeDate)], ["Đánh giá", cycle.assessment]]} />}
     </fieldset>

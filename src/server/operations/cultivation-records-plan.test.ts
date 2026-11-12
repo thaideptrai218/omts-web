@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { cultivationRecordsPlan } from "./cultivation-records-plan";
-import { harvestCorrected, harvestSaved, harvestValues } from "@/features/cultivation-api/records-contracts";
+import { harvestCorrected, harvestCorrection, harvestSaved, harvestValues } from "@/features/cultivation-api/records-contracts";
 
 const raft = "529ec3ce-af8f-42f7-a08f-4bab36ba7e62", zone = "529ec3ce-af8f-42f7-a08f-4bab36ba7e63", cycle = "529ec3ce-af8f-42f7-a08f-4bab36ba7e64";
 const post = (area: "harvest" | "seeding", body: unknown) => cultivationRecordsPlan(area, "POST", new URLSearchParams(), body);
-const trip = { laneNumbers: [1, 2], finishedLaneNumbers: [1], cageCount: 0.5, estimatedKg: null };
+const order = "529ec3ce-af8f-42f7-a08f-4bab36ba7e65";
+const trip = { purchaseRequestId: order, laneNumbers: [1, 2], finishedLaneNumbers: [1], cageCount: 0.5, estimatedKg: null };
 
 describe("finish a lane (one decisive per-lane action)", () => {
   it("posts without a body to the finish-harvest route of the raft and lane", () => {
@@ -20,7 +21,7 @@ describe("finish a lane (one decisive per-lane action)", () => {
   it("is not offered for seeding", () => expect(post("seeding", { action: "finish-lane", id: raft, zoneId: zone, body: { laneNumber: 1 } })).toBeUndefined());
 });
 
-describe("harvest values: decimal cages and the over-plan answer", () => {
+describe("harvest values: purchase request, decimal cages, and no plan cap", () => {
   it("reads the crew suggestions of a raft for one day with the harvest View permission only", () => {
     const query = (extra: Record<string, string> = {}) => new URLSearchParams({ action: "crew-suggestions", id: raft, zoneId: zone, date: "2026-11-12", ...extra });
     expect(cultivationRecordsPlan("harvest", "GET", query())).toMatchObject({ method: "GET", permission: "View", zoneId: zone, path: `/api/rafts/${raft}/crew-suggestions?date=2026-11-12` });
@@ -43,14 +44,29 @@ describe("harvest values: decimal cages and the over-plan answer", () => {
     expect(harvestValues.safeParse({ ...trip, estimatedKg: 10.005 }).success).toBe(false);
     expect(harvestValues.safeParse({ ...trip, estimatedKg: 1_000_000_001 }).success).toBe(false);
   });
-  it("needs a reason with confirmOverPlan and refuses a reason without it", () => {
-    expect(harvestValues.safeParse({ ...trip, confirmOverPlan: true }).success).toBe(false);
-    expect(harvestValues.safeParse({ ...trip, confirmOverPlan: true, overPlanReason: "  " }).success).toBe(false);
-    expect(harvestValues.safeParse({ ...trip, confirmOverPlan: true, overPlanReason: "Hàu lớn nhanh" }).success).toBe(true);
-    expect(harvestValues.safeParse({ ...trip, overPlanReason: "Hàu lớn nhanh" }).success).toBe(false);
-    expect(harvestValues.safeParse({ ...trip, confirmOverPlan: false }).success).toBe(true);
+  // Regression of 12/11/2026: the form sent no purchaseRequestId, so the backend answered 400 MSG-GEN-01 (field "Purchase request") to every new trip.
+  it("needs the purchase request a trip harvests for, as a guid", () => {
+    const without = { ...trip, purchaseRequestId: undefined };
+    expect(harvestValues.safeParse(without).success).toBe(false);
+    expect(harvestValues.safeParse({ ...trip, purchaseRequestId: "" }).success).toBe(false);
+    expect(harvestValues.safeParse({ ...trip, purchaseRequestId: "not-a-guid" }).success).toBe(false);
+    expect(post("harvest", { action: "record", id: raft, zoneId: zone, body: without })).toBeUndefined();
   });
-  it("refuses a reason longer than 1000 characters", () => expect(harvestValues.safeParse({ ...trip, confirmOverPlan: true, overPlanReason: "x".repeat(1001) }).success).toBe(false));
+  it("sends the exact multipart fields the backend reads for a trip with decimal cages and a crew", () => {
+    const body = { purchaseRequestId: order, laneNumbers: [1, 2], finishedLaneNumbers: [], cageCount: 14.5, estimatedKg: 700, crew: [cycle] };
+    const plan = post("harvest", { action: "record", id: raft, zoneId: zone, body });
+    expect(plan?.body).toEqual(body);
+    expect(plan).toMatchObject({ multipartFields: true, path: `/api/rafts/${raft}/harvest-lots` });
+  });
+  it("has no plan cap: a harvest never carries an over-plan confirmation", () => {
+    expect(harvestValues.safeParse({ ...trip, confirmOverPlan: true, overPlanReason: "Hàu lớn nhanh" }).success).toBe(false);
+    expect(harvestValues.safeParse({ ...trip, cageCount: 100_000, estimatedKg: 999_999_999 }).success).toBe(true);
+  });
+  it("a correction does not carry the purchase request", () => {
+    const fields = { laneNumbers: [1], finishedLaneNumbers: [], cageCount: 0.5, estimatedKg: null };
+    expect(harvestCorrection.safeParse({ ...fields, keepPhotoKeys: [], reason: "đếm lại", rowVersion: "v" }).success).toBe(true);
+    expect(harvestCorrection.safeParse({ ...fields, purchaseRequestId: order, keepPhotoKeys: [], reason: "đếm lại", rowVersion: "v" }).success).toBe(false);
+  });
   it("keeps the JSON record plan on the same contract", () => {
     const plan = post("harvest", { action: "record", id: raft, zoneId: zone, body: { ...trip, cageCount: 2.5 } });
     expect(plan).toMatchObject({ path: `/api/rafts/${raft}/harvest-lots`, multipartFields: true });

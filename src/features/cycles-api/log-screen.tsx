@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
+import { ImageFileInput } from "@/components/form/image-file-input";
 import { Dialog } from "@/components/ui/dialog";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Field, Note, businessToday, useMutation } from "@/features/operations/ui";
@@ -33,7 +34,7 @@ export function LogEditor({ cycleId, record, onClose, onSaved, dirtyRef }: { cyc
         <Note label="Nội dung chăm sóc" value={notes} onChange={e => setNotes(e.target.value)} />
         {record && <><Note label="Lý do sửa" required value={reason} onChange={e => setReason(e.target.value)} />
           <div className="space-y-2">{record.photos.map((photo, index) => <label key={photo.key} className="flex items-center gap-2"><input className="omts-check" type="checkbox" checked={keep.includes(photo.key)} onChange={e => setKeep(current => e.target.checked ? [...current, photo.key] : current.filter(key => key !== photo.key))} />Giữ ảnh {index + 1}</label>)}</div></>}
-        <Field label="Ảnh chăm sóc" type="file" multiple accept="image/jpeg,image/png" onChange={e => {
+        <ImageFileInput label="Ảnh chăm sóc" multiple accept="image/jpeg,image/png" onChange={e => {
           const next = Array.from(e.target.files ?? []);
           if (next.length + keep.length > 10 || next.some(file => file.size < 1 || file.size > 10 * 1024 * 1024 || !["image/jpeg", "image/png"].includes(file.type))) { setError("Chọn tối đa 10 ảnh JPEG/PNG, mỗi ảnh không quá 10 MB."); e.target.value = ""; setFiles([]); }
           else { setError(undefined); setFiles(next); }

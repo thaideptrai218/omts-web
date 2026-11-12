@@ -27,7 +27,7 @@ export function JobTypeRateEditor({ record, onSynced, onClose }: { record: Job; 
         <div className="flex items-center gap-2"><MoneyInput id={id} label="Đơn giá mới (đồng/giờ)" required autoThousands min={1} max={999999999} value={rate} invalid={!!errors?.hourlyRate} autoFocus onChange={setRate} wrapperClassName="min-w-0 flex-1" /><span className="shrink-0 text-xs">/giờ</span></div>
         {errors?.hourlyRate && <p role="alert" className={styles.fieldError}>{errors.hourlyRate}</p>}</div>
       <div><p className="mb-1 text-xs font-medium text-text-muted">Ngày bắt đầu hiệu lực *</p>
-        <DatePickerField label="Ngày bắt đầu hiệu lực" value={date} disabled={busy} inlineCalendar invalid={!!errors?.effectiveFrom} onChange={setDate} />
+        <DatePickerField label="Ngày bắt đầu hiệu lực" value={date} disabled={busy} invalid={!!errors?.effectiveFrom} onChange={setDate} />
         {errors?.effectiveFrom && <p role="alert" className={styles.fieldError}>{errors.effectiveFrom}</p>}</div>
       <div className="sm:col-span-2"><Note label="Ghi chú" maxLength={500} value={note} onChange={event => setNote(event.target.value)} /></div>
     </fieldset>

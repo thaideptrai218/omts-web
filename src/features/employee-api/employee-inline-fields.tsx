@@ -1,4 +1,5 @@
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
+import { digitsOnly, phoneInputProps, phoneInputValue } from "@/components/form/phone-input-rules";
 import { Field, Note, Select, businessToday, control } from "@/features/operations/ui";
 import type { Employee } from "./contracts";
 import { dateLabel, genderLabel } from "./employee-editor-model";
@@ -6,7 +7,7 @@ import type { EmployeeEditorFieldsProps } from "./employee-editor-fields";
 import styles from "./employee-detail.module.css";
 
 export const personalFields = [
-  ["code", "Mã nhân viên", 20], ["fullName", "Họ và tên", 100], ["phone", "Số điện thoại", undefined], ["birthday", "Ngày sinh", undefined],
+  ["code", "Mã nhân viên", 20], ["fullName", "Họ và tên", 100], ["phone", "Số điện thoại", 10], ["birthday", "Ngày sinh", undefined],
   ["gender", "Giới tính", undefined], ["startDate", "Ngày bắt đầu làm việc", undefined], ["idNumber", "CCCD", 12],
   ["address", "Địa chỉ", 500], ["area", "Khu vực", 100], ["wardCommune", "Phường/Xã", 100],
   ["otherInformation", "Thông tin khác", 1000], ["notes", "Ghi chú", 1000],
@@ -36,10 +37,11 @@ export function EmployeeInlinePersonalFields({ values, setValues, errorProps, er
     if (key === "gender") return <Select label={label} {...errorProps(key)} value={values.gender} onChange={event => set(key, event.target.value)}>
       <option value="">Chưa chọn</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option>
     </Select>;
-    if (key === "startDate") return <div className="block text-xs font-medium text-text-muted"><span>{label}</span>
-      <DatePickerField label={label} name={key} value={values.startDate} max={businessToday()} className={control} invalid={!!errors(key)} describedBy={errors(key) ? `employee-inline-error-${key}` : undefined} onChange={value => set(key, value)} /></div>;
-    return <Field label={key === "fullName" ? `${label} *` : label} required={key === "fullName"} type={key === "birthday" ? "date" : key === "phone" ? "tel" : "text"} max={key === "birthday" ? businessToday() : undefined}
-      maxLength={max} inputMode={key === "idNumber" ? "numeric" : undefined} autoComplete="off" {...errorProps(key)} value={values[key]} onChange={event => set(key, key === "code" ? event.target.value.toUpperCase() : event.target.value)} />;
+    if (key === "startDate" || key === "birthday") return <div className="block text-xs font-medium text-text-muted"><span>{label}</span>
+      <DatePickerField allowClear label={label} name={key} value={values[key]} max={businessToday()} className={control} invalid={!!errors(key)} describedBy={errors(key) ? `employee-inline-error-${key}` : undefined} onChange={value => set(key, value)} /></div>;
+    if (key === "phone") return <Field label={label} {...phoneInputProps} autoComplete="off" {...errorProps(key)} value={values.phone} onChange={event => set(key, phoneInputValue(event.target.value))} />;
+    return <Field label={key === "fullName" ? `${label} *` : label} required={key === "fullName"} type="text"
+      maxLength={max} inputMode={key === "idNumber" ? "numeric" : undefined} pattern={key === "idNumber" ? "([0-9]{9}|[0-9]{12})" : key === "code" ? "[A-Za-z0-9-]{1,20}" : undefined} autoComplete="off" {...errorProps(key)} value={values[key]} onChange={event => set(key, key === "code" ? event.target.value.toUpperCase() : key === "idNumber" ? digitsOnly(event.target.value, 12) : event.target.value)} />;
   };
   return <div className={styles.fields}>{personalFields.map(([key, label, max]) => <div key={key}>
     {control_(key, label, max)}

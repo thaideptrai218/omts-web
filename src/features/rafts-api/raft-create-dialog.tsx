@@ -31,10 +31,14 @@ export function RaftCreateDialog({ zoneId, zoneLabel, onClose, onCreated }: { zo
   return <Dialog open size="lg" title="Thêm bè nuôi" description={`Vùng ${zoneLabel}`} dismissible={!mutation.pending} onOpenChange={open => { if (!open) void close(); }}>
     {confirmation.dialog}
     <form noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
-      <fieldset disabled={mutation.pending || mutation.blocked} className="min-w-0">
-        <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["code"]} />
-        <CollapsibleSection title="Thông tin bè" description="Kích thước, số làn và địa điểm bè."><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["size", "laneCount", "location"]} /></CollapsibleSection>
-        <CollapsibleSection title="Vị trí trên bản đồ và tình trạng" description="Tọa độ và tình trạng hiện tại của bè."><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["latitude", "longitude", "conditionNotes"]} /></CollapsibleSection>
+      <fieldset disabled={mutation.pending || mutation.blocked} className="min-w-0 space-y-3">
+        <CollapsibleSection title="Thông tin chung" description="Mã định danh và vùng quản lý bè." columns={1}>
+          <div className="grid gap-3 sm:grid-cols-2"><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["code"]} /><div className="text-sm"><span className="mb-1 block text-xs font-medium text-text-muted">Vùng nuôi</span><div className="flex min-h-9 items-center rounded-control border border-border bg-surface px-3 font-medium">{zoneLabel}</div></div></div>
+          <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["location"]} />
+        </CollapsibleSection>
+        <CollapsibleSection title="Kích thước và làn nuôi" description="Diện tích được tính từ độ dài dây và chiều rộng bè." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["size", "laneCount"]} /></CollapsibleSection>
+        <CollapsibleSection title="Vị trí trên bản đồ" description="Chọn vị trí bè trong vùng nuôi." defaultOpen={false} columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["latitude", "longitude"]} /></CollapsibleSection>
+        <CollapsibleSection title="Ghi chú tình trạng" defaultOpen={false} columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["conditionNotes"]} /></CollapsibleSection>
       </fieldset>
       <ErrorNotice error={mutation.error} />
       {mutation.blocked && <p role="alert" className="text-sm">Chưa xác nhận được kết quả lưu. Hãy đóng cửa sổ này và tải lại danh sách để đối chiếu trước khi thêm lại.</p>}

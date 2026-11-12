@@ -21,12 +21,13 @@ export function RaftFormFields({ draft, setDraft, errors, only, zoneId, selfId, 
 }) {
   if (!only) return <div className="space-y-3">
     <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} only={["code"]} />
-    <CollapsibleSection title="Thông tin bè" description="Kích thước, số làn và địa điểm bè." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} only={["size", "laneCount", "location"]} /></CollapsibleSection>
-    <CollapsibleSection title="Vị trí trên bản đồ và tình trạng" description="Tọa độ và tình trạng hiện tại của bè." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} only={["latitude", "longitude", "conditionNotes"]} /></CollapsibleSection>
+    <CollapsibleSection title="Kích thước và làn nuôi" description="Diện tích tự tính và bố trí các làn." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} only={["size", "laneCount"]} /></CollapsibleSection>
+    <CollapsibleSection title="Vị trí trên bản đồ" description="Địa điểm và tọa độ của bè." defaultOpen={false} columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} only={["location", "latitude", "longitude"]} /></CollapsibleSection>
+    <CollapsibleSection title="Ghi chú tình trạng" defaultOpen={!!draft.conditionNotes} columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["conditionNotes"]} /></CollapsibleSection>
   </div>;
   const withMap = !only || only.some(isCoordinate), shown = labels.filter(([key]) => key !== "laneCount" && (!only || only.includes(key)));
   return <>
-    {shown.length > 0 && <div className={styles.fields}>{shown.map(([key, label, required]) => {
+    {shown.length > 0 && <div className={shown.some(([key]) => key === "size") ? "min-w-0" : styles.fields}>{shown.map(([key, label, required]) => {
       const common = { name: key, value: draft[key], "aria-invalid": !!errors[key], "aria-describedby": errors[key] ? `raft-error-${key}` : undefined,
         onChange: (event: { target: { value: string } }) => setDraft(current => ({ ...current, [key]: event.target.value })) };
       if (key === "size") return <div key={key}><RaftGeometryFields draft={draft} setDraft={setDraft} error={errors.size || errors.laneCount} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} /></div>;

@@ -4,11 +4,12 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
+import { ImageFileInput } from "@/components/form/image-file-input";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
 import { raftSchema, type Raft } from "@/features/farming-api/contracts";
 import { TabFooter } from "@/features/farming-management/detail-parts";
 import { createOperationsRepository } from "@/features/operations/repository";
-import { ErrorNotice, Field, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
+import { ErrorNotice, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { LaneIncidentsBoard } from "./lane-incidents-board";
 
@@ -49,7 +50,7 @@ export function RaftPhotoTab({ raftId, canEdit, dirtyRef, pendingRef }: { raftId
       : <p className={styles.hint}>Chưa có ảnh bè.</p>}
     {canEdit && !canAdd && <p className={styles.hint}>Bè đã có đủ {MAX_PHOTOS} ảnh.</p>}
     {canAdd && <fieldset disabled={mutation.pending || mutation.blocked} className="mt-3 min-w-0 border-0 p-0">
-      <Field key={fileKey} label="Thêm ảnh bè (JPEG/PNG, tối đa 10 MB)" type="file" accept="image/jpeg,image/png" onChange={event => {
+      <ImageFileInput key={fileKey} label="Thêm ảnh bè (JPEG/PNG, tối đa 10 MB)" accept="image/jpeg,image/png" onChange={event => {
         const selected = event.target.files?.[0]; setFile(undefined); setFileError(undefined);
         if (selected && (selected.size < 1 || selected.size > MAX_PHOTO || !["image/jpeg", "image/png"].includes(selected.type))) { setFileError("Ảnh phải là JPEG hoặc PNG, tối đa 10 MB."); event.target.value = ""; } else setFile(selected);
       }} /></fieldset>}

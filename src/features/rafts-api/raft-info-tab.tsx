@@ -14,7 +14,7 @@ import { RaftLaneDiagram } from "./raft-lane-diagram";
 import { geometryOf } from "./raft-geometry";
 import { formatRaftSize } from "./raft-size";
 import { useCoordinateWarnings } from "@/features/farming-api/use-coordinate-warnings";
-import { DISCONTINUED, laneStatusLabel, parseRaftDetail, raftBody, raftDraftOf, raftStatusLabel, validateRaftDraft, type RaftDetail, type RaftDraft, type RaftField } from "./raft-model";
+import { DISCONTINUED, parseRaftDetail, raftBody, raftDraftOf, raftStatusLabel, validateRaftDraft, type RaftDetail, type RaftDraft, type RaftField } from "./raft-model";
 
 const repository = createWorkspaceRepository("rafts");
 /** "Thông tin": read-only facts, or the same grid as inputs with `Bỏ qua` / `Lưu` in the footer. */
@@ -51,7 +51,6 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
         ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude], ["Tình trạng bè", raft.conditionNotes],
       ]} />}
     </fieldset>
-    {!editing && raft.lanes.length > 0 && <p className={styles.hint}>{raft.lanes.map(lane => `Làn ${lane.laneNumber}: ${laneStatusLabel(lane.statusId).toLocaleLowerCase("vi")}`).join(" · ")}</p>}
     {!editing && <RaftLaneDiagram lanes={raft.lanes} length={geometryOf(raft).length} />}
     {editing && laneLock.failed && <Button key="retry-cycle" type="button" variant="secondary" className="w-auto" onClick={laneLock.reload}>Kiểm tra lại chu kỳ</Button>}
     <ErrorNotice error={mutation.error} />

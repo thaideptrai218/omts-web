@@ -1,20 +1,18 @@
 import { z } from "zod";
 import type { EmployeeBankAccount } from "../domain/employee-working-details";
-import { formatMessage } from "@/shared/messages/message-catalog";
-
-const invalid = formatMessage({ code: "MSG01" });
 export const employeeBankSchema = z.object({
-  bankName: z.string().trim().max(100, invalid),
+  bankName: z.string().trim().max(100, "Tên ngân hàng tối đa 100 ký tự."),
   accountNumber: z.string().trim(),
-  accountHolderName: z.string().trim().max(100, invalid),
+  accountHolderName: z.string().trim().max(100, "Tên chủ tài khoản tối đa 100 ký tự."),
 }).superRefine((bank, context) => {
   const hasDetails = Object.values(bank).some(Boolean);
   if (!hasDetails) return;
   for (const field of ["bankName", "accountNumber", "accountHolderName"] as const) {
-    if (!bank[field]) context.addIssue({ code: "custom", path: [field], message: invalid });
+    const labels = { bankName: "ngân hàng", accountNumber: "số tài khoản", accountHolderName: "tên chủ tài khoản" };
+    if (!bank[field]) context.addIssue({ code: "custom", path: [field], message: `Nhập ${labels[field]} hoặc để trống toàn bộ thông tin ngân hàng.` });
   }
   if (bank.accountNumber && !/^[0-9]{6,20}$/u.test(bank.accountNumber)) {
-    context.addIssue({ code: "custom", path: ["accountNumber"], message: invalid });
+    context.addIssue({ code: "custom", path: ["accountNumber"], message: "Số tài khoản gồm 6–20 chữ số." });
   }
 });
 

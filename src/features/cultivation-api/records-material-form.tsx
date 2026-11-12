@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { useToast } from "@/components/ui/toast-provider";
 import { Button } from "@/components/ui/button";
+import { farmingStepLink } from "@/features/farming-management/entity-links";
 import { UnitField } from "@/components/form/number-fields";
 import { loadOptions } from "@/features/operations/lookups";
 import { Field, Note, Select, businessToday, useRemote } from "@/features/operations/ui";
@@ -15,6 +16,7 @@ import { EditorFrame, materialRepo } from "./records-shared";
 export function MaterialForm({
   zoneId,
   raftId,
+  cycleId,
   record,
   allowed,
   onClose,
@@ -22,6 +24,7 @@ export function MaterialForm({
 }: {
   zoneId: string;
   raftId: string;
+  cycleId?: string;
   record: z.infer<typeof c.materialRecord> | null;
   allowed(action: string): boolean;
   onClose(): void;
@@ -86,7 +89,7 @@ export function MaterialForm({
           zoneId,
         ),
       )
-    ) { notify({ tone: "success", title: record ? `Đã cập nhật sử dụng vật tư ${record.itemCode}.` : "Đã ghi nhận sử dụng vật tư." }); onSaved(); }
+    ) { notify({ tone: "success", title: record ? `Đã cập nhật sử dụng vật tư ${record.itemCode}.` : "Đã ghi nhận sử dụng vật tư.", action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } }); onSaved(); }
   }
   return (
     <EditorFrame

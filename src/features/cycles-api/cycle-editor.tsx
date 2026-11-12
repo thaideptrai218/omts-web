@@ -25,7 +25,7 @@ export function CycleEditor({ raftId, raftCode, record, canCancel, seedUnit, onC
         <Field label="Ngày thu hoạch dự kiến" type="date" value={values.expectedHarvestDate} onChange={e => field("expectedHarvestDate", e.target.value)} />
         </CollapsibleSection>
         <CollapsibleSection title="Kế hoạch" description="Lượng giống và sản lượng mục tiêu của chu kỳ." columns={2}>
-        <UnitField key="plan-seed" label="Lượng giống dự kiến" unit={seedUnit ?? "giống"} decimals={3} min={0.001} value={values.expectedSeedQuantity} onChange={value => field("expectedSeedQuantity", value)} />
+        <UnitField key="plan-seed" label={`Lượng giống dự kiến (${seedUnit ?? "mảnh"})`} unit={seedUnit ?? "mảnh"} decimals={3} min={0.001} value={values.expectedSeedQuantity} onChange={value => field("expectedSeedQuantity", value)} />
         <UnitField key="plan-target-kg" label="Sản lượng mục tiêu (ước tính)" unit="kg" decimals={2} min={0.01} value={values.targetYieldKg} onChange={value => field("targetYieldKg", value)} />
         </CollapsibleSection>
       </fieldset><div className="mt-6 flex flex-wrap justify-end gap-3">

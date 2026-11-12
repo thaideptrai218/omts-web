@@ -5,7 +5,7 @@
 .input svg { flex:none; width:14px; height:14px; color:var(--omts-color-text-muted); }
 .input:hover, .input[aria-expanded="true"] { border-color:var(--omts-color-primary); }
 
-.popover { position:fixed; z-index:70; max-width:calc(100vw - 16px); border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); color:var(--omts-color-text); box-shadow:var(--omts-shadow-raised); font-size:13px; }
+.popover { margin:0; padding:0; inset:auto; position:fixed; z-index:70; max-width:calc(100vw - 16px); border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); color:var(--omts-color-text); box-shadow:var(--omts-shadow-raised); font-size:13px; }
 .popover[data-side="right"]::before { content:""; position:absolute; left:-7px; top:var(--arrow-top); width:12px; height:12px; transform:translateY(-50%) rotate(45deg); border-left:1px solid var(--omts-color-border); border-bottom:1px solid var(--omts-color-border); background:var(--omts-color-surface); }
 .popoverBody { position:relative; max-height:calc(100dvh - 16px); overflow:auto; padding:16px; border-radius:8px; }
 .popover:focus { outline:none; }

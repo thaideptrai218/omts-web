@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { validVietnamesePhone, vietnamesePhoneMessage } from "@/components/form/phone-input-rules";
 import { Dialog } from "@/components/ui/dialog";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ResourceExtras } from "@/features/farming-api/resource-extras";
@@ -156,6 +157,10 @@ function GenericResourceEditor({
 
   async function mutate(action: MutationAction, reason?: string) {
     if (pendingRef.current || blocked || ((action === "create" || action === "update") && !editable)) return;
+    if (resource === "accounts" && (action === "create" || action === "update") && !validVietnamesePhone(values.phoneNumber ?? "")) {
+      setError(vietnamesePhoneMessage);
+      return;
+    }
     pendingRef.current = true;
     setPending(true);
     setError(undefined);

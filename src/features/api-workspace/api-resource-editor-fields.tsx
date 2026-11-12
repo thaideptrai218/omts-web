@@ -2,6 +2,7 @@
 import { SelectBox } from "@/components/ui/select-box";
 import type { Dispatch, SetStateAction } from "react";
 import { FormField } from "@/components/form/form-field";
+import { phoneInputProps, phoneInputValue, validVietnamesePhone, vietnamesePhoneMessage } from "@/components/form/phone-input-rules";
 import { ResourceLocationPicker } from "@/features/farming-api/resource-location-picker";
 import { inputClass, text } from "./api-resource-presentation";
 import { resources, type ResourceKey } from "./resources";
@@ -78,6 +79,15 @@ export function ResourceEditorFields({
               onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
             />
           </label>
+        ) : resource === "accounts" && field.key === "phoneNumber" ? (
+          <FormField key={field.key} id={`api-${field.key}`} label={field.label} {...phoneInputProps}
+            required={field.required} disabled={lockedField(field.key)} value={values[field.key]}
+            error={values[field.key] && !validVietnamesePhone(values[field.key]) ? vietnamesePhoneMessage : undefined}
+            onInvalid={event => event.currentTarget.setCustomValidity(vietnamesePhoneMessage)}
+            onChange={event => {
+              event.currentTarget.setCustomValidity("");
+              setValues(current => ({ ...current, [field.key]: phoneInputValue(event.target.value) }));
+            }} />
         ) : (
           <FormField
             key={field.key}

@@ -2,7 +2,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { Button } from "@/components/ui/button";
-import { StatusPill } from "@/components/ui/management-page";
+import { LaneOverview } from "@/features/farming-management/lane-overview";
 import type { Raft } from "@/features/farming-api/contracts";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "@/features/operations/permissions";
@@ -13,7 +13,6 @@ import { LaneIncidentHistory } from "./lane-incident-history";
 import { laneIncidentRepository } from "./lane-incident-repository";
 
 type Lane = Raft["lanes"][number];
-const states: Record<string, string> = { NotSeeded: "Chưa thả giống", Growing: "Đang nuôi", BeingHarvested: "Đang thu hoạch", Harvested: "Đã thu xong", OutOfService: "Mất giống, ngừng hoạt động" };
 type DraftState = { onDirty?(dirty: boolean): void; onPending?(pending: boolean): void };
 export function LaneIncidentsBoard({ raft, onChanged, onDirty, onPending }: { raft: Raft; onChanged(): void } & DraftState) {
   const [opened, setOpened] = useState<number>();
@@ -25,18 +24,13 @@ export function LaneIncidentsBoard({ raft, onChanged, onDirty, onPending }: { ra
     if (dirty.current && !await confirmation.confirm("Bỏ các thay đổi chưa lưu của làn?")) return;
     setOpened(value => value === n ? undefined : n);
   }
-  return <section aria-label="Các làn của bè" className="mt-5">{confirmation.dialog}<h4 className="mb-2 text-sm font-semibold">Các làn của bè</h4>
-    {!raft.lanes.length ? <p className="text-sm text-text-muted">Bè chưa có làn.</p> : <ul className="grid gap-2">
-      {[...raft.lanes].filter(lane => lane.statusId !== 2002).sort((a, b) => a.laneNumber - b.laneNumber).map(lane => <li key={lane.id} className="rounded-control border border-border p-3">
-        <button key="open-lane" type="button" aria-expanded={opened === lane.laneNumber} className="flex w-full flex-wrap items-center gap-2 text-left text-sm" onClick={() => void toggle(lane.laneNumber)}>
-          <strong>Làn {lane.laneNumber}</strong>{lane.isOutOfService ? <StatusPill tone="neutral">Ngừng hoạt động</StatusPill> : <StatusPill tone="success">Đang sử dụng</StatusPill>}
-          {lane.isDamaged && <StatusPill tone="danger">Hỏng</StatusPill>}{lane.state && <StatusPill tone="neutral">{states[lane.state] ?? lane.state}</StatusPill>}
-          {lane.lineLengthM != null && <span className="text-text-muted">{lane.lineLengthM.toLocaleString("vi-VN")} m</span>}
-        </button>
-        {opened === lane.laneNumber && (typeof lane.isDamaged === "boolean" ? <OpenedLane key={`${lane.id}-${raft.rowVersion}`} raft={raft} lane={lane} onChanged={onChanged} onDirty={reportDirty} onPending={reportPending} />
-          : <p className="mt-2 text-xs text-text-muted">Chưa có lịch sử sự cố của làn.</p>)}
-      </li>)}
-    </ul>}
+  const lane = raft.lanes.find(item => item.laneNumber === opened);
+  return <section aria-label="Các làn của bè" className="mt-4">{confirmation.dialog}
+    <LaneOverview lanes={raft.lanes} label="Các làn của bè" opened={opened} onLaneClick={number => void toggle(number)}>
+      {lane && <><div className="flex items-center justify-between gap-2 text-sm"><strong>Làn {lane.laneNumber}</strong>{lane.lineLengthM != null && <span>{lane.lineLengthM.toLocaleString("vi-VN")} m</span>}</div>
+        {typeof lane.isDamaged === "boolean" ? <OpenedLane key={`${lane.id}-${raft.rowVersion}`} raft={raft} lane={lane} onChanged={onChanged} onDirty={reportDirty} onPending={reportPending} />
+          : <p className="mt-2 text-xs text-text-muted">Chưa có lịch sử sự cố của làn.</p>}</>}
+    </LaneOverview>
   </section>;
 }
 function OpenedLane({ raft, lane, onChanged, onDirty, onPending }: { raft: Raft; lane: Lane; onChanged(): void } & DraftState) {

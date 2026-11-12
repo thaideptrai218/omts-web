@@ -6,9 +6,9 @@ import { projectCoordinateWarnings, coordinateWarningTexts } from "@/features/fa
 const item = "529ec3ce-af8f-42f7-a08f-4bab36ba7e62";
 
 describe("farming problem projection", () => {
-  it("keeps the over-plan confirmation numbers and drops everything else", () => {
-    const problem = projectFarmingProblem({ code: "MSG-GEN-04", confirmFlag: "confirmOverPlan", reasonField: "overPlanReason", targetYieldKg: 1000, harvestedKg: 800, newKg: 400, totalKg: 1200, overPlanPercent: 20, detail: "x", token: "secret" });
-    expect(problem).toEqual({ code: "MSG-GEN-04", confirmFlag: "confirmOverPlan", targetYieldKg: 1000, harvestedKg: 800, newKg: 400, totalKg: 1200, overPlanPercent: 20 });
+  it("keeps the confirmation flag and drops everything else", () => {
+    const problem = projectFarmingProblem({ code: "MSG-GEN-04", confirmFlag: "confirmOverPlan", reasonField: "overPlanReason", plannedSeedQuantity: 100, detail: "x", token: "secret" });
+    expect(problem).toEqual({ code: "MSG-GEN-04", confirmFlag: "confirmOverPlan" });
   });
   it("keeps the stock check numbers of MSG-INPUT-01", () => {
     expect(projectFarmingProblem({ code: "MSG-INPUT-01", field: "Quantity", itemId: item, seedLotLineId: item, onHand: 100, balanceAfter: -1 })).toMatchObject({ onHand: 100, balanceAfter: -1, itemId: item });
@@ -32,6 +32,11 @@ describe("farming error wording", () => {
     expect(farmingErrorText({ httpStatus: 400, problem: { field: "Number of cages" } })).toContain("0,5");
     expect(farmingErrorText({ httpStatus: 409, problem: { field: "Latitude" } })).toBeUndefined();
     expect(farmingErrorText({ httpStatus: 400 })).toBeUndefined();
+  });
+  it("names the harvest field the backend refused", () => {
+    expect(farmingErrorText({ httpStatus: 400, code: "MSG-GEN-01", problem: { code: "MSG-GEN-01", field: "Purchase request", fields: ["Purchase request"] } })).toContain("yêu cầu mua");
+    expect(farmingErrorText({ httpStatus: 400, problem: { field: "Lanes" } })).toContain("Làn thu hoạch");
+    expect(farmingErrorText({ httpStatus: 400, problem: { field: "Estimated kg" } })).not.toContain("150%");
   });
   it("formats a shortage without a unit", () => expect(stockShortageText({ onHand: 5 })).toContain("Còn trong kho 5."));
 });

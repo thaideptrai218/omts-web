@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
+import { FarmingStepBar } from "@/features/farming-management/farming-step-bar";
 import { CycleProgressTab } from "@/features/cycles-api/cycle-progress-tab";
 import { useMemo, useState, type ReactNode } from "react";
 import { StatusPill } from "@/components/ui/management-page";
@@ -27,12 +28,13 @@ export function RecordsRaftPanel({ area, row, zoneId }: { area: RecordsArea; row
   const state = cycleStateOf(row);
   const content: Record<TabKey, ReactNode> = {
     records: area === "seeding" ? selectedCycleId ? <SeedingPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} cycleStartDate={row.cycle?.id === selectedCycleId ? row.cycle.startDate : undefined} /> : <p className={flowStyles.empty}>Bè chưa có chu kỳ nuôi. Mở chu kỳ trước khi ghi nhận thả giống.</p>
-      : area === "material-usages" ? <MaterialsPanel zoneId={zoneId} raftId={row.raftId} /> : <HarvestPanel zoneId={zoneId} raftId={row.raftId} />,
+      : area === "material-usages" ? <MaterialsPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} /> : <HarvestPanel zoneId={zoneId} raftId={row.raftId} />,
     progress: <CycleProgressTab row={row} zoneId={zoneId} canSeeFlow={true} />,
   };
   return <section id={`cycle-preview-${row.raftId}`} className={styles.detail} aria-label="Hồ sơ vận hành của bè">
     <header className={styles.header}><h3><Link href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>Bè {row.raftCode}</Link></h3><StatusPill tone={state === "open" ? "success" : "neutral"}>{cycleStateLabel(state)}</StatusPill>
       <span className={styles.hint}>{row.laneCount} làn nuôi{row.cycle ? <> · <Link href={farmingReferenceHref("cycle", { zoneId, raftId: row.raftId, cycleId: row.cycle.id })}>Chu kỳ từ {formatVietnameseDate(row.cycle.startDate)}</Link></> : ""}</span></header>
+    <FarmingStepBar current={area === "material-usages" ? "material" : area} zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} />
     <Subtabs<TabKey> label="Hồ sơ vận hành của bè" tabs={tabs} value={tab} idPrefix={prefix} onChange={setTab} />
     <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={`${styles.body} ${flowStyles.page}`}>{content[tab]}</div>
   </section>;

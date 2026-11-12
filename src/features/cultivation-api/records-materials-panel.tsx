@@ -16,7 +16,7 @@ import { MaterialForm } from "./records-material-form";
 import { materialRepo, useAllowed } from "./records-shared";
 
 /** Material usage log of a raft, grouped by cultivation cycle. */
-export function MaterialsPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {
+export function MaterialsPanel({ zoneId, raftId, cycleId }: { zoneId: string; raftId: string; cycleId?: string }) {
   const allowed = useAllowed("material-usages", zoneId);
   const [selected, setSelected] = useState<z.infer<typeof c.materialRecord> | null>();
   const remote = useRemote(
@@ -50,7 +50,7 @@ export function MaterialsPanel({ zoneId, raftId }: { zoneId: string; raftId: str
                 zoneId={zoneId}
                 canEdit={allowed("Edit")}
                 onSelect={setSelected}
-                editor={selected && <MaterialForm zoneId={zoneId} raftId={raftId} record={selected} allowed={allowed} onClose={() => setSelected(undefined)} onSaved={() => { setSelected(undefined); remote.reload(); }} />}
+                editor={selected && <MaterialForm zoneId={zoneId} raftId={raftId} cycleId={cycleId} record={selected} allowed={allowed} onClose={() => setSelected(undefined)} onSaved={() => { setSelected(undefined); remote.reload(); }} />}
                 editingId={selected?.id}
               />
             ))}
@@ -69,6 +69,7 @@ export function MaterialsPanel({ zoneId, raftId }: { zoneId: string; raftId: str
         <MaterialForm
           zoneId={zoneId}
           raftId={raftId}
+          cycleId={cycleId}
           record={selected}
           allowed={allowed}
           onClose={() => setSelected(undefined)}
