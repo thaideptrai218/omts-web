@@ -27,7 +27,7 @@ Chỉ chuyển một chiều: Đang ươm → Đã hoàn tất, hoặc Đang ư�
 ## 3. Quy tắc nghiệp vụ chính (để UI dựng đúng)
 
 1. Một đợt = **một lô giống** (`seedLotId`), **một vùng**, không chọn bè khi bắt đầu. Đơn vị **mảnh**, tối đa 2 chữ số thập phân.
-2. Bắt đầu: số mảnh ≤ tồn kho của lô (không cho âm; nếu HTX bật cho phép tồn âm thì cho qua). Kho **trừ ngay** bằng một phiếu Xuất dùng (mục đích Nursery, vùng, không bè), mã `XD…` hiện ở `issueCode`. Hủy/sửa số mảnh thì phiếu xuất tự hoàn/điều chỉnh.
+2. Bắt đầu: số mảnh ≤ tồn kho của lô, **luôn chặn khi vượt, kể cả khi HTX bật cho phép tồn âm** (chủ chốt: không tồn âm cho ươm). Kho **trừ ngay** bằng một phiếu Xuất dùng (mục đích Nursery, vùng, không bè), mã `XD…` hiện ở `issueCode`. Hủy/sửa số mảnh thì phiếu xuất tự hoàn/điều chỉnh.
 3. Ảnh bắt buộc **1 đến 3** (JPEG/PNG, mỗi ảnh ≤ 10 MB) lúc **bắt đầu** và lúc **hoàn tất**. Lỗi ảnh: 400 trường `Photos`, `hint` tiếng Việt. Ảnh bắt đầu sửa được khi còn Đang ươm (vẫn 1-3).
 4. Hoàn tất: `survivors` (ước tính bằng mắt) từ 0 đến số mảnh vào; `allocations` (mỗi bè một lần, cùng vùng, bè đang dùng, **không có chu kỳ đang mở**, mỗi phần > 0), tổng phần chia **bằng đúng** `survivors`. `survivors = 0` thì `allocations` để trống và không tạo chu kỳ. Một giao dịch: đóng đợt, tạo **một chu kỳ cho mỗi bè** (`startDate` = `completedOn`, `expectedSeedQuantity` = `nurseryAllocated` = phần chia, `targetYieldKg` nhập ở đây, **không có ngày thu dự kiến**).
 5. Hao hụt ươm = vào − sống sót, luôn kèm `estimated: true`; không có tỉ lệ dự kiến, không cảnh báo hao hụt cao.
@@ -38,7 +38,7 @@ Chỉ chuyển một chiều: Đang ươm → Đã hoàn tất, hoặc Đang ư�
 ## 4. Endpoint
 
 ### 4.1 Lô giống để chọn khi bắt đầu ươm
-`GET /api/nursery-batches/seed-lots?zoneId={zoneId}` (View của vùng). 200:
+`GET /api/nursery-batches/seed-lots?zoneId={zoneId}` (quyền Create của vùng, vì để bắt đầu ươm). 200:
 ```json
 {
   "zoneId": "…",
