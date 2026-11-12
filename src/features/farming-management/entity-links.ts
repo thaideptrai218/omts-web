@@ -5,7 +5,7 @@ import { farmingReferenceHref } from "./farming-reference-href";
  * Each returns `undefined` when the record it points to is not identifiable, so a screen shows plain text instead of a dead link.
  */
 type Maybe = string | null | undefined;
-export type FarmingStep = "cycle" | "seeding" | "material" | "harvest";
+export type FarmingStep = "cycle" | "seeding" | "material" | "harvest" | "water";
 /** Preserve the raft and cycle when moving along the cultivation workflow. */
 export const farmingStepLink = (step: FarmingStep, ref: { zoneId: Maybe; raftId: Maybe; cycleId?: Maybe }) => farmingReferenceHref(step, ref);
 /** The current employee directory opens exact records through recordId. Keep this adapter until it supports code links. */

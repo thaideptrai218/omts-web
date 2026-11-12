@@ -15,7 +15,7 @@ import { readCycles, readCycleSummary } from "./repository";
 
 const linkAction = "inline-flex min-h-[30px] items-center rounded-control border border-primary bg-primary px-3 py-1 text-[13px] font-medium text-white hover:bg-primary-hover";
 
-/** "Hành trình": Kế hoạch → Thả giống → Chăm sóc → Thu hoạch → Tổng kết, each with plan vs actual, a status and one next action. */
+/** Four main milestones; care and materials remain optional side activities. */
 export function CycleJourneyTab({ row, zoneId, access, onJump, onChanged }: { row: CycleRow; zoneId: string; access: CycleAccess; onJump(tab: "plan" | "logs"): void; onChanged(notice: string): void }) {
   const cycleId = row.cycle?.id ?? "";
   const progress = useRemote(useCallback((signal: AbortSignal) => cycleId ? readCycles({ action: "progress", raftId: row.raftId, cycleId }, cycleProgress, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [row.raftId, cycleId]));
@@ -27,19 +27,23 @@ export function CycleJourneyTab({ row, zoneId, access, onJump, onChanged }: { ro
   if (progress.error || summary.error || !cycle || !figures) return <ListStateMessage error={progress.error ?? summary.error ?? "Không tải được hành trình chu kỳ."} onRetry={() => { progress.reload(); summary.reload(); }} retryLabel="Tải lại hành trình" />;
   const canRecord = access.view && !cycle.closeDate;
   const steps = buildJourney({ cycle, lanes: progress.data!.lanes, figures, today: businessToday(), canClose: access.edit && cycle.canEdit, canEditPlan: access.edit && cycle.canEdit, canLog: access.logsCreate, canRecord });
-  const current = currentStep(steps);
+  const mainSteps = steps.filter(step => step.key !== "care");
+  const care = steps.find(step => step.key === "care")!;
+  const current = currentStep(mainSteps);
   const act = (action: JourneyAction) => action.close ? setClosing(true) : action.tab ? onJump(action.tab) : undefined;
   return <><nav aria-label="Các mốc hành trình" className="mb-3 flex flex-wrap gap-1 rounded-control bg-surface-subtle p-2 text-xs font-medium">
-    {steps.map((step, index) => <span key={step.key} className="flex items-center gap-1">{index > 0 && <span aria-hidden className="px-1 text-text-muted">→</span>}{step.key === "seeding" || step.key === "harvest" ? <Link className="rounded-control px-2 py-2 text-primary hover:bg-surface" href={farmingStepLink(step.key, { zoneId, raftId: row.raftId, cycleId })}>{step.label}</Link> : <button type="button" className="rounded-control px-2 py-2 text-primary hover:bg-surface" onClick={() => step.key === "care" ? onJump("logs") : step.key === "plan" ? onJump("plan") : document.getElementById(`journey-summary-${cycleId}`)?.scrollIntoView({ block: "nearest" })}>{step.label}</button>}</span>)}
+    {mainSteps.map((step, index) => <span key={step.key} className="flex items-center gap-1">{index > 0 && <span aria-hidden className="px-1 text-text-muted">→</span>}{step.key === "seeding" || step.key === "harvest" ? <Link className="rounded-control px-2 py-2 text-primary hover:bg-surface" href={farmingStepLink(step.key, { zoneId, raftId: row.raftId, cycleId })}>{step.label}</Link> : <button type="button" className="rounded-control px-2 py-2 text-primary hover:bg-surface" onClick={() => step.key === "plan" ? onJump("plan") : document.getElementById(`journey-summary-${cycleId}`)?.scrollIntoView({ block: "nearest" })}>{step.label}</button>}</span>)}
   </nav><ol aria-label="Hành trình chu kỳ" className="grid gap-3">
-    {steps.map((step, index) => <StepCard key={step.key} id={`journey-${step.key}-${cycleId}`} step={step} index={index + 1} current={step.key === current}>
+    {mainSteps.map((step, index) => <StepCard key={step.key} id={`journey-${step.key}-${cycleId}`} step={step} index={index + 1} current={step.key === current}>
       {step.action && (step.action.screen
         ? <Link key={step.action.key} className={linkAction} href={farmingStepLink(step.action.screen, { zoneId, raftId: row.raftId, cycleId })}>{step.action.label}</Link>
         : !step.action.close || !closing ? <button key={step.action.key} type="button" className={linkAction} onClick={() => act(step.action!)}>{step.action.label}</button> : null)}
       {step.key === "summary" && closing && <CycleClosePanel cycleId={cycleId} raftCode={row.raftCode} onDismiss={() => setClosing(false)} onClosed={() => { setClosing(false); onChanged("Đã kết thúc chu kỳ."); }} />}
-      {step.key === "care" && access.view && <Link className="px-2 py-2 text-xs font-semibold text-primary underline underline-offset-4" href={farmingStepLink("material", { zoneId, raftId: row.raftId, cycleId })}>Sử dụng vật tư →</Link>}
     </StepCard>)}
-  </ol></>;
+  </ol><aside aria-label="Hoạt động tùy chọn" className="mt-3 grid gap-3 rounded-control border border-dashed border-border bg-surface-subtle p-3 sm:grid-cols-2">
+    <section className="space-y-2"><h4 className="text-sm font-medium">Chăm sóc <span className="ml-1 rounded-full border border-border px-2 py-0.5 text-xs font-normal text-text-muted">Tùy chọn</span></h4><p className="text-xs text-text-muted">Nhật ký chăm sóc trong suốt chu kỳ.</p>{access.logs && <button type="button" className="min-h-8 text-xs font-medium text-primary underline underline-offset-4" onClick={() => onJump("logs")}>{care.action?.label ?? "Xem nhật ký chăm sóc"}</button>}</section>
+    <section className="space-y-2"><h4 className="text-sm font-medium">Vật tư <span className="ml-1 rounded-full border border-border px-2 py-0.5 text-xs font-normal text-text-muted">Tùy chọn</span></h4><p className="text-xs text-text-muted">Ghi nhận vật tư khi có nhu cầu sửa chữa bè.</p>{access.view && <Link className="inline-flex min-h-8 items-center text-xs font-medium text-primary underline underline-offset-4" href={farmingStepLink("material", { zoneId, raftId: row.raftId, cycleId })}>Sử dụng vật tư →</Link>}</section>
+  </aside></>;
 }
 
 function StepCard({ id, step, index, current, children }: { id: string; step: JourneyStep; index: number; current: boolean; children: ReactNode }) {

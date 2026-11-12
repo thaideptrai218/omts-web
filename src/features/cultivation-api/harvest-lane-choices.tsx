@@ -2,9 +2,9 @@
 import { useMemo, useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { LaneOverview } from "@/features/farming-management/lane-overview";
 import { formatLaneRanges, parseLaneRanges, uniqueSorted } from "./harvest-lane-ranges";
 import type { harvestLane } from "./records-contracts";
-import styles from "./harvest-lane-picker.module.css";
 
 type Lane = z.infer<typeof harvestLane>;
 type Tone = "success" | "neutral";
@@ -37,8 +37,6 @@ type CellState = "Growing" | "BeingHarvested" | "Harvested" | "NotSeeded" | "Dam
 const cellStateOf = (lane: Lane): CellState => lane.statusId === 2002 || lane.isOutOfService || lane.state === "OutOfService" ? "OutOfService" : lane.isDamaged ? "Damaged"
   : lane.state === "Harvested" || lane.reasonCode === "AlreadyHarvested" ? "Harvested" : lane.state === "BeingHarvested" ? "BeingHarvested"
   : lane.state === "Growing" || (!lane.state && lane.canHarvest) ? "Growing" : "NotSeeded";
-const cellLabel: Record<CellState, string> = { Growing: "Đang nuôi", BeingHarvested: "Đang thu hoạch", Harvested: "Đã thu hoạch", NotSeeded: "Chưa thả giống", Damaged: "Hỏng", OutOfService: "Ngừng hoạt động" };
-const legendOrder: CellState[] = ["Growing", "BeingHarvested", "Harvested", "NotSeeded", "Damaged", "OutOfService"];
 
 /**
  * The lanes of the raft as a compact numbered grid: only lanes that can be harvested are shown by default (a toggle reveals the rest, disabled, with the reason as a tooltip).
@@ -96,21 +94,9 @@ export function HarvestLaneChoices({ lanes, values, onChange, label }: { lanes: 
       {hidden > 0 && <label className="flex w-fit items-center gap-2 text-sm">
         <input type="checkbox" className="omts-check" checked={showAll} onChange={event => setShowAll(event.target.checked)} />Hiện cả làn không thu được ({hidden})
       </label>}
-      {shown.length === 0
-        ? <p className="rounded-control border border-border bg-surface-subtle p-3 text-sm text-text-muted">Chưa có làn nào thu hoạch được. Làn cần được thả giống và đang hoạt động.</p>
-        : <div className={styles.grid} role="group" aria-label="Danh sách làn">
-          {shown.map(({ lane, blocked, state }) => {
-            const selected = values.includes(lane.laneNumber), text = `Làn ${lane.laneNumber} · ${cellLabel[state]}${blocked ? ` · ${blocked}` : ""}`;
-            return <span key={lane.laneNumber} title={text}>
-              <button type="button" className={styles.cell} data-state={state} aria-pressed={selected} aria-label={text} disabled={!!blocked}
-                onClick={event => click(lane.laneNumber, event.shiftKey)}>{lane.laneNumber}</button>
-            </span>;
-          })}
-        </div>}
-      <div className={styles.legend} aria-label="Chú giải">
-        {legendOrder.filter(state => showAll || state === "Growing" || state === "BeingHarvested").map(state => <span key={state}><i data-state={state} />{cellLabel[state]}</span>)}
-        <span><i data-state="Selected" />Đang chọn</span>
-      </div>
+      <LaneOverview lanes={shown.map(({ lane, blocked, state }) => ({ ...lane, state, disabled: !!blocked, description: blocked }))}
+        selected={values} label="Danh sách làn" emptyMessage="Chưa có làn nào thu hoạch được. Làn cần được thả giống và đang hoạt động."
+        onLaneClick={(number, event) => click(number, event.shiftKey)} />
     </fieldset>
   );
 }

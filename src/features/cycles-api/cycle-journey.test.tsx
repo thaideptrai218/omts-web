@@ -76,9 +76,12 @@ describe("journey tab", () => {
   it("renders the stepper with status chips and jumps to the care-log tab from its action", async () => {
     const { onJump } = mount();
     const list = await screen.findByRole("list", { name: "Hành trình chu kỳ" });
-    expect(within(list).getAllByRole("heading", { level: 4 }).map(heading => heading.textContent)).toEqual(["✓Kế hoạch", "2Thả giống", "3Chăm sóc", "4Thu hoạch", "5Tổng kết"]);
+    expect(within(list).getAllByRole("heading", { level: 4 }).map(heading => heading.textContent)).toEqual(["✓Kế hoạch", "2Thả giống", "3Thu hoạch", "4Tổng kết"]);
+    const optional = screen.getByRole("complementary", { name: "Hoạt động tùy chọn" });
+    expect(optional.textContent).toContain("Chăm sóc");
+    expect(optional.textContent).toContain("Vật tư");
     expect(within(list).getByRole("progressbar", { name: /Giống đã thả/ })).toBeTruthy();
-    fireEvent.click(within(list).getByRole("button", { name: "Ghi nhật ký chăm sóc" }));
+    fireEvent.click(within(optional).getByRole("button", { name: "Ghi nhật ký chăm sóc" }));
     expect(onJump).toHaveBeenCalledWith("logs");
     expect(within(list).getByRole("link", { name: "Thu hoạch và hoàn tất làn" }).getAttribute("href")).toBe(`/operations/harvest?zoneId=${zoneId}&raftId=${raftId}&cycleId=${cycleId}`);
   });

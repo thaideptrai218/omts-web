@@ -40,7 +40,7 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
   const query = useSearchParams();
   const [search, setSearch] = useState(() => query.get("search") ?? "");
   const [status, setStatus] = useState("");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState<number>();
   const [selectedLot, setSelectedLot] = useState<string | undefined>(() => query.get("recordId") ?? undefined);
   // The API reports lot status in either casing.
   const statusLabel = (value: string) =>
@@ -58,7 +58,9 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
         matchesSelection(status, String(lot.statusId)) &&
         lot.lotCode.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi")),
     ) ?? [];
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / 10)));
+  // A lot deep link must open the page containing its row, including lots beyond the first ten.
+  const linkedPage = Math.max(1, Math.ceil((rows.findIndex(lot => lot.id === query.get("recordId")) + 1) / 10));
+  const currentPage = Math.min(page ?? linkedPage, Math.max(1, Math.ceil(rows.length / 10)));
   const canShowApproximateCageTotals = rows.every(
     (lot) => cagesFromKg(lot.invoicedKg, lot.kgPerCage) !== undefined && cagesFromKg(lot.remainingKg, lot.kgPerCage) !== undefined,
   );
@@ -82,7 +84,14 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
           <h3>Các lô thu hoạch</h3>
 
         </div>
-
+        <div className={flowStyles.actions}>
+          {remote.data?.canRecordHarvest && allowed("Create") && (
+            <Button type="button" disabled={remote.loading} onClick={() => setAdding(true)}>Ghi nhận thu hoạch</Button>
+          )}
+          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
+            Tải lại
+          </Button>
+        </div>
       </div>
       {remote.loading ? (
         <Skeleton />
@@ -161,16 +170,10 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
               <Paging page={currentPage} total={rows.length} pageSize={10} onChange={setPage} />
             </div>
 
-        <div className={flowStyles.actions}>
-          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
-            Tải lại
-          </Button>
-          {remote.data?.canRecordHarvest && allowed("Create") && (
-            <Button type="button" onClick={() => setAdding(true)}>Ghi nhận thu hoạch</Button>
-          )}
-        </div>
+
             {adding && (
               <HarvestForm
+                canConfigure={allowed("Owner")}
                 zoneId={zoneId}
                 raftId={raftId}
                 data={remote.data}

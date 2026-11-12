@@ -22,7 +22,7 @@ export function CycleProgressTab({ row, zoneId, canSeeFlow }: { row: CycleRow; z
   const [cycleId, setCycleId] = useState(params?.get("cycleId") ?? row.cycle?.id ?? ""), [date, setDate] = useState(businessToday), [lane, setLane] = useState<number>();
   const history = useRemote(useCallback((signal: AbortSignal) => readCycles({ action: "history", raftId: row.raftId }, cycleHistory, signal), [row.raftId]));
   const progress = useRemote(useCallback((signal: AbortSignal) => readCycles({ action: "progress", raftId: row.raftId, ...(cycleId ? { cycleId } : { date }) }, cycleProgress, signal), [row.raftId, cycleId, date]));
-  const flow = (area: "seeding" | "material" | "harvest") => farmingReferenceHref(area, { zoneId, raftId: row.raftId, cycleId });
+  const flow = (area: "seeding" | "material" | "harvest") => farmingReferenceHref(area, { zoneId, raftId: row.raftId, cycleId: progress.data?.cycle?.id ?? cycleId });
   const data = progress.data;
   return <>
     <div className={styles.subToolbar}>
@@ -42,6 +42,6 @@ export function CycleProgressTab({ row, zoneId, canSeeFlow }: { row: CycleRow; z
         </div>
         {data.cycle && <aside className={cycleStyles.planPanel}><CyclePlanSummary plan={data.cycle} /><CyclePlanTracking cycleId={data.cycle.id} zoneId={zoneId} /></aside>}
       </div>}
-    {canSeeFlow && data?.cycle && <TabFooter left={<><Link className={styles.footerLink} href={flow("seeding")}>Thả giống</Link><Link className={styles.footerLink} href={flow("material")}>Sử dụng vật tư</Link><Link className={styles.footerLink} href={flow("harvest")}>Thu hoạch</Link></>} />}
+    {canSeeFlow && data?.cycle && <TabFooter left={<><Link className={styles.footerLink} href={flow("seeding")}>Thả giống</Link><Link className={styles.footerLink} href={flow("harvest")}>Thu hoạch</Link><Link className={styles.footerLink} href={flow("material")}>Sử dụng vật tư (tùy chọn)</Link></>} />}
   </>;
 }

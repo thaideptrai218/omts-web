@@ -33,7 +33,14 @@ export function MaterialsPanel({ zoneId, raftId, cycleId }: { zoneId: string; ra
           <h3>Nhật ký sử dụng vật tư</h3>
           <p>Nhóm theo chu kỳ; mỗi dòng là một vật tư đã ghi nhận.</p>
         </div>
-
+        <div className={flowStyles.actions}>
+          {remote.data?.canRecord && allowed("Create") && (
+            <Button type="button" disabled={remote.loading} onClick={() => setSelected(null)}>Ghi nhận sử dụng vật tư</Button>
+          )}
+          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
+            Tải lại
+          </Button>
+        </div>
       </div>
       {remote.loading ? (
         <Skeleton />
@@ -57,14 +64,7 @@ export function MaterialsPanel({ zoneId, raftId, cycleId }: { zoneId: string; ra
           </>
         )
       )}
-        <div className={flowStyles.actions}>
-          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
-            Tải lại
-          </Button>
-          {remote.data?.canRecord && allowed("Create") && (
-            <Button type="button" onClick={() => setSelected(null)}>Ghi nhận vật tư</Button>
-          )}
-        </div>
+
       {selected === null && (
         <MaterialForm
           zoneId={zoneId}

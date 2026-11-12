@@ -1,28 +1,40 @@
-.overview { min-width: 0; margin-top: 12px; }
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
-.toolbar strong span { color: var(--omts-color-text-muted, #64748b); font-weight: 400; }
-.search { width: 160px; }
-.search input { width: 100%; }
-.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
-.filters button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #d8e0e8; border-radius: 6px; padding: 5px 8px; font-size: 12px; background: white; color: #475569; }
-.filters button[aria-pressed="true"] { border-color: var(--omts-brand, #315a96); color: var(--omts-brand, #315a96); background: var(--omts-brand-soft, #edf3fc); }
-.filters i { height: 8px; width: 8px; border-radius: 2px; background: var(--lane-color, #64748b); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; max-height: 264px; overflow: auto; padding: 4px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; scrollbar-width: thin; }
-.grid button { position: relative; min-width: 36px; height: 40px; border: 1px solid var(--lane-color, #cbd5e1); border-radius: 6px; color: var(--lane-ink, #475569); background: var(--lane-bg, white); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+﻿.overview { min-width: 0; margin-top: 12px; color: var(--omts-color-text); }
+.viewport { position: relative; max-height: 380px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); background: var(--omts-color-surface-subtle); }
+.viewport::-webkit-scrollbar { display: block; width: 6px; }
+.viewport::-webkit-scrollbar-thumb { border-radius: 6px; background: var(--omts-color-border-strong); }
+.sticky { position: sticky; top: 0; z-index: 1; padding: 10px 12px 8px; border-bottom: 1px solid var(--omts-color-border); background: var(--omts-color-surface); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; font-size: 13px; }
+.toolbar strong { flex: 1 1 140px; }
+.toolbar strong span { color: var(--omts-color-text-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.search { display: flex; flex: 0 1 230px; min-width: 0; align-items: center; gap: 8px; font-size: 12px; color: var(--omts-color-text-muted); }
+.search span { white-space: nowrap; }
+.search input { width: 100%; min-width: 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.filters button { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-control); padding: 3px 7px; font-size: 12px; line-height: 18px; background: var(--omts-color-surface); color: var(--omts-color-text-muted); cursor: pointer; }
+.filters button:hover { background: var(--omts-color-surface-subtle); border-color: var(--omts-color-border-strong); }
+.filters button[aria-pressed="true"] { border-color: var(--omts-brand, var(--omts-color-primary)); color: var(--omts-brand, var(--omts-color-primary)); background: var(--omts-brand-soft, var(--omts-color-primary-soft)); }
+.filters b { min-width: 16px; padding-left: 4px; border-left: 1px solid var(--omts-color-border); text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.filters i { height: 7px; width: 7px; flex: none; border-radius: 2px; background: var(--lane-color, var(--omts-color-border-strong)); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 7px; padding: 12px; }
+.grid button { position: relative; min-width: 0; height: 40px; border: 1px solid color-mix(in srgb, var(--lane-color, var(--omts-color-border-strong)) 45%, var(--omts-color-surface)); border-radius: var(--omts-radius-control); color: var(--lane-ink, var(--omts-color-text-muted)); background: var(--lane-bg, var(--omts-color-surface)); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; scroll-margin-top: 160px; }
 .grid button:not(:disabled) { cursor: pointer; }
-.grid button:disabled { opacity: 1; }
-.grid button:not(:disabled):hover { box-shadow: inset 0 0 0 1px currentColor; }
-.grid button[data-active] { outline: 2px solid var(--omts-brand, #315a96); outline-offset: 1px; }
-.grid button[data-found] { outline: 3px solid #d97706; outline-offset: 1px; }
-.grid button:focus-visible, .filters button:focus-visible { outline: 2px solid var(--omts-brand, #315a96); outline-offset: 2px; }
-.grid button span { position: absolute; right: 2px; top: 0; font-size: 9px; }
-.overview [data-state="NotSeeded"] { --lane-color: #94a3b8; --lane-bg: #fff; --lane-ink: #475569; }
-.overview [data-state="Available"] { --lane-color: #94a3b8; --lane-bg: #f1f5f9; --lane-ink: #334155; }
-.overview [data-state="Growing"] { --lane-color: #16835c; --lane-bg: #e8f7ef; --lane-ink: #116343; }
-.overview [data-state="BeingHarvested"] { --lane-color: #b77910; --lane-bg: #fff5d9; --lane-ink: #855909; }
-.overview [data-state="Harvested"] { --lane-color: #4684b8; --lane-bg: #eaf3ff; --lane-ink: #24588c; }
-.overview [data-state="Damaged"] { --lane-color: #c34949; --lane-bg: #fef0ef; --lane-ink: #a42d2d; }
-.overview [data-state="OutOfService"] { --lane-color: #818896; --lane-bg: #e9ecf0; --lane-ink: #475569; }
-.summary, .note { margin: 8px 0; font-size: 12px; line-height: 1.6; color: #64748b; overflow-wrap: anywhere; }
-.detail { margin-top: 12px; padding: 12px; border: 1px solid #d8e0e8; border-radius: 8px; background: white; }
-@media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); } .grid button { height: 44px; } .search { width: 145px; } }
+.grid button:disabled { opacity: 1; cursor: default; }
+.grid button:not(:disabled):hover { border-color: var(--lane-color, var(--omts-color-border-strong)); box-shadow: inset 0 0 0 1px currentColor; }
+.grid button[data-found] { outline: 2px solid var(--omts-color-warning); outline-offset: 1px; }
+.grid button[data-active] { outline: 2px solid var(--omts-brand, var(--omts-color-primary)); outline-offset: 1px; background: var(--omts-brand-soft, var(--omts-color-primary-soft)); color: var(--omts-brand, var(--omts-color-primary)); }
+.grid button:focus-visible, .filters button:focus-visible { outline: 3px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.grid button span { position: absolute; right: 2px; top: 2px; font-size: 9px; }
+.overview [data-state="NotSeeded"] { --lane-color: var(--omts-color-border-strong); --lane-bg: var(--omts-color-surface); --lane-ink: var(--omts-color-text-muted); }
+.overview [data-state="Available"], .overview [data-state="OutOfService"] { --lane-color: var(--omts-color-text-muted); --lane-bg: var(--omts-color-surface-subtle); --lane-ink: var(--omts-color-text-muted); }
+.overview [data-state="Growing"] { --lane-color: var(--omts-color-success); --lane-bg: color-mix(in srgb, var(--omts-color-success) 9%, var(--omts-color-surface)); --lane-ink: var(--omts-color-success); }
+.overview [data-state="BeingHarvested"] { --lane-color: var(--omts-color-warning); --lane-bg: color-mix(in srgb, var(--omts-color-warning-soft) 65%, var(--omts-color-surface)); --lane-ink: var(--omts-color-warning); }
+.overview [data-state="Harvested"] { --lane-color: var(--omts-color-info); --lane-bg: color-mix(in srgb, var(--omts-color-info) 6%, var(--omts-color-surface)); --lane-ink: var(--omts-color-info); }
+.overview [data-state="Damaged"] { --lane-color: var(--omts-color-danger); --lane-bg: var(--omts-color-danger-soft); --lane-ink: var(--omts-color-danger); }
+.overview [data-state="OutOfService"] { border-style: dashed; }
+.summary { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--omts-color-text-muted); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.empty { display: grid; gap: 4px; padding: 24px 16px; text-align: center; font-size: 13px; color: var(--omts-color-text-muted); }
+.empty strong { color: var(--omts-color-text); font-weight: 600; }
+.empty p { margin: 0; line-height: 1.6; }
+.skeleton { height: 40px; border-radius: var(--omts-radius-control); }
+.detail { margin-top: 12px; padding: 12px; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); background: var(--omts-color-surface); }
+@media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 7px; padding: 10px; } .grid button { height: 44px; } .sticky { padding: 10px; } .filters button { min-height: 32px; } }

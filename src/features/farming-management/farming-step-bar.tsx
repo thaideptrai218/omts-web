@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { farmingStepLink, type FarmingStep } from "./entity-links";
 
-const steps: readonly [FarmingStep, string][] = [["cycle", "Chu kỳ"], ["seeding", "Thả giống"], ["material", "Vật tư"], ["harvest", "Thu hoạch"]];
+const steps: readonly [FarmingStep, string][] = [["cycle", "Chu kỳ nuôi"], ["seeding", "Thả giống"], ["harvest", "Thu hoạch"], ["material", "Sử dụng vật tư (tùy chọn)"], ["water", "Theo dõi chất lượng nước"]];
 
 /** A compact route map for the raft currently being worked on. */
 export function FarmingStepBar({ current, zoneId, raftId, cycleId }: { current: FarmingStep; zoneId: string; raftId: string; cycleId?: string }) {

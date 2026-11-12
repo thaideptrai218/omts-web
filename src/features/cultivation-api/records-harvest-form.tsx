@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { z } from "zod";
 import { useToast } from "@/components/ui/toast-provider";
 import { CollapsibleSection } from "@/components/ui/management-screen/management-table";
@@ -36,7 +37,7 @@ export function harvestInvalidFieldText(error: z.ZodError): string {
  * Records one harvest trip: the purchase request it harvests for, lanes, cage count, optional kg estimate, crew and photos. The cycle target is only a plan
  * (owner decision 12/11/2026): a trip above it saves like any other; warnings of the saved lot come back as non-blocking notices.
  */
-export function HarvestForm({ zoneId, raftId, data, onClose, onSaved }: { zoneId: string; raftId: string; data: z.infer<typeof c.harvestList>; onClose(): void; onSaved(): void }) {
+export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClose, onSaved }: { zoneId: string; raftId: string; data: z.infer<typeof c.harvestList>; canConfigure?: boolean; onClose(): void; onSaved(): void }) {
   const [lanes, setLanes] = useState<number[]>([]), [finished, setFinished] = useState<number[]>([]);
   const [cages, setCages] = useState(""), [kg, setKg] = useState("");
   const [orderId, setOrderId] = useState(() => defaultHarvestOrderId(data.orders));
@@ -88,6 +89,8 @@ export function HarvestForm({ zoneId, raftId, data, onClose, onSaved }: { zoneId
           <UnitField key="harvest-cages" label="Số lồng thu hoạch *" unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} required value={cages} onChange={setCages} />
           <UnitField key="harvest-estimated-kg" label="Kg ước tính (để trống: tính theo số lồng)" unit="kg ước tính" decimals={2} min={0.01} value={kg} onChange={setKg} />
           <HarvestEstimateHint cages={Number(cages)} typedKg={kg} kgPerCage={data.averageKgPerCage} />
+          <p className="text-xs text-text-muted">kg/lồng hiện tại: {data.averageKgPerCage.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}{" "}
+            ({canConfigure ? <Link className="underline underline-offset-2 focus-visible:outline-2" href="/settings?section=harvest">Cài đặt → Thiết lập thu hoạch</Link> : "Cài đặt → Thiết lập thu hoạch"})</p>
           <RecordPhotoPicker label="Ảnh chuyến thu hoạch (tối đa 10 ảnh JPEG/PNG, 10 MB/ảnh)" files={photos} onChange={setPhotos} />
         </CollapsibleSection>
       </fieldset>

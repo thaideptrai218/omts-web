@@ -54,7 +54,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
 
   const values = (confirmed: boolean) => c.seedValues.safeParse({ seedingDate: date, seedLotId: lot, quantity: Number(quantity), laneNumbers: lanes, ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
   const send = (parsed: z.infer<typeof c.seedValues>) => seedRepo.write(record ? "correct" : "record", { ...parsed, ...(record ? { reason, rowVersion: record.rowVersion } : {}) }, z.object({ record: c.seedingRecord }), record?.id ?? cycleId, zoneId);
-  const done = () => { notify({ tone: "success", title: `Đã lưu thả giống ${record?.seedLot.code ?? selectedLot?.code ?? ""}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("material", { zoneId, raftId, cycleId }) } }); onSaved(); };
+  const done = () => { notify({ tone: "success", title: `Đã lưu thả giống ${record?.seedLot.code ?? selectedLot?.code ?? ""}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } }); onSaved(); };
   /** Date, fields, reason, stock and the 150% ceiling: the problem text, or undefined when the form may be sent. */
   function problem(parsed: ReturnType<typeof values>) {
     const dateProblem = date !== record?.seedingDate ? backdateProblem(date, dateWindow, "Ngày thả giống", !!cycleStartDate) : undefined;

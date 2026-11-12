@@ -39,7 +39,7 @@ export function RaftCycleWorkspace(props: Props) {
   const { remote: zones, zones: offered, zoneId, setChoice } = useZoneChoice(zone => operationAllowed(props.area, identity, permissions.functionPermissions, "View", zone.id));
   if (zones.error && !zones.data) return <ListStateMessage error={zones.error} onRetry={zones.reload} retryLabel="Tải lại danh mục vùng" />;
   if (!zones.data) return <ListSkeleton />;
-  return <ZoneRaftList key={`${zoneId}:${params?.get("recordId") ?? ""}:${params?.get("search") ?? ""}:${params?.get("raftId") ?? ""}:${params?.get("cycleId") ?? ""}`} {...props} zones={offered} zoneId={zoneId} onZone={setChoice} />;
+  return <ZoneRaftList key={`${props.storageKey}:${zoneId}:${params?.get("recordId") ?? ""}:${params?.get("search") ?? ""}:${params?.get("raftId") ?? ""}:${params?.get("cycleId") ?? ""}`} {...props} zones={offered} zoneId={zoneId} onZone={setChoice} />;
 }
 
 function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail, loadRows = readZoneRows, zones, zoneId, onZone }: Props & { zones: readonly ZoneRow[]; zoneId: string; onZone(id: string): void }) {

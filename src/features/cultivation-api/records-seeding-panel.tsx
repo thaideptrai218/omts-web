@@ -46,7 +46,14 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
               : "Theo dõi giống trong chu kỳ đang chọn"}
           </p>
         </div>
-
+        <div className={flowStyles.actions}>
+          {data?.canRecord && allowed("Create") && (
+            <Button type="button" disabled={remote.loading} onClick={() => setSelected(null)}>Ghi nhận thả giống</Button>
+          )}
+          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
+            Tải lại
+          </Button>
+        </div>
       </div>
       {remote.loading ? (
         <Skeleton />
@@ -176,14 +183,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
                 ))}
               </DataTable>
             </details>
-        <div className={flowStyles.actions}>
-          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
-            Tải lại
-          </Button>
-          {data?.canRecord && allowed("Create") && (
-            <Button type="button" onClick={() => setSelected(null)}>Ghi nhận thả giống</Button>
-          )}
-        </div>
+
             {selected === null && (
               <SeedingForm
                 zoneId={zoneId}
