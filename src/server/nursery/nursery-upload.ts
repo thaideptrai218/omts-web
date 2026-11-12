@@ -3,7 +3,7 @@ import { readBoundedBytes } from "../operations/bounded-body";
 import type { NurseryPlan } from "./nursery-plan";
 
 const labels: Record<string, string> = { seedLotId: "Lô giống", quantity: "Số mảnh vào ươm", startDate: "Ngày bắt đầu ươm",
-  survivors: "Số sống sót (ước tính)", completedOn: "Ngày hoàn tất ươm", allocations: "Phân bổ cho bè", targetYieldKg: "Sản lượng dự kiến",
+  survivors: "Số sống sót (ước tính)", completedOn: "Ngày hoàn tất ươm",
   rowVersion: "Phiên bản bản ghi", note: "Ghi chú", keepPhotoIds: "Ảnh", reason: "Lý do" };
 export function validationProblem(path?: PropertyKey, hint?: string) {
   const field = typeof path === "string" ? labels[path] ?? path : "Dữ liệu";
@@ -34,7 +34,7 @@ export async function readNurseryUpload(request: Request, plan: NurseryPlan) {
         if (values.length !== 1 || typeof values[0] !== "string" || values[0].length > 32_768) return { problem: validationProblem(key) };
         const value = values[0];
         if (["quantity", "survivors"].includes(key)) input[key] = /^\d+(?:\.\d{1,2})?$/.test(value) ? Number(value) : Number.NaN;
-        else input[key] = key === "allocations" ? JSON.parse(value) : value;
+        else input[key] = value;
       }
     }
     const parsed = plan.validator!.safeParse(input);
@@ -53,8 +53,7 @@ export async function readNurseryUpload(request: Request, plan: NurseryPlan) {
     const body = new FormData();
     for (const [key, value] of Object.entries(parsed.data as Record<string, unknown>)) {
       if (value === undefined) continue;
-      if (key === "allocations") body.append(key, JSON.stringify(value));
-      else if (Array.isArray(value)) for (const part of value) body.append(key, String(part));
+      if (Array.isArray(value)) for (const part of value) body.append(key, String(part));
       else body.append(key, String(value));
     }
     for (const photo of photos) body.append("photos", photo, photo.name);

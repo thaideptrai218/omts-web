@@ -14,7 +14,7 @@ describe("nursery compact history", () => {
       { at: "2026-11-13T09:30:00+07:00", byName: "Nguyễn An", action: "Completed", reason: "Đã chuyển phân bổ cho bè", changes: [] },
     ] } });
     render(<NurseryHistoryTab id="n" zoneId="z" />);
-    const first = await screen.findByRole("button", { name: /Sửa số sống sót 900 → 950/ });
+    const first = await screen.findByRole("button", { name: /Sửa số sống sót \(ước tính\) 900 → 950/ });
     const second = screen.getByRole("button", { name: /Hoàn tất ươm/ });
     expect(first.getAttribute("aria-expanded")).toBe("false");
     expect(first.getAttribute("type")).toBe("button");

@@ -2,16 +2,13 @@ import { z } from "zod";
 import { bffFetch } from "@/features/auth/api/bff-fetch";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 
-const fields: Record<string, string> = { Photos: "Ảnh", Survivors: "Số sống sót (ước tính)", Quantity: "Số mảnh", "Seed lot": "Lô giống", "Start date": "Ngày bắt đầu", "Completed on": "Ngày hoàn tất", Allocations: "Phân bổ", "Target yield": "Sản lượng dự kiến", Zone: "Vùng nuôi", Note: "Ghi chú", Reason: "Lý do" };
+const fields: Record<string, string> = { Photos: "Ảnh", Survivors: "Số sống sót (ước tính)", Quantity: "Số mảnh", "Seed lot": "Lô giống", "Start date": "Ngày bắt đầu", "Completed on": "Ngày hoàn tất", Zone: "Vùng nuôi", Note: "Ghi chú", Reason: "Lý do" };
 const reasons: Record<string, string> = {
   NURSERY_NOT_NURSING: "Đợt không còn ở trạng thái Đang ươm. Hãy tải lại để đối chiếu.",
-  NURSERY_NOT_COMPLETED: "Đợt chưa hoàn tất nên không thể điều chỉnh phân bổ.",
-  NURSERY_RAFT_HAS_OPEN_CYCLE: "Bè đã có chu kỳ đang mở. Hãy chọn bè khác.",
-  NURSERY_RAFT_OTHER_ZONE: "Bè phải thuộc cùng vùng với đợt ươm.",
+  NURSERY_NOT_COMPLETED: "Chỉ sửa số sống sót hoặc đóng đợt khi đã ươm xong. Hãy tải lại đợt ươm.",
   NURSERY_SURVIVORS_BELOW_SEEDED: "Số sống sót (ước tính) không được nhỏ hơn tổng đã thả.",
-  NURSERY_ALLOCATION_BELOW_SEEDED: "Không thể giảm dưới số đã thả hoặc gỡ bè đã có thả giống, nhật ký.",
-  NURSERY_ALLOCATION_FROZEN: "Phân bổ của chu kỳ đã chốt không thể thay đổi.",
-  NURSERY_CYCLE_STARTS_BEFORE_CLOSE: "Ngày hoàn tất phải sau ngày chốt chu kỳ trước của bè.",
+  NURSERY_ALREADY_CLOSED: "Đợt ươm đã đóng. Hãy tải lại để đối chiếu.",
+  NURSERY_NOTHING_TO_CLOSE: "Kho ươm không còn mảnh để đóng đợt. Hãy tải lại để đối chiếu.",
 };
 const problemSchema = z.object({ field: z.string().optional(), fields: z.array(z.string()).optional(), hint: z.string().optional(), message: z.string().optional(), reasonCode: z.string().optional() });
 export function nurseryProblemText(value: unknown, code?: string) {

@@ -7,7 +7,7 @@ import { managementStyles, SortableHeader, type SortState } from "@/components/u
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import { nurseryStatus, quantityText, type NurseryRow } from "./contracts";
+import { nurseryStatus, nurseryStatusTone, quantityText, type NurseryRow } from "./contracts";
 
 type Column = { key: string; label: string; sort?: string; render(row: NurseryRow): ReactNode };
 export const nurseryColumns: readonly Column[] = [
@@ -16,10 +16,12 @@ export const nurseryColumns: readonly Column[] = [
   { key: "lot", label: "Lô giống", render: row => <Link className="text-primary underline" href={`/farming/nursery?${new URLSearchParams({ code: row.code, zoneId: row.zoneId })}`}>{row.seedLotCode ?? "Xem lô giống"}</Link> },
   { key: "quantityIn", label: "Số mảnh vào ươm", sort: "quantityIn", render: row => quantityText(row.quantityIn) },
   { key: "survivors", label: "Sống sót (ước tính)", render: row => quantityText(row.survivors) },
+  { key: "seeded", label: "Đã thả", render: row => row.statusId === 4001 || row.statusId === 4003 ? "—" : quantityText(row.seeded) },
+  { key: "remaining", label: "Còn lại", render: row => row.statusId === 4002 && row.remaining === 0 ? "Đã thả hết" : row.statusId === 4001 || row.statusId === 4003 ? "—" : quantityText(row.remaining) },
   { key: "lossPieces", label: "Hao hụt (ước tính)", render: row => quantityText(row.lossPieces) },
   { key: "startDate", label: "Ngày bắt đầu", sort: "startDate", render: row => formatVietnameseDate(row.startDate) },
   { key: "days", label: "Số ngày ươm", render: row => `${row.daysNursing} ngày` },
-  { key: "status", label: "Trạng thái", sort: "status", render: row => <StatusPill tone={row.statusId === 4001 ? "neutral" : row.statusId === 4002 ? "success" : "danger"}>{nurseryStatus(row.statusId)}</StatusPill> },
+  { key: "status", label: "Trạng thái", sort: "status", render: row => <StatusPill tone={nurseryStatusTone(row.statusId)}>{nurseryStatus(row.statusId)}</StatusPill> },
 ];
 export function NurseryTable({ rows, visible, sort, onSort, expanded, onToggle, detail }: {
   rows: readonly NurseryRow[]; visible: readonly string[]; sort: SortState; onSort(sort: SortState): void; expanded?: string; onToggle(id: string): void; detail(row: NurseryRow): ReactNode;

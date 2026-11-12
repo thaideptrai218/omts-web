@@ -7,12 +7,13 @@ export type NurseryHistoryEntry = z.infer<typeof nurseryHistorySchema>["entries"
 type Change = NurseryHistoryEntry["changes"][number];
 const actions: Record<string, string> = {
   created: "Bắt đầu ươm", edited: "Sửa đợt ươm", cancelled: "Xóa đợt ươm", completed: "Hoàn tất ươm",
-  survivorscorrected: "Sửa số sống sót", allocationschanged: "Chuyển lại số mảnh giữa các bè",
+  survivorscorrected: "Sửa số sống sót (ước tính)", closed: "Đóng đợt ươm", allocationschanged: "Cập nhật đợt ươm",
 };
 const fields: Record<string, string> = {
   quantity: "Số mảnh vào ươm", quantityin: "Số mảnh vào ươm", startdate: "Ngày bắt đầu ươm",
   seedlot: "Lô giống", seedlotid: "Lô giống", note: "Ghi chú", survivors: "Sống sót (ước tính)",
-  completedon: "Ngày hoàn tất ươm", allocations: "Số mảnh chuyển sang bè", status: "Trạng thái",
+  completedon: "Ngày hoàn tất ươm", allocations: "Thông tin trước đây", status: "Trạng thái",
+  seeded: "Đã thả", remaining: "Còn lại", closedon: "Ngày đóng đợt ươm", closelosspieces: "Hao hụt khi đóng (ước tính)",
   loss: "Hao hụt (ước tính)", losspieces: "Hao hụt (ước tính)", losspercent: "Tỷ lệ hao hụt (ước tính)",
   targetyieldkg: "Sản lượng dự kiến", startphotos: "Ảnh bắt đầu ươm", completionphotos: "Ảnh hoàn tất ươm",
 };
@@ -27,7 +28,7 @@ export function nurseryHistoryChangeLabel(change: Change): string {
 }
 export function nurseryHistoryValue(change: Change, value: Change["from"]): string {
   if (fieldKey(change.field) === "status" && typeof value === "string") {
-    const statuses: Record<string, string> = { Nursing: "Đang ươm", Completed: "Đã hoàn tất", Cancelled: "Đã hủy" };
+    const statuses: Record<string, string> = { Nursing: "Đang ươm", Completed: "Đã ươm xong", Cancelled: "Đã hủy", Closed: "Đã đóng", "4001": "Đang ươm", "4002": "Đã ươm xong", "4003": "Đã hủy", "4004": "Đã đóng" };
     return statuses[value] ?? nurseryDisplayText(historyValue(value)) ?? "—";
   }
   return nurseryDisplayText(historyValue(value)) ?? "—";

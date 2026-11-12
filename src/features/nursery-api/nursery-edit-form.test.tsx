@@ -17,15 +17,15 @@ function mount() {
     guard={{ dirty: { current: false }, pending: { current: false }, leave: vi.fn(), dialog: undefined }} />);
 }
 describe("nursery edit immutable zone and raw quantity", () => {
-  it("shows the region as text and keeps typing, deletion and blur unchanged", () => {
+  it("shows the region as text and supports grouped typing, deletion and decimals", () => {
     mount();
     expect(screen.getByText("KV01 · Vùng 1")).toBeTruthy();
     expect(screen.queryByRole("combobox", { name: /Vùng/ })).toBeNull();
     const input = screen.getByLabelText("Số mảnh vào ươm") as HTMLInputElement;
-    for (const value of ["95000", "9500", "", "95,00", "95,"]) {
+    for (const [value, shown] of [["95000", "95.000"], ["9500", "9.500"], ["", ""], ["95,00", "95,00"], ["95,", "95"]]) {
       fireEvent.change(input, { target: { value } });
       fireEvent.blur(input);
-      expect(input.value).toBe(value);
+      expect(input.value).toBe(shown);
     }
     expect(save).not.toHaveBeenCalled();
   });

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { UnitField } from "@/components/form/number-fields";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorNotice, Field, Note, Select, Skeleton, businessToday, useRemote } from "@/features/operations/ui";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
@@ -47,7 +48,7 @@ function StartForm({ zones, zoneId, onZone, onClose, onSaved }: { zones: readonl
         <Select label="Vùng ươm" value={zoneId} onChange={event => void leave(() => onZone(event.target.value))}>{zones.map(zone => <option key={zone.id} value={zone.id}>{zone.code} · {zone.name}</option>)}</Select>
         {lots.loading ? <Skeleton /> : lots.error ? <><ErrorNotice error={nurseryDisplayText(lots.error)} /><Button key="retry-start-lots" type="button" variant="secondary" onClick={lots.reload}>Tải lại lô giống</Button></> : <Select label="Lô giống trong kho" value={lotId} onChange={event => setLotId(event.target.value)}><option value="">Chọn lô giống</option>{lots.data?.lots.filter(item => (item.onHand ?? 0) > 0).map(item => <option key={item.id} value={item.id}>{item.code} · {item.itemName} · Tồn {quantityText(item.onHand, item.unit)}</option>)}</Select>}
         {!lots.loading && !lots.error && !lots.data?.lots.length && <p className="text-sm">Không có lô giống còn tồn kho trong vùng này.</p>}
-        <div className="grid gap-3 sm:grid-cols-2"><Field label="Số mảnh vào ươm" type="text" inputMode="decimal" value={quantity} onChange={event => setQuantity(event.target.value)} required /><Field label="Ngày bắt đầu ươm *" type="date" value={date} onChange={event => setDate(event.target.value)} max={businessToday()} required /></div>
+        <div className="grid gap-3 sm:grid-cols-2"><UnitField label="Số mảnh vào ươm" unit="mảnh" decimals={2} min={0} value={quantity} onChange={setQuantity} required /><Field label="Ngày bắt đầu ươm *" type="date" value={date} onChange={event => setDate(event.target.value)} max={businessToday()} required /></div>
         <Note label="Ghi chú" value={note} onChange={event => setNote(event.target.value)} maxLength={1000} />
         <NurseryPhotoField photos={photos} onChange={setPhotos} onBusy={setPhotoBusy} />
       </> : <NurseryReviewTable rows={[["Vùng ươm", zone ? `${zone.code} · ${zone.name}` : "—"], ["Lô giống", lot?.code], ["Nhà cung cấp", lot?.supplierName ?? "—"], ["Số mảnh vào ươm", quantityText(nurseryQuantityValue(quantity))], ["Ngày bắt đầu", date.split("-").reverse().join("/")], ["Tồn trước khi ươm", quantityText(lot?.onHand, lot?.unit)], ["Tồn sau khi ươm", lot?.onHand == null ? "—" : quantityText(lot.onHand - nurseryQuantityValue(quantity), lot.unit)], ["Ảnh hiện trường", `${photos.length} ảnh`], ["Ghi chú", nurseryDisplayText(note) || "—"]]} />}

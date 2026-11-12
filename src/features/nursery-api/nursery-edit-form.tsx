@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useImperativeHandle, useState, type Ref } from "react";
 import { Button } from "@/components/ui/button";
+import { UnitField } from "@/components/form/number-fields";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { TabFooter } from "@/features/farming-management/detail-parts";
 import type { UnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
@@ -41,7 +42,7 @@ export function NurseryEditForm({ batch, onClose, onSaved, onReload, leaveRef, g
   return <form noValidate aria-label={`Chỉnh sửa ${batch.code}`} onSubmit={event => { event.preventDefault(); void save(); }}>{confirmation.dialog}
       <dl className="mb-3 grid gap-2 text-sm sm:grid-cols-2"><div><dt className="text-xs text-text-muted">Vùng ươm</dt><dd>{batch.zoneCode} · {batch.zoneName}</dd></div><div><dt className="text-xs text-text-muted">Lô giống</dt><dd>{batch.seedLot.code}</dd></div></dl>
       <fieldset disabled={mutation.pending || mutation.blocked || photoBusy} className="min-w-0 space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2"><Field label="Số mảnh vào ươm" type="text" inputMode="decimal" value={quantity} onChange={event => setQuantity(event.target.value)} required />
+        <div className="grid gap-3 sm:grid-cols-2"><UnitField label="Số mảnh vào ươm" unit="mảnh" decimals={2} min={0} value={quantity} onChange={setQuantity} required />
           <Field label="Ngày bắt đầu ươm *" type="date" value={date} onChange={event => setDate(event.target.value)} max={businessToday()} required /></div>
         <Note label="Ghi chú" value={note} onChange={event => setNote(event.target.value)} maxLength={1000} />
         <NurseryPhotoField photos={photos} onChange={setPhotos} kept={kept} onRemoveKept={id => setKept(current => current.filter(photo => photo.id !== id))} onBusy={setPhotoBusy} />

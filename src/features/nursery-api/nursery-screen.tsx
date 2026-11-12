@@ -41,17 +41,17 @@ function NurseryDirectory({ zones, initialZone }: { zones: readonly ZoneRow[]; i
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
   const [expanded, setExpanded] = useState<string>(), [linkPlaced, setLinkPlaced] = useState(!code), [detailVersion, setDetailVersion] = useState(0);
   const [creating, setCreating] = useState(false), [completing, setCompleting] = useState<{ batch: NurseryDetail; mode: CompletionMode }>();
-  const [stored, store] = useStoredValue("omts-columns-nursery", nurseryColumns.map(column => column.key).join(",")), visible = nurseryColumns.filter(column => stored.split(",").includes(column.key)).map(column => column.key);
+  const [stored, store] = useStoredValue("omts-columns-nursery-v2", nurseryColumns.map(column => column.key).join(",")), visible = nurseryColumns.filter(column => stored.split(",").includes(column.key)).map(column => column.key);
   const list = useRemote(useCallback((signal: AbortSignal) => zoneId ? nurseryService.list({ zoneId, search, status: status || "all", ...(time.from ? { from: time.from } : {}), ...(time.to ? { to: time.to } : {}), page: String(page), pageSize: String(pageSize), sortBy: sort.key, sortDir: sort.direction }, signal)
     : Promise.resolve({ status: "success" as const, data: { items: [], page: 1, pageSize, total: 0 } }), [zoneId, search, status, time.from, time.to, page, pageSize, sort.key, sort.direction]));
   const rows = list.data?.items ?? [];
   if (!linkPlaced && list.data) { setLinkPlaced(true); setExpanded(rows.find(row => row.code === code)?.id); }
   const change = (action: () => void) => void guard.leave(() => { action(); setPage(1); setExpanded(undefined); });
-  function saved(batch: NurseryDetail, action = batch.statusId === 4003 ? "Đã hủy đợt ươm" : "Đã cập nhật đợt ươm") { setCreating(false); setCompleting(undefined); setDetailVersion(value => value + 1); list.reload(); notify({ tone: "success", title: `${action} ${batch.code}.` }); }
+  function saved(batch: NurseryDetail, action = batch.statusId === 4003 ? "Đã hủy đợt ươm" : batch.statusId === 4004 ? "Đã đóng đợt ươm" : "Đã cập nhật đợt ươm") { setCreating(false); setCompleting(undefined); setDetailVersion(value => value + 1); list.reload(); notify({ tone: "success", title: `${action} ${batch.code}.` }); }
   const createZones = zones.filter(zone => zone.statusId === 101 && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Create", zone.id));
   const filters = <>
     <FilterGroup legend="Vùng ươm"><SelectBox aria-label="Vùng ươm" className="omts-control" value={zoneId} onChange={event => change(() => setZoneId(event.target.value))}>{!zones.length && <option value="">Không có vùng được xem</option>}{zones.map(zone => <option key={zone.id} value={zone.id}>{zone.code} · {zone.name}</option>)}</SelectBox></FilterGroup>
-    <FilterPills legend="Trạng thái" name="nursery-status" value={status} onChange={value => change(() => setStatus(value))} options={[["nursing", "Đang ươm"], ["completed", "Đã hoàn tất"], ["cancelled", "Đã hủy"]]} />
+    <FilterPills legend="Trạng thái" name="nursery-status" value={status} onChange={value => change(() => setStatus(value))} options={[["nursing", "Đang ươm"], ["completed", "Đã ươm xong"], ["closed", "Đã đóng"], ["cancelled", "Đã hủy"]]} />
     <TimeRangeFilter legend="Ngày bắt đầu ươm" value={time} onChange={value => change(() => setTime(value))} />
   </>;
   return <ManagementLayout storageKey="nursery" icon="product" title="Ươm giống" filters={filters} search={<input type="search" aria-label="Tìm đợt ươm" placeholder="Theo mã, lô giống, nhà cung cấp" maxLength={200} value={search} onChange={event => change(() => setSearch(event.target.value))} />}
@@ -60,9 +60,9 @@ function NurseryDirectory({ zones, initialZone }: { zones: readonly ZoneRow[]; i
     {guard.dialog}
     <ManagementScroller busy={list.loading}>
       {list.loading ? <ListSkeleton /> : list.error ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại đợt ươm" /> : !rows.length ? <ListStateMessage>{search || status || time.from ? "Không có đợt ươm phù hợp bộ lọc." : "Chưa có đợt ươm giống nào."}</ListStateMessage>
-        : <NurseryTable rows={rows} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expanded={expanded} onToggle={id => void guard.leave(() => setExpanded(value => value === id ? undefined : id))} detail={row => <NurseryDetailPanel key={`${row.id}:${detailVersion}`} id={row.id} zoneId={row.zoneId} guard={guard} onChanged={saved} onComplete={batch => setCompleting({ batch, mode: "complete" })} onCorrect={batch => setCompleting({ batch, mode: "survivors" })} onTransfer={batch => setCompleting({ batch, mode: "allocations" })} />} />}
+        : <NurseryTable rows={rows} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expanded={expanded} onToggle={id => void guard.leave(() => setExpanded(value => value === id ? undefined : id))} detail={row => <NurseryDetailPanel key={`${row.id}:${detailVersion}`} id={row.id} zoneId={row.zoneId} guard={guard} onChanged={saved} onComplete={batch => setCompleting({ batch, mode: "complete" })} onCorrect={batch => setCompleting({ batch, mode: "survivors" })} />} />}
     </ManagementScroller>
     {creating && <NurseryStartDialog zones={createZones} initialZone={zoneId} onClose={() => setCreating(false)} onSaved={batch => saved(batch, "Đã bắt đầu ươm giống, đợt")} />}
-    {completing && <NurseryCompleteDialog batch={completing.batch} mode={completing.mode} onClose={() => setCompleting(undefined)} onSaved={batch => saved(batch, completing.mode === "complete" ? "Đã hoàn tất ươm, đợt" : completing.mode === "survivors" ? "Đã sửa số sống sót, đợt" : "Đã chuyển lại số mảnh giữa các bè, đợt")} />}
+    {completing && <NurseryCompleteDialog batch={completing.batch} mode={completing.mode} onClose={() => setCompleting(undefined)} onSaved={batch => saved(batch, completing.mode === "complete" ? "Đã hoàn tất ươm, đợt" : "Đã sửa số sống sót (ước tính), đợt")} />}
   </ManagementLayout>;
 }
