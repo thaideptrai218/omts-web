@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { raftGeometryRequest } from "@/features/rafts-api/raft-geometry";
 import { resourceKeys, resources, resourceCategoryFilters, projectResource, resourceAllowed, type ResourceKey } from "@/features/api-workspace/resources";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
@@ -68,7 +69,11 @@ export async function handleResourceRequest(request: Request, resourceName: stri
         || (key === "customers" && !["create", "update"].includes(action))
         || (["lock", "unlock"].includes(action) && key !== "accounts")) return json({ status: "invalid-input" }, 400);
       const allowed = [...resources[key].fields.map((field) => field.key), "rowVersion", "reason",
-        ...(key === "employees" ? ["workingZoneIds", "bankAccount", "accountId"] : []), ...(key === "rafts" ? ["laneCount"] : [])];
+        ...(key === "employees" ? ["workingZoneIds", "bankAccount", "accountId"] : []), ...(key === "rafts" ? ["laneCount", "lengthM", "widthM", "laneLengths"] : [])];
+      if (key === "rafts" && ["create", "update"].includes(action)) {
+        const { lengthM, widthM, laneLengths } = body;
+        if (!raftGeometryRequest.safeParse({ lengthM, widthM, laneLengths }).success) return json({ status: "invalid-input" }, 400);
+      }
       if (Object.keys(body).some((field) => !allowed.includes(field))) return json({ status: "invalid-input" }, 400);
     }
     const initial = await gateway.resolve(request.headers.get("cookie"));

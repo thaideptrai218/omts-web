@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { formatRaftSize } from "@/features/rafts-api/raft-size";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect } from "react";
@@ -56,7 +57,7 @@ export function ZoneRaftsTab({ zoneId, raftAccess, guard, openId }: {
                   void guard.leave(() => router.push(farmingReferenceHref("raft", { zoneId, recordId: raft.id, search: raft.code })));
                 }}
               >{raft.code}</Link>
-            </td><td>{raft.size || "—"}</td><td className={styles.number}>{raft.laneCount ?? "—"}</td>
+            </td><td>{formatRaftSize(raft.size) || "—"}</td><td className={styles.number}>{raft.laneCount == null ? "—" : `${raft.laneCount} làn`}</td>
             <td><StatusPill tone={raft.statusId === IN_USE ? "success" : "neutral"}>{raft.statusId === IN_USE ? "Đang sử dụng" : "Ngừng sử dụng"}</StatusPill></td>
             {showCycles && <td>{raft.cycle ? <Link className={styles.link} href={farmingReferenceHref("cycle", { zoneId, raftId: raft.id, cycleId: raft.cycle.id })}>{`${raft.cycle.closeDate ? "Đã đóng" : "Đang mở"} · từ ${formatVietnameseDate(raft.cycle.startDate)}`}</Link> : "Chưa có chu kỳ"}</td>}
           </tr>)}</tbody></table>}

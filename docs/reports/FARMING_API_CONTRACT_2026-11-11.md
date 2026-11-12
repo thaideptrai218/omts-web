@@ -182,3 +182,58 @@ The "seeded" quantity of a seed lot is replaced by the **real consumed quantity*
 ## 15. Legacy rows and migration
 
 Migration `20261111150000_FarmingStockIssueLinks`: `InputIssues.CycleId/SourceKind/SourceRecordId`, `SeedingRecords.IssueId`, `MaterialUsages.IssueId` (+ indexes, FKs). **Rows recorded before are not back-filled** (the ledger would have to be written back in time at costs that were never recorded): their `issueId` is null (legacy). A legacy seeding session is still counted as consumed from the session itself, so it is never counted twice and stays editable; a legacy material usage never left the stock and stays so.
+
+---
+
+# Part 3 - Merge with develop (#78, cage orders and port weighing)
+
+Only types changed (cages are decimal wherever a harvest lot's cages are shown); no field was renamed.
+
+- `POST /api/rafts/{raftId}/harvest-lots` (and the correction) now also take `purchaseRequestId` (develop: a new lot names one Accepted purchase request whose harvest is open) next to our `confirmOverPlan` / `overPlanReason`. Lot detail / list item carry `purchaseRequestId`, `purchaseRequestCode`, `overPlanReason`.
+- `GET /api/rafts/{raftId}/harvest-lots`: `orders[]` (develop) and our lane facts / `harvestedCages` / `harvestedKg` / `targetYieldKg` / `remainingKg` are both present. `orders[].harvestedCages` is now a decimal (sum of the lots' cages); `acceptedCages` stays an integer.
+- Purchase request detail `harvest.harvestedCages` and `harvest.lots[].cageCount` are decimal. The public origin page `harvestedCages` of a lot is decimal (`0.5`). `weighedCages` and port-weighing cage counts stay whole numbers (one weighed cage = one kg entry).
+- Port weighing keeps its rule "weighed cages of a lot <= cages of the lot", compared as whole weighed cages against the decimal cage count (a lot of 2.5 cages can be weighed as at most 2 whole cages).
+- Migrations are ordered after develop's `20261111135229_CageOrdersWorkPlansHarvestAndWeighing`: `20261111140000_HarvestLotFractionalCagesAndOverPlanReason`, `20261111150000_FarmingStockIssueLinks` (`InputIssues.SourceKind` is `nvarchar(50)`, default `None`, like every enum), `20261111160000_SeedingSessionOverPlanReason`.
+- New cooperatives (bootstrap) start with `allowNegativeQuantity: false` (stock cannot go negative); existing cooperatives keep their value. The PURCHASE-06 / MSG-PURCHASE-09 text now says "seed lot X has already been used".
+
+---
+
+# Part 4 - Seeding against the plan, removals, history (12/11/2026)
+
+## 16. Seeding session against the planned seed quantity
+
+Plan = `expectedSeedQuantity` of the cycle (BR-CYCLE-01 estimate). `total = sum(quantity of the other sessions of the cycle) + this session`. Same thresholds as the harvest cap: `<= 110 %` saved; `> 110 %` and `<= 150 %` -> `409 MSG-GEN-04`, nothing saved; `> 150 %` -> `400 MSG-GEN-01 field:"Quantity"` (cannot be confirmed); no plan -> no cap.
+
+`POST /api/cultivation-cycles/{id}/seeding-records` and `PUT /api/seeding-records/{id}` take two more optional fields: `confirmOverPlan` (bool, send `false` or leave out, not `null`) and `overPlanReason` (text <= 1000, required with `confirmOverPlan: true`, else `400 field:"Over plan reason"`).
+
+409 body:
+```json
+{ "code": "MSG-GEN-04", "detail": "Are you sure you want to record this seeding, which takes the cycle to 115 seed, above its planned seed of 100? This action is recorded in the audit log.",
+  "confirmFlag": "confirmOverPlan", "reasonField": "overPlanReason",
+  "plannedSeedQuantity": 100, "seededQuantity": 110, "newQuantity": 5, "totalQuantity": 115, "overPlanPercent": 15.0 }
+```
+The reason is stored on the session (`overPlanReason` in `SeedingRecordView`) and in the `SeedingRecord.Created` / `SeedingRecord.Corrected` audit values. A correction is judged only when it raises the quantity (the session's own old quantity is left out of the total); TRACE-03.1 corrections skip the cap.
+
+Reads: `GET /api/cultivation-cycles/{id}/seeding-records` adds `plannedSeedQuantity` (null without plan), `seededQuantity` (all sessions) and `percent` (`seeded / planned x 100`, 1 decimal, null without plan). The cycle summary (`/summary`, close preview and close) adds `seedPercent`.
+
+On-hand stock cap (unchanged, hard when negative stock is disallowed): `409 MSG-INPUT-01` carries `onHand` and `balanceAfter`; `GET /api/rafts/{raftId}/seed-lots` returns `onHand` per lot for the picker. The plan question is asked before the stock check.
+
+Demo data: the planned seed of the demo cycles is now about what the demo sessions hang (5,000 / 7,000 / 9,000), and the demo material repairs run after the receipts so stock never goes negative.
+
+## 17. Removing a session or a material usage
+
+- `POST /api/seeding-records/{id}/remove` `{ reason, rowVersion }` (existing): allowed while the cycle is Open and no lane of the session is in a harvest lot (Owner: any session; Zone Manager: own); reverses (cancels) the linked stock issue, so the seed returns to the lot. Otherwise `409 MSG-GEN-09` (lane in a harvest lot / cycle not Open); no reason -> `400 field:"Reason"`.
+- **New** `POST /api/material-usages/{id}/remove` `{ reason, rowVersion }` -> `204`. Same people as the edit (Owner, Zone Manager of the raft's zone). `409 MSG-GEN-09` when a closed cycle holds the usage date or the raft is not In Use; `400 field:"Reason"` without a reason; `409` MSG06 on a stale `rowVersion`. The linked issue is cancelled and the quantity returns to the stock. Audit action `MaterialUsage.Removed` with the reason.
+- Cultivation log removal (`POST /api/cultivation-logs/{id}/remove`) already exists and is unchanged.
+
+## 18. History of a record
+
+`GET /api/harvest-lots/{id}/history`, `/api/seeding-records/{id}/history`, `/api/material-usages/{id}/history`, `/api/cultivation-logs/{id}/history`, `/api/cultivation-cycles/{id}/history`. Read with View permission of the record's function (Harvests, Cultivation cycles, Cultivation logs) in the zone of its events; the Owner reads all; `404` when the record has no event; a **removed record keeps its history**.
+
+```json
+{ "recordType": "SeedingRecord", "recordId": "...", "recordCode": "B1-01",
+  "entries": [ { "eventId": "...", "at": "2026-11-12T03:10:00+00:00", "byName": "Nguyen Van A", "byRole": "Chủ hợp tác xã", "byRoleCode": "CooperativeOwner",
+                 "action": "Edited", "actionCode": "SeedingRecord.Corrected", "actionLabel": "Chỉnh sửa", "reason": "Counted again", "note": null,
+                 "changes": [ { "field": "Quantity", "label": "Số lượng giống", "from": "10", "to": "12", "unit": null } ] } ] }
+```
+Oldest first. `action`: Created, Edited (Corrected/Updated), TraceCorrected, Removed, LaneFinished, Started, SeedingCompleted, Closed, Cancelled, Reopened, Published, Republished, Withdrawn. `byRole` is the role at the time of the event (Chủ hợp tác xã, Quản lý vùng, Kế toán, Nhân viên, Thương nhân; null for the system); `byRoleCode`: `CooperativeOwner`, `ZONE_MANAGER`, `ACCOUNTANT`, `Staff`, `Employee`, `Trader`. `changes` come from the audit snapshots: values as text (dates `dd/MM/yyyy`, times in Vietnam time, lists joined with `, `, flags `Có`/`Không`); unchanged fields are left out; `unit` is set for numbers with a fixed unit (`lồng`, `kg`, `kg/lồng`) and null otherwise (seed and material quantities use the item's catalogue unit, read it from the record). `note` names published lots affected by a traceability correction.

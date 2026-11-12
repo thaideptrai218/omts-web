@@ -2,7 +2,7 @@
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import Image from "next/image";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
 import { raftSchema, type Raft } from "@/features/farming-api/contracts";
@@ -10,14 +10,20 @@ import { TabFooter } from "@/features/farming-management/detail-parts";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { ErrorNotice, Field, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
-import { laneStatusLabel } from "./raft-model";
+import { LaneIncidentsBoard } from "./lane-incidents-board";
 
 const MAX_PHOTO = 10 * 1024 * 1024, MAX_PHOTOS = 3;
 /** "Ảnh và làn": up to three raft photos (upload for those who may edit) and the lanes of the raft. */
-export function RaftPhotoTab({ raftId, canEdit }: { raftId: string; canEdit: boolean }) {
+export function RaftPhotoTab({ raftId, canEdit, dirtyRef, pendingRef }: { raftId: string; canEdit: boolean; dirtyRef?: RefObject<boolean>; pendingRef?: RefObject<boolean> }) {
   const repository = useMemo(() => createOperationsRepository("raft-details"), []), mutation = useMutation();
   const [saved, setSaved] = useState<Raft>(), [latest, setLatest] = useState<Raft>(), [file, setFile] = useState<File>(), [fileError, setFileError] = useState<string>(), [fileKey, setFileKey] = useState(0);
   const { notify } = useToast(), confirmation = useActionDialog();
+  const [incidentDirty, setIncidentDirty] = useState(false), [incidentPending, setIncidentPending] = useState(false);
+  useEffect(() => {
+    if (dirtyRef) dirtyRef.current = !!file || incidentDirty;
+    if (pendingRef) pendingRef.current = mutation.pending || incidentPending;
+    return () => { if (dirtyRef) dirtyRef.current = false; if (pendingRef) pendingRef.current = false; };
+  }, [dirtyRef, pendingRef, file, incidentDirty, incidentPending, mutation.pending]);
   const detail = useRemote(useCallback((signal: AbortSignal) => repository.read("detail", { id: raftId }, raftSchema, signal), [repository, raftId]));
   const record = saved ?? detail.data;
   async function upload() {
@@ -34,7 +40,7 @@ export function RaftPhotoTab({ raftId, canEdit }: { raftId: string; canEdit: boo
   if (detail.loading) return <Skeleton />;
   if (detail.error || !record) return <ListStateMessage error={detail.error ?? "Không tải được ảnh và làn của bè."} onRetry={detail.reload} retryLabel="Tải lại" />;
   const canAdd = canEdit && record.photos.length < MAX_PHOTOS;
-  return <form noValidate onSubmit={event => { event.preventDefault(); void upload(); }}>
+  return <><form noValidate onSubmit={event => { event.preventDefault(); void upload(); }}>
     {confirmation.dialog}
     <ErrorNotice error={mutation.error || fileError} />
     {saved && <p role="status" className={styles.hint}>Đã cập nhật ảnh bè.</p>}
@@ -51,9 +57,6 @@ export function RaftPhotoTab({ raftId, canEdit }: { raftId: string; canEdit: boo
       <Button key="compare" type="button" className="w-auto" variant="secondary" isPending={mutation.pending} onClick={async () => { const current = await mutation.run(() => repository.read("detail", { id: raftId }, raftSchema), true); if (current) setLatest(current); }}>Tải ảnh hiện tại để đối chiếu</Button>
       {latest && <><span>Hệ thống đang có {latest.photos.length} ảnh bè.</span><Button key="adopt" type="button" className="w-auto" variant="secondary" onClick={() => { setSaved(latest); setLatest(undefined); setFile(undefined); setFileKey(value => value + 1); mutation.reviewed(); }}>Đã đối chiếu, dùng dữ liệu hiện tại</Button></>}
     </div></div>}
-    <h4 className="mt-5 text-sm font-semibold">Các làn của bè</h4>
-    {record.lanes.length === 0 ? <p className={styles.hint}>Bè chưa có làn.</p> : <table className={styles.subTable}><thead><tr><th scope="col">Làn</th><th scope="col">Trạng thái</th></tr></thead>
-      <tbody>{record.lanes.map(lane => <tr key={lane.id}><td>Làn {lane.laneNumber}</td><td>{laneStatusLabel(lane.statusId)}</td></tr>)}</tbody></table>}
     {canAdd && <TabFooter right={<Button key="save-photo" type="submit" className="w-auto" isPending={mutation.pending} disabled={!file || mutation.blocked}>Lưu ảnh bè</Button>} />}
-  </form>;
+  </form><LaneIncidentsBoard raft={record} onChanged={() => { setSaved(undefined); detail.reload(); }} onDirty={setIncidentDirty} onPending={setIncidentPending} /></>;
 }

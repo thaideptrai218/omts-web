@@ -12,6 +12,7 @@ import catalogStyles from "./catalog.module.css";
 import { resources, type ResourceKey } from "./resources";
 import { workspaceError } from "./workspace-error";
 import { createWorkspaceRepository, type ApiRecord } from "./workspace-repository";
+import { RaftResourceEditor } from "./raft-resource-editor";
 
 type MutationAction = "create" | "update" | "discontinue" | "reactivate" | "lock" | "unlock";
 
@@ -21,7 +22,16 @@ const workingZoneIdsOf = (record: ApiRecord | null) =>
 const fieldValueOf = (record: ApiRecord | null, key: string) => (record?.[key] == null ? "" : String(record[key]));
 
 /** Create/edit dialog for a generic workspace resource, including status changes and conflict review. */
-export function ResourceEditor({
+type ResourceEditorProps = {
+  resource: ResourceKey; record: ApiRecord | null; canEdit: boolean; zones: ApiRecord[]; zoneId: string;
+  onClose(): void; onSaved(record: ApiRecord): void;
+};
+
+export function ResourceEditor(props: ResourceEditorProps) {
+  return props.resource === "rafts" ? <RaftResourceEditor {...props} /> : <GenericResourceEditor {...props} />;
+}
+
+function GenericResourceEditor({
   resource,
   record,
   canEdit,

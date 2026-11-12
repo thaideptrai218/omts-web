@@ -11,9 +11,12 @@ export const laneStateChip: Record<string, { label: string; tone: Tone }> = {
   Growing: { label: "Đang nuôi", tone: "neutral" },
   BeingHarvested: { label: "Đang thu hoạch", tone: "success" },
   Harvested: { label: "Đã thu xong", tone: "success" },
+  OutOfService: { label: "Ngừng hoạt động", tone: "neutral" },
 };
 const reasonText: Record<string, string> = {
-  LaneRemoved: "Làn đã được gỡ khỏi bè.",
+  LaneRemoved: "Làn đã ngừng hoạt động.",
+  LaneDamaged: "Làn đang hỏng; cần sửa trước khi thu hoạch.",
+  LaneOutOfService: "Làn đã ngừng hoạt động; số làn không dùng lại.",
   NoOpenCycle: "Bè chưa có chu kỳ đang nuôi.",
   ReadOnly: "Chu kỳ đang ở chế độ chỉ xem.",
   NoPermission: "Bạn chưa được phân quyền thu hoạch ở vùng này.",
@@ -22,7 +25,9 @@ const reasonText: Record<string, string> = {
 };
 
 /** Why a lane cannot be picked, in Vietnamese, or undefined when it can be. */
-export const laneBlockedReason = (lane: Lane) => (lane.canHarvest ? undefined : reasonText[lane.reasonCode ?? ""] ?? "Làn chưa đủ điều kiện thu hoạch.");
+export const laneBlockedReason = (lane: Lane) => lane.statusId === 2002 ? reasonText.LaneRemoved
+  : lane.isOutOfService || lane.state === "OutOfService" ? reasonText.LaneOutOfService : lane.isDamaged ? reasonText.LaneDamaged
+  : lane.canHarvest ? undefined : reasonText[lane.reasonCode ?? ""] ?? "Làn chưa đủ điều kiện thu hoạch.";
 
 /** All lanes of the raft with their state; only eligible lanes (including those already being harvested) are selectable. */
 export function HarvestLaneChoices({ lanes, values, onChange, label }: { lanes: Lane[]; values: number[]; onChange(values: number[]): void; label: string }) {

@@ -24,7 +24,7 @@ import { HarvestForm } from "./records-harvest-form";
 import { harvestRepo, useAllowed } from "./records-shared";
 
 /** Every lane that has seed is Harvested (and at least one lane was seeded): the cycle can be closed. */
-const everySeededLaneHarvested = (lanes: z.infer<typeof c.harvestLane>[]) => lanes.some(lane => lane.state === "Harvested") && lanes.every(lane => lane.state === "Harvested" || lane.state === "NotSeeded");
+const everySeededLaneHarvested = (lanes: z.infer<typeof c.harvestLane>[]) => lanes.some(lane => lane.state === "Harvested" || lane.state === "OutOfService") && lanes.every(lane => lane.state === "Harvested" || lane.state === "OutOfService" || lane.state === "NotSeeded");
 
 /** Harvest lots of a raft with search/status filters, filtered totals and an inline lot preview. */
 export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {

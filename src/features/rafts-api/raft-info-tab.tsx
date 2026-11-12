@@ -9,6 +9,9 @@ import { Facts, TabFooter } from "@/features/farming-management/detail-parts";
 import { ErrorNotice, useMutation } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { RaftFormFields } from "./raft-form-fields";
+import { useRaftLaneLock } from "./use-raft-lane-lock";
+import { RaftLaneDiagram } from "./raft-lane-diagram";
+import { geometryOf } from "./raft-geometry";
 import { formatRaftSize } from "./raft-size";
 import { useCoordinateWarnings } from "@/features/farming-api/use-coordinate-warnings";
 import { DISCONTINUED, laneStatusLabel, parseRaftDetail, raftBody, raftDraftOf, raftStatusLabel, validateRaftDraft, type RaftDetail, type RaftDraft, type RaftField } from "./raft-model";
@@ -22,6 +25,7 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState<RaftDraft>(() => raftDraftOf(raft));
   const [errors, setErrors] = useState<Partial<Record<RaftField, string>>>({}), [reloaded, setReloaded] = useState(false);
   const mutation = useMutation(), warnCoordinates = useCoordinateWarnings();
+  const laneLock = useRaftLaneLock(raft.id), laneCountLocked = laneLock.reason;
   const dirty = editing && JSON.stringify(draft) !== JSON.stringify(raftDraftOf(raft));
   useEffect(() => { dirtyRef.current = dirty; return () => { dirtyRef.current = false; }; }, [dirty, dirtyRef]);
   const discontinued = raft.statusId === DISCONTINUED, locked = busy || mutation.pending;
@@ -30,10 +34,10 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
   function cancel() { if (mutation.busy()) return; setEditing(false); setErrors({}); mutation.reviewed(); }
   async function save() {
     if (!editing || mutation.busy() || mutation.blocked || busy) return;
-    const found = validateRaftDraft(draft);
+    const found = validateRaftDraft(draft, raft.lanes);
     setErrors(found);
-    if (Object.keys(found).length) return;
-    const result = await mutation.run(() => repository.mutate("update", raftBody(draft, raft.rowVersion), raft.id));
+    if (Object.keys(found).length || (laneCountLocked && draft.laneCount !== raftDraftOf(raft).laneCount)) return;
+    const result = await mutation.run(() => repository.mutate("update", raftBody(draft, raft.rowVersion, raft.lanes), raft.id));
     if (!result) return;
     warnCoordinates(result);
     const record = parseRaftDetail(result);
@@ -42,12 +46,14 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
   }
   return <form noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
     <fieldset disabled={locked || mutation.blocked} className="min-w-0 border-0 p-0">
-      {editing ? <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={raft.id} /> : <Facts items={[
-        ["Mã bè", raft.code], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId })}>{zoneLabel}</Link>], ["Kích thước", formatRaftSize(raft.size)], ["Số làn đang dùng", raft.laneCount ?? raft.lanes.length], ["Trạng thái", raftStatusLabel(raft.statusId)],
+      {editing ? <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={raft.id} laneCountLocked={laneCountLocked} lanes={raft.lanes} canEditLaneLengths={raft.lanes.some(lane => lane.lineLengthM !== undefined)} /> : <Facts items={[
+        ["Mã bè", raft.code], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId })}>{zoneLabel}</Link>], ["Kích thước", formatRaftSize(raft.lengthM && raft.widthM ? `${raft.lengthM} m x ${raft.widthM} m` : raft.size)], ["Số làn đang dùng", `${raft.laneCount ?? raft.lanes.filter(lane => lane.statusId !== 2002).length} làn`], ["Trạng thái", raftStatusLabel(raft.statusId)],
         ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude], ["Tình trạng bè", raft.conditionNotes],
       ]} />}
     </fieldset>
     {!editing && raft.lanes.length > 0 && <p className={styles.hint}>{raft.lanes.map(lane => `Làn ${lane.laneNumber}: ${laneStatusLabel(lane.statusId).toLocaleLowerCase("vi")}`).join(" · ")}</p>}
+    {!editing && <RaftLaneDiagram lanes={raft.lanes} length={geometryOf(raft).length} />}
+    {editing && laneLock.failed && <Button key="retry-cycle" type="button" variant="secondary" className="w-auto" onClick={laneLock.reload}>Kiểm tra lại chu kỳ</Button>}
     <ErrorNotice error={mutation.error} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Chưa xác nhận được kết quả lưu. Hãy tải hồ sơ mới để đối chiếu; nội dung đang nhập vẫn được giữ.</p><div>
       <Button key="reload" type="button" className="w-auto" variant="secondary" disabled={busy} onClick={() => { onReload(); setReloaded(true); }}>Tải hồ sơ mới để đối chiếu</Button>

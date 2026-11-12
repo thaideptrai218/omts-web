@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
 const { read, write, upload } = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), upload: vi.fn() }));
@@ -10,6 +10,7 @@ vi.mock("./records-shared", async (importOriginal) => {
   return { ...original, seedRepo: { read, write }, harvestRepo: { read, write, upload }, useAllowed: () => () => true };
 });
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
+vi.mock("./harvest-crew-picker", () => ({ HarvestCrewPicker: ({ onChange }: { onChange(ids: string[]): void }) => <button type="button" onClick={() => onChange(["00000000-0000-4000-8000-000000000001"])}>Chọn An cùng thu</button> }));
 import { SeedingForm } from "./records-seeding-form";
 import { HarvestForm } from "./records-harvest-form";
 
@@ -19,6 +20,13 @@ const seedData = { cycleId: "c", raftId: "r", raftCode: "B1", seedingCompletedOn
 const lotId = "00000000-0000-4000-8000-000000000011";
 
 describe("seeding form units and date window", () => {
+  it("excludes incident lanes even when the legacy canSeed flag is true", async () => {
+    read.mockResolvedValue({ status: "success", data: { raftId: "r", lots: [] } });
+    const data = { ...seedData, lanes: [{ laneNumber: 1, canSeed: true, isDamaged: true }, { laneNumber: 2, canSeed: true, statusId: 2002 }, { laneNumber: 3, canSeed: true, state: "OutOfService" }] };
+    render(<ToastProvider><SeedingForm zoneId="z" raftId="r" cycleId="c" data={data} record={null} allowed={() => true} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
+    expect(await screen.findByText("Không có làn đủ điều kiện.")).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: /Làn/ })).toBeNull();
+  });
   it("shows the catalogue unit of the chosen seed lot next to the quantity and never a hard-coded word", async () => {
     read.mockResolvedValue({ status: "success", data: { raftId: "r", lots: [{ id: lotId, code: "PN1-1", receiptCode: "PN1", supplierName: "NCC", unit: "mảnh", itemName: "Giống hàu", quantityReceived: 100, quantitySeeded: 0, boughtForThisRaft: true, onHand: 80 }] } });
     render(<ToastProvider><SeedingForm zoneId="z" raftId="r" cycleId="c" data={seedData} record={null} allowed={() => true} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
@@ -47,6 +55,16 @@ describe("harvest form lanes and cages", () => {
     { laneNumber: 2, canHarvest: false, state: "Harvested" as const, reasonCode: "AlreadyHarvested" },
     { laneNumber: 3, canHarvest: false, state: "NotSeeded" as const, reasonCode: "NotSeeded" },
   ] };
+  it("sends the selected crew ids and leaves the field out when nobody is picked", async () => {
+    upload.mockResolvedValue({ status: "success", data: { lot: { id: lotId, lotCode: "L01" }, warnings: [] } });
+    render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Chọn An cùng thu" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Làn 1/ }));
+    fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "0,5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await waitFor(() => expect(upload).toHaveBeenCalledWith("harvest-record", [], expect.objectContaining({ cageCount: 0.5, crew: ["00000000-0000-4000-8000-000000000001"] }), expect.anything(), "r", "z"));
+  });
   it("lists every lane with its state, keeps blocked lanes disabled with the reason and leaves BeingHarvested selectable", () => {
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
     expect((screen.getByRole("checkbox", { name: /Làn 1/ }) as HTMLInputElement).disabled).toBe(false);

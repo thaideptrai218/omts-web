@@ -16,6 +16,7 @@ export type HistoryEntry = z.infer<typeof historyEntry>;
 export type HistoryChange = z.infer<typeof historyChange>;
 
 const actions: Record<string, string> = {
+  damaged: "Báo hỏng", repaired: "Sửa làn", outOfService: "Ngừng hoạt động",
   created: "Tạo mới", create: "Tạo mới", recorded: "Ghi nhận", corrected: "Điều chỉnh", correct: "Điều chỉnh", updated: "Cập nhật", edited: "Chỉnh sửa",
   removed: "Xóa", remove: "Xóa", cancelled: "Hủy", closed: "Kết thúc", laneFinished: "Hoàn tất thu hoạch làn", completed: "Hoàn tất",
 };

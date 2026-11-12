@@ -14,6 +14,7 @@ import { OverPlanConfirm, isOverPlanQuestion } from "./over-plan-confirm";
 import * as c from "./records-contracts";
 import { EditorFrame, LaneChoices, seedRepo } from "./records-shared";
 import { useSeedingPlan } from "./use-seeding-plan";
+import { laneIsUnavailable } from "./lane-availability";
 
 const labels: Record<string, string> = { seedingDate: "Ngày thả giống phải đúng ngày/tháng/năm", seedLotId: "Chọn lô giống", laneNumbers: "Chọn ít nhất một làn", quantity: "Số lượng giống phải lớn hơn 0" };
 const n = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
@@ -45,7 +46,8 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   // Stock check (409 MSG-INPUT-01): on hand and balance after, in the lot's own unit.
   const stockError = editor.mutation.failure ? farmingErrorText(editor.mutation.failure, seedUnit) : undefined;
   const editable = record ? record.canCorrect && allowed("Edit") : data.canRecord && allowed("Create");
-  const choices = Array.from(new Set([...data.lanes.filter(v => v.canSeed).map(v => v.laneNumber), ...(record?.laneNumbers ?? [])])).sort((a, b) => a - b);
+  const blockedLanes = data.lanes.filter(laneIsUnavailable).map(lane => lane.laneNumber);
+  const choices = Array.from(new Set([...data.lanes.filter(v => v.canSeed && !laneIsUnavailable(v)).map(v => v.laneNumber), ...(record?.laneNumbers ?? [])])).sort((a, b) => a - b);
   const edited = <T,>(set: (value: T) => void) => (value: T) => { setAsked(false); if (editor.mutation.failure) editor.mutation.reviewed(); set(value); };
 
   const values = (confirmed: boolean) => c.seedValues.safeParse({ seedingDate: date, seedLotId: lot, quantity: Number(quantity), laneNumbers: lanes, ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
@@ -56,6 +58,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     const dateProblem = date !== record?.seedingDate ? backdateProblem(date, dateWindow, "Ngày thả giống", !!cycleStartDate) : undefined;
     if (dateProblem) return dateProblem;
     if (!parsed.success) return `${[...new Set(parsed.error.issues.map(issue => labels[String(issue.path[0])] ?? "Kiểm tra thông tin thả giống"))].join(". ")}.`;
+    if (lanes.some(lane => blockedLanes.includes(lane))) return "Không thể thả giống trên làn đang hỏng, đã mất giống hoặc ngừng hoạt động.";
     if (record && !reason.trim()) return "Nhập lý do điều chỉnh hoặc xóa bản ghi.";
     if (noNegative && over) return `Số lượng vượt tồn kho: lô còn ${n(capacity!)} ${seedUnit} và hợp tác xã không cho xuất âm kho. Hãy giảm số lượng hoặc nhập thêm giống.`;
     if (plan.hard) return `Tổng giống thả sẽ là ${plan.percent}% kế hoạch, vượt 150% nên không thể xác nhận. Hãy sửa lại số liệu hoặc điều chỉnh kế hoạch chu kỳ.`;

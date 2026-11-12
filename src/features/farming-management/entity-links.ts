@@ -5,6 +5,8 @@ import { farmingReferenceHref } from "./farming-reference-href";
  * Each returns `undefined` when the record it points to is not identifiable, so a screen shows plain text instead of a dead link.
  */
 type Maybe = string | null | undefined;
+/** The current employee directory opens exact records through recordId. Keep this adapter until it supports code links. */
+export const employeeLink = (employeeId: Maybe) => employeeId ? farmingReferenceHref("employee", { recordId: employeeId }) : undefined;
 
 /** A stock movement posted by a farming record (seeding session or material usage) links to that record on its own screen. */
 export function movementSourceLink(movement: { sourceKind?: Maybe; sourceRecordId?: Maybe; cycleId?: Maybe; raftId?: Maybe; zoneId?: Maybe }): { label: string; href: string } | undefined {

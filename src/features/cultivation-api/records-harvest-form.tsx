@@ -10,6 +10,7 @@ import { HarvestLaneChoices } from "./harvest-lane-choices";
 import { HarvestEstimateHint, harvestEstimate } from "./harvest-estimate-hint";
 import { HarvestPlanSummary } from "./harvest-plan-summary";
 import { harvestWarningTexts } from "./harvest-warning-text";
+import { HarvestCrewPicker } from "./harvest-crew-picker";
 import { OverPlanConfirm, isOverPlanQuestion } from "./over-plan-confirm";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import flowStyles from "./cultivation-flow.module.css";
@@ -24,8 +25,9 @@ export function HarvestForm({ zoneId, raftId, data, onClose, onSaved }: { zoneId
   const [lanes, setLanes] = useState<number[]>([]), [finished, setFinished] = useState<number[]>([]);
   const [cages, setCages] = useState(""), [kg, setKg] = useState(""), [reason, setReason] = useState("");
   const [error, setError] = useState<string>(), [photos, setPhotos] = useState<File[]>([]);
+  const [crew, setCrew] = useState<string[]>([]);
   const { notify } = useToast();
-  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length);
+  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length || !!crew.length);
   const failure = editor.mutation.failure, question = isOverPlanQuestion(failure) ? failure.problem : undefined;
   // With the finish-lane endpoint (canFinish is reported) the lane is finished by its own action; an older backend still takes it with the trip.
   const finishesWithTrip = !data.lanes.some(lane => lane.canFinish !== undefined && lane.canFinish !== null);
@@ -34,6 +36,7 @@ export function HarvestForm({ zoneId, raftId, data, onClose, onSaved }: { zoneId
   const edited = <T,>(set: (value: T) => void) => (value: T) => { if (question) editor.mutation.reviewed(); set(value); };
 
   const values = (confirmed: boolean) => c.harvestValues.safeParse({ laneNumbers: lanes, finishedLaneNumbers: finishesWithTrip ? finished : [], cageCount: Number(cages), estimatedKg: kg ? Number(kg) : null,
+    ...(crew.length ? { crew } : {}),
     ...(confirmed ? { confirmOverPlan: true, overPlanReason: reason } : {}) });
   const send = (parsed: z.infer<typeof c.harvestValues>) => harvestRepo.upload("harvest-record", photos, parsed, c.harvestSaved, raftId, zoneId);
   function done(saved: z.infer<typeof c.harvestSaved>) {
@@ -72,6 +75,7 @@ export function HarvestForm({ zoneId, raftId, data, onClose, onSaved }: { zoneId
             {lanes.length > 0 && <LaneChoices lanes={lanes} values={finished} onChange={setFinished} label="Làn đã thu hết hàu trong chuyến này" />}
           </div>}
         </CollapsibleSection>
+        <CollapsibleSection title="Nhân viên cùng thu" description="Những nhân viên tham gia chuyến thu này." columns={1}><HarvestCrewPicker raftId={raftId} zoneId={zoneId} values={crew} onChange={edited(setCrew)} /></CollapsibleSection>
         <CollapsibleSection title="Số lượng và ảnh" description="Số lồng thu hoạch và ảnh ghi nhận." columns={1}>
           <UnitField key="harvest-cages" label="Số lồng thu hoạch *" unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} required value={cages} onChange={edited(setCages)} />
           <UnitField key="harvest-estimated-kg" label="Kg ước tính (để trống: tính theo số lồng)" unit="kg ước tính" decimals={2} min={0.01} value={kg} onChange={edited(setKg)} />

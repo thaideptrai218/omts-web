@@ -9,10 +9,10 @@ import { createOperationsRepository } from "@/features/operations/repository";
 import { getRaftCosts } from "@/features/purchase-documents/repository";
 import { operationAllowed } from "@/features/operations/permissions";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { DataTable, ErrorNotice, Field, money, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
+import { ErrorNotice, Field, money, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
+import { LaneIncidentsBoard } from "@/features/rafts-api/lane-incidents-board";
 import { raftSchema, type Raft } from "./contracts";
 
-const laneStatusLabel = (statusId: number) => statusId === 2001 ? "Đang sử dụng" : statusId === 2002 ? "Đã gỡ" : "Không xác định";
 const dateLabel = (value: string | null) => value ? value.split("-").reverse().join("/") : "—";
 export function RaftWorkspace({ raftId, canEdit, onClose }: { raftId: string; canEdit: boolean; onClose(saved?: Raft): void }) {
   const repository = useMemo(() => createOperationsRepository("raft-details"), []), mutation = useMutation();
@@ -42,8 +42,7 @@ export function RaftWorkspace({ raftId, canEdit, onClose }: { raftId: string; ca
         const current = await mutation.run(() => repository.read("detail", { id: raftId }, raftSchema), true); if (current) setLatest(current);
       }}>Tải ảnh hiện tại để đối chiếu</Button>{latest && <div className="mt-3 space-y-3">{latest.photos.length ? <p>Hệ thống đang có {latest.photos.length} ảnh bè.</p> : <p>Chưa có ảnh trên hệ thống.</p>}
         <Button type="button" className="w-auto" variant="secondary" onClick={() => { setSaved(latest); setLatest(undefined); setFile(undefined); setFileKey((value) => value + 1); mutation.reviewed(); }}>Đã đối chiếu, dùng dữ liệu hiện tại</Button></div>}</div>}
-      <h2 className="mt-6 text-xl font-semibold">Các làn của bè</h2>
-      <DataTable headings={["Làn", "Trạng thái"]} empty={!record.lanes.length}>{record.lanes.map((lane) => <tr key={lane.id}><td>Làn {lane.laneNumber}</td><td>{laneStatusLabel(lane.statusId)}</td></tr>)}</DataTable>
+      <LaneIncidentsBoard raft={record} onChanged={() => { setSaved(undefined); detail.reload(); }} />
     </>}
     {discard && <div className="my-4 rounded-control border border-border p-4"><p>Bỏ ảnh chưa lưu?</p><div className="mt-3 flex flex-wrap gap-3"><Button type="button" className="w-auto" variant="secondary" onClick={() => setDiscard(false)}>Tiếp tục xem</Button><Button type="button" className="w-auto" onClick={() => onClose(saved)}>Bỏ ảnh đã chọn</Button></div></div>}
     <Button type="button" className="mt-5 w-auto" variant="secondary" disabled={mutation.pending} onClick={close}>Thu gọn ảnh và làn</Button>

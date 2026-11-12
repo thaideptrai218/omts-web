@@ -45,7 +45,7 @@ function LanesBoardBody({ data, zoneId, raftId, canFinish, onChanged }: BoardPro
           </p>
           {!!lane.seedLotCodes?.length && <p className="text-xs text-text-muted">Giống: {lane.seedLotCodes.map((code, index) => <span key={code}>{index ? ", " : ""}<Link href={farmingReferenceHref("seeding", { zoneId, raftId, search: code })}>{code}</Link></span>)}</p>}
           {blocked && lane.state !== "Harvested" && <p className="text-xs text-text-muted">{blocked}</p>}
-          {canFinish && lane.canFinish && <Button key={`finish-lane-${lane.laneNumber}`} type="button" className="mt-1 w-auto self-start" variant="secondary" disabled={mutation.pending} isPending={mutation.pending} onClick={() => void finish(lane.laneNumber)}>Hoàn tất thu hoạch</Button>}
+          {canFinish && lane.canFinish && !lane.isDamaged && !lane.isOutOfService && lane.statusId !== 2002 && lane.state !== "OutOfService" && <Button key={`finish-lane-${lane.laneNumber}`} type="button" className="mt-1 w-auto self-start" variant="secondary" disabled={mutation.pending} isPending={mutation.pending} onClick={() => void finish(lane.laneNumber)}>Hoàn tất thu hoạch</Button>}
         </li>;
       })}
     </ul>

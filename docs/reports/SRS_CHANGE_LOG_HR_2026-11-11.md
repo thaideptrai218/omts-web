@@ -272,7 +272,7 @@ BR-PURCHASE-07 ("OMTS không giữ tồn kho") **không** bị đụng ở bư�
 
 **Thay thế** hai quy tắc SRS v8: **BR-PURCHASE-07** ("OMTS không giữ tồn kho / không trừ kho") và **GBR-04** ("thả giống không so số lượng với giống còn lại, vì OMTS không theo dõi giống còn lại"). Thay vào đó: kho (sổ nhập–xuất–hủy của module Vật tư) theo dõi tồn; thả giống và sử dụng vật tư **đi qua kho**, không đếm hai lần.
 
-Đã làm (backend, migration `20261111130000_FarmingStockIssueLinks`):
+Đã làm (backend, migration `20261111150000_FarmingStockIssueLinks`):
 
 | Use case | SRS v8 nói | Quy tắc mới |
 |---|---|---|
@@ -290,3 +290,37 @@ Dữ liệu cũ: **không** tạo bút toán ngược thời gian cho bản ghi 
 **Chưa làm bước 2:** giới hạn trả hàng theo tồn cho dòng vật tư (không phải giống); tham chiếu "hóa đơn đã bán lô" và "chu kỳ/bè đã tiêu thụ" trong chi tiết phiếu nhập; màn/phiếu nhập hiển thị tồn của vật tư không lô; nhật ký audit của phiếu Xuất dùng tự sinh dùng chung hành động `InputIssue.Created/Edited` (chưa có hành động riêng); xóa bản ghi dùng vật tư (API chưa có). Khi hợp tác xã để "cho phép tồn âm" (**mặc định hiện là cho phép**) thì không có kiểm tra tồn: chủ dự án cần quyết định đổi mặc định.
 
 **Câu hỏi mở bước 2:** (1) Đổi mặc định "cho phép tồn âm" thành không cho phép? (2) Câu "seed lot X has already been seeded" của PURCHASE-06 đổi thành "đã sử dụng"? (3) Cho phép Xuất dùng thủ công vật tư cho bè có chu kỳ mở dưới dạng "dùng ngoài chu kỳ"? Hiện chặn. (4) Có muốn tạo bút toán ngược thời gian cho dữ liệu cũ không (cần giá vốn)?
+
+**Đã xử lý bước 2 (12/11):** (1) Cooperative **mới** (bootstrap) mặc định không cho tồn âm; cooperative đang có giữ nguyên giá trị đã lưu (không đổi dữ liệu cũ). (2) Câu `MSG-PURCHASE-09` đổi thành "seed lot X has already been used". Hai câu hỏi (3), (4) còn mở.
+
+### G.5 Merge với develop (#78)
+
+Hợp nhất `origin/develop` (commit `83ef148c` "kết nối đơn đặt lồng với thu hoạch và cân tại cảng") vào nhánh `feature/OMTS-132-farming-rules`. Giữ cả hai tính năng: số lồng thập phân `decimal(9,2)` + cảnh báo/trần kế hoạch/kết thúc làn của nhánh này, và liên kết lô thu hoạch với đơn đặt mua + cân tại cảng của #78.
+
+- Xung đột mã: `HarvestLotForm` (`confirmOverPlan`/`overPlanReason` + `purchaseRequestId`), `HarvestLotsController`, `HarvestLotDtos`, `HarvestLotViews`, `HarvestLotReadService` (màn hình lô có cả `orders[]` và số liệu làn/tiến độ); README (README của nhánh đã rút gọn, nội dung #78 chuyển sang `docs/api-behaviour-reference.md`, thêm bảng `docs/cage-order-harvest.md`).
+- Kiểu dữ liệu đổi theo số lồng thập phân: `orders[].harvestedCages`, `harvest.harvestedCages` / `harvest.lots[].cageCount` của chi tiết đơn đặt mua, `harvestedCages` của trang truy xuất công khai. Số lồng đã cân (`weighedCages`) vẫn là số nguyên (mỗi lồng cân là một dòng kg); quy tắc "lồng đã cân của một lô ≤ lồng của lô" so số nguyên với số thập phân.
+- Migration: migration #78 `20261111135229_CageOrdersWorkPlansHarvestAndWeighing` nằm **trước** hai migration của nhánh; hai migration của nhánh được đổi số (chưa áp dụng ở đâu) thành `20261111140000_HarvestLotFractionalCagesAndOverPlanReason`, `20261111150000_FarmingStockIssueLinks`; thêm `20261111160000_SeedingSessionOverPlanReason`. Cột `InputIssues.SourceKind` sửa thành `nvarchar(50)` (đúng quy ước enum dạng chuỗi; bản cũ viết `int` làm model lệch snapshot).
+- Dữ liệu demo: kế hoạch giống của chu kỳ demo khớp với số đã thả (5.000/7.000/9.000 con, trước đây 250 con); bước "dùng vật tư" chạy sau bước phiếu nhập để tồn không âm.
+
+### G.6 Yêu cầu mới của chủ dự án 12/11
+
+1. **Giống so với kế hoạch:** tổng giống đã thả của chu kỳ so với `ExpectedSeedQuantity` như trần thu hoạch: ≤110 % bình thường; 110–150 % hỏi xác nhận (409 `MSG-GEN-04`) kèm lý do (lưu trên phiên thả giống + audit); >150 % chặn (400); không có kế hoạch thì không chặn. Trả thêm `plannedSeedQuantity`, `seededQuantity`, `percent` (màn Thả giống) và `seedPercent` (tóm tắt chu kỳ). Trần theo tồn kho (`MSG-INPUT-01` kèm `onHand`, `balanceAfter`) giữ nguyên; danh sách lô giống trả `onHand`. Migration `20261111160000_SeedingSessionOverPlanReason`. Ngưỡng 110 %/150 % là số mặc định đề xuất giống thu hoạch.
+2. **Xóa/hủy:** xóa phiên thả giống (endpoint remove có sẵn, kèm lý do) đảo phiếu Xuất dùng liên kết, chỉ khi chu kỳ đang mở và không làn nào của phiên đã vào lô thu hoạch (409 `MSG-GEN-09`). **Mới:** `POST /api/material-usages/{id}/remove` cho dùng vật tư (đảo phiếu Xuất dùng; chặn khi chu kỳ đã đóng). Nhật ký chăm sóc đã có sẵn chức năng xóa.
+3. **Lịch sử:** 5 endpoint đọc `/history` (lô thu hoạch, phiên thả giống, dùng vật tư, nhật ký, chu kỳ) từ snapshot audit: ai/khi nào/vai trò/hành động/lý do/ghi chú và danh sách trường đổi từ → sang với nhãn tiếng Việt và đơn vị; quyền đọc giống bản ghi gốc; bản ghi đã xóa vẫn xem được lịch sử. Số lượng giống/vật tư chưa có đơn vị trong dòng đổi (đơn vị lấy từ bản ghi). Vai trò là vai trò hiệu lực tại thời điểm sự kiện.
+
+### G.7 Bè, làn và thu hoạch (12/11)
+
+Nguồn: `FARMING_RAFT_LANES_HARVEST_OWNER_DECISIONS_2026-11-12.md` (ghi đè đặc tả `FARMING_RAFT_LANES_AND_HARVEST_PLAN_SPEC_2026-11-12.md`). Hợp đồng API: `FARMING_RAFT_LANES_API_CONTRACT_2026-11-12.md`. Nhánh backend `feature/OMTS-132-raft-lanes`, ba migration `20261112100000_RaftGeometry`, `20261112110000_LaneIncidents`, `20261112120000_HarvestLotCrew`. Phần đơn hàng, kế hoạch thu theo đơn, cân cảng thuộc đồng đội (OMTS-223): không đụng.
+
+| Mục SRS v8 | SRS v8 | Sau 12/11 |
+|---|---|---|
+| FARM-04, BR-FARM-02 (thực thể bè) | bè chỉ có `Size` là văn bản tự do | Thêm `lengthM`, `widthM` (m, 1–500 và 1–200, 2 chữ số thập phân), `areaM2` tự tính (làm tròn 2 chữ số, không lưu, không nhận từ client) và độ dài dây riêng của từng làn (`1 ≤ x ≤ lengthM`, mặc định theo bè). Văn bản `size` được server ghi lại `"{dài} m x {rộng} m"` để client cũ vẫn đọc được; request cũ chỉ có `size` thì đọc ngược nếu đúng dạng, không thì để trống số (không đoán). Migration điền số cho bè cũ chỉ khi `Size` đúng dạng đó. Cảnh báo mềm: làn hẹp dưới 1 m, các làn khác độ dài |
+| BR-FARM-04 (thêm/bớt làn) | chỉ ở cuối và chỉ khi không có chu kỳ mở | **Giữ nguyên** (đặc tả đề xuất nới, chủ dự án chốt giữ). Không có "thay làn", "gỡ làn giữa bè", đánh số lại. Chỉ đổi hình học và độ dài dây khi chu kỳ đang mở (ghi audit) |
+| BR-FARM-03 (trạng thái làn dẫn xuất) | NotSeeded, Growing, BeingHarvested, Harvested | Thêm trạng thái dẫn xuất **`OutOfService`** (làn đang có giống mà bị ngừng hoạt động) và hai cờ lưu trên làn: `isDamaged`, `isOutOfService` (+ ngày). Làn hỏng **giữ trạng thái cũ** (không có trạng thái "đang sửa"); cờ chỉ chặn thả giống/thu hoạch (`reasonCode` `LaneDamaged`/`LaneOutOfService`) |
+| Báo hỏng, sửa, ngừng hoạt động làn (mới, chưa có trong SRS) | không có | Bảng lịch sử `LaneIncidents` (ai, khi nào, lý do, trạng thái trước, ảnh tùy chọn ≤3). Báo hỏng: Owner và Quản lý vùng; thông báo Owner (trừ khi chính Owner làm). **Sửa dựa trên tồn kho:** kiểm tồn vật tư trước (`MSG-INPUT-01`), rồi trong một lần lưu ghi bản ghi dùng vật tư của bè (tính vào chi phí vật tư BR-FARM-05) và phiếu Xuất dùng "Sửa chữa bè" đã hoàn thành, liên kết bè/chu kỳ/sự cố, có nhật ký; làn trở lại đúng trạng thái trước. Ngừng hoạt động: một chiều, không xóa dữ liệu, không dùng lại số làn |
+| BR-CYCLE-07 (đóng chu kỳ bình thường), CYCLE-06 | bình thường khi mọi làn đã thả giống đều Harvested; làn Growing còn lại là đóng sớm, **"no loss record"** (không ghi nhận mất giống) | Làn ngừng hoạt động khi đang có giống được **ghi một sự kiện mất giống không số lượng** (lý do bắt buộc, hỏi xác nhận `MSG-GEN-04`) và **được coi là đã kết thúc**: chu kỳ đóng bình thường khi mọi làn có giống là Harvested hoặc OutOfService. Tóm tắt chu kỳ thêm `lostLanes` (làn mất giống kèm lý do) và `damagedLanes`. Không có số lượng hay giá trị mất (hệ thống không có số liệu theo làn); giống đã xuất dùng không hoàn kho. Khác BR-CYCLE-07 ở điểm "no loss record" |
+| BR-CYCLE-03 (dùng vật tư) | ghi riêng ở màn Sử dụng vật tư | Sửa làn có thể tạo bản ghi dùng vật tư tương ứng (cùng quy tắc kho); bản ghi vẫn xem được/sửa được ở màn Sử dụng vật tư theo quy tắc cũ |
+| HARVEST-01, BR-HARVEST-03 (lô thu hoạch) | một lô một bè, không có danh sách người làm | Thêm **danh sách nhân viên cùng làm** `crew` (tùy chọn) trên lô, nhiều lô nhiều bè cùng ngày được chọn cùng một người; kiểm tra nhân viên tồn tại, còn làm, cùng hợp tác xã; ghi trong audit. **Không** chỉ tiêu theo người, không liên kết với đơn. Gợi ý nhân viên đã được phân công cho bè trong ngày (`GET /api/rafts/{id}/crew-suggestions`, chỉ đọc từ LABOR-02). Một lô vẫn là một bè (khớp SRS và đồng đội) |
+| HARVEST-01 (chọn làn) | làn Growing/BeingHarvested | thêm điều kiện: không hỏng, không ngừng hoạt động (làn đã nằm trong lô vẫn sửa được lô) |
+
+**Chưa làm / ghi chú:** (1) Không có audit tổng `Raft.GeometryBackfilled` cho migration điền số (chỉ là câu SQL; số bè điền được/không điền được xem bằng truy vấn `LengthM IS NULL`). (2) Tin nhắn thông báo hai loại mới dùng mã chung `MINI_APP_NOTIFICATION` vì SRS chưa có mã riêng. (3) Không có khôi phục làn đã ngừng hoạt động. (4) Gợi ý bè để thu theo chỉ số thật (làn đang nuôi, không hỏng, ngày nuôi) chưa làm ở backend; màn đọc `lanes/today` và màn thu hoạch đã có đủ dữ liệu. (5) Số lồng theo người mua, đơn, kế hoạch theo đơn: đồng đội.

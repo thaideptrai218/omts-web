@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { raftGeometryFields, raftLaneFields } from "@/features/rafts-api/raft-geometry";
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
 import { farmingZoneListItemSchema, farmingZoneViewSchema } from "@/features/farming-zones/api/farming-zone-contract.schemas";
 import { employeeListItemSchema, employeeViewSchema } from "@/features/employee-management/api/employee-contract.schemas";
@@ -61,7 +62,7 @@ const customerView = z.object({ id: apiIdSchema, name: text, phoneNumber: nullab
   phoneLocked: z.boolean(), traderAccount: z.object({ accountId: apiIdSchema, username: nullableText, displayName: text }).nullable(), mergedIntoCustomerId: apiIdSchema.nullable(), currentDebt: z.number(), ...version });
 const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, phoneNumber: text, ...usage });
 const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: z.enum(["Seed", "Material", "Other"]), unit: text, ...usage });
-const raftRow = z.object({ id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), size: nullableText.optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
+const raftRow = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), size: nullableText.optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
 const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), status: text.optional() }).refine((row) => row.code !== undefined || row.status !== undefined);
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
   subjectType: text.optional(), mustChangePassword: z.boolean().optional(), ...version });
@@ -74,7 +75,7 @@ const detailSchemas = {
   "input-items": itemRow.extend({ description: nullableText, isUsed: z.boolean(), ...version }),
   employees: employeeViewSchema,
   rafts: raftRow.extend({ location: nullableText, size: nullableText, conditionNotes: nullableText,
-    lanes: z.array(z.object({ id: apiIdSchema, laneNumber: z.number().int(), statusId: z.number().int(), status: text })),
+    lanes: z.array(z.object({ id: apiIdSchema, laneNumber: z.number().int(), statusId: z.number().int(), status: text, ...raftLaneFields })),
     ...version }),
   accounts: accountRow,
   roles: roleRow.extend({ description: nullableText.optional(), permissions: z.array(z.object({ functionCode: text, actions: z.array(text), dataScope: text.optional() })), rowVersion: text.optional() }),

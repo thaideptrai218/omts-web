@@ -38,7 +38,7 @@ export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, onChange
   const busy = detail.loading || mutation.pending || mutation.blocked, stopping = action === "discontinue";
   const content: Record<TabKey, ReactNode> = raft ? {
     info: <RaftInfoTab raft={raft} zoneId={zoneId} zoneLabel={zoneLabel} canEdit={access.edit} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload} onStatus={() => { mutation.reviewed(); setAction(raft.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
-    photo: <RaftPhotoTab raftId={id} canEdit={access.photoEdit} />, costs: <RaftMaterialCosts raftId={id} zoneId={zoneId} />, cycles: <RaftCyclesTab raftId={id} zoneId={zoneId} />,
+    photo: <RaftPhotoTab raftId={id} canEdit={access.photoEdit} dirtyRef={guard.dirty} pendingRef={guard.pending} />, costs: <RaftMaterialCosts raftId={id} zoneId={zoneId} />, cycles: <RaftCyclesTab raftId={id} zoneId={zoneId} />,
   } : { info: null, photo: null, costs: null, cycles: null };
   return <section id={`raft-preview-${id}`} className={styles.detail} aria-label="Chi tiết bè nuôi">
     {detail.loading && !raft && <Skeleton />}

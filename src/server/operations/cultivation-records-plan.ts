@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/cultivation-api/records-contracts";
 import { cycle } from "@/features/cultivation-api/contracts";
+import { crewSuggestions } from "@/features/cultivation-api/harvest-crew-contracts";
 import { historyList } from "@/features/history/history-contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
@@ -24,6 +25,11 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     const q = z.strictObject({ action: z.literal("detail"), id: z.guid(), zoneId: z.guid() }).safeParse(Object.fromEntries(query));
     if (!q.success) return;
     return { area, action: "detail", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/harvest-lots/${q.data.id}`, schema: c.harvestDetail, expectedId: q.data.id };
+  }
+  if (area === "harvest" && method === "GET" && query.get("action") === "crew-suggestions") {
+    const q = z.strictObject({ action: z.literal("crew-suggestions"), id: z.guid(), zoneId: z.guid(), date: z.iso.date() }).safeParse(Object.fromEntries(query));
+    if (!q.success) return;
+    return { area, action: "crew-suggestions", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/rafts/${q.data.id}/crew-suggestions?date=${q.data.date}`, schema: crewSuggestions };
   }
   if (area === "harvest" && method === "GET" && ["settings", "settings-preview"].includes(query.get("action") ?? "")) {
     const q = z.strictObject({ action: z.enum(["settings", "settings-preview"]), days: z.string().regex(/^\d{1,3}$/).refine(v => Number(v) >= 1 && Number(v) <= 365).optional() }).safeParse(Object.fromEntries(query));

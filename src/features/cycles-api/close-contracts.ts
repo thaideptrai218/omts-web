@@ -14,6 +14,7 @@ export const cycleFigures = z.object({
   expectedSeedQuantity: optionalNumber, expectedHarvestDate: z.string().nullish(), targetYieldKg: optionalNumber,
   closedEarly: z.boolean(), earlyReason: z.string().nullish(), notHarvestedLanes: z.array(z.number().int()), assessment: z.string().nullish(),
   harvestedCages: optionalNumber, remainingKg: optionalNumber,
+  lostLanes: z.array(z.object({ laneNumber: z.number().int(), date: z.string().nullish(), reason: z.string().nullish(), reasonCode: z.string().nullish() })).optional(), damagedLanes: z.array(z.number().int()).optional(),
 });
 export type CycleFigures = z.infer<typeof cycleFigures>;
 

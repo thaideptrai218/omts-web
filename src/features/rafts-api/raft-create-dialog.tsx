@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { CollapsibleSection } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
-import { createWorkspaceRepository } from "@/features/api-workspace/workspace-repository";
+import { createWorkspaceRepository, type ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { ErrorNotice, useMutation } from "@/features/operations/ui";
 import { RaftFormFields } from "./raft-form-fields";
 import { useCoordinateWarnings } from "@/features/farming-api/use-coordinate-warnings";
@@ -13,7 +13,7 @@ import { emptyRaftDraft, raftBody, validateRaftDraft, type RaftDraft, type RaftF
 
 const repository = createWorkspaceRepository("rafts");
 /** Creating a raft is a pop-up in the zone chosen in the filter column. */
-export function RaftCreateDialog({ zoneId, zoneLabel, onClose, onCreated }: { zoneId: string; zoneLabel: string; onClose(): void; onCreated(): void }) {
+export function RaftCreateDialog({ zoneId, zoneLabel, onClose, onCreated }: { zoneId: string; zoneLabel: string; onClose(): void; onCreated(record: ApiRecord): void }) {
   const [draft, setDraft] = useState<RaftDraft>(emptyRaftDraft), [errors, setErrors] = useState<Partial<Record<RaftField, string>>>({});
   const mutation = useMutation(), confirmation = useActionDialog(), warnCoordinates = useCoordinateWarnings();
   // The next free code ({zone}-B01...) is prefilled but stays editable; it does not count as a user change.
@@ -26,7 +26,7 @@ export function RaftCreateDialog({ zoneId, zoneLabel, onClose, onCreated }: { zo
     setErrors(found);
     if (Object.keys(found).length) return;
     const created = await mutation.run(() => repository.mutate("create", raftBody(draft), undefined, zoneId));
-    if (created) { warnCoordinates(created); onCreated(); }
+    if (created) { warnCoordinates(created); onCreated(created); }
   }
   return <Dialog open size="lg" title="Thêm bè nuôi" description={`Vùng ${zoneLabel}`} dismissible={!mutation.pending} onOpenChange={open => { if (!open) void close(); }}>
     {confirmation.dialog}

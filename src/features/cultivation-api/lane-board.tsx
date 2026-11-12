@@ -1,11 +1,11 @@
 "use client";
 import styles from "./lane-board.module.css";
-const states = ["NotSeeded", "Growing", "BeingHarvested", "Harvested"] as const;
-const labels: Record<string, string> = { NotSeeded: "Chưa thả giống", Growing: "Đang nuôi", BeingHarvested: "Đang thu hoạch", Harvested: "Đã thu hoạch" };
-export function LaneBoard({ lanes, selected, onSelect }: { lanes: readonly { id?: string; laneNumber: number; state: string | number; statusId?: number }[]; selected?: number; onSelect(lane: number): void }) {
+const states = ["NotSeeded", "Growing", "BeingHarvested", "Harvested", "OutOfService"] as const;
+const labels: Record<string, string> = { NotSeeded: "Chưa thả giống", Growing: "Đang nuôi", BeingHarvested: "Đang thu hoạch", Harvested: "Đã thu hoạch", OutOfService: "Ngừng hoạt động" };
+export function LaneBoard({ lanes, selected, onSelect }: { lanes: readonly { id?: string; laneNumber: number; state: string | number; statusId?: number; isDamaged?: boolean; isOutOfService?: boolean }[]; selected?: number; onSelect(lane: number): void }) {
   return <section aria-label="Sơ đồ làn nuôi"><div className={styles.legend}>{states.map(state => <span key={state}><i data-state={state} />{labels[state]}</span>)}</div>{!lanes.length && <p className="py-4 text-sm text-text-muted">Chưa có thông tin làn tại thời điểm đã chọn.</p>}<div className={styles.board}>{lanes.map(lane => {
-    const state = typeof lane.state === "number" ? states[lane.state] : lane.state;
-    return <button type="button" key={lane.id ?? lane.laneNumber} className={styles.lane} data-state={state} aria-pressed={selected === lane.laneNumber} aria-label={`Làn ${lane.laneNumber} · ${labels[state] ?? "Chưa rõ tiến độ"}`} onClick={() => onSelect(lane.laneNumber)}><strong>Làn {lane.laneNumber}</strong><span>{labels[state] ?? "Chưa rõ tiến độ"}</span>{(lane.statusId === 102 || lane.statusId === 2002) && <small>Đã ngừng sử dụng</small>}<small className={styles.action}>{selected === lane.laneNumber ? "Đang xem" : "Xem chi tiết →"}</small></button>;
+    const state = lane.isOutOfService ? "OutOfService" : typeof lane.state === "number" ? states[lane.state] : lane.state;
+    return <button type="button" key={lane.id ?? lane.laneNumber} className={styles.lane} data-state={state} data-damaged={lane.isDamaged || undefined} aria-pressed={selected === lane.laneNumber} aria-label={`Làn ${lane.laneNumber} · ${labels[state] ?? "Chưa rõ tiến độ"}${lane.isDamaged ? " · Hỏng" : ""}`} onClick={() => onSelect(lane.laneNumber)}><strong>Làn {lane.laneNumber}</strong><span>{labels[state] ?? "Chưa rõ tiến độ"}</span>{lane.isDamaged && <small>Hỏng</small>}{(lane.statusId === 102 || lane.statusId === 2002) && <small>Đã ngừng sử dụng</small>}<small className={styles.action}>{selected === lane.laneNumber ? "Đang xem" : "Xem chi tiết →"}</small></button>;
   })}</div></section>;
 }
 export function CyclePlanSummary({ plan }: { plan: { expectedSeedQuantity: number | null; expectedHarvestDate: string | null; targetYieldKg: number | null; assessment?: string | null; closeDate?: string | null } }) {

@@ -21,6 +21,19 @@ describe("finish a lane (one decisive per-lane action)", () => {
 });
 
 describe("harvest values: decimal cages and the over-plan answer", () => {
+  it("reads the crew suggestions of a raft for one day with the harvest View permission only", () => {
+    const query = (extra: Record<string, string> = {}) => new URLSearchParams({ action: "crew-suggestions", id: raft, zoneId: zone, date: "2026-11-12", ...extra });
+    expect(cultivationRecordsPlan("harvest", "GET", query())).toMatchObject({ method: "GET", permission: "View", zoneId: zone, path: `/api/rafts/${raft}/crew-suggestions?date=2026-11-12` });
+    expect(cultivationRecordsPlan("harvest", "GET", query({ date: "12/11/2026" }))).toBeUndefined();
+    expect(cultivationRecordsPlan("harvest", "GET", query({ extra: "1" }))).toBeUndefined();
+  });
+  it("forwards the optional crew without adding it to a legacy write", () => {
+    const legacy = post("harvest", { action: "record", id: raft, zoneId: zone, body: trip });
+    expect(legacy?.body).not.toHaveProperty("crew");
+    const next = post("harvest", { action: "record", id: raft, zoneId: zone, body: { ...trip, crew: [cycle] } });
+    expect(next?.body).toMatchObject({ crew: [cycle] });
+    expect(post("harvest", { action: "record", id: raft, zoneId: zone, body: { ...trip, crew: [cycle, cycle] } })).toBeUndefined();
+  });
   it("accepts half a cage and an estimate", () => {
     expect(harvestValues.safeParse(trip).success).toBe(true);
     expect(harvestValues.safeParse({ ...trip, cageCount: 12.25, estimatedKg: 612.5 }).success).toBe(true);

@@ -1,10 +1,13 @@
 import "server-only";
 import { z } from "zod";
 import { saveLicenseSchema } from "@/features/farming-api/contracts";
+import { operationAllowed } from "@/features/operations/permissions";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
 import { readBackendResponse } from "../backend/backend-response";
+import { readFarmingProblem } from "../backend/farming-problem-copy";
+import type { LaneIncident } from "@/features/rafts-api/lane-incident-contracts";
 import { sameEmployeeSession } from "../employees/employee-session";
 import { readBoundedBytes, readOperationUpload } from "../operations/bounded-body";
 import { localFileTarget } from "../operations/evidence-target";
@@ -33,10 +36,20 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
     if (context.status !== "ready") return json({ status: "unavailable" }, 503);
     const subject = context.context.identity.subjectType;
     if (subject !== "CooperativeOwner" && (plan.ownerOnly || subject !== "Staff")) return json({ status: "forbidden", code: "MSG02" }, 403);
+    if (plan.zoneId && plan.method !== "GET" && !operationAllowed("cultivation-cycles", context.context.identity, context.context.permissions.functionPermissions, "Edit", plan.zoneId)) return json({ status: "forbidden", code: "MSG02" }, 403);
     if (request.signal.aborted) return json({ status: "unavailable" }, 503);
-    let body: FormData | undefined;
+    let body: FormData | string | undefined;
+    if (plan.jsonBody) {
+      const guard = createCsrfGuard(process.env);
+      if (guard.status !== "available") return json({ status: "unavailable" }, 503);
+      const checked = await guard.guard.check(request, { method: "POST", body: "json", maxBytes: 16_384, timeoutMs: 5000 });
+      if (checked.status !== "allowed") return json({ status: "rejected" }, checked.status === "rejected" ? checked.httpStatus : 503);
+      const values = plan.jsonBody.safeParse(checked.body.readForValidation());
+      if (!values.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      body = JSON.stringify(values.data);
+    }
     if (plan.upload) {
-      const input = await readOperationUpload(request, plan.upload === "photo", { maxFiles: 1, optionalFile: plan.action === "update", maxBytes: 12 * 1024 * 1024 });
+      const input = await readOperationUpload(request, plan.upload !== "license", { maxFiles: 1, optionalFile: plan.action === "update", maxBytes: 12 * 1024 * 1024 });
       if (!input) return json({ status: "invalid-input", code: "MSG01" }, 400);
       const values = (plan.upload === "license" ? saveLicenseSchema : z.strictObject({})).safeParse(input.payload);
       if (!values.success || plan.action === "update" && !("rowVersion" in values.data)) return json({ status: "invalid-input", code: "MSG01" }, 400);
@@ -53,16 +66,21 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
     try {
       if (request.signal.aborted) controller.abort();
       const upstream = await fetch(new URL(plan.path, backend.config.origin), { method: plan.method, body, cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal,
-        headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` } });
-      const result = await readBackendResponse(upstream, "profileRead");
-      if (result.status === "http-error") return json({ status: "rejected", code: result.code }, result.httpStatus);
+        headers: { Accept: "application/json", ...(typeof body === "string" ? { "Content-Type": "application/json" } : {}), Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` } });
+      // The photo command documents a 201 without a JSON shape. Still perform the session recheck below.
+      const problemCopy = !upstream.ok && plan.action.startsWith("lane-") ? upstream.clone() : undefined;
+      if (plan.action === "lane-photo" && upstream.status === 201) void upstream.body?.cancel().catch(() => undefined);
+      const result = plan.action === "lane-photo" && upstream.status === 201
+        ? { status: "success" as const, httpStatus: 201, data: { done: true } } : await readBackendResponse(upstream, "profileRead");
+      if (result.status === "http-error") return json({ status: "rejected", code: result.code, ...(problemCopy ? { problem: await readFarmingProblem(problemCopy) } : {}) }, result.httpStatus);
       if (result.status !== "success" || ![200, 201].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
       const parsed = plan.schema.safeParse(result.data);
       if (!parsed.success) return json({ status: "invalid-response" }, 502);
       const record = (plan.unwrap ? (parsed.data as Record<string, unknown>)[plan.unwrap] : parsed.data) as Record<string, unknown>;
       let bytes: Uint8Array | undefined, contentType: string | undefined;
       if (plan.file) {
-        const source = plan.photoId ? (record.photos as { id: string; url: string }[]).find((photo) => photo.id === plan.photoId)?.url : record[plan.file];
+        const source = plan.file === "incident-photo" ? (record.incidents as LaneIncident[]).find(incident => incident.id === plan.incidentId)?.photos?.[plan.photoIndex!]?.url
+          : plan.photoId ? (record.photos as { id: string; url: string }[]).find((photo) => photo.id === plan.photoId)?.url : record[plan.file];
         const target = localFileTarget(source, backend.config.origin);
         if (!target) return json({ status: "not-found" }, 404);
         const file = await fetch(target, { cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal });
@@ -80,6 +98,8 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
         if ("fileUrl" in record) record.fileUrl = record.fileUrl ? `/api/operations/zone-licenses?action=file&id=${record.id}` : null;
         if (Array.isArray(record.photos)) record.photos = (record.photos as { id: string }[]).map((photo) => ({ ...photo, url: `/api/operations/raft-details?action=photo&id=${record.id}&photoId=${photo.id}` }));
       }
+      if (Array.isArray(record.incidents)) record.incidents = (record.incidents as LaneIncident[]).map(incident => ({ ...incident,
+        photos: incident.photos?.map((photo, index) => ({ ...photo, url: photo.url ? `/api/operations/raft-details?${new URLSearchParams({ action: "lane-photo-view", id: new URL(request.url).searchParams.get("id")!, zoneId: plan.zoneId!, laneNumber: String(incident.laneNumber), incidentId: incident.id, photoIndex: String(index) })}` : undefined })) }));
       return json({ status: "success", data: record });
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); }
   } catch { return json({ status: "unavailable" }, 503); }
