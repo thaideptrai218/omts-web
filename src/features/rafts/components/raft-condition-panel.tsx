@@ -3,7 +3,7 @@
 import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
+import { Field } from "@/features/operations/ui";
 import {
   formatVietnameseDate,
   isDateOnly,
@@ -65,21 +65,9 @@ export function RaftConditionPanel({
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor={`${id}-date`} className="text-sm font-semibold">
-            Ngày xem sơ đồ
-          </label>
-          <VietnameseDateInput
-            id={`${id}-date`}
-            value={date}
-            onValueChange={(value) => {
-              setDate(value);
-              setCycleId("");
-            }}
-            className={controlStyles}
-            calendarLabel="Chọn ngày xem sơ đồ"
-            aria-invalid={!dateValid}
-            aria-describedby={!dateValid ? `${id}-error` : undefined}
-          />
+          <Field label="Ngày xem sơ đồ" type="date" value={date}
+            onChange={event => { setDate(event.target.value); setCycleId(""); }}
+            aria-invalid={!dateValid} aria-describedby={!dateValid ? `${id}-error` : undefined} />
         </div>
         <div>
           <label htmlFor={`${id}-cycle`} className="text-sm font-semibold">

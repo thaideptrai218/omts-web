@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { finishHarvestLaneProblem } from "./finish-harvest-contracts";
 
 const guid = z.guid(), num = z.number().finite();
 /**
@@ -15,6 +16,7 @@ export const farmingProblem = z.object({
   message: z.string().max(400).optional().catch(undefined),
   confirmFlag: z.enum(["confirmOverPlan", "confirmEmpty", "ownerApproved"]).optional().catch(undefined),
   laneNumbers: z.array(z.number().int().positive()).max(200).optional().catch(undefined),
+  lanes: z.array(finishHarvestLaneProblem).max(200).optional().catch(undefined),
   onHand: num.nullish().catch(undefined), balanceAfter: num.nullish().catch(undefined),
   itemId: guid.nullish().catch(undefined), seedLotLineId: guid.nullish().catch(undefined),
   sourceKind: z.enum(["None", "Seeding", "MaterialUsage"]).nullish().catch(undefined),
@@ -24,8 +26,8 @@ export type FarmingProblem = z.infer<typeof farmingProblem>;
 
 /** Parses an untrusted problem object (the backend body on the server, `problem` of the BFF answer in the browser). */
 export function projectFarmingProblem(value: unknown): FarmingProblem | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  const parsed = farmingProblem.safeParse(value);
+  if (!value || typeof value !== "object") return undefined;
+  const parsed = farmingProblem.safeParse(Array.isArray(value) ? { lanes: value } : value);
   if (!parsed.success) return undefined;
   const keys = Object.entries(parsed.data).filter(([, entry]) => entry !== undefined && entry !== null);
   return keys.length ? (Object.fromEntries(keys) as FarmingProblem) : undefined;

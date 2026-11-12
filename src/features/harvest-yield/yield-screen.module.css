@@ -57,3 +57,48 @@
 .targetFill, .targetFillOver { display:block; height:100%; border-radius:inherit; background:var(--omts-color-primary); }
 .targetFillOver { background:#b45309; }
 .targetText { font-size:.75rem; color:var(--omts-color-text-muted); font-variant-numeric:tabular-nums; }
+
+/* Tổng quan: chỉ số, xu hướng, gợi ý. Gọn để vừa 1366x768; cuộn trong khung danh sách. */
+.overview { display: grid; gap: .625rem; padding: 12px 14px; border-bottom: 1px solid var(--omts-color-border); }
+.overview .period { margin: 0; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .5rem; margin: 0; }
+.kpis > div { display: grid; gap: 1px; align-content: start; padding: .5rem .625rem; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); }
+.kpis dt { font-size: .6875rem; font-weight: 600; color: var(--omts-color-text-muted); }
+.kpis dd { margin: 0; font-size: 1.0625rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpiDelta, .deltaUp, .deltaDown { font-size: .6875rem; color: var(--omts-color-text-muted); font-variant-numeric: tabular-nums; }
+.deltaUp { color: #0f766e; font-weight: 600; }
+.deltaDown { color: #b45309; font-weight: 600; }
+
+.section { border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); background: var(--omts-color-surface); }
+.section > summary { cursor: pointer; padding: .5rem .75rem; font-size: .875rem; list-style-position: inside; }
+.section > summary:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.sectionBody { padding: 0 .75rem .75rem; display: grid; gap: .5rem; min-width: 0; }
+.segment { display: inline-flex; gap: 4px; }
+.chartTools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .875rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .25rem .875rem; margin: 0; font-size: .75rem; color: var(--omts-color-text-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatchLine { width: 16px; height: 0; border-top: 2px solid var(--omts-color-text); display: inline-block; }
+.swatchTarget { width: 16px; height: 0; border-top: 2px dashed #b45309; display: inline-block; }
+.tableScroll { overflow-x: auto; max-width: 100%; }
+
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .625rem; }
+.insight { min-width: 0; padding: .5rem .625rem; border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-control); background: var(--omts-color-surface-subtle); font-size: .8125rem; }
+.insight h3 { margin: 0 0 .25rem; font-size: .75rem; font-weight: 700; color: var(--omts-color-text-muted); }
+.insight ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.insight li { display: flex; justify-content: space-between; gap: .5rem; font-variant-numeric: tabular-nums; }
+.insight p { margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { border: 1px solid var(--omts-color-border); border-radius: 999px; padding: 1px 8px; font-size: .75rem; color: var(--omts-color-primary); background: var(--omts-color-surface); }
+
+.detailBody { display: grid; gap: .5rem; padding: .625rem .875rem; min-width: 0; position: sticky; left: 0; width: var(--view-width, 100%); box-sizing: border-box; }
+.detailLinks { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: 0; font-size: .8125rem; }
+.soldBar { width: 6rem; height: 6px; border-radius: 999px; background: var(--omts-color-border); overflow: hidden; }
+.soldBar > span { display: block; height: 100%; background: var(--omts-color-primary); }
+.statusCell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.totalRow > * { font-weight: 700; background: var(--omts-color-surface-subtle); border-top: 1px solid var(--omts-color-border-strong); border-bottom: 0 !important; }
+
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overview { padding: 8px; }
+}

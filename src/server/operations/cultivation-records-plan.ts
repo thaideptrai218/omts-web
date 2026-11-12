@@ -4,6 +4,7 @@ import * as c from "@/features/cultivation-api/records-contracts";
 import { cycle } from "@/features/cultivation-api/contracts";
 import { crewSuggestions } from "@/features/cultivation-api/harvest-crew-contracts";
 import { historyList } from "@/features/history/history-contracts";
+import { finishHarvestResult, finishHarvestValues, matchesFinishedSelection } from "@/features/cultivation-api/finish-harvest-contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
 export function cultivationRecordsPlan(area: OperationArea, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
@@ -48,11 +49,17 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     return { area, action, zoneId, permission: action === "preview" ? "Create" : "View", method: "GET", path: seeding ? action === "seed-lots" ? `/api/rafts/${id}/seed-lots` : `/api/cultivation-cycles/${id}/${action === "preview" ? "seeding-complete/preview" : "seeding-records"}` : `/api/rafts/${id}/${material ? "material-usages" : "harvest-lots"}`, schema: seeding ? action === "seed-lots" ? c.seedLots : action === "preview" ? c.seedingPreview : c.seedingList : material ? c.materialList : c.harvestList };
   }
   if (method !== "POST" || query.size) return;
-  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-lane"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
+  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-lane", "finish-harvest"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
   if (!m.success) return;
   const { action, id, zoneId, body } = m.data;
   const base = { area, action, zoneId, method: "POST" as const, permission: action === "correct" ? "Edit" : action === "remove" ? "Delete" : "Create" };
   const version = { rowVersion: z.string().min(1) }, reason = { reason: z.string().trim().min(1), ...version };
+  if (area === "harvest" && action === "finish-harvest") {
+    const values = finishHarvestValues.safeParse(body);
+    if (!values.success) return;
+    return { ...base, permission: "Create", path: `/api/rafts/${id}/finish-harvest`, body: values.data, schema: finishHarvestResult.refine(result => matchesFinishedSelection(values.data.laneNumbers, result)) };
+  }
+  if (action === "finish-harvest") return;
   if (area === "harvest" && action === "finish-lane") {
     // One decisive per-lane action (no body): the lane number is validated here and only ever enters the path as digits.
     const lane = z.strictObject({ laneNumber: z.number().int().min(1).max(999_999) }).safeParse(body);

@@ -40,3 +40,8 @@ export type HarvestYieldReport = z.infer<typeof harvestYieldReport>;
 /** Tham số gửi qua BFF: groupBy chữ thường, zoneIds ngăn cách bằng dấu phẩy (BFF mở thành tham số lặp cho backend). */
 export const groupingValue = (g: Grouping) => g.toLowerCase() as "raft" | "zone" | "cycle";
 export const groupingLabel: Record<Grouping, string> = { Raft: "Bè", Zone: "Vùng nuôi", Cycle: "Chu kỳ" };
+
+/** Cách gộp trên màn hình: ba cách của backend cộng "Tháng" (gộp ở trình duyệt từ ngày thu hoạch của từng lô). */
+export type ViewGrouping = Grouping | "Month";
+export const viewGroupings: readonly ViewGrouping[] = ["Raft", "Zone", "Cycle", "Month"];
+export const viewGroupingLabel: Record<ViewGrouping, string> = { ...groupingLabel, Month: "Tháng" };

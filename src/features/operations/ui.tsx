@@ -4,7 +4,7 @@ import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid } from "@/components/ui/data-grid";
-import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
+import { DateInputField } from "@/components/ui/management-screen/date-input-field";
 import { ManagementHeading } from "@/components/ui/management-page";
 import type { InterfaceIconName } from "@/components/ui/interface-icon";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
@@ -40,11 +40,7 @@ export function FilterPanel({ children, columns = "four" }: { children: ReactNod
 }
 export function Field({ label, ref, ...props }: ComponentProps<"input"> & { label: string }) {
   if (props.type === "date" || props.type === "datetime-local") {
-    return <div className="block text-xs font-medium text-text-muted"><span>{label}</span>
-      <DatePickerField label={label} value={String(props.value ?? "")} min={props.min == null ? undefined : String(props.min)} max={props.max == null ? undefined : String(props.max)} disabled={props.disabled} withTime={props.type === "datetime-local"} allowClear={!props.required} invalid={!!props["aria-invalid"]} describedBy={props["aria-describedby"]} className={control}
-        onChange={value => props.onChange?.({ target: { value }, currentTarget: { value } } as React.ChangeEvent<HTMLInputElement>)} />
-      <input {...props} ref={ref} aria-hidden="true" type="text" tabIndex={-1} className="sr-only fixed" value={String(props.value ?? "")} />
-    </div>;
+    return <DateInputField {...props} label={label} ref={ref} />;
   }
   return <label className="block text-xs font-medium text-text-muted">{label}<input {...props} ref={ref} className={control} /></label>;
 }

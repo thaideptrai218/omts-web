@@ -1,11 +1,13 @@
 "use client";
-import { useId, useRef, useState } from "react";
-import { DayPicker, type DropdownProps } from "react-day-picker";
+import { useId, useImperativeHandle, useLayoutEffect, useRef, useState, type ComponentProps, type Ref } from "react";
+import { DayPicker } from "react-day-picker";
 import { vi } from "react-day-picker/locale";
 import "react-day-picker/style.css";
 import { InterfaceIcon } from "../interface-icon";
 import { SelectBox } from "../select-box";
 import { maskDateInput, parseDateInput } from "./date-picker-input-model";
+import { dateTimeBoundsError } from "./date-time-bounds";
+import { CalendarDropdown } from "./calendar-dropdown";
 import { fromQueryDate, toDisplayDate, toQueryDate } from "./time-range-model";
 import { Popover } from "./time-range-filter";
 import screenStyles from "./management-screen.module.css";
@@ -15,16 +17,12 @@ const pad = (value: number) => String(value).padStart(2, "0");
 const nowTime = () => { const now = new Date(); return `${pad(now.getHours())}:${pad(now.getMinutes())}`; };
 const weekdays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-function CalendarDropdown(props: DropdownProps) {
-  const { options } = props;
-  return <SelectBox aria-label={props["aria-label"]} value={props.value} onChange={props.onChange} disabled={props.disabled} name={props.name} className="omts-control">{options?.map(option => <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}</SelectBox>;
-}
-
-type Props = { label: string; value: string; min?: string; max?: string; disabled?: boolean; withTime?: boolean; allowClear?: boolean; className?: string; name?: string; invalid?: boolean; describedBy?: string; onChange(value: string): void };
+type Props = { id?: string; inputRef?: Ref<HTMLInputElement>; required?: boolean; readOnly?: boolean; onBlur?: ComponentProps<"input">["onBlur"]; onFocus?: ComponentProps<"input">["onFocus"]; onInvalid?: ComponentProps<"input">["onInvalid"]; label: string; value: string; min?: string; max?: string; disabled?: boolean; withTime?: boolean; allowClear?: boolean; className?: string; name?: string; invalid?: boolean; describedBy?: string; onChange(value: string): void };
 
 /** A typed local date and a top-layer calendar share the same validated yyyy-mm-dd value. */
-export function DatePickerField({ label, value, min, max, disabled, withTime, allowClear = false, className, name, invalid, describedBy, onChange }: Props) {
+export function DatePickerField({ id, inputRef, required, readOnly, onBlur, onFocus, onInvalid, label, value, min, max, disabled, withTime, allowClear = false, className, name, invalid, describedBy, onChange }: Props) {
   const anchor = useRef<HTMLSpanElement>(null), input = useRef<HTMLInputElement>(null);
+  useImperativeHandle(inputRef, () => input.current!, []);
   const errorId = useId();
   const [open, setOpen] = useState(false);
   const [datePart, timePart = ""] = value.split("T");
@@ -39,7 +37,14 @@ export function DatePickerField({ label, value, min, max, disabled, withTime, al
   const error = draft?.source === value ? draft.error : undefined;
   const time = timePart.slice(0, 5) || timeDraft;
   const close = (returnFocus: boolean) => { setOpen(false); if (returnFocus) input.current?.focus(); };
-  const emit = (day: string, clock = time) => { input.current?.setCustomValidity(""); setDraft(undefined); onChange(withTime ? `${day}T${clock}` : day); };
+  const valueError = value ? parseDateInput(toDisplayDate(datePart), min, max).error ?? (withTime ? dateTimeBoundsError(value, min, max) : undefined) : undefined;
+  const draftError = draft?.source === value && draft.text ? parseDateInput(draft.text, min, max).error : undefined;
+  useLayoutEffect(() => { input.current?.setCustomValidity(draftError ?? valueError ?? ""); }, [draftError, valueError]);
+  const emit = (day: string, clock = time) => {
+    const next = withTime ? `${day}T${clock}` : day;
+    input.current?.setCustomValidity((withTime ? dateTimeBoundsError(next, min, max) : undefined) ?? "");
+    setDraft(undefined); onChange(next);
+  };
   const pick = (day: Date) => { emit(toQueryDate(day)); if (!withTime) close(true); };
   const today = new Date(), todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   function typeDate(raw: string) {
@@ -50,22 +55,22 @@ export function DatePickerField({ label, value, min, max, disabled, withTime, al
     else if (!masked && allowClear) { setDraft(undefined); onChange(""); }
   }
   function validate() {
-    if (!text && allowClear) { input.current?.setCustomValidity(""); return; }
+    if (!text && !required) { input.current?.setCustomValidity(""); return; }
     const parsed = parseDateInput(text, min, max);
     setDraft({ source: value, text, error: parsed.error });
-    input.current?.setCustomValidity(parsed.error ?? "");
+    input.current?.setCustomValidity(parsed.error ?? valueError ?? "");
   }
   return <span className={styles.field}>
     {name && <input type="hidden" name={name} value={value} disabled={disabled} />}
-    <span ref={anchor} className={`${styles.control} ${className ?? ""}`} data-invalid={invalid || !!error || undefined}>
-      <input ref={input} type="text" value={text} inputMode="numeric" maxLength={10} placeholder="dd/mm/yyyy" aria-label={label} disabled={disabled} aria-invalid={invalid || !!error || undefined} aria-describedby={[describedBy, error ? errorId : ""].filter(Boolean).join(" ") || undefined}
-        onChange={event => { event.currentTarget.setCustomValidity(""); typeDate(event.target.value); }} onBlur={validate}
-        onKeyDown={event => { if (event.key === "ArrowDown") { event.preventDefault(); setOpen(true); } }} />
+    <span ref={anchor} className={`${styles.control} ${className ?? ""}`} data-invalid={invalid || !!error || !!valueError || undefined}>
+      <input id={id} ref={input} required={required} readOnly={readOnly} onFocus={onFocus} onInvalid={onInvalid} type="text" value={text} inputMode="numeric" maxLength={10} placeholder="dd/mm/yyyy" aria-label={label} disabled={disabled} aria-invalid={invalid || !!error || !!valueError || undefined} aria-describedby={[describedBy, error || valueError ? errorId : ""].filter(Boolean).join(" ") || undefined}
+        onChange={event => { event.currentTarget.setCustomValidity(""); typeDate(event.target.value); }} onBlur={event => { validate(); onBlur?.(event); }}
+        onKeyDown={event => { if (!readOnly && event.key === "ArrowDown") { event.preventDefault(); setOpen(true); } }} />
       {withTime && timePart && <span className={styles.timeValue}>{timePart.slice(0, 5)}</span>}
-      <button type="button" aria-label={`${label}: ${datePart ? `${toDisplayDate(datePart)}${withTime && timePart ? ` ${timePart.slice(0, 5)}` : ""}` : "chưa chọn"}`} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} onClick={() => { setMonth(selected ?? month); setOpen(current => !current); }}><InterfaceIcon name="calendar" /></button>
+      <button type="button" aria-label={`${label}: ${datePart ? `${toDisplayDate(datePart)}${withTime && timePart ? ` ${timePart.slice(0, 5)}` : ""}` : "chưa chọn"}`} aria-haspopup="dialog" aria-expanded={open} disabled={disabled || readOnly} onClick={() => { setMonth(selected ?? month); setOpen(current => !current); }}><InterfaceIcon name="calendar" /></button>
     </span>
-    {error && <span id={errorId} className={styles.error} role="alert">{error}</span>}
-    {open && <Popover anchor={anchor} label={label} onClose={close} placement="below">
+    {(error || valueError) && <span id={errorId} className={styles.error} role="alert">{error || valueError}</span>}
+    {open && !disabled && !readOnly && <Popover anchor={anchor} label={label} onClose={close} placement="below">
       <div className={styles.calendar}>
         <DayPicker mode="single" navLayout="around" captionLayout="dropdown" startMonth={firstMonth} endMonth={lastMonth} locale={vi} weekStartsOn={1} month={month} onMonthChange={setMonth} selected={selected} fixedWeeks autoFocus
           components={{ Dropdown: CalendarDropdown }} formatters={{ formatWeekdayName: day => weekdays[day.getDay()], formatMonthDropdown: day => `Tháng ${day.getMonth() + 1}` }}

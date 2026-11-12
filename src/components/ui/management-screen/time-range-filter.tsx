@@ -5,6 +5,8 @@ import { DayPicker, type DateRange } from "react-day-picker";
 import { vi } from "react-day-picker/locale";
 import "react-day-picker/style.css";
 import { InterfaceIcon } from "../interface-icon";
+import { CalendarDropdown } from "./calendar-dropdown";
+import calendarStyles from "./date-picker-field.module.css";
 import { FilterGroup } from "./management-layout";
 import { fromQueryDate, presetValue, timePresetGroups, timePresetLabel, toDisplayDate, toQueryDate, type TimePreset, type TimeRangeValue } from "./time-range-model";
 import screenStyles from "./management-screen.module.css";
@@ -106,8 +108,8 @@ function CustomCalendar({ value, onApply, onCancel }: { value: TimeRangeValue; o
   const line = preview ?? draft;
   const pick = (_: DateRange | undefined, clicked: Date) => { const next = afterClick(clicked); setDraft(next.range); setEditing(next.editing); };
   function today() { const now = new Date(), day = new Date(now.getFullYear(), now.getMonth(), now.getDate()); setDraft({ from: day, to: day }); setEditing("from"); setLeftMonth(monthOf(day)); setRightMonth(monthOf(day, 1)); }
-  const calendar = (month: Date, onMonthChange: (next: Date) => void) => <DayPicker mode="range" navLayout="around" locale={vi} weekStartsOn={1} month={month} onMonthChange={onMonthChange} selected={draft} onSelect={pick} fixedWeeks formatters={{ formatWeekdayName: day => ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][day.getDay()] }}
-    onDayMouseEnter={(day) => setHovered(day)} modifiers={{ preview: preview?.from ? { from: preview.from, to: preview.to ?? preview.from } : false }} modifiersClassNames={{ preview: styles.preview }} />;
+  const calendar = (month: Date, onMonthChange: (next: Date) => void) => <div className={calendarStyles.calendar}><DayPicker mode="range" navLayout="around" captionLayout="dropdown" startMonth={new Date(1940, 0, 1)} endMonth={new Date(new Date().getFullYear() + 5, 11, 31)} components={{ Dropdown: CalendarDropdown }} labels={{ labelMonthDropdown: () => "Tháng", labelYearDropdown: () => "Năm", labelPrevious: () => "Tháng trước", labelNext: () => "Tháng sau" }} locale={vi} weekStartsOn={1} month={month} onMonthChange={onMonthChange} selected={draft} onSelect={pick} fixedWeeks formatters={{ formatWeekdayName: day => ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][day.getDay()], formatMonthDropdown: day => `Tháng ${day.getMonth() + 1}` }}
+    onDayMouseEnter={(day) => setHovered(day)} modifiers={{ preview: preview?.from ? { from: preview.from, to: preview.to ?? preview.from } : false }} modifiersClassNames={{ preview: styles.preview }} /></div>;
   return <div className={styles.calendar}>
     <p className={styles.rangeLine} aria-live="polite">
       <button type="button" className={styles.endChip} aria-pressed={editing === "from"} onClick={() => setEditing("from")}>Từ ngày: <strong>{shown(line?.from)}</strong></button>

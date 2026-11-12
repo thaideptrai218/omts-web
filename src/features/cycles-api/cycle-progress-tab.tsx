@@ -4,7 +4,8 @@ import { useSearchParams } from "next/navigation";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useCallback, useState } from "react";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
-import { CyclePlanSummary, LaneBoard } from "@/features/cultivation-api/lane-board";
+import { CyclePlanSummary } from "@/features/cultivation-api/lane-board";
+import { HarvestAwareLaneOverview } from "@/features/cultivation-api/harvest-aware-lane-overview";
 import { TabFooter } from "@/features/farming-management/detail-parts";
 import { businessToday, ErrorNotice, Field, Select, Skeleton, useRemote } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
@@ -36,7 +37,7 @@ export function CycleProgressTab({ row, zoneId, canSeeFlow }: { row: CycleRow; z
         <div className={cycleStyles.progressMain}>
           <div className={cycleStyles.sectionHeading}><h3>Tiến độ làn nuôi</h3><span>{formatVietnameseDate(data.date)}{data.cycle ? ` · ${data.cycle.daysOfFarming} ngày nuôi` : ""}</span></div>
           {!data.cycle && <p className={styles.hint}>Chưa có chu kỳ trong ngày này.</p>}
-          <LaneBoard lanes={data.lanes} selected={lane} onSelect={setLane} />
+          <HarvestAwareLaneOverview key={`${row.raftId}:${data.cycle?.id}:${date}`} raftId={row.raftId} zoneId={zoneId} cycleId={data.cycle?.id ?? "no-cycle"} allowFinish={!!cycleId || date === businessToday()} lanes={data.lanes} opened={lane} onLaneClick={setLane} onChanged={progress.reload} label="Sơ đồ làn nuôi" />
           {lane ? <CycleLaneDetail key={`${row.raftId}:${data.cycle?.id}:${lane}`} raftId={row.raftId} zoneId={zoneId} cycleId={data.cycle?.id} lane={lane} onClose={() => setLane(undefined)} />
             : !!data.lanes.length && <p className={styles.hint}>Chọn một làn để xem các lần thả giống.</p>}
         </div>

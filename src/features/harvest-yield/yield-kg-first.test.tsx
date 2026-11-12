@@ -2,23 +2,23 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import type { HarvestYieldReport } from "./contracts";
+import { YieldKpiStrip } from "./yield-kpi-strip";
 import { YieldTable } from "./yield-table";
-import { YieldTotalsStrip } from "./yield-totals-strip";
+import { kpisOf } from "./yield-summary-model";
 
 afterEach(cleanup);
-const report = {
-  from: "2026-10-01", to: "2026-10-31", groupBy: "Raft", groups: [], message: null, messageCode: null, notFinalNotice: null, notFinalNoticeCode: null,
-  totals: { lotCount: 2, estimatedKg: 600, soldKg: 180, lostKg: 0, differenceKg: -25, notFinal: false, harvestedCages: 12 },
-} as HarvestYieldReport;
 const group = (over: object) => ({ key: "g1", label: "Bè B1", zoneId: "z", zoneCode: "V01", cycleStatus: "Closed", lotCount: 1, estimatedKg: 250, soldKg: 100, lostKg: 0, differenceKg: 0, notFinal: false, lots: [], ...over }) as unknown as HarvestYieldReport["groups"][number];
 
 describe("yield screen is kg-first without loss wording", () => {
-  it("totals show cages, estimated kg and sold kg and never the dropped loss/difference columns", () => {
-    render(<YieldTotalsStrip report={report} />);
-    const strip = screen.getByLabelText("Tổng của báo cáo");
+  it("KPI strip shows cages, estimated and sold kg, kg per cage and the delta against the previous period", () => {
+    const current = kpisOf([group({ lotCount: 2, estimatedKg: 600, soldKg: 180, harvestedCages: 12, availableKg: 420 })]);
+    const before = kpisOf([group({ lotCount: 1, estimatedKg: 400, soldKg: 180, harvestedCages: 8, availableKg: 220 })]);
+    render(<YieldKpiStrip kpis={current} previous={before} />);
+    const strip = screen.getByLabelText("Chỉ số chính của báo cáo");
     expect(within(strip).getByText("12 lồng")).toBeTruthy();
     expect(within(strip).getByText("600 kg")).toBeTruthy();
-    expect(within(strip).getByText("180 kg")).toBeTruthy();
+    expect(within(strip).getByText("50 kg/lồng")).toBeTruthy();
+    expect(within(strip).getAllByText(/▲ 50%/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Hao hụt|Chênh lệch/)).toBeNull();
   });
   it("shows the percent of target bar and the remaining kg when the API returns them", () => {

@@ -1,44 +1,64 @@
 "use client";
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { StatusPill } from "@/components/ui/management-page";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
-import { managementStyles, SortableHeader } from "@/components/ui/management-screen/management-table";
+import { SortableHeader } from "@/components/ui/management-screen/management-table";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import type { YieldGroup } from "./contracts";
-import type { Sort, SortKey } from "./yield-logic";
-import { YieldLotsTable } from "./yield-lots-table";
+import { allColumnKeys, yieldColumns, type ColumnKey } from "./yield-columns";
+import { YieldGroupDetail } from "./yield-group-detail";
+import { formatKg, type Sort, type SortKey } from "./yield-logic";
 import { cagesOrDash, kgOrDash, YieldTargetCell } from "./yield-target-cell";
+import { daysToLastOf, kgPerCageOf, lastHarvestOf, type YieldRow } from "./yield-rows";
+import type { Kpis } from "./yield-summary-model";
 import s from "./yield-screen.module.css";
 
-type Column = { key?: SortKey; label: string; num?: boolean };
-const columns: Column[] = [
-  { key: "label", label: "Nhóm" }, { key: "lotCount", label: "Số lô", num: true }, { label: "Số lồng", num: true },
-  { key: "estimatedKg", label: "Kg ước tính", num: true }, { label: "So với mục tiêu" },
-  { key: "soldKg", label: "Đã bán", num: true }, { key: "remainingKg", label: "Còn để bán", num: true },
-];
+type Props = {
+  groups: YieldRow[]; sort: Sort; showZone: boolean; linkedRecordId?: string; visible?: readonly string[]; totals?: Kpis;
+  onSort(key: SortKey): void;
+};
 
-type Props = { groups: YieldGroup[]; sort: Sort; showZone: boolean; linkedRecordId?: string; onSort(key: SortKey): void };
+const perCage = (value: number | null) => value == null ? "—" : `${formatKg(Math.round(value * 10) / 10)} kg/lồng`;
 
-/** Bảng nhóm có sắp xếp theo cột và dòng mở rộng xem các lô; trạng thái mở/đóng đọc được qua aria-expanded. */
-export function YieldTable({ groups, sort, showZone, linkedRecordId, onSort }: Props) {
+function StatusCell({ row }: { row: YieldRow }) {
+  const cycle = row.cycleStatus === "Open" ? "Đang mở" : row.cycleStatus === "Closed" ? "Đã đóng" : null;
+  if (!cycle && !row.notFinal) return <span className={s.muted}>Đã chốt</span>;
+  return <span className={s.statusCell}>{cycle && <span>{cycle}</span>}{row.notFinal && <StatusPill>Chưa chốt</StatusPill>}</span>;
+}
+
+/** Bảng nhóm: cột chọn được, sắp xếp theo cột, dòng tổng và dòng mở rộng xem lô ngay tại chỗ (aria-expanded). */
+export function YieldTable({ groups, sort, showZone, linkedRecordId, visible = allColumnKeys, totals, onSort }: Props) {
   const [open, setOpen] = useState<string | undefined>(() => groups.find(group => group.key === linkedRecordId || group.lots.some(lot => lot.id === linkedRecordId))?.key);
   const toggle = (key: string) => setOpen(current => current === key ? undefined : key);
+  const columns = yieldColumns.filter(column => visible.includes(column.key));
+  const cells = (row: YieldRow): Record<ColumnKey, ReactNode> => {
+    const last = lastHarvestOf(row), days = daysToLastOf(row);
+    return {
+      lotCount: row.lotCount, cages: cagesOrDash(row.harvestedCages), estimatedKg: kgOrDash(row.estimatedKg), kgPerCage: perCage(kgPerCageOf(row)),
+      target: <YieldTargetCell harvestedKg={row.targetedKg ?? row.estimatedKg} targetKg={row.targetYieldKg} />,
+      soldKg: kgOrDash(row.soldKg), remainingKg: kgOrDash(row.availableKg), lastHarvest: last ? formatVietnameseDate(last) : "—",
+      daysToLast: days == null ? "—" : `${days} ngày`, status: <StatusCell row={row} />,
+    };
+  };
+  const totalCells: Partial<Record<ColumnKey, ReactNode>> | undefined = totals && {
+    lotCount: totals.lots, cages: cagesOrDash(totals.cages), estimatedKg: kgOrDash(totals.kg), kgPerCage: perCage(totals.kgPerCage),
+    target: totals.targetPct == null ? "—" : `${totals.targetPct}%`, soldKg: kgOrDash(totals.soldKg), remainingKg: kgOrDash(totals.remainingKg),
+  };
   return (
     <div className={s.tableFrame}>
       <table className={s.table}>
         <caption className={s.srOnly}>Sản lượng thu hoạch theo nhóm</caption>
         <thead><tr>
-          {columns.map(c => c.key
-            ? <SortableHeader key={c.label} label={c.label} sortKey={c.key} sort={{ key: sort.key, direction: sort.dir }} onSort={() => onSort(c.key!)} className={c.num ? s.num : undefined} />
-            : <th key={c.label} scope="col" className={c.num ? s.num : undefined}>{c.label}</th>)}
-          <th scope="col">Trạng thái số liệu</th>
+          <SortableHeader label="Nhóm" sortKey="label" sort={{ key: sort.key, direction: sort.dir }} onSort={() => onSort("label")} />
+          {columns.map(c => c.sort
+            ? <SortableHeader key={c.key} label={c.label} sortKey={c.sort} sort={{ key: sort.key, direction: sort.dir }} onSort={() => onSort(c.sort!)} className={c.num ? s.num : undefined} />
+            : <th key={c.key} scope="col" className={c.num ? s.num : undefined}>{c.label}</th>)}
         </tr></thead>
         <tbody>
           {groups.map((g) => {
-            const expanded = open === g.key, detailId = `lots-${g.key}`;
+            const expanded = open === g.key, detailId = `lots-${g.key}`, values = cells(g);
             return (
               <Fragment key={g.key}>
                 <OpenableTableRow className={expanded ? s.rowOpen : undefined} data-selected={expanded || undefined} onOpen={() => toggle(g.key)}>
@@ -46,23 +66,22 @@ export function YieldTable({ groups, sort, showZone, linkedRecordId, onSort }: P
                     <button type="button" className={s.expand} aria-label={`${expanded ? "Thu gọn" : "Mở"} nhóm ${g.label}`} aria-expanded={expanded} aria-controls={detailId} onClick={() => toggle(g.key)}>
                       <InterfaceIcon name={expanded ? "chevron-down" : "chevron-right"} />
                     </button>
-                    <Link className="ml-2 text-primary underline" href={g.raftId ? farmingReferenceHref("raft", { zoneId: g.zoneId, recordId: g.raftId, search: g.raftCode }) : farmingReferenceHref("zone", { recordId: g.zoneId, search: g.zoneCode })}>{g.label}</Link>
+                    {g.zoneId
+                      ? <Link className="ml-2 text-primary underline" href={g.raftId ? farmingReferenceHref("raft", { zoneId: g.zoneId, recordId: g.raftId, search: g.raftCode }) : farmingReferenceHref("zone", { recordId: g.zoneId, search: g.zoneCode })}>{g.label}</Link>
+                      : <span className="ml-2">{g.label}</span>}
                     {g.cycleId && <Link className="ml-2 text-primary underline" href={farmingReferenceHref("cycle", { zoneId: g.zoneId, raftId: g.raftId, cycleId: g.cycleId })}>Chu kỳ {g.cycleStartDate ? formatVietnameseDate(g.cycleStartDate) : ""}</Link>}
-                    {showZone && <Link className={`ml-2 ${s.muted} underline`} href={farmingReferenceHref("zone", { recordId: g.zoneId, search: g.zoneCode })}>{g.zoneCode}</Link>}
-                    {g.cycleStatus === "Open" && <span className={s.muted}> · chu kỳ đang nuôi</span>}
+                    {showZone && g.zoneId && <Link className={`ml-2 ${s.muted} underline`} href={farmingReferenceHref("zone", { recordId: g.zoneId, search: g.zoneCode })}>{g.zoneCode}</Link>}
                   </th>
-                  <td className={s.num}>{g.lotCount}</td>
-                  <td className={s.num}>{cagesOrDash(g.harvestedCages)}</td>
-                  <td className={s.num}>{kgOrDash(g.estimatedKg)}</td>
-                  <td><YieldTargetCell harvestedKg={g.estimatedKg} targetKg={g.targetYieldKg} /></td>
-                  <td className={s.num}>{kgOrDash(g.soldKg)}</td>
-                  <td className={s.num}>{kgOrDash(g.availableKg)}</td>
-                  <td>{g.notFinal ? <StatusPill>Chưa chốt</StatusPill> : <span className={s.muted}>Đã chốt</span>}</td>
+                  {columns.map(c => <td key={c.key} className={c.num ? s.num : undefined}>{values[c.key]}</td>)}
                 </OpenableTableRow>
-                {expanded && <tr id={detailId} className={s.detail}><td colSpan={columns.length + 1}><div className={`${managementStyles.viewWidth} max-w-full overflow-x-auto`}><YieldLotsTable lots={g.lots} /></div></td></tr>}
+                {expanded && <tr id={detailId} className={s.detail}><td colSpan={columns.length + 1}><YieldGroupDetail group={g} /></td></tr>}
               </Fragment>);
           })}
         </tbody>
+        {totalCells && <tfoot><tr className={s.totalRow}>
+          <th scope="row">Tổng (mọi nhóm đang lọc)</th>
+          {columns.map(c => <td key={c.key} className={c.num ? s.num : undefined}>{totalCells[c.key] ?? ""}</td>)}
+        </tr></tfoot>}
       </table>
     </div>
   );

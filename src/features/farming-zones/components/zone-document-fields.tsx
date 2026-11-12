@@ -1,7 +1,7 @@
 import { SelectBox } from "@/components/ui/select-box";
 import { Controller, type UseFormReturn } from "react-hook-form";
 import type { Ref } from "react";
-import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
+import { Field } from "@/features/operations/ui";
 import { zoneDocumentTypes, type FarmingZone } from "../domain/farming-zone";
 import type { ZoneDocumentFormValues } from "../schemas/farming-zone-schema";
 import { zoneDocumentFileAccept } from "../schemas/zone-file";
@@ -49,48 +49,17 @@ export function ZoneDocumentFields({
           />
         )}
       </ZoneField>
-      <ZoneField
-        label="Ngày hiệu lực"
-        required
-        error={errors.effectiveDate?.message}
-      >
-        {(props) => (
-          <Controller
-            control={control}
-            name="effectiveDate"
-            render={({ field }) => (
-              <VietnameseDateInput
-                {...props}
-                value={field.value}
-                onValueChange={field.onChange}
-                inputRef={field.ref}
-                onBlur={field.onBlur}
-                className={zoneInputStyles}
-                calendarLabel="Chọn ngày hiệu lực giấy tờ"
-              />
-            )}
-          />
-        )}
-      </ZoneField>
-      <ZoneField label="Ngày hết hạn" error={errors.expiryDate?.message}>
-        {(props) => (
-          <Controller
-            control={control}
-            name="expiryDate"
-            render={({ field }) => (
-              <VietnameseDateInput
-                {...props}
-                value={field.value}
-                onValueChange={field.onChange}
-                inputRef={field.ref}
-                onBlur={field.onBlur}
-                className={zoneInputStyles}
-                calendarLabel="Chọn ngày hết hạn giấy tờ"
-              />
-            )}
-          />
-        )}
-      </ZoneField>
+      {([["effectiveDate", "Ngày hiệu lực *"], ["expiryDate", "Ngày hết hạn"]] as const).map(([name, label]) => (
+        <div key={name}>
+          <Controller control={control} name={name} render={({ field }) => (
+            <Field label={label} type="date" required={name === "effectiveDate"}
+              name={field.name} ref={field.ref} value={field.value} onBlur={field.onBlur}
+              aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `zone-document-${name}-error` : undefined}
+              onChange={event => field.onChange(event.target.value)} />
+          )} />
+          {errors[name] && <p id={`zone-document-${name}-error`} role="alert" className="mt-1 text-sm text-danger">{errors[name]?.message}</p>}
+        </div>
+      ))}
       <ZoneField label="Cơ quan cấp" error={errors.issuingAuthority?.message}>
         {(props) => (
           <input

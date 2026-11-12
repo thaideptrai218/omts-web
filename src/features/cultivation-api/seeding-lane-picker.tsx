@@ -34,7 +34,7 @@ export function SeedingLanePicker({ lanes: source, notSeededLanes, choices, valu
     <label className="flex items-center gap-2 text-xs"><Switch checked={supplement} onChange={event => setSupplement(event.target.checked)} />Thả bổ sung vào làn đang nuôi</label>
     {!!seeded.length && <p className="text-xs text-text-muted">Đã thả: làn {compressLaneNumbers(seeded)}</p>}
     {!!values.length && <p className="text-xs font-medium text-primary">Đang chọn: làn {compressLaneNumbers(values)}</p>}
-    <LaneOverview lanes={visible} selected={values} label="Làn có thể thả giống" onLaneClick={(number, event) => {
+    <LaneOverview lanes={visible} selected={values} onSelectionChange={update} label="Làn có thể thả giống" onLaneClick={(number, event) => {
       if (event.shiftKey && anchor.current !== undefined) {
         const low = Math.min(anchor.current, number), high = Math.max(anchor.current, number);
         update([...values, ...visible.filter(lane => lane.laneNumber >= low && lane.laneNumber <= high).map(lane => lane.laneNumber)]);

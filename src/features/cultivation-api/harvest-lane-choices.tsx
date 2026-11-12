@@ -95,7 +95,7 @@ export function HarvestLaneChoices({ lanes, values, onChange, label }: { lanes: 
         <input type="checkbox" className="omts-check" checked={showAll} onChange={event => setShowAll(event.target.checked)} />Hiện cả làn không thu được ({hidden})
       </label>}
       <LaneOverview lanes={shown.map(({ lane, blocked, state }) => ({ ...lane, state, disabled: !!blocked, description: blocked }))}
-        selected={values} label="Danh sách làn" emptyMessage="Chưa có làn nào thu hoạch được. Làn cần được thả giống và đang hoạt động."
+        selected={values} onSelectionChange={set} label="Danh sách làn" emptyMessage="Chưa có làn nào thu hoạch được. Làn cần được thả giống và đang hoạt động."
         onLaneClick={(number, event) => click(number, event.shiftKey)} />
     </fieldset>
   );

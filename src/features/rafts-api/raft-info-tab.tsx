@@ -51,7 +51,7 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
         ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude], ["Tình trạng bè", raft.conditionNotes],
       ]} />}
     </fieldset>
-    {!editing && <RaftLaneDiagram lanes={raft.lanes} length={geometryOf(raft).length} />}
+    {!editing && <RaftLaneDiagram lanes={raft.lanes} length={geometryOf(raft).length} harvestScope={{ raftId: raft.id, zoneId, rowVersion: raft.rowVersion, onChanged: onReload }} />}
     {editing && laneLock.failed && <Button key="retry-cycle" type="button" variant="secondary" className="w-auto" onClick={laneLock.reload}>Kiểm tra lại chu kỳ</Button>}
     <ErrorNotice error={mutation.error} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Chưa xác nhận được kết quả lưu. Hãy tải hồ sơ mới để đối chiếu; nội dung đang nhập vẫn được giữ.</p><div>

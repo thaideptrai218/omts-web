@@ -60,6 +60,19 @@ Owner: "the plan is only a plan; the harvest may be lower or higher than the pla
 - `409 MSG-GEN-09`: lane is Growing / Not seeded (no harvest lot to finish) or the raft has no Open cycle or is read-only. `404`: unknown raft or lane number (or Removed lane). `403`: no access to the zone.
 - Undo stays a lot correction with a reason.
 
+## 3b. Finish harvest on many lanes (new, owner decision 12/11)
+
+`POST /api/rafts/{raftId}/finish-harvest` - body `{ "laneNumbers": [1, 2, 3], "rowVersion": "..." }`. `laneNumbers`: 1 to 200 distinct integers >= 1. `rowVersion` (optional): the cycle version the screen read; a stale one answers the usual `409 MSG06` with `currentRowVersion`. Access as section 3.
+
+`200`:
+```json
+{ "finished": [1, 2], "alreadyFinished": [3], "everySeededLaneHarvested": false, "cycleRowVersion": "...", "message": "Lane harvest saved.", "messageCode": "MSG-GEN-05" }
+```
+- All or nothing, one transaction. Each lane follows the rule of section 3. Lanes already Harvested go to `alreadyFinished` (idempotent, nothing written); a repeat call finishes nothing and answers `200`.
+- `409 MSG-GEN-09` when any lane cannot be finished (nothing is changed), with every offending lane: `"lanes": [ { "laneNumber": 2, "reasonCode": "NotBeingHarvested", "message": "Làn 2 chưa có đợt thu hoạch nào để hoàn tất." } ]`. `reasonCode`: `NotBeingHarvested` (no harvest lot yet), `LaneNotFound` (no such lane on the raft). Also `409 MSG-GEN-09` for no Open cycle or a read-only raft.
+- `400 MSG-GEN-01` (`field: "LaneNumbers"`) for an empty list, more than 200, duplicates or a number < 1. `403` / `404` as section 3.
+- Audit: one `HarvestLot.LaneFinished` per lane finished plus one summary `Raft.HarvestLanesFinished` on the raft (`after.FinishedLanes`). The close reminder (MSG-CYCLE-08) is sent once when the last seeded lane is finished.
+
 ## 4. Harvest lots screen - lane facts and cycle progress
 
 `GET /api/rafts/{raftId}/harvest-lots` - existing fields kept; additive:

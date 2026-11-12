@@ -11,6 +11,8 @@ import { formatVietnameseDate } from "@/shared/format/date-only";
 import { laneBlockedReason, laneStateChip } from "./harvest-lane-choices";
 import { finishLaneResult, type harvestList } from "./records-contracts";
 import { harvestRepo } from "./records-shared";
+import { FinishHarvestOverview } from "./finish-harvest-overview";
+import { eligibleToFinish } from "./finish-harvest-model";
 
 type Screen = z.infer<typeof harvestList>;
 /** "Làn" facts of the open cycle: state, trips, apportioned cages, seed lots, and the one decisive action "Hoàn tất thu hoạch". */
@@ -32,6 +34,7 @@ function LanesBoardBody({ data, zoneId, raftId, canFinish, onChanged }: BoardPro
   return <section aria-label="Các làn của chu kỳ" className="mb-4">
     {confirmation.dialog}
     <h4 className="mb-2 text-sm font-semibold">Làn</h4>
+    {canFinish && <FinishHarvestOverview lanes={data.lanes.map(lane => ({ ...lane, state: lane.state ?? undefined }))} raftId={raftId} zoneId={zoneId} eligibleLaneNumbers={data.lanes.filter(eligibleToFinish).map(lane => lane.laneNumber)} onChanged={onChanged} label="Sơ đồ làn thu hoạch" selectionDisabled={mutation.pending} />}
     {mutation.error && <p role="alert" className="mb-2 rounded-control border border-danger/30 bg-danger/5 p-2 text-sm text-danger">{mutation.error}</p>}
     <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {data.lanes.map(lane => {
