@@ -54,7 +54,7 @@ function StepCard({ id, step, index, current, children }: { id: string; step: Jo
       <span className="flex items-center gap-2 text-xs text-text-muted"><StatusPill tone={step.status === "done" ? "success" : "neutral"}>{statusLabel[step.status]}</StatusPill>{step.chip}</span>
     </div>
     {step.bars.map(bar => <PlanBar key={bar.label} {...bar} />)}
-    {step.lines.length > 0 && <ul className="grid gap-0.5 text-xs text-text-muted">{step.lines.map(line => <li key={line}>{line}</li>)}</ul>}
+    {step.lines.length > 0 && <ul className="grid gap-0.5 text-xs text-text-muted">{step.lines.map(line => <li key={line}>{step.key === "nursery" ? line.replace("Phân bổ từ ươm:", "Đã chuyển sang bè:") : line}</li>)}</ul>}
     {Children.toArray(children).length > 0 && <div className="flex flex-wrap justify-end gap-2">{children}</div>}
   </li>;
 }

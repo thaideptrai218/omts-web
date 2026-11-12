@@ -8,6 +8,8 @@ import { UnitInput, type UnitInputProps } from "./unit-input";
  * and parses them on submit (the label look matches operations/ui `Field`). The text handed to
  * `onChange` is machine format: digits for money ("300000"), "." as decimal mark for units ("0.5"),
  * "" when empty, so existing submit code keeps working unchanged.
+ * The inputs retain the local editing draft across numeric echoes from the parent; callers should
+ * still keep this string contract to distinguish an empty required field from an actual zero.
  *
  * Usage:
  *   <MoneyField label="Số tiền đã trả" value={amount} onChange={setAmount} min={1000} autoThousands required />
