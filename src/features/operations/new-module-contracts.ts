@@ -2,14 +2,15 @@ import { z } from "zod";
 import { ownerResponseSchema } from "@/features/trader-purchases/contracts";
 
 /** Trạng thái yêu cầu mua (StatusIds.PurchaseRequest): bộ lọc `statusId` của GET /api/purchase-requests. "Hoàn thành" chỉ là cờ `fulfilled`, không có mã riêng. */
-export const REQUEST_STATUS_FILTERS = ["3201", "3202", "3203", "3204"] as const;
+export const REQUEST_STATUS_FILTERS = ["3201", "3202", "3203", "3204", "3205"] as const;
 export const requestStatusFilterSchema = z.enum(REQUEST_STATUS_FILTERS);
 const customerSchema = z.object({ id: z.guid(), name: z.string(), phoneNumber: z.string().nullable(), currentDebt: z.number() });
 export const requestSendingSchema = z.object({ channel: z.string(), phoneNumber: z.string().nullable(), deliveryStatusId: z.number().int().nullable(), deliveryStatus: z.string().nullable(), deliveryStatusAt: z.iso.datetime({ offset: true }).nullable() });
 /** PurchaseRequestView của backend (kg, không có lồng/nhân lực). */
 export const purchaseRequestSchema = z.object({ id: z.guid(), customer: customerSchema, productId: z.guid(), productName: z.string(), requestedKg: z.number(), pickupDate: z.iso.date(), note: z.string().nullable(),
   sentAt: z.iso.datetime({ offset: true }), statusId: z.number().int(), status: z.string(), fulfilled: z.boolean(), response: ownerResponseSchema.nullable(), cancelReason: z.string().nullable(),
-  cancelledAt: z.iso.datetime({ offset: true }).nullable(), sendings: z.array(requestSendingSchema), rowVersion: z.string() });
+  cancelledAt: z.iso.datetime({ offset: true }).nullable(), sendings: z.array(requestSendingSchema), rowVersion: z.string(),
+  salesOrderId: z.guid().nullish(), salesOrderCode: z.string().nullish() });
 export const purchaseRequestPageSchema = z.object({ items: z.array(purchaseRequestSchema), page: z.number().int().positive(), pageSize: z.number().int().positive(), total: z.number().int().nonnegative() });
 const requestText = z.string().max(1000);
 const acceptedKg = z.number().positive().max(999_999_999_999_999).refine((v) => Math.abs(v * 1000 - Math.round(v * 1000)) < 1e-6);

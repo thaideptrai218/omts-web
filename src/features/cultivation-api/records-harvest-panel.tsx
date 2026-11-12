@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { FilterChecks } from "@/components/ui/filter-checks";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { DataTable, ErrorNotice, Field, Paging, Skeleton, displayTime, useRemote } from "@/features/operations/ui";
+import { AssignedPlansBanner } from "@/features/harvest-plans/assigned-plans-banner";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { cagesFromKg, formatCages } from "@/shared/format/cage-quantity";
 import { matchesSelection } from "@/shared/presentation/filter-selection";
@@ -85,6 +86,13 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
           )}
         </div>
       </div>
+      {allowed("Create") && (
+        <AssignedPlansBanner
+          zoneId={zoneId}
+          raftId={raftId}
+          onChanged={remote.reload}
+        />
+      )}
       {settingsOpen && (
         <HarvestSettings
           onClose={() => {

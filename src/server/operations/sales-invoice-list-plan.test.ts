@@ -47,15 +47,14 @@ describe("kế hoạch BFF cho danh sách hóa đơn bán", () => {
     expect(plan("POST", q(), { action: "resend", id: id(1), body: { x: 1 } })).toBeUndefined();
     expect(plan("POST", q(), { action: "resend", id: "abc" })).toBeUndefined();
   });
-  it("sửa hóa đơn (nhánh chưa gộp): PUT, quyền Edit, hai loại không lẫn trường", () => {
+  it("điều chỉnh: PUT, quyền Edit, chỉ giảm giá sau khiếu nại; sửa dòng hàng đi qua PUT hóa đơn", () => {
     const line = { productId: id(2), harvestLotId: id(3), kg: 10, unitPrice: 85000 };
-    const ok = plan("POST", q(), { action: "correct", id: id(1), body: { kind: "DataEntryError", reason: "Nhập sai kg", rowVersion: "AAA", lines: [line], discount: 0 } });
+    const ok = plan("POST", q(), { action: "correct", id: id(1), body: { kind: "PriceCutAfterClaim", reason: "Khiếu nại", rowVersion: "AAA", priceCutAmount: 50000 } });
     expect(ok).toMatchObject({ method: "PUT", permission: "Edit", path: `/api/sales-invoices/${id(1)}/correction` });
-    expect(plan("POST", q(), { action: "correct", id: id(1), body: { kind: "PriceCutAfterClaim", reason: "Khiếu nại", rowVersion: "AAA", priceCutAmount: 50000 } })).toBeDefined();
     expect(plan("POST", q(), { action: "correct", id: id(1), body: { kind: "PriceCutAfterClaim", reason: "x", rowVersion: "AAA", priceCutAmount: 5, lines: [line] } })).toBeUndefined();
-    expect(plan("POST", q(), { action: "correct", id: id(1), body: { kind: "DataEntryError", reason: "x", rowVersion: "AAA", lines: [line], priceCutAmount: 5 } })).toBeUndefined();
-    expect(plan("POST", q(), { action: "correct", id: id(1), body: { kind: "DataEntryError", reason: " ", rowVersion: "AAA", lines: [line] } })).toBeUndefined();
-    expect(plan("POST", q(), { action: "correct", id: id(1), body: { kind: "DataEntryError", reason: "x", lines: [line] } })).toBeUndefined();
+    expect(plan("POST", q(), { action: "correct", id: id(1), body: { kind: "PriceCutAfterClaim", reason: " ", rowVersion: "AAA", priceCutAmount: 5 } })).toBeUndefined();
+    expect(plan("POST", q(), { action: "correct", id: id(1), body: { kind: "PriceCutAfterClaim", reason: "x", priceCutAmount: 5 } })).toBeUndefined();
+    expect(plan("POST", q(), { action: "correct", id: id(1), body: { kind: "DataEntryError", reason: "Nhập sai kg", rowVersion: "AAA", lines: [line], discount: 0 } })).toBeUndefined();
   });
   it("hủy hóa đơn (nhánh chưa gộp): POST, quyền Delete, bắt buộc lý do và phiên bản", () => {
     const body = { reason: "Bán nhầm", rowVersion: "AAA", cashGivenBack: [{ paymentId: id(9), givenBack: true }], confirmOwedBack: true };

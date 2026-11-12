@@ -23,7 +23,7 @@ const number = (value: string) => { const parsed = Number(value.replace(",", "."
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
 /** The products a trip can be split into: those in use, plus the ones a lot being corrected already has (they stay allowed even if no longer sold). */
-export function useHarvestProducts(saved: readonly SavedLine[] = []) {
+export function useHarvestProducts(saved: readonly Pick<SavedLine, "productId" | "productCode" | "productName">[] = []) {
   const remote = useRemote<ProductRow[]>(useCallback((signal: AbortSignal) => productRepository.all({}, signal), []));
   const list = (remote.data ?? []).filter((product) => product.statusId === IN_USE || saved.some((line) => line.productId === product.id));
   const extra: ProductRow[] = saved.filter((line) => !list.some((product) => product.id === line.productId))

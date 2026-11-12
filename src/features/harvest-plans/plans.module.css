@@ -1,0 +1,30 @@
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:2px 8px; border:1px solid var(--omts-color-border-strong); border-radius:12px; background:var(--omts-color-surface); font-size:12px; white-space:nowrap; }
+.chip[data-state="Planned"] { background:#eef4ff; border-color:#9db8ec; }
+.chip[data-state="Harvested"] { background:#e9f6ef; border-color:#7fbf9c; }
+.chip[data-state="Skipped"] { background:#f3f4f6; border-color:#b8bec7; color:var(--omts-color-text-muted); text-decoration:line-through; text-decoration-color:#b8bec7; }
+.chip a { color:var(--omts-color-primary); text-decoration:underline; }
+/* The zone and raft selects of a line are the same width. */
+.selectCol { width:160px; }
+.laneBox { display:flex; flex-wrap:wrap; gap:6px; }
+.lane { display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:3px 9px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:12px; cursor:pointer; }
+.lane[data-checked="true"] { background:#eef4ff; border-color:var(--omts-color-primary); }
+.lane[data-disabled="true"] { cursor:not-allowed; opacity:.55; background:#f3f4f6; }
+.lane small { color:var(--omts-color-text-muted); font-size:11px; }
+.hint { font-size:12px; color:var(--omts-color-text-muted); }
+.orders { display:grid; gap:6px; max-height:240px; overflow:auto; }
+.order { display:grid; gap:2px; padding:6px 8px; border:1px solid var(--omts-color-border); border-radius:6px; font-size:12px; }
+.order label { display:flex; gap:8px; align-items:flex-start; cursor:pointer; }
+.order[data-checked="true"] { border-color:var(--omts-color-primary); background:#f5f8ff; }
+.banner { display:grid; gap:8px; padding:12px 14px; margin-bottom:12px; border:1px solid #f0d28a; border-radius:8px; background:#fff8e6; }
+.banner h3 { font-size:14px; font-weight:650; }
+.bannerLine { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-top:1px dashed #e6c775; font-size:13px; }
+.bannerLine:first-of-type { border-top:0; }
+/* The coverage of the linked orders in the side column: one block per product, rows like the other side rows. */
+.coverage { display:grid; gap:4px; padding:8px 0; border-top:1px dashed var(--omts-color-border); font-size:13px; }
+.coverage:first-of-type { border-top:0; padding-top:0; }
+.coverageState { font-weight:650; }
+.coverageState[data-state="enough"] { color:#1f7a4a; }
+.coverageState[data-state="short"] { color:var(--omts-color-danger, #b42318); }
+.coverageState[data-state="over"] { color:#9a6700; }
+.retry { color:var(--omts-color-primary); text-decoration:underline; }

@@ -71,6 +71,18 @@ export function notificationText(code: string | null, parameters: unknown, fallb
     const p = parsed.data;
     return { title: "Có khoản trả trước sau khi hủy phiếu", body: `${p.user_name} đã hủy phiếu ${p.receipt_code}. Khoản trả trước cho ${p.supplier_name} hiện là ${amount(p.advance_amount)} đồng.` };
   }
+  if (code === "MSG-PLAN-05") {
+    const parsed = z.object({ plan_code: text, zone_code: text, planned_at: z.iso.datetime({ offset: true }), line_count: z.number().int().nonnegative() }).safeParse(parameters);
+    if (!parsed.success) return undefined;
+    const p = parsed.data, when = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(p.planned_at));
+    return { title: "Kế hoạch thu hoạch được giao", body: `Kế hoạch ${p.plan_code} của vùng ${p.zone_code} đã được giao, dự kiến ${when}, ${amount(p.line_count)} bè. Vui lòng thu hoạch theo kế hoạch.` };
+  }
+  if (code === "MSG-PLAN-06") {
+    const parsed = z.object({ plan_code: text, raft_code: text, lane_numbers: z.array(z.number().int().positive()).min(1).max(200), reason: z.string().trim().min(1).max(500) }).safeParse(parameters);
+    if (!parsed.success) return undefined;
+    const p = parsed.data;
+    return { title: "Luống không thu theo kế hoạch", body: `Kế hoạch ${p.plan_code}, bè ${p.raft_code}: luống ${p.lane_numbers.join(", ")} không thu. Lý do: ${p.reason}.` };
+  }
   if (code === "MSG-CYCLE-02") {
     const parsed = z.object({ raft_code: text, seeded_count: z.number(), lane_count: z.number() }).safeParse(parameters);
     if (!parsed.success) return undefined;

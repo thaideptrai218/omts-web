@@ -1,43 +1,35 @@
 import { describe, expect, it } from "vitest";
+import { allTime, presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { allowedSet, changeErrorText, dateText, deliveryStatus, invoiceStatus, paidState, paymentMethod, paymentStatus } from "./invoice-labels";
-import { defaultFilters, filterProblem, isDefault, presetRange, toQuery } from "./invoice-list-logic";
+import { emptyFilters, timeProblem, toQuery } from "./invoice-list-logic";
 
-describe("khoảng ngày của lựa chọn nhanh", () => {
-  it("hôm nay, tháng này, tuần này bắt đầu từ thứ Hai", () => {
-    expect(presetRange("today", "2026-11-09", { from: "", to: "" })).toEqual({ from: "2026-11-09", to: "2026-11-09" });
-    expect(presetRange("month", "2026-11-18", { from: "", to: "" })).toEqual({ from: "2026-11-01", to: "2026-11-18" });
-    // 2026-11-09 là thứ Hai; 2026-11-15 là Chủ nhật: tuần vẫn bắt đầu 09/11.
-    expect(presetRange("week", "2026-11-09", { from: "", to: "" }).from).toBe("2026-11-09");
-    expect(presetRange("week", "2026-11-15", { from: "", to: "" }).from).toBe("2026-11-09");
-    expect(presetRange("week", "2026-11-01", { from: "", to: "" }).from).toBe("2026-10-26");
-  });
-  it("tùy chỉnh dùng ngày đã nhập", () => {
-    expect(presetRange("custom", "2026-11-09", { from: "2026-10-01", to: "2026-10-28" })).toEqual({ from: "2026-10-01", to: "2026-10-28" });
-  });
-});
-
-describe("kiểm tra bộ lọc", () => {
-  const custom = (from: string, to: string) => ({ ...defaultFilters(), preset: "custom" as const, from, to });
+describe("kiểm tra kỳ xem", () => {
+  const custom = (from: string, to: string): TimeRangeValue => ({ kind: "custom", from, to });
   it("tùy chỉnh phải đủ ngày, đúng thứ tự, tối đa 5 năm", () => {
-    expect(filterProblem(custom("", "2026-11-09"))).toMatch(/đủ ngày/);
-    expect(filterProblem(custom("2026-11-09", "2026-11-01"))).toMatch(/không được sau/);
-    expect(filterProblem(custom("2020-01-01", "2025-01-02"))).toMatch(/5 năm/);
-    expect(filterProblem(custom("2020-01-01", "2025-01-01"))).toBeNull();
-    expect(filterProblem(custom("2024-02-29", "2026-11-09"))).toBeNull();
-    expect(filterProblem(defaultFilters())).toBeNull();
+    expect(timeProblem(custom("", "2026-11-09"))).toMatch(/đủ ngày/);
+    expect(timeProblem(custom("2026-11-09", "2026-11-01"))).toMatch(/không được sau/);
+    expect(timeProblem(custom("2020-01-01", "2025-01-02"))).toMatch(/5 năm/);
+    expect(timeProblem(custom("2020-01-01", "2025-01-01"))).toBeNull();
+    expect(timeProblem(custom("2024-02-29", "2026-11-09"))).toBeNull();
+  });
+  it("mốc nhanh và Toàn thời gian luôn xem được", () => {
+    expect(timeProblem(presetValue("thisMonth", new Date(2026, 10, 18)))).toBeNull();
+    expect(timeProblem(allTime)).toBeNull();
   });
 });
 
 describe("tham số truy vấn", () => {
-  it("mặc định chỉ có kỳ hôm nay", () => {
-    expect(toQuery(defaultFilters(), "2026-11-09")).toEqual({ from: "2026-11-09", to: "2026-11-09", zoneId: undefined, customerId: undefined, harvestLotId: undefined, statusId: undefined, paid: undefined, code: undefined, cashCollectedByMe: undefined });
-    expect(isDefault(defaultFilters())).toBe(true);
+  const month = presetValue("thisMonth", new Date(2026, 10, 18));
+  it("mặc định chỉ có kỳ xem", () => {
+    expect(toQuery({ search: "", time: month, filters: emptyFilters }, "2026-11-18")).toEqual({ from: "2026-11-01", to: "2026-11-30", zoneId: undefined, customerId: undefined, harvestLotId: undefined, statusId: undefined, paid: undefined, code: undefined, cashCollectedByMe: undefined });
   });
-  it("một trạng thái được chọn thì lọc theo mã trạng thái; tiền mặt và mã được cắt khoảng trắng", () => {
-    const q = toQuery({ ...defaultFilters(), cancelled: false, code: " HD01 ", cashMine: true, paid: "false", zoneId: "z" }, "2026-11-09");
-    expect(q).toMatchObject({ statusId: "3501", code: "HD01", cashCollectedByMe: "true", paid: "false", zoneId: "z" });
-    expect(toQuery({ ...defaultFilters(), completed: false }, "2026-11-09").statusId).toBe("3502");
-    expect(toQuery({ ...defaultFilters(), completed: false, cancelled: false }, "2026-11-09").statusId).toBeUndefined();
+  it("Toàn thời gian lấy 5 năm gần nhất, 29/02 lùi về 28/02", () => {
+    expect(toQuery({ search: "", time: allTime, filters: emptyFilters }, "2026-11-18")).toMatchObject({ from: "2021-11-18", to: "2026-11-18" });
+    expect(toQuery({ search: "", time: allTime, filters: emptyFilters }, "2028-02-29").from).toBe("2023-02-28");
+  });
+  it("bộ lọc đi vào tham số; mã tìm được cắt khoảng trắng", () => {
+    const q = toQuery({ search: " HD01 ", time: month, filters: { zoneId: "z", customer: { id: "c", title: "An" }, lot: { id: "l", title: "B03" }, status: "3501", paid: "false", cashMine: true } }, "2026-11-18");
+    expect(q).toMatchObject({ statusId: "3501", code: "HD01", cashCollectedByMe: "true", paid: "false", zoneId: "z", customerId: "c", harvestLotId: "l" });
   });
 });
 

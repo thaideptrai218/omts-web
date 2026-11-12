@@ -20,14 +20,19 @@ describe("cycle rows", () => {
 });
 
 describe("cycle plan draft", () => {
-  const draft = { startDate: "2026-09-01", expectedSeedQuantity: "1000,5", expectedHarvestDate: "", targetYieldKg: "" };
+  const draft = { startDate: "2026-09-01", productId: "00000000-0000-4000-8000-0000000000d1", expectedSeedQuantity: "1000,5", expectedHarvestDate: "", targetYieldKg: "" };
   it("needs a start date that is not in the future and positive optional quantities", () => {
     expect(validatePlan(draft, "2026-11-11")).toEqual({});
     expect(validatePlan({ ...draft, startDate: "" }, "2026-11-11").startDate).toBeTruthy();
     expect(validatePlan({ ...draft, startDate: "2026-12-01" }, "2026-11-11").startDate).toBeTruthy();
     expect(validatePlan({ ...draft, targetYieldKg: "0" }, "2026-11-11").targetYieldKg).toBeTruthy();
   });
+  it("needs the farmed product unless the cycle never had one", () => {
+    expect(validatePlan({ ...draft, productId: "" }, "2026-11-11").productId).toBeTruthy();
+    expect(validatePlan({ ...draft, productId: "" }, "2026-11-11", false)).toEqual({});
+  });
   it("sends empty optional fields as null together with the row version", () => {
-    expect(planBody(draft, "v3")).toEqual({ startDate: "2026-09-01", expectedSeedQuantity: 1000.5, expectedHarvestDate: null, targetYieldKg: null, rowVersion: "v3" });
+    expect(planBody(draft, "v3")).toEqual({ startDate: "2026-09-01", productId: draft.productId, expectedSeedQuantity: 1000.5, expectedHarvestDate: null, targetYieldKg: null, rowVersion: "v3" });
+    expect(planBody({ ...draft, productId: "" }, "v3").productId).toBeNull();
   });
 });

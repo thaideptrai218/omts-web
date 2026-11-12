@@ -49,3 +49,9 @@ describe("kg input", () => {
     expect(placeRequestSchema.safeParse({ productId: base.productId, requestedKg: 0.1255, pickupDate: "2026-11-12", note: null }).success).toBe(false);
   });
 });
+
+describe("ordered request", () => {
+  it("shows a request the cooperative made an order from as done, not as waiting", () => {
+    expect(statusKey({ statusId: 3205, fulfilled: false })).toBe("fulfilled");
+  });
+});

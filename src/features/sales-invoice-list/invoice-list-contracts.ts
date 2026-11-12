@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { lineEntry, salesInvoice, salesInvoiceSent } from "@/features/sales-invoices/contracts";
+import { salesInvoice, salesInvoiceSent } from "@/features/sales-invoices/contracts";
 
 /**
  * Hợp đồng dữ liệu Hóa đơn bán (SCR-SALE-05) khớp backend:
@@ -14,6 +14,8 @@ export const listRow = z.object({
   customer: z.object({ id, name: z.string(), phoneNumber: z.string().nullable(), code: z.string().nullish() }).nullable(), walkInCustomer: z.boolean(), total: money,
   statusId: z.number().int(), status: z.string(), paymentTerm: z.enum(["PayNow", "PayLater"]), isPaid: z.boolean().nullable(), unpaidAmount: money,
   deliveryStatusId: z.number().int(), deliveryStatus: z.string(), cashAwaitingConfirmation: money.nullable(),
+  // Đơn đặt hàng mà hóa đơn được lập từ đó; hóa đơn cũ không có.
+  salesOrder: z.object({ id, code: z.string() }).nullish(),
 });
 export const searchResult = z.object({
   page: z.object({ items: z.array(listRow), page: z.number().int(), pageSize: z.number().int(), total: z.number().int() }),
@@ -21,7 +23,7 @@ export const searchResult = z.object({
 });
 
 /** Tên lệnh trong allowedActions. Lệnh lạ (backend thêm sau) bị bỏ qua thay vì làm hỏng cả chi tiết. */
-export const knownActions = ["Resend", "CreateReturn", "CancelReturn", "Correct", "Cancel", "Print"] as const;
+export const knownActions = ["Resend", "CreateReturn", "CancelReturn", "Edit", "Correct", "Cancel", "Print"] as const;
 export type InvoiceAction = (typeof knownActions)[number];
 
 const priceCut = z.object({ amount: money, cutDate: day, reason: z.string() });
@@ -44,13 +46,13 @@ export type SearchResult = z.infer<typeof searchResult>;
 export const lotSearch = z.object({ lots: z.array(z.object({ id, lotCode: z.string(), zoneCode: z.string() })) });
 
 const reason = z.string().trim().min(1).max(500), rowVersion = z.string().min(1).max(200), wholeMoney = z.number().int().nonnegative().max(9_999_999_999_999);
-/** Thân PUT .../correction (nhánh chưa gộp): sửa lỗi nhập liệu (dòng, giảm giá, thu khác) hoặc giảm giá sau khiếu nại; hai loại không dùng chung trường (SALE-07.1). */
+/**
+ * Thân PUT .../correction: chỉ còn giảm giá sau khiếu nại (SALE-07.1). Sửa nội dung hóa đơn (dòng, giá, giảm giá, thu khác) đi qua
+ * PUT /api/sales-invoices/{id} của màn sửa hóa đơn, như sửa phiếu nhập.
+ */
 export const correctionBody = z.strictObject({
-  kind: correctionKind, reason, rowVersion, lines: z.array(lineEntry).min(1).max(100).optional(), notSoldWholeLotIds: z.array(id).max(100).optional(),
-  discount: wholeMoney.optional(), otherCharges: wholeMoney.optional(), customerId: id.optional(), priceCutAmount: wholeMoney.positive().optional(), confirmOwedBack: z.boolean().optional(),
-}).refine((v) => v.kind === "PriceCutAfterClaim"
-  ? v.priceCutAmount !== undefined && v.lines === undefined && v.notSoldWholeLotIds === undefined && v.discount === undefined && v.otherCharges === undefined
-  : v.lines !== undefined && v.priceCutAmount === undefined);
+  kind: z.literal("PriceCutAfterClaim"), reason, rowVersion, priceCutAmount: wholeMoney.positive(), confirmOwedBack: z.boolean().optional(), customerId: id.optional(),
+});
 /** Thân POST .../cancel (nhánh chưa gộp): lý do, một câu trả lời cho mỗi khoản tiền mặt đang chờ xác nhận, hồ sơ người mua khi là khách lẻ còn khoản đã thu. */
 export const cancelBody = z.strictObject({
   reason, rowVersion, cashGivenBack: z.array(z.strictObject({ paymentId: id, givenBack: z.boolean() })).max(50).optional(), customerId: id.optional(), confirmOwedBack: z.boolean().optional(),

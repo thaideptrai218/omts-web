@@ -23,15 +23,16 @@ export function sortCycleRows(rows: readonly CycleRow[], key: CycleSortKey, dire
   return [...rows].sort((a, b) => sign * (sortValue(a, key).localeCompare(sortValue(b, key), "vi", { numeric: true }) || a.raftCode.localeCompare(b.raftCode, "vi", { numeric: true })));
 }
 
-export type PlanDraft = Record<"startDate" | "expectedSeedQuantity" | "expectedHarvestDate" | "targetYieldKg", string>;
+export type PlanDraft = Record<"startDate" | "productId" | "expectedSeedQuantity" | "expectedHarvestDate" | "targetYieldKg", string>;
 export type PlanField = keyof PlanDraft;
 const asText = (value: string | number | null) => value === null ? "" : String(value);
-export const planDraftOf = (cycle: CycleView): PlanDraft => ({ startDate: cycle.startDate, expectedSeedQuantity: asText(cycle.expectedSeedQuantity), expectedHarvestDate: asText(cycle.expectedHarvestDate), targetYieldKg: asText(cycle.targetYieldKg) });
-/** Start date is required; planned quantities are optional but must be positive numbers when given. */
-export function validatePlan(draft: PlanDraft, today: string): Partial<Record<PlanField, string>> {
+export const planDraftOf = (cycle: CycleView): PlanDraft => ({ startDate: cycle.startDate, productId: cycle.product?.id ?? "", expectedSeedQuantity: asText(cycle.expectedSeedQuantity), expectedHarvestDate: asText(cycle.expectedHarvestDate), targetYieldKg: asText(cycle.targetYieldKg) });
+/** Start date and the farmed product are required (a cycle started before products were recorded may stay without one); planned quantities are optional but must be positive numbers when given. */
+export function validatePlan(draft: PlanDraft, today: string, productRequired = true): Partial<Record<PlanField, string>> {
   const errors: Partial<Record<PlanField, string>> = {};
   if (!draft.startDate) errors.startDate = "Chọn ngày bắt đầu.";
   else if (draft.startDate > today) errors.startDate = "Ngày bắt đầu không được sau hôm nay.";
+  if (productRequired && !draft.productId) errors.productId = "Chọn sản phẩm nuôi.";
   for (const key of ["expectedSeedQuantity", "targetYieldKg"] as const) {
     if (draft[key] === "") continue;
     const value = Number(draft[key].replace(",", "."));
@@ -41,5 +42,5 @@ export function validatePlan(draft: PlanDraft, today: string): Partial<Record<Pl
 }
 export function planBody(draft: PlanDraft, rowVersion: string) {
   const number = (value: string) => value === "" ? null : Number(value.replace(",", "."));
-  return { startDate: draft.startDate || null, expectedSeedQuantity: number(draft.expectedSeedQuantity), expectedHarvestDate: draft.expectedHarvestDate || null, targetYieldKg: number(draft.targetYieldKg), rowVersion };
+  return { startDate: draft.startDate || null, productId: draft.productId || null, expectedSeedQuantity: number(draft.expectedSeedQuantity), expectedHarvestDate: draft.expectedHarvestDate || null, targetYieldKg: number(draft.targetYieldKg), rowVersion };
 }

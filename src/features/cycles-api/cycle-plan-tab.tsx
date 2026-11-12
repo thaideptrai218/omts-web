@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState, type RefObject } from "react";
+import { Fragment, useCallback, useEffect, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
@@ -10,6 +10,7 @@ import { businessToday, ErrorNotice, Field, Skeleton, useMutation } from "@/feat
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { CycleEditor } from "./cycle-editor";
+import { CycleProductField } from "./cycle-product-field";
 import { planBody, planDraftOf, validatePlan, type CycleRow, type PlanDraft, type PlanField } from "./cycle-model";
 import { cycleProgress } from "./contracts";
 import { readCycles, writeCycle } from "./repository";
@@ -30,7 +31,7 @@ export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleR
 
   async function save() {
     if (!cycle || !draft || mutation.busy() || mutation.blocked || current.loading) return;
-    const found = validatePlan(draft, businessToday());
+    const found = validatePlan(draft, businessToday(), !!cycle.product);
     setErrors(found);
     if (Object.keys(found).length) return;
     const result = await mutation.run(() => writeCycle("edit", cycle.id, planBody(draft, cycle.rowVersion)));
@@ -53,11 +54,13 @@ export function CyclePlanTab({ row, access, dirtyRef, onChanged }: { row: CycleR
   return <form noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
     {confirmation.dialog}
     <fieldset disabled={locked || mutation.blocked} className="min-w-0 border-0 p-0">
-      {editing && draft ? <div className={styles.fields}>{fields.map(([key, label, type]) => <div key={key}>
+      {editing && draft ? <div className={styles.fields}>{fields.map(([key, label, type]) => <Fragment key={key}>
+        {key === "expectedSeedQuantity" && <CycleProductField label={cycle.product ? "Sản phẩm nuôi *" : "Sản phẩm nuôi"} current={cycle.product} value={draft.productId} error={errors.productId} onChange={productId => setDraft(previous => previous && { ...previous, productId })} />}
+        <div>
         <Field label={key === "startDate" ? `${label} *` : label} type={type} name={key} max={key === "startDate" ? businessToday() : undefined} min={type === "number" ? "0" : undefined} step={key === "expectedSeedQuantity" ? "0.001" : key === "targetYieldKg" ? "0.01" : undefined}
           value={draft[key]} aria-invalid={!!errors[key]} onChange={event => setDraft(previous => previous && { ...previous, [key]: event.target.value })} />
-        {errors[key] && <p role="alert" className={styles.fieldError}>{errors[key]}</p>}</div>)}</div>
-        : <Facts items={[["Ngày bắt đầu", day(cycle.startDate)], ["Tình trạng", cycle.closeDate ? "Đã đóng" : "Đang nuôi"], ["Số ngày nuôi", cycle.daysOfFarming], ["Lượng giống dự kiến", cycle.expectedSeedQuantity?.toLocaleString("vi-VN") ?? "Chưa lập"],
+        {errors[key] && <p role="alert" className={styles.fieldError}>{errors[key]}</p>}</div></Fragment>)}</div>
+        : <Facts items={[["Ngày bắt đầu", day(cycle.startDate)], ["Sản phẩm nuôi", cycle.product ? `${cycle.product.name} (${cycle.product.code})` : "Chưa chọn"], ["Tình trạng", cycle.closeDate ? "Đã đóng" : "Đang nuôi"], ["Số ngày nuôi", cycle.daysOfFarming], ["Lượng giống dự kiến", cycle.expectedSeedQuantity?.toLocaleString("vi-VN") ?? "Chưa lập"],
           ["Ngày thu hoạch dự kiến", day(cycle.expectedHarvestDate) ?? "Chưa lập"], ["Sản lượng mục tiêu", cycle.targetYieldKg === null ? "Chưa lập" : `${cycle.targetYieldKg.toLocaleString("vi-VN")} kg`],
           ["Thả giống hoàn tất", day(cycle.seedingCompletedOn)], ["Ngày đóng", day(cycle.closeDate)], ["Đánh giá", cycle.assessment]]} />}
     </fieldset>

@@ -19,25 +19,19 @@ export const paymentMethod = (method: string) => lookup({ Cash: "Tiền mặt", 
 export const paymentKind = (kind: string) => lookup({ Payment: "Khách thanh toán", PaidBack: "Trả lại khách" }, kind);
 export const sendingChannel = (channel: string) => lookup({ Sms: "Tin nhắn SMS", ZaloOa: "Zalo OA" }, channel);
 export const correctionKind = (kind: string) => lookup({ DataEntryError: "Sửa lỗi nhập liệu", PriceCutAfterClaim: "Giảm giá sau khiếu nại" }, kind);
-export const priceSource = (source: string) => lookup({ PriceList: "Bảng giá", DecidedByOwner: "Chủ HTX quyết định" }, source);
+export const priceSource = (source: string) => lookup({ PriceList: "Bảng giá", DecidedByOwner: "Chủ HTX quyết định", OrderPrice: "Giá đơn đặt hàng" }, source);
 
 /** Tình trạng thu tiền của một dòng danh sách: hóa đơn đã hủy không có tình trạng này. */
 export const paidState = (isPaid: boolean | null) => (isPaid === null ? "—" : isPaid ? "Đã trả đủ" : "Còn nợ");
-export const paidTone = (isPaid: boolean | null) => (isPaid === null ? "none" : isPaid ? "good" : "warn");
-export const statusTone = (statusId: number) => (statusId === 3501 ? "good" : statusId === 3502 ? "bad" : "none");
-export const deliveryTone = (statusId: number) => (statusId === 1602 ? "good" : statusId === 1601 ? "warn" : "none");
 
 /** Chỉ giữ các lệnh mà màn hình hiểu; lệnh lạ của backend bị bỏ qua. */
 export function allowedSet(actions: readonly string[]): ReadonlySet<InvoiceAction> {
   return new Set(knownActions.filter((action) => actions.includes(action)));
 }
 
-const vnNumber = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 });
-export const num = (value: number) => vnNumber.format(value);
 export const vnd = (value: number) => `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)} ₫`;
 /** "2026-11-09" -> "09/11/2026" (ghép chuỗi, không qua múi giờ). */
 export const dateText = (iso: string) => { const [y, m, d] = iso.slice(0, 10).split("-"); return `${d}/${m}/${y}`; };
-export const dateTimeText = (iso: string) => new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
 
 /**
  * Thông báo lỗi của sửa / hủy hóa đơn. Mã MSG-SALE-20/21 chưa có trong danh mục thông điệp của Web nên BFF không chuyển mã: 409 không mã được diễn đạt chung,

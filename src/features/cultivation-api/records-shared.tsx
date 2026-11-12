@@ -65,11 +65,14 @@ export function LaneChoices({
   values,
   onChange,
   label = "Làn nuôi",
+  disabled = false,
 }: {
   lanes: number[];
   values: number[];
   onChange(values: number[]): void;
   label?: string;
+  /** The lanes are fixed (a harvest from a plan line): shown ticked, not changeable. */
+  disabled?: boolean;
 }) {
   return (
     <fieldset className="space-y-2">
@@ -80,6 +83,7 @@ export function LaneChoices({
             <input
               type="checkbox"
               checked={values.includes(n)}
+              disabled={disabled}
               onChange={(e) =>
                 onChange(e.target.checked ? [...values, n].sort((a, b) => a - b) : values.filter((v) => v !== n))
               }

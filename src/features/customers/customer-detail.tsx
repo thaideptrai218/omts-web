@@ -23,7 +23,7 @@ import listStyles from "@/features/suppliers-api/suppliers.module.css";
 export type CustomerAccess = { edit: boolean; remove: boolean; history: boolean; requests: boolean; debt: boolean; pay: boolean; adjust: boolean; confirm: boolean; exportDebt: boolean };
 type Tab = "info" | "sales" | "requests" | "debt";
 const invoiceStatus: Record<number, string> = { 3501: "Hoàn thành", 3502: "Đã hủy" };
-const requestStatus: Record<number, string> = { 3201: "Chờ phản hồi", 3202: "Đã chấp nhận", 3203: "Đã từ chối", 3204: "Đã hủy" };
+const requestStatus: Record<number, string> = { 3201: "Chờ phản hồi", 3202: "Đã chấp nhận", 3203: "Đã từ chối", 3204: "Đã hủy", 3205: "Hoàn thành" };
 const signed = (value: number) => value < 0 ? `-${fmt(-value)}` : fmt(value);
 
 export function CustomerDetailPanel({ id, access, onEdit, onChanged, onRemoved }: { id: string; access: CustomerAccess; onEdit(record: CustomerDetail): void; onChanged(): void; onRemoved(): void }) {
@@ -121,9 +121,10 @@ function RequestsTab({ id }: { id: string }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.requests(id, page, pageSize, signal), [id, page, pageSize]));
   return <div className={listStyles.tabBody}>
     {remote.loading ? <Skeleton /> : remote.error ? <ListStateMessage error={remote.error} onRetry={remote.reload} /> : remote.data && <>
-      <DataTable responsive headings={["Gửi lúc", "Sản phẩm", "Số lượng (kg)", "Ngày lấy", "Trạng thái", ""]} empty={!remote.data.items.length}>{remote.data.items.map((row) => <tr key={row.id}>
+      <DataTable responsive headings={["Gửi lúc", "Sản phẩm", "Số lượng (kg)", "Ngày lấy", "Trạng thái", "Mã DH", ""]} empty={!remote.data.items.length}>{remote.data.items.map((row) => <tr key={row.id}>
         <td data-label="Gửi lúc">{viDateTime(row.sentAt)}</td><td data-label="Sản phẩm">{row.productName}</td><td data-label="Số lượng (kg)">{fmt(row.requestedKg)}</td><td data-label="Ngày lấy">{viDate(row.pickupDate)}</td>
-        <td data-label="Trạng thái">{requestStatus[row.statusId] ?? row.status}</td><td><Link className={styles.link} href={`/operations/purchase-requests/${row.id}`}>Mở</Link></td></tr>)}</DataTable>
+        <td data-label="Trạng thái">{requestStatus[row.statusId] ?? row.status}</td>
+        <td data-label="Mã DH">{row.salesOrderCode ? <Link className={styles.link} href={`/sales/orders?code=${encodeURIComponent(row.salesOrderCode)}`}>{row.salesOrderCode}</Link> : "—"}</td><td><Link className={styles.link} href={`/operations/purchase-requests/${row.id}`}>Mở</Link></td></tr>)}</DataTable>
       <ManagementPagination page={remote.data.page} pageSize={remote.data.pageSize} total={remote.data.total} unit="yêu cầu" onPage={setPage} onPageSize={(size) => { setPageSize(size); setPage(1); }} /></>}
   </div>;
 }
@@ -171,6 +172,7 @@ function DebtTab({ id, access, onChanged }: { id: string; access: CustomerAccess
         <label>Loại giao dịch<SelectBox aria-label="Loại giao dịch" className="h-8 rounded-control border border-border-strong px-2 text-sm" value={kind} onChange={(event) => { setKind(event.target.value); setPage(1); }}>
           <option value="">Tất cả giao dịch</option>{filterKinds.map((key) => <option key={key} value={key}>{kindLabel[key]}</option>)}</SelectBox></label>
       </div>
+      {!!data.reservedAdvances?.length && <p className={styles.muted}>{data.reservedAdvances.map((reserved, index) => <span key={reserved.salesOrderId}>{index > 0 && " · "}Tiền ứng của <Link className={styles.link} href={`/sales/orders?code=${encodeURIComponent(reserved.salesOrderCode)}`}>{reserved.salesOrderCode}</Link>: {fmt(reserved.amount)}</span>)} (giữ riêng cho đơn, chỉ trừ vào hóa đơn của đơn đó)</p>}
       <div className={styles.entryScroll}><table className={styles.entryTable}><thead><tr><th>Mã phiếu</th><th>Thời gian</th><th>Loại</th><th className={styles.num}>Giá trị</th><th className={styles.num}>Nợ cần thu</th><th>Trạng thái</th><th /></tr></thead>
         <tbody>{data.entries.items.map((entry, index) => {
           const payment = entry.kind === "Payment" || entry.kind === "PaidBack" || entry.kind === "Discount";
@@ -179,7 +181,7 @@ function DebtTab({ id, access, onChanged }: { id: string; access: CustomerAccess
             <td>{kindLabel[entry.kind]}{entry.method && payment && entry.kind !== "Discount" ? <small className={styles.muted}> · {methodLabel(entry.method)}</small> : null}</td>
             <td className={styles.num}>{fmt(entry.amount)}</td><td className={styles.num}>{signed(entry.debtAfter)}</td>
             <td>{entry.cancelled ? <span className={`${styles.state} ${styles.stateOff}`}>Đã hủy</span> : entry.pending ? <span className={`${styles.state} ${styles.stateWait}`}>Chờ chuyển khoản</span>
-              : entry.awaitingConfirmation ? <span className={`${styles.state} ${styles.stateWait}`}>Chờ xác nhận</span> : entry.note ? <span className={styles.muted} title={entry.note}>{entry.note.length > 40 ? `${entry.note.slice(0, 40)}…` : entry.note}</span> : null}</td>
+              : entry.reservedForOrder && entry.salesOrderCode ? <span className={`${styles.state} ${styles.stateWait}`}>Giữ riêng cho {entry.salesOrderCode}</span> : entry.awaitingConfirmation ? <span className={`${styles.state} ${styles.stateWait}`}>Chờ xác nhận</span> : entry.note ? <span className={styles.muted} title={entry.note}>{entry.note.length > 40 ? `${entry.note.slice(0, 40)}…` : entry.note}</span> : null}</td>
             <td><div className={styles.rowActions}>
               {entry.awaitingConfirmation && !entry.cancelled && access.confirm && <button type="button" disabled={busyId === entry.id} onClick={() => void confirmEntry(entry)}>Xác nhận</button>}
               {entry.pending && !entry.cancelled && access.pay && <button type="button" disabled={busyId === entry.id} onClick={() => setDialog({ kind: "reprint", id: entry.id })}>In lại QR</button>}

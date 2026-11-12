@@ -46,7 +46,7 @@ export async function handleCycleWrite(request: Request) {
     const check = await csrf.guard.check(request, { method: "POST", body: "json", maxBytes: 8192, timeoutMs: 5000 });
     if (check.status !== "allowed") return json({ status: "rejected" }, check.status === "rejected" ? check.httpStatus : 503);
     const command = z.discriminatedUnion("action", [
-      z.strictObject({ action: z.literal("start"), id: z.guid(), body: cycleInput }),
+      z.strictObject({ action: z.literal("start"), id: z.guid(), body: cycleInput.extend({ productId: z.guid() }) }),
       z.strictObject({ action: z.literal("edit"), id: z.guid(), body: cycleInput.extend({ rowVersion: z.string().min(1) }) }),
       z.strictObject({ action: z.literal("cancel"), id: z.guid(), body: z.strictObject({ rowVersion: z.string().min(1) }) }),
     ]).safeParse(check.body.readForValidation());

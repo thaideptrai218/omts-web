@@ -22,6 +22,7 @@ describe("new real modules read contracts", () => {
     expect(planOperation("purchase-requests", "GET", q(`action=mine-detail&id=${ids.receipt}`))).toMatchObject({ path: `/api/me/purchase-requests/${ids.receipt}`, expectedId: ids.receipt, permission: "Mine" });
     // Owner/Staff giữ nguyên /api/purchase-requests.
     expect(planOperation("purchase-requests", "GET", q("action=list&status=3202&page=2"))).toMatchObject({ path: "/api/purchase-requests?page=2&pageSize=20&statusId=3202", permission: "Review" });
+    expect(planOperation("purchase-requests", "GET", q("action=list&status=3205"))).toMatchObject({ path: "/api/purchase-requests?page=1&pageSize=20&statusId=3205", permission: "Review" });
     expect(planOperation("purchase-requests", "GET", q(`action=detail&id=${ids.receipt}`))).toMatchObject({ path: `/api/purchase-requests/${ids.receipt}`, expectedId: ids.receipt, permission: "Review" });
   });
   it("validates the trader list against the MyPurchases contract", () => {
@@ -33,7 +34,7 @@ describe("new real modules read contracts", () => {
     expect(plan.schema.safeParse({ items: [], page: 1, pageSize: 20, total: 0 }).success).toBe(false);
     expect(plan.schema.safeParse({ requests: [{ ...request, requestedKg: "500" }], page: 1, pageSize: 20, total: 1, message: null, messageCode: null }).success).toBe(false);
   });
-  it.each(["accountId=x", "action=mine&customerId=x", "action=mine&status=Draft", "action=mine&status=3202", `action=mine-detail&id=${ids.receipt}&page=2`, "action=mine-detail", "action=list&id=not-guid", "action=list&status=ACCEPTED", "action=list&status=3205", "action=list&status=3202&status=3203", "action=list&customerId=x", "action=mine&page=0", "action=mine&page=1&page=2", `action=detail&id=${ids.receipt}&page=2`, "action=detail"])("rejects unsupported request query %s", (query) => {
+  it.each(["accountId=x", "action=mine&customerId=x", "action=mine&status=Draft", "action=mine&status=3202", `action=mine-detail&id=${ids.receipt}&page=2`, "action=mine-detail", "action=list&id=not-guid", "action=list&status=ACCEPTED", "action=list&status=3206", "action=list&status=3202&status=3203", "action=list&customerId=x", "action=mine&page=0", "action=mine&page=1&page=2", `action=detail&id=${ids.receipt}&page=2`, "action=detail"])("rejects unsupported request query %s", (query) => {
     expect(planOperation("purchase-requests", "GET", q(query))).toBeUndefined();
   });
   it("keeps product availability and workforce date explicit", () => {

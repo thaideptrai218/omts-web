@@ -4,32 +4,41 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/features/operations/ui";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
+import type { HarvestPlanTarget } from "@/features/harvest-plans/plan-logic";
 import { HarvestProductLines, blankLine, linesPayload, linesProblem, linesTotals, useHarvestProducts, type HarvestLine } from "./harvest-product-lines";
 import flowStyles from "./cultivation-flow.module.css";
 import * as c from "./records-contracts";
 import { EditorFrame, LaneChoices, harvestRepo } from "./records-shared";
 
-/** Records one harvest trip: lanes, lanes finished, the product lines (product, cages, kg) and photos. */
+/**
+ * Records one harvest trip: lanes, lanes finished, the product lines (product, cages, kg) and photos. With `plan` (a line of a harvest plan) the trip is
+ * recorded from that line: the raft and the lanes still to harvest are fixed by the plan, the product line starts from what the line expects, and the line
+ * id goes with the lot so the API ties it to the plan.
+ */
 export function HarvestForm({
   zoneId,
   raftId,
   data,
+  plan,
   onClose,
   onSaved,
 }: {
   zoneId: string;
   raftId: string;
-  data: z.infer<typeof c.harvestList>;
+  /** The raft's harvest screen data; a harvest from a plan line needs none, the plan fixes the lanes. */
+  data?: z.infer<typeof c.harvestList>;
+  plan?: Pick<HarvestPlanTarget, "lineId" | "planCode" | "laneNumbers" | "expectedProductId" | "expectedCageCount">;
   onClose(): void;
   onSaved(): void;
 }) {
-  const [lanes, setLanes] = useState<number[]>([]);
+  const [lanes, setLanes] = useState<number[]>(() => plan?.laneNumbers ?? []);
   const [finished, setFinished] = useState<number[]>([]);
-  const [lines, setLines] = useState<HarvestLine[]>(() => [blankLine()]);
+  const [lines, setLines] = useState<HarvestLine[]>(() => [plan?.expectedProductId ? { ...blankLine(), productId: plan.expectedProductId, cages: plan.expectedCageCount ? String(plan.expectedCageCount) : "" } : blankLine()]);
+  const [started] = useState(() => JSON.stringify(lines.map((line) => [line.productId, line.cages])));
   const [error, setError] = useState<string>();
   const [photos, setPhotos] = useState<File[]>([]);
   const products = useHarvestProducts();
-  const editor = useOperationEditor(onClose, !!lanes.length || lines.some((line) => line.productId || line.cages) || !!photos.length);
+  const editor = useOperationEditor(onClose, plan ? !!finished.length || !!photos.length || JSON.stringify(lines.map((line) => [line.productId, line.cages])) !== started : !!lanes.length || lines.some((line) => line.productId || line.cages) || !!photos.length);
   async function save() {
     const problem = linesProblem(lines, true);
     if (problem) {
@@ -44,6 +53,7 @@ export function HarvestForm({
       cageCount: totals.cages,
       estimatedKg: null,
       productLines: linesPayload(lines),
+      ...(plan ? { harvestPlanLineId: plan.lineId } : {}),
     });
     if (!parsed.success) {
       setError("Chọn làn thu hoạch, sản phẩm với số lồng nguyên dương và số kg lớn hơn 0 nếu nhập.");
@@ -76,7 +86,7 @@ export function HarvestForm({
       onSaved();
   }
   return (
-    <EditorFrame title="Ghi nhận chuyến thu hoạch" editor={editor} error={error}>
+    <EditorFrame title={plan ? `Thu hoạch theo kế hoạch ${plan.planCode}` : "Ghi nhận chuyến thu hoạch"} editor={editor} error={error}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -87,13 +97,14 @@ export function HarvestForm({
           <div className={flowStyles.harvestFormSection}>
             <h3>Phạm vi thu hoạch</h3>
             <LaneChoices
-              lanes={data.lanes.filter((v) => v.canHarvest).map((v) => v.laneNumber)}
+              lanes={plan ? plan.laneNumbers : (data?.lanes ?? []).filter((v) => v.canHarvest).map((v) => v.laneNumber)}
               values={lanes}
+              disabled={!!plan}
               onChange={(v) => {
                 setLanes(v);
                 setFinished((f) => f.filter((n) => v.includes(n)));
               }}
-              label="Làn thu hoạch *"
+              label={plan ? `Làn thu hoạch theo kế hoạch ${plan.planCode} (cố định)` : "Làn thu hoạch *"}
             />
             <LaneChoices
               lanes={lanes}

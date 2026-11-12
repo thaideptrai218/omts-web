@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -10,7 +11,7 @@ import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, Note, Select, businessToday, money } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
 import { PurchaseRequestSendings, ReviewStatusPill } from "./purchase-request-review-parts";
-import { buildAcceptPayload, buildDeclinePayload, canRespondToRequest, quantityWithCages, reviewResponseSummary } from "./purchase-request-review-presentation";
+import { buildAcceptPayload, buildDeclinePayload, canOrderRequest, canRespondToRequest, quantityWithCages, reviewResponseSummary } from "./purchase-request-review-presentation";
 
 const requests = createOperationsRepository("purchase-requests");
 
@@ -39,7 +40,8 @@ export function PurchaseRequestReviewDetails({ record, kgPerCage, onClose, onSav
     <p><ReviewStatusPill request={baseline} /></p>
     <dl className="mt-4 grid gap-4 sm:grid-cols-2">{rows.map(([label, value]) => <div key={label}><dt className="text-sm text-text-muted">{label}</dt><dd className="whitespace-pre-wrap break-words">{value}</dd></div>)}
       <div className="sm:col-span-2"><dt className="text-sm text-text-muted">Phản hồi của hợp tác xã{baseline.response ? ` lúc ${formatDateTime(baseline.response.respondedAt)}` : ""}</dt><dd className="whitespace-pre-wrap break-words"><strong>{summary.headline}</strong>{summary.note && <span className="block">{summary.note}</span>}</dd></div>
-      {baseline.cancelledAt && <div><dt className="text-sm text-text-muted">Hủy lúc</dt><dd>{formatDateTime(baseline.cancelledAt)}</dd></div>}</dl>
+      {baseline.cancelledAt && <div><dt className="text-sm text-text-muted">Hủy lúc</dt><dd>{formatDateTime(baseline.cancelledAt)}</dd></div>}
+      {baseline.salesOrderCode && <div><dt className="text-sm text-text-muted">Đơn đặt hàng</dt><dd><Link className="font-medium text-primary underline" href={`/sales/orders?code=${encodeURIComponent(baseline.salesOrderCode)}`}>{baseline.salesOrderCode}</Link></dd></div>}</dl>
     <PurchaseRequestSendings sendings={baseline.sendings} />
     <ErrorNotice error={error || editor.mutation.error} />
     {canRespond && <form className="mt-5" onSubmit={(e) => { e.preventDefault(); void save(); }}><fieldset disabled={editor.disabled} className="space-y-4">
@@ -50,6 +52,9 @@ export function PurchaseRequestReviewDetails({ record, kgPerCage, onClose, onSav
     {!owner && canRespondToRequest(baseline) && <p className="mt-4 text-sm text-text-muted">Chỉ Chủ hợp tác xã được trả lời yêu cầu mua; bạn có quyền xem.</p>}
     {editor.mutation.blocked && <><p className="mt-4">Bản nháp đang được giữ. Tải dữ liệu mới để đối chiếu; không tự gửi lại.</p><Button variant="secondary" disabled={editor.pending} onClick={async () => { const found = await editor.mutation.run(() => requests.read("detail", { id: record.id }, c.purchaseRequestSchema), true); if (found) setLatest(found); }}>Tải yêu cầu mới để đối chiếu</Button></>}
     {latest && <section className="mt-4 rounded-control border border-border p-4"><h3 className="font-semibold">Yêu cầu hiện tại</h3><p>{latest.status} · {quantityWithCages(latest.requestedKg, kgPerCage)} · {formatDate(latest.pickupDate)}</p>{!editor.mutation.uncertain && <Button variant="secondary" onClick={() => { setBaseline(latest); editor.mutation.reviewed(); setLatest(undefined); }}>Đã đối chiếu, giữ nháp để sửa tiếp</Button>}</section>}
-    <Button className="mt-4" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Đóng</Button>
+    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+      {owner && canOrderRequest(baseline) && <Link href={`/sales/orders/new?request=${baseline.id}`} className="inline-flex min-h-11 items-center justify-center rounded-control border border-primary bg-primary px-3 py-2 text-[13px] font-medium text-white hover:border-primary-hover hover:bg-primary-hover lg:min-h-0 lg:py-1">Đặt hàng</Link>}
+      <Button className="w-auto" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Đóng</Button>
+    </div>
   </Dialog>;
 }

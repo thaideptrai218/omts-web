@@ -15,7 +15,7 @@ export const STATUS_ORDER: readonly RequestStatusKey[] = ["awaiting", "accepted"
 
 /** "Fulfilled" là cờ tính từ hóa đơn; StatusId vẫn là Accepted (3202). Trạng thái lạ rơi về "Chờ phản hồi" thay vì ẩn đơn. */
 export function statusKey(request: Pick<TraderRequest, "statusId" | "fulfilled">): RequestStatusKey {
-  if (request.fulfilled) return "fulfilled";
+  if (request.fulfilled || request.statusId === REQUEST_STATUS_IDS.ordered) return "fulfilled";
   if (request.statusId === REQUEST_STATUS_IDS.accepted) return "accepted";
   if (request.statusId === REQUEST_STATUS_IDS.declined) return "declined";
   if (request.statusId === REQUEST_STATUS_IDS.cancelled) return "cancelled";

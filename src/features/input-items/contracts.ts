@@ -98,4 +98,6 @@ export const fieldNames: Record<string, string> = {
   Ids: "Thứ tự", Parent: "Nhóm cha",
   "Unit price": "Giá bán", Category: "Nhóm sản phẩm", "Min kg": "Định mức tối thiểu", "Max kg": "Định mức tối đa", Factor: "Quy đổi", "Disposed at": "Thời gian",
   "Product lines": "Sản phẩm thu hoạch",
+  Advance: "Khách thanh toán", "Advance amount": "Số tiền khách thanh toán", "Advance method": "Phương thức thanh toán", "Cash account": "Tài khoản nhận", "Bank reference": "Mã giao dịch ngân hàng",
+  "Purchase request": "Yêu cầu mua", "Received by": "Người nhận đặt", Customer: "Khách hàng", Source: "Nguồn đặt", "Pickup at": "Hẹn lấy hàng", "Ordered at": "Thời gian", Discount: "Giảm giá",
 };

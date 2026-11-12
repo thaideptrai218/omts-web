@@ -31,6 +31,25 @@ describe("operations BFF authorization and evidence boundary", () => {
     expect(keys.filter((key) => key.startsWith("productLines"))).toHaveLength(5);
     expect(sent.get("cageCount")).toBe("5");
   });
+  it("sends the plan line of a lot recorded from a harvest plan as a form field and refuses a malformed one or one on a correction", async () => {
+    configure(); const raft = ids.receipt, zone = ids.item, line = ids.supplier ?? ids.receipt;
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ lot: { id: ids.receipt, lotCode: "L1" } }, { status: 201 }));
+    const record = (payload: object, action = "harvest-record", id = raft) => {
+      const form = new FormData(); form.set("payload", JSON.stringify(payload));
+      return new Request(`http://localhost:3002/api/operations/harvest?action=${action}&id=${id}&zoneId=${zone}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form });
+    };
+    const lot = { laneNumbers: [1, 2], finishedLaneNumbers: [], cageCount: 5, estimatedKg: null, productLines: [{ productId: ids.item, cageCount: 5, kg: null }] };
+    expect((await handleOperationRequest(record({ ...lot, harvestPlanLineId: line }), "harvest")).status).toBe(200);
+    const sent = fetcher.mock.calls[0][1]!.body as FormData;
+    expect(sent.get("harvestPlanLineId")).toBe(line);
+    expect(sent.getAll("laneNumbers")).toEqual(["1", "2"]);
+    expect((await handleOperationRequest(record({ ...lot, harvestPlanLineId: "not-a-guid" }), "harvest")).status).toBe(400);
+    expect((await handleOperationRequest(record({ ...lot, keepPhotoKeys: [], reason: "x", rowVersion: "v", harvestPlanLineId: line }, "harvest-correct"), "harvest")).status).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    // A normal lot carries no plan field.
+    expect((await handleOperationRequest(record(lot), "harvest")).status).toBe(200);
+    expect([...(fetcher.mock.calls[1][1]!.body as FormData).keys()]).not.toContain("harvestPlanLineId");
+  });
   it("requires CSRF on the newly approved sales writes before calling upstream", async () => {
     configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch");
     const request = new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "https://evil.test", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "submit", body: { productId: ids.item, requestedKg: 2, pickupDate: "2026-10-31", note: null } }) });

@@ -51,7 +51,7 @@ const workspaceGroups = [
   { label: INPUT_GROUP, resources: [], operations: [] },
   { label: "Mua hàng", resources: ["suppliers"], operations: ["supplier-payments"] },
   { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "my-work"] },
-  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoices", "sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests"] },
+  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests"] },
   { label: "Báo cáo", resources: [], operations: ["sales-report", "price-trend-report", "after-sales-report"] },
 ];
 
@@ -95,8 +95,11 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   ];
   const productLinks: [string, string, InterfaceIconName][] = [
     ...(context.identity.subjectType !== "Trader" && canReadProducts(context.identity, context.permissions.functionPermissions) ? [["/sales/products", "Sản phẩm", "product"] as [string, string, InterfaceIconName]] : []),
+    ...(holds("SALES_ORDERS", "View") ? [["/sales/orders", "Đặt hàng", "request"] as [string, string, InterfaceIconName]] : []),
     ...(holds("PRODUCT_DISPOSALS", "View") ? [["/sales/disposals", "Xuất hủy hàu", "trash"] as [string, string, InterfaceIconName]] : []),
   ];
+  /** Kế hoạch thu hoạch sits in Nuôi trồng right after Thu hoạch. */
+  const harvestPlanLink: [string, string, InterfaceIconName] | undefined = holds("HARVEST_PLANS", "View") ? ["/farming/harvest-plans", "Kế hoạch thu hoạch", "calendar"] : undefined;
   const settingsSections: SettingsSection[] = [
     { label: "Quản lý", items: [...cashItems, ...inputSettings, ...productSettings, ...customerSettings] },
     { label: "Phân quyền", items: (["accounts", "roles"] as const).filter((key) => visible.includes(key)).map((key) => ({ href: `/workspace/${key}`, label: resources[key].title, icon: resourceIcons[key], description: settingsDescriptions[key] })) },
@@ -122,11 +125,14 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
         const purchasing = operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions);
         const inputs = group.label === INPUT_GROUP ? inputLinks : [];
         const sales: [string, string, InterfaceIconName][] = group.label === "Kinh doanh" ? productLinks : [];
-        return rows.length || modules.length || inputs.length || sales.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
+        const plans = group.label === "Nuôi trồng" && harvestPlanLink && !modules.some((entry) => entry.key === "harvest") ? [harvestPlanLink] : [];
+        return rows.length || modules.length || inputs.length || sales.length || plans.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
           {inputs.map(([href, label, icon]) => link(href, label, icon))}
           {sales.map(([href, label, icon]) => link(href, label, icon))}
-          {modules.map((entry) => link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]))}
+          {modules.flatMap((entry) => [link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]),
+            ...(entry.key === "harvest" && harvestPlanLink && group.label === "Nuôi trồng" ? [link(...harvestPlanLink)] : [])])}
+          {plans.map(([href, label, icon]) => link(href, label, icon))}
           {group.label === "Mua hàng" && purchasing && <>{link("/operations/purchase-receipts", "Nhập hàng", "receipt")}{link("/operations/purchase-returns", "Trả hàng nhập", "upload")}</>}
         </div></NavigationGroup> : null;
       })}

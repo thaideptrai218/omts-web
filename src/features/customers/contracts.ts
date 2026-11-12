@@ -67,7 +67,7 @@ export const invoiceRow = z.object({
 }).loose();
 export const invoicePage = z.object({ page: z.object({ items: z.array(invoiceRow), page: count, pageSize: count, total: count }), completedTotal: money.nullish() }).loose();
 export const requestRow = z.object({
-  id, productName: text, requestedKg: money, pickupDate: text, note: opt, sentAt: text, statusId: count, status: text, fulfilled: z.boolean().nullish(),
+  id, productName: text, requestedKg: money, pickupDate: text, note: opt, sentAt: text, statusId: count, status: text, fulfilled: z.boolean().nullish(), salesOrderCode: opt,
 }).loose();
 export const requestPage = z.object({ items: z.array(requestRow), page: count, pageSize: count, total: count });
 
@@ -76,11 +76,13 @@ const debtCustomer = z.object({ id, name: text, phoneNumber: opt, code: opt });
 export const entryKinds = ["Invoice", "PriceCut", "Return", "Payment", "Discount", "PaidBack", "Adjustment"] as const;
 export const debtEntry = z.object({
   date: text, kind: z.enum(entryKinds), id, code: text, amount: money, debtChange: money, invoiceCode: opt, method: opt, awaitingConfirmation: z.boolean(), cancelled: z.boolean(),
-  pending: z.boolean().nullish(), debtAfter: money, cancelledAt: opt, recordedBy: person.nullish(), confirmedBy: person.nullish(), collectedBy: person.nullish(), note: opt, cancelReason: opt, at: opt,
+  pending: z.boolean().nullish(), salesOrderCode: opt, reservedForOrder: z.boolean().nullish(), debtAfter: money, cancelledAt: opt, recordedBy: person.nullish(), confirmedBy: person.nullish(), collectedBy: person.nullish(), note: opt, cancelReason: opt, at: opt,
 });
 export const debtTab = z.object({
   customer: debtCustomer, debt: money, debtAgeDays: count.nullish(), unpaidInvoices: z.array(unpaidInvoice),
   entries: z.object({ items: z.array(debtEntry), page: count, pageSize: count, total: count }), openingDebt: money, awaitingConfirmationCount: count, pendingTransferCount: count,
+  /** Advances held for an open order: they lower the debt but pay only that order's invoices. */
+  reservedAdvances: z.array(z.object({ salesOrderId: id, salesOrderCode: text, amount: money })).nullish(),
 });
 
 export const bankAccount = z.object({ id, bankBin: opt, providerName: text, accountNumber: text, holderName: text, isDefault: z.boolean().nullish() });

@@ -18,6 +18,14 @@ it("formats overdue and expiring/expired licence messages from atomic parameters
   expect(notificationText("MSG-FARM-01", p, fallback)?.body).toContain("còn 0 ngày");
   expect(notificationText("MSG-FARM-02", p, fallback)?.body).toContain("đã hết hạn");
 });
+it("formats the harvest plan notices from their parameters", () => {
+  const assigned = notificationText("MSG-PLAN-05", { plan_code: "KHT000001", zone_code: "Z1", planned_at: "2026-11-14T06:00:00+07:00", line_count: 3 }, fallback);
+  expect(assigned?.title).toBe("Kế hoạch thu hoạch được giao");
+  expect(assigned?.body).toContain("KHT000001"); expect(assigned?.body).toContain("vùng Z1"); expect(assigned?.body).toContain("14/11"); expect(assigned?.body).toContain("3 bè");
+  const skipped = notificationText("MSG-PLAN-06", { plan_code: "KHT000001", raft_code: "B1", lane_numbers: [2, 3], reason: "Hàu chưa đủ cỡ" }, fallback);
+  expect(skipped?.body).toBe("Kế hoạch KHT000001, bè B1: luống 2, 3 không thu. Lý do: Hàu chưa đủ cỡ.");
+  expect(notificationText("MSG-PLAN-06", { plan_code: "K", raft_code: "B1", lane_numbers: [], reason: "x" }, fallback)).toBeUndefined();
+});
 it("rejects malformed structured values instead of rendering a server phrase", () => {
   expect(notificationText("MSG-WATER-03", { values_outside: "arbitrary English phrase" }, fallback)).toBeUndefined();
   expect(notificationText("MSG-FARM-01", { expiry_date: "yesterday", days: -1 }, fallback)).toBeUndefined();
