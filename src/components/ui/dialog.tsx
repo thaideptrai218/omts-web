@@ -140,16 +140,15 @@ export function Dialog({
             )}
           </div>
 
-          {(dismissible || onCloseRequest) && (
-            <button
-              aria-label="Đóng hộp thoại"
-              className="grid size-11 shrink-0 place-items-center rounded-control text-xl text-text-muted transition hover:bg-surface-subtle hover:text-text"
-              onClick={() => onCloseRequest ? onCloseRequest() : onOpenChange(false)}
-              type="button"
-            >
-              <span aria-hidden="true">×</span>
-            </button>
-          )}
+          {/* Every dialog has a close button: a dialog that is not dismissible by backdrop/Escape still asks its own handler (which may confirm unsaved changes). */}
+          <button
+            aria-label="Đóng hộp thoại"
+            className="grid size-9 shrink-0 place-items-center rounded-control text-2xl leading-none text-text-muted transition hover:bg-surface-subtle hover:text-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+            onClick={() => onCloseRequest ? onCloseRequest() : onOpenChange(false)}
+            type="button"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
         <div className="mt-5">{children}</div>

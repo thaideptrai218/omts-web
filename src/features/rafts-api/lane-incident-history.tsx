@@ -10,7 +10,7 @@ export function LaneIncidentHistory({ incidents }: { incidents: LaneIncident[] }
     <button key="toggle-history" type="button" className="text-xs font-semibold underline" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? "Ẩn lịch sử" : "Lịch sử"}</button>
     {open && <div className="mt-2"><HistoryEntries entries={[...incidents].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).map(incident => ({
       at: incident.occurredAt, action: incident.kind, byName: incident.recordedByName, reason: incident.reason,
-      note: [incident.reasonCode ? reasonLabels[incident.reasonCode] : undefined, incident.hadSeed ? "Đã ghi mất giống, không số lượng" : undefined].filter(Boolean).join(" · ") || undefined,
+      note: [incident.reasonCode ? reasonLabels[incident.reasonCode] : undefined, incident.kind === "OutOfService" && incident.hadSeed ? "Đã ghi mất giống, không số lượng" : undefined].filter(Boolean).join(" · ") || undefined,
       changes: (incident.materials ?? []).map(material => ({ field: material.itemId, label: `Vật tư ${material.itemCode ?? material.itemName ?? ""} (${material.unit})${material.issueCode ? ` · phiếu ${material.issueCode}` : ""}`, from: null, to: material.quantity })),
     }))} />{incidents.filter(incident => incident.photos?.some(photo => photo.url)).map(incident => <div key={incident.id} className="mt-2 flex flex-wrap gap-3 text-xs">{incident.photos?.map((photo, index) => photo.url && /^\/api\/operations\/raft-details\?/.test(photo.url) ? <a key={photo.id ?? index} href={photo.url} target="_blank" rel="noreferrer" className="text-primary underline">Ảnh sự cố {index + 1}</a> : null)}</div>)}</div>}
   </section>;

@@ -65,9 +65,10 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
               <span>
                 {data.seedingCompletedOn
                   ? `Hoàn tất thả giống ngày ${formatVietnameseDate(data.seedingCompletedOn)}`
-                  : "Chưa đánh dấu hoàn tất thả giống"}
+                  : data.seededCount > 0 ? "Chưa đánh dấu hoàn tất thả giống" : "Chưa thả giống. Ghi nhận thả giống trước, sau đó mới đánh dấu hoàn tất."}
               </span>
-              {data.canMarkComplete && allowed("Create") && (
+              {/* Completing is offered only once at least one lane holds seed. */}
+              {data.canMarkComplete && data.seededCount > 0 && allowed("Create") && (
                 <Button type="button" variant="secondary" onClick={() => setCompleting(true)}>
                   Đánh dấu hoàn tất
                 </Button>

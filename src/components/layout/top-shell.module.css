@@ -7,3 +7,13 @@
 .settingsFooter{margin-top:6px;padding:10px 4px 2px;border-top:1px solid #dce3ed}
 .accountMenu .settingsAll{display:block;width:100%;padding:9px 12px;border:1px solid var(--omts-brand, #305eb1);border-radius:6px;background:#fff;color:var(--omts-brand, #305eb1);text-align:center;font-size:13px;font-weight:600}
 .accountMenu .settingsAll:hover{background:#edf3fc;color:var(--omts-brand-hover, #2858a5)}
+
+/* Farming journey (FarmingWorkflowNav): numbered steps joined by arrows; the current step is filled. */
+.journeyList{display:flex;align-items:center;gap:4px;margin:0;padding:6px 0;list-style:none;overflow:auto;max-width:100%}
+.journeyItem{display:flex;align-items:center;gap:4px;flex:none}
+.journeyArrow{color:#94a3b8;font-size:14px}
+.contextNav a.journeyLink{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid transparent;border-radius:8px;font-size:13px;color:#475a73}
+.contextNav a.journeyLink:hover{background:#f1f5fb;color:var(--omts-brand, #305eb1)}
+.journeyNumber{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:#e5ebf4;color:#475a73;font-size:11px;font-weight:700}
+.contextNav a.journeyLink[aria-current="page"]{background:var(--omts-brand, #305eb1);border-color:var(--omts-brand, #305eb1);color:#fff;font-weight:650}
+.contextNav a.journeyLink[aria-current="page"] .journeyNumber{background:#fff;color:var(--omts-brand, #305eb1)}
