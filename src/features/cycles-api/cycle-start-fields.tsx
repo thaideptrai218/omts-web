@@ -23,13 +23,14 @@ export function NurseryBatchSelect({ batches, loading, error, onReload, value, o
 }
 
 /** Step 1 of the start form: raft and zone (read only), the nursed batch, the planned yield, the start date, a note and 1-3 plan photos. */
-export function CycleStartFields({ raftCode, zoneLabel, values, errors, onValue, batchSelect, photos, onPhotos, onPhotoBusy }: {
+export function CycleStartFields({ raftCode, zoneLabel, values, errors, onValue, batchSelect, productSelect, photos, onPhotos, onPhotoBusy }: {
   raftCode: string; zoneLabel: string; values: CycleStartValues; errors: CycleStartErrors; onValue(key: keyof CycleStartValues, value: string): void;
-  batchSelect: ReactNode; photos: File[]; onPhotos(files: File[]): void; onPhotoBusy(busy: boolean): void;
+  batchSelect: ReactNode; productSelect: ReactNode; photos: File[]; onPhotos(files: File[]): void; onPhotoBusy(busy: boolean): void;
 }) {
   return <>
     <div className="grid gap-3 sm:grid-cols-2"><Field label="Bè nuôi" value={raftCode} readOnly /><Field label="Vùng nuôi" value={zoneLabel} readOnly /></div>
     {batchSelect}
+    {productSelect}
     <div className="grid gap-3 sm:grid-cols-2">
       <div><UnitField label="Sản lượng dự kiến (kg) *" unit="kg" decimals={2} min={0.01} required value={values.targetYieldKg} onChange={value => onValue("targetYieldKg", value)}
         hint="Tổng sản lượng giống này dự kiến thu về" error={errors.targetYieldKg} /></div>

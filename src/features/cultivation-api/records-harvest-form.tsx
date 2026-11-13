@@ -16,6 +16,8 @@ import { HarvestEstimateHint, harvestEstimate } from "./harvest-estimate-hint";
 import { HarvestPlanSummary } from "./harvest-plan-summary";
 import { harvestWarningTexts } from "./harvest-warning-text";
 import { HarvestCrewPicker } from "./harvest-crew-picker";
+import { HarvestCycleProductBanner } from "./harvest-cycle-product-banner";
+import { harvestOrderError, splitHarvestRead } from "./harvest-order-filter";
 import { HarvestOrderPicker, defaultHarvestOrderId } from "./harvest-order-picker";
 import { laneSummary } from "./harvest-lane-ranges";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
@@ -44,7 +46,9 @@ export function harvestInvalidFieldText(error: z.ZodError): string {
 export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClose, onSaved }: { zoneId: string; raftId: string; data: z.infer<typeof c.harvestList>; canConfigure?: boolean; onClose(): void; onSaved(): void }) {
   const [lanes, setLanes] = useState<number[]>([]), [finished, setFinished] = useState<number[]>([]);
   const [cages, setCages] = useState(""), [kg, setKg] = useState("");
-  const [orderId, setOrderId] = useState(() => defaultHarvestOrderId(data.orders));
+  // Only requests for the oyster the raft farms can be harvested for; the others are kept apart with the reason.
+  const orderView = splitHarvestRead(data);
+  const [orderId, setOrderId] = useState(() => defaultHarvestOrderId(orderView.selectable));
   const [error, setError] = useState<string>(), [photos, setPhotos] = useState<File[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false), [photoError, setPhotoError] = useState<string>();
   const [percents, setPercents] = useState<Record<string, string>>({}), [percentError, setPercentError] = useState<string>();
@@ -79,11 +83,12 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
     if (saved) done(saved);
   }
   return <EditorFrame size="xl" title="Ghi nhận chuyến thu hoạch" editor={editor} error={error}>
+    <HarvestCycleProductBanner productName={orderView.productName} nurseryCode={data.cycle?.nurseryCode} />
     <HarvestPlanSummary data={data} extraKg={estimate.effective} />
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset disabled={editor.disabled || laneDirty} className={flowStyles.harvestFormGrid}>
         <CollapsibleSection title="Yêu cầu mua" description="Chuyến thu này phục vụ yêu cầu mua nào." columns={1}>
-          <HarvestOrderPicker orders={data.orders} value={orderId} onChange={setOrderId} />
+          <HarvestOrderPicker view={orderView} value={orderId} onChange={setOrderId} error={harvestOrderError(editor.mutation.failure?.problem)} />
         </CollapsibleSection>
         <CollapsibleSection title="Làn thu hoạch" description="Các làn trong chuyến thu." columns={1}>
           <HarvestLaneChoices lanes={data.lanes} values={lanes} label="Làn thu hoạch *" onChange={next => { setLanes(next); setFinished(current => current.filter(n => next.includes(n))); }}
@@ -107,7 +112,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
       </fieldset>
       <div className={flowStyles.harvestFormFooter}>
         <Button key="discard-harvest" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
-        <Button key="save-harvest" type="submit" disabled={editor.disabled || laneDirty || !data.orders.length}>Lưu</Button>
+        <Button key="save-harvest" type="submit" disabled={editor.disabled || laneDirty || !orderView.selectable.length}>Lưu</Button>
       </div>
     </form>
   </EditorFrame>;

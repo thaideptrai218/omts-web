@@ -20,8 +20,8 @@ describe("cycle rows", () => {
 });
 
 describe("cycle plan draft", () => {
-  const draft = { startDate: "2026-09-01", targetYieldKg: "", note: "", nurseryBatchId: "" };
-  const cycle = { rowVersion: "v3", nurseryBatchId: "n-1" };
+  const draft = { startDate: "2026-09-01", targetYieldKg: "", note: "", nurseryBatchId: "", productId: "" };
+  const cycle = { rowVersion: "v3", nurseryBatchId: "n-1", productId: "p-1" };
   it("needs a start date that is not in the future and a positive yield (required once the cycle has a nursery batch)", () => {
     expect(validatePlan(draft, "2026-11-11")).toEqual({});
     expect(validatePlan({ ...draft, startDate: "" }, "2026-11-11").startDate).toBeTruthy();
@@ -38,6 +38,11 @@ describe("cycle plan draft", () => {
     expect(planBody({ ...draft, nurseryBatchId: "n-2" }, cycle, false)).toMatchObject({ nurseryBatchId: "n-2" });
     expect(planBody({ ...draft, nurseryBatchId: "n-2" }, cycle, true)).not.toHaveProperty("nurseryBatchId");
     expect(planBody({ ...draft, nurseryBatchId: "" }, cycle, false)).not.toHaveProperty("nurseryBatchId");
+  });
+  it("sends the farmed product only when it changed and the cycle is not locked by a seeding", () => {
+    expect(planBody({ ...draft, productId: "p-2" }, cycle, false)).toMatchObject({ productId: "p-2" });
+    expect(planBody({ ...draft, productId: "p-2" }, cycle, true)).not.toHaveProperty("productId");
+    expect(planBody({ ...draft, productId: "p-1" }, cycle, false)).not.toHaveProperty("productId");
   });
 });
 

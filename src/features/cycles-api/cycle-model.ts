@@ -34,9 +34,9 @@ export function isNurseryBatchLocked(cycle: Pick<CycleView, "nurserySeeded" | "s
 export const seedLockedFailure = (failure: { code?: string; problem?: { code?: string; reasonCode?: string } } | undefined) =>
   !!failure && [failure.code, failure.problem?.code, failure.problem?.reasonCode].some(code => code?.includes("CYCLE_SEED_LOCKED"));
 
-export type PlanDraft = Record<"startDate" | "targetYieldKg" | "note" | "nurseryBatchId", string>;
+export type PlanDraft = Record<"startDate" | "targetYieldKg" | "note" | "nurseryBatchId" | "productId", string>;
 export type PlanField = keyof PlanDraft;
-export const planDraftOf = (cycle: CycleView): PlanDraft => ({ startDate: cycle.startDate, targetYieldKg: cycle.targetYieldKg === null ? "" : String(cycle.targetYieldKg), note: cycle.note ?? "", nurseryBatchId: cycle.nurseryBatchId ?? "" });
+export const planDraftOf = (cycle: CycleView): PlanDraft => ({ startDate: cycle.startDate, targetYieldKg: cycle.targetYieldKg === null ? "" : String(cycle.targetYieldKg), note: cycle.note ?? "", nurseryBatchId: cycle.nurseryBatchId ?? "", productId: cycle.productId ?? "" });
 /** Planned total yield (kg): above 0; blank only where the cycle has none yet (an old cycle without a nursery batch). */
 export function validateTargetYield(text: string, required: boolean): string | undefined {
   if (text.trim() === "") return required ? "Nhập sản lượng dự kiến lớn hơn 0." : undefined;
@@ -52,9 +52,13 @@ export function validatePlan(draft: PlanDraft, today: string): Partial<Record<Pl
   if (yieldError) errors.targetYieldKg = yieldError;
   return errors;
 }
-/** Body of the edit: `nurseryBatchId` is sent only when it really changed and the cycle is not locked by a seeding; an empty note ("") clears it, a null yield keeps the old one. */
-export function planBody(draft: PlanDraft, cycle: Pick<CycleView, "rowVersion" | "nurseryBatchId">, batchLocked: boolean) {
+/**
+ * Body of the edit: `nurseryBatchId` and `productId` (the farmed product) are sent only when they really changed and the cycle is not locked by a seeding;
+ * an empty note ("") clears it, a null yield keeps the old one.
+ */
+export function planBody(draft: PlanDraft, cycle: Pick<CycleView, "rowVersion" | "nurseryBatchId" | "productId">, batchLocked: boolean) {
   const number = (value: string) => value === "" ? null : Number(value.replace(",", "."));
   const changedBatch = !batchLocked && !!draft.nurseryBatchId && draft.nurseryBatchId !== (cycle.nurseryBatchId ?? "");
-  return { startDate: draft.startDate || null, targetYieldKg: number(draft.targetYieldKg), note: draft.note.trim(), ...(changedBatch ? { nurseryBatchId: draft.nurseryBatchId } : {}), rowVersion: cycle.rowVersion };
+  const changedProduct = !batchLocked && !!draft.productId && draft.productId !== (cycle.productId ?? "");
+  return { startDate: draft.startDate || null, targetYieldKg: number(draft.targetYieldKg), note: draft.note.trim(), ...(changedBatch ? { nurseryBatchId: draft.nurseryBatchId } : {}), ...(changedProduct ? { productId: draft.productId } : {}), rowVersion: cycle.rowVersion };
 }

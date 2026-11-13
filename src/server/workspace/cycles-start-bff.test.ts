@@ -24,7 +24,7 @@ function startRequest(fields: Record<string, string>, photos = [jpeg()]) {
   photos.forEach(photo => form.append("photos", photo, photo.name));
   return new Request("http://localhost:3002/api/cultivation-cycles", { method: "POST", body: form, headers });
 }
-const startFields = { nurseryBatchId: batch, startDate: "2026-11-13", targetYieldKg: "2000" };
+const startFields = { nurseryBatchId: batch, productId: "529ec3ce-af8f-42f7-a08f-4bab36ba7e66", startDate: "2026-11-13", targetYieldKg: "2000" };
 
 describe("available nursery batches for the start form", () => {
   it("relays GET /api/nursery-batches/available?zoneId with the View permission of the cycles function", async () => {
@@ -44,6 +44,17 @@ describe("available nursery batches for the start form", () => {
   });
 });
 
+describe("products of the start form", () => {
+  it("relays GET /api/products with the View permission of the cycles function and takes no parameter", async () => {
+    configure("Staff", [{ functionCode: "CULTIVATION_CYCLES", action: "View" }]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([{ id: "p1", name: "Hàu múp", statusId: 101, status: "InUse", unitPrice: 1, rowVersion: "x" }]));
+    const response = await handleCycles(new Request("http://localhost:3002/api/cultivation-cycles?action=products"));
+    expect(response.status).toBe(200); expect(fetcher.mock.calls[0][0].toString()).toBe("http://127.0.0.1:8080/api/products");
+    expect((await response.json()).data[0]).toMatchObject({ id: "p1", name: "Hàu múp", statusId: 101 });
+    expect((await handleCycles(new Request(`http://localhost:3002/api/cultivation-cycles?action=products&zoneId=${zone}`))).status).toBe(400);
+  });
+});
+
 describe("manual start of a cycle (POST /api/cultivation-cycles)", () => {
   it("sends raftId, the nursed batch, the yield, the date and the photos as multipart for a Create permission", async () => {
     configure("Staff", [{ functionCode: "CULTIVATION_CYCLES", action: "Create" }]);
@@ -52,7 +63,7 @@ describe("manual start of a cycle (POST /api/cultivation-cycles)", () => {
     expect(response.status).toBe(200);
     expect(fetcher.mock.calls[0][0].toString()).toBe("http://127.0.0.1:8080/api/cultivation-cycles"); expect(fetcher.mock.calls[0][1]?.method).toBe("POST");
     const sent = fetcher.mock.calls[0][1]?.body as FormData;
-    expect(Object.fromEntries([...sent.entries()].filter(([key]) => key !== "photos"))).toEqual({ raftId: raft, nurseryBatchId: batch, startDate: "2026-11-13", targetYieldKg: "2000", note: "Lứa mới" });
+    expect(Object.fromEntries([...sent.entries()].filter(([key]) => key !== "photos"))).toEqual({ raftId: raft, nurseryBatchId: batch, startDate: "2026-11-13", targetYieldKg: "2000", note: "Lứa mới", productId: "529ec3ce-af8f-42f7-a08f-4bab36ba7e66" });
     expect(sent.getAll("photos")).toHaveLength(1);
     expect((await response.json()).data.cycle).toMatchObject({ id: cycle, nurseryCode: "NU000002", nurseryRemaining: 9500 });
   });

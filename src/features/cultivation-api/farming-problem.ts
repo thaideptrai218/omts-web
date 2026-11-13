@@ -18,6 +18,7 @@ export const farmingProblem = z.object({
   field: z.string().max(60).optional().catch(undefined),
   fields: z.array(z.string().max(60)).max(20).optional().catch(undefined),
   message: z.string().max(400).optional().catch(undefined),
+  detail: z.string().max(400).optional().catch(undefined),
   confirmFlag: z.enum(["confirmOverPlan", "confirmEmpty", "ownerApproved"]).optional().catch(undefined),
   laneNumbers: z.array(z.number().int().positive()).max(200).optional().catch(undefined),
   lanes: z.array(finishHarvestLaneProblem).max(200).optional().catch(undefined),
