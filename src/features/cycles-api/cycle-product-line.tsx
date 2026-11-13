@@ -1,5 +1,7 @@
-/** "Đang nuôi: Hàu múp · đợt ươm NU000007": the loại hàu a cycle farms (derived from its seed) and the nursery batch it came from; nothing for a cycle without one. */
-export function CycleProductLine({ productName, nurseryCode }: { productName?: string | null; nurseryCode?: string | null }) {
-  if (!productName) return null;
-  return <p className="mb-3 text-sm"><span className="text-text-muted">Đang nuôi:</span> <strong>{productName}</strong>{nurseryCode ? <span className="text-text-muted"> · đợt ươm {nurseryCode}</span> : null}</p>;
+import { farmedSeedParts, type FarmedSeedSource } from "./cycle-farmed-seed";
+
+/** "Đang nuôi: Hàu giống bản địa Vân Đồn 3 cm · lô PN000013-1 · đợt ươm NU000007": the seed a cycle farms, never the sold product. */
+export function CycleProductLine({ cycle }: { cycle: FarmedSeedSource }) {
+  const { name, details } = farmedSeedParts(cycle);
+  return <p className="mb-3 text-sm"><span className="text-text-muted">Đang nuôi:</span> <strong>{name}</strong>{details.length ? <span className="text-text-muted"> · {details.join(" · ")}</span> : null}</p>;
 }

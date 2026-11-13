@@ -65,8 +65,8 @@ export function orderTripsText(order: Pick<z.infer<typeof harvestOrder>, "trips"
 }
 
 /** The line under the order picker: the cages are only a suggestion, the rest of the order is harvested on another raft of the same oyster. */
-export function orderGatherHint(order: Order | undefined, productName: string | null | undefined): string | undefined {
+export function orderGatherHint(order: Order | undefined): string | undefined {
   const left = orderRemainingCages(order);
   if (left === undefined) return undefined;
-  return `Đơn còn ${vn(left)} lồng. Nhập số lồng thu được từ bè này; phần còn lại thu ở bè khác cùng loại hàu${productName ? ` (${productName})` : ""}.`;
+  return `Đơn còn ${vn(left)} lồng. Nhập số lồng thu được từ bè này; phần còn lại thu ở bè khác cùng loại hàu.`;
 }

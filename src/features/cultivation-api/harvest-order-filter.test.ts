@@ -6,10 +6,10 @@ const muop = order("PR000001", "Hàu múp", { matchesCycleProduct: true }), gay 
 
 describe("harvest purchase requests by the farmed product", () => {
   it("lists only the orders that match and keeps the others as blocked with the reason", () => {
-    const view = splitHarvestOrders({ productId: "p1", productName: "Hàu múp" }, [gay, muop]);
-    expect(view.filtering).toBe(true); expect(view.productName).toBe("Hàu múp");
+    const view = splitHarvestOrders({ productId: "p1", productName: "Hàu múp", seedItemName: "Hàu giống Vân Đồn 3 cm" }, [gay, muop]);
+    expect(view.filtering).toBe(true); expect(view.productName).toBe("Hàu múp"); expect(view.seedName).toBe("Hàu giống Vân Đồn 3 cm");
     expect(view.selectable.map(item => item.code)).toEqual(["PR000001"]);
-    expect(view.mismatched).toEqual([{ order: gay, reason: "Đơn đặt Hàu gầy 3cm nhưng bè đang nuôi Hàu múp" }]);
+    expect(view.mismatched).toEqual([{ order: gay, reason: "Đơn đặt Hàu gầy 3cm; bè đang nuôi Hàu giống Vân Đồn 3 cm" }]);
   });
   it("has no selectable order when every request is for another product", () => {
     const view = splitHarvestOrders({ productName: "Hàu múp" }, [gay]);
@@ -36,5 +36,9 @@ describe("harvest purchase requests by the farmed product", () => {
     expect(harvestOrderError({ reasonCode: "HARVEST_PRODUCT_MISMATCH" })).toContain("không khớp loại hàu");
     expect(harvestOrderError({ field: "Photos", hint: "Ảnh sai" })).toBeUndefined();
   });
-  it("words the reason even when the farmed product is unknown", () => expect(mismatchReason(gay, null)).toBe("Đơn đặt Hàu gầy 3cm nhưng bè đang nuôi loại hàu khác"));
+  it("words the reason even when the farmed seed is unknown", () => expect(mismatchReason(gay, null)).toBe("Đơn đặt Hàu gầy 3cm; bè đang nuôi giống chưa xác định"));
+  it("names the farmed seed from the seed lot of a cycle that has no seed item name", () => {
+    const view = splitHarvestRead({ cycle: { productName: "Hàu múp", seedLot: { code: "PN1-1", itemName: "Hàu giống A" } }, orders: [gay] });
+    expect(view.seedName).toBe("Hàu giống A"); expect(view.mismatched[0].reason).toBe("Đơn đặt Hàu gầy 3cm; bè đang nuôi Hàu giống A");
+  });
 });

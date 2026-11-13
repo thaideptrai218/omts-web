@@ -7,7 +7,8 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { NurseryReviewTable } from "@/features/nursery-api/nursery-review-table";
 import { ErrorNotice, businessToday, useMutation, useRemote } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import { DerivedProductNote, planProductText } from "./cycle-derived-product";
+import { DerivedProductNote } from "./cycle-derived-product";
+import { farmedSeedText } from "./cycle-farmed-seed";
 import { CycleStartFields, NurseryBatchSelect } from "./cycle-start-fields";
 import { cycleStartFailure, cycleStartForm, emptyCycleStart, validateCycleStart, type CycleStartErrors, type CycleStartValues } from "./cycle-start-model";
 import { nurseryBatchLabel, readAvailableNurseryBatches, wholePieces } from "./nursery-batch-options";
@@ -48,7 +49,7 @@ export function CycleStartDialog({ raftId, raftCode, zoneId, zoneLabel, onClose,
     <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
       <p className="mb-3 text-sm font-medium">Bước {reviewing ? "2/2 · Xem lại và xác nhận" : "1/2 · Thông tin chu kỳ"}</p>
       <fieldset disabled={mutation.pending || mutation.blocked || photoBusy} className="min-w-0 space-y-3">
-        {reviewing ? <NurseryReviewTable rows={[["Bè nuôi", raftCode], ["Đợt ươm", batch ? nurseryBatchLabel(batch) : "—"], ["Loại hàu", batch?.productName ? planProductText(batch) : "Chưa gắn loại hàu cho giống"], ["Sản lượng dự kiến", `${values.targetYieldKg.replace(".", ",")} kg`],
+        {reviewing ? <NurseryReviewTable rows={[["Bè nuôi", raftCode], ["Đợt ươm", batch ? nurseryBatchLabel(batch) : "—"], ["Giống", batch ? farmedSeedText({ seedItemName: batch.seedItemName ?? batch.name }) : "—"], ["Sản lượng dự kiến", `${values.targetYieldKg.replace(".", ",")} kg`],
           ["Ngày bắt đầu", formatVietnameseDate(values.startDate)], ["Ảnh kế hoạch", `${photos.length} ảnh`], ...(values.note.trim() ? [["Ghi chú", values.note.trim()] as const] : [])]} />
           : <CycleStartFields raftCode={raftCode} zoneLabel={zoneLabel} values={values} errors={fieldErrors} onValue={edit} batchSelect={batchSelect} photos={photos}
             onPhotos={files => { setErrors(current => ({ ...current, photos: undefined })); setPhotos(files); }} onPhotoBusy={setPhotoBusy} />}

@@ -11,7 +11,7 @@ import styles from "@/features/farming-management/farming-management.module.css"
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { RecordHistory } from "@/features/history/record-history";
 import { isNurseryBatchLocked, planBody, seedLockedFailure, seedWithoutProductText, planDraftOf, validatePlan, type CycleRow, type PlanDraft, type PlanField } from "./cycle-model";
-import { planProductText } from "./cycle-derived-product";
+import { farmedSeedText } from "./cycle-farmed-seed";
 import { CyclePlanFields } from "./cycle-plan-fields";
 import { CyclePlanPhotos } from "./cycle-plan-photos";
 import { cycleProgress } from "./contracts";
@@ -57,7 +57,7 @@ export function CyclePlanTab({ row, zoneId, access, dirtyRef, onChanged }: { row
       {editing && draft ? <CyclePlanFields cycle={cycle} zoneId={zoneId} draft={draft} errors={errors} batchLocked={batchLocked} onChange={(key, value) => { setErrors(previous => ({ ...previous, [key]: undefined })); setDraft(previous => previous && { ...previous, [key]: value }); }} />
         : <Facts items={[["Ngày bắt đầu", day(cycle.startDate)], ["Tình trạng", cycle.closeDate ? "Đã đóng" : "Đang nuôi"], ["Số ngày nuôi", cycle.daysOfFarming],
           ["Đợt ươm", cycle.nurseryBatchId ? <>{cycleNurseryText(cycle)}{batchLocked && <small className="block text-text-muted">Đã thả giống, không đổi được đợt ươm</small>}</> : "Không qua ươm"],
-          ["Loại hàu", cycle.productName ? planProductText(cycle) : "Chưa xác định loại hàu"],
+          ["Giống", farmedSeedText({ ...cycle, nurseryCode: null })],
           ["Sản lượng dự kiến", cycle.targetYieldKg === null ? "Chưa lập" : `${cycle.targetYieldKg.toLocaleString("vi-VN")} kg`], ["Ghi chú", cycle.note],
           ["Thả giống hoàn tất", day(cycle.seedingCompletedOn)], ["Ngày đóng", day(cycle.closeDate)], ["Đánh giá", cycle.assessment]]} />}
     </fieldset>

@@ -20,7 +20,7 @@ export const defaultHarvestOrderId = (orders: readonly Order[]) => (orders.find(
  */
 export function HarvestOrderPicker({ view, value, onChange, error }: { view: HarvestOrderView; value: string; onChange(id: string): void; error?: string }) {
   const [showOthers, setShowOthers] = useState(false);
-  const { selectable, mismatched, productName } = view;
+  const { selectable, mismatched, seedName } = view;
   const picked = selectable.find(order => order.id === value);
   const others = mismatched.length > 0 && <div className="grid gap-1">
     <button key="toggle-mismatched-orders" type="button" aria-expanded={showOthers} className="w-fit min-h-8 text-xs font-medium text-primary underline underline-offset-4" onClick={() => setShowOthers(current => !current)}>
@@ -32,7 +32,7 @@ export function HarvestOrderPicker({ view, value, onChange, error }: { view: Har
   </div>;
   if (!selectable.length) return <div className="grid gap-2">
     <p role="status" className={notice}>{view.filtering
-      ? `Chưa có đơn mua nào khớp loại hàu đang nuôi${productName ? ` (${productName})` : ""}. Chuyến thu hoạch chỉ gắn được với đơn mua đúng loại hàu của bè.`
+      ? `Chưa có đơn mua nào khớp loại hàu của giống đang nuôi${seedName ? ` (${seedName})` : ""}. Chuyến thu hoạch chỉ gắn được với đơn mua đúng loại hàu của bè.`
       : "Chưa có yêu cầu mua nào đang chờ thu hoạch. Chuyến thu hoạch cần gắn với một yêu cầu mua đã chấp nhận và chưa được đánh dấu thu xong."}</p>
     {others}
   </div>;
@@ -44,7 +44,7 @@ export function HarvestOrderPicker({ view, value, onChange, error }: { view: Har
     </label>
     {error && <p role="alert" className="text-xs text-danger">{error}</p>}
     {picked && <p className="text-xs text-text-muted">{orderProgressText(picked)}{orderTripsText(picked) ? `: ${orderTripsText(picked)}` : ""} · lấy hàng {day(picked.pickupDate)}{picked.workDate ? ` · ngày làm ${day(picked.workDate)}` : ""}</p>}
-    {picked && orderGatherHint(picked, productName) && <p className="text-xs text-text-muted">{orderGatherHint(picked, productName)}</p>}
+    {picked && orderGatherHint(picked) && <p className="text-xs text-text-muted">{orderGatherHint(picked)}</p>}
     {others}
   </div>;
 }

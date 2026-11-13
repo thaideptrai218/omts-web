@@ -1,13 +1,16 @@
 import type { z } from "zod";
+import { farmedSeedName, type FarmedSeedSource } from "@/features/cycles-api/cycle-farmed-seed";
 import { farmingFieldError, type FarmingProblem } from "./farming-problem";
 import type { harvestOrder } from "./records-contracts";
 
 type Order = z.infer<typeof harvestOrder>;
-type CycleProduct = { productId?: string | null; productName?: string | null } | null | undefined;
+type CycleProduct = { productId?: string | null; productName?: string | null } & FarmedSeedSource | null | undefined;
 
 export type HarvestOrderView = {
-  /** Name of the product the raft farms, when known; null for a legacy cycle without a product. */
+  /** Name of the product the raft farms, when known; null for a legacy cycle without a product. Only for matching orders, never shown as "Đang nuôi". */
   productName: string | null;
+  /** Name of the seed the raft farms (what the owner bought and nursed); null when unknown. */
+  seedName: string | null;
   /** True when the product rule applies (the cycle farms a known product); false for a legacy cycle: nothing is filtered and no banner shows. */
   filtering: boolean;
   /** Orders a trip can be recorded for: they match the farmed product. */
@@ -19,7 +22,7 @@ export type HarvestOrderView = {
 /** The harvest read in the words of this module: the farmed product is at screen level (`cycleProductId/Name`), with the cycle summary as a fallback. */
 type HarvestRead = { cycle?: CycleProduct; cycleProductId?: string | null; cycleProductName?: string | null; orders?: readonly Order[] | null };
 export const splitHarvestRead = (data: HarvestRead) =>
-  splitHarvestOrders({ productId: data.cycleProductId ?? data.cycle?.productId, productName: data.cycleProductName ?? data.cycle?.productName }, data.orders ?? []);
+  splitHarvestOrders({ ...data.cycle, productId: data.cycleProductId ?? data.cycle?.productId, productName: data.cycleProductName ?? data.cycle?.productName }, data.orders ?? []);
 
 /** Does the order ask for the farmed product? The backend flag decides; without it (older backend) ids are compared, and with neither the order stays selectable. */
 function matchesProduct(order: Order, cycle: CycleProduct): boolean {
@@ -39,9 +42,9 @@ export function harvestOrderError(problem: FarmingProblem | undefined): string |
   return farmingFieldError(problem, "Purchase request", "PurchaseRequestId");
 }
 
-/** "Đơn đặt Hàu gầy 3cm nhưng bè đang nuôi Hàu múp": why an order cannot be harvested on this raft. */
-export const mismatchReason = (order: Pick<Order, "productName">, farmed: string | null) =>
-  `Đơn đặt ${order.productName} nhưng bè đang nuôi ${farmed ?? "loại hàu khác"}`;
+/** "Đơn đặt Hàu sữa; bè đang nuôi Hàu giống Thái Bình Dương 3 cm": why an order cannot be harvested on this raft. The product is the customer's wording, the raft is named by its seed. */
+export const mismatchReason = (order: Pick<Order, "productName">, farmedSeed: string | null) =>
+  `Đơn đặt ${order.productName}; bè đang nuôi ${farmedSeed ?? "giống chưa xác định"}`;
 
 /**
  * Splits the purchase requests of the harvest screen by the product the cycle farms (owner rule 13/11/2026: the request must match the farmed oyster, a customer
@@ -50,8 +53,9 @@ export const mismatchReason = (order: Pick<Order, "productName">, farmed: string
 export function splitHarvestOrders(cycle: CycleProduct, orders: readonly Order[]): HarvestOrderView {
   const flagged = orders.some(order => order.matchesCycleProduct != null);
   const productName = cycle?.productName ?? orders.find(order => order.matchesCycleProduct === true)?.productName ?? null;
+  const seedName = farmedSeedName(cycle);
   const filtering = !!(cycle?.productId || cycle?.productName || flagged);
-  if (!filtering) return { productName, filtering: false, selectable: [...orders], mismatched: [] };
+  if (!filtering) return { productName, seedName, filtering: false, selectable: [...orders], mismatched: [] };
   const selectable = orders.filter(order => matchesProduct(order, cycle));
-  return { productName, filtering: true, selectable, mismatched: orders.filter(order => !selectable.includes(order)).map(order => ({ order, reason: mismatchReason(order, productName) })) };
+  return { productName, seedName, filtering: true, selectable, mismatched: orders.filter(order => !selectable.includes(order)).map(order => ({ order, reason: mismatchReason(order, seedName) })) };
 }

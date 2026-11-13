@@ -23,7 +23,7 @@ describe("harvest cages follow the purchase request", () => {
     expect(orderProgressText(order(10, 5))).toBe("Đã thu 5/10 lồng · còn 5 lồng");
     expect(orderTripsText(order(10, 5, [{ raftCode: "B1-06", zoneCode: "DEMO-01", cages: 5 }]))).toBe("B1-06 (DEMO-01) 5 lồng");
     expect(orderTripsText(order(10, 0))).toBeUndefined();
-    expect(orderGatherHint(order(10, 5), "Hàu sữa")).toBe("Đơn còn 5 lồng. Nhập số lồng thu được từ bè này; phần còn lại thu ở bè khác cùng loại hàu (Hàu sữa).");
+    expect(orderGatherHint(order(10, 5))).toBe("Đơn còn 5 lồng. Nhập số lồng thu được từ bè này; phần còn lại thu ở bè khác cùng loại hàu.");
   });
   it("shows the backend detail of HARVEST_ORDER_CAGES_EXCEEDED at the cages field", () => {
     expect(harvestCagesError({ reasonCode: "HARVEST_ORDER_CAGES_EXCEEDED", detail: "Đơn mua YC-1 chỉ còn 5 lồng (đã thu 10/15 lồng). Số lồng thu hoạch phải khớp với đơn mua." })).toContain("chỉ còn 5 lồng");

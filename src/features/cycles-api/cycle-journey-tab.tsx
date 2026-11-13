@@ -38,7 +38,7 @@ export function CycleJourneyTab({ part, row, zoneId, access, onJump, onChanged }
   const care = steps.find(step => step.key === "care")!;
   const current = currentStep(allMain);
   const act = (action: JourneyAction) => action.close ? setClosing(true) : action.tab ? onJump(action.tab) : undefined;
-  return <>{overview && <CycleProductLine productName={cycle.productName} nurseryCode={cycle.nurseryCode} />}{overview && <CycleJourneyKpiRow items={buildStripItems({ cycle, lanes: progress.data!.lanes, figures })} />}<ol aria-label={overview ? "Hành trình chu kỳ" : "Tổng kết chu kỳ"} className="grid gap-3">
+  return <>{overview && <CycleProductLine cycle={cycle} />}{overview && <CycleJourneyKpiRow items={buildStripItems({ cycle, lanes: progress.data!.lanes, figures })} />}<ol aria-label={overview ? "Hành trình chu kỳ" : "Tổng kết chu kỳ"} className="grid gap-3">
     {mainSteps.map(step => <StepCard key={step.key} id={`journey-${step.key}-${cycleId}`} step={step} index={allMain.indexOf(step) + 1} current={step.key === current}>
       {step.key === "nursery" && nurseryLink(cycle.nurseryCode, zoneId) && <Link key="view-nursery" className={linkAction} href={nurseryLink(cycle.nurseryCode, zoneId)!}>Xem đợt ươm {cycle.nurseryCode}</Link>}
       {step.action && (step.action.screen

@@ -42,6 +42,8 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
   const fromNursery = !!data?.nurseryBatchId, completed = !!data?.seedingCompletedOn;
   // Nothing left to seed (nursed batch used up, or every seedable lane at 100%): ask for the completion and make its button the primary one.
   const canComplete = !!data?.canMarkComplete && allowed("Create"), completionPrompt = data && canComplete ? seedingCompletionPrompt(data) : null;
+  // Beside "Ghi nhận thả giống": enabled once a record exists (completion does not need every lane at 100%); before that it stays disabled with a reason. Hidden when completed.
+  const hasRecords = !!data?.records.length, showComplete = !!data && !completed && allowed("Create") && (canComplete || !hasRecords);
   const reload = () => { setSelected(undefined); remote.reload(); };
   const form = (record: z.infer<typeof c.seedingRecord> | null) => data && <SeedingForm zoneId={zoneId} raftId={raftId} cycleId={cycleId} cycleStartDate={cycleStartDate} data={data} record={record} allowed={allowed} onClose={() => setSelected(undefined)} onSaved={reload} />;
   const toggle = (id: string) => setExpanded(current => current === id ? undefined : id);
@@ -53,19 +55,16 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
           <h3>Các lần thả giống</h3>
           <p>{data ? `${data.records.length} lần ghi nhận · ${data.seededCount}/${data.laneCount} làn đã thả giống` : "Theo dõi giống trong chu kỳ đang chọn"}</p>
         </div>
+        {/* [Ghi nhận thả giống] [Hoàn tất thả giống] [Tải lại]: completing sits beside recording; when the prompt applies it becomes the primary action. */}
         <div className={flowStyles.actions}>
-          {data?.canRecord && !completed && allowed("Create") && <Button type="button" disabled={remote.loading} onClick={() => setSelected(null)}>Ghi nhận thả giống</Button>}
+          {data?.canRecord && !completed && allowed("Create") && <Button type="button" variant={completionPrompt ? "secondary" : "primary"} disabled={remote.loading} onClick={() => setSelected(null)}>Ghi nhận thả giống</Button>}
+          {showComplete && <Button type="button" variant={completionPrompt ? "primary" : "secondary"} className={completionPrompt ? "ring-2 ring-primary/40 ring-offset-2" : ""}
+            disabled={remote.loading || !hasRecords} title={hasRecords ? undefined : "Cần ít nhất một lần thả giống"} onClick={() => setCompleting(true)}>Hoàn tất thả giống</Button>}
           <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>Tải lại</Button>
         </div>
       </div>
       {remote.loading ? <Skeleton /> : data && <>
         <SeedingSummaryStrip data={data} />
-        {!completed && <div className={flowStyles.completion}>
-          {/* The completion state itself is in the summary strip above. */}
-          <span>{data.records.length ? "" : "Chưa thả giống. Ghi nhận thả giống trước, sau đó mới đánh dấu hoàn tất."}</span>
-          {/* Offered once at least one record exists; completion does not need every lane at 100%. */}
-          {!completed && canComplete && data.records.length > 0 && <Button type="button" variant={completionPrompt ? "primary" : "secondary"} className={completionPrompt ? "ring-2 ring-primary/40 ring-offset-2" : ""} onClick={() => setCompleting(true)}>Đánh dấu hoàn tất thả giống</Button>}
-        </div>}
         {completionPrompt && <p role="status" className="mb-3 rounded-control border border-success/30 bg-success/5 p-3 text-sm font-medium">{completionPrompt}</p>}
         <DataTable responsive headings={fromNursery ? ["Ngày thả", "Số mảnh (ước tính)", "Làn", "Người ghi nhận", "Tổng đã thả"] : ["Ngày thả", "Lô giống / nhà cung cấp", "Làn", "Số lượng", "Người ghi nhận"]} empty={!data.records.length}
           sort={{ state: sort, keys: fromNursery ? nurserySortKeys : legacySortKeys, onSort: next => { setSort(next); setPage(1); } }}>

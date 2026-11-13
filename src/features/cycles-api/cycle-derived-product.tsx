@@ -1,15 +1,14 @@
 import Link from "next/link";
+import { farmedSeedText } from "./cycle-farmed-seed";
 
 /**
- * The "loại hàu" of a cycle is DERIVED from the seed item of the nursed batch (set once in Vật tư & Giống): nobody picks it on a cycle.
- * One wording everywhere: "Loại hàu" (never "sản phẩm bán" or "loại hàu nuôi").
+ * A cycle farms the SEED of its nursed batch (the sold "loại hàu" is derived from that seed item once, in Vật tư & Giống, and only matches orders):
+ * the start and plan screens name the seed ("Giống: Hàu giống … · đợt ươm NU…"), never the sold product.
  */
-export type DerivedProduct = { productName?: string | null; seedItemName?: string | null };
+export type DerivedProduct = { code?: string | null; name?: string | null; productName?: string | null; seedItemName?: string | null };
 
-/** Start form: "Loại hàu: Hàu múp · giống Hàu giống". */
-export const startProductText = ({ productName, seedItemName }: DerivedProduct) => `Loại hàu: ${productName}${seedItemName ? ` · giống ${seedItemName}` : ""}`;
-/** Plan tab: "Hàu múp (theo giống Hàu giống)". */
-export const planProductText = ({ productName, seedItemName }: DerivedProduct) => `${productName}${seedItemName ? ` (theo giống ${seedItemName})` : ""}`;
+/** Start form / plan: "Giống: Hàu giống bản địa Vân Đồn 3 cm · đợt ươm NU000007". */
+export const startProductText = ({ code, name, seedItemName }: DerivedProduct) => `Giống: ${farmedSeedText({ seedItemName: seedItemName ?? name, nurseryCode: code })}`;
 /** The seed item has no loại hàu yet: the user sets it once in Vật tư & Giống. */
 export const noProductText = (seedItemName?: string | null) => `${seedItemName ? `Giống ${seedItemName}` : "Giống của đợt ươm này"} chưa gắn loại hàu bán ra.`;
 
@@ -17,5 +16,5 @@ export const noProductText = (seedItemName?: string | null) => `${seedItemName ?
 export function DerivedProductNote({ batch }: { batch: DerivedProduct | undefined }) {
   if (!batch) return null;
   if (batch.productName) return <p role="status" className="mt-1 text-xs font-medium">{startProductText(batch)}</p>;
-  return <p role="status" className="mt-1 text-xs text-text-muted">{noProductText(batch.seedItemName)} Hãy chọn loại hàu cho giống trong <Link className="font-medium text-primary underline underline-offset-4" href="/inputs/items">Vật tư &amp; Giống</Link> rồi quay lại.</p>;
+  return <p role="status" className="mt-1 text-xs text-text-muted">{noProductText(batch.seedItemName ?? batch.name)} Hãy chọn loại hàu cho giống trong <Link className="font-medium text-primary underline underline-offset-4" href="/inputs/items">Vật tư &amp; Giống</Link> rồi quay lại.</p>;
 }

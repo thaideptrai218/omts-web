@@ -47,14 +47,15 @@ describe("Bắt đầu chu kỳ nuôi", () => {
     expect(mocks.available).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the loại hàu derived from the picked batch, read only, or says where to set it when the seed has none", async () => {
+  it("names the seed of the picked batch, read only (never the sold product), or says where to set the product when the seed has none", async () => {
     mount();
     const select = await screen.findByRole("combobox", { name: "Đợt ươm (loại giống đã ươm) *" });
-    expect(screen.queryByText(/Loại hàu:/)).toBeNull();
+    expect(screen.queryByText(/Giống:/)).toBeNull();
     fireEvent.change(select, { target: { value: batches[0].id } });
-    expect(screen.getByText("Loại hàu: Hàu múp · giống Hàu giống")).toBeTruthy();
+    expect(screen.getByText("Giống: Hàu giống · đợt ươm NU000007")).toBeTruthy();
+    expect(screen.queryByText(/Hàu múp/)).toBeNull();
     fireEvent.change(select, { target: { value: batches[1].id } });
-    expect(screen.queryByText(/Loại hàu:/)).toBeNull();
+    expect(screen.queryByText(/Giống:/)).toBeNull();
     expect(screen.getByText(/Giống Hàu B chưa gắn loại hàu bán ra/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Vật tư & Giống" }).getAttribute("href")).toBe("/inputs/items");
   });
@@ -80,7 +81,7 @@ describe("Bắt đầu chu kỳ nuôi", () => {
     const onStarted = mount(); await fill(); click("Tiếp tục");
     expect(screen.getByText("Bước 2/2 · Xem lại và xác nhận")).toBeTruthy();
     expect(screen.getByText("NU000007 · Hàu giống · còn 9.500 mảnh (ước tính)")).toBeTruthy();
-    expect(screen.getByText("Hàu múp (theo giống Hàu giống)")).toBeTruthy(); expect(screen.getByText("2000 kg")).toBeTruthy(); expect(screen.getByText("1 ảnh")).toBeTruthy();
+    expect(screen.getByText("Hàu giống")).toBeTruthy(); expect(screen.getByText("2000 kg")).toBeTruthy(); expect(screen.getByText("1 ảnh")).toBeTruthy();
     expect(mocks.write).not.toHaveBeenCalled();
     click("Xác nhận bắt đầu chu kỳ");
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith(cycleId));

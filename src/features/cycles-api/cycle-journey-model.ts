@@ -1,6 +1,7 @@
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import type { CycleFigures } from "./close-contracts";
+import { farmedSeedName } from "./cycle-farmed-seed";
 import type { CycleView } from "./cycle-model";
 
 export type JourneyKey = "nursery" | "plan" | "seeding" | "care" | "harvest" | "summary";
@@ -66,7 +67,7 @@ export function buildJourney(input: JourneyInput): JourneyStep[] {
       ...(!closed && f.damagedLanes?.length ? [`Làn ${list(f.damagedLanes)} đang hỏng, chưa sửa.`] : []), ...(!closed && early ? [early] : []), ...(closed && cycle.assessment ? [`Đánh giá: ${cycle.assessment}`] : [])],
     ...(!closed && input.canClose ? { action: { key: "journey-close", label: "Kết thúc chu kỳ", close: true as const } } : {}) };
   // The nursed batch of the cycle and what is left in its nursery pool (shared by every raft that takes seed from it).
-  const nursery: JourneyStep[] = cycle.nurseryBatchId ? [{ key: "nursery", label: "Ươm", status: "done", chip: [cycle.nurseryCode ?? "Đợt ươm", cycle.seedLot?.itemName].filter(Boolean).join(" · "), bars: [],
+  const nursery: JourneyStep[] = cycle.nurseryBatchId ? [{ key: "nursery", label: "Ươm", status: "done", chip: [cycle.nurseryCode ?? "Đợt ươm", farmedSeedName(cycle), cycle.seedLot?.code ? `lô ${cycle.seedLot.code}` : null].filter(Boolean).join(" · "), bars: [],
     lines: [...(cycle.nurserySeeded != null ? [`Đã thả: ${pcs(cycle.nurserySeeded)} mảnh`] : []), ...(cycle.nurseryRemaining != null ? [`Còn trong kho ươm: ${pcs(cycle.nurseryRemaining)} mảnh`] : [])] }] : [];
   return [...nursery, plan, seeding, care, harvest, summary];
 }

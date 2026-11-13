@@ -17,7 +17,6 @@ import Link from "next/link";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { HarvestLanesBoard } from "./harvest-lanes-board";
 import { HarvestCycleProductBanner } from "./harvest-cycle-product-banner";
-import { splitHarvestRead } from "./harvest-order-filter";
 import { HarvestPlanSummary } from "./harvest-plan-summary";
 
 
@@ -109,7 +108,7 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 <strong>{remote.data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng</strong>
               </span>
             </p>
-            {remote.data.cycle && <HarvestCycleProductBanner productName={splitHarvestRead(remote.data).productName} nurseryCode={remote.data.cycle.nurseryCode} />}
+            {remote.data.cycle && <HarvestCycleProductBanner cycle={remote.data.cycle} />}
             <HarvestPlanSummary data={remote.data} />
             <HarvestLanesBoard data={remote.data} zoneId={zoneId} raftId={raftId} canFinish={remote.data.canRecordHarvest && allowed("Create")} onChanged={remote.reload} />
             {remote.data.cycle && everySeededLaneHarvested(remote.data.lanes) && <p role="status" className="mb-3 rounded-control border border-success/30 bg-success/5 p-3 text-sm">Tất cả làn đã thu xong. <Link href={farmingReferenceHref("cycle", { zoneId, raftId, cycleId: remote.data.cycle.id, tab: "journey" })}>Kết thúc chu kỳ</Link></p>}

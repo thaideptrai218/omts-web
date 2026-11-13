@@ -94,7 +94,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
     if (saved) done(saved);
   }
   return <EditorFrame size="xl" title="Ghi nhận chuyến thu hoạch" editor={editor} error={error}>
-    <HarvestCycleProductBanner productName={orderView.productName} nurseryCode={data.cycle?.nurseryCode} />
+    {data.cycle && <HarvestCycleProductBanner cycle={data.cycle} />}
     <HarvestPlanSummary data={data} extraKg={estimate.effective} />
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset disabled={editor.disabled || laneDirty} className={flowStyles.harvestFormGrid}>
