@@ -417,3 +417,20 @@ JPEG/PNG đọc từ nội dung, mỗi ảnh ≤ 10 MB, phần tên `photos` l�
 
 - Thông báo mới `LANE_PROGRESS_CHANGED` (tùy chọn bật/tắt, không bắt buộc đẩy) hiện trong cài đặt thông báo của Chủ HTX.
 - Demo: bản ghi thả/thu do bootstrap tạo vẫn có ảnh mẫu; dữ liệu cũ được backfill % như mục 8.1.
+
+
+## Phụ lục H1 (13/11/2026): số lồng thu hoạch khớp đơn mua
+
+Quyết định của Chủ HTX: tổng số lồng các chuyến thu của một yêu cầu mua **không vượt** số lồng đã chấp nhận; đơn đã thu đủ (15/15) không còn trong danh sách yêu cầu mua. Một đơn thường gom từ **nhiều bè**, cùng vùng hoặc khác vùng, cùng loại hàu (đơn 10 lồng hàu sữa: bè A thu 5, bè B thu 5). Tổng được tính trên **mọi bè/vùng** (`CagesOfPurchaseRequestsAsync`), danh sách đơn và mức trần **không** giới hạn theo bè hay vùng đang mở. Không đổi phía bán (tạo/phản hồi yêu cầu, kế hoạch nhân sự, hóa đơn, `PurchaseHarvestService`, `PurchaseRequestRules`); backend **không** đặt `HarvestCompletedAt` (đó vẫn là thao tác "đánh dấu thu xong" của Chủ HTX).
+
+**`GET /api/rafts/{raftId}/harvest-lots` → `orders[]`**
+- Bỏ đơn đã thu đủ: `acceptedCages > 0` và `harvestedCages >= acceptedCages`.
+- Thêm `trips: [ { "raftCode": "B1-06", "zoneCode": "DEMO-01", "cages": 5, "recordedOn": "2026-11-13" } ]`: các lô đã ghi cho đơn, gom theo bè (mọi vùng), mới nhất trước, tối đa 10; `[]` khi chưa thu. Web hiện "Đã thu 5/10 lồng: B1-06 (DEMO-01) 5 lồng".
+
+**`POST /api/rafts/{raftId}/harvest-lots`**
+- Từ chối khi `đã thu của các lô khác + cageCount > acceptedCages`: 400 `MSG-GEN-09`, `reasonCode: "HARVEST_ORDER_CAGES_EXCEEDED"`, `field: "CageCount"`, `requestId`, `requestCode`, `acceptedCages`, `harvestedCages`, `remainingCages`, `detail`: "Đơn mua YC… chỉ còn Z lồng (đã thu X/Y lồng). Số lồng thu hoạch phải khớp với đơn mua." Kiểm tra ở lần xem đầu (trước tải ảnh) và lại trong lần lưu (sau tải ảnh, đọc lại tổng; hai chuyến song song của một đơn đã được khóa bằng dòng yêu cầu nên chuyến thua thử lại và bị từ chối nếu vượt). Đúng bằng số còn lại thì được; thập phân được (5,5).
+- Kết quả lưu (`HarvestLotSaved`) thêm (giữ nguyên các trường cũ): `orderCagesTotal` (số lồng đã chấp nhận), `orderCagesHarvested` (đã thu kể cả chuyến này), `orderComplete` (true khi chuyến này đưa đơn tới đủ số lồng). Web: `orderComplete` → "Đơn <mã> đã thu đủ Y/Y lồng."; chưa đủ → "Còn Z lồng của đơn <mã> cần thu ở bè khác cùng loại hàu" (Z = `orderCagesTotal` − `orderCagesHarvested`).
+
+**`PUT /api/harvest-lots/{id}` (sửa lô)**: cùng quy tắc, đếm các lô khác của đơn (không tính chính lô này), **chỉ khi số lồng tăng** (lô ghi trước quy tắc vẫn sửa được các trường khác hoặc giảm lồng). Cùng 400 `HARVEST_ORDER_CAGES_EXCEEDED` / `CageCount`. Kết quả sửa không có ba trường mới.
+
+**Gợi ý cho form web**: số lồng mặc định = còn lại của đơn (accepted − harvested) chỉ là **gợi ý**; người dùng giảm xuống số bè này thu được, phần còn lại thu ở bè khác cùng loại hàu. Dòng trợ giúp dưới ô chọn đơn: "Đơn còn Z lồng. Nhập số lồng thu được từ bè này; phần còn lại thu ở bè khác cùng loại hàu (<tên>)."
