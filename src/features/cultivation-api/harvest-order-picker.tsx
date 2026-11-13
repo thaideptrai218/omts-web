@@ -4,6 +4,7 @@ import type { z } from "zod";
 import { SelectBox } from "@/components/ui/select-box";
 import type { HarvestOrderView } from "./harvest-order-filter";
 import type { harvestOrder } from "./records-contracts";
+import { orderGatherHint, orderProgressText, orderRemainingCages, orderTripsText } from "./harvest-order-cages";
 
 type Order = z.infer<typeof harvestOrder>;
 const n = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
@@ -38,11 +39,12 @@ export function HarvestOrderPicker({ view, value, onChange, error }: { view: Har
   return <div className="grid gap-1">
     <label className="grid gap-1 text-sm font-medium">Yêu cầu mua *
       <SelectBox className="omts-control" value={value} required aria-invalid={!!error} onChange={event => onChange(event.target.value)}>
-        {selectable.map(order => <option key={order.id} value={order.id}>{order.code} · {order.customerName} · {order.productName}{order.plannedOnRaft ? " · lập kế hoạch cho bè này" : ""}</option>)}
+        {selectable.map(order => <option key={order.id} value={order.id}>{order.code} · {order.customerName} · {order.productName}{orderRemainingCages(order) !== undefined ? ` · còn ${n(orderRemainingCages(order)!)} lồng` : ""}{order.plannedOnRaft ? " · lập kế hoạch cho bè này" : ""}</option>)}
       </SelectBox>
     </label>
     {error && <p role="alert" className="text-xs text-danger">{error}</p>}
-    {picked && <p className="text-xs text-text-muted">Đã thu {n(picked.harvestedCages)}/{n(picked.acceptedCages)} lồng · lấy hàng {day(picked.pickupDate)}{picked.workDate ? ` · ngày làm ${day(picked.workDate)}` : ""}</p>}
+    {picked && <p className="text-xs text-text-muted">{orderProgressText(picked)}{orderTripsText(picked) ? `: ${orderTripsText(picked)}` : ""} · lấy hàng {day(picked.pickupDate)}{picked.workDate ? ` · ngày làm ${day(picked.workDate)}` : ""}</p>}
+    {picked && orderGatherHint(picked, productName) && <p className="text-xs text-text-muted">{orderGatherHint(picked, productName)}</p>}
     {others}
   </div>;
 }

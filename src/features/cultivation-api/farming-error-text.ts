@@ -1,4 +1,5 @@
 import { nurseryPoolExceededText, stockShortageText, type FarmingProblem } from "./farming-problem";
+import { harvestCagesError } from "./harvest-order-cages";
 
 const harvestFieldText: Record<string, string> = {
   "Purchase request": "Chưa chọn yêu cầu mua cho chuyến thu hoạch này. Hãy chọn một yêu cầu mua đã chấp nhận và còn đang thu hoạch.",
@@ -17,6 +18,7 @@ export function farmingErrorText(result: FailedResult, unit?: string): string | 
   if ([result.code, problem?.code, problem?.reasonCode].includes("NURSERY_POOL_EXCEEDED")) return nurseryPoolExceededText(problem);
   if (!problem) return undefined;
   if (problem.reasonCode === "SEEDING_COMPLETED") return "Chu kỳ đã đánh dấu hoàn tất thả giống nên không thể ghi nhận, sửa hoặc xóa lần thả. Hãy tải lại để xem trạng thái mới.";
+  if (harvestCagesError(problem)) return harvestCagesError(problem);
   if (problem.hint && /[À-ỹ]/.test(problem.hint)) return problem.hint;
   // A question the backend asks (over plan, empty seeding, owner approval) is answered in the form; it is not an error to show.
   if (result.httpStatus === 409 && problem.confirmFlag) return "";

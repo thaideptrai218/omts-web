@@ -21,6 +21,7 @@ import { HarvestCrewPicker } from "./harvest-crew-picker";
 import { HarvestCycleProductBanner } from "./harvest-cycle-product-banner";
 import { harvestOrderError, splitHarvestRead } from "./harvest-order-filter";
 import { HarvestOrderPicker, defaultHarvestOrderId } from "./harvest-order-picker";
+import { cagesOverOrderProblem, defaultCagesText, harvestCagesError, orderCompleteText } from "./harvest-order-cages";
 import { laneSummary } from "./harvest-lane-ranges";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import flowStyles from "./cultivation-flow.module.css";
@@ -47,17 +48,20 @@ export function harvestInvalidFieldText(error: z.ZodError): string {
  */
 export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClose, onSaved }: { zoneId: string; raftId: string; data: z.infer<typeof c.harvestList>; canConfigure?: boolean; onClose(): void; onSaved(): void }) {
   const [lanes, setLanes] = useState<number[]>([]), [finished, setFinished] = useState<number[]>([]);
-  const [cages, setCages] = useState(""), [kg, setKg] = useState("");
+  const [typedCages, setTypedCages] = useState<string>(), [cagesError, setCagesError] = useState<string>(), [kg, setKg] = useState("");
   // Only requests for the oyster the raft farms can be harvested for; the others are kept apart with the reason.
   const orderView = splitHarvestRead(data);
   const [orderId, setOrderId] = useState(() => defaultHarvestOrderId(orderView.selectable));
+  // The cages suggest what the order has left (it may be gathered from several rafts: lower it to what this raft gives); a new order refills it until the user types.
+  const pickedOrder = orderView.selectable.find(order => order.id === orderId);
+  const cages = typedCages ?? defaultCagesText(pickedOrder);
   const [error, setError] = useState<string>(), [photos, setPhotos] = useState<File[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false), [photoError, setPhotoError] = useState<string>();
   const [percents, setPercents] = useState<Record<string, string>>({}), [percentError, setPercentError] = useState<string>();
   const [crew, setCrew] = useState<string[]>([]);
   const [laneDirty, setLaneDirty] = useState(false), [lanePending, setLanePending] = useState(false);
   const { notify } = useToast();
-  const editor = useOperationEditor(onClose, !!lanes.length || !!cages || !!kg || !!photos.length || !!crew.length || Object.keys(percents).length > 0 || laneDirty, lanePending || photoBusy);
+  const editor = useOperationEditor(onClose, !!lanes.length || !!typedCages || !!kg || !!photos.length || !!crew.length || Object.keys(percents).length > 0 || laneDirty, lanePending || photoBusy);
   // With the finish-lane endpoint (canFinish is reported) the lane is finished by its own action; an older backend still takes it with the trip.
   const finishesWithTrip = !data.lanes.some(lane => lane.canFinish !== undefined && lane.canFinish !== null);
   const estimate = harvestEstimate(Number(cages), kg, data.averageKgPerCage);
@@ -69,6 +73,8 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
   const send = (parsed: z.infer<typeof c.harvestValues>) => harvestRepo.upload("harvest-record", photos, parsed, c.harvestSaved, raftId, zoneId);
   function done(saved: z.infer<typeof c.harvestSaved>) {
     notify({ tone: "success", title: `Đã ghi nhận chuyến thu hoạch ${saved.lot.lotCode}.`, ...(saved.everySeededLaneHarvested ? { description: "Tất cả làn đã thu xong. Có thể kết thúc chu kỳ." } : {}) });
+    const order = orderCompleteText(saved, pickedOrder?.code, pickedOrder?.acceptedCages);
+    if (order) notify({ tone: order.complete ? "success" : "info", title: order.text });
     for (const text of harvestWarningTexts(saved.warnings)) notify({ tone: "warning", title: text });
     onSaved();
   }
@@ -78,8 +84,9 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
   async function save() {
     if (lanePending || laneDirty) { setError("Lưu hoặc bỏ thay đổi của làn trước khi lưu chuyến thu hoạch."); return; }
     const parsed = values(), bad = invalid(), percentBad = lanePercentsProblem(lanes, shownPercents) ?? overRemainingPercentProblem(lanes, shownPercents, remainingByLane, "thu");
-    setPhotoError(bad); setPercentError(percentBad);
-    if (bad || percentBad || photoBusy) return;
+    const cagesBad = cagesOverOrderProblem(pickedOrder, cages);
+    setPhotoError(bad); setPercentError(percentBad); setCagesError(cagesBad);
+    if (bad || percentBad || cagesBad || photoBusy) return;
     if (!parsed.success) { setError(harvestInvalidFieldText(parsed.error)); return; }
     if (bad) { setError(bad); return; }
     setError(undefined);
@@ -106,7 +113,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
         </CollapsibleSection>
         <CollapsibleSection title="Nhân viên cùng thu" description="Những nhân viên tham gia chuyến thu này." columns={1}><HarvestCrewPicker raftId={raftId} zoneId={zoneId} values={crew} onChange={setCrew} /></CollapsibleSection>
         <CollapsibleSection title="Số lượng và ảnh" description="Số lồng thu hoạch và ảnh ghi nhận." columns={1}>
-          <UnitField key="harvest-cages" label="Số lồng thu hoạch *" unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} required value={cages} onChange={setCages} />
+          <UnitField key="harvest-cages" label="Số lồng thu hoạch *" unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} required value={cages} onChange={value => { setTypedCages(value); setCagesError(undefined); }} error={cagesError ?? harvestCagesError(editor.mutation.failure?.problem)} />
           <UnitField key="harvest-estimated-kg" label="Kg ước tính (để trống: tính theo số lồng)" unit="kg ước tính" decimals={2} min={0.01} value={kg} onChange={setKg} />
           <HarvestEstimateHint cages={Number(cages)} typedKg={kg} kgPerCage={data.averageKgPerCage} />
           <p className="text-xs text-text-muted">kg/lồng hiện tại: {data.averageKgPerCage.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}{" "}
