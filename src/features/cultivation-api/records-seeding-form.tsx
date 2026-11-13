@@ -24,6 +24,8 @@ import { EditorFrame, RecordFormFooter, seedRepo } from "./records-shared";
 import { useSeedingPlan } from "./use-seeding-plan";
 import { laneIsUnavailable } from "./lane-availability";
 import { seedingLaneChoices } from "./seeding-lane-choices";
+import { nurseryUsedUpMessage } from "./seeding-completion-prompt";
+import { defaultSeedingPercents, overRemainingPercentProblem, remainingPercentByLane } from "./seeding-lane-remaining-percent";
 
 const labels: Record<string, string> = { seedingDate: "Ngày thả giống phải đúng ngày/tháng/năm", seedLotId: "Chọn lô giống", laneNumbers: "Chọn ít nhất một làn", quantity: "Số lượng giống phải lớn hơn 0" };
 const n = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
@@ -70,10 +72,18 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   const poolExceeded = fromNursery && capacityNursery !== null && Number(quantity) > capacityNursery;
   const quantityError = poolExceeded ? `Chỉ còn ${n(capacityNursery!)} mảnh trong kho ươm${record ? " (đã tính số mảnh của bản ghi đang sửa)" : ""}.` : farmingFieldError(editor.mutation.failure?.problem, "Quantity");
   const edited = <T,>(set: (value: T) => void) => (value: T) => { setAsked(false); if (editor.mutation.failure) editor.mutation.reviewed(); set(value); };
+  // A new seeding defaults each picked lane to what is left of it (100% minus the percent already seeded); the user may lower it, never exceed it.
+  const remainingByLane = useMemo(() => record ? undefined : remainingPercentByLane(data.lanes), [record, data.lanes]);
+  const shownPercents = remainingByLane ? { ...defaultSeedingPercents(lanes, remainingByLane), ...percents } : percents;
+  const percentsProblem = () => lanePercentsProblem(lanes, shownPercents, record ? undefined : 100) ?? (remainingByLane ? overRemainingPercentProblem(lanes, shownPercents, remainingByLane) : undefined);
 
-  const values = (confirmed: boolean) => c.seedValues.safeParse({ cycleId, seedingDate: date, ...(!fromNursery ? { seedLotId: lot } : {}), lanePercents: selectedLanePercents(lanes, percents, record ? undefined : 100), quantity: Number(quantity), laneNumbers: lanes, ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
+  const values = (confirmed: boolean) => c.seedValues.safeParse({ cycleId, seedingDate: date, ...(!fromNursery ? { seedLotId: lot } : {}), lanePercents: selectedLanePercents(lanes, shownPercents, record ? undefined : 100), quantity: Number(quantity), laneNumbers: lanes, ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
   const send = (parsed: z.infer<typeof c.seedValues>) => seedRepo.upload(record ? "seeding-correct" : "seeding-record", photos, { ...parsed, ...(record ? { reason, rowVersion: record.rowVersion, ...(photos.length || kept.length !== (record.photos?.length ?? 0) ? { keepPhotoIds: kept.map(photo => photo.id).filter((id): id is string => !!id) } : {}) } : {}) }, z.object({ record: c.seedingRecord }), record?.id ?? cycleId, zoneId);
-  const done = () => { notify({ tone: "success", title: `Đã lưu lần thả giống${fromNursery ? ` từ ${data.nurseryCode ?? "đợt ươm"}` : ` ${record?.seedLot.code ?? selectedLot?.code ?? ""}`}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } }); onSaved(); };
+  const done = () => { notify({ tone: "success", title: `Đã lưu lần thả giống${fromNursery ? ` từ ${data.nurseryCode ?? "đợt ươm"}` : ` ${record?.seedLot.code ?? selectedLot?.code ?? ""}`}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } });
+    // This save used the last nursed pieces: say so now; the panel keeps the same prompt as a banner above the records.
+    if (fromNursery && capacityNursery !== null && capacityNursery - Number(quantity) <= 0) notify({ tone: "success", title: nurseryUsedUpMessage(data.nurseryCode) });
+    onSaved();
+  };
   /** Date, fields, reason, stock and the 150% ceiling: the problem text, or undefined when the form may be sent. */
   function problem(parsed: ReturnType<typeof values>) {
     const dateProblem = date !== record?.seedingDate ? backdateProblem(date, dateWindow, "Ngày thả giống", !!cycleStartDate) : undefined;
@@ -92,7 +102,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   async function save() {
     if (lanePending || laneDirty) { setError("Lưu hoặc bỏ thay đổi của làn trước khi lưu lần thả giống."); return; }
     const photosBad = photoValidationMessage(kept.length + photos.length, !record || !!record.photos?.length);
-    const percentsBad = lanePercentsProblem(lanes, percents, record ? undefined : 100);
+    const percentsBad = percentsProblem();
     setPhotoError(photosBad); setPercentError(percentsBad);
     if (photosBad || percentsBad || photoBusy) return;
     const parsed = values(false), blocked = problem(parsed);
@@ -104,7 +114,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   }
   async function confirmOver() {
     const photosBad = photoValidationMessage(kept.length + photos.length, !record || !!record.photos?.length);
-    const percentsBad = lanePercentsProblem(lanes, percents, record ? undefined : 100);
+    const percentsBad = percentsProblem();
     setPhotoError(photosBad); setPercentError(percentsBad);
     if (lanePending || laneDirty || photoBusy || photosBad || percentsBad) return;
     const parsed = values(true), blocked = problem(parsed);
@@ -131,7 +141,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
         {!fromNursery && plan.planned !== null && <PlanBar label="Giống đã thả" actual={plan.total} plan={plan.planned} unit={plan.seedUnit ?? seedUnit} hideOverNote note={`Giống đã thả ${n(plan.total)} / kế hoạch ${n(plan.planned)} ${plan.seedUnit ?? seedUnit} (${n(plan.percent!)}%) nếu lưu lần thả này.`} />}
         <SeedingLanePicker lanes={data.lanes} notSeededLanes={data.notSeededLanes} choices={choices} values={lanes} editing={!!record} onChange={edited(setLanes)}
           onDirty={setLaneDirty} onPending={setLanePending} scope={{ raftId, zoneId, cycleId, cycleRowVersion: data.cycleRowVersion, readOnly: !editable || editor.mutation.pending, onChanged: () => {} }} />
-        <RecordLanePercentFields lanes={lanes} values={percents} onChange={value => { edited(setPercents)(value); setPercentError(undefined); }} kind="seeding" defaultValue={record ? undefined : 100} error={percentError || farmingFieldError(editor.mutation.failure?.problem, "LanePercent")} />
+        <RecordLanePercentFields lanes={lanes} values={shownPercents} onChange={value => { edited(setPercents)(value); setPercentError(undefined); }} kind="seeding" defaultValue={record ? undefined : 100} remaining={remainingByLane} error={percentError || farmingFieldError(editor.mutation.failure?.problem, "LanePercent")} />
         <PhotoPicker files={photos} onChange={value => { edited(setPhotos)(value); setPhotoError(undefined); }} existing={kept} onRemoveExisting={id => setKept(kept.filter(photo => (photo.id ?? photo.key ?? photo.url) !== id))} required={!record || !!record.photos?.length} onBusyChange={setPhotoBusy} error={photoError || farmingFieldError(editor.mutation.failure?.problem, "Photos")} />
         {record && <Note label="Lý do điều chỉnh *" required value={reason} onChange={event => setReason(event.target.value)} />}
         </div>

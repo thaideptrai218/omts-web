@@ -3,7 +3,7 @@ import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { DataGrid } from "@/components/ui/data-grid";
+import { DataGrid, type DataGridSort } from "@/components/ui/data-grid";
 import { DateInputField } from "@/components/ui/management-screen/date-input-field";
 import { ManagementHeading } from "@/components/ui/management-page";
 import type { InterfaceIconName } from "@/components/ui/interface-icon";
@@ -64,8 +64,8 @@ export const displayTime = (value: string) => new Intl.DateTimeFormat("vi-VN", {
 export const statusLabel = (value: string | number) => ({ "1701": "Nháp", "1702": "Hoàn thành", "1703": "Đã hủy", "1801": "Đã ghi nhận", "1802": "Đã hủy", DRAFT: "Nháp", CONFIRMED: "Đã xác nhận", ACTIVE: "Đang hiệu lực", SUPERSEDED: "Đã hiệu chỉnh", CORRECTED: "Đã hiệu chỉnh", VOIDED: "Đã hủy", Active: "Đang cảnh báo", None: "Không", Corrected: "Đã hiệu chỉnh", Voided: "Đã hủy" }[String(value)] ?? String(value));
 export const methodLabel = (value: string) => ({ Cash: "Tiền mặt", BankTransfer: "Chuyển khoản", Other: "Khác" }[value] ?? value);
 export function MethodOptions() { return <><option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản</option><option value="Other">Khác</option></>; }
-export function DataTable({ headings, children, empty, responsive }: { headings: string[]; children: ReactNode; empty?: boolean; responsive?: boolean }) {
-  return <div className="my-4"><DataGrid headings={headings} empty={empty} responsive={responsive}>{children}</DataGrid></div>;
+export function DataTable({ headings, children, empty, responsive, sort }: { headings: string[]; children: ReactNode; empty?: boolean; responsive?: boolean; sort?: DataGridSort }) {
+  return <div className="my-4"><DataGrid headings={headings} empty={empty} responsive={responsive} sort={sort}>{children}</DataGrid></div>;
 }
 export function Paging({ page, total, pageSize = 20, disabled, onChange }: { page: number; total: number; pageSize?: number; disabled?: boolean; onChange(page: number): void }) {
   return <div className="flex flex-wrap items-center justify-between gap-3"><p>{total} bản ghi · Trang {page}</p><div className="flex gap-2"><Button className="w-auto" variant="secondary" disabled={disabled || page <= 1} onClick={() => onChange(page - 1)}>Trước</Button>

@@ -3,10 +3,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { CycleProgressTab } from "@/features/cycles-api/cycle-progress-tab";
+import { CycleStartAction } from "@/features/cycles-api/cycle-start-action";
+import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { operationAllowed } from "@/features/operations/permissions";
+import { replaceUrlParams } from "@/features/farming-management/replace-url-params";
 import { useMemo, useState, type ReactNode } from "react";
 import { StatusPill } from "@/components/ui/management-page";
 import { Subtabs } from "@/components/ui/management-screen/management-table";
-import { cycleStateLabel, cycleStateOf, type CycleRow } from "@/features/cycles-api/cycle-model";
+import { canStartCycle, cycleStateLabel, cycleStateOf, type CycleRow } from "@/features/cycles-api/cycle-model";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 
@@ -28,7 +32,11 @@ function HistoricalHarvestRecord({ id, zoneId }: { id: string; zoneId: string })
 }
 
 /** Opened raft row of the seeding, material-use and harvest screens: the area's records and the lane progress, in place. */
-export function RecordsRaftPanel({ area, row, zoneId }: { area: RecordsArea; row: CycleRow; zoneId: string }) {
+export function RecordsRaftPanel({ area, row, zoneId, zoneLabel, onChanged }: { area: RecordsArea; row: CycleRow; zoneId: string; zoneLabel: string; onChanged(notice: string): void }) {
+  const { identity, permissions } = useApiWorkspace();
+  const canStart = canStartCycle(row) && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Create", zoneId);
+  // A cycle started here opens right on this screen: its id goes to the URL, the list reloads and the records panel replaces the empty state.
+  const started = (cycleId: string | undefined) => { replaceUrlParams({ ...(cycleId ? { cycleId } : {}) }); onChanged("Đã bắt đầu chu kỳ nuôi"); };
   // The screen writes raftId and cycleId of the open row itself; the URL can lag a render behind, so only this raft's cycleId counts.
   const params = useSearchParams(), selectedCycleId = (params.get("raftId") ?? row.raftId) === row.raftId ? params.get("cycleId") ?? row.cycle?.id : row.cycle?.id;
   const [tab, setTab] = useState<TabKey>("records"), prefix = `records-${area}-${row.raftId}`;
@@ -36,12 +44,9 @@ export function RecordsRaftPanel({ area, row, zoneId }: { area: RecordsArea; row
   const state = cycleStateOf(row);
   const unavailableHarvestCycle = area === "harvest" && !!selectedCycleId && selectedCycleId !== row.cycle?.id;
   const harvestRecordId = area === "harvest" ? params.get("recordId") : null;
-  const journeyQuery = new URLSearchParams(params.toString());
-  journeyQuery.set("zoneId", zoneId); journeyQuery.set("raftId", row.raftId);
-  journeyQuery.delete("cycleId"); journeyQuery.delete("recordId");
   const noOpenCycle = !selectedCycleId || state !== "open";
   const content: Record<TabKey, ReactNode> = {
-    records: area === "seeding" ? !noOpenCycle && selectedCycleId ? <SeedingPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} cycleStartDate={row.cycle?.id === selectedCycleId ? row.cycle.startDate : undefined} /> : <div className={flowStyles.empty}><p>Bè chưa có chu kỳ nuôi. Hãy bắt đầu chu kỳ nuôi trước</p><Link className="mt-2 inline-block font-medium text-primary underline" href={`/farming/cycles?${journeyQuery}`}>Bắt đầu chu kỳ nuôi</Link></div>
+    records: area === "seeding" ? !noOpenCycle && selectedCycleId ? <SeedingPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} cycleStartDate={row.cycle?.id === selectedCycleId ? row.cycle.startDate : undefined} /> : <div className={flowStyles.empty}><p>Bè chưa có chu kỳ nuôi. Hãy bắt đầu chu kỳ nuôi trước</p>{canStart && <div className="mt-2"><CycleStartAction row={row} zoneId={zoneId} zoneLabel={zoneLabel} canCreate variant="button" onStarted={started} /></div>}</div>
       : area === "material-usages" ? <MaterialsPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} /> : unavailableHarvestCycle && harvestRecordId ? <HistoricalHarvestRecord key={harvestRecordId} id={harvestRecordId} zoneId={zoneId} /> : unavailableHarvestCycle ? <div className="space-y-2 p-3 text-sm"><p>Chu kỳ đã chọn không phải chu kỳ gần nhất của bè. Màn ghi nhận thu hoạch chỉ hỗ trợ chu kỳ gần nhất; chọn một lô trong Sản lượng nuôi để xem thu hoạch cũ.</p><Link className="text-primary underline" href={farmingReferenceHref("yield", { zoneId, raftId: row.raftId, cycleId: selectedCycleId })}>Xem thu hoạch của chu kỳ đã chọn</Link><br /><Link className="text-primary underline" href={farmingReferenceHref("harvest", { zoneId, raftId: row.raftId })}>Mở thu hoạch chu kỳ gần nhất</Link></div> : <HarvestPanel zoneId={zoneId} raftId={row.raftId} />,
     progress: <CycleProgressTab row={row} zoneId={zoneId} canSeeFlow={true} />,
   };

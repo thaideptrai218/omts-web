@@ -13,19 +13,16 @@ import flowStyles from "./cultivation-flow.module.css";
 import * as c from "./records-contracts";
 import { CompleteSeeding } from "./records-complete-seeding-dialog";
 import { SeedingForm } from "./records-seeding-form";
+import type { SortState } from "@/components/ui/management-screen/management-table";
+import { seedingCompletionPrompt } from "./seeding-completion-prompt";
+import { defaultSeedingSort, seedingRunningTotals, sortSeedingRecords } from "./seeding-records-sort";
 import { SeedingRecordDetails } from "./seeding-record-details";
 import { SeedingSummaryStrip } from "./seeding-summary-strip";
 import { seedRepo, useAllowed } from "./records-shared";
 
 const n = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
-
-/** Running total after each record, oldest first (the list itself is shown newest first). */
-function runningTotals(records: readonly z.infer<typeof c.seedingRecord>[]) {
-  const totals = new Map<string, number>();
-  let sum = 0;
-  for (const record of [...records].sort((a, b) => a.seedingDate.localeCompare(b.seedingDate) || a.recordedAt.localeCompare(b.recordedAt))) totals.set(record.id, sum += record.quantity);
-  return totals;
-}
+// Sort key of each heading (same order as the headings below): date, pieces/lot, lane, recorder, running total.
+const nurserySortKeys = ["date", "pieces", "lane", "recorder", "total"], legacySortKeys = ["date", "lot", "lane", "pieces", "recorder"];
 
 /** Seeding records of the raft's current cycle, per day, and the "mark seeding complete" action. */
 export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zoneId: string; raftId: string; cycleId: string; cycleStartDate?: string }) {
@@ -36,12 +33,15 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
   const [selected, setSelected] = useState<z.infer<typeof c.seedingRecord> | null>();
   const [completing, setCompleting] = useState(false);
   const data = remote.data;
-  const [page, setPage] = useState<number>();
-  const linkedPage = Math.max(1, Math.ceil(((data?.records.findIndex(v => v.id === query.get("recordId")) ?? 0) + 1) / 10));
-  const currentPage = Math.min(page ?? linkedPage, Math.max(1, Math.ceil((data?.records.length ?? 0) / 10)));
-  const visible = data?.records.slice((currentPage - 1) * 10, currentPage * 10) ?? [];
-  const totals = useMemo(() => runningTotals(data?.records ?? []), [data?.records]);
+  const [page, setPage] = useState<number>(), [sort, setSort] = useState<SortState>(defaultSeedingSort);
+  const totals = useMemo(() => seedingRunningTotals(data?.records ?? []), [data?.records]);
+  const records = useMemo(() => sortSeedingRecords(data?.records ?? [], sort, totals), [data?.records, sort, totals]);
+  const linkedPage = Math.max(1, Math.ceil((Math.max(0, records.findIndex(v => v.id === query.get("recordId"))) + 1) / 10));
+  const currentPage = Math.min(page ?? linkedPage, Math.max(1, Math.ceil(records.length / 10)));
+  const visible = records.slice((currentPage - 1) * 10, currentPage * 10);
   const fromNursery = !!data?.nurseryBatchId, completed = !!data?.seedingCompletedOn;
+  // Nothing left to seed (nursed batch used up, or every seedable lane at 100%): ask for the completion and make its button the primary one.
+  const canComplete = !!data?.canMarkComplete && allowed("Create"), completionPrompt = data && canComplete ? seedingCompletionPrompt(data) : null;
   const reload = () => { setSelected(undefined); remote.reload(); };
   const form = (record: z.infer<typeof c.seedingRecord> | null) => data && <SeedingForm zoneId={zoneId} raftId={raftId} cycleId={cycleId} cycleStartDate={cycleStartDate} data={data} record={record} allowed={allowed} onClose={() => setSelected(undefined)} onSaved={reload} />;
   const toggle = (id: string) => setExpanded(current => current === id ? undefined : id);
@@ -64,9 +64,11 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
           {/* The completion state itself is in the summary strip above. */}
           <span>{data.records.length ? "" : "Chưa thả giống. Ghi nhận thả giống trước, sau đó mới đánh dấu hoàn tất."}</span>
           {/* Offered once at least one record exists; completion does not need every lane at 100%. */}
-          {!completed && data.canMarkComplete && data.records.length > 0 && allowed("Create") && <Button type="button" variant="secondary" onClick={() => setCompleting(true)}>Đánh dấu hoàn tất thả giống</Button>}
+          {!completed && canComplete && data.records.length > 0 && <Button type="button" variant={completionPrompt ? "primary" : "secondary"} className={completionPrompt ? "ring-2 ring-primary/40 ring-offset-2" : ""} onClick={() => setCompleting(true)}>Đánh dấu hoàn tất thả giống</Button>}
         </div>}
-        <DataTable responsive headings={fromNursery ? ["Ngày thả", "Số mảnh (ước tính)", "Làn", "Người ghi nhận", "Tổng đã thả"] : ["Ngày thả", "Lô giống / nhà cung cấp", "Làn", "Số lượng", "Người ghi nhận"]} empty={!data.records.length}>
+        {completionPrompt && <p role="status" className="mb-3 rounded-control border border-success/30 bg-success/5 p-3 text-sm font-medium">{completionPrompt}</p>}
+        <DataTable responsive headings={fromNursery ? ["Ngày thả", "Số mảnh (ước tính)", "Làn", "Người ghi nhận", "Tổng đã thả"] : ["Ngày thả", "Lô giống / nhà cung cấp", "Làn", "Số lượng", "Người ghi nhận"]} empty={!data.records.length}
+          sort={{ state: sort, keys: fromNursery ? nurserySortKeys : legacySortKeys, onSort: next => { setSort(next); setPage(1); } }}>
           {visible.map(v => <Fragment key={v.id}>
             <OpenableTableRow data-selected={expanded === v.id || undefined} onOpen={() => toggle(v.id)}>
               <td data-label="Ngày thả">

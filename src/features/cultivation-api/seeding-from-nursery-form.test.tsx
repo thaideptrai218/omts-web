@@ -67,6 +67,17 @@ describe("seeding from a nursery cycle takes a free daily quantity from the batc
     expect(screen.queryByRole("checkbox", { name: /^Làn 1:/ })).toBeNull();
   });
 
+  it("defaults the lane percent to what is left of the lane and refuses more than that", async () => {
+    open();
+    await selectLane(2);
+    await selectLane(3);
+
+    expect((screen.getByLabelText("Làn 2") as HTMLInputElement).value).toBe("60");
+    expect((screen.getByLabelText("Làn 3") as HTMLInputElement).value).toBe("100");
+    fireEvent.change(screen.getByLabelText("Làn 2"), { target: { value: "70" } });
+    expect((await screen.findAllByText("Làn 2 chỉ còn 60% có thể thả.")).length).toBeGreaterThan(0);
+  });
+
   it("shows the pool refusal of the backend at the quantity field with what is left", async () => {
     upload.mockResolvedValue({ status: "error", httpStatus: 409, code: "MSG-GEN-09", uncertain: false, problem: { code: "MSG-GEN-09", reasonCode: "NURSERY_POOL_EXCEEDED", field: "Quantity", remaining: 400 } });
     open();
