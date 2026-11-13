@@ -10,6 +10,8 @@ import { photoValidationMessage } from "@/components/form/photo-compression";
 import { farmingFieldError } from "./farming-problem";
 import { RecordLanePercentFields } from "./record-lane-percent-fields";
 import { selectedLanePercents, lanePercentsProblem } from "./record-lane-percents";
+import { harvestRemainingByLane, shownHarvestPercents } from "./harvest-lane-remaining-percent";
+import { overRemainingPercentProblem } from "./seeding-lane-remaining-percent";
 import { UnitField } from "@/components/form/number-fields";
 import { HarvestLaneChoices } from "./harvest-lane-choices";
 import { HarvestEstimateHint, harvestEstimate } from "./harvest-estimate-hint";
@@ -60,7 +62,9 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
   const finishesWithTrip = !data.lanes.some(lane => lane.canFinish !== undefined && lane.canFinish !== null);
   const estimate = harvestEstimate(Number(cages), kg, data.averageKgPerCage);
 
-  const values = () => c.harvestValues.safeParse({ purchaseRequestId: orderId, lanePercents: selectedLanePercents(lanes, percents), laneNumbers: lanes, finishedLaneNumbers: finishesWithTrip ? finished : [], cageCount: Number(cages), estimatedKg: kg ? Number(kg) : null,
+  // Picking a lane fills "Phần trăm thu thêm" with what is left on it (100% for an untouched lane); the supervisor only edits the lanes not fully harvested.
+  const remainingByLane = harvestRemainingByLane(data.lanes), shownPercents = shownHarvestPercents(lanes, percents, remainingByLane);
+  const values = () => c.harvestValues.safeParse({ purchaseRequestId: orderId, lanePercents: selectedLanePercents(lanes, shownPercents), laneNumbers: lanes, finishedLaneNumbers: finishesWithTrip ? finished : [], cageCount: Number(cages), estimatedKg: kg ? Number(kg) : null,
     ...(crew.length ? { crew } : {}) });
   const send = (parsed: z.infer<typeof c.harvestValues>) => harvestRepo.upload("harvest-record", photos, parsed, c.harvestSaved, raftId, zoneId);
   function done(saved: z.infer<typeof c.harvestSaved>) {
@@ -73,7 +77,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
   }
   async function save() {
     if (lanePending || laneDirty) { setError("Lưu hoặc bỏ thay đổi của làn trước khi lưu chuyến thu hoạch."); return; }
-    const parsed = values(), bad = invalid(), percentBad = lanePercentsProblem(lanes, percents);
+    const parsed = values(), bad = invalid(), percentBad = lanePercentsProblem(lanes, shownPercents) ?? overRemainingPercentProblem(lanes, shownPercents, remainingByLane, "thu");
     setPhotoError(bad); setPercentError(percentBad);
     if (bad || percentBad || photoBusy) return;
     if (!parsed.success) { setError(harvestInvalidFieldText(parsed.error)); return; }
@@ -93,7 +97,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
         <CollapsibleSection title="Làn thu hoạch" description="Các làn trong chuyến thu." columns={1}>
           <HarvestLaneChoices lanes={data.lanes} values={lanes} label="Làn thu hoạch *" onChange={next => { setLanes(next); setFinished(current => current.filter(n => next.includes(n))); }}
             onDirty={setLaneDirty} onPending={setLanePending} scope={{ raftId, zoneId, cycleId: data.cycle?.id, cycleRowVersion: data.cycle?.rowVersion, readOnly: editor.mutation.pending || !data.canRecordHarvest, onChanged: () => {} }} />
-          <RecordLanePercentFields lanes={lanes} values={percents} onChange={value => { setPercents(value); setPercentError(undefined); }} kind="harvest" error={percentError || farmingFieldError(editor.mutation.failure?.problem, "LanePercent")} />
+          <RecordLanePercentFields lanes={lanes} values={shownPercents} onChange={value => { setPercents(value); setPercentError(undefined); }} kind="harvest" remaining={remainingByLane} error={percentError || farmingFieldError(editor.mutation.failure?.problem, "LanePercent")} />
           {finishesWithTrip && <div>
             <h4 className="mb-1 text-sm font-semibold">Xác nhận làn đã thu xong</h4>
             <p className={flowStyles.harvestHint}>{lanes.length ? "Tích những làn không còn hàu để thu. Làn không tích vẫn ở trạng thái Đang thu hoạch sau khi lưu." : "Chọn làn thu hoạch ở trên để hiện các ô xác nhận đã thu xong."}</p>

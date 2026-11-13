@@ -19,11 +19,11 @@ export function defaultSeedingPercents(selected: readonly number[], remaining: R
 }
 
 /** First selected lane whose typed percent is above what is left: "Làn N chỉ còn X% có thể thả." */
-export function overRemainingPercentProblem(selected: readonly number[], drafts: Readonly<Record<string, string>>, remaining: Readonly<Record<string, number>>): string | undefined {
+export function overRemainingPercentProblem(selected: readonly number[], drafts: Readonly<Record<string, string>>, remaining: Readonly<Record<string, number>>, verb: "thả" | "thu" = "thả"): string | undefined {
   for (const lane of selected) {
     const left = remaining[String(lane)], typed = Number((drafts[lane] ?? "").replace(",", "."));
-    if (left !== undefined && Number.isFinite(typed) && typed > left) return laneRemainingMessage(lane, left);
+    if (left !== undefined && Number.isFinite(typed) && typed > left) return laneRemainingMessage(lane, left, verb);
   }
 }
 
-export const laneRemainingMessage = (lane: number, left: number) => `Làn ${lane} chỉ còn ${left.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}% có thể thả.`;
+export const laneRemainingMessage = (lane: number, left: number, verb: "thả" | "thu" = "thả") => `Làn ${lane} chỉ còn ${left.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}% có thể ${verb}.`;
