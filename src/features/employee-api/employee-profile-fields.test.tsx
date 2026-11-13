@@ -105,7 +105,7 @@ describe("create modal: new profile fields", () => {
     repository.write.mockResolvedValue({ status: "success", data: record() });
     render(<EmployeeApiEditor {...props()} />); fillRequired();
     type("Mã nhân viên", "nv-9"); type("Giới tính", "Other");
-    fireEvent.click(screen.getByRole("button", { name: /Thông tin cá nhân/ })); type("CCCD", "012345678901");
+    fireEvent.click(screen.getByRole("button", { name: /Thông tin cá nhân/ })); type("CCCD/CMND", "012345678901");
     fireEvent.click(screen.getByRole("button", { name: /^Ngày bắt đầu làm việc: chưa chọn/ }));
     fireEvent.click(document.querySelector<HTMLButtonElement>("button.rdp-day_button:not([disabled])")!);
     saveNew();
@@ -115,11 +115,11 @@ describe("create modal: new profile fields", () => {
   });
   it("opens the personal group and focuses a bad CCCD before sending", async () => {
     render(<EmployeeApiEditor {...props()} />); fillRequired();
-    fireEvent.click(screen.getByRole("button", { name: /Thông tin cá nhân/ })); type("CCCD", "12");
+    fireEvent.click(screen.getByRole("button", { name: /Thông tin cá nhân/ })); type("CCCD/CMND", "12");
     fireEvent.click(screen.getByRole("button", { name: /Thông tin cá nhân/ }));
     saveNew();
     await waitFor(() => expect(screen.getByRole("button", { name: /Thông tin cá nhân.*Có lỗi/ }).getAttribute("aria-expanded")).toBe("true"));
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("CCCD", { exact: true })));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("CCCD/CMND", { exact: true })));
     expect(screen.getAllByText("CCCD gồm 9 hoặc 12 chữ số.").length).toBeGreaterThan(0); expect(repository.write).not.toHaveBeenCalled();
   });
   it("rejects a malformed code in the basic group and shows MSG-GEN-02 beside the code input", async () => {

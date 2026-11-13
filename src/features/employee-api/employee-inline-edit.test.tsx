@@ -47,14 +47,14 @@ it.each(["Thông tin", "Công việc", "Ngân hàng"])("discards only the %s dra
   await setup(); tab(name); edit();
   if (name === "Thông tin") change("Ghi chú", "Nháp thông tin");
   if (name === "Công việc") fireEvent.click(panel().getByRole("checkbox", { name: "Treo giống" }));
-  if (name === "Ngân hàng") change("Ngân hàng", "Ngân hàng nháp");
+  if (name === "Ngân hàng") change("Ngân hàng *", "Ngân hàng nháp");
   fireEvent.click(panel().getByRole("button", { name: "Bỏ qua" }));
   await waitFor(() => expect(document.activeElement).toBe(panel().getByRole("button", { name: "Chỉnh sửa" })));
   expect(repository.write).not.toHaveBeenCalled();
   edit();
   if (name === "Thông tin") expect((panel().getByLabelText("Ghi chú") as HTMLTextAreaElement).value).toBe(record().notes);
   if (name === "Công việc") expect((panel().getByRole("checkbox", { name: "Treo giống" }) as HTMLInputElement).checked).toBe(false);
-  if (name === "Ngân hàng") expect((panel().getByLabelText("Ngân hàng") as HTMLInputElement).value).toBe(record().bankAccount!.bankName);
+  if (name === "Ngân hàng") expect((panel().getByLabelText("Ngân hàng *") as HTMLInputElement).value).toBe(record().bankAccount!.bankName);
 });
 
 it("saves personal fields in place while preserving loaded job, zone, type and bank data", async () => {
@@ -100,14 +100,14 @@ it("requires at least one working zone in the work tab", async () => {
 });
 
 it("saves bank fields without changing the rest of the employee", async () => {
-  const { employee } = await setup(); tab("Ngân hàng"); edit(); change("Số tài khoản", "000111222333"); save();
+  const { employee } = await setup(); tab("Ngân hàng"); edit(); change("Số tài khoản *", "000111222333"); save();
   await waitFor(() => expect(repository.write).toHaveBeenCalled());
   expectPreserved(employee, { bankAccount: { ...employee.bankAccount, accountNumber: "000111222333" } });
 });
 
 it("clears all three bank fields as null without removing existing work assignments", async () => {
   const { employee } = await setup(); tab("Ngân hàng"); edit();
-  for (const label of ["Ngân hàng", "Số tài khoản", "Chủ tài khoản"]) change(label, "");
+  for (const label of ["Ngân hàng *", "Số tài khoản *", "Chủ tài khoản *"]) change(label, "");
   save(); await waitFor(() => expect(repository.write).toHaveBeenCalled());
   expectPreserved(employee, { bankAccount: null });
 });
@@ -143,9 +143,9 @@ it("prevents duplicate submissions and keeps save pending until the request comp
 });
 
 it("renders bank validation under the responsible input and never sends an incomplete account", async () => {
-  await setup(); tab("Ngân hàng"); edit(); change("Số tài khoản", "123"); save();
+  await setup(); tab("Ngân hàng"); edit(); change("Số tài khoản *", "123"); save();
   expect(repository.write).not.toHaveBeenCalled();
-  const input = panel().getByLabelText("Số tài khoản", { exact: true });
+  const input = panel().getByLabelText("Số tài khoản *", { exact: true });
   expect(input.getAttribute("aria-invalid")).toBe("true");
   const descriptions = input.getAttribute("aria-describedby")?.split(" ").map(id => document.getElementById(id));
   expect(descriptions?.some(node => node?.getAttribute("role") === "alert" || node?.textContent?.includes("kiểm tra"))).toBe(true);

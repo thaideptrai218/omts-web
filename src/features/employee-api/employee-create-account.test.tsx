@@ -14,13 +14,15 @@ const fixture = () => employeeViewSchema.parse(employeeDetailFixture());
 const password = "Tmp-Pass-Once-7391";
 const receipt = () => ({ employee: fixture(), temporaryPassword: password, temporaryPasswordExpiresAt: "2026-11-12T12:00:00+07:00", accountMessageCode: "MSG-ACCOUNT-23" as const });
 const props = () => ({ zones: [{ id: workingZoneId, code: "V01", name: "Vùng Đông", statusId: 101 }], jobTypes: [], lookupsReady: true, onClose: vi.fn(), onAdopt: vi.fn(), onSaved: vi.fn() });
-const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label, { exact: true }), { target: { value } });
+const type = (label: string | RegExp, value: string) => fireEvent.change(screen.getByLabelText(label, typeof label === "string" ? { exact: true } : undefined), { target: { value } });
+// The phone label gains a required mark while a login account is requested.
+const phoneLabel = /^Số điện thoại( [*])?$/u;
 const save = () => fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
 const accountSwitch = () => screen.getByRole("switch", { name: "Tạo tài khoản đăng nhập khi lưu" });
 function fillProfile(phone = "0912345678") {
   type("Họ và tên *", "Người mới");
   type("Loại nhân viên *", "Staff");
-  if (phone) type("Số điện thoại", phone);
+  if (phone) type(phoneLabel, phone);
   fireEvent.click(screen.getByRole("checkbox", { name: /Vùng Đông/ }));
 }
 beforeEach(() => vi.clearAllMocks());
@@ -46,7 +48,7 @@ describe("create employee dialog: login account", () => {
     fillProfile("");
     save();
     expect(screen.getByLabelText("Tên đăng nhập *").getAttribute("aria-invalid")).toBe("true");
-    expect(screen.getByLabelText("Số điện thoại", { exact: true }).getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByLabelText("Số điện thoại *").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByRole("button", { name: /Tài khoản đăng nhập.*Có lỗi/ })).toBeTruthy();
     expect(repository.write).not.toHaveBeenCalled();
     // The account has no email: the group offers a username only.
