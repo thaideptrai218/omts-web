@@ -434,3 +434,43 @@ Quyết định của Chủ HTX: tổng số lồng các chuyến thu của mộ
 **`PUT /api/harvest-lots/{id}` (sửa lô)**: cùng quy tắc, đếm các lô khác của đơn (không tính chính lô này), **chỉ khi số lồng tăng** (lô ghi trước quy tắc vẫn sửa được các trường khác hoặc giảm lồng). Cùng 400 `HARVEST_ORDER_CAGES_EXCEEDED` / `CageCount`. Kết quả sửa không có ba trường mới.
 
 **Gợi ý cho form web**: số lồng mặc định = còn lại của đơn (accepted − harvested) chỉ là **gợi ý**; người dùng giảm xuống số bè này thu được, phần còn lại thu ở bè khác cùng loại hàu. Dòng trợ giúp dưới ô chọn đơn: "Đơn còn Z lồng. Nhập số lồng thu được từ bè này; phần còn lại thu ở bè khác cùng loại hàu (<tên>)."
+
+
+## Phụ lục H2 (13/11/2026): một lựa chọn duy nhất, loại hàu của chu kỳ SUY RA từ giống của đợt ươm (THAY mục 0.15 ở phần tạo/sửa chu kỳ)
+
+Quyết định chủ: "hàu sữa/hàu béo loại nhỏ cũng chỉ là loại giống hàu". Không còn chọn "Loại hàu nuôi" riêng. Giống (vật tư nhóm Seed) mang **loại hàu bán ra tương ứng** (`productId`, đặt MỘT lần ở Vật tư & Giống); chu kỳ lấy sản phẩm = sản phẩm của giống của lô giống của đợt ươm đã chọn.
+
+**1. Giống (vật tư) có `productId`/`productName`** (`GET /api/farming-input-items` (mảng), `/search` (mỗi phần tử), `/{id}`, kết quả `POST`/`PUT`/discontinue/resume/photos: cùng một trường thêm vào cả `FarmingInputItemListItem` và `FarmingInputItemView`):
+```json
+{ "id": "…", "code": "VT001", "name": "Hàu giống Thái Bình Dương 3 cm", "group": "Seed", "productId": "…", "productName": "Hàu béo", "…": "các trường cũ" }
+```
+`productId`/`productName` = `null` khi chưa gắn, và **luôn null** với nhóm Material/Other. Tạo/sửa (`POST /api/farming-input-items`, `PUT /api/farming-input-items/{id}`, JSON như cũ) thêm `productId` (guid, tùy chọn):
+```json
+{ "code": "VT001", "name": "Hàu giống Thái Bình Dương 3 cm", "group": "Seed", "unit": "mảnh", "productId": "…", "rowVersion": "…" }
+```
+- Chỉ nhóm **Seed** nhận; nhóm khác: `productId` bị **bỏ qua** (lưu null, không lỗi).
+- Sản phẩm phải có trong danh mục `GET /api/products` và đang bán: không thì **400** `MSG-GEN-01`, `field: "ProductId"`, `fields: ["ProductId"]` (không có `hint`; web tự hiện "Loại hàu bán ra không còn bán, chọn loại khác").
+- Như mọi trường khác của form vật tư (PUT thay toàn bộ): **bỏ trống/null khi PUT = xóa liên kết**. Web: gửi lại `productId` hiện có khi người dùng không đổi.
+- Gợi ý UI: trong form giống (nhóm Seed) thêm select "Loại hàu bán ra (khi nuôi giống này)" lấy từ `GET /api/products` (lọc bỏ ngừng bán); bảng/chi tiết giống hiện cột "Loại hàu bán ra".
+
+**2. Đợt ươm có sẵn `GET /api/nursery-batches/available`** (mục 0.6): mỗi phần tử thêm `seedItemName` (tên giống; trùng `itemName` hiện có, giữ cả hai), `productId`, `productName` (từ giống; `null` nếu giống chưa gắn):
+```json
+{ "id": "…", "code": "NU000002", "itemName": "Hàu giống Thái Bình Dương 3 cm", "seedItemName": "Hàu giống Thái Bình Dương 3 cm", "productId": "…", "productName": "Hàu béo", "remaining": 6500, "…": "…" }
+```
+Danh sách `GET /api/nursery-batches` (mỗi `items[]`) và chi tiết `GET /api/nursery-batches/{id}` cũng thêm `productId`, `productName`, `seedItemName` (chi tiết: ở mức đợt, cạnh `seedLot`). Nhãn gợi ý form chọn đợt: `"{code} · {seedItemName} → {productName} · còn {remaining} mảnh"`. Đợt có `productId = null` vẫn liệt kê nhưng UI nên cảnh báo "Giống này chưa gắn loại hàu bán ra. Vào Vật tư & Giống để gắn trước" (server sẽ từ chối, xem mục 5).
+
+**3. Tạo chu kỳ** (`POST /api/cultivation-cycles` / `POST /api/rafts/{raftId}/cultivation-cycles`): **KHÔNG còn trường `productId`** (gửi cũng bị bỏ qua, không lỗi). Chọn đợt ươm là đủ; server đặt `cycle.productId = giống của đợt.productId`.
+
+**4. Sửa chu kỳ** (`PUT /api/cultivation-cycles/{id}`): **bỏ `productId`** khỏi body (gửi cũng bỏ qua):
+```json
+{ "startDate": "2026-11-12", "targetYieldKg": 2200, "note": "…", "nurseryBatchId": "…", "rowVersion": "…" }
+```
+Đổi `nurseryBatchId` (chỉ khi chưa thả giống, như 0.8) thì `productId` của chu kỳ **cập nhật theo đợt mới**. Cờ `canChangeProduct` vẫn có trong `CycleView` (= `canChangeNursery`) nhưng web **không còn** control chọn loại hàu: chỉ hiện loại hàu (chỉ đọc), đổi bằng cách đổi đợt ươm.
+
+**5. Lỗi mới**: giống của đợt chưa gắn sản phẩm khi tạo chu kỳ hoặc khi đổi sang đợt đó: **400** `MSG-GEN-01`, `field: "NurseryBatchId"`, `reasonCode: "SEED_ITEM_WITHOUT_PRODUCT"`, `hint`/`message`: "Giống này chưa gắn loại sản phẩm bán. Vào Vật tư & Giống, mở giống đó và chọn loại hàu bán ra trước." (kèm `nurseryBatchId`, `nurseryCode`, `seedItemName`). Web hiện lỗi này ở ô chọn đợt ươm. Lỗi `ProductId` (400) và `CYCLE_SEED_LOCKED` với `field: "ProductId"` của mục 0.15 **không còn xảy ra** ở tạo/sửa chu kỳ.
+
+**6. Đọc chu kỳ** (`CycleView`): `productId`, `productName` (suy ra, như 0.15; `null` ở chu kỳ cũ không qua ươm) và thêm **`seedItemName`** (tên giống của lô giống của đợt; `null` nếu không có đợt). `seedLot.itemName` vẫn có. Hiển thị gợi ý: "Giống: {seedItemName} → bán ra: {productName}".
+
+**7. Không đổi**: kiểm thu hoạch `HARVEST_PRODUCT_MISMATCH`, `cycleProductId`/`cycleProductName`, `matchesCycleProduct` ở màn Thu hoạch (mục 0.15 phần Thu hoạch).
+
+**8. Demo**: giống VT001 và VT002 (Thái Bình Dương 3/5 cm) bán ra "Hàu béo", VT003 (bản địa Vân Đồn 3 cm) bán ra "Hàu sữa", VT004 (Cổ Trai 4 cm) bán ra "Hàu sống loại nhỏ". Chu kỳ demo có đợt ươm lấy sản phẩm theo giống; các đợt ươm 4002 sẵn sàng gồm cả "Hàu béo" và "Hàu sữa" (đợt demo 1 lấy lô của VT001/VT002 = Hàu béo, đợt demo 2 lấy lô của VT003 = Hàu sữa; CSDL cũ giữ các đợt đã có: nhiều đợt 4002 của VT003 = Hàu sữa, một đợt của VT001 = Hàu béo). Chu kỳ demo có đợt ươm tự đồng bộ sản phẩm theo giống khi chạy lại seed; các chu kỳ demo cũ không qua ươm giữ sản phẩm đã gán (Hàu béo/Hàu sữa xen kẽ).
