@@ -14,11 +14,11 @@ export function buildSeeding(draft: SeedingDraft): Built<ReturnType<typeof seedi
   const lanes = parseNumberList(draft.lanes), quantity = parseDecimal(draft.quantity);
   if (!draft.seedingDate) return fail("Hãy chọn ngày thả giống.");
   if (!draft.seedLotId) return fail("Hãy chọn lô giống.");
-  if (!lanes?.length) return fail("Hãy nhập các luống bằng số, cách nhau bởi dấu phẩy.");
+  if (!lanes?.length) return fail("Hãy nhập các làn bằng số, cách nhau bởi dấu phẩy.");
   if (!(quantity > 0)) return fail("Số lượng phải lớn hơn 0.");
   if (!draft.reason.trim()) return fail(needReason);
   const parsed = seedingPreviewBody.safeParse({ seedingDate: draft.seedingDate, seedLotId: draft.seedLotId, laneNumbers: lanes, quantity, reason: draft.reason });
-  return parsed.success ? { ok: true, value: parsed.data } : fail("Các luống không được trùng nhau và lý do tối đa 1.000 ký tự.");
+  return parsed.success ? { ok: true, value: parsed.data } : fail("Các làn không được trùng nhau và lý do tối đa 1.000 ký tự.");
 }
 
 export type LotDraft = { lanes: string; finished: string; cageCount: string; estimatedKg: string; reason: string; keep: string[]; files: File[] };
@@ -28,16 +28,16 @@ export const lotDraftOf = (item: LotItem, keep: string[]): LotDraft => ({
 export function buildLot(draft: LotDraft): Built<ReturnType<typeof lotPreviewBody.parse>> {
   const lanes = parseNumberList(draft.lanes), finished = parseNumberList(draft.finished), cages = parseDecimal(draft.cageCount);
   const kg = draft.estimatedKg.trim() ? parseDecimal(draft.estimatedKg) : null;
-  if (!lanes?.length) return fail("Hãy nhập các luống thu hoạch bằng số, cách nhau bởi dấu phẩy.");
-  if (!finished) return fail("Luống đã thu xong chỉ gồm các số, cách nhau bởi dấu phẩy.");
-  if (!finished.every((n) => lanes.includes(n))) return fail("Luống đã thu xong phải nằm trong các luống thu hoạch.");
+  if (!lanes?.length) return fail("Hãy nhập các làn thu hoạch bằng số, cách nhau bởi dấu phẩy.");
+  if (!finished) return fail("Làn đã thu xong chỉ gồm các số, cách nhau bởi dấu phẩy.");
+  if (!finished.every((n) => lanes.includes(n))) return fail("Làn đã thu xong phải nằm trong các làn thu hoạch.");
   if (!Number.isInteger(cages) || cages <= 0) return fail("Số lồng phải là số nguyên lớn hơn 0.");
   if (kg !== null && !(kg > 0)) return fail("kg ước tính phải lớn hơn 0 hoặc để trống.");
   if (draft.keep.length + draft.files.length > maxPhotos) return fail(`Tối đa ${maxPhotos} ảnh cho mỗi lô.`);
   if (photoProblem(draft.files)) return fail(photoProblem(draft.files)!);
   if (!draft.reason.trim()) return fail(needReason);
   const parsed = lotPreviewBody.safeParse({ laneNumbers: lanes, finishedLaneNumbers: finished, cageCount: cages, estimatedKg: kg, keepPhotoKeys: draft.keep, reason: draft.reason });
-  return parsed.success ? { ok: true, value: parsed.data } : fail("Các luống không được trùng nhau và lý do tối đa 1.000 ký tự.");
+  return parsed.success ? { ok: true, value: parsed.data } : fail("Các làn không được trùng nhau và lý do tối đa 1.000 ký tự.");
 }
 
 export type LogDraft = { visitDate: string; notes: string; reason: string; keep: string[]; files: File[] };

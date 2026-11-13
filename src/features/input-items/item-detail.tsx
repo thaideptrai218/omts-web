@@ -47,6 +47,7 @@ function InfoTab(props: TabProps) {
   const quantity = (value: number | null | undefined) => value == null ? "—" : `${fmt(value)} ${base?.name ?? ""}`;
   const facts: [string, ReactNode][] = [
     ["Mã hàng", record.code], ["Tên hàng", record.name], ["Loại hàng", typeLabel(record.group)], ["Nhóm hàng", record.itemGroupName],
+    ...(record.group === "Seed" ? [["Loại hàu bán ra", record.productName] as [string, ReactNode]] : []),
     ["Đơn vị tính", <span key="units" className={styles.unitList}>{record.units.map((unit) => <span key={unit.id}>{unit.name} <small>· {unit.code}</small></span>)}</span>],
     ["Giá vốn", record.costPrice == null ? null : `${fmt(record.costPrice)} / ${base?.name ?? ""}`], ["Giá nhập cuối", record.lastPurchasePrice == null ? null : `${fmt(record.lastPurchasePrice)} / ${base?.name ?? ""}`],
     ["Còn lại", quantity(record.onHand)], ["Giá trị còn lại", fmt(record.stockValue)], ["Định mức tối thiểu", quantity(record.minQuantity)], ["Định mức tối đa", quantity(record.maxQuantity)],

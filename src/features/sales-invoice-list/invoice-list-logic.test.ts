@@ -1,23 +1,30 @@
 import { describe, expect, it } from "vitest";
 import { allowedSet, changeErrorText, dateText, deliveryStatus, invoiceStatus, paidState, paymentMethod, paymentStatus } from "./invoice-labels";
-import { defaultFilters, filterProblem, isDefault, presetRange, toQuery } from "./invoice-list-logic";
+import { customRange } from "@/components/ui/management-screen/time-range-limits";
+import { allTime, presetValue } from "@/components/ui/management-screen/time-range-model";
+import { defaultFilters, filterProblem, isDefault, periodRange, toQuery } from "./invoice-list-logic";
 
-describe("khoảng ngày của lựa chọn nhanh", () => {
-  it("hôm nay, tháng này, tuần này bắt đầu từ thứ Hai", () => {
-    expect(presetRange("today", "2026-11-09", { from: "", to: "" })).toEqual({ from: "2026-11-09", to: "2026-11-09" });
-    expect(presetRange("month", "2026-11-18", { from: "", to: "" })).toEqual({ from: "2026-11-01", to: "2026-11-18" });
+describe("khoảng ngày của bộ lọc thời gian", () => {
+  it("mốc nhanh tính lại từ ngày hôm nay theo giờ Việt Nam, tuần bắt đầu từ thứ Hai", () => {
+    expect(periodRange(presetValue("today"), "2026-11-09")).toEqual({ from: "2026-11-09", to: "2026-11-09" });
+    expect(periodRange(presetValue("thisMonth"), "2026-11-18")).toEqual({ from: "2026-11-01", to: "2026-11-30" });
     // 2026-11-09 là thứ Hai; 2026-11-15 là Chủ nhật: tuần vẫn bắt đầu 09/11.
-    expect(presetRange("week", "2026-11-09", { from: "", to: "" }).from).toBe("2026-11-09");
-    expect(presetRange("week", "2026-11-15", { from: "", to: "" }).from).toBe("2026-11-09");
-    expect(presetRange("week", "2026-11-01", { from: "", to: "" }).from).toBe("2026-10-26");
+    expect(periodRange(presetValue("thisWeek"), "2026-11-09").from).toBe("2026-11-09");
+    expect(periodRange(presetValue("thisWeek"), "2026-11-15").from).toBe("2026-11-09");
+    expect(periodRange(presetValue("thisWeek"), "2026-11-01").from).toBe("2026-10-26");
   });
-  it("tùy chỉnh dùng ngày đã nhập", () => {
-    expect(presetRange("custom", "2026-11-09", { from: "2026-10-01", to: "2026-10-28" })).toEqual({ from: "2026-10-01", to: "2026-10-28" });
+  it("tùy chỉnh dùng ngày đã chọn", () => {
+    expect(periodRange(customRange("2026-10-01", "2026-10-28"), "2026-11-09")).toEqual({ from: "2026-10-01", to: "2026-10-28" });
+  });
+  it("Toàn thời gian là 5 năm gần nhất, đúng kỳ rộng nhất backend cho phép", () => {
+    const range = periodRange(allTime, "2026-11-09");
+    expect(range).toEqual({ from: "2021-11-10", to: "2026-11-09" });
+    expect(filterProblem({ ...defaultFilters(), time: customRange(range.from, range.to) })).toBeNull();
   });
 });
 
 describe("kiểm tra bộ lọc", () => {
-  const custom = (from: string, to: string) => ({ ...defaultFilters(), preset: "custom" as const, from, to });
+  const custom = (from: string, to: string) => ({ ...defaultFilters(), time: customRange(from, to) });
   it("tùy chỉnh phải đủ ngày, đúng thứ tự, tối đa 5 năm", () => {
     expect(filterProblem(custom("", "2026-11-09"))).toMatch(/đủ ngày/);
     expect(filterProblem(custom("2026-11-09", "2026-11-01"))).toMatch(/không được sau/);
@@ -32,6 +39,9 @@ describe("tham số truy vấn", () => {
   it("mặc định chỉ có kỳ hôm nay", () => {
     expect(toQuery(defaultFilters(), "2026-11-09")).toEqual({ from: "2026-11-09", to: "2026-11-09", zoneId: undefined, customerId: undefined, harvestLotId: undefined, statusId: undefined, paid: undefined, code: undefined, cashCollectedByMe: undefined });
     expect(isDefault(defaultFilters())).toBe(true);
+    // "Hôm nay" chọn lại từ bảng mốc vẫn là mặc định; đổi mốc hoặc khoảng thì không.
+    expect(isDefault({ ...defaultFilters(), time: presetValue("today", new Date(2020, 0, 1)) })).toBe(true);
+    expect(isDefault({ ...defaultFilters(), time: presetValue("thisMonth") })).toBe(false);
   });
   it("một trạng thái được chọn thì lọc theo mã trạng thái; tiền mặt và mã được cắt khoảng trắng", () => {
     const q = toQuery({ ...defaultFilters(), cancelled: false, code: " HD01 ", cashMine: true, paid: "false", zoneId: "z" }, "2026-11-09");

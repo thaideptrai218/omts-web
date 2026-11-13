@@ -3,14 +3,14 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
 import { CustomerSearch } from "@/features/customer-lookup/customer-search";
-import { Field, Select } from "@/features/operations/ui";
+import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
+import { isAllTime } from "@/components/ui/management-screen/time-range-model";
+import { Select } from "@/features/operations/ui";
 import q from "@/features/quality-claims/frame-kit.module.css";
 import { InvoiceLotPicker } from "./invoice-lot-picker";
-import type { Filters, Preset } from "./invoice-list-logic";
+import { MAX_PERIOD_YEARS, type Filters } from "./invoice-list-logic";
 import type { ZoneOption } from "./use-invoice-list";
 import s from "./invoice-list.module.css";
-
-const PRESETS: readonly { value: Preset; label: string }[] = [{ value: "today", label: "Hôm nay" }, { value: "week", label: "Tuần này" }, { value: "month", label: "Tháng này" }, { value: "custom", label: "Tùy chỉnh" }];
 
 type Props = {
   filters: Filters; zones: ZoneOption[]; zonesLoading: boolean; zonesError?: string; problem: string | null; busy: boolean; canExport: boolean; exporting: boolean;
@@ -23,12 +23,9 @@ export function InvoiceFilterPanel({ filters: f, zones, zonesLoading, zonesError
     <FilterWorkspace label="Bộ lọc hóa đơn" reset={<button type="button" className={s.linkButton} onClick={onReset} disabled={busy}>Đặt lại</button>}
       filters={<form className="grid gap-3.5" onSubmit={(event) => { event.preventDefault(); onApply(); }}>
         {canExport && <Button type="button" className="w-full" variant="secondary" disabled={exporting || busy} onClick={onExport}>{exporting ? "Đang xuất file..." : "Xuất Excel danh sách"}</Button>}
-        <fieldset className={q.group} disabled={busy}><legend>Thời gian</legend>
-          {PRESETS.map((p) => <label key={p.value} className={q.option}><input type="radio" name="invoice-period" checked={f.preset === p.value} onChange={() => onChange({ preset: p.value })} />{p.label}</label>)}
-          {f.preset === "custom" && <>
-            <Field type="date" label="Từ ngày" value={f.from} max={f.to || undefined} onChange={(event) => onChange({ from: event.target.value })} />
-            <Field type="date" label="Đến ngày" value={f.to} min={f.from || undefined} onChange={(event) => onChange({ to: event.target.value })} />
-          </>}
+        <fieldset className="contents" disabled={busy}>
+          <TimeRangeFilter legend="Thời gian" value={f.time} onChange={(time) => onChange({ time })} />
+          {isAllTime(f.time) && <p className={s.muted}>Toàn thời gian: xem tối đa {MAX_PERIOD_YEARS} năm gần nhất.</p>}
         </fieldset>
         <div>
           <Select label="Vùng nuôi" value={f.zoneId} disabled={busy || zonesLoading} onChange={(event) => onChange({ zoneId: event.target.value })}>

@@ -1,15 +1,19 @@
 "use client";
+import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { DataGrid } from "@/components/ui/data-grid";
-import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
+import { DataGrid, type DataGridSort } from "@/components/ui/data-grid";
+import { DateInputField } from "@/components/ui/management-screen/date-input-field";
 import { ManagementHeading } from "@/components/ui/management-page";
 import type { InterfaceIconName } from "@/components/ui/interface-icon";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { workspaceError } from "@/features/api-workspace/workspace-error";
+import { farmingErrorText } from "@/features/cultivation-api/farming-error-text";
 
 export function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
+  const farming = farmingErrorText(result);
+  if (farming !== undefined) return farming;
   if (result.httpStatus === 401 && result.uncertain) return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại và đối chiếu kết quả trước khi lập lượt mới.";
   const messages: Record<string, string> = { MSG41: "Số tiền phải là bội số của 1.000 đồng.", MSG45: "Số tiền hoặc số lượng vượt mức cho phép. Hãy đối chiếu số còn nợ hoặc số còn được trả.",
     "MSG-SALE-13": "Chưa dùng được VietQR vì hợp tác xã chưa có tài khoản nhận tiền. Hãy chọn cách thanh toán khác và nhờ Chủ hợp tác xã thiết lập tài khoản.",
@@ -34,24 +38,22 @@ export function FilterPanel({ children, columns = "four" }: { children: ReactNod
   const grid = columns === "two" ? "sm:grid-cols-2" : columns === "three" ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-4";
   return <div className={`grid items-end gap-3 rounded-card border border-border bg-[#fafbf9] p-3.5 ${grid}`}>{children}</div>;
 }
-export function Field({ label, ...props }: ComponentProps<"input"> & { label: string }) {
-  if (props.type === "date") {
-    const { type: _type, value, min, max, onChange, ref, ...input } = props;
-    void _type;
-    return <div className="block text-xs font-medium text-text-muted"><span>{label}</span><VietnameseDateInput {...input} aria-label={label} value={String(value ?? "")} min={min == null ? undefined : String(min)} max={max == null ? undefined : String(max)} inputRef={ref} className={control} calendarLabel={`Chọn ${label.toLocaleLowerCase("vi")}`} onValueChange={value => onChange?.({ target: { value }, currentTarget: { value } } as React.ChangeEvent<HTMLInputElement>)} /></div>;
+export function Field({ label, ref, ...props }: ComponentProps<"input"> & { label: string }) {
+  if (props.type === "date" || props.type === "datetime-local") {
+    return <DateInputField {...props} label={label} ref={ref} />;
   }
-  return <label className="block text-xs font-medium text-text-muted">{label}<input {...props} className={control} /></label>;
+  return <label className="block text-xs font-medium text-text-muted">{label}<input {...props} ref={ref} className={control} /></label>;
 }
 export function Select({ label, children, ...props }: ComponentProps<"select"> & { label: string }) {
   return <label className="block text-xs font-medium text-text-muted">{label}<SelectBox aria-label={label} {...props} className={control}>{children}</SelectBox></label>;
 }
 export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: string }) {
-  return <label className="block text-xs font-medium text-text-muted">{label}<textarea {...props} className={control} rows={3} /></label>;
+  return <label className="block text-xs font-medium text-text-muted">{label}<textarea rows={3} {...props} className={control} /></label>;
 }
 export function ErrorNotice({ error }: { error?: string }) { return error ? <p role="alert" className="my-4 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p> : null; }
 export function Skeleton() { return <div role="status" aria-label="Đang tải dữ liệu" className="my-5 space-y-3">{[1, 2, 3].map((id) => <div key={id} className="omts-skeleton h-14 rounded-control" />)}</div>; }
-export function Money({ value }: { value: number | null | undefined }) { return <span data-currency>{value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)}{value == null ? "" : " ₫"}</span>; }
-export const money = (value: number | null | undefined) => value == null ? "—" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value) + " ₫";
+export function Money({ value }: { value: number | null | undefined }) { return <span data-currency>{value == null ? "—" : formatVndWithSymbol(value)}</span>; }
+export const money = (value: number | null | undefined) => value == null ? "—" : formatVndWithSymbol(value);
 export function businessToday() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 export function businessTime(value: string | Date = new Date()) {
   const parts = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value));
@@ -62,8 +64,8 @@ export const displayTime = (value: string) => new Intl.DateTimeFormat("vi-VN", {
 export const statusLabel = (value: string | number) => ({ "1701": "Nháp", "1702": "Hoàn thành", "1703": "Đã hủy", "1801": "Đã ghi nhận", "1802": "Đã hủy", DRAFT: "Nháp", CONFIRMED: "Đã xác nhận", ACTIVE: "Đang hiệu lực", SUPERSEDED: "Đã hiệu chỉnh", CORRECTED: "Đã hiệu chỉnh", VOIDED: "Đã hủy", Active: "Đang cảnh báo", None: "Không", Corrected: "Đã hiệu chỉnh", Voided: "Đã hủy" }[String(value)] ?? String(value));
 export const methodLabel = (value: string) => ({ Cash: "Tiền mặt", BankTransfer: "Chuyển khoản", Other: "Khác" }[value] ?? value);
 export function MethodOptions() { return <><option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản</option><option value="Other">Khác</option></>; }
-export function DataTable({ headings, children, empty, responsive }: { headings: string[]; children: ReactNode; empty?: boolean; responsive?: boolean }) {
-  return <div className="my-4"><DataGrid headings={headings} empty={empty} responsive={responsive}>{children}</DataGrid></div>;
+export function DataTable({ headings, children, empty, responsive, sort }: { headings: string[]; children: ReactNode; empty?: boolean; responsive?: boolean; sort?: DataGridSort }) {
+  return <div className="my-4"><DataGrid headings={headings} empty={empty} responsive={responsive} sort={sort}>{children}</DataGrid></div>;
 }
 export function Paging({ page, total, pageSize = 20, disabled, onChange }: { page: number; total: number; pageSize?: number; disabled?: boolean; onChange(page: number): void }) {
   return <div className="flex flex-wrap items-center justify-between gap-3"><p>{total} bản ghi · Trang {page}</p><div className="flex gap-2"><Button className="w-auto" variant="secondary" disabled={disabled || page <= 1} onClick={() => onChange(page - 1)}>Trước</Button>

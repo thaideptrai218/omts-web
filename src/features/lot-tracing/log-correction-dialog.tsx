@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+
 import { createOperationsRepository } from "@/features/operations/repository";
 import { ErrorNotice, Field, Note } from "@/features/operations/ui";
 import { logSaved, preview, type LogItem } from "./correction-contracts";
@@ -37,7 +37,7 @@ export function LogCorrectionDialog({ item, onClose, onSaved }: Props) {
   const set = (patch: Partial<LogDraft>) => setDraft((d) => ({ ...d, ...patch }));
 
   return (
-    <Dialog open size="lg" title={`Sửa nhật ký nuôi ${formatDay(item.visitDate)}`} onOpenChange={(open) => !open && onClose()}>
+    <section aria-label={`Sửa nhật ký nuôi ${formatDay(item.visitDate)}`}>
       <div className={s.dialogBody}>
         {flow.reviewed ? (
           <CorrectionConfirmStep rows={logRows(item, draft)} preview={flow.reviewed.preview} pending={busy} error={flow.mutation.error} onBack={flow.back} onConfirm={() => void flow.confirm()} />
@@ -50,12 +50,12 @@ export function LogCorrectionDialog({ item, onClose, onSaved }: Props) {
             <ErrorNotice error={flow.mutation.error} />
             {!flow.built.ok && <p className={s.hint}>{flow.built.problem}</p>}
             <div className={s.dialogActions}>
-              <Button className="w-auto" variant="secondary" disabled={busy} onClick={onClose}>Hủy</Button>
-              <Button className="w-auto" type="submit" disabled={!flow.built.ok} isPending={busy} pendingLabel="Đang kiểm tra...">Xem lại thay đổi</Button>
+              <Button key="discard-correction" type="button" className="w-auto" variant="secondary" disabled={busy} onClick={onClose}>Bỏ qua</Button>
+              <Button key="review-correction" className="w-auto" type="submit" disabled={!flow.built.ok} isPending={busy} pendingLabel="Đang kiểm tra...">Xem lại thay đổi</Button>
             </div>
           </form>
         )}
       </div>
-    </Dialog>
+    </section>
   );
 }

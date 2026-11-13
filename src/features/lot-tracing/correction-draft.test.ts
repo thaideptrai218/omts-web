@@ -9,7 +9,7 @@ const lotItem = { id: id(2), lotCode: "B03-1", harvestedAt: "2026-10-26T05:40:00
 const pngFile = (size = 10, type = "image/png") => new File([new Uint8Array(size)], "a.png", { type });
 
 describe("đọc số nhập tay", () => {
-  it("danh sách luống nhận dấu phẩy, chấm phẩy, khoảng trắng và từ chối chữ, số 0", () => {
+  it("danh sách làn nhận dấu phẩy, chấm phẩy, khoảng trắng và từ chối chữ, số 0", () => {
     expect(parseNumberList("1, 2;3  4")).toEqual([1, 2, 3, 4]); expect(parseNumberList("")).toEqual([]);
     expect(parseNumberList("1, a")).toBeUndefined(); expect(parseNumberList("0")).toBeUndefined(); expect(parseNumberList("1.5")).toBeUndefined();
   });
@@ -24,7 +24,7 @@ describe("bản nháp phiên thả giống", () => {
     const built = buildSeeding(seeding);
     expect(built).toEqual({ ok: true, value: { seedingDate: "2026-04-20", seedLotId: id(1), laneNumbers: [1, 2, 3], quantity: 9000, reason: "Nhập nhầm lô giống" } });
   });
-  it("nêu lỗi tiếng Việt khi thiếu lý do, luống sai, trùng luống hoặc số lượng không dương", () => {
+  it("nêu lỗi tiếng Việt khi thiếu lý do, làn sai, trùng làn hoặc số lượng không dương", () => {
     expect(buildSeeding({ ...seeding, reason: "  " })).toEqual({ ok: false, problem: "Hãy nhập lý do sửa." });
     expect(buildSeeding({ ...seeding, lanes: "a" }).ok).toBe(false);
     expect(buildSeeding({ ...seeding, lanes: "1, 1" }).ok).toBe(false);
@@ -43,7 +43,7 @@ describe("bản nháp lô thu hoạch", () => {
     expect(buildLot(draft)).toMatchObject({ ok: true, value: { laneNumbers: [3, 4], finishedLaneNumbers: [3, 4], cageCount: 60, estimatedKg: 1200, keepPhotoKeys: ["k1", "k2"] } });
     expect(buildLot({ ...draft, estimatedKg: "" })).toMatchObject({ ok: true, value: { estimatedKg: null } });
   });
-  it("luống thu xong phải thuộc luống thu hoạch, số lồng nguyên dương, ảnh tối đa 10 và đúng loại", () => {
+  it("làn thu xong phải thuộc làn thu hoạch, số lồng nguyên dương, ảnh tối đa 10 và đúng loại", () => {
     expect(buildLot({ ...draft, finished: "5" }).ok).toBe(false);
     expect(buildLot({ ...draft, cageCount: "1,5" }).ok).toBe(false);
     expect(buildLot({ ...draft, keep: Array.from({ length: 10 }, (_, i) => `k${i}`), files: [pngFile()] }).ok).toBe(false);
@@ -78,7 +78,7 @@ describe("định dạng hiển thị", () => {
     expect(formatValue("lanes", [1, 2])).toBe("1, 2"); expect(formatValue("photos", ["a", "b"])).toBe("2 ảnh"); expect(formatValue("notes", null)).toBe("—");
   });
   it("mô tả chỗ thiếu bằng tiếng Việt từ giá trị nguyên tử, không dùng chuỗi backend", () => {
-    expect(describeGap({ kind: "NoSeedingSession", laneNumber: 2, seedLotCodes: [], zoneCode: null })).toContain("Luống 2 chưa có phiên thả giống");
+    expect(describeGap({ kind: "NoSeedingSession", laneNumber: 2, seedLotCodes: [], zoneCode: null })).toContain("Làn 2 chưa có phiên thả giống");
     expect(describeGap({ kind: "SeedLotNotOnCompletedReceipt", laneNumber: 1, seedLotCodes: ["PN1-1", "PN2-1"], zoneCode: null })).toContain("PN1-1, PN2-1");
     expect(describeGap({ kind: "NotPublisherOfZone", laneNumber: null, seedLotCodes: [], zoneCode: "VP01" })).toContain("VP01");
   });

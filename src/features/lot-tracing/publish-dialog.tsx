@@ -28,8 +28,8 @@ export function PublishDialog({ check, pending, error, onConfirm, onClose }: Pro
         )}
         {error && <p role="alert" className={s.error}>{error}</p>}
         <div className={s.dialogActions}>
-          <Button className="w-auto" variant="secondary" disabled={pending} onClick={onClose}>{allowed ? "Hủy" : "Đóng"}</Button>
-          {allowed && <Button className="w-auto" isPending={pending} pendingLabel="Đang công bố..." onClick={onConfirm}>{check.republish ? "Công bố lại" : "Công bố"}</Button>}
+          <Button key="discard" type="button" className="w-auto" variant="secondary" disabled={pending} onClick={onClose}>{allowed ? "Bỏ qua" : "Đóng"}</Button>
+          {allowed && <Button type="button" className="w-auto" isPending={pending} pendingLabel="Đang công bố..." onClick={onConfirm}>{check.republish ? "Công bố lại" : "Công bố"}</Button>}
         </div>
       </div>
     </Dialog>

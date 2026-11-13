@@ -1,4 +1,5 @@
 "use client";
+import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createOperationsRepository } from "@/features/operations/repository";
@@ -25,7 +26,7 @@ export function useJobTypeWrite(record: Job, onSynced: (job: Job) => void) {
     const latest = await mutation.run(() => jobTypesRepository.read("detail", { id: record.id }, jobType), true);
     if (!latest) return;
     onSynced(latest); mutation.reviewed();
-    setNotice(`Đã đọc hồ sơ hiện tại: ${latest.name} · ${latest.currentRate ? `${latest.currentRate.hourlyRate.toLocaleString("vi-VN")} đồng/giờ` : NO_RATE} · ${statusLabel(latest.statusId)}. Bạn có thể lưu lại bản nháp.`);
+    setNotice(`Đã đọc hồ sơ hiện tại: ${latest.name} · ${latest.currentRate ? `${formatVndWithSymbol(latest.currentRate.hourlyRate)}/giờ` : NO_RATE} · ${statusLabel(latest.statusId)}. Bạn có thể lưu lại bản nháp.`);
   }
   return { mutation, write, reread, notice, clearNotice: () => setNotice(undefined) };
 }

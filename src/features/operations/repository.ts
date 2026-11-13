@@ -4,6 +4,7 @@ import { z } from "zod";
 import { invoiceConfirmationSchema } from "@/features/sales-invoices/confirmation-problem";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OperationArea } from "./permissions";
+import { projectFarmingProblem } from "@/features/cultivation-api/farming-problem";
 import { employeeProblemMetadataSchema } from "@/features/employee-management/api/employee-problem-metadata";
 type RepositoryArea = OperationArea | "zone-licenses" | "raft-details" | "employees";
 
@@ -24,7 +25,8 @@ async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>,
     // A write returning 401 therefore also needs reconciliation, never replay.
     const employeeProblem = area === "employees" ? employeeProblemMetadataSchema.safeParse(result.employeeProblem) : undefined;
     const invoiceConfirmation = ["sales-invoices", "customer-payments", "sales-invoice-list"].includes(area) ? invoiceConfirmationSchema.safeParse(result.invoiceConfirmation) : undefined;
-    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}), ...(invoiceConfirmation?.success ? { invoiceConfirmation: invoiceConfirmation.data } : {}),
+    const farming = projectFarmingProblem(result.problem);
+    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}), ...(invoiceConfirmation?.success ? { invoiceConfirmation: invoiceConfirmation.data } : {}), ...(farming ? { problem: farming } : {}),
       uncertain: body !== undefined && (response.status >= 500 || response.ok || response.status === 401) };
   } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
 }
@@ -37,6 +39,8 @@ export function createOperationsRepository(area: RepositoryArea) {
   return {
     read<T>(action: string, query: Query, schema: z.ZodType<T>, signal?: AbortSignal) { return send(area, { ...query, action }, schema, undefined, signal); },
     write<T>(action: string, body: unknown, schema: z.ZodType<T>, id?: string, zoneId?: string) { return send(area, {}, schema, { action, id, zoneId, body }); },
+    /** A write with no body whose target is named in the query (e.g. delete-photo with id and photoId); the BFF checks CSRF and maps it to the backend verb. */
+    post<T>(action: string, query: Query, schema: z.ZodType<T>) { return send(area, { ...query, action }, schema, {}); },
     upload<T>(action: string, files: File[], body: unknown, schema: z.ZodType<T>, id?: string, zoneId?: string) {
       const form = new FormData(); form.set("payload", JSON.stringify(body));
       for (const file of files) form.append(area === "water" || area === "raft-details" ? "photo" : "files", file, file.name);

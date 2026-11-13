@@ -14,13 +14,14 @@ import { lotTracingUpload, lotTracingUploadActions } from "./lot-tracing-upload-
 import { claimUpload, claimUploadActions } from "./claim-upload-plan";
 import { handleFarmingRequest } from "../farming/farming-http";
 import { handleEmployeeApi } from "../employees/employee-api-http";
-import { harvestValues, harvestCorrection, harvestDetail } from "@/features/cultivation-api/records-contracts";
-import { cultivationLog, logValues, logCorrection } from "@/features/cultivation-api/logs-contracts";
+import { readFarmingProblem } from "../backend/farming-problem-copy";
+import { farmingRecordUpload, farmingRecordUploadActions, farmingRecordPayload, appendFarmingFields } from "./farming-record-upload";
 export { localFileTarget } from "./evidence-target";
 
 const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: responseHeaders });
-const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", "harvest-record", "harvest-correct", "log-record", "log-correct", ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
+const farmingAreas = new Set<string>(["harvest", "seeding", "material-usages", "cultivation-cycles"]);
+const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", ...farmingRecordUploadActions, ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
 
 function browserFiles(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
@@ -64,18 +65,9 @@ export async function handleOperationRequest(request: Request, areaName: string)
         const checked = uploadQuery.safeParse(Object.fromEntries(query));
         if (!checked.success || [...query.keys()].length !== new Set(query.keys()).size) return json({ status: "invalid-input" }, 400);
         upload = checked.data;
-        if (area.data === "cultivation-cycles" && ["log-record", "log-correct"].includes(upload.action) && upload.id && upload.zoneId) {
-          const zone = upload.zoneId;
-          plan = { area: area.data, action: upload.action, zoneId: zone, path: upload.action === "log-record" ? `/api/cultivation-cycles/${upload.id}/cultivation-logs` : `/api/cultivation-logs/${upload.id}`, method: upload.action === "log-record" ? "POST" : "PUT", permission: upload.action === "log-record" ? "LogsCreate" : "LogsEdit", schema: z.object({ log: cultivationLog }).transform(({ log }) => ({ log: { ...log, photos: log.photos.map((photo,index) => ({ ...photo, url: `/api/operations/cultivation-cycles?action=log-photo&id=${log.id}&zoneId=${zone}&index=${index}` })) } })) };
-        }
+        plan = farmingRecordUpload(area.data, upload.action, upload.id, upload.zoneId)?.plan;
         if (area.data === "lot-tracing" && upload.id) plan = lotTracingUpload(upload.action, upload.id)?.plan;
         if (area.data === "claim-reports" && upload.id) plan = claimUpload(upload.action, upload.id)?.plan;
-        if (area.data === "harvest" && upload.action === "harvest-record" && upload.id && upload.zoneId) {
-          plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/rafts/${upload.id}/harvest-lots`, method: "POST", permission: "Create", schema: z.object({ lot: z.object({ id: z.guid(), lotCode: z.string() }) }) };
-        }
-        if (area.data === "harvest" && upload.action === "harvest-correct" && upload.id && upload.zoneId) {
-          plan = { area: "harvest", action: upload.action, zoneId: upload.zoneId, path: `/api/harvest-lots/${upload.id}`, method: "PUT", permission: "Edit", schema: z.object({ lot: harvestDetail }) };
-        }
         if (area.data === "purchase-receipts" && upload.action === "invoice-photos" && upload.id) {
           plan = { area: area.data, action: upload.action, path: `/api/purchase-receipts/${upload.id}/invoice-photos`, method: "POST", permission: "Edit", schema: c.receiptSchema };
         } else if (area.data === "water" && upload.action === "recognize" && upload.zoneId) {
@@ -99,10 +91,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
     let payload: string | FormData | undefined = plan.body === undefined ? undefined : JSON.stringify(plan.body);
     if (plan.multipartFields) {
       payload = new FormData();
-      for (const [key, value] of Object.entries(plan.body as Record<string, unknown>)) {
-        if (value == null) continue;
-        for (const item of Array.isArray(value) ? value : [value]) payload.append(key, String(item));
-      }
+      appendFarmingFields(payload, plan.body as Record<string, unknown>);
     }
 
     if (upload && area.data === "claim-reports") {
@@ -131,26 +120,16 @@ export async function handleOperationRequest(request: Request, areaName: string)
       }
     } else
     if (upload) {
-      const logUpload = upload.action === "log-record" || upload.action === "log-correct";
-      const input = await readOperationUpload(request, area.data === "water", area.data === "harvest" || logUpload ? { optionalFile: upload.action !== "log-record", maxFiles: 10 } : {});
-      if (!input) return json({ status: "invalid-input", code: "MSG01" }, 400);
-      const validator = upload.action === "harvest-record" ? harvestValues : upload.action === "harvest-correct" ? harvestCorrection : upload.action === "log-record" ? logValues : upload.action === "log-correct" ? logCorrection : z.strictObject({});
-      const values = validator.safeParse(input.payload);
-      if (!values.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
-      if ((area.data === "harvest" || logUpload) && input.files.some(file => !["image/jpeg", "image/png"].includes(file.type))) return json({ status: "invalid-input", code: "MSG01" }, 400);
-      if (upload.action === "log-correct") {
-        const correction = logCorrection.safeParse(input.payload);
-        const total = correction.success ? input.files.length + correction.data.keepPhotoKeys.length : 0;
-        if (!correction.success || total < 1 || total > 10) return json({ status: "invalid-input", code: "MSG01" }, 400);
-      }
-      if (upload.action === "harvest-correct") {
-        const correction = harvestCorrection.safeParse(input.payload);
-        if (!correction.success || input.files.length + correction.data.keepPhotoKeys.length > 10) return json({ status: "invalid-input", code: "MSG01" }, 400);
-      }
-      payload = new FormData();
-      for (const file of input.files) payload.append(area.data === "water" ? "photo" : area.data === "harvest" || logUpload ? "photos" : "files", file, file.name);
-      for (const [key, value] of Object.entries(values.data)) if (value != null) {
-        for (const part of Array.isArray(value) ? value : [value]) payload.append(key, String(part));
+      const farming = farmingRecordUpload(area.data, upload.action, upload.id, upload.zoneId);
+      if (farming) {
+        const result = await farmingRecordPayload(request, farming);
+        if (!result.form) return json({ status: "invalid-input", code: "MSG-GEN-01", problem: { field: result.error, hint: result.hint } }, 400);
+        payload = result.form;
+      } else {
+        const input = await readOperationUpload(request, area.data === "water");
+        if (!input || !z.strictObject({}).safeParse(input.payload).success) return json({ status: "invalid-input", code: "MSG01" }, 400);
+        payload = new FormData();
+        for (const file of input.files) payload.append(area.data === "water" ? "photo" : "files", file, file.name);
       }
     }
     const controller = new AbortController();
@@ -164,6 +143,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
         headers: { Accept: plan.file === "export" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/json",
           Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(typeof payload === "string" ? { "Content-Type": "application/json" } : {}) }, body: payload });
       let data: unknown;
+      const failedCopy = upstream.ok ? undefined : upstream.clone();
       let bytes: Uint8Array | undefined;
       let contentType = upstream.headers.get("content-type")?.split(";")[0];
       if (plan.file === "export" && upstream.ok) {
@@ -172,7 +152,11 @@ export async function handleOperationRequest(request: Request, areaName: string)
       } else if (plan.noContent && upstream.status === 204) data = { done: true };
       else {
         const result = await readBackendResponse(upstream, "profileRead", false, ["sales-invoices", "customer-payments", "sales-invoice-list"].includes(area.data));
-        if (result.status === "http-error") return json({ status: "rejected", code: result.code, ...(result.invoiceConfirmation ? { invoiceConfirmation: result.invoiceConfirmation } : {}) }, result.httpStatus);
+        if (result.status === "http-error") {
+          // Nuôi trồng questions and stock checks (MSG-GEN-04, MSG-CYCLE-01/07, MSG-INPUT-01) travel as an allow-listed problem.
+          const problem = farmingAreas.has(area.data) ? await readFarmingProblem(failedCopy) : undefined;
+          return json({ status: "rejected", code: result.code, ...(problem ? { problem } : {}), ...(result.invoiceConfirmation ? { invoiceConfirmation: result.invoiceConfirmation } : {}) }, result.httpStatus);
+        }
         if (result.status !== "success" || ![200, 201, 202].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
         const parsed = plan.schema.safeParse(result.data);
         if (!parsed.success) return json({ status: "invalid-response" }, 502);

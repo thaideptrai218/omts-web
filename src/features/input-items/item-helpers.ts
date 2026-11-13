@@ -38,7 +38,7 @@ export function suggestUnitCode(itemCode: string, unitName: string) {
 
 export type UnitDraft = { key: string; id: string | null; unitId: string; factor: string; code: string; isBase: boolean; isUsed: boolean };
 export type FormValues = {
-  code: string; name: string; group: string; itemGroupId: string; description: string; notes: string;
+  code: string; name: string; group: string; itemGroupId: string; productId: string; description: string; notes: string;
   minQuantity: string; maxQuantity: string; costPrice: string; openingQuantity: string; units: UnitDraft[];
 };
 export const MAX_PHOTOS = 5;
@@ -52,7 +52,7 @@ export function initialValues(record: ItemView | null, copy: boolean): FormValue
     ? record.units.map((unit) => ({ key: newKey(), id: copy ? null : unit.id, unitId: unit.unitId, factor: unit.isBase ? "" : String(unit.factor), code: copy ? "" : unit.code, isBase: unit.isBase, isUsed: copy ? false : unit.isUsed === true }))
     : [{ key: newKey(), id: null, unitId: "", factor: "", code: "", isBase: true, isUsed: false }];
   return {
-    code: record && !copy ? record.code : "", name: record ? (copy ? `${record.name} (bản sao)` : record.name) : "", group: record?.group ?? "Material", itemGroupId: record?.itemGroupId ?? "",
+    code: record && !copy ? record.code : "", name: record ? (copy ? `${record.name} (bản sao)` : record.name) : "", group: record?.group ?? "Material", itemGroupId: record?.itemGroupId ?? "", productId: record?.productId ?? "",
     description: record?.description ?? "", notes: record?.notes ?? "", minQuantity: text(record?.minQuantity), maxQuantity: text(record?.maxQuantity), costPrice: text(record?.costPrice),
     openingQuantity: copy ? "" : text(record?.openingQuantity), units: units.sort((a, b) => Number(b.isBase) - Number(a.isBase)),
   };
@@ -92,14 +92,15 @@ export function validateForm(values: FormValues): string | undefined {
 
 /**
  * The body of a save. On an update the opening quantity is sent only when it changed: the API takes a different value
- * only while the opening row is the item's one movement, and says so itself otherwise.
+ * only while the opening row is the item's one movement, and says so itself otherwise. `productId` (loại hàu bán ra) belongs to seed items only:
+ * the item is replaced as a whole, so an empty choice is sent as null to clear the link.
  */
 export function buildSaveBody(values: FormValues, record: ItemView | null): Record<string, unknown> {
   const blank = (value: string) => value.trim() || null;
   const opening = parseNumber(values.openingQuantity);
   const openingChanged = record === null || (opening ?? 0) !== (record.openingQuantity ?? 0);
   return {
-    code: blank(values.code), name: values.name.trim(), group: values.group, itemGroupId: values.itemGroupId || null, description: blank(values.description), notes: blank(values.notes),
+    code: blank(values.code), name: values.name.trim(), group: values.group, itemGroupId: values.itemGroupId || null, productId: values.group === "Seed" && values.productId ? values.productId : null, description: blank(values.description), notes: blank(values.notes),
     minQuantity: parseNumber(values.minQuantity), maxQuantity: parseNumber(values.maxQuantity), costPrice: parseNumber(values.costPrice),
     ...(openingChanged ? { openingQuantity: opening } : {}),
     units: values.units.map((unit) => ({ id: unit.id, unitId: unit.unitId, factor: unit.isBase ? 1 : parseNumber(unit.factor), code: blank(unit.code), isBase: unit.isBase })),

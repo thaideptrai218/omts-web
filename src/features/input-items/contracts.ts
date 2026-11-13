@@ -14,6 +14,8 @@ export const IN_USE = 101, DISCONTINUED = 102;
 export const unitView = z.object({ id, unitId: id, name: text, factor: num, code: text, isBase: z.boolean(), isUsed: z.boolean().nullish() });
 export const itemRow = z.object({
   id, code: text, name: text, group: text, itemGroupId: id.nullish(), itemGroupName: opt, unit: text, units: z.array(unitView), description: opt, notes: opt, photoUrl: opt,
+  // "Loại hàu bán ra" of a seed item (the product its oysters are sold as); empty until set, and always empty for Material/Other.
+  productId: id.nullish(), productName: opt,
   minQuantity: numOpt, maxQuantity: numOpt, costPrice: numOpt, lastPurchasePrice: numOpt, onHand: num, stockValue: num, isUsed: z.boolean().nullish(),
   statusId: count, status: text, createdAt: text, createdBy: opt, rowVersion: text,
 });
@@ -22,6 +24,15 @@ export const itemView = itemRow.extend({ photos: z.array(z.object({ id, url: tex
 export const itemList = z.array(itemRow);
 export const importResult = z.object({ imported: count, errors: z.array(z.object({ row: count, fields: z.array(text), message: text })) });
 export const nextCode = z.object({ code: text });
+/**
+ * GET /api/products relayed by the input-items BFF (the Owner's item form): tolerant of the shape (bare array or `items`) and of the "in use" flag
+ * (`inUse`, or `statusId` 101; a product with neither is kept). Keeps the products in use, sorted by name: the choices of "Loại hàu bán ra".
+ */
+const rawProduct = z.object({ id, name: text.min(1), statusId: numOpt, inUse: z.boolean().nullish() });
+export const productList = z.union([z.array(rawProduct), z.object({ items: z.array(rawProduct) })]);
+export type ProductOption = { id: string; name: string };
+export const productsInUse = productList.transform((value): ProductOption[] => (Array.isArray(value) ? value : value.items)
+  .filter((row) => row.inUse ?? (row.statusId == null || row.statusId === IN_USE)).map((row) => ({ id: row.id, name: row.name })).sort((a, b) => a.name.localeCompare(b.name, "vi")));
 export const removedItem = z.object({ disposalId: id.nullish(), disposalCode: opt, disposedQuantity: numOpt });
 export const removed = z.object({ done: z.literal(true) });
 
@@ -35,6 +46,8 @@ export const movementKinds = ["Opening", "Receipt", "PurchaseReturn", "Issue", "
 export const movement = z.object({
   id, sequence: count.nullish(), kind: text, documentId: id.nullish(), documentCode: opt, occurredAt: text, quantity: num, balanceAfter: numOpt, unitCost: numOpt, transactionPrice: numOpt,
   partyName: opt, seedLotLineId: id.nullish(), seedLotCode: opt, reversesMovementId: id.nullish(),
+  // Issues posted by a farming record (11/11/2026): which record, so the movement can link back to it. All optional.
+  sourceKind: z.enum(["Seeding", "MaterialUsage"]).nullish().catch(undefined), sourceRecordId: id.nullish().catch(undefined), cycleId: id.nullish().catch(undefined), raftId: id.nullish().catch(undefined), zoneId: id.nullish().catch(undefined),
 });
 export const movementPage = z.object({ items: z.array(movement), page: count, pageSize: count, total: count, unit: opt });
 export const seedLots = z.object({

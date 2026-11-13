@@ -42,7 +42,7 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
     if (active.current || blocked || credential || employee.account || employee.hasStaffAccount || employee.status !== "Employed" || !employee.canMaintain) return;
     const checked = issueEmployeeAccountRequestSchema.safeParse({ username });
     if (!checked.success) {
-      setError("Nhập tên tài khoản.");
+      setError(checked.error.issues[0].message);
       form.current?.querySelector<HTMLInputElement>('[name="username"]')?.focus();
       return;
     }
@@ -66,7 +66,7 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
   return <Dialog open title="Cấp tài khoản đăng nhập" dismissible={!pending} onOpenChange={open => { if (!open) close(); }}>
     <p className="mb-4">Cấp tài khoản cho {employee.fullName}. Phân quyền được thực hiện tại màn Tài khoản.</p>
     <form ref={form} className="space-y-4" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
-      <Field label="Tên tài khoản *" name="username" required autoComplete="off" value={username} disabled={pending || blocked} onChange={event => setUsername(event.target.value)} />
+      <Field label="Tên tài khoản *" name="username" required minLength={3} maxLength={50} autoComplete="off" value={username} disabled={pending || blocked} onChange={event => setUsername(event.target.value)} />
       <ErrorNotice error={error} />
       <div className="flex flex-wrap gap-3">
         <Button className="w-auto" variant="secondary" disabled={pending} onClick={close}>Đóng</Button>

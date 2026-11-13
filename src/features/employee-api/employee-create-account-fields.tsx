@@ -17,7 +17,8 @@ export function EmployeeCreateAccountFields({ values, setValues, errorProps, fie
     {values.createAccount && (
       <div className={styles.grid}>
         <div>
-          <Field label="Tên đăng nhập *" required autoComplete="off" {...errorProps("username")} value={values.username} onChange={event => setValues(current => ({ ...current, username: event.target.value }))} />
+          <Field label="Tên đăng nhập *" required minLength={3} maxLength={50} autoComplete="off" {...errorProps("username")} value={values.username} onChange={event => setValues(current => ({ ...current, username: event.target.value }))} />
+          <p className={styles.hint}>3–50 ký tự: chữ, số, dấu chấm, gạch ngang hoặc gạch dưới; cần ít nhất một chữ cái.</p>
           <FieldError path="username" fieldError={fieldError} />
         </div>
       </div>

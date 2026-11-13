@@ -7,11 +7,12 @@ import { useSettingsSections } from "@/components/layout/settings-sections-conte
 import { CashBookSettings } from "@/features/cash-book/cash-settings";
 import { CustomerSettingsPanel } from "@/features/customers/customer-settings";
 import { InputInventorySettings } from "@/features/input-items/inventory-settings";
+import { HarvestSettingsPanel } from "./harvest-settings-panel";
 import { foldVietnamese } from "@/shared/presentation/fold-text";
 import styles from "./settings-page.module.css";
 
 /** Settings that open in place on this page; every other item still links to its own page until it is moved here. */
-const panels: Record<string, ComponentType> = { "cash-book": CashBookSettings, "input-inventory": InputInventorySettings, customers: CustomerSettingsPanel };
+const panels: Record<string, ComponentType> = { "cash-book": CashBookSettings, "input-inventory": InputInventorySettings, customers: CustomerSettingsPanel, harvest: HarvestSettingsPanel };
 
 /**
  * Thiết lập: the groups and their items on the left, the chosen item on the right without leaving the page. The selection

@@ -33,6 +33,17 @@
   --omts-color-overlay: rgb(15 23 42 / 0.45);
   --omts-color-focus-ring: #086f78;
 
+  /* Lane states stay distinct from the user's brand theme; white ink exceeds 4.5:1. */
+  --omts-lane-empty: #64748b;
+  --omts-lane-growing: #166534;
+  --omts-lane-harvested: #1e40af;
+  --omts-lane-harvesting: #9a3412;
+  --omts-lane-damaged: #b91c1c;
+  --omts-lane-inactive: #475569;
+  --omts-lane-ink: #ffffff;
+  --omts-lane-track: #e2e8f0;
+  --omts-lane-track-ink: #10243a;
+
   /* Shape, depth and readable content width */
   --omts-radius-control: 0.375rem;
   --omts-radius-card: 0.625rem;
@@ -178,6 +189,9 @@ html { scroll-behavior: smooth; text-rendering: optimizeLegibility; -webkit-font
 /* Phản hồi nhấn nút trong 100ms, không làm xê dịch bố cục xung quanh. */
 button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { touch-action: manipulation; }
 button:not(:disabled):active { transform: scale(0.985); }
+/* Trình duyệt đặt min-width: min-content cho fieldset nên một dải làn hay bảng rộng bên trong làm giãn cả hộp thoại.
+   Cho fieldset co theo khung chứa; phần rộng tự cuộn ngang trong hộp riêng của nó. */
+fieldset { min-width: 0; }
 /* Nội dung vào trang nhẹ nhàng khi chuyển màn. */
 #workspace-main > section { animation: omts-page-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes omts-page-enter { from { transform: translateY(0.5rem); opacity: 0.001; } to { transform: none; opacity: 1; } }

@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render as baseRender, screen, within } from "@testing-library/react";
+import { ToastProvider } from "@/components/ui/toast-provider";
 const state = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("./api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "Staff" }, permissions: { functionPermissions: [] } }) }));
 vi.mock("./workspace-repository", () => ({ createWorkspaceRepository: (resource: string) => ({ list: (query: unknown) => state.list(resource, query) }) }));
 import { ApiResourceScreen } from "./api-resource-screen";
 import { SelectedZonesProvider } from "./selected-zones";
+const render = (ui: import("react").ReactElement) => baseRender(<ToastProvider>{ui}</ToastProvider>);
 
 const zoneId = (number: number) => `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`;
 const zones = ["Ngọc Vừng", "Minh Châu", "Quan Lạn"].map((name, index) => ({ id: zoneId(index + 1), code: `Z${index + 1}`, name, location: null, area: null, statusId: 101, status: "In Use", inUseRaftCount: 0, licenseState: null }));

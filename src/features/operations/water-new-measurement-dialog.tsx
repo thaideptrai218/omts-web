@@ -2,10 +2,13 @@ import { useCallback, useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { CollapsibleSection } from "@/components/ui/management-screen/management-table";
+import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import * as c from "./contracts";
 import { loadOptions } from "./lookups";
 import { DataTable, ErrorNotice, Field, Select, businessTime, displayTime, statusLabel, toApiTime, useMutation, useRemote } from "./ui";
+import { WaterValueFields } from "./water-value-fields";
 import { waterRepository as repository, type WaterRecognition } from "./water-measurement-shared";
 
 type NewMeasurementProps = {
@@ -26,6 +29,7 @@ const readValue = (field: { value: number } | null | undefined) => field ? Strin
  */
 export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasurementProps) {
   const confirmation = useActionDialog();
+  const { notify } = useToast();
   const [photo, setPhoto] = useState<File>();
   const [recognition, setRecognition] = useState<Recognition>();
   const [values, setValues] = useState(emptyValues);
@@ -71,7 +75,7 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
     const payload = attempt.current;
     if (!payload) return;
     const result = await mutation.run(() => repository.write("record", payload, c.waterSchema, undefined, zoneId));
-    if (result) onSaved(result, recognition.ocr);
+    if (result) { notify({ tone: "success", title: `Đã ghi phép đo tại bè ${result.raftCode}.` }); onSaved(result, recognition.ocr); }
   }
 
   async function loadReviewHistory() {
@@ -88,6 +92,7 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
       <ErrorNotice error={mutation.error || rafts.error} />
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void (recognition ? save() : recognize()); }}>
         <fieldset disabled={mutation.pending || mutation.uncertain} className="space-y-4">
+          <CollapsibleSection title="Ảnh máy đo" description="Ảnh dùng để đọc các chỉ số nước." columns={1}>
           <Field
             label="Ảnh máy đo * (JPEG/PNG, tối đa 10 MB)"
             type="file"
@@ -96,28 +101,29 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
             disabled={!!recognition}
             onChange={(e) => setPhoto(e.target.files?.[0])}
           />
+          </CollapsibleSection>
           {recognition && (
             <>
               {recognition.ocr.warning && <p role="status" className="rounded-control bg-primary-soft p-3">{recognition.ocr.warning.text}</p>}
               {recognition.thresholdWarning && <p role="alert" className="rounded-control border border-danger p-3 text-danger">{recognition.thresholdWarning.text}</p>}
+              <CollapsibleSection title="Phép đo" description="Đối chiếu thời gian, bè và chỉ số với ảnh máy đo." columns={2}>
               <Select label="Bè đo *" value={values.raftId} required onChange={setField("raftId")}>
                 <option value="">Chọn bè đang sử dụng</option>
                 {(rafts.data ?? []).map((raft) => <option key={raft.id} value={raft.id}>{String(raft.code)}</option>)}
               </Select>
-              <Field label="Thời điểm đo (giờ Việt Nam) *" type="datetime-local" required value={values.measuredAt} onChange={setField("measuredAt")} />
-              <Field label="pH (0–14) *" type="number" required min="0" max="14" step="0.01" value={values.ph} onChange={setField("ph")} />
-              <Field label="Độ mặn (0–100 ‰) *" type="number" required min="0" max="100" step="0.01" value={values.salinity} onChange={setField("salinity")} />
-              <Field label="Nhiệt độ (°C) *" type="number" required min="0" max="100" step="0.01" value={values.temperature} onChange={setField("temperature")} />
+              <WaterValueFields values={values} onChange={(key, value) => setField(key)({ target: { value } })} />
+              </CollapsibleSection>
             </>
           )}
         </fieldset>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button key="discard" type="button" className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => { void close(); }}>Bỏ qua</Button>
           {mutation.uncertain ? (
-            <Button className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked}>Gửi lại lượt đang chờ</Button>
+            <Button key="retry-save" className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked}>Gửi lại lượt đang chờ</Button>
           ) : recognition ? (
-            <Button className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked || !filled}>Lưu phép đo</Button>
+            <Button key="save" className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked || !filled}>Lưu phép đo</Button>
           ) : (
-            <Button className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked || !photo}>Nhận dạng từ ảnh</Button>
+            <Button key="recognize" className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked || !photo}>Nhận dạng từ ảnh</Button>
           )}
         </div>
       </form>
@@ -147,7 +153,6 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
           )}
         </div>
       )}
-      <Button className="mt-5 w-auto" variant="secondary" disabled={mutation.pending} onClick={close}>Đóng</Button>
     </Dialog>
   );
 }

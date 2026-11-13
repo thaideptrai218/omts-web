@@ -9,11 +9,13 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 export function useUnsavedGuard() {
   const confirmation = useActionDialog();
   const dirty = useRef(false);
+  const pending = useRef(false);
   async function leave(apply: () => void) {
+    if (pending.current) return;
     if (dirty.current && !(await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) return;
     dirty.current = false;
     apply();
   }
-  return { dirty, leave, dialog: confirmation.dialog };
+  return { dirty, pending, leave, dialog: confirmation.dialog };
 }
 export type UnsavedGuard = ReturnType<typeof useUnsavedGuard>;

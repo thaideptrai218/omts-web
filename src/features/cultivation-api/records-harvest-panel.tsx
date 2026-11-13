@@ -1,36 +1,48 @@
 "use client";
-import { Fragment, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
+import type { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { FilterChecks } from "@/components/ui/filter-checks";
-import { OpenableTableRow } from "@/components/ui/openable-table-row";
-import { DataTable, ErrorNotice, Field, Paging, Skeleton, displayTime, useRemote } from "@/features/operations/ui";
+import { FilterPills } from "@/components/ui/management-screen/management-layout";
+
+import { ErrorNotice, Field, Paging, Skeleton, useRemote } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { cagesFromKg, formatCages } from "@/shared/format/cage-quantity";
 import { matchesSelection } from "@/shared/presentation/filter-selection";
-import { CagesWithEstimatedKg, KgWithApproxCages } from "./harvest-quantity-cell";
+import { CagesWithEstimatedKg } from "./harvest-quantity-cell";
 import flowStyles from "./cultivation-flow.module.css";
 import { HarvestLotPreview } from "./harvest-lot-preview";
-import { HarvestLotButton } from "./harvest-detail";
-import { HarvestSettings } from "./harvest-settings";
+import { HarvestRecordsTable } from "./harvest-records-table";
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
+import { HarvestLanesBoard } from "./harvest-lanes-board";
+import { HarvestCycleProductBanner } from "./harvest-cycle-product-banner";
+import { HarvestPlanSummary } from "./harvest-plan-summary";
+
+
 import * as c from "./records-contracts";
 import { HarvestForm } from "./records-harvest-form";
 import { harvestRepo, useAllowed } from "./records-shared";
+
+/** Every lane that has seed is Harvested (and at least one lane was seeded): the cycle can be closed. */
+const everySeededLaneHarvested = (lanes: z.infer<typeof c.harvestLane>[]) => lanes.some(lane => lane.state === "Harvested" || lane.state === "OutOfService") && lanes.every(lane => lane.state === "Harvested" || lane.state === "OutOfService" || lane.state === "NotSeeded");
 
 /** Harvest lots of a raft with search/status filters, filtered totals and an inline lot preview. */
 export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {
   const allowed = useAllowed("harvest", zoneId);
   const [adding, setAdding] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const remote = useRemote(
     useMemo(
       () => (signal: AbortSignal) => harvestRepo.read("list", { id: raftId, zoneId }, c.harvestList, signal),
       [raftId, zoneId],
     ),
   );
-  const [search, setSearch] = useState("");
+  const query = useSearchParams();
+  const [search, setSearch] = useState(() => query.get("search") ?? "");
   const [status, setStatus] = useState("");
-  const [page, setPage] = useState(1);
-  const [selectedLot, setSelectedLot] = useState<string>();
+  const [page, setPage] = useState<number>();
+  const [selectedLot, setSelectedLot] = useState<string | undefined>(() => query.get("recordId") ?? undefined);
   // The API reports lot status in either casing.
   const statusLabel = (value: string) =>
     ({
@@ -47,7 +59,9 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
         matchesSelection(status, String(lot.statusId)) &&
         lot.lotCode.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi")),
     ) ?? [];
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / 10)));
+  // A lot deep link must open the page containing its row, including lots beyond the first ten.
+  const linkedPage = Math.max(1, Math.ceil((rows.findIndex(lot => lot.id === query.get("recordId")) + 1) / 10));
+  const currentPage = Math.min(page ?? linkedPage, Math.max(1, Math.ceil(rows.length / 10)));
   const canShowApproximateCageTotals = rows.every(
     (lot) => cagesFromKg(lot.invoicedKg, lot.kgPerCage) !== undefined && cagesFromKg(lot.remainingKg, lot.kgPerCage) !== undefined,
   );
@@ -69,30 +83,17 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
       <div className={flowStyles.panelHeading}>
         <div>
           <h3>Các lô thu hoạch</h3>
-          <p>Chọn mã lô để xem sản lượng, ảnh và lịch sử ghi nhận.</p>
+
         </div>
         <div className={flowStyles.actions}>
-          <Button variant="secondary" disabled={remote.loading} onClick={remote.reload}>
+          {remote.data?.canRecordHarvest && allowed("Create") && (
+            <Button type="button" disabled={remote.loading} onClick={() => setAdding(true)}>Ghi nhận thu hoạch</Button>
+          )}
+          <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
             Tải lại
           </Button>
-          {allowed("Owner") && (
-            <Button variant="secondary" onClick={() => setSettingsOpen(true)}>
-              Quy đổi & tự đóng lô
-            </Button>
-          )}
-          {remote.data?.canRecordHarvest && allowed("Create") && (
-            <Button onClick={() => setAdding(true)}>Ghi nhận thu hoạch</Button>
-          )}
         </div>
       </div>
-      {settingsOpen && (
-        <HarvestSettings
-          onClose={() => {
-            setSettingsOpen(false);
-            remote.reload();
-          }}
-        />
-      )}
       {remote.loading ? (
         <Skeleton />
       ) : (
@@ -107,6 +108,10 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 <strong>{remote.data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng</strong>
               </span>
             </p>
+            {remote.data.cycle && <HarvestCycleProductBanner cycle={remote.data.cycle} />}
+            <HarvestPlanSummary data={remote.data} />
+            <HarvestLanesBoard data={remote.data} zoneId={zoneId} raftId={raftId} canFinish={remote.data.canRecordHarvest && allowed("Create")} onChanged={remote.reload} />
+            {remote.data.cycle && everySeededLaneHarvested(remote.data.lanes) && <p role="status" className="mb-3 rounded-control border border-success/30 bg-success/5 p-3 text-sm">Tất cả làn đã thu xong. <Link href={farmingReferenceHref("cycle", { zoneId, raftId, cycleId: remote.data.cycle.id, tab: "journey" })}>Kết thúc chu kỳ</Link></p>}
             <div className={flowStyles.harvestFilters}>
               <Field
                 label="Tìm mã lô"
@@ -118,8 +123,9 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                   setPage(1);
                 }}
               />
-              <FilterChecks
-                label="Trạng thái lô"
+              <FilterPills
+                legend="Trạng thái lô"
+                name="harvest-lot-status"
                 value={status}
                 options={[
                   ...new Map(remote.data.lots.map((lot) => [String(lot.statusId), statusLabel(lot.status)])).entries(),
@@ -133,89 +139,8 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 {rows.length}/{remote.data.lots.length} lô
               </span>
             </div>
-            <div className={flowStyles.harvestTable}>
-              <DataTable
-                responsive
-                headings={[
-                  "Mã lô / thời điểm",
-                  "Làn thu hoạch",
-                  "Số lồng thu hoạch",
-                  "Đã lập hóa đơn",
-                  "Còn lại",
-                  "Trạng thái",
-                ]}
-                empty={!rows.length}
-              >
-                {rows.slice((currentPage - 1) * 10, currentPage * 10).map((lot) => (
-                  <Fragment key={lot.id}>
-                    <OpenableTableRow
-                      data-selected={selectedLot === lot.id || undefined}
-                      onOpen={() => setSelectedLot((value) => (value === lot.id ? undefined : lot.id))}
-                    >
-                      <td data-label="Mã lô / thời điểm">
-                        <button
-                          type="button"
-                          className={flowStyles.recordLink}
-                          aria-expanded={selectedLot === lot.id}
-                          onClick={() => setSelectedLot((value) => (value === lot.id ? undefined : lot.id))}
-                        >
-                          {lot.lotCode}
-                        </button>
-                        <span className="mt-1 block whitespace-nowrap text-xs text-text-muted">
-                          {displayTime(lot.harvestedAt)}
-                        </span>
-                      </td>
-                      <td data-label="Làn thu hoạch">
-                        {lot.laneNumbers.join(", ")}
-                        <span className="mt-1 block text-xs text-text-muted">
-                          Đã thu hết: {lot.finishedLaneNumbers.join(", ") || "Chưa có"}
-                        </span>
-                      </td>
-                      <td data-label="Số lồng thu hoạch" className="text-right">
-                        <CagesWithEstimatedKg cages={lot.cageCount} kg={lot.estimatedKg} />
-                      </td>
-                      <td data-label="Đã lập hóa đơn" className="text-right">
-                        <KgWithApproxCages kg={lot.invoicedKg} kgPerCage={lot.kgPerCage} />
-                      </td>
-                      <td data-label="Còn lại" className="text-right font-semibold">
-                        <KgWithApproxCages kg={lot.remainingKg} kgPerCage={lot.kgPerCage} />
-                      </td>
-                      <td data-label="Trạng thái">
-                        <span className={flowStyles.state}>{statusLabel(lot.status)}</span>
-                        {lot.canCorrect && allowed("Edit") && (
-                          <div className="mt-2 text-sm">
-                            <HarvestLotButton
-                              id={lot.id}
-                              zoneId={zoneId}
-                              label="Sửa lô"
-                              onSaved={() => {
-                                setSelectedLot(undefined);
-                                remote.reload();
-                              }}
-                            />
-                          </div>
-                        )}
-                      </td>
-                    </OpenableTableRow>
-                    {selectedLot === lot.id && (
-                      <tr>
-                        <td colSpan={6} className={flowStyles.recordDetailCell}>
-                          <HarvestLotPreview
-                            id={lot.id}
-                            zoneId={zoneId}
-                            onClose={() => setSelectedLot(undefined)}
-                            onSaved={() => {
-                              setSelectedLot(undefined);
-                              remote.reload();
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                ))}
-              </DataTable>
-            </div>
+            <HarvestRecordsTable rows={rows.slice((currentPage - 1) * 10, currentPage * 10)} selectedLot={selectedLot} zoneId={zoneId} statusLabel={statusLabel} onSelect={setSelectedLot} onSaved={remote.reload} />
+            {selectedLot && !remote.data.lots.some(lot => lot.id === selectedLot) && <HarvestLotPreview id={selectedLot} zoneId={zoneId} onClose={() => setSelectedLot(undefined)} onSaved={() => { setSelectedLot(undefined); remote.reload(); }} />}
             <div className={flowStyles.harvestTotals}>
               <span>Tổng các lô phù hợp bộ lọc</span>
               <dl>
@@ -227,8 +152,8 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 </div>
                 {(
                   [
-                    ["Đã lập hóa đơn", totals.invoiced, totals.invoicedCages],
-                    ["Còn lại", totals.remaining, totals.remainingCages],
+                    ["Đã bán", totals.invoiced, totals.invoicedCages],
+                    ["Còn để bán", totals.remaining, totals.remainingCages],
                   ] as const
                 ).map(([label, kg, cages]) => (
                   <div key={label}>
@@ -246,12 +171,11 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
             <div className={flowStyles.tablePaging}>
               <Paging page={currentPage} total={rows.length} pageSize={10} onChange={setPage} />
             </div>
-            <p className={flowStyles.harvestHint}>
-              Thu hoạch tính theo lồng; số kg là ước tính theo kg/lồng của từng lô. Số lồng có dấu “≈” là quy đổi từ kg.
-              Mở hồ sơ lô để xem lượng đã bán, trả lại, hao hụt và chênh lệch.
-            </p>
+
+
             {adding && (
               <HarvestForm
+                canConfigure={allowed("Owner")}
                 zoneId={zoneId}
                 raftId={raftId}
                 data={remote.data}

@@ -2,6 +2,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast-provider";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
 import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, type SortState } from "@/components/ui/management-screen/management-table";
@@ -12,12 +13,11 @@ import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { ListSkeleton } from "@/features/farming-management/detail-parts";
 import { useStickyRemote } from "@/features/farming-management/use-sticky-remote";
 import { useUnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
-import styles from "@/features/farming-management/farming-management.module.css";
 import { WaterZoneOverview } from "@/features/water-overview/water-zone-overview";
 import * as c from "./contracts";
 import { loadOptions } from "./lookups";
 import { operationAllowed } from "./permissions";
-import { ErrorNotice, useMutation, useRemote } from "./ui";
+import { businessTime, useMutation, useRemote } from "./ui";
 import { WaterChartSection } from "./water-chart-section";
 import { emptyWaterFilters, filterWater, noWaterHistory, raftsOf, readAllWaterHistory, sortWater, type WaterFilters, type WaterSortKey, type WaterZoneRef } from "./water-history-model";
 import { WaterHistoryTable, waterColumns } from "./water-history-table";
@@ -37,24 +37,36 @@ const noLinkedRecord = { status: "success" as const, data: undefined as c.WaterM
 
 /** Theo dõi chất lượng nước: measurements of one zone (`?zoneId=`), a row (`?recordId=`) opens its record in place; no zone shows the zone overview. */
 export function WaterScreen({ initialZoneId = "", helpHref }: { initialZoneId?: string; helpHref?: string } = {}) {
-  return <Suspense fallback={<ListSkeleton />}><WaterWorkspace initialZoneId={initialZoneId} helpHref={helpHref} /></Suspense>;
+  return <Suspense fallback={<ListSkeleton />}><LinkedWaterWorkspace initialZoneId={initialZoneId} helpHref={helpHref} /></Suspense>;
+}
+
+function LinkedWaterWorkspace(props: { initialZoneId: string; helpHref?: string }) {
+  const params = useSearchParams();
+  return <WaterWorkspace key={`${props.initialZoneId}:${params?.get("zoneId") ?? ""}:${params?.get("recordId") ?? ""}`} {...props} />;
 }
 
 function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; helpHref?: string }) {
   const { identity, permissions } = useApiWorkspace();
+  const { notify } = useToast();
   const functions = permissions.functionPermissions, params = useSearchParams();
   const linkedId = UUID.test(params?.get("recordId") ?? "") ? params?.get("recordId") ?? undefined : undefined, linkedZone = params?.get("zoneId") ?? "";
   const zones = useRemote(loadZones);
   // undefined = no explicit choice yet: a linked measurement then decides the zone, otherwise the overview shows.
   const [choice, setChoice] = useState<string | undefined>(initialZoneId || (UUID.test(linkedZone) ? linkedZone : undefined));
-  const linked = useRemote<c.WaterMeasurement | undefined>(useCallback((signal: AbortSignal) => linkedId && choice === undefined ? repository.read("detail", { id: linkedId }, c.waterSchema, signal) : Promise.resolve(noLinkedRecord), [linkedId, choice]));
+  const linked = useRemote<c.WaterMeasurement | undefined>(useCallback((signal: AbortSignal) => linkedId ? repository.read("detail", { id: linkedId }, c.waterSchema, signal) : Promise.resolve(noLinkedRecord), [linkedId]));
   const { zones: offered, zoneId } = useScopedZones(zones.data?.filter(row => operationAllowed("water", identity, functions, "View", row.id)) ?? [], choice ?? linked.data?.zoneId ?? "", initialZoneId || undefined);
 
   const [time, setTime] = useState<TimeRangeValue>(allTime), [filters, setFilters] = useState<WaterFilters>(() => ({ ...emptyWaterFilters, status: linkedId ? "" : emptyWaterFilters.status }));
+  const [datedLink, setDatedLink] = useState(false);
+  if (linked.data && !datedLink) {
+    const date = businessTime(linked.data.measuredAt).slice(0, 10);
+    setDatedLink(true); setTime({ kind: "custom", from: date, to: date });
+  }
   const [sort, setSort] = useState<SortState>({ key: "time", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
   const [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
-  const [chartOpen, setChartOpen] = useState(false), [thresholdsOpen, setThresholdsOpen] = useState(false), [revision, setRevision] = useState(0), [notice, setNotice] = useState<string>();
+  const [chartOpen, setChartOpen] = useState(false), [thresholdsOpen, setThresholdsOpen] = useState(false), [revision, setRevision] = useState(0);
   const guard = useUnsavedGuard(), exporting = useMutation();
+  useEffect(() => { if (exporting.error) notify({ tone: "danger", title: "Chưa xuất được phép đo.", description: exporting.error }); }, [exporting.error, notify]);
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-water", waterColumns.map(column => column.key).join(","));
   const visible = waterColumns.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);
 
@@ -63,7 +75,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
     : Promise.resolve({ status: "success" as const, data: noWaterHistory }), [zoneId, time.from, time.to, filters.status]));
   const loaded = history.data?.zoneId === zoneId ? history.data : undefined;
   const rows = useMemo(() => sortWater(filterWater(loaded?.items ?? [], filters), sort.key as WaterSortKey, sort.direction), [loaded, filters, sort]);
-  if (!linkPlaced && loaded) { setLinkPlaced(true); const index = rows.findIndex(row => row.id === linkedId); if (index >= 0) setPage(Math.floor(index / pageSize) + 1); }
+  if (!linkPlaced && loaded) { const index = rows.findIndex(row => row.id === linkedId); if (index >= 0) { setLinkPlaced(true); setPage(Math.floor(index / pageSize) + 1); } }
 
   useEffect(() => {
     if (!linkedId || !loaded) return;
@@ -80,7 +92,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   const currentZone = offered.find(row => row.id === zoneId);
   const zone: WaterZoneRef = { id: zoneId, code: String(currentZone?.code ?? ""), name: String(currentZone?.name ?? "") };
   const canExport = !!zoneId && operationAllowed("water", identity, functions, "Export", zoneId), canEdit = !!zoneId && operationAllowed("water", identity, functions, "Edit", zoneId);
-  const changed = (message: string) => { history.reload(); setRevision(value => value + 1); setNotice(message); };
+  const changed = (message: string) => { history.reload(); setRevision(value => value + 1); notify({ tone: "success", title: message }); };
 
   const list = !zoneId ? null : history.error && !loaded ? <ListStateMessage error={history.error} onRetry={history.reload} retryLabel="Tải lại" />
     : !loaded ? <ListSkeleton />
@@ -100,14 +112,12 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
     </>}
     footer={zoneId ? <ManagementPagination page={current} pageSize={pageSize} total={rows.length} unit="phép đo" disabled={history.loading && !loaded} onPage={next => void guard.leave(() => { setPage(next); setExpanded(undefined); })} onPageSize={size => change(() => setPageSize(size))} /> : undefined}>
     {guard.dialog}
-    <ErrorNotice error={exporting.error} />
-    {notice && <div className={styles.feedback}><p role="status">{notice}</p></div>}
     <ManagementScroller busy={history.loading}>
       {!zoneId ? overview : <>
         <WaterPanelStrip chartOpen={chartOpen} thresholdsOpen={thresholdsOpen} note={loaded?.truncated ? `Chỉ hiển thị ${loaded.items.length} phép đo mới nhất; hãy thu hẹp khoảng thời gian.` : undefined}
           onChart={() => setChartOpen(open => !open)} onThresholds={() => void guard.leave(() => { setExpanded(undefined); setThresholdsOpen(open => !open); })} />
         {chartOpen && <WaterChartSection key={`${zoneId}:${revision}`} zoneId={zoneId} from={time.from} to={time.to} />}
-        {thresholdsOpen && <section className={local.panel} aria-label="Ngưỡng cảnh báo"><WaterThresholdPanel key={zoneId} zoneId={zoneId} owner={identity.subjectType === "CooperativeOwner"} dirtyRef={guard.dirty} onSaved={message => { setRevision(value => value + 1); setNotice(message); }} /></section>}
+        {thresholdsOpen && <section className={local.panel} aria-label="Ngưỡng cảnh báo"><WaterThresholdPanel key={zoneId} zoneId={zoneId} owner={identity.subjectType === "CooperativeOwner"} dirtyRef={guard.dirty} onSaved={message => { setRevision(value => value + 1); notify({ tone: "success", title: message }); }} /></section>}
         {list}
       </>}
     </ManagementScroller>

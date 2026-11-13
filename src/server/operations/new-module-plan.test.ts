@@ -5,6 +5,13 @@ import { operationAllowed } from "@/features/operations/permissions";
 import { ids } from "@/features/operations/__tests__/fixtures";
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
 const q = (s = "") => new URLSearchParams(s);
+describe("workforce job types", () => {
+  it("does not post to /api/workforce/job-types (the backend has none); job types go through /api/job-types", () => {
+    expect(planOperation("workforce", "POST", q(), { action: "job", body: { name: "Thu hoạch" } })).toBeUndefined();
+    const plan = planOperation("job-types", "POST", q(), { action: "create", body: { name: "Thu hoạch", hourlyRate: 30000, effectiveFrom: "2026-11-12" } });
+    expect(plan).toMatchObject({ method: "POST", path: "/api/job-types", permission: "Create" });
+  });
+});
 describe("new real modules read contracts", () => {
   it("no longer exposes cage staffing or purchase-shift routes (no backend in develop)", () => {
     for (const query of [`action=staffing&id=${ids.receipt}`, "action=staffing-employees&day=2026-11-05"]) expect(planOperation("purchase-requests", "GET", q(query))).toBeUndefined();

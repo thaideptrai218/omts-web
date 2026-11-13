@@ -1,5 +1,6 @@
 "use client";
 import type { Dispatch, SetStateAction } from "react";
+import { MoneyField, UnitField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import * as c from "./contracts";
@@ -45,22 +46,20 @@ export function ReceiptLineItemsFieldset({
               </option>
             ))}
           </Select>
-          <Field
+          <UnitField
             label="Số lượng"
-            type="number"
-            min="0.001"
-            max="1000000000"
-            step="0.001"
+            unit={String(activeItems.find((item) => item.id === row.itemId)?.unit ?? "đơn vị")}
+            decimals={3}
+            min={0.001}
+            max={1000000000}
             value={row.quantity}
-            onChange={(e) => changeLine(row.key, "quantity", e.target.value)}
+            onChange={(next) => changeLine(row.key, "quantity", next)}
           />
-          <Field
-            label="Đơn giá (đồng)"
-            type="number"
-            min="0"
-            step="1"
+          <MoneyField
+            label="Đơn giá"
+            min={0}
             value={row.unitPrice}
-            onChange={(e) => changeLine(row.key, "unitPrice", e.target.value)}
+            onChange={(next) => changeLine(row.key, "unitPrice", next)}
           />
           <Field
             label="Mã lô nhà cung cấp"

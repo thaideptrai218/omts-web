@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { validVietnamesePhone, vietnamesePhoneMessage } from "@/components/form/phone-input-rules";
 import { Dialog } from "@/components/ui/dialog";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ResourceExtras } from "@/features/farming-api/resource-extras";
@@ -12,6 +13,7 @@ import catalogStyles from "./catalog.module.css";
 import { resources, type ResourceKey } from "./resources";
 import { workspaceError } from "./workspace-error";
 import { createWorkspaceRepository, type ApiRecord } from "./workspace-repository";
+import { RaftResourceEditor } from "./raft-resource-editor";
 
 type MutationAction = "create" | "update" | "discontinue" | "reactivate" | "lock" | "unlock";
 
@@ -21,7 +23,16 @@ const workingZoneIdsOf = (record: ApiRecord | null) =>
 const fieldValueOf = (record: ApiRecord | null, key: string) => (record?.[key] == null ? "" : String(record[key]));
 
 /** Create/edit dialog for a generic workspace resource, including status changes and conflict review. */
-export function ResourceEditor({
+type ResourceEditorProps = {
+  resource: ResourceKey; record: ApiRecord | null; canEdit: boolean; zones: ApiRecord[]; zoneId: string;
+  onClose(): void; onSaved(record: ApiRecord): void;
+};
+
+export function ResourceEditor(props: ResourceEditorProps) {
+  return props.resource === "rafts" ? <RaftResourceEditor {...props} /> : <GenericResourceEditor {...props} />;
+}
+
+function GenericResourceEditor({
   resource,
   record,
   canEdit,
@@ -146,6 +157,10 @@ export function ResourceEditor({
 
   async function mutate(action: MutationAction, reason?: string) {
     if (pendingRef.current || blocked || ((action === "create" || action === "update") && !editable)) return;
+    if (resource === "accounts" && (action === "create" || action === "update") && !validVietnamesePhone(values.phoneNumber ?? "")) {
+      setError(vietnamesePhoneMessage);
+      return;
+    }
     pendingRef.current = true;
     setPending(true);
     setError(undefined);

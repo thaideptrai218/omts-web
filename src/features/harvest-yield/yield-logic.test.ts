@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { harvestYieldReport, type YieldGroup } from "./contracts";
-import { defaultFilters, differenceNote, filterProblem, monthRange, nextSort, pageSize, pageSlice, sortGroups, toQuery } from "./yield-logic";
+import { defaultFilters, percentOfTarget, filterProblem, linkedYieldFilters, monthRange, nextSort, pageSize, pageSlice, sortGroups, toQuery } from "./yield-logic";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const group = (n: number, label: string, over: Partial<YieldGroup> = {}): YieldGroup => ({
@@ -9,6 +9,11 @@ const group = (n: number, label: string, over: Partial<YieldGroup> = {}): YieldG
 });
 
 describe("kỳ và bộ lọc", () => {
+  it("includes historical linked records while leaving an ordinary report in the current month", () => {
+    expect(toQuery(linkedYieldFilters("2026-11-11", { recordId: id(1) }), 2)).toMatchObject({ from: "2021-11-12", to: "2026-11-11" });
+    expect(linkedYieldFilters("2026-11-11", { cycleId: id(2), from: "2026-02-01", to: "2026-03-01" })).toMatchObject({ from: "2026-02-01", to: "2026-03-01" });
+    expect(linkedYieldFilters("2026-11-11", {})).toEqual(defaultFilters("2026-11-11"));
+  });
   it("monthRange: mùng 1 đến ngày cuối tháng, kể cả tháng 2 nhuận", () => {
     expect(monthRange("2026-10-28")).toEqual({ from: "2026-10-01", to: "2026-10-31" });
     expect(monthRange("2028-02-10").to).toBe("2028-02-29");
@@ -45,10 +50,11 @@ describe("sắp xếp và phân trang", () => {
     expect(pageSlice(many, 1)).toHaveLength(pageSize);
     expect(pageSlice(many, 2)).toEqual([pageSize, pageSize + 1, pageSize + 2]);
   });
-  it("differenceNote nói rõ âm/0/dương bằng chữ", () => {
-    expect(differenceNote(-5)).toMatch(/vượt/);
-    expect(differenceNote(0)).toMatch(/Khớp/);
-    expect(differenceNote(10)).toMatch(/lệch 10/);
+  it("percentOfTarget chỉ tính khi có kg mục tiêu", () => {
+    expect(percentOfTarget(250, 1000)).toBe(25);
+    expect(percentOfTarget(1200, 1000)).toBe(120);
+    expect(percentOfTarget(100, null)).toBeUndefined();
+    expect(percentOfTarget(100, 0)).toBeUndefined();
   });
 });
 

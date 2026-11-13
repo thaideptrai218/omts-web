@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useMemo, useState } from "react";
+import { customRange } from "@/components/ui/management-screen/time-range-limits";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { loadOptions } from "@/features/operations/lookups";
 import { operationAllowed } from "@/features/operations/permissions";
@@ -20,7 +21,7 @@ export function useInvoiceList(linkedCode = "") {
   const workspace = useApiWorkspace(), exporter = useMutation();
   const [today] = useState(businessToday);
   // A link from another screen names the invoice by its code; the invoice may be old, so the longest period the list allows is searched.
-  const [start] = useState<Filters>(() => linkedCode ? { ...defaultFilters(), code: linkedCode, preset: "custom", from: `${Number(today.slice(0, 4)) - 5}${today.slice(4).replace("-02-29", "-02-28")}`, to: today } : defaultFilters());
+  const [start] = useState<Filters>(() => linkedCode ? { ...defaultFilters(), code: linkedCode, time: customRange(`${Number(today.slice(0, 4)) - 5}${today.slice(4).replace("-02-29", "-02-28")}`, today) } : defaultFilters());
   const [draft, setDraft] = useState<Filters>(start), [applied, setApplied] = useState<Filters>(start), [page, setPage] = useState(1);
   const allowed = (action: string, zoneId?: string) => operationAllowed("sales-invoice-list", workspace.identity, workspace.permissions.functionPermissions, action, zoneId);
 

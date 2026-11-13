@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 const read = vi.hoisted(() => vi.fn());
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => ({ read, write: vi.fn() }) }));
 vi.mock("./records-shared", () => ({ harvestRepo: { read }, useAllowed: () => () => false }));

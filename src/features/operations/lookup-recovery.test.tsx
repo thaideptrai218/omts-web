@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render as baseRender, screen, waitFor } from "@testing-library/react";
+import { ToastProvider } from "@/components/ui/toast-provider";
 import type { ReactNode } from "react";
 const mocks = vi.hoisted(() => ({ options: vi.fn(), read: vi.fn(), write: vi.fn(), upload: vi.fn(), download: vi.fn() }));
 vi.mock("./repository", () => ({ createOperationsRepository: () => mocks }));
@@ -11,6 +12,7 @@ import { ReceiptEditor, ReceiptScreen } from "./receipt-screen";
 import { PaymentEditor } from "./payment-screen";
 import { WaterScreen } from "./water-screen";
 import { ids, receiptFixture } from "./__tests__/fixtures";
+const render = (ui: ReactNode) => baseRender(<ToastProvider>{ui}</ToastProvider>);
 
 const unavailable = { status: "error", httpStatus: 503, uncertain: false };
 const record = receiptFixture();
@@ -63,11 +65,11 @@ describe("manual lookup recovery without losing drafts or writing", () => {
   it("retries payment debt for the same supplier while retaining the amount and reference", async () => {
     mocks.read.mockResolvedValueOnce(unavailable).mockResolvedValue({ status: "success", data: debt });
     render(<PaymentEditor payment={null} suppliers={[debt.totals]} canCreate initialSupplierId={ids.supplier} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("Số tiền đã trả (đồng) *"), { target: { value: "1000" } });
+    fireEvent.change(screen.getByLabelText("Số tiền đã trả *"), { target: { value: "1000" } });
     fireEvent.change(screen.getByLabelText("Mã tham chiếu"), { target: { value: "QA giữ tham chiếu" } });
     fireEvent.click(await screen.findByRole("button", { name: "Tải lại công nợ theo phiếu" }));
     await screen.findByRole("option", { name: /PN-QA-01/ });
-    expect((screen.getByLabelText("Số tiền đã trả (đồng) *") as HTMLInputElement).value).toBe("1000");
+    expect((screen.getByLabelText("Số tiền đã trả *") as HTMLInputElement).value).toBe("1.000");
     expect((screen.getByLabelText("Mã tham chiếu") as HTMLInputElement).value).toBe("QA giữ tham chiếu");
     expect(mocks.read.mock.calls[1][1]).toEqual({ supplierId: ids.supplier }); expect(mocks.write).not.toHaveBeenCalled();
   });

@@ -19,7 +19,6 @@ export function TraceDetail({ lotId, onCorrect }: { lotId: string; onCorrect(raf
   if (d.trace.error || !trace) return <div><ErrorNotice error={d.trace.error} /><Button className="w-auto" variant="secondary" onClick={d.trace.reload}>Tải lại</Button></div>;
   return (
     <div className={s.stack}>
-      {d.notice && <p role="status" className={s.success}>{d.notice}</p>}
       {!d.check && <ErrorNotice error={d.publishing.error ?? d.exporting.error} />}
       <TraceLotHeader trace={trace} exporting={d.exporting.pending} publishing={d.publishing.pending && !d.check} onExport={() => void d.exportFile()} onPublish={() => void d.openPublish()} onCorrect={() => onCorrect(trace.raftId, trace.cycleId)} />
       <div className={s.columns}>

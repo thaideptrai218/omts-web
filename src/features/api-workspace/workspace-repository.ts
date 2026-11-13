@@ -1,11 +1,12 @@
 import { bffFetch } from "@/features/auth/api/bff-fetch";
+import { projectFarmingProblem } from "@/features/cultivation-api/farming-problem";
 import { catalogueProblemSchema, type CatalogueProblem } from "./catalogue-problem";
 import type { ResourceKey } from "./resources";
 import type { EmployeeProblemMetadata } from "@/features/employee-management/api/employee-problem-metadata";
 
 export type ApiRecord = Record<string, unknown> & { id: string; rowVersion?: string };
 export type ApiPage = { items: ApiRecord[]; page: number; pageSize: number; total: number };
-export type WorkspaceResult<T> = { status: "success"; data: T } | { status: "error"; httpStatus: number; code?: string; uncertain: boolean; catalogueProblem?: CatalogueProblem; employeeProblem?: EmployeeProblemMetadata; invoiceConfirmation?: import("@/features/sales-invoices/confirmation-problem").InvoiceConfirmation };
+export type WorkspaceResult<T> = { status: "success"; data: T } | { status: "error"; httpStatus: number; code?: string; uncertain: boolean; catalogueProblem?: CatalogueProblem; employeeProblem?: EmployeeProblemMetadata; invoiceConfirmation?: import("@/features/sales-invoices/confirmation-problem").InvoiceConfirmation; problem?: import("@/features/cultivation-api/farming-problem").FarmingProblem };
 async function send<T>(resource: ResourceKey, query: URLSearchParams, body?: unknown, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
   try {
     const response = await bffFetch(`/api/workspace/${resource}?${query}`, { method: body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", redirect: "error",
@@ -13,12 +14,13 @@ async function send<T>(resource: ResourceKey, query: URLSearchParams, body?: unk
       body: body ? JSON.stringify(body) : undefined, signal: signal ?? AbortSignal.timeout(30_000) });
     const value = await response.json();
     return response.ok && value.status === "success" ? { status: "success", data: value.data as T }
-      : { status: "error", httpStatus: response.status, code: value.code, catalogueProblem: catalogueProblemSchema.safeParse(value.catalogueProblem).data, uncertain: body !== undefined && (response.status === 401 || response.status >= 500 || response.ok) };
+      : { status: "error", httpStatus: response.status, code: value.code, catalogueProblem: catalogueProblemSchema.safeParse(value.catalogueProblem).data, ...(projectFarmingProblem(value.problem) ? { problem: projectFarmingProblem(value.problem) } : {}), uncertain: body !== undefined && (response.status === 401 || response.status >= 500 || response.ok) };
   } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
 }
 export function createWorkspaceRepository(resource: ResourceKey) {
   return {
-    proposal(signal?: AbortSignal) { return send<{ code: string; seedUnit: string | null }>(resource, new URLSearchParams({ proposal: "1" }), undefined, signal); },
+    /** `zoneId` is required for rafts (their code is built from the zone code). */
+    proposal(signal?: AbortSignal, zoneId?: string) { return send<{ code: string; seedUnit?: string | null }>(resource, new URLSearchParams({ proposal: "1", ...(zoneId ? { zoneId } : {}) }), undefined, signal); },
     list(query: Record<string, string>, signal?: AbortSignal) { return send<ApiPage>(resource, new URLSearchParams(query), undefined, signal); },
     detail(id: string, signal?: AbortSignal) { return send<ApiRecord>(resource, new URLSearchParams({ id }), undefined, signal); },
     mutate(action: "create" | "update" | "discontinue" | "reactivate" | "lock" | "unlock", body: Record<string, unknown>, id?: string, zoneId?: string) {

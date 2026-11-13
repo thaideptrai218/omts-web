@@ -1,14 +1,18 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { z } from "zod";
+import { MoneyField } from "@/components/form/number-fields";
 import { Dialog } from "@/components/ui/dialog";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { Button } from "@/components/ui/button";
+import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
+import { isTimeNarrowed } from "@/components/ui/management-screen/time-range-limits";
+import { allTime, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import { createOperationsRepository, type Query } from "./repository";
-import { DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, OperationHeading, Paging, Select, Skeleton, businessToday, methodLabel, statusLabel, useMutation, useRemote } from "./ui";
+import { DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, OperationHeading, Paging, Select, Skeleton, businessToday, methodLabel, money, statusLabel, useMutation, useRemote } from "./ui";
 
 const repository = createOperationsRepository("supplier-payments");
 const loadDebts = (signal: AbortSignal) => repository.read("debts", {}, c.debtsSchema, signal);
@@ -16,10 +20,11 @@ type Debt = z.infer<typeof c.debtSchema>;
 type Debts = z.infer<typeof c.debtsSchema>;
 export function PaymentScreen() {
   const context = useApiWorkspace();
-  const [filters, setFilters] = useState({ supplierId: "", receiptId: "", method: "", statusId: "", from: "", to: "" });
+  const [filters, setFilters] = useState({ supplierId: "", receiptId: "", method: "", statusId: "" });
+  const [time, setTime] = useState<TimeRangeValue>(allTime);
   const [page, setPage] = useState(1), [editor, setEditor] = useState<c.Payment | null>(), [notice, setNotice] = useState<string>();
   const debts = useRemote(loadDebts);
-  const query = useMemo<Query>(() => ({ ...filters, page: String(page), pageSize: "20" }), [filters, page]);
+  const query = useMemo<Query>(() => ({ ...filters, from: time.from, to: time.to, page: String(page), pageSize: "20" }), [filters, time.from, time.to, page]);
   const history = useRemote(useMemo(() => (signal: AbortSignal) => repository.read("list", query, c.paymentSearchSchema, signal), [query]));
   const supplierDebt = useRemote(useMemo(() => (signal: AbortSignal) => filters.supplierId ? repository.read("debt", { supplierId: filters.supplierId }, c.debtSchema, signal)
     : Promise.resolve({ status: "success" as const, data: undefined as Debt | undefined }), [filters.supplierId]));
@@ -30,9 +35,9 @@ export function PaymentScreen() {
     outstanding: summary.outstanding + row.outstanding,
     unallocated: summary.unallocated + row.unallocated,
   }), { suppliersWithDebt: 0, outstanding: 0, unallocated: 0 });
-  const hasFilters = Object.values(filters).some(Boolean);
+  const hasFilters = Object.values(filters).some(Boolean) || isTimeNarrowed(time);
   const filter = (key: keyof typeof filters, value: string) => { setFilters((current) => ({ ...current, [key]: value, ...(key === "supplierId" ? { receiptId: "" } : {}) })); setPage(1); };
-  const clearFilters = () => { setFilters({ supplierId: "", receiptId: "", method: "", statusId: "", from: "", to: "" }); setPage(1); };
+  const clearFilters = () => { setFilters({ supplierId: "", receiptId: "", method: "", statusId: "" }); setTime(allTime); setPage(1); };
   function reload() { history.reload(); debts.reload(); supplierDebt.reload(); }
   return <section><OperationHeading title="Thanh toán nhà cung cấp" description="Đối chiếu khoản đã trả, số tiền chưa phân bổ và công nợ theo từng phiếu." icon="document">
     {canCreate && <Button className="w-auto" onClick={() => setEditor(null)}>Ghi nhận thanh toán</Button>}
@@ -52,7 +57,7 @@ export function PaymentScreen() {
       <Select label="Phiếu nhập" value={filters.receiptId} disabled={!filters.supplierId} onChange={(e) => filter("receiptId", e.target.value)}><option value="">Tất cả phiếu</option>{supplierDebt.data?.receipts.map((row) => <option key={row.receiptId} value={row.receiptId}>{row.code}</option>)}</Select>
       <Select label="Hình thức" value={filters.method} onChange={(e) => filter("method", e.target.value)}><option value="">Tất cả</option><MethodOptions /></Select>
       <Select label="Trạng thái" value={filters.statusId} onChange={(e) => filter("statusId", e.target.value)}><option value="">Tất cả</option><option value="1801">Đã ghi nhận</option><option value="1802">Đã hủy</option></Select>
-      <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => filter("from", e.target.value)} /><Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => filter("to", e.target.value)} />
+      <TimeRangeFilter legend="Ngày thanh toán" value={time} onChange={(value) => { setTime(value); setPage(1); }} />
     </FilterPanel>
     <ErrorNotice error={history.error || debts.error || supplierDebt.error} />
     {notice && <p role="status" className="mt-4 text-primary">{notice}</p>}
@@ -106,9 +111,9 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
     {(!payment && canCreate || canAllocate) && <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirming(true); }}>
       <fieldset disabled={mutation.pending || mutation.uncertain || confirming} className="space-y-4">
         {!payment && <Select label="Nhà cung cấp *" required value={supplierId} onChange={(e) => { setSupplierId(e.target.value); setReceiptId(""); }}><option value="">Chọn nhà cung cấp</option>{suppliers.map((row) => <option key={row.supplierId} value={row.supplierId}>{row.supplierName}</option>)}</Select>}
-        {debt.loading && supplierId ? <Skeleton /> : <Select label="Phiếu nhập hoàn thành *" required value={receiptId} onChange={(e) => setReceiptId(e.target.value)}><option value="">Chọn phiếu</option>{debt.data?.receipts.filter((row) => row.outstanding > 0).map((row) => <option key={row.receiptId} value={row.receiptId}>{row.code} · Còn nợ {new Intl.NumberFormat("vi-VN").format(row.outstanding)} đồng</option>)}</Select>}
+        {debt.loading && supplierId ? <Skeleton /> : <Select label="Phiếu nhập hoàn thành *" required value={receiptId} onChange={(e) => setReceiptId(e.target.value)}><option value="">Chọn phiếu</option>{debt.data?.receipts.filter((row) => row.outstanding > 0).map((row) => <option key={row.receiptId} value={row.receiptId}>{row.code} · Còn nợ {money(row.outstanding)}</option>)}</Select>}
         {target && <p className="rounded-control bg-primary-soft p-3">Còn nợ trên phiếu: <strong><Money value={target.outstanding} /></strong></p>}
-        {!payment && <><Field label="Số tiền đã trả (đồng) *" type="number" min="1000" max={target?.outstanding} step="1000" required value={amount} onChange={(e) => setAmount(e.target.value)} />
+        {!payment && <><MoneyField label="Số tiền đã trả *" min={1000} max={target?.outstanding} autoThousands showWords required value={amount} onChange={setAmount} />
           <Field label="Ngày trả *" type="date" max={businessToday()} required value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Hình thức *" value={method} onChange={(e) => setMethod(e.target.value)}><MethodOptions /></Select>
           <Field label="Mã tham chiếu" maxLength={100} value={reference} onChange={(e) => setReference(e.target.value)} /></>}
       </fieldset>

@@ -1,11 +1,12 @@
 "use client";
 import { useState, type FormEvent } from "react";
+import { MoneyInput } from "@/components/form/money-input";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorNotice, Money, useMutation } from "@/features/operations/ui";
 import type { SheetDetail } from "./contracts";
 import { rangeLabel } from "./payroll-model";
-import { PaymentHeaderFields, digits, newPaymentHeader, paidAtInstant } from "./payroll-payment-fields";
+import { PaymentHeaderFields, newPaymentHeader, paidAtInstant } from "./payroll-payment-fields";
 import { payrollRepository } from "./repository";
 import s from "./payroll-screen.module.css";
 
@@ -47,8 +48,8 @@ export function PayrollPayDialog({ sheet, onClose, onPaid }: { sheet: SheetDetai
               <td className={s.checkCell}><input type="checkbox" aria-label={`Trả ${slip.employeeName}`} disabled={off} checked={checked.has(slip.id)}
                 onChange={(event) => setChecked((current) => { const next = new Set(current); if (event.target.checked) next.add(slip.id); else next.delete(slip.id); return next; })} /></td>
               <td className={s.mono}>{slip.code}</td><td>{slip.employeeName}</td><td className={s.right}><Money value={slip.net} /></td><td className={s.right}><Money value={slip.paid} /></td><td className={s.right}><Money value={slip.outstanding} /></td>
-              <td className={s.right}><input type="text" inputMode="numeric" aria-label={`Tiền trả ${slip.employeeName}`} aria-invalid={bad || undefined} disabled={off || !checked.has(slip.id)} value={amounts[slip.id] ?? ""}
-                onChange={(event) => setAmounts((current) => ({ ...current, [slip.id]: digits(event.target.value) }))} />
+              <td className={s.right}><MoneyInput label={`Tiền trả ${slip.employeeName}`} invalid={bad} autoThousands wrapperClassName="ml-auto w-[130px]" disabled={off || !checked.has(slip.id)} value={amounts[slip.id] ? Number(amounts[slip.id]) : null}
+                onChange={(next) => setAmounts((current) => ({ ...current, [slip.id]: next === null ? "" : String(next) }))} />
                 {bad && <div className={s.fieldError} role="alert">Từ 1 đến {new Intl.NumberFormat("vi-VN").format(slip.outstanding)}</div>}</td>
             </tr>;
           })}</tbody>

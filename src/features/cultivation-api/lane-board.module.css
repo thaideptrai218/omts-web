@@ -11,6 +11,8 @@
 .lane:focus-visible { outline:3px solid var(--omts-color-primary); outline-offset:3px; }
 .lane:hover { box-shadow:0 3px 10px #10243a10; }
 .action { margin-top:auto; }
+.lane[data-state="OutOfService"] { background:#f2f2f2; border-top-color:#778899; }
+.lane[data-damaged="true"] { border-top-color:#b42318; background:#fff2f0; }
 .legend { display:flex; flex-wrap:wrap; gap:10px 16px; margin-bottom:14px; font-size:11px; color:var(--omts-color-text-muted); }
 .legend span { display:inline-flex; align-items:center; gap:6px; }
 .legend i { width:8px; height:8px; border:1px solid #9aabb4; border-radius:2px; }

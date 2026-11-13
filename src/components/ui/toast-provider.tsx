@@ -15,12 +15,14 @@ import {
   type PausableTimer,
 } from "@/components/ui/pausable-timer";
 
+import Link from "next/link";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import styles from "./toast-provider.module.css";
 
 type ToastTone = "danger" | "info" | "success" | "warning";
 
 type ToastInput = Readonly<{
+  action?: Readonly<{ label: string; href: string }>;
   description?: string;
   durationMs?: number;
   title: string;
@@ -85,6 +87,7 @@ function ToastItem({
       <div className={styles.body}>
         <p className={styles.title}>{message.title}</p>
         {message.description && <p className={styles.description}>{message.description}</p>}
+        {message.action && <Link className="mt-1 inline-flex min-h-8 items-center font-semibold underline underline-offset-4" href={message.action.href} onClick={() => onDismiss(message.id)}>{message.action.label}</Link>}
       </div>
       <button aria-label="Đóng thông báo" className={styles.close} onClick={() => onDismiss(message.id)} type="button">
         <InterfaceIcon name="close" className="" aria-hidden="true" />
@@ -119,6 +122,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       </div>
     </ToastContext.Provider>
   );
+}
+
+/** Like useToast, but undefined outside a ToastProvider: for optional notices that must not break a screen rendered without one. */
+export function useOptionalToast(): ToastContextValue | undefined {
+  return useContext(ToastContext) ?? undefined;
 }
 
 export function useToast(): ToastContextValue {

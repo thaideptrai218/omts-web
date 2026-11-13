@@ -7,6 +7,7 @@ import { stateLabel } from "@/features/farming-api/contracts";
 import { Facts, TabFooter } from "@/features/farming-management/detail-parts";
 import { ErrorNotice, useMutation } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
+import { useCoordinateWarnings } from "@/features/farming-api/use-coordinate-warnings";
 import { ZoneFormFields } from "./zone-form-fields";
 import { DISCONTINUED, parseZoneDetail, validateZoneDraft, zoneBody, zoneDraftOf, zoneStatusLabel, type ZoneDetail, type ZoneDraft, type ZoneField } from "./zone-model";
 
@@ -18,7 +19,7 @@ export function ZoneInfoTab({ zone, canEdit, canSeeLicense, busy, dirtyRef, onSa
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState<ZoneDraft>(() => zoneDraftOf(zone));
   const [errors, setErrors] = useState<Partial<Record<ZoneField, string>>>({}), [reloaded, setReloaded] = useState(false);
-  const mutation = useMutation();
+  const mutation = useMutation(), warnCoordinates = useCoordinateWarnings();
   const dirty = editing && JSON.stringify(draft) !== JSON.stringify(zoneDraftOf(zone));
   useEffect(() => { dirtyRef.current = dirty; return () => { dirtyRef.current = false; }; }, [dirty, dirtyRef]);
   const discontinued = zone.statusId === DISCONTINUED;
@@ -33,6 +34,7 @@ export function ZoneInfoTab({ zone, canEdit, canSeeLicense, busy, dirtyRef, onSa
     if (Object.keys(found).length) return;
     const result = await mutation.run(() => repository.mutate("update", zoneBody(draft, zone.rowVersion), zone.id));
     if (!result) return;
+    warnCoordinates(result);
     const record = parseZoneDetail(result);
     setEditing(false);
     if (record) onSaved(record); else onReload();
@@ -42,7 +44,7 @@ export function ZoneInfoTab({ zone, canEdit, canSeeLicense, busy, dirtyRef, onSa
       {editing ? <ZoneFormFields draft={draft} setDraft={setDraft} errors={errors} /> : <Facts items={[
         ["Mã vùng", zone.code], ["Tên vùng", zone.name], ["Vị trí", zone.location], ["Diện tích (ha)", zone.area?.toLocaleString("vi-VN")],
         ["Trạng thái", zoneStatusLabel(zone.statusId)], ["Vĩ độ", zone.latitude], ["Kinh độ", zone.longitude],
-        ...(canSeeLicense ? [["Hồ sơ giấy phép", zone.licenseState ? stateLabel(zone.licenseState) : "Thiếu hồ sơ"] as const] : []),
+        ...(canSeeLicense ? [["Hồ sơ giấy phép", zone.licenseState ? stateLabel(zone.licenseState) : "Xem ở tab Giấy phép"] as const] : []),
       ]} />}
     </fieldset>
     <ErrorNotice error={mutation.error} />

@@ -2,15 +2,16 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
-import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
-import { FilterGroup, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
+import { HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
 import { ListStateMessage, ManagementPagination, ManagementScroller, Subtabs, managementStyles } from "@/components/ui/management-screen/management-table";
+import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
+import { presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { LeaveEditor } from "./my-work-leave-editor";
 import { MAX_PERIOD_DAYS, dateLabel, isValidPeriod, myWorkRepository as repository, type MyWorkTab } from "./my-work-shared";
 import styles from "./my-work-screen.module.css";
 import { MyAssignmentsTable, MyAttendanceTable, MyLeaveTable } from "./my-work-tables";
 import * as c from "./new-module-contracts";
-import { businessToday, useRemote } from "./ui";
+import { useRemote } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
 
 // The leave pop-up lives in its own module; keep exporting it for existing importers.
@@ -21,7 +22,8 @@ const matches = (term: string, ...parts: (string | null | undefined)[]) => !term
 
 /** The signed-in Staff member's own assignments, worked days and leave requests. */
 export function MyWorkScreen() {
-  const [period, setPeriod] = useState(() => ({ from: businessToday().slice(0, 8) + "01", to: businessToday() }));
+  const [time, setTime] = useState<TimeRangeValue>(() => presetValue("thisMonth"));
+  const period = useMemo(() => ({ from: time.from, to: time.to }), [time.from, time.to]);
   const [tab, setTab] = useState<MyWorkTab>("assignments");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -49,7 +51,7 @@ export function MyWorkScreen() {
   const slice = <T,>(rows: readonly T[]) => rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function body() {
-    if (!valid) return <ListStateMessage error={`Chọn khoảng từ ngày đến ngày, tối đa ${MAX_PERIOD_DAYS + 1} ngày.`} />;
+    if (!valid) return <ListStateMessage error={`Chọn một khoảng thời gian cụ thể, tối đa ${MAX_PERIOD_DAYS + 1} ngày (không dùng Toàn thời gian).`} />;
     if (work.error) return <ListStateMessage error={work.error} onRetry={work.reload} retryLabel="Tải lại công việc cá nhân" />;
     if (work.loading || !data) return <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3, 4, 5].map((key) => <div key={key} />)}</div>;
     if (!linked) return <ListStateMessage>Chưa có hồ sơ nhân viên gắn với tài khoản này.</ListStateMessage>;
@@ -61,9 +63,8 @@ export function MyWorkScreen() {
 
   const rail = <>
     <div className={styles.railHead}><strong>Khoảng thời gian</strong></div>
-    <FilterGroup legend="Từ ngày"><DatePickerField label="Từ ngày" value={period.from} onChange={changed((from: string) => setPeriod((current) => ({ ...current, from })))} /></FilterGroup>
-    <FilterGroup legend="Đến ngày"><DatePickerField label="Đến ngày" value={period.to} onChange={changed((to: string) => setPeriod((current) => ({ ...current, to })))} /></FilterGroup>
-    {!valid && <p role="alert" className={styles.rangeError}>Khoảng thời gian tối đa {MAX_PERIOD_DAYS + 1} ngày và ngày bắt đầu không sau ngày kết thúc.</p>}
+    <TimeRangeFilter legend="Thời gian" value={time} onChange={changed<TimeRangeValue>(setTime)} />
+    {!valid && <p role="alert" className={styles.rangeError}>Khoảng thời gian tối đa {MAX_PERIOD_DAYS + 1} ngày, không dùng Toàn thời gian.</p>}
     <p className={styles.hint}>Khoảng ngày áp dụng cho phân công và ngày công; yêu cầu nghỉ phép hiển thị toàn bộ.</p>
     {data?.name && <p className={styles.hint}>Nhân viên: <strong>{data.name}</strong></p>}
     <button type="button" className={`${managementStyles.linkButton} ${styles.reload}`} disabled={!valid || work.loading || editor.pending} onClick={work.reload}>Tải lại công việc cá nhân</button>

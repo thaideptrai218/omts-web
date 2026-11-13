@@ -30,12 +30,11 @@ export function WaterMeasurementPanel({ id, zone, canEdit, guard, onChanged }: {
   async function confirmVoid(reason: string) {
     if (!record || detail.loading || mutation.busy() || mutation.blocked) return;
     const result = await mutation.run(() => waterRepository.write("void", { reason }, c.waterSchema, id));
-    setVoiding(false);
-    if (result) saved(result, "Đã hủy bỏ phép đo.");
+    if (result) { setVoiding(false); saved(result, `Đã hủy phép đo tại bè ${record.raftCode}.`); }
   }
   const content: Record<TabKey, ReactNode> = record ? {
     info: <WaterMeasurementInfoTab record={record} zoneName={zone.name} canChange={canEdit && record.statusCode === "ACTIVE"} busy={busy} dirtyRef={guard.dirty}
-      onSaved={next => saved(next, "Đã hiệu chỉnh phép đo.")} onReload={detail.reload} onVoid={() => { mutation.reviewed(); setVoiding(true); }} />,
+      onSaved={next => saved(next, `Đã hiệu chỉnh phép đo tại bè ${next.raftCode}.`)} onReload={detail.reload} onVoid={() => { mutation.reviewed(); setVoiding(true); }} />,
     photo: <EvidenceGallery title="Ảnh máy đo" images={[{ id: record.id, url: record.photoUrl, label: `Ảnh phép đo ${displayTime(record.measuredAt)}` }]} />,
   } : { info: null, photo: null };
 
@@ -53,7 +52,7 @@ export function WaterMeasurementPanel({ id, zone, canEdit, guard, onChanged }: {
       </header>
       <Subtabs<TabKey> label="Hồ sơ phép đo" tabs={tabs} value={tab} idPrefix={prefix} onChange={key => { if (key !== tab) void guard.leave(() => setTab(key)); }} />
       <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={styles.body}>{content[tab]}</div>
-      {voiding && <WaterVoidDialog subject={`Bè ${record.raftCode} · ${record.zoneName} · ${displayTime(record.measuredAt)}`} pending={mutation.pending} busy={mutation.busy} onCancel={() => setVoiding(false)} onConfirm={reason => void confirmVoid(reason)} />}
+      {voiding && <WaterVoidDialog subject={`Bè ${record.raftCode} · ${record.zoneName} · ${displayTime(record.measuredAt)}`} pending={mutation.pending} busy={mutation.busy} blocked={mutation.blocked} error={mutation.error} onCancel={() => setVoiding(false)} onConfirm={reason => void confirmVoid(reason)} />}
     </>}
   </section>;
 }
