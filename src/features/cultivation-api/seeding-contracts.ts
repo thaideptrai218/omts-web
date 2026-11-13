@@ -49,6 +49,8 @@ export const seedingRecord = z.object({
 
 const seedingListRead = z.object({
   ...nurseryReadFields,
+  // The seed the cycle farms; a legacy cycle (no nursery batch) names it from its seeding records, `seedItemNames` when several items.
+  seedItemName: z.string().nullish(), seedItemNames: z.array(z.string()).nullish(),
   // Kept readable for historical payloads, never used to derive V2 pool capacity.
   nurseryAllocated: z.number().nullish(),
   cycleId: z.guid(), raftId: z.guid(), raftCode: z.string(),

@@ -10,6 +10,11 @@ describe("the seed a raft farms", () => {
     expect(farmedSeedName({ seedLot: { code: "", itemName: "Hàu giống A" } })).toBe("Hàu giống A");
     expect(farmedSeedText({ seedItemName: "  ", seedLot: { code: "", itemName: "Hàu giống A" }, nurseryCode: "NU1" })).toBe("Hàu giống A · đợt ươm NU1");
   });
+  it("names a legacy cycle by the seed of its seeding records, without a nursery part", () => {
+    expect(farmedSeedText({ seedItemName: "Hàu giống Thái Bình Dương 3 cm", seedLot: { code: "PN000008-1", itemName: "Hàu giống Thái Bình Dương 3 cm" }, nurseryCode: null })).toBe("Hàu giống Thái Bình Dương 3 cm · lô PN000008-1");
+    expect(farmedSeedText({ seedItemName: "Hàu giống A", seedItemNames: ["Hàu giống A", "Hàu giống B"], seedLot: { code: "PN000002-1", itemName: "Hàu giống A" } })).toBe("Hàu giống A + Hàu giống B · lô PN000002-1");
+    expect(farmedSeedName({ seedItemNames: ["Hàu giống A"] })).toBe("Hàu giống A");
+  });
   it("says the seed is unknown for a legacy cycle without any", () => {
     expect(farmedSeedText({ seedLot: null })).toBe("Chưa xác định giống");
     expect(farmedSeedText(null)).toBe("Chưa xác định giống");

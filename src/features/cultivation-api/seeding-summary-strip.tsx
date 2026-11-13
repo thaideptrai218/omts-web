@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { z } from "zod";
 import type * as c from "./records-contracts";
 import { StatusPill } from "@/components/ui/management-page";
-import { farmedSeedText } from "@/features/cycles-api/cycle-farmed-seed";
+import { farmedSeedName, farmedSeedText } from "@/features/cycles-api/cycle-farmed-seed";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 
 type SeedingData = z.infer<typeof c.seedingList>;
@@ -14,8 +14,8 @@ export function SeedingSummaryStrip({ data }: { data: SeedingData }) {
   const remaining = data.nurseryRemaining;
   // The seed bought and nursed ("Hàu giống … · lô PN… · đợt ươm NU…"), then what is left of the nursery pool.
   const source = data.nurseryBatchId
-    ? `${farmedSeedText({ seedLot: data.seedLot, nurseryCode: data.nurseryCode ?? "—" })} · kho ươm còn ${remaining == null ? "—" : n(remaining)} mảnh (ước tính)`
-    : "Không qua ươm";
+    ? `${farmedSeedText({ ...data, nurseryCode: data.nurseryCode ?? "—" })} · kho ươm còn ${remaining == null ? "—" : n(remaining)} mảnh (ước tính)`
+    : farmedSeedName(data) ? `${farmedSeedText({ ...data, nurseryCode: null })} · không qua ươm` : "Không qua ươm";
   const facts: [string, ReactNode][] = [
     ["Nguồn giống", source], ["Đã thả trong chu kỳ", `${n(hung)}${unit ? ` ${unit}` : ""}`],
     ["Làn đã thả", `${data.seededCount}/${data.laneCount} làn`],
