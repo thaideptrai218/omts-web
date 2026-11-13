@@ -73,7 +73,7 @@ describe("tester workflow safeguards", () => {
     expect(repository.write).not.toHaveBeenCalled(); expect(repository.upload).not.toHaveBeenCalled();
   });
   it.each([
-    ["Ngày trả *", "2026-01-01"],
+    ["Ngày trả *", "01/01/2026"],
     ["Hình thức *", "BankTransfer"],
     ["Nhà cung cấp *", ids.supplier],
   ])("keeps a payment draft when only %s changed until explicit discard", async (label, value) => {
