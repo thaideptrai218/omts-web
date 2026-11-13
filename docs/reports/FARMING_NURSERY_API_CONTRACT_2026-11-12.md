@@ -112,6 +112,36 @@ Khối `nursery` (summary/close preview): `{ "batchId", "batchCode", "quantityIn
 ### 0.14 Dữ liệu demo (DEMO-01) sau khi áp dụng V2
 2 đợt ươm 4002 sẵn sàng thả (sống sót 9.500 và 6.000; hai lô giống khác nhau; chưa thả), 1 đợt 4001 đang ươm (3.500 mảnh), ≥ 5 bè trống đang dùng có làn (B1-08, B1-11 … B1-14, 12-24 làn), 4 đơn mua đã chấp nhận còn mở thu hoạch (800/1.500/2.000 kg và đơn 5 lồng). Chu kỳ demo cũ không qua ươm có thể còn; vẫn đọc được.
 
+### 0.15 Loại hàu của chu kỳ (B6, 13/11/2026): chu kỳ mang SẢN PHẨM nuôi, thu hoạch phải khớp đơn mua
+Quyết định chủ: chu kỳ nuôi một loại sản phẩm bán (danh mục Sản phẩm: "Hàu múp", "Hàu gầy 3cm"…); lô thu hoạch chỉ gắn được với đơn mua **cùng sản phẩm**. Lô giống (ví dụ "Hàu giống") **không phải** sản phẩm bán. Cột mới `CultivationCycles.ProductId` (FK `Products`, **nullable**: chu kỳ cũ = `null` = không kiểm khớp).
+
+**Tạo chu kỳ** (`POST /api/cultivation-cycles` và `POST /api/rafts/{raftId}/cultivation-cycles`, multipart): thêm trường **`productId`** (guid, **bắt buộc**). Thiếu/không đọc được/không tồn tại, hoặc sản phẩm đã ngừng bán: **400** `MSG-GEN-01`, `field: "ProductId"`, `hint` tiếng Việt ("Chọn loại hàu mà chu kỳ này nuôi và bán." / "Sản phẩm … không còn được bán…"). Nguồn chọn: `GET /api/products` (Quản lý vùng chỉ thấy sản phẩm đang dùng; Owner thấy cả ngừng bán nên web lọc bỏ sản phẩm ngừng bán như màn đơn mua).
+
+**Sửa chu kỳ** (`PUT /api/cultivation-cycles/{id}` JSON): thêm **`productId`** (guid, tùy chọn; bỏ trống/null = giữ nguyên):
+```json
+{ "startDate": "2026-11-12", "targetYieldKg": 2200, "note": "…", "nurseryBatchId": "…", "productId": "…", "rowVersion": "…" }
+```
+`productId` **khác** hiện tại chỉ được khi chu kỳ **chưa có bản ghi thả giống** (cùng luật đổi đợt ươm); đã có → **409** `MSG-GEN-09` `reasonCode: CYCLE_SEED_LOCKED`, `field: "ProductId"` (message tiếng Việt). Sản phẩm không có/ngừng bán: 400 `ProductId` như trên. Gửi đúng sản phẩm hiện tại: không đổi. Áp cho cả chu kỳ cũ không qua ươm (gán sản phẩm cho chu kỳ cũ khi chưa thả).
+
+**Đọc chu kỳ** (`CycleView`: `GET /api/cultivation-cycles/{id}`, `GET /api/rafts/{raftId}/progress` → `cycle`, bắt đầu/sửa/đóng/hoàn tất thả giống): thêm
+```json
+{ "productId": "…" , "productName": "Hàu múp", "canChangeProduct": true }
+```
+`productId`/`productName` = `null` ở chu kỳ cũ (không rõ loại hàu: UI hiển thị "Chưa xác định loại hàu"). `canChangeProduct` = đúng điều kiện của `canChangeNursery` (đang mở và chưa có bản ghi thả giống).
+
+**Thu hoạch**
+- `GET /api/rafts/{raftId}/harvest-lots` (màn Thu hoạch; `orders[]` chỉ có khi người gọi được ghi): thêm ở **mức màn hình** `cycleProductId`, `cycleProductName` (`null` khi bè không có chu kỳ mở hoặc chu kỳ cũ chưa có sản phẩm). Mỗi phần tử `orders[]` thêm `productId`, `matchesCycleProduct` (`productName` đã có từ trước):
+```json
+{ "cycleProductId": "…", "cycleProductName": "Hàu múp",
+  "orders": [ { "id": "…", "code": "YC-20261113-ABC", "customerName": "…", "productId": "…", "productName": "Hàu múp", "matchesCycleProduct": true, "…": "các trường cũ" },
+              { "id": "…", "productId": "…", "productName": "Hàu gầy 3cm", "matchesCycleProduct": false, "…": "…" } ] }
+```
+`matchesCycleProduct` = `true` khi chu kỳ chưa có sản phẩm (`null`) **hoặc** `productId` của đơn = `cycleProductId`. Quy tắc chọn đơn (đã chấp nhận, chưa đánh dấu xong thu hoạch) **giữ nguyên**: server vẫn trả **mọi** đơn, **client lọc** theo `matchesCycleProduct` (khuyến nghị: chỉ liệt kê đơn khớp; nếu không còn đơn khớp hiển thị "Chưa có đơn mua loại {cycleProductName}").
+- Ghi lô (`POST /api/rafts/{raftId}/harvest-lots`, multipart, trường `purchaseRequestId`): khi chu kỳ mở của bè **có** `ProductId` mà `request.ProductId` khác → **400** `MSG-GEN-09`, `reasonCode: "HARVEST_PRODUCT_MISMATCH"`, `field: "Purchase request"`, kèm `requestId`, `requestCode`, `requestProductName`, `cycleProductName`, `message` tiếng Việt: "Đơn mua YC-… đặt Hàu gầy 3cm nhưng bè đang nuôi Hàu múp. Chọn đơn mua khớp loại hàu đang nuôi." Chu kỳ chưa có sản phẩm: không kiểm. Sửa lô (`PUT /api/harvest-lots/{id}`) không đổi được đơn mua của lô nên không có kiểm này; sản phẩm của chu kỳ không đổi được sau khi đã thả giống (nên lô luôn khớp).
+- Mã `reasonCode` mới: `HARVEST_PRODUCT_MISMATCH` (400). `CYCLE_SEED_LOCKED` nay cũng áp cho `productId`.
+
+**Demo (DEMO-01)**: các chu kỳ do dữ liệu demo tạo có sản phẩm; các đơn mua đã chấp nhận còn mở thu hoạch gồm 2 sản phẩm: "Hàu béo" (đơn 5, 20, 38, 50 lồng) và "Hàu sữa" (đơn 15 lồng, Nhà hàng Biển Xanh) để thử cảnh báo lệch. Chu kỳ demo đang mở: bè không có lô thu hoạch xen kẽ "Hàu béo"/"Hàu sữa" (ví dụ B1-04, B1-08, B2-02, B2-04 là "Hàu sữa"; B1-01..03, B1-05, B1-12, B2-01 là "Hàu béo"); bè có lô thu hoạch lấy sản phẩm của đơn đã thu hoạch ("Hàu béo").
+
 ---
 
 ## 1. Quyền và phạm vi (V1, còn đúng trừ chỗ mục 0 thay thế)
