@@ -24,17 +24,17 @@ export function HarvestPlanSummary({ data, extraKg = 0 }: { data: HarvestScreen;
   const { harvestedKg, harvestedCages, target, remainingKg, percent, overTarget } = harvestProgressOf(data);
   const afterTrip = extraKg > 0 ? harvestedKg + extraKg : undefined;
   const afterPercent = afterTrip !== undefined ? planPercent(afterTrip, target) : undefined;
-  return <section aria-label="Sản lượng so với kế hoạch" className="mb-4 grid gap-2 rounded-control border border-border bg-surface p-3" data-testid="harvest-plan-summary">
+  return <section aria-label="Sản lượng so với dự kiến" className="mb-4 grid gap-2 rounded-control border border-border bg-surface p-3" data-testid="harvest-plan-summary">
     <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
       <span className="font-medium">Sản lượng thu hoạch <span className="font-normal text-text-muted">(ước tính)</span></span>
       <span className="tabular-nums text-text-muted">
         {target !== null ? `${kg(harvestedKg)} / ${kg(target)} kg ước tính` : `${kg(harvestedKg)} kg ước tính`}
         {percent !== null && <strong className="ml-1 text-text">({kg(percent)}%)</strong>}
-        {overTarget && <span className="ml-2 rounded-full border border-border bg-surface-subtle px-2 py-0.5 font-medium text-text">Vượt kế hoạch</span>}
+        {overTarget && <span className="ml-2 rounded-full border border-border bg-surface-subtle px-2 py-0.5 font-medium text-text">Vượt dự kiến</span>}
       </span>
     </div>
     {percent !== null
-      ? <div role="progressbar" aria-label="Sản lượng so với kế hoạch" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(percent))} aria-valuetext={`${kg(percent)}% kế hoạch`} className="h-2 overflow-hidden rounded-full bg-surface-subtle">
+      ? <div role="progressbar" aria-label="Sản lượng so với dự kiến" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(percent))} aria-valuetext={`${kg(percent)}% dự kiến`} className="h-2 overflow-hidden rounded-full bg-surface-subtle">
         <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, percent)}%` }} />
       </div>
       : <p className="text-xs text-text-muted">Chu kỳ chưa đặt sản lượng mục tiêu.</p>}
@@ -43,6 +43,6 @@ export function HarvestPlanSummary({ data, extraKg = 0 }: { data: HarvestScreen;
       {remainingKg !== null && (remainingKg > 0 ? `. Còn ${kg(remainingKg)} kg so với mục tiêu.` : remainingKg === 0 ? ". Đã đạt mục tiêu." : `. Cao hơn mục tiêu ${kg(-remainingKg)} kg.`)}
     </p>
     {afterTrip !== undefined && <p className="text-xs text-text-muted" role="status">
-      Cộng chuyến đang nhập: {kg(afterTrip)} kg ước tính{afterPercent !== undefined ? ` (${kg(afterPercent)}% kế hoạch)` : ""}.</p>}
+      Cộng chuyến đang nhập: {kg(afterTrip)} kg ước tính{afterPercent !== undefined ? ` (${kg(afterPercent)}% dự kiến)` : ""}.</p>}
   </section>;
 }

@@ -33,11 +33,11 @@ export function HarvestOrderPicker({ view, value, onChange, error }: { view: Har
   if (!selectable.length) return <div className="grid gap-2">
     <p role="status" className={notice}>{view.filtering
       ? `Chưa có đơn mua nào khớp loại hàu của giống đang nuôi${seedName ? ` (${seedName})` : ""}. Chuyến thu hoạch chỉ gắn được với đơn mua đúng loại hàu của bè.`
-      : "Chưa có yêu cầu mua nào đang chờ thu hoạch. Chuyến thu hoạch cần gắn với một yêu cầu mua đã chấp nhận và chưa được đánh dấu thu xong."}</p>
+      : "Chưa có đơn mua nào cần thu. Chuyến thu hoạch gắn với một đơn mua khách đã đặt, đã chấp nhận và chưa được đánh dấu thu xong."}</p>
     {others}
   </div>;
   return <div className="grid gap-1">
-    <label className="grid gap-1 text-sm font-medium">Yêu cầu mua *
+    <label className="grid gap-1 text-sm font-medium">Đơn mua cần thu *
       <SelectBox className="omts-control" value={value} required aria-invalid={!!error} onChange={event => onChange(event.target.value)}>
         {selectable.map(order => <option key={order.id} value={order.id}>{order.code} · {order.customerName} · {order.productName}{orderRemainingCages(order) !== undefined ? ` · còn ${n(orderRemainingCages(order)!)} lồng` : ""}{order.plannedOnRaft ? " · lập kế hoạch cho bè này" : ""}</option>)}
       </SelectBox>

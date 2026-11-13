@@ -32,7 +32,7 @@ import { EditorFrame, LaneChoices, harvestRepo } from "./records-shared";
 export function harvestInvalidFieldText(error: z.ZodError): string {
   const field = error.issues[0]?.path[0];
   switch (field) {
-    case "purchaseRequestId": return "Chọn yêu cầu mua mà chuyến thu hoạch này phục vụ.";
+    case "purchaseRequestId": return "Chọn đơn mua mà chuyến thu hoạch này phục vụ.";
     case "laneNumbers": return "Làn thu hoạch: chọn ít nhất một làn thu được.";
     case "finishedLaneNumbers": return "Làn đã thu xong phải nằm trong các làn của chuyến này.";
     case "cageCount": return "Số lồng thu hoạch phải lớn hơn 0, tối đa 100.000 và có tối đa 2 số lẻ (được nhập 0,5).";
@@ -98,7 +98,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
     <HarvestPlanSummary data={data} extraKg={estimate.effective} />
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset disabled={editor.disabled || laneDirty} className={flowStyles.harvestFormGrid}>
-        <CollapsibleSection title="Yêu cầu mua" description="Chuyến thu này phục vụ yêu cầu mua nào." columns={1}>
+        <CollapsibleSection title="Đơn mua cần thu" description="Chuyến thu này phục vụ đơn mua nào. Đơn khách đã đặt và đã chấp nhận chính là kế hoạch cần thu; một đơn có thể thu nhiều chuyến ở nhiều bè cùng giống." columns={1}>
           <HarvestOrderPicker view={orderView} value={orderId} onChange={setOrderId} error={harvestOrderError(editor.mutation.failure?.problem)} />
         </CollapsibleSection>
         <CollapsibleSection title="Làn thu hoạch" description="Các làn trong chuyến thu." columns={1}>

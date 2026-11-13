@@ -8,7 +8,8 @@ const item = "529ec3ce-af8f-42f7-a08f-4bab36ba7e62";
 describe("farming problem projection", () => {
   it("keeps the confirmation flag and drops everything else", () => {
     const problem = projectFarmingProblem({ code: "MSG-GEN-04", confirmFlag: "confirmOverPlan", reasonField: "overPlanReason", plannedSeedQuantity: 100, detail: "x", token: "secret" });
-    expect(problem).toEqual({ code: "MSG-GEN-04", confirmFlag: "confirmOverPlan" });
+    // `detail` is kept now: the harvest refusals (cages, product) carry the backend sentence.
+    expect(problem).toEqual({ code: "MSG-GEN-04", confirmFlag: "confirmOverPlan", detail: "x" });
   });
   it("keeps the stock check numbers of MSG-INPUT-01", () => {
     expect(projectFarmingProblem({ code: "MSG-INPUT-01", field: "Quantity", itemId: item, seedLotLineId: item, onHand: 100, balanceAfter: -1 })).toMatchObject({ onHand: 100, balanceAfter: -1, itemId: item });
@@ -39,7 +40,7 @@ describe("farming error wording", () => {
     expect(farmingErrorText({ httpStatus: 400 })).toBeUndefined();
   });
   it("names the harvest field the backend refused", () => {
-    expect(farmingErrorText({ httpStatus: 400, code: "MSG-GEN-01", problem: { code: "MSG-GEN-01", field: "Purchase request", fields: ["Purchase request"] } })).toContain("yêu cầu mua");
+    expect(farmingErrorText({ httpStatus: 400, code: "MSG-GEN-01", problem: { code: "MSG-GEN-01", field: "Purchase request", fields: ["Purchase request"] } })).toContain("đơn mua");
     expect(farmingErrorText({ httpStatus: 400, problem: { field: "Lanes" } })).toContain("Làn thu hoạch");
     expect(farmingErrorText({ httpStatus: 400, problem: { field: "Estimated kg" } })).not.toContain("150%");
   });

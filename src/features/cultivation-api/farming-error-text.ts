@@ -2,7 +2,7 @@ import { nurseryPoolExceededText, stockShortageText, type FarmingProblem } from 
 import { harvestCagesError } from "./harvest-order-cages";
 
 const harvestFieldText: Record<string, string> = {
-  "Purchase request": "Chưa chọn yêu cầu mua cho chuyến thu hoạch này. Hãy chọn một yêu cầu mua đã chấp nhận và còn đang thu hoạch.",
+  "Purchase request": "Chưa chọn đơn mua cho chuyến thu hoạch này. Hãy chọn một đơn mua đã chấp nhận và còn cần thu.",
   "Lanes": "Làn thu hoạch chưa hợp lệ: chọn ít nhất một làn đang nuôi hoặc đang thu hoạch, không chọn trùng.",
   "Finished lanes": "Làn đánh dấu thu xong phải nằm trong các làn của chuyến thu này.",
   "Photos": "Ảnh chưa hợp lệ: từ 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh tối đa 10 MB.",

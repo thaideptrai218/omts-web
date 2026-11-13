@@ -19,10 +19,10 @@ export function harvestEstimate(cages: number, typedKg: string, kgPerCage: numbe
 /** Shows the estimate, where the kg/lồng comes from, and the non-blocking "far from cages" notice. */
 export function HarvestEstimateHint({ cages, typedKg, kgPerCage }: { cages: number; typedKg: string; kgPerCage: number }) {
   const { computed, far, typed } = harvestEstimate(cages, typedKg, kgPerCage);
-  if (!(computed > 0)) return <p className="text-xs text-text-muted">Kg chỉ là ước tính: số lồng × {kg(kgPerCage)} kg/lồng (thiết lập thu hoạch của hợp tác xã).</p>;
+  if (!(computed > 0)) return <p className="text-xs text-text-muted">Kg chỉ là ước tính: số lồng × {kg(kgPerCage)} kg/lồng (thiết lập thu hoạch của hợp tác xã); kg thật được chốt khi cân tại cảng.</p>;
   return <div className="grid gap-1 text-xs text-text-muted" aria-live="polite">
     <p>{typed ? `Kg ước tính nhập tay. Theo thiết lập, ${cagesText(cages)} lồng ≈ ${kg(computed)} kg ước tính.` : `${cagesText(cages)} lồng ≈ ${kg(computed)} kg ước tính.`}{" "}
-      Nguồn: {cagesText(cages)} lồng × {kg(kgPerCage)} kg/lồng (thiết lập thu hoạch của hợp tác xã, lưu cùng lô).</p>
+      Nguồn: {cagesText(cages)} lồng × {kg(kgPerCage)} kg/lồng (thiết lập thu hoạch của hợp tác xã, lưu cùng lô). Kg thật được chốt khi cân tại cảng.</p>
     {far && <p role="status" className="text-warning">Kg ước tính lệch nhiều so với {kg(computed)} kg. Vẫn lưu được, kèm cảnh báo để kiểm tra.</p>}
   </div>;
 }
