@@ -42,6 +42,7 @@ const columns: readonly Column[] = [
     </span>}</span> },
   { key: "group", label: "Loại hàng", sort: "group", render: (row) => typeLabel(row.group) },
   { key: "itemGroup", label: "Nhóm hàng", defaultHidden: true, render: (row) => dash(row.itemGroupName) },
+  { key: "product", label: "Loại hàu bán ra", render: (row) => row.group === "Seed" ? dash(row.productName) : "" },
   { key: "cost", label: "Giá vốn", sort: "costPrice", numeric: true, render: (row, unitId) => perUnit(row.costPrice, chosenUnit(row, unitId).factor, "price") },
   { key: "last", label: "Giá nhập cuối", sort: "lastPurchasePrice", numeric: true, defaultHidden: true, render: (row, unitId) => perUnit(row.lastPurchasePrice, chosenUnit(row, unitId).factor, "price") },
   { key: "onHand", label: "Còn lại", sort: "onHand", numeric: true, render: (row, unitId) => <span className={row.onHand < 0 ? styles.neg : undefined}>{perUnit(row.onHand, chosenUnit(row, unitId).factor, "quantity")}</span> },

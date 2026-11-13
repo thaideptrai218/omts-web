@@ -55,6 +55,8 @@ const reads: Record<string, Read> = {
   "movements-export": (q, ref) => ({ path: `${F}/${ref.id}/movements/export${forward(q, ["from", "to", "kind", "includeReversals"])}`, method: "GET", access: { any: [["PURCHASE_RECEIPTS", "Export"]] }, schema: noBody, file: "nhap-xuat.xlsx" }),
   "seed-lots": (_q, ref) => ({ path: `${F}/${ref.id}/seed-lots`, method: "GET", access: catalogRead, schema: c.seedLots }),
   units: () => ({ path: "/api/input-units", method: "GET", access: catalogRead, schema: z.array(c.inputUnit) }),
+  // The sales products in use: only the Owner edits the item catalogue, so only the Owner's item form needs them.
+  products: () => ({ path: "/api/products", method: "GET", access: ownerOnly, schema: c.productList }),
   groups: () => ({ path: "/api/input-item-groups", method: "GET", access: catalogRead, schema: z.array(c.inputGroup) }),
   settings: () => ({ path: "/api/input-inventory-settings", method: "GET", access: catalogRead, schema: c.settings }),
   "issue-types": () => ({ path: "/api/input-issue-types", method: "GET", access: catalogRead, schema: z.array(c.issueType) }),
@@ -71,6 +73,8 @@ const needsId = new Set(["item", "movements", "movements-export", "seed-lots", "
 const unitRow = z.strictObject({ id: id.nullable().optional(), unitId: id.nullable().optional(), unitName: text(30), factor: z.number().positive().max(1_000_000), code, isBase: z.boolean() });
 const itemBody = z.strictObject({
   code, name: z.string().max(200), group: z.enum(["Seed", "Material", "Other"]), itemGroupId: id.nullable().optional(), description: text(2000), notes: text(2000),
+  // "Loại hàu bán ra" of a seed item; a PUT replaces the whole item, so null clears the link (the API ignores it for other groups).
+  productId: id.nullable().optional(),
   minQuantity: nonNegative, maxQuantity: nonNegative, costPrice: nonNegative, openingQuantity: nonNegative, units: z.array(unitRow).min(1).max(20).optional(), unit: text(30), rowVersion: rowVersion.optional(),
 });
 const nameBody = z.strictObject({ name: z.string().trim().min(1).max(100) });

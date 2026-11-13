@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canStartCycle, cycleStateOf, filterCycleRows, isNurseryBatchLocked, planBody, sortCycleRows, validatePlan, type CycleRow } from "./cycle-model";
+import { canStartCycle, cycleStateOf, filterCycleRows, isNurseryBatchLocked, planBody, seedWithoutProductText, sortCycleRows, validatePlan, type CycleRow } from "./cycle-model";
 
 const row = (raftCode: string, cycle: CycleRow["cycle"], raftStatusId = 101): CycleRow => ({ raftId: `00000000-0000-4000-8000-${raftCode.replace(/\D/g, "").padStart(12, "0")}`, raftCode, raftStatusId, raftStatus: "In Use", laneCount: 2, cycle,
   lastCloseDate: null, canStart: false, canEdit: false, canCancel: false });
@@ -20,8 +20,8 @@ describe("cycle rows", () => {
 });
 
 describe("cycle plan draft", () => {
-  const draft = { startDate: "2026-09-01", targetYieldKg: "", note: "", nurseryBatchId: "", productId: "" };
-  const cycle = { rowVersion: "v3", nurseryBatchId: "n-1", productId: "p-1" };
+  const draft = { startDate: "2026-09-01", targetYieldKg: "", note: "", nurseryBatchId: "" };
+  const cycle = { rowVersion: "v3", nurseryBatchId: "n-1" };
   it("needs a start date that is not in the future and a positive yield (required once the cycle has a nursery batch)", () => {
     expect(validatePlan(draft, "2026-11-11")).toEqual({});
     expect(validatePlan({ ...draft, startDate: "" }, "2026-11-11").startDate).toBeTruthy();
@@ -39,10 +39,17 @@ describe("cycle plan draft", () => {
     expect(planBody({ ...draft, nurseryBatchId: "n-2" }, cycle, true)).not.toHaveProperty("nurseryBatchId");
     expect(planBody({ ...draft, nurseryBatchId: "" }, cycle, false)).not.toHaveProperty("nurseryBatchId");
   });
-  it("sends the farmed product only when it changed and the cycle is not locked by a seeding", () => {
-    expect(planBody({ ...draft, productId: "p-2" }, cycle, false)).toMatchObject({ productId: "p-2" });
-    expect(planBody({ ...draft, productId: "p-2" }, cycle, true)).not.toHaveProperty("productId");
-    expect(planBody({ ...draft, productId: "p-1" }, cycle, false)).not.toHaveProperty("productId");
+  it("never sends a product: the loại hàu is re-derived by the backend when the batch changes", () => {
+    expect(planBody({ ...draft, nurseryBatchId: "n-2" }, cycle, false)).not.toHaveProperty("productId");
+    expect(planBody({ ...draft, nurseryBatchId: "n-2" }, cycle, false)).toEqual({ startDate: "2026-09-01", targetYieldKg: null, note: "", nurseryBatchId: "n-2", rowVersion: "v3" });
+  });
+});
+
+describe("seed item without a loại hàu (plan edit refusal)", () => {
+  it("uses the backend's Vietnamese detail, else a fixed sentence, and only for that reason", () => {
+    expect(seedWithoutProductText({ problem: { reasonCode: "SEED_ITEM_WITHOUT_PRODUCT", hint: "Giống này chưa gắn loại sản phẩm bán." } })).toBe("Giống này chưa gắn loại sản phẩm bán.");
+    expect(seedWithoutProductText({ problem: { reasonCode: "SEED_ITEM_WITHOUT_PRODUCT" } })).toContain("Vật tư & Giống");
+    expect(seedWithoutProductText({ problem: { reasonCode: "CYCLE_SEED_LOCKED" } })).toBeUndefined();
   });
 });
 

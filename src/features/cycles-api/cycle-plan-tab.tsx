@@ -10,7 +10,8 @@ import { businessToday, ErrorNotice, Skeleton, useMutation } from "@/features/op
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { RecordHistory } from "@/features/history/record-history";
-import { isNurseryBatchLocked, planBody, seedLockedFailure, planDraftOf, validatePlan, type CycleRow, type PlanDraft, type PlanField } from "./cycle-model";
+import { isNurseryBatchLocked, planBody, seedLockedFailure, seedWithoutProductText, planDraftOf, validatePlan, type CycleRow, type PlanDraft, type PlanField } from "./cycle-model";
+import { planProductText } from "./cycle-derived-product";
 import { CyclePlanFields } from "./cycle-plan-fields";
 import { CyclePlanPhotos } from "./cycle-plan-photos";
 import { cycleProgress } from "./contracts";
@@ -56,13 +57,13 @@ export function CyclePlanTab({ row, zoneId, access, dirtyRef, onChanged }: { row
       {editing && draft ? <CyclePlanFields cycle={cycle} zoneId={zoneId} draft={draft} errors={errors} batchLocked={batchLocked} onChange={(key, value) => { setErrors(previous => ({ ...previous, [key]: undefined })); setDraft(previous => previous && { ...previous, [key]: value }); }} />
         : <Facts items={[["Ngày bắt đầu", day(cycle.startDate)], ["Tình trạng", cycle.closeDate ? "Đã đóng" : "Đang nuôi"], ["Số ngày nuôi", cycle.daysOfFarming],
           ["Đợt ươm", cycle.nurseryBatchId ? <>{cycleNurseryText(cycle)}{batchLocked && <small className="block text-text-muted">Đã thả giống, không đổi được đợt ươm</small>}</> : "Không qua ươm"],
-          ["Loại hàu nuôi", cycle.productName ? <>{cycle.productName}{batchLocked && <small className="block text-text-muted">Đã thả giống, không đổi được</small>}</> : "Chưa xác định loại hàu"],
+          ["Loại hàu", cycle.productName ? planProductText(cycle) : "Chưa xác định loại hàu"],
           ["Sản lượng dự kiến", cycle.targetYieldKg === null ? "Chưa lập" : `${cycle.targetYieldKg.toLocaleString("vi-VN")} kg`], ["Ghi chú", cycle.note],
           ["Thả giống hoàn tất", day(cycle.seedingCompletedOn)], ["Ngày đóng", day(cycle.closeDate)], ["Đánh giá", cycle.assessment]]} />}
     </fieldset>
     <CyclePlanPhotos key={cycle.id} cycle={cycle} canEdit={access.edit && cycle.canEdit && !editing} onDirtyChange={setPhotoDirty} onSaved={() => { current.reload(); onChanged("Đã cập nhật ảnh kế hoạch nuôi."); }} />
     {cycle && <RecordHistory kind="cycle" id={cycle.id} zoneId="" />}
-    <ErrorNotice error={seedLockedFailure(mutation.failure) ? "Đã thả giống, không đổi được đợt ươm hay loại hàu nuôi. Hãy tải lại chu kỳ để đối chiếu." : mutation.error || current.error} />
+    <ErrorNotice error={seedLockedFailure(mutation.failure) ? "Đã thả giống, không đổi được đợt ươm (và loại hàu theo đợt). Hãy tải lại chu kỳ để đối chiếu." : seedWithoutProductText(mutation.failure) ?? (mutation.error || current.error)} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Hãy tải lại chu kỳ và đối chiếu trước khi lưu lại. Nội dung đang nhập vẫn được giữ.</p><div>
       <Button key="reload" type="button" className="w-auto" variant="secondary" disabled={current.loading} onClick={() => { current.reload(); setReloaded(true); }}>Tải chu kỳ mới để đối chiếu</Button>
       {reloaded && !current.loading && !mutation.uncertain && <Button key="reviewed" type="button" className="w-auto" variant="secondary" onClick={() => { mutation.reviewed(); setReloaded(false); }}>Đã đối chiếu, tiếp tục</Button>}

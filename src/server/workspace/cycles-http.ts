@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { zoneCycles, cycleHistory, cycleProgress, cycleStartInput, cycleEditInput, cycleView, rawNurseryBatchList, rawProductList } from "@/features/cycles-api/contracts";
+import { zoneCycles, cycleHistory, cycleProgress, cycleStartInput, cycleEditInput, cycleView, rawNurseryBatchList } from "@/features/cycles-api/contracts";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -55,7 +55,6 @@ export async function handleCycles(request: Request) {
     z.strictObject({ action: z.literal("history"), raftId: z.guid() }),
     z.strictObject({ action: z.literal("progress"), raftId: z.guid(), date: z.iso.date().optional(), cycleId: z.guid().optional() }),
     z.strictObject({ action: z.literal("nursery-available"), zoneId: z.guid() }),
-    z.strictObject({ action: z.literal("products") }),
   ]).safeParse(Object.fromEntries(query));
   if (request.method !== "GET" || !parsed.success || new Set(query.keys()).size !== query.size) return json({ status: "invalid-input" }, 400);
   const gateway = getSessionGateway(), backend = parseServerBackendConfig(process.env);
@@ -68,8 +67,7 @@ export async function handleCycles(request: Request) {
     if (!allowedFor(application.context, "View")) return json({ status: "forbidden", code: "MSG02" }, 403);
     const q = parsed.data;
     // "nursery-available": finished nursery batches of the zone, the choices of the start-cycle form (backend contract 0.6).
-    // "products": the catalogue products the start form and the plan offer as the farmed product; read here so the cycle permission is enough.
-    const path = q.action === "products" ? "/api/products" : q.action === "zone" ? `/api/zones/${q.zoneId}/cultivation-cycles` : q.action === "history" ? `/api/rafts/${q.raftId}/cultivation-cycles` : q.action === "nursery-available" ? `/api/nursery-batches/available?${new URLSearchParams({ zoneId: q.zoneId })}`
+    const path = q.action === "zone" ? `/api/zones/${q.zoneId}/cultivation-cycles` : q.action === "history" ? `/api/rafts/${q.raftId}/cultivation-cycles` : q.action === "nursery-available" ? `/api/nursery-batches/available?${new URLSearchParams({ zoneId: q.zoneId })}`
       : `/api/rafts/${q.raftId}/progress?${new URLSearchParams({ ...(q.date ? { date: q.date } : {}), ...(q.cycleId ? { cycleId: q.cycleId } : {}) })}`;
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(backend.config.timeoutMs)]);
     const response = await fetch(new URL(path, backend.config.origin), { headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` }, cache: "no-store", credentials: "omit", redirect: "error", signal });
@@ -78,7 +76,7 @@ export async function handleCycles(request: Request) {
     if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
     if (result.status === "http-error") return json({ status: "rejected", code: result.code }, result.httpStatus);
     if (result.status !== "success" || signal.aborted) return json({ status: "unavailable" }, 503);
-    const value = (q.action === "products" ? rawProductList : q.action === "zone" ? zoneCycles : q.action === "history" ? cycleHistory : q.action === "nursery-available" ? rawNurseryBatchList : cycleProgress).safeParse(result.data);
+    const value = (q.action === "zone" ? zoneCycles : q.action === "history" ? cycleHistory : q.action === "nursery-available" ? rawNurseryBatchList : cycleProgress).safeParse(result.data);
     if (!value.success || q.action === "progress" && "raftId" in value.data && value.data.raftId !== q.raftId) return json({ status: "invalid-response" }, 502);
     return json({ status: "success", data: value.data });
   } catch { return json({ status: "unavailable" }, 503); }

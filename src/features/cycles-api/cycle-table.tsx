@@ -12,7 +12,7 @@ import { cycleStateLabel, cycleStateOf, raftStatusLabel, type CycleRow, type Cyc
 
 type Column = { key: string; label: string; weight: number; sort: CycleSortKey; render(row: CycleRow): ReactNode };
 export const cycleColumns: readonly Column[] = [
-  { key: "raft", label: "Bè nuôi", weight: 24, sort: "raft", render: row => <><span className={`${styles.truncated} ${styles.name}`} title={row.raftCode}>{row.raftCode}</span><small className={styles.meta}>{row.laneCount} làn nuôi{row.cycle && !row.cycle.closeDate && row.cycle.productName ? ` · ${row.cycle.productName}` : ""}</small></> },
+  { key: "raft", label: "Bè nuôi", weight: 24, sort: "raft", render: row => <><span className={`${styles.truncated} ${styles.name}`} title={row.raftCode}>{row.raftCode}</span><small className={styles.meta}>{row.laneCount} làn nuôi{row.cycle && !row.cycle.closeDate && row.cycle.productName ? ` · Đang nuôi: ${row.cycle.productName}${row.cycle.nurseryCode ? ` · đợt ươm ${row.cycle.nurseryCode}` : ""}` : ""}</small></> },
   { key: "raftStatus", label: "Trạng thái bè", weight: 20, sort: "raftStatus", render: row => raftStatusLabel(row.raftStatusId) },
   { key: "state", label: "Chu kỳ gần nhất", weight: 22, sort: "state", render: row => <StatusPill tone={cycleStateOf(row) === "open" ? "success" : "neutral"}>{cycleStateLabel(cycleStateOf(row))}</StatusPill> },
   { key: "start", label: "Ngày bắt đầu", weight: 17, sort: "start", render: row => row.cycle ? formatVietnameseDate(row.cycle.startDate) : "—" },

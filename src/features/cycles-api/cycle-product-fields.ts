@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * The farmed product ("loại hàu nuôi", e.g. Hàu múp, Hàu gầy 3cm) of a cycle: the Product catalogue entry the raft grows and sells.
- * Tolerant on purpose (nullish): a legacy cycle has none, and an older backend does not send these fields yet.
+ * The "loại hàu" of a cycle (e.g. Hàu múp, Hàu gầy 3cm): DERIVED by the backend from the seed item of the nursed batch, so it is read only.
+ * `seedItemName` is that seed item. Tolerant on purpose (nullish): a legacy cycle has none, and a seed item may not have a product yet.
  */
-export const cycleProductFields = { productId: z.string().nullish(), productName: z.string().nullish() };
+export const cycleProductFields = { productId: z.string().nullish(), productName: z.string().nullish(), seedItemName: z.string().nullish() };

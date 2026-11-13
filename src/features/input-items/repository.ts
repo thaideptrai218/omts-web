@@ -89,6 +89,8 @@ export const inputRepository = {
   seedLots: (id: string, signal?: AbortSignal) => read("seed-lots", { id }, c.seedLots, signal),
   removeSeedLot: (id: string, lotId: string) => json("seed-lot-delete", { id, lotId }, c.removedItem),
 
+  /** The products in use, the choices of "Loại hàu bán ra" of a seed item. */
+  products: (signal?: AbortSignal) => read("products", {}, c.productsInUse, signal),
   units: (signal?: AbortSignal) => read("units", {}, c.inputUnit.array(), signal),
   saveUnit: (name: string, id?: string, rowVersion?: string) => json(id ? "unit-update" : "unit-create", { id, body: id ? { name, rowVersion } : { name } }, c.inputUnit),
   removeUnit: (id: string) => json("unit-delete", { id }, c.removed),
