@@ -6,7 +6,7 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { TabFooter } from "@/features/farming-management/detail-parts";
 import type { UnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
 import { businessToday, ErrorNotice, Field, Note } from "@/features/operations/ui";
-import type { NurseryDetail } from "./contracts";
+import { quantityText, type NurseryDetail } from "./contracts";
 import { nurseryMultipart, nurseryService } from "./service";
 import { NurseryPhotoField, type NurseryPhotoDraft } from "./nursery-photo-field";
 import { useNurseryMutation } from "./use-nursery-mutation";
@@ -25,12 +25,16 @@ export function NurseryEditForm({ batch, onClose, onSaved, onReload, leaveRef, g
     dirtyRef.current = dirty; pendingRef.current = mutation.pending || photoBusy;
     return () => { dirtyRef.current = false; pendingRef.current = false; };
   }, [dirty, dirtyRef, pendingRef, mutation.pending, photoBusy]);
+  // This batch's own pieces are already out of the lot: the most it can take is what is on hand now plus what it holds.
+  const typed = nurseryQuantityValue(quantity), mostAllowed = batch.seedLotOnHand == null ? undefined : batch.seedLotOnHand + batch.quantityIn;
+  const overStock = mostAllowed !== undefined && Number.isFinite(typed) && typed > mostAllowed ? `Số mảnh: lô ${batch.seedLot.code} chỉ đủ tối đa ${quantityText(mostAllowed, batch.seedLot.unit)} (tồn kho ${quantityText(batch.seedLotOnHand, batch.seedLot.unit)} cộng phần đợt này đang giữ). Nhập tối đa ${quantityText(mostAllowed, batch.seedLot.unit)}.` : undefined;
   async function canLeave() { return !mutation.busy() && !photoBusy && (!dirty || await confirmation.confirm("Bỏ các thay đổi đợt ươm chưa lưu?")); }
   useImperativeHandle(leaveRef, () => ({ canLeave }));
   async function close() { if (await canLeave()) onClose(); }
   async function save() {
     if (mutation.busy() || mutation.blocked || photoBusy || batch.statusId !== 4001 || !batch.canEdit) return;
     if (!quantity || !Number.isFinite(nurseryQuantityValue(quantity)) || nurseryQuantityValue(quantity) <= 0) { setError("Số mảnh vào ươm phải lớn hơn 0, tối đa 2 chữ số thập phân."); return; }
+    if (overStock) { setError(overStock); return; }
     if (!date || date > businessToday()) { setError("Ngày bắt đầu ươm phải không sau hôm nay."); return; }
     if (photosChanged && (kept.length + photos.length < 1 || kept.length + photos.length > 3)) { setError("Ảnh: cần giữ hoặc chọn từ 1 đến 3 ảnh hiện trường."); return; }
     setError(undefined);
@@ -42,7 +46,7 @@ export function NurseryEditForm({ batch, onClose, onSaved, onReload, leaveRef, g
   return <form noValidate aria-label={`Chỉnh sửa ${batch.code}`} onSubmit={event => { event.preventDefault(); void save(); }}>{confirmation.dialog}
       <dl className="mb-3 grid gap-2 text-sm sm:grid-cols-2"><div><dt className="text-xs text-text-muted">Vùng ươm</dt><dd>{batch.zoneCode} · {batch.zoneName}</dd></div><div><dt className="text-xs text-text-muted">Lô giống</dt><dd>{batch.seedLot.code}</dd></div></dl>
       <fieldset disabled={mutation.pending || mutation.blocked || photoBusy} className="min-w-0 space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2"><UnitField label="Số mảnh vào ươm" unit="mảnh" decimals={2} min={0} value={quantity} onChange={setQuantity} required />
+        <div className="grid gap-3 sm:grid-cols-2"><UnitField label="Số mảnh vào ươm" unit="mảnh" decimals={2} min={0} value={quantity} onChange={setQuantity} required hint={mostAllowed === undefined ? undefined : `Tối đa theo kho: ${quantityText(mostAllowed, batch.seedLot.unit)}`} error={overStock} />
           <Field label="Ngày bắt đầu ươm *" type="date" value={date} onChange={event => setDate(event.target.value)} max={businessToday()} required /></div>
         <Note label="Ghi chú" value={note} onChange={event => setNote(event.target.value)} maxLength={1000} />
         <NurseryPhotoField photos={photos} onChange={setPhotos} kept={kept} onRemoveKept={id => setKept(current => current.filter(photo => photo.id !== id))} onBusy={setPhotoBusy} />
