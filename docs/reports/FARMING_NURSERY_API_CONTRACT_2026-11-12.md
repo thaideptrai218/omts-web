@@ -474,3 +474,22 @@ Danh sách `GET /api/nursery-batches` (mỗi `items[]`) và chi tiết `GET /api
 **7. Không đổi**: kiểm thu hoạch `HARVEST_PRODUCT_MISMATCH`, `cycleProductId`/`cycleProductName`, `matchesCycleProduct` ở màn Thu hoạch (mục 0.15 phần Thu hoạch).
 
 **8. Demo**: giống VT001 và VT002 (Thái Bình Dương 3/5 cm) bán ra "Hàu béo", VT003 (bản địa Vân Đồn 3 cm) bán ra "Hàu sữa", VT004 (Cổ Trai 4 cm) bán ra "Hàu sống loại nhỏ". Chu kỳ demo có đợt ươm lấy sản phẩm theo giống; các đợt ươm 4002 sẵn sàng gồm cả "Hàu béo" và "Hàu sữa" (đợt demo 1 lấy lô của VT001/VT002 = Hàu béo, đợt demo 2 lấy lô của VT003 = Hàu sữa; CSDL cũ giữ các đợt đã có: nhiều đợt 4002 của VT003 = Hàu sữa, một đợt của VT001 = Hàu béo). Chu kỳ demo có đợt ươm tự đồng bộ sản phẩm theo giống khi chạy lại seed; các chu kỳ demo cũ không qua ươm giữ sản phẩm đã gán (Hàu béo/Hàu sữa xen kẽ).
+
+## Phụ lục H3 (13/11/2026): mọi lần đọc chu kỳ đều nêu GIỐNG đang nuôi, kể cả chu kỳ cũ (không qua ươm)
+
+Lỗi chủ bè gặp: bè đang nuôi nhưng nhãn "Đang nuôi" ghi "Chưa xác định giống". Nguyên nhân: `seedItemName` / `seedLot` chỉ có khi chu kỳ tạo từ đợt ươm; chu kỳ cũ (B1-01, B1-02, B1-03, B2-01...) có giống nằm ở các lần thả giống (mỗi lần có lô giống -> mặt hàng) và các lần đọc không trả ra.
+
+Quy tắc (một nơi: `CycleSeedLabels`):
+- Chu kỳ có đợt ươm: `seedLot` = lô giống của đợt (mã `PN000013-1` + `itemName`), `seedItemName` = mặt hàng của lô đó, `nurseryCode` = mã đợt (NU000007).
+- Chu kỳ cũ (không có `nurseryBatchId`): lấy từ các lần thả giống hiện có (lần đã xóa không còn). Lô có SỐ LƯỢNG THẢ NHIỀU NHẤT là lô chính: `seedLot` = lô đó, `seedItemName` = mặt hàng của nó; `nurseryCode` = null.
+- `seedItemNames` (mảng tên mặt hàng khác nhau, tên thả nhiều nhất đứng đầu) CHỈ có khi chu kỳ cũ thả từ hơn một mặt hàng; ngược lại null. UI nối bằng " + ".
+- Chu kỳ chưa có đợt ươm và chưa có lần thả giống nào: cả ba trường null. Chỉ khi đó UI mới được ghi "Chưa xác định giống".
+
+Các lần đọc có thêm trường (tất cả tùy chọn, thêm vào cuối, không phá tương thích):
+- `CycleView` (chi tiết chu kỳ, kết quả tạo/sửa): `seedItemName` (nay có cho cả chu kỳ cũ), `seedLot` (cả chu kỳ cũ, đủ thông tin `SeedLotRef`), `seedItemNames`.
+- `CycleListItem` (khối `cycle` của: `GET /api/zones/{zoneId}/cultivation-cycles`, `GET /api/rafts/{raftId}/cultivation-cycles`, `cycle` của `GET /api/rafts/{raftId}/harvest-lots`, `cycle` của `GET /api/rafts/{raftId}/lanes/{n}/progress`): thêm `nurseryCode`, `seedItemName`, `seedLot: { code, itemName }`, `seedItemNames`.
+- `SeedingList` (`GET /api/cultivation-cycles/{cycleId}/seeding-records`): thêm `seedItemName`, `seedItemNames`; `seedLot` nay có cả cho chu kỳ cũ (lô chính).
+
+Hiệu năng: danh sách bè/chu kỳ dùng 3 truy vấn tổng hợp cho mọi chu kỳ (không truy vấn theo từng bè). Không đổi hành vi nào khác; chữ báo lỗi HARVEST_PRODUCT_MISMATCH giữ nguyên.
+
+Hiển thị (web): "Hàu giống … · lô PN… · đợt ươm NU…" (phần đợt ươm chỉ khi có); chu kỳ cũ nhiều giống: "Giống A + Giống B · lô PN…".
