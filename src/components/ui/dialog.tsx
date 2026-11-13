@@ -116,9 +116,9 @@ export function Dialog({
         // React also propagates cancel to ancestor dialogs. Escape belongs only
         // to the topmost dialog; closing its parent would discard the editor.
         event.stopPropagation();
-        // Escape is deliberate (unlike a stray backdrop click), so it behaves like the × button even when the dialog is not dismissible by backdrop.
+        // A dialog that is not dismissible (a running request, a one-time secret) ignores Escape unless it supplies its own close handler.
         if (onCloseRequest) onCloseRequest();
-        else onOpenChange(false);
+        else if (dismissible) onOpenChange(false);
       }}
       onClick={(event) => {
         if (dismissible && event.target === event.currentTarget) {
@@ -141,15 +141,17 @@ export function Dialog({
             )}
           </div>
 
-          {/* Every dialog has a close button: a dialog that is not dismissible by backdrop/Escape still asks its own handler (which may confirm unsaved changes). */}
-          <button
-            aria-label="Đóng hộp thoại"
-            className="grid size-9 shrink-0 place-items-center rounded-control text-2xl leading-none text-text-muted transition hover:bg-surface-subtle hover:text-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
-            onClick={() => onCloseRequest ? onCloseRequest() : onOpenChange(false)}
-            type="button"
-          >
-            <span aria-hidden="true">×</span>
-          </button>
+          {/* A dialog that is not dismissible (a running request, a one-time secret) shows no close button unless it supplies its own close handler, which may confirm unsaved changes. */}
+          {(dismissible || onCloseRequest) && (
+            <button
+              aria-label="Đóng hộp thoại"
+              className="grid size-9 shrink-0 place-items-center rounded-control text-2xl leading-none text-text-muted transition hover:bg-surface-subtle hover:text-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+              onClick={() => onCloseRequest ? onCloseRequest() : onOpenChange(false)}
+              type="button"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          )}
         </div>
 
         <div className="mt-5">{children}</div>

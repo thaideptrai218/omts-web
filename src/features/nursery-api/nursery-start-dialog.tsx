@@ -16,7 +16,7 @@ import { nurseryQuantityValue } from "./nursery-quantity-value";
 
 export function NurseryStartDialog({ zones, initialZone, onClose, onSaved }: { zones: readonly ZoneRow[]; initialZone: string; onClose(): void; onSaved(batch: NurseryDetail): void }) {
   const [zoneId, setZoneId] = useState(zones.some(zone => zone.id === initialZone) ? initialZone : zones[0]?.id ?? "");
-  return <Dialog open size="lg" title="Bắt đầu ươm giống" onOpenChange={open => { if (!open) onClose(); }} dismissible={false}>
+  return <Dialog open size="lg" title="Bắt đầu ươm giống" onOpenChange={open => { if (!open) onClose(); }} onCloseRequest={onClose} dismissible={false}>
     <StartForm key={zoneId} zones={zones} zoneId={zoneId} onZone={setZoneId} onClose={onClose} onSaved={onSaved} />
   </Dialog>;
 }

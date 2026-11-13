@@ -28,7 +28,7 @@ export function NurseryCloseDialog({ batch, guard, onClose, onSaved }: {
       { ...(reason.trim() ? { reason: reason.trim() } : {}), rowVersion: batch.rowVersion }, batch.id));
     if (record) onSaved(record);
   }
-  return <Dialog open title={`Đóng đợt ươm ${batch.code}`} dismissible={false} onOpenChange={open => { if (!open) close(); }}>
+  return <Dialog open title={`Đóng đợt ươm ${batch.code}`} dismissible={false} onCloseRequest={close} onOpenChange={open => { if (!open) close(); }}>
     <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
       <p className="mb-4 text-sm">{quantityText(batch.remaining)} còn lại sẽ ghi là hao hụt (ước tính). Đợt ươm sẽ kết thúc và không thể thả thêm.</p>
       <Note label="Lý do (tùy chọn)" value={reason} maxLength={1000} disabled={mutation.pending || mutation.blocked} onChange={event => { setReason(event.target.value); setError(undefined); }} />

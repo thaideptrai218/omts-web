@@ -46,7 +46,7 @@ function NurseryCompletionForm({ batch, mode, onClose, onSaved }: CompletionProp
     const result = await mutation.run(() => nurseryService.save(mode, batch.zoneId, body, batch.id));
     if (result) onSaved(result);
   }
-  return <Dialog open size="lg" title={`${titles[mode]} · ${batch.code}`} dismissible={false} onOpenChange={open => { if (!open) void close(); }}>{confirmation.dialog}
+  return <Dialog open size="lg" title={`${titles[mode]} · ${batch.code}`} dismissible={false} onCloseRequest={() => void close()} onOpenChange={open => { if (!open) void close(); }}>{confirmation.dialog}
     <form noValidate className="min-w-0" onSubmit={event => { event.preventDefault(); void submit(); }}>
       <NurseryCompletionSteps step={step} complete={mode === "complete"} />
       <fieldset disabled={disabled} className="min-w-0 space-y-4">

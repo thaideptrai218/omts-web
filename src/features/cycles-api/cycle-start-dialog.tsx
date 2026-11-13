@@ -45,7 +45,7 @@ export function CycleStartDialog({ raftId, raftCode, zoneId, zoneLabel, onClose,
     if (result !== undefined) onStarted(started.safeParse(result).data?.cycle.id);
   }
   const batchSelect = <><NurseryBatchSelect batches={batches.data} loading={batches.loading} error={batches.error} onReload={batches.reload} value={values.nurseryBatchId} onChange={id => edit("nurseryBatchId", id)} message={fieldErrors.nurseryBatchId} /><DerivedProductNote batch={batch} /></>;
-  return <Dialog open size="lg" title={`Bắt đầu chu kỳ nuôi · ${raftCode}`} dismissible={false} onOpenChange={open => { if (!open) void leave(); }}>{confirmation.dialog}
+  return <Dialog open size="lg" title={`Bắt đầu chu kỳ nuôi · ${raftCode}`} dismissible={false} onCloseRequest={() => void leave()} onOpenChange={open => { if (!open) void leave(); }}>{confirmation.dialog}
     <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
       <p className="mb-3 text-sm font-medium">Bước {reviewing ? "2/2 · Xem lại và xác nhận" : "1/2 · Thông tin chu kỳ"}</p>
       <fieldset disabled={mutation.pending || mutation.blocked || photoBusy} className="min-w-0 space-y-3">
