@@ -31,9 +31,9 @@ export function RaftGeometryFields({ draft, setDraft, error, laneCountLocked, la
       <UnitField label="Độ dài dây *" unit="m" decimals={2} min={1} max={500} required value={length} onChange={next => update(next, width)} />
       <UnitField label="Chiều rộng bè *" unit="m" decimals={2} min={1} max={200} required value={width} onChange={next => update(length, next)} />
       <div className="flex items-end gap-2">
-      <Button key="decrease-lanes" type="button" variant="secondary" className="w-auto" aria-label="Bớt làn cuối" disabled={!!laneCountLocked || count <= 1} onClick={() => changeCount(String(count - 1))}>−</Button>
-      <div className="min-w-0 flex-1"><UnitField label="Số làn *" unit="làn" min={1} max={200} required disabled={!!laneCountLocked} value={draft.laneCount} onChange={changeCount} /></div>
-      <Button key="increase-lanes" type="button" variant="secondary" className="w-auto" aria-label="Thêm làn cuối" disabled={!!laneCountLocked || count >= 200} onClick={() => changeCount(String(count + 1))}>+</Button>
+        <div className="min-w-0 flex-1"><UnitField label="Số làn *" unit="làn" min={1} max={200} required disabled={!!laneCountLocked} value={draft.laneCount} onChange={changeCount} /></div>
+        <Button key="decrease-lanes" type="button" variant="secondary" className="w-auto" aria-label="Bớt làn cuối" disabled={!!laneCountLocked || count <= 1} onClick={() => changeCount(String(count - 1))}>−</Button>
+        <Button key="increase-lanes" type="button" variant="secondary" className="w-auto" aria-label="Thêm làn cuối" disabled={!!laneCountLocked || count >= 200} onClick={() => changeCount(String(count + 1))}>+</Button>
       </div>
       <div aria-live="polite" className="rounded-control border border-border bg-surface-muted px-4 py-2"><span className="block text-xs text-text-muted">Diện tích tự tính</span><output aria-label="Diện tích" className="block text-xl font-semibold tabular-nums text-primary">{length && width ? areaOf(Number(length), Number(width)).toLocaleString("vi-VN") : "—"} <span className="text-sm font-normal">m²</span></output></div>
     </div>
