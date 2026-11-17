@@ -110,4 +110,4 @@ export const employeeApiEditorSchema = createEmployeePersonalSchema().extend({
  bankAccount: employeeBankSchema,
 });
 export const genderLabel = (value: string | null | undefined) => value === "Male" ? "Nam" : value === "Female" ? "Nữ" : value === "Other" ? "Khác" : "";
-export const employeeTypeLabel = (value: string | null) => value === "Staff" ? "Nhân viên" : value === "SeasonalWorker" ? "Thời vụ" : "—";
+export const employeeTypeLabel = (value: string | null) => value === "Staff" ? "Nội bộ" : value === "SeasonalWorker" ? "Thời vụ" : "—";

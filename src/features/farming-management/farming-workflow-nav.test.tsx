@@ -11,7 +11,7 @@ const props = { identity: {} as never, permissions: { functionPermissions: [] } 
 afterEach(cleanup);
 
 describe("farming bar", () => {
-  it("keeps Hành trình (0) outside the flow and numbers the flow steps 1-4 with the current raft in every link", () => {
+  it("keeps Hành trình (0) outside the flow and numbers the flow steps 1-3 (no nursery step) with the current raft in every link", () => {
     render(<FarmingWorkflowNav {...props} />);
     const bar = screen.getByRole("navigation", { name: "Hành trình nuôi trồng" });
     const overview = within(bar).getByRole("link", { name: /Hành trình/ });
@@ -20,7 +20,7 @@ describe("farming bar", () => {
     const flow = within(bar).getByRole("list", { name: "Các bước nuôi trồng" });
     expect(within(flow).queryByRole("link", { name: /Hành trình/ })).toBeNull();
     expect(within(flow).getAllByRole("link").map(link => link.textContent)).toEqual([
-      "1Ươm giốngƯơm giống con trong vùng", "2Thả giốngĐưa giống xuống từng làn", "3Thu hoạchThu theo đơn mua", "4Sử dụng vật tư (tùy chọn)Cho ăn, thuốc, sửa chữa"]);
+      "1Thả giốngĐưa giống xuống từng làn", "2Thu hoạchThu theo đơn mua", "3Sử dụng vật tư (tùy chọn)Cho ăn, thuốc, sửa chữa"]);
     expect(within(flow).getByRole("link", { name: /Thả giống/ }).getAttribute("href")).toBe("/operations/seeding?zoneId=z1&raftId=r1&cycleId=c1");
     expect(within(flow).getByRole("link", { name: /Thu hoạch/ }).getAttribute("aria-current")).toBe("page");
   });
