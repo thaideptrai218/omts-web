@@ -13,6 +13,8 @@ export function usePlanAccess() {
     owner, view: can("HARVEST_PLANS", "View"), create: can("HARVEST_PLANS", "Create"), edit: can("HARVEST_PLANS", "Edit"), remove: can("HARVEST_PLANS", "Delete"),
     /** Recording a lot from a plan line or marking lanes "Không thu". */
     harvest: can("HARVESTS", "Create"), viewHarvests: can("HARVESTS", "View"),
+    /** Choosing the employees of a plan line (the work assignments of its crew). */
+    staff: can("WORK_ASSIGNMENTS", "Create"),
   };
 }
 export type PlanAccess = ReturnType<typeof usePlanAccess>;

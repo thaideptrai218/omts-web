@@ -34,6 +34,21 @@ it("puts employees assigned to this raft first and keeps every active employee s
   expect(onChange).toHaveBeenCalledWith([id1]);
   expect(screen.getByText("Đã phân công cho bè hôm nay")).toBeTruthy();
 });
+it("reads the crew of the day it is given, says so on those assigned that day, and keeps a locked employee chosen", async () => {
+  state.harvest.mockResolvedValue(ok({ employees: [{ id: id2, code: "NV2", name: "Bình" }] }));
+  state.workforce.mockResolvedValue(lookups([id1, "An"], [id2, "Bình"]));
+  const onChange = vi.fn();
+  render(<RecordCrewPicker raftId={raft} zoneId={raft} day="2099-03-05" values={[id2]} locked={[id1]} onChange={onChange} />);
+  expect(await screen.findByText("Đã phân công cho bè ngày 05/03/2099")).toBeTruthy();
+  expect(state.harvest).toHaveBeenCalledWith("crew-suggestions", { id: raft, zoneId: raft, date: "2099-03-05" }, expect.anything(), expect.anything());
+  expect(state.workforce).toHaveBeenCalledWith("lookups", { day: "2099-03-05" }, expect.anything(), expect.anything());
+  const locked = screen.getByRole("checkbox", { name: /^An/ }) as HTMLInputElement;
+  expect(locked.checked).toBe(true);
+  expect(locked.disabled).toBe(true);
+  expect(screen.getByText("Đã điểm danh nên không bỏ khỏi bè được")).toBeTruthy();
+  fireEvent.click(screen.getByRole("checkbox", { name: /^Bình/ }));
+  expect(onChange).toHaveBeenCalledWith([]);
+});
 it("still offers the suggestions when the user cannot read the workforce lookups", async () => {
   state.harvest.mockResolvedValue(ok({ employees: [{ id: id1, name: "An" }] }));
   state.workforce.mockResolvedValue({ status: "error", httpStatus: 403, uncertain: false });

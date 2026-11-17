@@ -149,4 +149,50 @@ describe("harvest plans BFF", () => {
     expect((await handleHarvestPlans(post(JSON.stringify({ action: "plan-create", body: { ...body, note: "x".repeat(70_000) } })))).status).toBeGreaterThanOrEqual(400);
     expect(fetcher).not.toHaveBeenCalled();
   });
+
+  const staffingLine = { lineId: line, raftId: other, raftCode: "B1", zoneId: id, zoneCode: "Z1", laneNumbers: [1, 2], plannedDate: "2026-11-18", canEdit: true,
+    employees: [{ employeeId: other, code: "NV000001", name: "An", assignmentId: id, checkedIn: false }] };
+
+  it("reads the Nhân công of a plan for who may view plans and checks the answer names the same plan", async () => {
+    setup([["HARVEST_PLANS", "View"]]);
+    const answer = { planId: id, planCode: "KHT000001", rowVersion: "v1", canEdit: true, lines: [staffingLine] };
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(answer)).mockResolvedValueOnce(Response.json({ ...answer, planId: other })).mockResolvedValueOnce(Response.json({ ...answer, lines: [{ ...staffingLine, plannedDate: "tomorrow" }] }));
+    expect((await (await handleHarvestPlans(get(`action=plan-staffing&id=${id}`))).json()).data).toMatchObject({ planCode: "KHT000001", lines: [{ raftCode: "B1", employees: [{ name: "An", checkedIn: false }] }] });
+    expect(String(fetcher.mock.calls[0][0])).toContain(`/api/harvest-plans/${id}/staffing`);
+    expect((await handleHarvestPlans(get(`action=plan-staffing&id=${id}`))).status).toBe(502);
+    expect((await handleHarvestPlans(get(`action=plan-staffing&id=${id}`))).status).toBe(502);
+    expect((await handleHarvestPlans(get("action=plan-staffing"))).status).toBe(400);
+    expect((await handleHarvestPlans(get("action=plan-staffing&id=nope"))).status).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it("sets the crew of a line with a PUT to the line path, for who may create work assignments, and refuses a bad crew before the API", async () => {
+    setup([["WORK_ASSIGNMENTS", "Create"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json(staffingLine));
+    const save = { action: "plan-line-staffing", id, lineId: line, body: { employeeIds: [other], rowVersion: "v1" } };
+    const answered = await handleHarvestPlans(post(save));
+    expect(answered.status).toBe(200);
+    expect((await answered.json()).data).toMatchObject({ lineId: line, employees: [{ name: "An" }] });
+    expect(String(fetcher.mock.calls[0][0])).toContain(`/api/harvest-plans/${id}/lines/${line}/staffing`);
+    expect(fetcher.mock.calls[0][1]).toMatchObject({ method: "PUT", body: JSON.stringify(save.body) });
+    expect((await handleHarvestPlans(post({ ...save, body: { employeeIds: [] } }))).status).toBe(200);
+    for (const body of [{ employeeIds: [other, other] }, { employeeIds: ["nope"] }, { employeeIds: [other], extra: 1 }, { rowVersion: "v1" }, { employeeIds: Array.from({ length: 101 }, (_, n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`) }]) {
+      expect((await handleHarvestPlans(post({ ...save, body }))).status).toBe(400);
+    }
+    expect((await handleHarvestPlans(post({ ...save, lineId: "nope" }))).status).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the Nhân công to its permissions and passes a refusal on with the sentence of the API", async () => {
+    setup([["HARVEST_PLANS", "View"], ["HARVEST_PLANS", "Edit"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ code: "MSG-GEN-09", message: "Kế hoạch thu hoạch KHT000001 đã hủy.", field: "Plan" }, { status: 409 }));
+    expect((await handleHarvestPlans(post({ action: "plan-line-staffing", id, lineId: line, body: { employeeIds: [] } }))).status).toBe(403);
+    expect(fetcher).not.toHaveBeenCalled();
+    setup([["WORK_ASSIGNMENTS", "Create"]]);
+    const refused = await handleHarvestPlans(post({ action: "plan-line-staffing", id, lineId: line, body: { employeeIds: [other] } }));
+    expect(refused.status).toBe(409);
+    expect(await refused.json()).toMatchObject({ status: "rejected", code: "MSG-GEN-09", problem: { message: "Kế hoạch thu hoạch KHT000001 đã hủy." } });
+    setup([["WORK_ASSIGNMENTS", "Create"]]);
+    expect((await handleHarvestPlans(get(`action=plan-staffing&id=${id}`))).status).toBe(403);
+  });
 });

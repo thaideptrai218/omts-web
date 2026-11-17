@@ -53,6 +53,16 @@ export const eligibleRaft = z.object({ raftId: id, raftCode: text, zone: zoneRef
 /** The API answers `{ rafts }`; the BFF hands on the list itself, which the browser reads with the same schema. */
 export const eligibleRafts = z.union([z.object({ rafts: z.array(eligibleRaft) }).transform((value) => value.rafts), z.array(eligibleRaft)]);
 
+/**
+ * The Nhân công of a plan (GET api/harvest-plans/{id}/staffing): for each line the caller sees, the employees assigned to it for the day of the plan. `checkedIn`: the employee already checked in that day, so cannot be
+ * taken off. `canEdit` (of the plan and of each line): the caller may choose the crew now (role, status of the plan and day not past).
+ */
+export const staffingEmployee = z.object({ employeeId: id, code: text, name: text, assignmentId: id, checkedIn: z.boolean() });
+export const staffingLine = z.object({
+  lineId: id, raftId: id, raftCode: text, zoneId: id, zoneCode: text, laneNumbers: z.array(count), plannedDate: z.iso.date(), employees: z.array(staffingEmployee), canEdit: z.boolean(),
+});
+export const planStaffing = z.object({ planId: id, planCode: text, rowVersion: text, lines: z.array(staffingLine), canEdit: z.boolean() });
+
 /** A save, assign, finish or cancel answers `{ plan, message, messageCode }`; the skip actions answer the plan itself. */
 export const planAnswer = z.union([z.object({ plan: planView }).transform((value) => value.plan), planView]);
 /** The answer of assign, finish, cancel and the skip actions is not read: the screen reloads the plan. */
@@ -61,6 +71,9 @@ export const ack = z.unknown();
 export const planList = z.union([z.object({ plans: z.array(planView) }).transform((value) => value.plans), z.array(planView)]);
 
 export type PlanView = z.infer<typeof planView>;
+export type StaffingEmployee = z.infer<typeof staffingEmployee>;
+export type StaffingLine = z.infer<typeof staffingLine>;
+export type PlanStaffing = z.infer<typeof planStaffing>;
 export type PlanLine = z.infer<typeof planLine>;
 export type PlanLane = z.infer<typeof planLane>;
 export type PlanRow = z.infer<typeof planRow>;
