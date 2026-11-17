@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { lotRepository } from "@/features/harvest-lots/repository";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -27,6 +28,8 @@ import { DISPOSALS_PATH, disposalHref } from "./disposal-parts";
 type Line = { key: string; productId: string; productCode: string; productName: string; lotId: string; lotCode: string; kg: string; note: string };
 type LotState = { data: ProductLots } | { error: string };
 type Saved = { id: string; rowVersion: string; statusId: number; code: string };
+/** The starting zone and lines of a disposal opened from a harvest lot. */
+type Prefill = { zoneId: string; lines: Line[] };
 
 const kgOf = (value: string) => { const parsed = Number(value.replace(",", ".")); return value && Number.isFinite(parsed) && parsed > 0 ? parsed : null; };
 const optionOf = (product: ProductRow): ItemOption => ({ id: product.id, code: product.code, name: product.name, unit: "kg", group: "Other", units: [] });
@@ -38,31 +41,42 @@ function fetchLots(productId: string, setLots: Dispatch<SetStateAction<Record<st
   void productRepository.lots(productId).then((result) => setLots((current) => ({ ...current, [productId]: result.status === "success" ? { data: result.data } : { error: errorText(result) ?? "Không tải được lô thu hoạch." } })));
 }
 
-/** Create a disposal, continue a draft, edit a completed one, or start from a copy: one page, the source decides the starting values. */
-export function DisposalEditorPage({ id, copyFrom }: { id?: string; copyFrom?: string }) {
+/**
+ * Create a disposal, continue a draft, edit a completed one, or start from a copy: one page, the source decides the starting values.
+ * `fromLot` (Lô thu hoạch "Xuất hủy"): a new disposal in the lot's zone with one line per product the lot still holds, on that lot.
+ */
+export function DisposalEditorPage({ id, copyFrom, fromLot }: { id?: string; copyFrom?: string; fromLot?: { id: string; zoneId: string } }) {
   const access = useDisposalAccess(), source = id ?? copyFrom;
+  const lotRead = useRemote<Prefill | undefined>(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<Prefill | undefined>> => {
+    if (!fromLot || source) return { status: "success", data: undefined };
+    const lot = await lotRepository.detail(fromLot.id, fromLot.zoneId, signal);
+    if (lot.status !== "success") return lot;
+    const lines = lot.data.productStocks.filter((stock) => stock.remainingKg > 0)
+      .map((stock) => ({ ...newLine({ id: stock.productId, code: stock.productCode, name: stock.productName }), lotId: lot.data.id, lotCode: lot.data.lotCode }));
+    return { status: "success", data: { zoneId: lot.data.zoneId, lines } };
+  }, [fromLot, source]));
   const remote = useRemote<DisposalView | undefined>(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<DisposalView | undefined>> => source ? disposalRepository.detail(source, signal) : { status: "success", data: undefined }, [source]));
   const products = useRemote<ProductRow[]>(useCallback((signal: AbortSignal) => productRepository.all({}, signal), []));
   const zones = useZoneOptions();
   if (!(id ? access.edit : access.create)) return <ListStateMessage>Bạn không có quyền lập hoặc sửa phiếu xuất hủy hàu.</ListStateMessage>;
-  if (remote.loading || products.loading || zones.loading) return <Skeleton />;
-  const failure = remote.error ?? products.error ?? zones.error;
+  if (remote.loading || products.loading || zones.loading || lotRead.loading) return <Skeleton />;
+  const failure = remote.error ?? products.error ?? zones.error ?? lotRead.error;
   if (failure || !products.data) return <ListStateMessage error={failure ?? "Không tải được dữ liệu."} onRetry={() => { remote.reload(); products.reload(); }} retryLabel="Tải lại" />;
   const disposal = remote.data;
   if (source && !disposal) return <ListStateMessage>Không tìm thấy phiếu.</ListStateMessage>;
   if (id && disposal?.statusId === DISPOSAL.cancelled) return <ListStateMessage>Phiếu {disposal.code} đã hủy nên không sửa được.</ListStateMessage>;
-  return <Editor access={access} disposal={id ? disposal : undefined} copy={copyFrom ? disposal : undefined} products={products.data} zones={zones.zones} />;
+  return <Editor access={access} disposal={id ? disposal : undefined} copy={copyFrom ? disposal : undefined} prefill={lotRead.data} products={products.data} zones={zones.zones} />;
 }
 
-function Editor({ access, disposal, copy, products, zones }: { access: ReturnType<typeof useDisposalAccess>; disposal?: DisposalView; copy?: DisposalView; products: ProductRow[]; zones: ReturnType<typeof useZoneOptions>["zones"] }) {
+function Editor({ access, disposal, copy, prefill, products, zones }: { access: ReturnType<typeof useDisposalAccess>; disposal?: DisposalView; copy?: DisposalView; prefill?: Prefill; products: ProductRow[]; zones: ReturnType<typeof useZoneOptions>["zones"] }) {
   const router = useRouter(), confirmation = useActionDialog(), { notify } = useToast();
   const origin = disposal ?? copy;
   const [doc, setDoc] = useState<Saved | undefined>(disposal ? { id: disposal.id, rowVersion: disposal.rowVersion, statusId: disposal.statusId, code: disposal.code } : undefined);
   const completed = doc?.statusId === DISPOSAL.completed;
   const usableZones = zones.filter((zone) => zone.inUse);
-  const [lines, setLines] = useState<Line[]>(() => origin?.lines.map(lineFrom) ?? []);
+  const [lines, setLines] = useState<Line[]>(() => origin?.lines.map(lineFrom) ?? prefill?.lines ?? []);
   const [disposedAt, setDisposedAt] = useState(disposal ? vnLocal(disposal.disposedAt) : nowLocal()), [code, setCode] = useState(disposal?.code ?? "");
-  const [zoneId, setZoneId] = useState(origin?.zoneId ?? (usableZones.length === 1 ? usableZones[0].id : ""));
+  const [zoneId, setZoneId] = useState(origin?.zoneId ?? prefill?.zoneId ?? (usableZones.length === 1 ? usableZones[0].id : ""));
   const [reason, setReason] = useState(origin?.reason ?? ""), [notes, setNotes] = useState(origin?.notes ?? "");
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false);
   const [lots, setLots] = useState<Record<string, LotState>>({}), requested = useRef(new Set<string>());

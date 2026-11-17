@@ -28,11 +28,13 @@ export const orderAdvance = z.object({
 });
 export const orderInvoice = z.object({ id, code: text, invoicedAt: text, total: num, statusId: count, status: text });
 export const orderPlan = z.object({ id, code: text, statusId: count, status: text, plannedAt: opt });
+/** A sales return of an invoice of the order: shown as a link only, since a return does not change the order. */
+export const orderReturn = z.object({ id, code: text, statusId: count });
 export const orderView = z.object({
   id, code: text, statusId: count, status: text, orderedAt: text, pickupAt: opt,
   customer: z.object({ id, code: text, name: text, phoneNumber: opt }).nullish(), walkInCustomer: z.boolean(), source: z.enum(orderSources), receivedBy: person, createdBy: person.nullish(),
   note: opt, subtotal: num, discount: num, discountDecidedByOwner: z.boolean(), total: num, invoicedTotal: num, customerPaid: num, advanceLeft: num, advanceReserved: z.boolean(),
-  lines: z.array(orderLine), progress: z.array(progress), advances: z.array(orderAdvance), invoices: z.array(orderInvoice), harvestPlans: z.array(orderPlan),
+  lines: z.array(orderLine), progress: z.array(progress), advances: z.array(orderAdvance), invoices: z.array(orderInvoice), harvestPlans: z.array(orderPlan), salesReturns: z.array(orderReturn).default([]),
   purchaseRequest: z.object({ id, sentAt: text, statusId: count, status: text }).nullish(), allowedActions: z.array(text),
   createdAt: text, completedAt: opt, completedManually: z.boolean(), cancelledAt: opt, cancelReason: opt, rowVersion: text,
 });

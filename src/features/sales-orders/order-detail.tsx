@@ -19,6 +19,7 @@ import { planHref, planStatusLabel } from "@/features/harvest-plans/plan-labels"
 import { productHref } from "@/features/products/product-helpers";
 import styles from "@/features/purchase-documents/purchases.module.css";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
+import { salesReturnHref, returnStatusLabel } from "@/features/sales-returns/return-labels";
 import { ORDER, type OrderAction, type OrderView } from "./contracts";
 import type { OrderAccess } from "./order-access";
 import { ORDERS_PATH, OrderStatus, advanceMethodLabel, planHarvestHref, processOrderHref, sourceLabel } from "./order-labels";
@@ -64,6 +65,7 @@ function InfoTab({ order }: { order: OrderView }) {
       <div><span>Người tạo:</span><strong>{dash(order.createdBy?.name)}</strong></div>
       {order.purchaseRequest && <div><span>Yêu cầu mua:</span><Link className={styles.link} href={`/operations/purchase-requests/${order.purchaseRequest.id}`}>Gửi lúc {viDateTime(order.purchaseRequest.sentAt)}</Link></div>}
       {order.harvestPlans.length > 0 && <div><span>Kế hoạch thu hoạch:</span><span className={styles.codeList}>{order.harvestPlans.map((plan) => <Link key={plan.id} className={styles.link} href={planHref(plan.code)} title={planStatusLabel[plan.statusId]}>{plan.code}</Link>)}</span></div>}
+      {order.salesReturns.length > 0 && <div><span>Trả hàng bán:</span><span className={styles.codeList}>{order.salesReturns.map((item) => <Link key={item.id} className={styles.link} href={salesReturnHref(item.code)} title={returnStatusLabel[item.statusId]}>{item.code}</Link>)}</span></div>}
       {order.completedAt && <div><span>Hoàn thành lúc:</span><strong>{viDateTime(order.completedAt)}{order.completedManually ? " (kết thúc tay)" : ""}</strong></div>}
       {order.statusId === ORDER.cancelled && <div><span>Hủy lúc:</span><strong>{order.cancelledAt ? viDateTime(order.cancelledAt) : "—"}</strong></div>}
       {order.cancelReason && <div><span>Lý do hủy:</span><span className={styles.danger}>{order.cancelReason}</span></div>}

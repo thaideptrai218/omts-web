@@ -41,7 +41,7 @@ function browserFiles(value: unknown): unknown {
 function exportFileName(area: string, query: URLSearchParams, exporting: boolean): string {
   const id = query.get("id");
   if (exporting && area === "sales-invoice-list" && id && /^[0-9a-f-]{36}$/i.test(id)) return `hoa-don-${id.slice(0, 8)}`;
-  return `${area}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
+  return `${area === "harvest" ? "lo-thu-hoach" : area === "sales-returns" ? "tra-hang-ban" : area}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
 }
 export async function handleOperationRequest(request: Request, areaName: string): Promise<Response> {
   if (areaName === "employees") return handleEmployeeApi(request);
@@ -151,7 +151,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
         bytes = await readBoundedBytes(upstream.body, controller.signal, 32 * 1024 * 1024, budget);
       } else if (plan.noContent && upstream.status === 204) data = { done: true };
       else {
-        const result = await readBackendResponse(upstream, "profileRead", false, ["sales-invoices", "customer-payments", "sales-invoice-list"].includes(area.data));
+        const result = await readBackendResponse(upstream, "profileRead", false, ["sales-invoices", "customer-payments", "sales-invoice-list", "sales-returns"].includes(area.data));
         if (result.status === "http-error") {
           // Nuôi trồng questions and stock checks (MSG-GEN-04, MSG-CYCLE-01/07, MSG-INPUT-01) travel as an allow-listed problem.
           const problem = farmingAreas.has(area.data) ? await readFarmingProblem(failedCopy) : undefined;

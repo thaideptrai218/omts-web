@@ -37,7 +37,7 @@ import { buildCreateBody, buildUpdateBody, discountShare, firstProblem, invoiceT
 import { invoiceEditorRepository as repository } from "./repository";
 import { useInvoiceSubmit } from "./use-invoice-submit";
 
-type Start = { kind: "new"; draft: InvoiceDraft; lots: LotForSale[] } | { kind: "edit"; invoice: SalesInvoice; order: OrderView | null; lots: LotForSale[] };
+type Start = { kind: "new"; draft: InvoiceDraft; lots: LotForSale[]; pickedLotId?: string } | { kind: "edit"; invoice: SalesInvoice; order: OrderView | null; lots: LotForSale[] };
 type Saved = z.infer<typeof salesInvoiceSaved>;
 const CANCELLED = 3502, PAYMENT_CANCELLED = 3603;
 
@@ -48,7 +48,8 @@ const optionOf = (product: ProductRow): ItemOption => ({ id: product.id, code: p
  * The invoice editor: a new invoice made from an order (`orderId`, from "Xử lý đặt hàng") or an existing invoice changed the way a receipt is (`invoiceId`).
  * One page; the source decides the starting values.
  */
-export function InvoiceEditorPage({ orderId, invoiceId }: { orderId?: string; invoiceId?: string }) {
+/** `lotId`: the lot the invoice was opened from (Lô thu hoạch "Lập hóa đơn"); lines whose product the lot holds start on it. */
+export function InvoiceEditorPage({ orderId, invoiceId, lotId }: { orderId?: string; invoiceId?: string; lotId?: string }) {
   const { identity, permissions } = useApiWorkspace();
   const remote = useRemote<Start>(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<Start>> => {
     if (invoiceId) {
@@ -63,8 +64,8 @@ export function InvoiceEditorPage({ orderId, invoiceId }: { orderId?: string; in
     if (!orderId) return { status: "error", httpStatus: 400, uncertain: false };
     const [draft, lots] = await Promise.all([repository.draft(orderId, signal), repository.lots(orderId, signal)]);
     if (draft.status !== "success") return draft;
-    return lots.status === "success" ? { status: "success", data: { kind: "new", draft: draft.data, lots: lots.data.lots } } : lots;
-  }, [invoiceId, orderId]));
+    return lots.status === "success" ? { status: "success", data: { kind: "new", draft: draft.data, lots: lots.data.lots, pickedLotId: lotId } } : lots;
+  }, [invoiceId, orderId, lotId]));
   const products = useRemote<ProductRow[]>(useCallback((signal: AbortSignal) => productRepository.all({}, signal), []));
   if (!operationAllowed("sales-invoices", identity, permissions.functionPermissions, invoiceId ? "Edit" : "Create")) return <ListStateMessage>Bạn không có quyền {invoiceId ? "sửa hóa đơn bán" : "lập hóa đơn bán"}.</ListStateMessage>;
   if (remote.loading || products.loading) return <Skeleton />;
@@ -78,7 +79,15 @@ export function InvoiceEditorPage({ orderId, invoiceId }: { orderId?: string; in
 
 function initialLines(start: Start, products: readonly ProductRow[]): EditorLine[] {
   const productOf = (id: string) => products.find((row) => row.id === id);
-  if (start.kind === "new") return start.draft.lines.map((line) => lineFromDraft(line, crypto.randomUUID(), unitsOf(productOf(line.productId))));
+  if (start.kind === "new") {
+    const picked = start.lots.find((lot) => lot.id === start.pickedLotId);
+    return start.draft.lines.map((line) => {
+      const row = lineFromDraft(line, crypto.randomUUID(), unitsOf(productOf(line.productId)));
+      // A lot split per product sells only its products; an old lot without product lines sells any.
+      const holds = picked && (!picked.products?.length || picked.products.some((product) => product.productId === line.productId));
+      return holds ? { ...row, lotId: picked.id, lotCode: picked.lotCode } : row;
+    });
+  }
   const orderLines = new Map((start.order?.lines ?? []).map((line) => [line.id, line]));
   return start.invoice.lines.map((line) => {
     const product = productOf(line.productId), unit = line.unit, orderLine = line.salesOrderLineId ? orderLines.get(line.salesOrderLineId) : undefined;

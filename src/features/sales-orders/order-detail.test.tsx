@@ -21,7 +21,7 @@ const order = {
     { paymentId: ids.qr, paymentCode: "PT000002", amount: 70000, method: "OtherTransfer", statusId: 3604, status: "Pending transfer", paidAt: "2026-11-12T10:00:00+07:00", bankReference: null, collectedBy: null, allocatedToInvoices: 0, reserved: true },
   ],
   invoices: [{ id: ids.invoice, code: "HD000001", invoicedAt: "2026-11-12T11:00:00+07:00", total: 100000, statusId: 3501, status: "Completed" }],
-  harvestPlans: [], purchaseRequest: null, allowedActions: ["Edit", "AddAdvance", "Finish"],
+  harvestPlans: [], salesReturns: [], purchaseRequest: null, allowedActions: ["Edit", "AddAdvance", "Finish"],
   createdAt: "2026-11-12T08:00:00+07:00", completedAt: null, completedManually: false, cancelledAt: null, cancelReason: null, rowVersion: "v1",
 };
 const access = { owner: true, username: "owner", view: true, create: true, edit: true, remove: true, exportFile: true, addCustomer: true };
@@ -45,4 +45,18 @@ it("has no button to take an advance: that is done in the order editor", async (
   render(<ToastProvider><OrderDetailPanel id={ids.order} access={access} onChanged={() => undefined} /></ToastProvider>);
   await screen.findByRole("button", { name: /Mở phiếu/ });
   expect(screen.queryByRole("button", { name: /Thu tiền ứng/ })).toBeNull();
+});
+
+it("shows the returns of the order's invoices as links only, and none when there is no return", async () => {
+  state.detail.mockResolvedValue({ status: "success", data: { ...order, salesReturns: [{ id: ids.invoice, code: "TL000001", statusId: 4101 }, { id: ids.cash, code: "TL000002", statusId: 4102 }] } });
+  const { unmount } = render(<ToastProvider><OrderDetailPanel id={ids.order} access={access} onChanged={() => undefined} /></ToastProvider>);
+  const link = await screen.findByRole("link", { name: "TL000001" });
+  expect(link.getAttribute("href")).toBe("/operations/sales-returns?code=TL000001");
+  expect(screen.getByRole("link", { name: "TL000002" }).getAttribute("title")).toBe("Đã hủy");
+  expect(screen.getByText("Trả hàng bán:")).toBeTruthy();
+  unmount();
+  state.detail.mockResolvedValue({ status: "success", data: order });
+  render(<ToastProvider><OrderDetailPanel id={ids.order} access={access} onChanged={() => undefined} /></ToastProvider>);
+  await screen.findByRole("button", { name: /Mở phiếu/ });
+  expect(screen.queryByText("Trả hàng bán:")).toBeNull();
 });

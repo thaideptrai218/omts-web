@@ -7,7 +7,7 @@ import type { YieldRow } from "./yield-rows";
 import { cagesOrDash, kgOrDash } from "./yield-target-cell";
 import s from "./yield-screen.module.css";
 
-const lotStatus: Record<string, string> = { Open: "Đang bán", Reopened: "Mở lại", Closed: "Đã chốt" };
+const lotStatus: Record<string, string> = { AwaitingWeighing: "Chờ cân", Open: "Đang bán", Reopened: "Mở lại", Closed: "Đã chốt" };
 
 /** Thanh nhỏ: phần đã bán / còn để bán trên kg ước tính của lô. Không có số liệu còn lại thì chỉ hiện phần đã bán. */
 function SoldBar({ lot }: { lot: YieldLot }) {

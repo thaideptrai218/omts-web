@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/management-table";
 import { useToast } from "@/components/ui/toast-provider";
+import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { operationAllowed } from "@/features/operations/permissions";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
+import { newReturnHref } from "@/features/sales-returns/return-labels";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { InvoiceCancelDialog } from "./invoice-cancel-dialog";
 import { InvoiceCorrectionDialog } from "./invoice-correction-dialog";
@@ -47,7 +50,8 @@ function Body({ invoice, tab, canExport, onChanged, onReload }: { invoice: Invoi
 }
 
 function Actions({ invoice, tab, canExport, onChanged, onReload }: { invoice: InvoiceDetail; tab: Tab; canExport: boolean; onChanged(invoice: InvoiceDetail): void; onReload(): void }) {
-  const router = useRouter(), { notify } = useToast(), actions = useInvoiceActions(invoice.id, onChanged);
+  const router = useRouter(), { notify } = useToast(), actions = useInvoiceActions(invoice.id, onChanged), { identity, permissions } = useApiWorkspace();
+  const mayReturn = operationAllowed("sales-returns", identity, permissions.functionPermissions, "Create");
   const [cancelling, setCancelling] = useState(false), [cutting, setCutting] = useState(false);
   const allowed = allowedSet(invoice.allowedActions), completed = invoice.statusId === INVOICE.completed;
   const can = (action: InvoiceAction) => allowed.has(action), mayChange = completed && (can("Edit") || can("Correct"));
@@ -60,8 +64,7 @@ function Actions({ invoice, tab, canExport, onChanged, onReload }: { invoice: In
       {mayChange && <Button className="w-auto" onClick={() => router.push(`/sales/invoices/${invoice.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
       {can("Resend") && <Button className="w-auto" variant="secondary" isPending={actions.resending} disabled={actions.blocked || actions.resending} onClick={() => void actions.resend()}><InterfaceIcon name="refresh" className="size-4" />Gửi lại</Button>}
       {mayChange && tab === "history" && <Button className="w-auto" variant="secondary" onClick={() => setCutting(true)}><InterfaceIcon name="payment" className="size-4" />Giảm giá sau khiếu nại</Button>}
-      {/* Phiếu trả hàng bán (CLAIM-03) chưa có endpoint tạo: nút giữ ở trạng thái khóa cho tới khi backend có API và màn Phiếu trả hàng bán được nối. */}
-      {can("CreateReturn") && <Button className="w-auto" variant="secondary" disabled aria-disabled="true"><InterfaceIcon name="upload" className="size-4" />Tạo phiếu trả hàng bán</Button>}
+      {can("CreateReturn") && completed && mayReturn && <Button className="w-auto" variant="secondary" onClick={() => router.push(newReturnHref(invoice.code))}><InterfaceIcon name="upload" className="size-4" />Tạo phiếu trả hàng bán</Button>}
     </div>
     {cancelling && <InvoiceCancelDialog invoice={invoice} onClose={() => setCancelling(false)} onDone={(next) => { setCancelling(false); notify({ tone: "success", title: `Đã hủy hóa đơn ${next.code}.` }); onChanged(next); }} onReload={() => { setCancelling(false); onReload(); }} />}
     {cutting && <InvoiceCorrectionDialog invoice={invoice} onClose={() => setCutting(false)} onDone={(next) => { setCutting(false); notify({ tone: "success", title: `Đã ghi giảm giá sau khiếu nại cho hóa đơn ${next.code}.` }); onChanged(next); }} onReload={() => { setCutting(false); onReload(); }} />}

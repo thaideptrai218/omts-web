@@ -11,6 +11,7 @@ import { salesInvoicesPlan } from "./sales-invoices-plan";
 import { customerPaymentsPlan } from "./customer-payments-plan";
 import { harvestYieldPlan } from "./harvest-yield-plan";
 import { salesInvoiceListPlan } from "./sales-invoice-list-plan";
+import { salesReturnsPlan } from "./sales-returns-plan";
 import { claimReportsPlan, qualityClaimsPlan } from "./quality-claims-plan";
 import { waterOverviewPlan } from "./water-overview-plan";
 import { lotTracingPlan } from "./lot-tracing-plan";
@@ -35,6 +36,7 @@ export function planOperation(areaName: string, method: string, query: URLSearch
   if (area.data === "customer-payments") return customerPaymentsPlan(method, query, input);
   if (area.data === "harvest-yield") return harvestYieldPlan(method, query, input);
   if (area.data === "sales-invoice-list") return salesInvoiceListPlan(method, query, input);
+  if (area.data === "sales-returns") return salesReturnsPlan(method, query, input);
   if (area.data === "claim-reports") return claimReportsPlan(method, query, input);
   if (area.data === "quality-claims") return qualityClaimsPlan(method, query, input);
   if (area.data === "lot-tracing") return lotTracingPlan(method, query, input);

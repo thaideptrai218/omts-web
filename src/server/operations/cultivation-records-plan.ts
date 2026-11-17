@@ -5,8 +5,21 @@ import { cycle } from "@/features/cultivation-api/contracts";
 import { crewSuggestions } from "@/features/cultivation-api/record-crew-contracts";
 import { historyList } from "@/features/history/history-contracts";
 import { finishHarvestResult, finishHarvestValues, matchesFinishedSelection } from "@/features/cultivation-api/finish-harvest-contracts";
+import * as lots from "@/features/harvest-lots/contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
+
+/** The filters of the Lô thu hoạch list, as the web names them; the API takes the same names. Dates are yyyy-MM-dd (the harvest date). */
+const lotFilters = {
+  from: z.iso.date().optional(), to: z.iso.date().optional(), zoneId: z.guid().optional(), raftId: z.guid().optional(), productId: z.guid().optional(),
+  statusId: z.enum(["2901", "2902", "2903", "2904"]).optional(), weighed: z.enum(["true", "false"]).optional(), closeReason: z.enum(lots.closeReasons).optional(),
+  hasPlan: z.enum(["true", "false"]).optional(), search: z.string().trim().min(1).max(100).optional(), sort: z.enum(["code", "harvestedAt", "remainingKg"]).optional(), desc: z.enum(["true", "false"]).optional(),
+};
+const lotList = z.strictObject({ action: z.literal("lots"), ...lotFilters, page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["15", "30", "50", "100"]).optional() });
+const lotExport = z.strictObject({ action: z.literal("export"), ...lotFilters });
+/** Weigh (Cân thực tế), reopen with a reason and close by hand: each answers the lot as it is now. */
+const lotActions = new Set(["weigh", "reopen", "close"]);
+
 export function cultivationRecordsPlan(area: OperationArea, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   if (new Set(query.keys()).size !== query.size) return;
   const seeding = area === "seeding", material = area === "material-usages";
@@ -21,6 +34,24 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     if (!q.success) return;
     const root = area === "harvest" ? "harvest-lots" : seeding ? "seeding-records" : material ? "material-usages" : undefined;
     return root && { area, action: "history", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/${root}/${q.data.id}/history`, schema: historyList };
+  }
+  if (area === "harvest" && method === "GET" && ["lots", "export"].includes(query.get("action") ?? "")) {
+    // Every lot the caller may see (Owner: all zones; Zone Manager: their zones), and the file with the same filters and no paging.
+    const q = (query.get("action") === "export" ? lotExport : lotList).safeParse(Object.fromEntries(query));
+    if (!q.success || q.data.from && q.data.to && q.data.from > q.data.to) return;
+    const { action, ...filters } = q.data;
+    const params = new URLSearchParams();
+    // The backend names the direction sortDir (asc|desc); the screen keeps a desc flag like the other lists.
+    for (const [name, value] of Object.entries(filters)) if (value !== undefined) params.set(name === "desc" ? "sortDir" : name, name === "desc" ? (value === "false" ? "asc" : "desc") : String(value));
+    const path = `/api/harvest-lots${action === "export" ? "/export" : ""}${params.size ? `?${params}` : ""}`;
+    return action === "export"
+      ? { area, action, method: "GET", zoneId: q.data.zoneId, permission: "View", path, schema: z.strictObject({}), file: "export" }
+      : { area, action, method: "GET", zoneId: q.data.zoneId, permission: "View", path, schema: lots.lotPage };
+  }
+  if (area === "harvest" && method === "GET" && query.get("action") === "movements") {
+    const q = z.strictObject({ action: z.literal("movements"), id: z.guid(), zoneId: z.guid() }).safeParse(Object.fromEntries(query));
+    if (!q.success) return;
+    return { area, action: "movements", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/harvest-lots/${q.data.id}/movements`, schema: lots.lotMovements };
   }
   if (area === "harvest" && method === "GET" && query.get("action") === "detail") {
     const q = z.strictObject({ action: z.literal("detail"), id: z.guid(), zoneId: z.guid() }).safeParse(Object.fromEntries(query));
@@ -49,10 +80,11 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     return { area, action, zoneId, permission: action === "preview" ? "Create" : "View", method: "GET", path: seeding ? action === "seed-lots" ? `/api/rafts/${id}/seed-lots` : `/api/cultivation-cycles/${id}/${action === "preview" ? "seeding-complete/preview" : "seeding-records"}` : `/api/rafts/${id}/${material ? "material-usages" : "harvest-lots"}`, schema: seeding ? action === "seed-lots" ? c.seedLots : action === "preview" ? c.seedingPreview : c.seedingList : material ? c.materialList : c.harvestList };
   }
   if (method !== "POST" || query.size) return;
-  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-lane", "finish-harvest"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
+  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-lane", "finish-harvest", "weigh", "reopen", "close"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
   if (!m.success) return;
   const { action, id, zoneId, body } = m.data;
-  const base = { area, action, zoneId, method: "POST" as const, permission: action === "correct" ? "Edit" : action === "remove" ? "Delete" : "Create" };
+  if (lotActions.has(action) && area !== "harvest") return;
+  const base = { area, action, zoneId, method: "POST" as const, permission: action === "correct" || lotActions.has(action) ? "Edit" : action === "remove" ? "Delete" : "Create" };
   // The Cooperative Owner may complete while employees are not checked out yet (MSG-LABOR-37), with a reason.
   const ownerApproval = { ownerApproved: z.boolean().optional(), approvalReason: z.string().trim().min(1).max(1000).optional() };
   const version = { rowVersion: z.string().min(1) }, reason = { reason: z.string().trim().min(1), ...version };
@@ -67,6 +99,11 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     const lane = z.strictObject({ laneNumber: z.number().int().min(1).max(999_999), ...ownerApproval }).safeParse(body);
     if (!lane.success) return;
     return { ...base, permission: "Create", path: `/api/rafts/${id}/lanes/${lane.data.laneNumber}/finish-harvest`, ...(lane.data.ownerApproved ? { body: { ownerApproved: true, approvalReason: lane.data.approvalReason } } : {}), schema: c.finishLaneResult };
+  }
+  if (area === "harvest" && lotActions.has(action)) {
+    const values = (action === "weigh" ? lots.weighValues : action === "reopen" ? lots.reopenValues : lots.closeValues).safeParse(body);
+    if (!values.success) return;
+    return { ...base, path: `/api/harvest-lots/${id}/${action}`, body: values.data, schema: c.harvestLotAnswer };
   }
   if (area === "harvest" && action === "remove") {
     const values = z.strictObject(reason).safeParse(body);

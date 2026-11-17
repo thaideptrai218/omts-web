@@ -6,7 +6,7 @@ export const originLabel = (state: OriginState) => ({ NotPublished: "Chưa công
 export const originTone = (state: OriginState) => state === "Published" ? "success" as const : state === "Withdrawn" ? "danger" as const : "neutral" as const;
 export const cycleStatusLabel = (status: string) => status.toLowerCase() === "closed" ? "Đã đóng" : status.toLowerCase() === "open" ? "Đang mở" : "Không xác định";
 /** Trạng thái lô theo mã ổn định của backend (2901 Mở, 2902 Mở lại, 2903 Đóng), không dựa vào chuỗi tiếng Anh. */
-export const lotStatusLabel = (statusId: number) => ({ 2901: "Đang mở", 2902: "Mở lại", 2903: "Đã đóng" }[statusId] ?? "Không xác định");
+export const lotStatusLabel = (statusId: number) => ({ 2901: "Đang mở", 2902: "Mở lại", 2903: "Đã đóng", 2904: "Chờ cân" }[statusId] ?? "Không xác định");
 
 /** "2026-10-26" thành "26/10/2026" bằng cắt chuỗi, không qua múi giờ. */
 export function formatDay(value: string | null | undefined) {

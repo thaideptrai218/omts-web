@@ -1,5 +1,4 @@
 import { nurseryPoolExceededText, stockShortageText, type FarmingProblem } from "./farming-problem";
-import { harvestCagesError } from "./harvest-order-cages";
 
 const harvestFieldText: Record<string, string> = {
   "Purchase request": "Chưa chọn đơn mua cho chuyến thu hoạch này. Hãy chọn một đơn mua đã chấp nhận và còn cần thu.",
@@ -7,6 +6,9 @@ const harvestFieldText: Record<string, string> = {
   "Finished lanes": "Làn đánh dấu thu xong phải nằm trong các làn của chuyến thu này.",
   "Photos": "Ảnh chưa hợp lệ: từ 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh tối đa 10 MB.",
   "Reason": "Nhập lý do điều chỉnh (tối đa 1.000 ký tự).",
+  "Product lines": "Lô đã cân: sửa kg bằng Cân lại, không sửa sản phẩm hay số lồng của lô.",
+  "Weighed at": "Giờ cân không được trước giờ thu hoạch hoặc ở tương lai.",
+  "Weighed kg": "Kg cân phải lớn hơn 0 và có tối đa 3 số lẻ.",
 };
 type FailedResult = { httpStatus: number; code?: string; problem?: FarmingProblem };
 /**
@@ -18,7 +20,6 @@ export function farmingErrorText(result: FailedResult, unit?: string): string | 
   if ([result.code, problem?.code, problem?.reasonCode].includes("NURSERY_POOL_EXCEEDED")) return nurseryPoolExceededText(problem);
   if (!problem) return undefined;
   if (problem.reasonCode === "SEEDING_COMPLETED") return "Chu kỳ đã đánh dấu hoàn tất thả giống nên không thể ghi nhận, sửa hoặc xóa lần thả. Hãy tải lại để xem trạng thái mới.";
-  if (harvestCagesError(problem)) return harvestCagesError(problem);
   if (problem.hint && /[À-ỹ]/.test(problem.hint)) return problem.hint;
   // A question the backend asks (over plan, empty seeding, owner approval) is answered in the form; it is not an error to show.
   if (result.httpStatus === 409 && problem.confirmFlag) return "";

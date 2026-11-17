@@ -17,7 +17,7 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "harvest-yield", title: "Sản lượng nuôi", functionCode: "HARVEST_LOTS" },
   { key: "claim-reports", title: "Báo vấn đề chất lượng", functionCode: "QUALITY_CLAIMS" },
   { key: "quality-claims", title: "Khiếu nại chất lượng", functionCode: "QUALITY_CLAIMS" },
-  { key: "sales-returns", title: "Phiếu trả hàng bán", functionCode: "SALES_RETURNS" },
+  { key: "sales-returns", title: "Trả hàng bán", functionCode: "SALES_RETURNS" },
   { key: "sales-invoice-list", title: "Hóa đơn bán", functionCode: "SALES_INVOICES" },
   { key: "payroll", title: "Bảng lương", functionCode: "PAYROLL" },
   { key: "payroll-payments", title: "Thanh toán lương", functionCode: "PAYROLL" },

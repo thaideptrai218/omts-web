@@ -74,14 +74,23 @@ describe("SalesInvoiceListScreen", () => {
     fireEvent.click(button); expect(screen.queryByRole("tablist")).toBeNull();
   });
 
-  it("keeps create-return disabled, resends with an empty body, prints one invoice", async () => {
+  it("opens the return editor for the invoice, resends with an empty body, prints one invoice", async () => {
     serve(); await openRow();
-    expect((screen.getByRole("button", { name: "Tạo phiếu trả hàng bán" }) as HTMLButtonElement).disabled).toBe(true);
+    const create = screen.getByRole("button", { name: "Tạo phiếu trả hàng bán" }) as HTMLButtonElement;
+    expect(create.disabled).toBe(false);
+    fireEvent.click(create);
+    expect(push).toHaveBeenCalledWith("/sales/returns/new?invoice=HD000123");
     write.mockResolvedValue({ status: "success", data: sent(detail()) });
     write.mockImplementation(async (_a: string, _b: unknown, schema: { parse(v: unknown): unknown }) => ({ status: "success", data: schema.parse(sent(detail())) }));
     fireEvent.click(screen.getByRole("button", { name: "Gửi lại" }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith({ tone: "success", title: "Đã gửi lại hóa đơn cho khách." })); expect(write.mock.calls[0].slice(0, 2)).toEqual(["resend", {}]); expect(write.mock.calls[0][3]).toBe(ids.invoice);
     fireEvent.click(screen.getByRole("button", { name: "In" })); await waitFor(() => expect(download).toHaveBeenCalledWith({ id: ids.invoice }));
+  });
+
+  it("hides the return button from an account that may not create a sales return", async () => {
+    workspace.mockReturnValue({ identity: { subjectType: "Staff" }, permissions: { functionPermissions: [{ functionCode: "SALES_INVOICES", action: "View", dataScope: "AssignedZone", scope: { kind: "all-zones" } }] } });
+    serve(); await openRow();
+    expect(screen.queryByRole("button", { name: "Tạo phiếu trả hàng bán" })).toBeNull();
   });
 
   it("offers only the actions the API allows", async () => {

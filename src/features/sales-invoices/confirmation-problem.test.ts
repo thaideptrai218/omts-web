@@ -20,3 +20,23 @@ describe("câu hỏi xác nhận khi sửa / hủy hóa đơn (nhánh OMTS-224)"
     expect(projectInvoiceConfirmation(400, { confirmationField: "confirmOwedBack" })).toBeUndefined();
   });
 });
+
+describe("câu hỏi xác nhận khi trả hàng bán (CLAIM-03)", () => {
+  it("giữ ownerAgreed kèm giá trị phiếu trả", () => {
+    expect(projectInvoiceConfirmation(409, { confirmationField: "ownerAgreed", returnValue: 4250000, title: "x" })).toEqual({ field: "ownerAgreed", returnValue: 4250000 });
+  });
+  it("giữ thrownAwayLots kèm lô, số kg hủy và số kg còn lại", () => {
+    expect(projectInvoiceConfirmation(409, { confirmationField: "thrownAwayLots", harvestLotId: guid, lotCode: "LTH000008", discardedKg: 20, remainingKg: 40.5 }))
+      .toEqual({ field: "thrownAwayLots", harvestLotId: guid, lotCode: "LTH000008", discardedKg: 20, remainingKg: 40.5 });
+  });
+  it("giữ confirmNegativeRemaining kèm các lô sẽ âm kho", () => {
+    expect(projectInvoiceConfirmation(409, { confirmationField: "confirmNegativeRemaining", lots: [{ lotCode: "LTH000007", remainingKg: -18, extra: 1 }] }))
+      .toEqual({ field: "confirmNegativeRemaining", lots: [{ lotCode: "LTH000007", remainingKg: -18 }] });
+  });
+  it("từ chối mã lô lạ, GUID sai, số kg không hợp lệ", () => {
+    expect(projectInvoiceConfirmation(409, { confirmationField: "thrownAwayLots", harvestLotId: "x", lotCode: "LTH1" })).toBeUndefined();
+    expect(projectInvoiceConfirmation(409, { confirmationField: "thrownAwayLots", harvestLotId: guid, lotCode: "<script>" })).toBeUndefined();
+    expect(projectInvoiceConfirmation(409, { confirmationField: "confirmNegativeRemaining", lots: [{ lotCode: "L1", remainingKg: "-1" }] })).toBeUndefined();
+    expect(projectInvoiceConfirmation(409, { confirmationField: "ownerAgreed", returnValue: -5 })).toBeUndefined();
+  });
+});

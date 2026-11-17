@@ -1,0 +1,5 @@
+.menuWrap { position:relative; display:inline-flex; }
+.menu { position:absolute; right:0; bottom:calc(100% + 6px); z-index:20; display:grid; min-width:200px; padding:4px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); box-shadow:0 12px 32px #142b3826; }
+.menu button { display:flex; justify-content:space-between; gap:12px; padding:7px 9px; border-radius:5px; font-size:13px; text-align:left; white-space:nowrap; }
+.menu button:hover, .menu button:focus-visible { background:var(--omts-color-primary-soft); }
+.menu small { color:var(--omts-color-text-muted); }
