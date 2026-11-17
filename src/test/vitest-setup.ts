@@ -17,3 +17,10 @@ if (typeof document !== "undefined" && typeof HTMLElement.prototype.showPopover 
   style.textContent = "[popover] { display: block !important; }";
   document.head.append(style);
 }
+
+/**
+ * The CI runner shares its CPUs between four workers, and a state update that follows a resolved mock can wait more than the
+ * 1 s default of the findBy/waitFor queries there. Wait up to 5 s (the test itself may run 15 s, see vitest.config.mts).
+ */
+import { configure } from "@testing-library/react";
+configure({ asyncUtilTimeout: 5000 });
