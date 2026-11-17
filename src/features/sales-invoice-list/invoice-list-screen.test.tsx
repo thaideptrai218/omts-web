@@ -106,7 +106,7 @@ describe("cancel and correction dialogs (need the unmerged OMTS-224 backend bran
     fireEvent.click(within(dialog).getByRole("button", { name: "Hủy hóa đơn" }));
     expect(await screen.findByText(/hợp tác xã sẽ nợ khách 120\.000/)).toBeTruthy();
     expect(write.mock.calls[0].slice(0, 2)).toEqual(["cancel", { reason: "Bán nhầm", rowVersion: "AAAA" }]);
-    fireEvent.click(screen.getByRole("button", { name: "Vẫn hủy hóa đơn" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Vẫn hủy hóa đơn" }));
     await waitFor(() => expect(write).toHaveBeenCalledTimes(2));
     expect(write.mock.calls[1][1]).toEqual({ reason: "Bán nhầm", rowVersion: "AAAA", confirmOwedBack: true });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
