@@ -16,7 +16,7 @@ export type EmployeeDirectoryFilterProps = {
 export function EmployeeDirectoryFilters({ employeeType, setEmployeeType, statusId, setStatusId, zoneId, setZoneId, zones, jobTypeId, setJobTypeId, jobTypes, onReset, hasFilters }: EmployeeDirectoryFilterProps) {
   return <>
     <div className={styles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilters} onClick={onReset}>Đặt lại</button></div>
-    <FilterPills legend="Loại nhân viên" name="employee-type" value={employeeType} options={[["SeasonalWorker", "Thời vụ"], ["Staff", "Nhân viên"]]} onChange={setEmployeeType} />
+    <FilterPills legend="Loại nhân viên" name="employee-type" value={employeeType} options={[["SeasonalWorker", "Thời vụ"], ["Staff", "Nội bộ"]]} onChange={setEmployeeType} />
     <FilterPills legend="Tình trạng làm việc" name="employee-status" value={statusId} options={[["401", "Đang làm việc"], ["402", "Đã nghỉ việc"]]} onChange={setStatusId} />
     <FilterGroup legend="Vùng làm việc"><SelectBox aria-label="Vùng làm việc" className={styles.zoneSelect} value={zoneId} onChange={event => setZoneId(event.target.value)}>
       <option value="">Tất cả vùng</option>

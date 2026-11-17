@@ -52,8 +52,8 @@ describe("approved sales/workforce writes and draft safety", () => {
     mocks.options.mockImplementation(async (area) => ({ status: "success", data: area === "zones" ? [{ id: ids.zone, name: "Vùng QA", statusId: 101 }] : [{ id: raftId, code: "B-QA" }] }));
     render(<AssignmentEditor mode="assign" initialDay={businessToday()} onClose={vi.fn()} onSaved={vi.fn()} />);
     fireEvent.change(await screen.findByLabelText("Vùng phân công *"), { target: { value: ids.zone } }); await screen.findByRole("option", { name: "B-QA" });
-    fireEvent.change(screen.getByLabelText("Bè làm việc *"), { target: { value: raftId } }); fireEvent.click(screen.getByLabelText("QA staff · Đã duyệt nghỉ ngày này"));
+    fireEvent.change(screen.getByLabelText("Bè làm việc (bỏ trống nếu làm ở vùng, ví dụ ươm)"), { target: { value: raftId } }); fireEvent.click(screen.getByLabelText("QA staff · Đã duyệt nghỉ ngày này"));
     fireEvent.click(screen.getByRole("button", { name: "Tải lại danh mục phân công" })); await waitFor(() => expect(mocks.read).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect((screen.getByLabelText("Bè làm việc *") as HTMLSelectElement).value).toBe(raftId)); expect((screen.getByLabelText("QA staff · Đã duyệt nghỉ ngày này") as HTMLInputElement).checked).toBe(true); expect(mocks.write).not.toHaveBeenCalled();
+    await waitFor(() => expect((screen.getByLabelText("Bè làm việc (bỏ trống nếu làm ở vùng, ví dụ ươm)") as HTMLSelectElement).value).toBe(raftId)); expect((screen.getByLabelText("QA staff · Đã duyệt nghỉ ngày này") as HTMLInputElement).checked).toBe(true); expect(mocks.write).not.toHaveBeenCalled();
   });
 });

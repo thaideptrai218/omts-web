@@ -2,6 +2,7 @@ import { z } from "zod";
 import { stepPhotosSchema } from "@/components/form/photo-contracts";
 import { laneProgressReadFields } from "@/features/farming-management/lane-progress-contracts";
 import { lanePercentRead, lanePercentValues } from "./record-lane-percents";
+import { crewAssignmentFields, crewIds, crewReadFields } from "./record-crew-contracts";
 
 const numbers = z.array(z.number().int().positive());
 const displayText = z.string().nullish().transform(value => value ?? "");
@@ -38,7 +39,7 @@ export const seedLots = z.object({
 });
 
 export const seedingRecord = z.object({
-  photos: stepPhotosSchema, lanePercents: lanePercentRead,
+  photos: stepPhotosSchema, lanePercents: lanePercentRead, ...crewReadFields,
   id: z.guid(), cycleId: z.guid(), raftId: z.guid(), raftCode: z.string(), seedingDate: z.iso.date(),
   seedLot: seedLot.nullish().transform(value => value ?? seedLot.parse({})),
   quantity: z.number(), laneNumbers: numbers,
@@ -70,7 +71,7 @@ export const seedingList = seedingListRead;
 /** Legacy cycles retain lot/plan inputs; V2 supplies cycleId and a free positive daily quantity. */
 export const seedValues = z.strictObject({
   cycleId: z.guid().optional(), seedingDate: z.iso.date(), seedLotId: z.guid().optional(),
-  lanePercents: lanePercentValues.optional(),
+  lanePercents: lanePercentValues.optional(), crew: crewIds.optional(),
   laneNumbers: numbers.min(1).refine(value => new Set(value).size === value.length),
   quantity: z.number().positive(), confirmOverPlan: z.boolean().optional(),
   overPlanReason: z.string().trim().min(1).max(1000).optional(),
@@ -79,8 +80,11 @@ export const seedValues = z.strictObject({
 
 export const seedCorrection = seedValues.safeExtend({
   reason: z.string().trim().min(1).max(1000), rowVersion: z.string().min(1),
-  keepPhotoIds: z.array(z.string().min(1)).max(3).optional(),
+  keepPhotoIds: z.array(z.string().min(1)).max(3).optional(), replaceCrew: z.boolean().optional(),
 });
+
+/** A saved seeding record, with what the automatic work assignment did for its employees. */
+export const seedingSaved = z.object({ record: seedingRecord, ...crewAssignmentFields });
 
 export const seedingPreview = z.object({
   cycleId: z.guid(), laneCount: z.number(), seededCount: z.number(),

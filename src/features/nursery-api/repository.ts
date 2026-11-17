@@ -27,7 +27,7 @@ async function send<T>(action: string, query: Record<string, string>, schema: z.
     const result = await response.json(), parsed = schema.safeParse(result.data);
     if (response.ok && result.status === "success" && parsed.success) return { status: "success", data: parsed.data };
     return { status: "error", httpStatus: response.status, code: result.code, uncertain: body !== undefined && (response.ok || response.status >= 500 || response.status === 401),
-      nurseryMessage: nurseryProblemText(result.problem, result.code) } as WorkspaceResult<T>;
+      nurseryMessage: nurseryProblemText(result.problem, result.code), ...(result.problem && typeof result.problem === "object" ? { problem: result.problem } : {}) } as WorkspaceResult<T>;
   } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
 }
 export const nurseryRepository = { read: <T>(action: string, query: Record<string, string>, schema: z.ZodType<T>, signal?: AbortSignal) => send(action, query, schema, undefined, signal),

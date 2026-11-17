@@ -23,7 +23,7 @@ export function ZoneFormFields({ draft, setDraft, errors, only }: {
   const typed = shown.filter(([key]) => !isCoordinate(key));
   const withMap = shown.some(([key]) => isCoordinate(key));
   return <>
-    {typed.length > 0 && <div className={styles.fields}>{typed.map(([key, label]) => <div key={key}>
+    {typed.length > 0 && <div className={`grid gap-x-5 gap-y-3 sm:grid-cols-2 ${only?.includes("code") ? "mb-4" : ""}`}>{typed.map(([key, label]) => <div key={key}>
       <Field label={`${label} *`} required name={key} value={draft[key]} maxLength={key === "location" ? 300 : 100}
         inputMode={key === "area" ? "decimal" : undefined} aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `zone-error-${key}` : undefined}
         onChange={event => setDraft(current => ({ ...current, [key]: event.target.value }))} />

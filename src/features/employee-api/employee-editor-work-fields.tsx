@@ -8,7 +8,7 @@ export function EmployeeEditorWorkFields({ values, setValues, errorProps, baseli
   return <>
       <Select label={baseline ? "Loại nhân viên" : "Loại nhân viên *"} required={!baseline} {...errorProps("employeeType")} value={values.employeeType} onChange={event => setValues({ ...values, employeeType: event.target.value })}>
         {(!baseline || !baseline.employeeType) && <option value="">Chọn loại nhân viên</option>}
-        <option value="SeasonalWorker">Thời vụ</option><option value="Staff">Nhân viên</option>
+        <option value="SeasonalWorker">Thời vụ</option><option value="Staff">Nội bộ</option>
       </Select>
       {error("employeeType")}
       {baseline && values.employeeType && values.employeeType !== baseline.employeeType && <label className="block text-sm font-semibold">

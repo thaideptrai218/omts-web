@@ -17,7 +17,7 @@ export function CycleStartAction({ row, zoneId, zoneLabel, canCreate, variant, o
   return <>
     {variant === "empty"
       ? <div className="grid justify-items-start gap-3 py-2 text-sm"><p className="font-medium">Bè này chưa có chu kỳ nuôi</p>
-        <p className="text-text-muted">{row.raftStatusId === 101 ? "Chọn một đợt ươm đã ươm xong, nhập sản lượng dự kiến và ảnh kế hoạch để bắt đầu chu kỳ." : "Bè ngừng sử dụng nên chưa thể bắt đầu chu kỳ nuôi."}</p>{button}</div>
+        <p className="text-text-muted">{row.raftStatusId === 101 ? "Chọn một đợt ươm đã ươm xong, nhập sản lượng dự kiến để bắt đầu chu kỳ." : "Bè ngừng sử dụng nên chưa thể bắt đầu chu kỳ nuôi."}</p>{button}</div>
       : button}
     {open && <CycleStartDialog raftId={row.raftId} raftCode={row.raftCode} zoneId={zoneId} zoneLabel={zoneLabel} onClose={() => setOpen(false)} onStarted={id => { setOpen(false); onStarted(id); }} />}
   </>;

@@ -22,6 +22,8 @@ import { OverPlanConfirm, isOverPlanQuestion } from "./over-plan-confirm";
 import * as c from "./records-contracts";
 import { EditorFrame, RecordFormFooter, seedRepo } from "./records-shared";
 import { useSeedingPlan } from "./use-seeding-plan";
+import { RecordCrewPicker } from "./record-crew-picker";
+import { crewAssignmentNotice } from "./record-crew-assignment-notice";
 import { laneIsUnavailable } from "./lane-availability";
 import { seedingLaneChoices } from "./seeding-lane-choices";
 import { nurseryUsedUpMessage } from "./seeding-completion-prompt";
@@ -48,13 +50,14 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   const [laneDirty, setLaneDirty] = useState(false), [lanePending, setLanePending] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]), [photoBusy, setPhotoBusy] = useState(false);
   const [kept, setKept] = useState(record?.photos ?? []), [photoError, setPhotoError] = useState<string>();
+  const [crew, setCrew] = useState<string[]>(() => record?.crew?.map(member => member.id) ?? []);
   const [percents, setPercents] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(record?.lanePercents ?? {}).map(([lane, value]) => [lane, String(value)])));
   const [percentError, setPercentError] = useState<string>();
   const remaining = data.nurseryRemaining ?? null;
   // A correction first releases its own quantity, then takes the replacement from the shared pool.
   const capacityNursery = remaining == null ? null : remaining + (record?.quantity ?? 0);
   const nurseryExhausted = fromNursery && capacityNursery !== null && capacityNursery <= 0;
-  const dirty = !!photos.length || kept.length !== (record?.photos?.length ?? 0) || JSON.stringify(percents) !== JSON.stringify(Object.fromEntries(Object.entries(record?.lanePercents ?? {}).map(([lane, value]) => [lane, String(value)]))) || date !== (record?.seedingDate ?? businessToday()) || lot !== (record?.seedLot.id ?? "") || quantity !== String(record?.quantity ?? "") || JSON.stringify(lanes) !== JSON.stringify(record?.laneNumbers ?? []) || !!reason;
+  const dirty = !!photos.length || kept.length !== (record?.photos?.length ?? 0) || JSON.stringify(percents) !== JSON.stringify(Object.fromEntries(Object.entries(record?.lanePercents ?? {}).map(([lane, value]) => [lane, String(value)]))) || date !== (record?.seedingDate ?? businessToday()) || lot !== (record?.seedLot.id ?? "") || quantity !== String(record?.quantity ?? "") || JSON.stringify(lanes) !== JSON.stringify(record?.laneNumbers ?? []) || !!reason || JSON.stringify(crew) !== JSON.stringify(record?.crew?.map(member => member.id) ?? []);
   // The unit always comes from the Vật tư & Giống catalogue (the lot's unit), never a fixed word.
   const selectedLot = lots.data?.lots.find(v => v.id === lot);
   const seedUnit = selectedLot?.unit ?? record?.seedLot.unit ?? "mảnh";
@@ -77,9 +80,12 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   const shownPercents = remainingByLane ? { ...defaultSeedingPercents(lanes, remainingByLane), ...percents } : percents;
   const percentsProblem = () => lanePercentsProblem(lanes, shownPercents, record ? undefined : 100) ?? (remainingByLane ? overRemainingPercentProblem(lanes, shownPercents, remainingByLane) : undefined);
 
-  const values = (confirmed: boolean) => c.seedValues.safeParse({ cycleId, seedingDate: date, ...(!fromNursery ? { seedLotId: lot } : {}), lanePercents: selectedLanePercents(lanes, shownPercents, record ? undefined : 100), quantity: Number(quantity), laneNumbers: lanes, ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
-  const send = (parsed: z.infer<typeof c.seedValues>) => seedRepo.upload(record ? "seeding-correct" : "seeding-record", photos, { ...parsed, ...(record ? { reason, rowVersion: record.rowVersion, ...(photos.length || kept.length !== (record.photos?.length ?? 0) ? { keepPhotoIds: kept.map(photo => photo.id).filter((id): id is string => !!id) } : {}) } : {}) }, z.object({ record: c.seedingRecord }), record?.id ?? cycleId, zoneId);
-  const done = () => { notify({ tone: "success", title: `Đã lưu lần thả giống${fromNursery ? ` từ ${data.nurseryCode ?? "đợt ươm"}` : ` ${record?.seedLot.code ?? selectedLot?.code ?? ""}`}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } });
+  const values = (confirmed: boolean) => c.seedValues.safeParse({ cycleId, seedingDate: date, ...(!fromNursery ? { seedLotId: lot } : {}), lanePercents: selectedLanePercents(lanes, shownPercents, record ? undefined : 100), quantity: Number(quantity), laneNumbers: lanes, ...(crew.length ? { crew } : {}), ...(confirmed ? { confirmOverPlan: true, overPlanReason: overReason } : {}) });
+  const send = (parsed: z.infer<typeof c.seedValues>) => seedRepo.upload(record ? "seeding-correct" : "seeding-record", photos, { ...parsed, ...(record ? { replaceCrew: true, reason, rowVersion: record.rowVersion, ...(photos.length || kept.length !== (record.photos?.length ?? 0) ? { keepPhotoIds: kept.map(photo => photo.id).filter((id): id is string => !!id) } : {}) } : {}) }, c.seedingSaved, record?.id ?? cycleId, zoneId);
+  const done = (saved?: z.infer<typeof c.seedingSaved>) => {
+    const crewNotice = crewAssignmentNotice(saved?.crewAssignment);
+    if (crewNotice) notify({ tone: saved?.crewAssignment?.skipped.length ? "warning" : "info", title: crewNotice });
+    notify({ tone: "success", title: `Đã lưu lần thả giống${fromNursery ? ` từ ${data.nurseryCode ?? "đợt ươm"}` : ` ${record?.seedLot.code ?? selectedLot?.code ?? ""}`}.`, action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } });
     // This save used the last nursed pieces: say so now; the panel keeps the same prompt as a banner above the records.
     if (fromNursery && capacityNursery !== null && capacityNursery - Number(quantity) <= 0) notify({ tone: "success", title: nurseryUsedUpMessage(data.nurseryCode) });
     onSaved();
@@ -110,7 +116,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     setError(undefined);
     if (!fromNursery && plan.soft) { setAsked(true); return; }
     const saved = await editor.submit(record ? "Lưu điều chỉnh thả giống?" : "Ghi nhận lần thả giống này?", () => send(parsed.data));
-    if (saved) done();
+    if (saved) done(saved as z.infer<typeof c.seedingSaved>);
   }
   async function confirmOver() {
     const photosBad = photoValidationMessage(kept.length + photos.length, !record || !!record.photos?.length);
@@ -121,7 +127,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     if (blocked || !parsed.success) { setError(blocked ?? "Nhập lý do vượt kế hoạch (tối đa 1.000 ký tự)."); return; }
     setError(undefined);
     const saved = await editor.mutation.run(() => send(parsed.data));
-    if (saved) { setAsked(false); done(); }
+    if (saved) { setAsked(false); done(saved); }
   }
   return <EditorFrame size="xl" inline={!!record} title={record ? "Bản ghi thả giống" : "Ghi nhận thả giống"} editor={editor} error={error || stockError || lots.error}>
     {record && !record.canCorrect && <p className="mb-4 text-sm text-text-muted">Bản ghi đang được khóa theo trạng thái chu kỳ hoặc lô thu hoạch. Không thể sửa hoặc xóa ở trạng thái này.</p>}
@@ -143,6 +149,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
           onDirty={setLaneDirty} onPending={setLanePending} scope={{ raftId, zoneId, cycleId, cycleRowVersion: data.cycleRowVersion, readOnly: !editable || editor.mutation.pending, onChanged: () => {} }} />
         <RecordLanePercentFields lanes={lanes} values={shownPercents} onChange={value => { edited(setPercents)(value); setPercentError(undefined); }} kind="seeding" defaultValue={record ? undefined : 100} remaining={remainingByLane} error={percentError || farmingFieldError(editor.mutation.failure?.problem, "LanePercent")} />
         <PhotoPicker files={photos} onChange={value => { edited(setPhotos)(value); setPhotoError(undefined); }} existing={kept} onRemoveExisting={id => setKept(kept.filter(photo => (photo.id ?? photo.key ?? photo.url) !== id))} required={!record || !!record.photos?.length} onBusyChange={setPhotoBusy} error={photoError || farmingFieldError(editor.mutation.failure?.problem, "Photos")} />
+        <div className="min-w-0 sm:col-span-2"><RecordCrewPicker label="Nhân viên thả giống" raftId={raftId} zoneId={zoneId} values={crew} onChange={edited(setCrew)} /></div>
         {record && <Note label="Lý do điều chỉnh *" required value={reason} onChange={event => setReason(event.target.value)} />}
         </div>
       </fieldset>

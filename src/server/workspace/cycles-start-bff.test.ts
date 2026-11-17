@@ -67,7 +67,7 @@ describe("manual start of a cycle (POST /api/cultivation-cycles)", () => {
     expect(sent.getAll("photos")).toHaveLength(1);
     expect((await response.json()).data.cycle).toMatchObject({ id: cycle, nurseryCode: "NU000002", nurseryRemaining: 9500 });
   });
-  it("refuses a start without the batch, without the yield, with the old seed fields or without a photo, before any backend call", async () => {
+  it("refuses a start without the batch, without the yield, with the old seed fields or with four photos, before any backend call", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch");
     expect((await handleCycleWrite(startRequest({ startDate: "2026-11-13", targetYieldKg: "2000" }))).status).toBe(400);
     expect((await handleCycleWrite(startRequest({ nurseryBatchId: batch, startDate: "2026-11-13" }))).status).toBe(400);
@@ -75,9 +75,13 @@ describe("manual start of a cycle (POST /api/cultivation-cycles)", () => {
     // The loại hàu is derived from the batch's seed: a start never carries a product.
     expect((await handleCycleWrite(startRequest({ ...startFields, productId: "529ec3ce-af8f-42f7-a08f-4bab36ba7e66" }))).status).toBe(400);
     expect((await handleCycleWrite(startRequest({ ...startFields, targetYieldKg: "0" }))).status).toBe(400);
-    const noPhoto = await handleCycleWrite(startRequest(startFields, []));
-    expect(noPhoto.status).toBe(400); expect((await noPhoto.json()).problem.field).toBe("Photos");
+    expect((await handleCycleWrite(startRequest(startFields, [jpeg(), jpeg(), jpeg(), jpeg()]))).status).toBe(400);
     expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("starts a cycle without any photo (owner decision of 17/11/2026)", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ cycle: view, previousCloseDate: null, lanes: [] }, { status: 201 }));
+    const response = await handleCycleWrite(startRequest(startFields, []));
+    expect(response.status).toBe(200); expect((fetcher.mock.calls[0][1]?.body as FormData).getAll("photos")).toHaveLength(0);
   });
   it("forbids a start without Create", async () => {
     configure("Staff", [{ functionCode: "CULTIVATION_CYCLES", action: "Edit" }]); const fetcher = vi.spyOn(globalThis, "fetch");

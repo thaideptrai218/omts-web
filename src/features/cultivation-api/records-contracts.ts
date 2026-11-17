@@ -3,11 +3,11 @@ import { stepPhotosSchema } from "@/components/form/photo-contracts";
 import { lanePercentValues, lanePercentRead } from "./record-lane-percents";
 import { seedLot } from "./seeding-contracts";
 import { cycleSummary } from "./contracts";
-import { crewIds, crewReadFields } from "./harvest-crew-contracts";
+import { crewAssignmentFields, crewIds, crewReadFields } from "./record-crew-contracts";
 import { laneProgressReadFields } from "@/features/farming-management/lane-progress-contracts";
 const numbers = z.array(z.number().int().positive());
 const incidentLaneFields = { ...laneProgressReadFields, isDamaged: z.boolean().optional(), isOutOfService: z.boolean().optional(), statusId: z.number().int().optional(), lineLengthM: z.number().positive().nullish() };
-export { seedLots, seedingRecord, seedingList, seedValues, seedCorrection, seedingPreview } from "./seeding-contracts";
+export { seedLots, seedingRecord, seedingList, seedValues, seedCorrection, seedingPreview, seedingSaved } from "./seeding-contracts";
 export const materialRecord = z.object({ id: z.guid(), raftId: z.guid(), raftCode: z.string(), cycleId: z.guid().nullable(), usageDate: z.iso.date(), repairReason: z.string(), itemId: z.guid(), itemCode: z.string(), itemName: z.string(), unit: z.string(), quantity: z.number(), recordedByName: z.string().nullable(), recordedAt: z.string(), canEdit: z.boolean(), rowVersion: z.string(), issueId: z.guid().nullish(), issueCode: z.string().nullish() });
 export const materialList = z.object({ raftId: z.guid(), raftCode: z.string(), canRecord: z.boolean(), groups: z.array(z.object({ cycle: cycleSummary.nullable(), locked: z.boolean(), repairs: z.array(z.object({ usageDate: z.iso.date(), repairReason: z.string(), records: z.array(materialRecord) })) })) });
 export const materialValues = z.strictObject({ usageDate: z.iso.date(), repairReason: z.string().trim().min(1), items: z.array(z.strictObject({ itemId: z.guid(), quantity: z.number().positive() })).min(1) });
@@ -45,9 +45,9 @@ export const harvestValues = harvestBase.safeExtend({ harvestPlanLineId: z.guid(
 /** Non-blocking notice saved with the lot (e.g. ESTIMATED_KG_FAR_FROM_CAGES); the web words it by code. */
 export const harvestWarning = z.object({ code: z.string().max(60), message: z.string().max(400).nullish(), details: z.record(z.string(), z.unknown()).nullish() });
 /** `orderCagesTotal` / `orderCagesHarvested` / `orderComplete` (backend 13/11/2026): where the request stands with this trip; absent on older backends. */
-export const harvestSaved = z.object({ lot: z.object({ id: z.guid(), lotCode: z.string(), purchaseRequestCode: z.string().nullish() }), everySeededLaneHarvested: z.boolean().nullish(), cycleRowVersion: z.string().nullish(), warnings: z.array(harvestWarning).default([]),
+export const harvestSaved = z.object({ lot: z.object({ id: z.guid(), lotCode: z.string(), purchaseRequestCode: z.string().nullish() }), everySeededLaneHarvested: z.boolean().nullish(), cycleRowVersion: z.string().nullish(), ...crewAssignmentFields, warnings: z.array(harvestWarning).default([]),
   orderCagesTotal: z.number().nullish().catch(undefined), orderCagesHarvested: z.number().nullish().catch(undefined), orderComplete: z.boolean().nullish().catch(undefined) });
-export const harvestCorrected = z.object({ lot: harvestDetail, everySeededLaneHarvested: z.boolean().nullish(), cycleRowVersion: z.string().nullish(), warnings: z.array(harvestWarning).default([]) });
+export const harvestCorrected = z.object({ lot: harvestDetail, everySeededLaneHarvested: z.boolean().nullish(), cycleRowVersion: z.string().nullish(), ...crewAssignmentFields, warnings: z.array(harvestWarning).default([]) });
 /** POST /api/rafts/{raftId}/lanes/{n}/finish-harvest (no body): changed=false when the lane was already Harvested. */
 export const finishLaneResult = z.object({ laneNumber: z.number().int(), state: z.string(), changed: z.boolean(), lotCode: z.string().nullish(), everySeededLaneHarvested: z.boolean().nullish(), cycleRowVersion: z.string().nullish(), message: z.string().nullish() });
 /** A correction never changes which plan line a lot belongs to. */

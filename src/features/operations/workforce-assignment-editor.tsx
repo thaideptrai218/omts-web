@@ -70,25 +70,27 @@ export function AssignmentEditor({
 
   function confirmationMessage() {
     const verb = mode === "assign" ? "Phân công" : "Đổi việc cho";
-    const raftCode = String(rafts.data?.find((r) => r.id === values.raftId)?.code ?? "đã chọn");
+    const raftCode = values.raftId ? `bè ${String(rafts.data?.find((r) => r.id === values.raftId)?.code ?? "đã chọn")}` : "vùng (không có bè)";
     const jobName = options.data?.jobs.find((r) => r.id === values.jobTypeId)?.name ?? "công việc đã chọn";
     const moveNote = values.moveExisting ? "; chuyển phân công đã có" : "";
-    return `${verb} ${employeeIds.length} nhân viên, ngày ${values.date}, bè ${raftCode}, ${jobName}${moveNote}?`;
+    return `${verb} ${employeeIds.length} nhân viên, ngày ${values.date}, ${raftCode}, ${jobName}${moveNote}?`;
   }
 
   async function save() {
+    // A raft when one is chosen; otherwise the zone alone (work without a raft, such as the nursery).
+    const place = values.raftId ? { raftId: values.raftId } : { zoneId: values.zoneId };
     const payload =
       mode === "assign"
         ? c.assignWorkSchema.safeParse({
-            raftId: values.raftId,
+            ...place,
             jobTypeId: values.jobTypeId,
             date: values.date,
             employeeIds,
             moveExisting: values.moveExisting,
           })
-        : c.crewWorkSchema.safeParse({ raftId: values.raftId, jobTypeId: values.jobTypeId, employeeIds });
+        : c.crewWorkSchema.safeParse({ ...place, jobTypeId: values.jobTypeId, employeeIds });
     if (!payload.success || !values.zoneId || (mode === "assign" && values.date < businessToday())) {
-      setError("Chọn vùng, bè, công việc, ngày hợp lệ và ít nhất một nhân viên (tối đa 100).");
+      setError("Chọn vùng, công việc, ngày hợp lệ và ít nhất một nhân viên (tối đa 100). Bè có thể để trống.");
       return;
     }
     setError(undefined);
@@ -162,12 +164,11 @@ export function AssignmentEditor({
               ))}
             </Select>
             <Select
-              label="Bè làm việc *"
-              required
+              label="Bè làm việc (bỏ trống nếu làm ở vùng, ví dụ ươm)"
               value={values.raftId}
               onChange={(e) => setValues({ ...values, raftId: e.target.value })}
             >
-              <option value="">Chọn bè</option>
+              <option value="">Không chọn bè (làm ở vùng)</option>
               {rafts.data?.map((r) => (
                 <option key={r.id} value={r.id}>
                   {String(r.code)}
