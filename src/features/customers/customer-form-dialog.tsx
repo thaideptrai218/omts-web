@@ -26,6 +26,11 @@ const initialValues = (record: CustomerDetail | null): Values => ({
   customerType: record?.customerType ?? "Individual", companyName: record?.companyName ?? "", taxCode: record?.taxCode ?? "", identityNumber: record?.identityNumber ?? "", bankBin: record?.bankBin ?? "", bankAccountNumber: record?.bankAccountNumber ?? "",
 });
 const star = (required: boolean) => required ? " *" : "";
+/**
+ * The identity fields are the ones that password managers and browser autofill recognise (a name, a phone number, a code) and decorate with an icon of their own,
+ * which pushes the typed text to the right of the box. The inputs carry no padding rule for it (they are the shared `omts-control`): these hints turn the helpers off.
+ */
+const noAutofill = { autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true", "data-bwignore": "true", "data-form-type": "other" } as const;
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join("").toUpperCase() || "KH";
 
 /** The failed save as one line: its message, then the fields the backend named. */
@@ -107,13 +112,13 @@ export function CustomerFormDialog({ record, required = noRequiredFields, onClos
         <CollapsibleSection title="Thông tin khách hàng" description="Ảnh, tên, mã và số điện thoại.">
           {/* Fields on the left, the photo in its own column at the far right. */}
           <div className={styles.identity}><div className={styles.identityFields}>
-          <Field label="Tên khách hàng *" required maxLength={200} value={values.name} onChange={set("name")} />
-          <Field label="Mã khách hàng" maxLength={30} placeholder="Mã tự động" title="Để trống để hệ thống tự cấp mã KH…" value={values.code} onChange={(event) => setValues((current) => ({ ...current, code: event.target.value.replace(/\s/g, "") }))} />
+          <Field {...noAutofill} label="Tên khách hàng *" required maxLength={200} value={values.name} onChange={set("name")} />
+          <Field {...noAutofill} label="Mã khách hàng" maxLength={30} placeholder="Mã tự động" title="Để trống để hệ thống tự cấp mã KH…" value={values.code} onChange={(event) => setValues((current) => ({ ...current, code: event.target.value.replace(/\s/g, "") }))} />
           <div>
-            <Field label="Số điện thoại 1 *" required maxLength={20} inputMode="tel" readOnly={locked} value={values.phoneNumber} onChange={set("phoneNumber")} />
+            <Field {...noAutofill} label="Số điện thoại 1 *" required maxLength={20} inputMode="tel" readOnly={locked} value={values.phoneNumber} onChange={set("phoneNumber")} />
             {locked && <p className={styles.hint}><span className={`${styles.badge} ${styles.badgeWarn}`}>Tài khoản thương lái</span> Số điện thoại gắn với tài khoản đăng nhập nên không sửa ở đây.</p>}
           </div>
-          <Field label={`Số điện thoại 2${star(required.phoneNumber2)}`} maxLength={20} inputMode="tel" value={values.phoneNumber2} onChange={set("phoneNumber2")} />
+          <Field {...noAutofill} label={`Số điện thoại 2${star(required.phoneNumber2)}`} maxLength={20} inputMode="tel" value={values.phoneNumber2} onChange={set("phoneNumber2")} />
           </div>
           <div className={styles.photoBox}>
             <span className={styles.photo} aria-hidden={!shownPhoto}>{shownPhoto ? (

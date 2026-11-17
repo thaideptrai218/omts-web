@@ -1,13 +1,7 @@
-// @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
-const hook = vi.hoisted(() => ({ kgPerCage: undefined as number | undefined }));
-vi.mock("@/features/harvest-settings-lookup/use-kg-per-cage", () => ({ useKgPerCage: () => ({ kgPerCage: hook.kgPerCage, loading: false }) }));
+import { describe, expect, it } from "vitest";
 import { lotForSale, type LotForSale } from "./contracts";
-import { InvoiceLinesPanel } from "./invoice-lines-panel";
 import { lotRemainingText } from "./invoice-lot-quantity";
 
-afterEach(() => { cleanup(); hook.kgPerCage = undefined; });
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 const base = { id: id(1), lotCode: "B03-1", raftId: id(2), raftCode: "B03", zoneId: id(3), zoneCode: "VP01", zoneName: "Vùng Phú", harvestDate: "2026-10-26", remainingKg: 180, statusId: 1, status: "Open", originState: "NotPublished" as const, withdrawnAt: null };
 
@@ -25,10 +19,4 @@ describe("lotForSale contract", () => {
     expect(lotForSale.safeParse({ ...base, cageCount: 8, kgPerCage: 22.5 }).success).toBe(true);
     expect(lotForSale.safeParse({ ...base, kgPerCage: 0 }).success).toBe(false);
   });
-});
-
-describe("InvoiceLinesPanel lot list", () => {
-  const render_ = () => render(<InvoiceLinesPanel lots={{ data: { lots: [base as LotForSale], message: null }, loading: false, reload: () => {} }} draft={{ lines: [] } as never} active={[]} listPrice={() => undefined} disabled={false} onAdd={() => {}} onChange={() => {}} />);
-  it("shows approximate cages next to kg when the ratio is readable", () => { hook.kgPerCage = 50; render_(); expect(screen.getByText(/còn ≈ 3,6 lồng · 180 kg/)).toBeTruthy(); });
-  it("shows kg alone otherwise", () => { render_(); expect(screen.getByText(/còn 180 kg/)).toBeTruthy(); expect(screen.queryByText(/≈ 3,6/)).toBeNull(); });
 });

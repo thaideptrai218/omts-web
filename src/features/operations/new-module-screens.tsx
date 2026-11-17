@@ -1,7 +1,6 @@
 "use client";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { useMemo, useState } from "react";
-import { z } from "zod";
 import { FilterChecks } from "@/components/ui/filter-checks";
 import { readSelectionPages } from "./selection-pages";
 import { FilterWorkspace } from "@/components/ui/filter-workspace";
@@ -11,33 +10,16 @@ import { Button } from "@/components/ui/button";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { createOperationsRepository } from "./repository";
 import * as c from "./new-module-contracts";
-import { DataTable, ErrorNotice, Field, FilterPanel, OperationHeading, Paging, Select, Skeleton, useMutation, useRemote } from "./ui";
+import { ErrorNotice, OperationHeading, Paging, Skeleton, useMutation, useRemote } from "./ui";
 import { TraderPurchasesScreen } from "@/features/trader-purchases/trader-purchases-screen";
 import { TraderRequestDetailPage } from "@/features/trader-purchases/trader-request-detail-page";
-import { ProductEditor } from "./sales-editors";
 import { PurchaseRequestReviewDetails } from "./purchase-request-review-details";
 import { ReviewStatusPill } from "./purchase-request-review-parts";
 import { REVIEW_STATUS_OPTIONS, quantityWithCages, reviewResponseSummary } from "./purchase-request-review-presentation";
 import { formatDate } from "@/features/trader-purchases/presentation";
 import { useKgPerCage } from "@/features/harvest-settings-lookup/use-kg-per-cage";
 
-const products = createOperationsRepository("sales-products"), requests = createOperationsRepository("purchase-requests");
-
-export function SalesProductsScreen() {
-  const { identity } = useApiWorkspace();
-  const [all, setAll] = useState(false), [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<z.infer<typeof c.salesProductSchema> | null>();
-  const loader = useMemo(() => (signal: AbortSignal) => products.read(all && identity.subjectType === "CooperativeOwner" ? "all" : "list", {}, z.array(c.salesProductSchema), signal), [all, identity.subjectType]);
-  const catalog = useRemote(loader);
-  const rows = catalog.data?.filter((row) => `${row.code} ${row.name}`.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi")));
-  return <section><OperationHeading title="Danh mục sản phẩm hàu" description="Quản lý sản phẩm và tình trạng tiếp nhận yêu cầu mua." icon="document">{identity.subjectType === "CooperativeOwner" && <Button className="w-auto" onClick={() => setSelected(null)}>Thêm sản phẩm</Button>}</OperationHeading>
-    <FilterPanel columns="two"><Field label="Tìm sản phẩm" value={search} onChange={(e) => setSearch(e.target.value)} />
-      {identity.subjectType === "CooperativeOwner" && <Select label="Phạm vi sản phẩm" value={all ? "all" : "available"} onChange={(e) => setAll(e.target.value === "all")}><option value="available">Đang nhận yêu cầu mua</option><option value="all">Tất cả sản phẩm</option></Select>}</FilterPanel>
-    <Button className="mt-4 w-auto" variant="secondary" disabled={catalog.loading} onClick={catalog.reload}>Tải lại sản phẩm</Button><ErrorNotice error={catalog.error} />
-    {catalog.loading ? <Skeleton /> : rows && <DataTable headings={["Mã", "Sản phẩm", "Mô tả", "Trạng thái", "Nhận yêu cầu mua", ...(identity.subjectType === "CooperativeOwner" ? ["Chỉnh sửa"] : [])]} empty={!rows.length}>{rows.map((row) => <tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td className="whitespace-pre-wrap">{row.description || "—"}</td><td>{row.inUse ? "Đang dùng" : "Ngừng dùng"}</td><td>{row.availableForPurchase ? "Có" : "Không"}</td>{identity.subjectType === "CooperativeOwner" && <td><button className="text-primary underline" onClick={() => setSelected(row)}>Chỉnh sửa</button></td>}</tr>)}</DataTable>}
-    {selected !== undefined && <ProductEditor key={selected?.id ?? "new"} record={selected} onClose={() => setSelected(undefined)} onSaved={() => { setSelected(undefined); catalog.reload(); }} />}
-  </section>;
-}
+const requests = createOperationsRepository("purchase-requests");
 
 /** Thương lái có màn riêng "Đơn mua của tôi" (GET /api/me/purchases, đơn vị kg); Chủ HTX/nhân viên xem danh sách duyệt ở dưới. */
 export function PurchaseRequestsScreen() {

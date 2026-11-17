@@ -11,9 +11,10 @@ vi.mock("./records-shared", async (importOriginal) => {
 });
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
 vi.mock("./harvest-crew-picker", () => ({ HarvestCrewPicker: ({ onChange }: { onChange(ids: string[]): void }) => <button type="button" onClick={() => onChange(["00000000-0000-4000-8000-000000000001"])}>Chọn An cùng thu</button> }));
+vi.mock("@/features/products/repository", async (original) => ({ ...(await original<typeof import("@/features/products/repository")>()), productRepository: { all: vi.fn().mockResolvedValue({ status: "success", data: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", code: "SP000001", name: "Hàu sữa", unitPrice: 60000, statusId: 101, status: "In Use", rowVersion: "v", unit: "kg", createdAt: "x", units: [] }] }) } }));
 // jsdom cannot decode images; the picker only needs the file back.
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
-import { attachPhoto, selectLane } from "./record-form-test-helpers";
+import { attachPhoto, fillProductLine, selectLane } from "./record-form-test-helpers";
 import { SeedingForm } from "./records-seeding-form";
 import { HarvestForm } from "./records-harvest-form";
 
@@ -71,10 +72,10 @@ describe("harvest form lanes and cages", () => {
     fireEvent.click(screen.getByRole("button", { name: "Chọn An cùng thu" }));
     await selectLane(1);
     await attachPhoto();
-    fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "0,5" } });
+    await fillProductLine("0,5");
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
-    await waitFor(() => expect(upload).toHaveBeenCalledWith("harvest-record", [expect.any(File)], expect.objectContaining({ purchaseRequestId: orderId, cageCount: 0.5, crew: ["00000000-0000-4000-8000-000000000001"] }), expect.anything(), "r", "z"));
+    await waitFor(() => expect(upload).toHaveBeenCalledWith("harvest-record", [expect.any(File)], expect.objectContaining({ cageCount: 0.5, productLines: [{ productId: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", cageCount: 0.5, kg: null }], crew: ["00000000-0000-4000-8000-000000000001"] }), expect.anything(), "r", "z"));
   });
   it("shows the harvestable lanes first and keeps blocked lanes disabled with the reason once revealed", () => {
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
@@ -86,9 +87,9 @@ describe("harvest form lanes and cages", () => {
     expect(screen.getByRole("button", { name: /^Làn 2: Đã thu · .*Làn đã thu xong\./ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Làn 3: Chưa thả · .*Làn chưa thả giống nên chưa thể thu hoạch\./ })).toBeTruthy();
   });
-  it("accepts half a cage, states the kg is an estimate and keeps Bỏ qua from submitting", () => {
+  it("accepts half a cage, states the kg is an estimate and keeps Bỏ qua from submitting", async () => {
     render(<ToastProvider><HarvestForm zoneId="z" raftId="r" data={data} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
-    fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "0,5" } });
+    await fillProductLine("0,5");
     expect(screen.getByText(/0,5 lồng ≈ 25 kg ước tính/)).toBeTruthy();
     expect(screen.getAllByText("lồng").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Bỏ qua" }).getAttribute("type")).toBe("button");

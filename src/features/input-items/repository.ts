@@ -2,16 +2,18 @@ import type { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { workspaceError } from "@/features/api-workspace/workspace-error";
 import { bffFetch } from "@/features/auth/api/bff-fetch";
+import { invoiceConfirmationSchema, type InvoiceConfirmation } from "@/features/sales-invoices/confirmation-problem";
 import { messageCatalog } from "@/shared/messages/message-catalog";
 import * as c from "./contracts";
 
 /** A failed call, with the part of the problem that tells what to fix (field names, existing record, the API's own words). */
-export type Failure = Extract<WorkspaceResult<never>, { status: "error" }> & { problem?: c.Problem };
+/** `confirmation` is a question of the API (409) the user answers by sending the same request again with the named flag. */
+export type Failure = Extract<WorkspaceResult<never>, { status: "error" }> & { problem?: c.Problem; confirmation?: InvoiceConfirmation };
 export type Result<T> = { status: "success"; data: T } | Failure;
 export type Query = Record<string, string | undefined>;
 
 const mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-const failed = (httpStatus: number, code?: string, uncertain = false, problem?: c.Problem): Failure => ({ status: "error", httpStatus, code, uncertain, ...(problem ? { problem } : {}) });
+const failed = (httpStatus: number, code?: string, uncertain = false, problem?: c.Problem, confirmation?: InvoiceConfirmation): Failure => ({ status: "error", httpStatus, code, uncertain, ...(problem ? { problem } : {}), ...(confirmation ? { confirmation } : {}) });
 const problemOf = (value: unknown) => c.problemExtras.safeParse(value).data;
 function search(values: Query) {
   const params = new URLSearchParams();
@@ -19,39 +21,44 @@ function search(values: Query) {
   return params;
 }
 
-async function read<T>(action: string, values: Query, schema: z.ZodType<T>, signal?: AbortSignal): Promise<Result<T>> {
-  try {
-    const response = await bffFetch(`/api/input-items?${search({ action, ...values })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: signal ?? AbortSignal.timeout(30_000) });
-    const value = await response.json(), parsed = schema.safeParse(value.data);
-    return response.ok && value.status === "success" && parsed.success ? { status: "success", data: parsed.data } : failed(response.ok ? 502 : response.status, value.code, false, problemOf(value.problem));
-  } catch { return failed(0); }
+/** The calls of one BFF door: reads by action name, JSON actions, uploads and spreadsheet downloads, all answering the same `Result`. */
+export function bffClient(endpoint: string) {
+  async function read<T>(action: string, values: Query, schema: z.ZodType<T>, signal?: AbortSignal): Promise<Result<T>> {
+    try {
+      const response = await bffFetch(`${endpoint}?${search({ action, ...values })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: signal ?? AbortSignal.timeout(30_000) });
+      const value = await response.json(), parsed = schema.safeParse(value.data);
+      return response.ok && value.status === "success" && parsed.success ? { status: "success", data: parsed.data } : failed(response.ok ? 502 : response.status, value.code, false, problemOf(value.problem));
+    } catch { return failed(0); }
+  }
+  async function send<T>(init: RequestInit, schema: z.ZodType<T>, query = ""): Promise<Result<T>> {
+    try {
+      const response = await bffFetch(`${endpoint}${query}`, { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000), ...init });
+      const value = await response.json(), parsed = schema.safeParse(value.data);
+      return response.ok && value.status === "success" && parsed.success ? { status: "success", data: parsed.data }
+        : failed(response.status, value.code, response.status === 401 || response.status >= 500 || response.ok, problemOf(value.problem), invoiceConfirmationSchema.safeParse(value.invoiceConfirmation).data);
+    } catch { return failed(0, undefined, true); }
+  }
+  const json = <T,>(action: string, payload: Record<string, unknown>, schema: z.ZodType<T>) =>
+    send({ headers: { "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action, ...payload }) }, schema);
+  function upload<T>(action: string, file: File, schema: z.ZodType<T>, id?: string) {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    return send({ headers: { "X-OMTS-Request": "web" }, body: form }, schema, `?${search({ action, id })}`);
+  }
+  async function download(action: string, values: Query, name: string): Promise<Result<true>> {
+    try {
+      const response = await bffFetch(`${endpoint}?${search({ action, ...values })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000) });
+      if (!response.ok) { const value = await response.json(); return failed(response.status, value.code); }
+      if (!response.headers.get("content-type")?.startsWith(mime)) return failed(502);
+      const url = URL.createObjectURL(await response.blob()), link = document.createElement("a");
+      link.href = url; link.download = name; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      return { status: "success", data: true };
+    } catch { return failed(0); }
+  }
+  return { read, json, upload, download };
 }
-async function send<T>(init: RequestInit, schema: z.ZodType<T>, query = ""): Promise<Result<T>> {
-  try {
-    const response = await bffFetch(`/api/input-items${query}`, { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000), ...init });
-    const value = await response.json(), parsed = schema.safeParse(value.data);
-    return response.ok && value.status === "success" && parsed.success ? { status: "success", data: parsed.data }
-      : failed(response.status, value.code, response.status === 401 || response.status >= 500 || response.ok, problemOf(value.problem));
-  } catch { return failed(0, undefined, true); }
-}
-const json = <T,>(action: string, payload: Record<string, unknown>, schema: z.ZodType<T>) =>
-  send({ headers: { "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action, ...payload }) }, schema);
-function upload<T>(action: "import" | "photo", file: File, schema: z.ZodType<T>, id?: string) {
-  const form = new FormData();
-  form.append("file", file, file.name);
-  return send({ headers: { "X-OMTS-Request": "web" }, body: form }, schema, `?${search({ action, id })}`);
-}
-async function download(action: string, values: Query, name: string): Promise<Result<true>> {
-  try {
-    const response = await bffFetch(`/api/input-items?${search({ action, ...values })}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60_000) });
-    if (!response.ok) { const value = await response.json(); return failed(response.status, value.code); }
-    if (!response.headers.get("content-type")?.startsWith(mime)) return failed(502);
-    const url = URL.createObjectURL(await response.blob()), link = document.createElement("a");
-    link.href = url; link.download = name; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
-    return { status: "success", data: true };
-  } catch { return failed(0); }
-}
+const { read, json, upload, download } = bffClient("/api/input-items");
 
 /** The text of a failed call: the API's own sentence for a shortage, the message of the code when the web has one, otherwise the usual wording of the status. */
 export function inputError(result: Failure) {

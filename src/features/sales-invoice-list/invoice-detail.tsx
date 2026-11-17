@@ -1,56 +1,69 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/management-table";
+import { useToast } from "@/components/ui/toast-provider";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
-import { FrameTabs } from "@/features/quality-claims/frame-kit";
-import q from "@/features/quality-claims/frame-kit.module.css";
-import { InvoiceEditTab } from "./invoice-edit-tab";
+import listStyles from "@/features/suppliers-api/suppliers.module.css";
+import { InvoiceCancelDialog } from "./invoice-cancel-dialog";
+import { InvoiceCorrectionDialog } from "./invoice-correction-dialog";
 import { InvoiceInfoTab } from "./invoice-info-tab";
-import { InvoicePaymentsTab, InvoiceSendingTab } from "./invoice-payments-sending-tabs";
-import { invoiceDetail, type InvoiceDetail } from "./invoice-list-contracts";
-import { allowedSet, invoiceStatus, statusTone } from "./invoice-labels";
+import { InvoiceHistoryTab, InvoicePaymentsTab, InvoiceSendingTab } from "./invoice-payments-sending-tabs";
+import { invoiceDetail, type InvoiceAction, type InvoiceDetail } from "./invoice-list-contracts";
+import { allowedSet } from "./invoice-labels";
+import { INVOICE } from "./invoice-status";
 import { useInvoiceActions } from "./use-invoice-actions";
 import { invoiceRepository } from "./use-invoice-list";
-import s from "./invoice-list.module.css";
 
-type Props = { id: string; zoneName: string; canExport: boolean; onChanged(): void };
+type Tab = "info" | "payments" | "sending" | "history";
+type Props = { id: string; canExport: boolean; onChanged(): void };
+const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "payments" as const, label: "Lịch sử thanh toán" }, { key: "sending" as const, label: "Gửi hóa đơn" }, { key: "history" as const, label: "Lịch sử chỉnh sửa" }];
 
-/** Chi tiết một hóa đơn mở ngay dưới dòng được chọn: các tab Thông tin / Thanh toán / Gửi hóa đơn / Chỉnh sửa và các lệnh mà backend cho phép trên hóa đơn này. */
-export function InvoiceDetailPanel({ id, zoneName, canExport, onChanged }: Props) {
+/** The row opened under the list, laid out like the purchase receipt row: tabs, then the invoice with its lines and money, then the buttons the API allows on this invoice now. */
+export function InvoiceDetailPanel({ id, canExport, onChanged }: Props) {
   const remote = useRemote(useCallback((signal: AbortSignal) => invoiceRepository.read("detail", { id }, invoiceDetail, signal), [id]));
-  const [fresh, setFresh] = useState<InvoiceDetail>();
+  const [tab, setTab] = useState<Tab>("info"), [fresh, setFresh] = useState<InvoiceDetail>();
   const invoice = fresh ?? remote.data;
   const apply = useCallback((next: InvoiceDetail) => { setFresh(next); onChanged(); }, [onChanged]);
-  const actions = useInvoiceActions(id, apply);
-
-  if (remote.loading && !invoice) return <Skeleton />;
-  if (remote.error || !invoice) {
-    return <div role="alert" className="py-4"><ErrorNotice error={remote.error ?? "Chưa tải được chi tiết hóa đơn."} /><Button className="w-auto" variant="secondary" onClick={remote.reload}>Tải lại chi tiết</Button></div>;
-  }
-  const allowed = allowedSet(invoice.allowedActions);
+  if (remote.loading && !invoice) return <div className={listStyles.detail}><Skeleton /></div>;
+  if (remote.error || !invoice) return <ListStateMessage error={remote.error ?? "Chưa tải được chi tiết hóa đơn."} onRetry={remote.reload} retryLabel="Tải lại chi tiết" />;
   const reload = () => { setFresh(undefined); remote.reload(); onChanged(); };
-  return (
-    <div className={s.detailBox}>
-      <div className={s.detailHead}>
-        <h3>{invoice.code}</h3><span className={s.chip} data-tone={statusTone(invoice.statusId)}>{invoiceStatus(invoice.statusId)}</span>
-        <span className={s.muted}>Vùng nuôi: {zoneName}</span>
-      </div>
-      <FrameTabs label={`Hóa đơn ${invoice.code}`} tabs={[
-        { id: "info", label: "Thông tin", content: <InvoiceInfoTab invoice={invoice} /> },
-        { id: "payments", label: "Thanh toán", content: <InvoicePaymentsTab invoice={invoice} /> },
-        { id: "sending", label: "Gửi hóa đơn", content: <InvoiceSendingTab invoice={invoice} /> },
-        { id: "edit", label: "Chỉnh sửa", content: <InvoiceEditTab invoice={invoice} allowed={allowed} onChanged={apply} onReload={reload} /> },
-      ]} />
-      <ErrorNotice error={actions.error} />
-      {actions.notice && <p role="status" className={s.notice}>{actions.notice}</p>}
-      <div className={q.footer} role="group" aria-label={`Thao tác với hóa đơn ${invoice.code}`}>
-        {allowed.has("CreateReturn") && (
-          // TODO(api): phiếu trả hàng bán (CLAIM-03) chưa có endpoint tạo; nút giữ ở trạng thái khóa cho tới khi backend có API và màn Phiếu trả hàng bán được nối.
-          <Button className="w-auto" disabled aria-disabled="true">Tạo phiếu trả hàng bán</Button>
-        )}
-        {allowed.has("Resend") && <Button className="w-auto" variant="secondary" isPending={actions.resending} disabled={actions.blocked || actions.resending} onClick={() => void actions.resend()}>Gửi lại</Button>}
-        {allowed.has("Print") && canExport && <Button className="w-auto" variant="secondary" isPending={actions.printing} disabled={actions.printing} onClick={actions.print}>In</Button>}
-      </div>
+  return <section className={listStyles.detail} aria-label={`Chi tiết ${invoice.code}`}>
+    <Subtabs<Tab> label={`Hóa đơn ${invoice.code}`} tabs={tabs} value={tab} onChange={setTab} />
+    <Body key={invoice.rowVersion} invoice={invoice} tab={tab} canExport={canExport} onChanged={apply} onReload={reload} />
+  </section>;
+}
+
+function Body({ invoice, tab, canExport, onChanged, onReload }: { invoice: InvoiceDetail; tab: Tab; canExport: boolean; onChanged(invoice: InvoiceDetail): void; onReload(): void }) {
+  return <div className={listStyles.tabBody}>
+    {tab === "info" && <InvoiceInfoTab invoice={invoice} />}
+    {tab === "payments" && <InvoicePaymentsTab invoice={invoice} />}
+    {tab === "sending" && <InvoiceSendingTab invoice={invoice} />}
+    {tab === "history" && <InvoiceHistoryTab invoice={invoice} />}
+    <Actions invoice={invoice} tab={tab} canExport={canExport} onChanged={onChanged} onReload={onReload} />
+  </div>;
+}
+
+function Actions({ invoice, tab, canExport, onChanged, onReload }: { invoice: InvoiceDetail; tab: Tab; canExport: boolean; onChanged(invoice: InvoiceDetail): void; onReload(): void }) {
+  const router = useRouter(), { notify } = useToast(), actions = useInvoiceActions(invoice.id, onChanged);
+  const [cancelling, setCancelling] = useState(false), [cutting, setCutting] = useState(false);
+  const allowed = allowedSet(invoice.allowedActions), completed = invoice.statusId === INVOICE.completed;
+  const can = (action: InvoiceAction) => allowed.has(action), mayChange = completed && (can("Edit") || can("Correct"));
+  return <><ErrorNotice error={actions.error} /><footer className={listStyles.tabFooter}>
+    <div>
+      {completed && can("Cancel") && <Button className="w-auto" variant="ghost" onClick={() => setCancelling(true)}><InterfaceIcon name="trash" className="size-4" />Hủy hóa đơn</Button>}
+      {can("Print") && canExport && <Button className="w-auto" variant="ghost" isPending={actions.printing} disabled={actions.printing} onClick={actions.print}><InterfaceIcon name="download" className="size-4" />In</Button>}
     </div>
-  );
+    <div>
+      {mayChange && <Button className="w-auto" onClick={() => router.push(`/sales/invoices/${invoice.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
+      {can("Resend") && <Button className="w-auto" variant="secondary" isPending={actions.resending} disabled={actions.blocked || actions.resending} onClick={() => void actions.resend()}><InterfaceIcon name="refresh" className="size-4" />Gửi lại</Button>}
+      {mayChange && tab === "history" && <Button className="w-auto" variant="secondary" onClick={() => setCutting(true)}><InterfaceIcon name="payment" className="size-4" />Giảm giá sau khiếu nại</Button>}
+      {/* Phiếu trả hàng bán (CLAIM-03) chưa có endpoint tạo: nút giữ ở trạng thái khóa cho tới khi backend có API và màn Phiếu trả hàng bán được nối. */}
+      {can("CreateReturn") && <Button className="w-auto" variant="secondary" disabled aria-disabled="true"><InterfaceIcon name="upload" className="size-4" />Tạo phiếu trả hàng bán</Button>}
+    </div>
+    {cancelling && <InvoiceCancelDialog invoice={invoice} onClose={() => setCancelling(false)} onDone={(next) => { setCancelling(false); notify({ tone: "success", title: `Đã hủy hóa đơn ${next.code}.` }); onChanged(next); }} onReload={() => { setCancelling(false); onReload(); }} />}
+    {cutting && <InvoiceCorrectionDialog invoice={invoice} onClose={() => setCutting(false)} onDone={(next) => { setCutting(false); notify({ tone: "success", title: `Đã ghi giảm giá sau khiếu nại cho hóa đơn ${next.code}.` }); onChanged(next); }} onReload={() => { setCutting(false); onReload(); }} />}
+  </footer></>;
 }

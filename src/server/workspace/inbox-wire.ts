@@ -16,7 +16,7 @@ export function parseInboxItem(raw: unknown) {
   const content = notificationText(parsed.data.messageCode, parsed.data.messageParams, parsed.data);
   if (!content) return undefined;
   const { id, type, relatedRecordType, relatedRecordCode, createdAt, readAt } = parsed.data;
-  return { id, type, ...content, relatedRecordType, relatedRecordCode, createdAt, readAt, isMandatory: parsed.data.mandatory, canOpenRecord: parsed.data.relatedRecordId !== null && ["WaterMeasurement", "FarmingZone", "ZoneComplianceDocument", "Account", "CooperativeCertification", "HarvestLot", "PurchaseReceipt", "SupplierPayment"].includes(parsed.data.relatedRecordType ?? "") };
+  return { id, type, ...content, relatedRecordType, relatedRecordCode, createdAt, readAt, isMandatory: parsed.data.mandatory, canOpenRecord: parsed.data.relatedRecordId !== null && ["WaterMeasurement", "FarmingZone", "ZoneComplianceDocument", "Account", "CooperativeCertification", "HarvestLot", "PurchaseReceipt", "SupplierPayment", "HarvestPlan"].includes(parsed.data.relatedRecordType ?? "") };
 }
 export const inboxWirePage = z.object({ items: z.array(z.unknown()).max(20), total: z.number().int().nonnegative(), unreadCount: z.number().int().nonnegative(),
   page: z.number().int().positive().optional(), pageSize: z.literal(20).optional() });

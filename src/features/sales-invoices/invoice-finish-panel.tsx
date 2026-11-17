@@ -11,8 +11,8 @@ import s from "./invoice-screen.module.css";
 const sales = createOperationsRepository("sales-invoices");
 type Sent = z.infer<typeof salesInvoiceSent>;
 
-/** Sau khi lập xong (SALE-05 bước 9-11): hỏi có kèm mã QR nguồn gốc không, gửi hóa đơn cho khách và cho phép gửi lại. */
-export function InvoiceFinishPanel({ invoice, change, subtracted, onNew }: { invoice: SalesInvoice; change: number; subtracted: number; onNew(): void }) {
+/** Sau khi lập xong (SALE-05 bước 9-11): hỏi có kèm mã QR nguồn gốc không, gửi hóa đơn cho khách và cho phép gửi lại. `onDone` đưa người dùng về nơi họ bắt đầu (danh sách đơn đặt hàng). */
+export function InvoiceFinishPanel({ invoice, change, subtracted, onDone, doneLabel, skipLabel }: { invoice: SalesInvoice; change: number; subtracted: number; onDone(): void; doneLabel: string; skipLabel: string }) {
   const check = useRemote(useCallback((signal: AbortSignal) => sales.read("publish-check", { id: invoice.id }, publishCheck, signal), [invoice.id]));
   const [sent, setSent] = useState<Sent>(), [busy, setBusy] = useState(false), [error, setError] = useState<string>();
 
@@ -63,11 +63,11 @@ export function InvoiceFinishPanel({ invoice, change, subtracted, onNew }: { inv
           <ErrorNotice error={error} />
           <div className={s.actions}>
             {sent.deliveryStatus !== "Sent" && !!sent.invoice.customer && <Button className="w-auto" variant="secondary" isPending={busy} onClick={() => void run("resend", {})}>Gửi lại</Button>}
-            <Button className="w-auto" onClick={onNew}>Lập hóa đơn mới</Button>
+            <Button className="w-auto" onClick={onDone}>{doneLabel}</Button>
           </div>
         </>
       )}
-      {!sent && <button type="button" className={s.linkBtn} onClick={onNew}>Để sau, lập hóa đơn mới</button>}
+      {!sent && <button type="button" className={s.linkBtn} onClick={onDone}>{skipLabel}</button>}
     </section>
   );
 }

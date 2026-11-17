@@ -10,9 +10,10 @@ vi.mock("./records-shared", async (importOriginal) => {
   return { ...original, harvestRepo: { read, write, upload }, useAllowed: () => () => true };
 });
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
+vi.mock("@/features/products/repository", async (original) => ({ ...(await original<typeof import("@/features/products/repository")>()), productRepository: { all: vi.fn().mockResolvedValue({ status: "success", data: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", code: "SP000001", name: "Hàu sữa", unitPrice: 60000, statusId: 101, status: "In Use", rowVersion: "v", unit: "kg", createdAt: "x", units: [] }] }) } }));
 // jsdom cannot decode images; the picker only needs the file back.
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
-import { attachPhoto, selectLane } from "./record-form-test-helpers";
+import { attachPhoto, fillProductLine, selectLane } from "./record-form-test-helpers";
 import { HarvestForm } from "./records-harvest-form";
 import { HarvestLanesBoard } from "./harvest-lanes-board";
 import { HarvestPlanSummary, harvestProgressOf } from "./harvest-plan-summary";
@@ -67,9 +68,9 @@ describe("estimate = cages x kg per cage with the source", () => {
     expect(harvestEstimate(4, "401", 50).far).toBe(true);
     expect(harvestEstimate(Number.NaN, "", 50).computed).toBe(0);
   });
-  it("names the source of kg per cage in the form", () => {
+  it("names the source of kg per cage in the form", async () => {
     wrap(<HarvestForm zoneId="z" raftId="r" data={screenData()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "4" } });
+    await fillProductLine("4");
     expect(screen.getByText(/Nguồn: 4 lồng × 50 kg\/lồng \(thiết lập thu hoạch/)).toBeTruthy();
     expect(screen.getByText(/4 lồng ≈ 200 kg ước tính/)).toBeTruthy();
   });
@@ -118,12 +119,12 @@ describe("the form follows the backend that answers", () => {
 const fillTrip = async () => {
   await selectLane(1);
   await attachPhoto();
-  fireEvent.change(screen.getByLabelText("Số lồng thu hoạch *"), { target: { value: "8" } });
+  await fillProductLine("8");
   fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
   fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
 };
 describe("recording a trip above the plan (the plan is not a cap)", () => {
-  it("sends the purchase request with the trip and saves a 700 kg trip against a 500 kg target with no confirmation, keeping warnings as notices", async () => {
+  it("saves a 700 kg trip against a 500 kg target with no confirmation, keeping warnings as notices", async () => {
     upload.mockResolvedValueOnce({ status: "success", data: { lot: { id: "x", lotCode: "KV01-B01-20261112" }, warnings: [{ code: "ESTIMATED_KG_FAR_FROM_CAGES", details: { workedKg: 400, minKg: 80, maxKg: 800 } }] } });
     const onSaved = vi.fn();
     wrap(<HarvestForm zoneId="z" raftId="r" data={screenData({ harvestedKg: 500, targetYieldKg: 500, remainingKg: 0 })} onClose={vi.fn()} onSaved={onSaved} />);
@@ -132,24 +133,13 @@ describe("recording a trip above the plan (the plan is not a cap)", () => {
     expect(upload).toHaveBeenCalledTimes(1);
     // One mandatory photo goes with the trip; the harvest % of a picked lane is filled with what is left on it (100 for an untouched lane).
     expect(upload.mock.calls[0][1]).toHaveLength(1);
-    expect(upload.mock.calls[0][2]).toEqual({ purchaseRequestId: orderId, lanePercents: { "1": 100 }, laneNumbers: [1], finishedLaneNumbers: [], cageCount: 8, estimatedKg: null });
+    expect(upload.mock.calls[0][2]).toEqual({ lanePercents: { "1": 100 }, laneNumbers: [1], finishedLaneNumbers: [], cageCount: 8, estimatedKg: null, productLines: [{ productId: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", cageCount: 8, kg: null }] });
     expect(screen.queryByRole("alert", { name: "Xác nhận vượt kế hoạch" })).toBeNull();
     expect(await screen.findByText(/Kg ước tính \(400 kg\) lệch nhiều so với số lồng/)).toBeTruthy();
   });
-  it("lists the purchase requests, picks the one planned on the raft and cannot save without any", () => {
-    const second = { ...order, id: "00000000-0000-4000-8000-0000000000bb", code: "YC-20261112-BBBB", plannedOnRaft: false };
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData({ orders: [second, order] })} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect((screen.getByLabelText("Đơn mua cần thu *") as HTMLSelectElement).value).toBe(orderId);
-    cleanup();
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData({ orders: [] })} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.getByText(/Chưa có đơn mua nào cần thu/)).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Lưu" }) as HTMLButtonElement).disabled).toBe(true);
-  });
-  it("names the field the backend refused instead of the generic message", async () => {
-    upload.mockResolvedValueOnce({ status: "error", httpStatus: 400, code: "MSG-GEN-01", uncertain: false, problem: { code: "MSG-GEN-01", field: "Purchase request", fields: ["Purchase request"] } });
+  it("offers no purchase request: the lot links the plan line, not a request", () => {
     wrap(<HarvestForm zoneId="z" raftId="r" data={screenData()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    await fillTrip();
-    await waitFor(() => expect(screen.getAllByRole("alert").map(a => a.textContent).join(" | ")).toContain("đơn mua"));
-    expect(upload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText(/Đơn mua/)).toBeNull();
+    expect((screen.getByRole("button", { name: "Lưu" }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

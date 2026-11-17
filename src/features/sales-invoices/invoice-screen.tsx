@@ -1,48 +1,47 @@
 "use client";
-import { useEffect } from "react";
-import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { OperationHeading, ErrorNotice, money } from "@/features/operations/ui";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useToast } from "@/components/ui/toast-provider";
+import { ErrorNotice, OperationHeading, useRemote } from "@/features/operations/ui";
+import { createOperationsRepository } from "@/features/operations/repository";
+import { ORDERS_PATH } from "@/features/sales-orders/order-labels";
+import { z } from "zod";
+import type { salesInvoiceSaved } from "./contracts";
 import { InvoiceFinishPanel } from "./invoice-finish-panel";
-import { InvoiceLinesPanel } from "./invoice-lines-panel";
-import { InvoiceQuestionDialog } from "./invoice-question-dialog";
-import { InvoiceSummaryPanel } from "./invoice-summary-panel";
+import { InvoiceQuestionDialog, useQuestion } from "./invoice-question-dialog";
 import { VietQrDialog } from "./vietqr-dialog";
 import { VietQrResumeNotice } from "./vietqr-resume-notice";
-import { useInvoiceEditor } from "./use-invoice-editor";
-import s from "./invoice-screen.module.css";
+import { pendingSale, type PendingSale } from "./vietqr-contracts";
 
-/** SCR-SALE-04 Lập hóa đơn bán: dòng hàng bên trái, tổng tiền và thanh toán dính bên phải. */
+const sales = createOperationsRepository("sales-invoices");
+const HINT = "Hóa đơn bán được lập từ đơn đặt hàng: chọn đơn rồi bấm Xử lý đặt hàng.";
+
+/**
+ * The old "Lập hóa đơn bán" address. An invoice is now made from an order, so this sends the user to the orders; it stays only while a VietQR sale
+ * is waiting for its transfer, so that the sale can still be followed to its invoice.
+ */
 export function SalesInvoiceScreen() {
-  const { identity } = useApiWorkspace();
-  const e = useInvoiceEditor();
-  const locked = e.saving || !!e.pending; // đang gửi hoặc đang chờ chuyển khoản: không sửa bản nháp, không lập thêm
-  // Cảnh báo khi rời trang giữa chừng để không mất bản nháp.
+  const router = useRouter(), { notify } = useToast(), { question, ask } = useQuestion();
+  const pendingList = useRemote(useCallback((signal: AbortSignal) => sales.read("pending", {}, z.array(pendingSale), signal), []));
+  const [following, setFollowing] = useState<PendingSale>(), [saved, setSaved] = useState<z.infer<typeof salesInvoiceSaved>>();
+  const waiting = (pendingList.data ?? []).some((sale) => sale.status === "Awaiting");
+  const goToOrders = !pendingList.loading && !pendingList.error && !waiting && !following && !saved;
   useEffect(() => {
-    if (!e.draft.lines.length || e.saved) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [e.draft.lines.length, e.saved]);
+    if (!goToOrders) return;
+    notify({ tone: "info", title: HINT });
+    router.replace(ORDERS_PATH);
+  }, [goToOrders, notify, router]);
 
   return (
     <section>
-      <OperationHeading title="Lập hóa đơn bán" description="Chọn lô thu hoạch, nhập số kg và nhận thanh toán. Mỗi hóa đơn gắn với từng lô để truy xuất nguồn gốc." icon="receipt" />
-      <ErrorNotice error={e.products.error} />
-      {!e.saved && !e.pending && <VietQrResumeNotice sales={e.pendingList.data ?? []} onResume={e.resume} />}
-      {e.saved ? (
-        <div className={s.doneWrap}><InvoiceFinishPanel invoice={e.saved.invoice} change={e.saved.change} subtracted={e.saved.subtractedFromDebt} onNew={e.reset} /></div>
-      ) : (
-        <div className={s.layout}>
-          <InvoiceLinesPanel lots={e.lots} draft={e.draft} active={e.active} listPrice={e.listPrice} disabled={locked} harvestSettingsOwnerId={identity.subjectType === "CooperativeOwner" ? identity.accountId : undefined} onAdd={e.addLot} onChange={e.setDraft} />
-          <InvoiceSummaryPanel draft={e.draft} sums={e.sums} problem={e.problem} error={e.error} saving={locked} savingMode={e.savingMode} canVietQr={e.canVietQr} onChange={e.setDraft} onSubmit={(mode) => void e.submit(mode)} />
-        </div>
-      )}
-      {/* Màn nhỏ: tổng tiền luôn trong tầm mắt, một chạm tới phần thanh toán. */}
-      {!e.saved && !e.pending && e.draft.lines.length > 0 && (
-        <a className={s.stickyBar} href="#invoice-summary"><span>Tổng cộng<strong>{money(e.sums.total)}</strong></span><span className={s.stickyGo}>Thanh toán ↓</span></a>
-      )}
-      {e.pending && <VietQrDialog key={e.pending.code} sale={e.pending} ask={e.ask} onInvoice={e.finishPending} onLeave={e.leavePending} />}
-      {e.question && <InvoiceQuestionDialog question={e.question} />}
+      <OperationHeading title="Lập hóa đơn bán" description={HINT} icon="receipt" />
+      <ErrorNotice error={pendingList.error} />
+      <p className="my-3 text-sm"><Link className="text-primary underline" href={ORDERS_PATH}>Mở danh sách đơn đặt hàng</Link></p>
+      {saved ? <div className="mx-auto mt-5 w-full max-w-[44rem]"><InvoiceFinishPanel invoice={saved.invoice} change={saved.change} subtracted={saved.subtractedFromDebt} onDone={() => router.push(ORDERS_PATH)} doneLabel="Về danh sách đơn đặt hàng" skipLabel="Để sau" /></div>
+        : !following && <VietQrResumeNotice sales={pendingList.data ?? []} onResume={setFollowing} />}
+      {following && <VietQrDialog key={following.code} sale={following} ask={ask} onInvoice={(invoice) => { setFollowing(undefined); setSaved(invoice); pendingList.reload(); }} onLeave={() => { setFollowing(undefined); pendingList.reload(); }} />}
+      {question && <InvoiceQuestionDialog question={question} />}
     </section>
   );
 }

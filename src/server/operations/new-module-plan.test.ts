@@ -29,6 +29,7 @@ describe("new real modules read contracts", () => {
     expect(planOperation("purchase-requests", "GET", q(`action=mine-detail&id=${ids.receipt}`))).toMatchObject({ path: `/api/me/purchase-requests/${ids.receipt}`, expectedId: ids.receipt, permission: "Mine" });
     // Owner/Staff giữ nguyên /api/purchase-requests.
     expect(planOperation("purchase-requests", "GET", q("action=list&status=3202&page=2"))).toMatchObject({ path: "/api/purchase-requests?page=2&pageSize=20&statusId=3202", permission: "Review" });
+    expect(planOperation("purchase-requests", "GET", q("action=list&status=3206"))).toMatchObject({ path: "/api/purchase-requests?page=1&pageSize=20&statusId=3206", permission: "Review" });
     expect(planOperation("purchase-requests", "GET", q(`action=detail&id=${ids.receipt}`))).toMatchObject({ path: `/api/purchase-requests/${ids.receipt}`, expectedId: ids.receipt, permission: "Review" });
   });
   it("validates the trader list against the MyPurchases contract", () => {

@@ -43,6 +43,11 @@ export function HarvestRecordsTable({ rows, selectedLot, zoneId, statusLabel, on
                         <span className="mt-1 block whitespace-nowrap text-xs text-text-muted">
                           {displayTime(lot.harvestedAt)}
                         </span>
+                        {(lot.productLines ?? []).map((line) => (
+                          <span key={line.productId} className="mt-1 block text-xs text-text-muted">
+                            {line.productName}: {line.cageCount.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} lồng · {line.kg.toLocaleString("vi-VN")} kg
+                          </span>
+                        ))}
                       </td>
                       <td data-label="Làn thu hoạch">
                         {lot.laneNumbers.join(", ")}

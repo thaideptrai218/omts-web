@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FilterPills } from "@/components/ui/management-screen/management-layout";
 
 import { ErrorNotice, Field, Paging, Skeleton, useRemote } from "@/features/operations/ui";
+import { AssignedPlansBanner } from "@/features/harvest-plans/assigned-plans-banner";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { cagesFromKg, formatCages } from "@/shared/format/cage-quantity";
 import { matchesSelection } from "@/shared/presentation/filter-selection";
@@ -94,6 +95,7 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
           </Button>
         </div>
       </div>
+      {allowed("Create") && <AssignedPlansBanner zoneId={zoneId} raftId={raftId} onChanged={remote.reload} />}
       {remote.loading ? (
         <Skeleton />
       ) : (

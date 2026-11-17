@@ -1,4 +1,5 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { expect } from "vitest";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 
 /** Lanes are picked in the horizontal column overview's selection mode, which does not open the lane detail popover. */
 export async function selectLane(laneNumber: number) {
@@ -11,4 +12,15 @@ export async function selectLane(laneNumber: number) {
 export async function attachPhoto() {
   fireEvent.change(screen.getByLabelText(/^Chọn ảnh/), { target: { files: [new File(["jpeg"], "site.jpg", { type: "image/jpeg" })] } });
   await screen.findByAltText("Ảnh mới 1");
+}
+
+export const harvestTestProduct = { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", code: "SP000001", name: "Hàu sữa", unitPrice: 60000, statusId: 101, status: "In Use", rowVersion: "v", unit: "kg", createdAt: "x", units: [] };
+
+/** Fills the first product line of a harvest form: the test product and the cages. The test file must mock the product repository to list harvestTestProduct. */
+export async function fillProductLine(cages: string) {
+  const select = await screen.findByLabelText("Sản phẩm dòng 1");
+  // The product list arrives after the form opens.
+  await waitFor(() => expect(select.querySelector(`option[value="${harvestTestProduct.id}"]`)).toBeTruthy());
+  fireEvent.change(select, { target: { value: harvestTestProduct.id } });
+  fireEvent.change(screen.getByLabelText("Số lồng dòng 1"), { target: { value: cages } });
 }

@@ -6,7 +6,7 @@ import { harvestCorrected, harvestCorrection, harvestSaved, harvestValues } from
 const raft = "529ec3ce-af8f-42f7-a08f-4bab36ba7e62", zone = "529ec3ce-af8f-42f7-a08f-4bab36ba7e63", cycle = "529ec3ce-af8f-42f7-a08f-4bab36ba7e64";
 const post = (area: "harvest" | "seeding", body: unknown) => cultivationRecordsPlan(area, "POST", new URLSearchParams(), body);
 const order = "529ec3ce-af8f-42f7-a08f-4bab36ba7e65";
-const trip = { purchaseRequestId: order, laneNumbers: [1, 2], finishedLaneNumbers: [1], cageCount: 0.5, estimatedKg: null };
+const trip = { laneNumbers: [1, 2], finishedLaneNumbers: [1], cageCount: 0.5, estimatedKg: null };
 
 describe("finish a lane (one decisive per-lane action)", () => {
   it("posts without a body to the finish-harvest route of the raft and lane", () => {
@@ -44,16 +44,14 @@ describe("harvest values: purchase request, decimal cages, and no plan cap", () 
     expect(harvestValues.safeParse({ ...trip, estimatedKg: 10.005 }).success).toBe(false);
     expect(harvestValues.safeParse({ ...trip, estimatedKg: 1_000_000_001 }).success).toBe(false);
   });
-  // Regression of 12/11/2026: the form sent no purchaseRequestId, so the backend answered 400 MSG-GEN-01 (field "Purchase request") to every new trip.
-  it("needs the purchase request a trip harvests for, as a guid", () => {
-    const without = { ...trip, purchaseRequestId: undefined };
-    expect(harvestValues.safeParse(without).success).toBe(false);
-    expect(harvestValues.safeParse({ ...trip, purchaseRequestId: "" }).success).toBe(false);
-    expect(harvestValues.safeParse({ ...trip, purchaseRequestId: "not-a-guid" }).success).toBe(false);
-    expect(post("harvest", { action: "record", id: raft, zoneId: zone, body: without })).toBeUndefined();
+  it("does not take a purchase request: a trip names its plan line instead", () => {
+    expect(harvestValues.safeParse(trip).success).toBe(true);
+    expect(harvestValues.safeParse({ ...trip, purchaseRequestId: order }).success).toBe(false);
+    expect(harvestValues.safeParse({ ...trip, harvestPlanLineId: order }).success).toBe(true);
+    expect(harvestValues.safeParse({ ...trip, harvestPlanLineId: "not-a-guid" }).success).toBe(false);
   });
   it("sends the exact multipart fields the backend reads for a trip with decimal cages and a crew", () => {
-    const body = { purchaseRequestId: order, laneNumbers: [1, 2], finishedLaneNumbers: [], cageCount: 14.5, estimatedKg: 700, crew: [cycle] };
+    const body = { laneNumbers: [1, 2], finishedLaneNumbers: [], cageCount: 14.5, estimatedKg: 700, crew: [cycle] };
     const plan = post("harvest", { action: "record", id: raft, zoneId: zone, body });
     expect(plan?.body).toEqual(body);
     expect(plan).toMatchObject({ multipartFields: true, path: `/api/rafts/${raft}/harvest-lots` });

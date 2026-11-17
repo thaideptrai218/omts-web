@@ -11,11 +11,15 @@ export type ReviewResult<T> = { ok: true; value: T } | { ok: false; error: strin
 /** Mã trạng thái gửi lên `statusId`; "Hoàn thành" không có mã riêng (cờ fulfilled của đơn đã chấp nhận). */
 export const REVIEW_STATUS_OPTIONS: ReadonlyArray<readonly [string, string]> = [
   [String(REQUEST_STATUS_IDS.awaiting), "Chờ phản hồi"], [String(REQUEST_STATUS_IDS.accepted), "Đã chấp nhận"],
-  [String(REQUEST_STATUS_IDS.declined), "Bị từ chối"], [String(REQUEST_STATUS_IDS.cancelled), "Đã hủy"],
+  [String(REQUEST_STATUS_IDS.declined), "Bị từ chối"], [String(REQUEST_STATUS_IDS.cancelled), "Đã hủy"], [String(REQUEST_STATUS_IDS.ordered), "Hoàn thành"],
 ];
 
 /** BR-SALE-02: chỉ trả lời một lần, khi đơn còn "Chờ phản hồi". */
 export const canRespondToRequest = (request: Pick<PurchaseRequest, "statusId">) => request.statusId === REQUEST_STATUS_IDS.awaiting;
+
+/** The Owner makes an order (Đặt hàng) from a request that waits for an answer, or from an older accepted one that no invoice has fulfilled. */
+export const canOrderRequest = (request: Pick<PurchaseRequest, "statusId" | "fulfilled">) =>
+  request.statusId === REQUEST_STATUS_IDS.awaiting || request.statusId === REQUEST_STATUS_IDS.accepted && !request.fulfilled;
 
 const CHANNEL_LABELS: Record<string, string> = { Sms: "SMS", ZaloOa: "Zalo OA", Zalo: "Zalo OA", InApp: "Trong ứng dụng" };
 const DELIVERY_LABELS: Record<number, string> = { 1601: "Đang gửi", 1602: "Đã gửi", 1603: "Gửi chưa thành công" };
@@ -42,6 +46,7 @@ export function quantityWithCages(kg: number, kgPerCage?: number): string {
 /** Tóm tắt phản hồi của Chủ HTX cho một dòng danh sách (kg chấp nhận, ngày lấy, trả sau hoặc lý do từ chối/hủy). */
 export function reviewResponseSummary(request: PurchaseRequest, kgPerCage?: number): { headline: string; note: string | null } {
   const response = request.response;
+  if (request.statusId === REQUEST_STATUS_IDS.ordered) return { headline: request.salesOrderCode ? `Đã đặt hàng ${request.salesOrderCode}` : "Đã đặt hàng", note: response?.note ?? null };
   if (request.statusId === REQUEST_STATUS_IDS.cancelled) return { headline: "Thương lái đã hủy", note: request.cancelReason };
   if (!response) return { headline: "Chưa có phản hồi", note: null };
   if (response.acceptedKg === null) return { headline: "Đã từ chối", note: response.note };

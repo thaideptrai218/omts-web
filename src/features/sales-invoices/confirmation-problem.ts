@@ -29,12 +29,13 @@ export function projectInvoiceConfirmation(status: number, body: unknown): Invoi
 }
 
 /** Chuyển tên trường backend thành cách ghi trong thân yêu cầu: trả lời "Có" cho từng loại câu hỏi. */
-export function answerPatch(field: string): { kind: "line"; index: number } | { kind: "discount" | "payLater" | "subtract" | "qr" } | undefined {
+export function answerPatch(field: string): { kind: "line"; index: number } | { kind: "discount" | "payLater" | "subtract" | "owedBack" | "qr" } | undefined {
   const line = /^lines\[(\d{1,3})\]\.priceDecidedByOwner$/.exec(field);
   if (line) return { kind: "line", index: Number(line[1]) };
   if (field === "discountDecidedByOwner") return { kind: "discount" };
   if (field === "payment.payLaterOwnerAgreed") return { kind: "payLater" };
   if (field === "payment.subtractExtraFromDebt") return { kind: "subtract" };
+  if (field === "confirmOwedBack") return { kind: "owedBack" };
   if (field === "wantsQrCode") return { kind: "qr" };
   return undefined;
 }

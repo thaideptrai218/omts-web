@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 const mocks = vi.hoisted(() => ({ read: vi.fn(), subjectType: "Trader" }));
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mocks.read }) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType }, permissions: { functionPermissions: [] } }) }));
-import { PurchaseRequestsScreen, SalesProductsScreen, WorkforceScreen } from "./new-module-screens";
+import { PurchaseRequestsScreen, WorkforceScreen } from "./new-module-screens";
 import { ids } from "./__tests__/fixtures";
 import { backendRequest } from "./__tests__/purchase-request-fixture";
 beforeAll(() => {
@@ -31,22 +31,6 @@ describe("new API read screens", () => {
     render(<PurchaseRequestsScreen />); await screen.findByText("Thương lái An");
     expect(screen.getByText("120,5 kg")).toBeTruthy(); expect(screen.getByText("12/11/2026")).toBeTruthy(); expect(screen.getByText(/Đã hoàn thành/)).toBeTruthy(); expect(screen.getByText("100 kg · lấy ngày 13/11/2026 · cho trả sau")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Mở yêu cầu" })); await waitFor(() => expect(mocks.read.mock.calls.some((args) => args[0] === "detail")).toBe(true));
-  });
-  it("offers all products only to Owner and renders product content as text", async () => {
-    mocks.subjectType = "CooperativeOwner";
-    mocks.read.mockResolvedValue({ status: "success", data: [{ id: ids.item, code: "QA", name: "<script>QA</script>", description: null, inUse: true, availableForPurchase: true, rowVersion: "opaque" }] });
-    const view = render(<SalesProductsScreen />); await screen.findByText("<script>QA</script>");
-    expect(view.container.querySelector("script")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Phạm vi sản phẩm"), { target: { value: "all" } });
-    await waitFor(() => expect(mocks.read.mock.calls.at(-1)?.[0]).toBe("all"));
-  });
-  it("recovers a read failure without clearing the entered product search", async () => {
-    mocks.read.mockResolvedValueOnce({ status: "error", httpStatus: 503, uncertain: false }).mockResolvedValue({ status: "success", data: [] });
-    render(<SalesProductsScreen />); await screen.findByRole("alert");
-    fireEvent.change(screen.getByLabelText("Tìm sản phẩm"), { target: { value: "hàu" } });
-    fireEvent.click(screen.getByRole("button", { name: "Tải lại sản phẩm" })); await screen.findByText("Không có dữ liệu phù hợp.");
-    expect((screen.getByLabelText("Tìm sản phẩm") as HTMLInputElement).value).toBe("hàu");
-    expect(screen.queryByLabelText("Phạm vi sản phẩm")).toBeNull();
   });
   it("renders absent attendance truthfully in the attendance view of the workforce day", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: [{ id: ids.receipt, employeeId: ids.item, employeeName: "QA nhân viên", zoneId: ids.zone, raftId: null, raftCode: null, jobTypeId: null, job: "Chăm sóc", date: "2026-10-31", checkedInAt: null, checkedOutAt: null }] });

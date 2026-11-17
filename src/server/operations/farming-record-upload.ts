@@ -31,11 +31,15 @@ export function farmingRecordUpload(area: OperationArea, action: string, id?: st
   return { plan, validator, requiredPhotos };
 }
 
-/** Arrays repeat, while lanePercents is one JSON string, as required by B2 model binding. */
+/** Arrays repeat, while lanePercents is one JSON string, as required by B2 model binding. The product lines of a harvest lot go as indexed fields: productLines[0].productId, productLines[0].cageCount, productLines[0].kg (an empty kg is left out). */
 export function appendFarmingFields(form: FormData, values: Record<string, unknown>) {
   for (const [key, value] of Object.entries(values)) {
     if (value == null) continue;
     if (key === "lanePercents") { form.append(key, JSON.stringify(value)); continue; }
+    if (key === "productLines" && Array.isArray(value)) {
+      for (const [index, line] of (value as Record<string, unknown>[]).entries()) for (const [field, part] of Object.entries(line)) if (part != null) form.append(`productLines[${index}].${field}`, String(part));
+      continue;
+    }
     for (const part of Array.isArray(value) ? value : [value]) form.append(key, String(part));
   }
 }
