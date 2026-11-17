@@ -106,7 +106,7 @@ function Editor({ start, products }: { start: Start; products: ProductRow[] }) {
   const [code, setCode] = useState(invoice?.code ?? ""), [note, setNote] = useState(invoice?.note ?? ""), [otherCharges, setOtherCharges] = useState(invoice?.otherCharges ?? 0);
   const [discountValue, setDiscountValue] = useState(invoice?.discount ?? 0), [discountTouched, setDiscountTouched] = useState(!!invoice);
   const [cash, setCash] = useState(0), [payLater, setPayLater] = useState(false);
-  const [notWholeLots, setNotWholeLots] = useState<ReadonlySet<string>>(() => invoice ? new Set([...new Set(invoice.lines.map((line) => line.harvestLotId))].filter((lot) => invoice.lines.filter((line) => line.harvestLotId === lot).every((line) => !line.soldWholeLot))) : new Set());
+  const [notWholeLots, setNotWholeLots] = useState<ReadonlySet<string>>(() => invoice ? new Set([...new Set(invoice.lines.map((line) => line.harvestLotId))].filter((lot) => invoice.lines.filter((line) => line.harvestLotId === lot).every((line) => !line.soldWholeLot))) : new Set(start.lots.map((lot) => lot.id))); // A new invoice closes no lot until "Bán hết lô" is ticked.
   const [error, setError] = useState<string>(), [pending, setPending] = useState<PendingSale>(), [saved, setSaved] = useState<Saved>(), [asking, setAsking] = useState(false);
   const [openedAt] = useState(() => new Date().toISOString());
   const pendingList = useRemote(useCallback((signal: AbortSignal) => draft ? repository.pending(signal) : Promise.resolve<WorkspaceResult<PendingSale[]>>({ status: "success", data: [] }), [draft]));

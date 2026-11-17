@@ -78,7 +78,7 @@ it("opens the order with its remaining lines, the lot of the plan chosen, the di
   expect(await screen.findByText("Hóa đơn bán · đơn DH000001")).toBeTruthy();
   expect((screen.getByLabelText("số lượng dòng 1") as HTMLInputElement).value).toBe("60");
   expect((screen.getByLabelText("Lô thu hoạch dòng 1") as HTMLSelectElement).value).toBe(ids.lotA);
-  expect(screen.getByText("KHT000001")).toBeTruthy();
+  expect(screen.getAllByRole("option", { name: /^KHT000001 · / }).length).toBeGreaterThan(0);
   expect(state.lots).toHaveBeenCalledWith(ids.order, expect.anything());
   expect((screen.getByLabelText("Mã hóa đơn") as HTMLInputElement).placeholder).toBe("HD000002 (tự động)");
   // The lot of the plan that serves the order comes first in the list even though the API listed it second.
