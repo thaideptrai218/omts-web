@@ -26,22 +26,25 @@ import { CyclesScreen } from "@/features/cycles-api/cycles-screen";
 import { CultivationRecordsScreen } from "@/features/cultivation-api/records-screen";
 import { JobTypesScreen } from "@/features/labor-api/job-types-screen";
 import { PaymentsV2Screen } from "@/features/purchasing-v2/screens";
-import { PurchaseReceiptsScreen } from "@/features/purchase-documents/receipts-screen";
-function ProductsRedirect() {
+import { LegacyReceiptsRedirect } from "@/features/purchase-documents/legacy-redirects";
+import { SEED_LOTS_PATH } from "@/features/input-items/stock-kind";
+function ScreenRedirect({ to }: { to: string }) {
   const router = useRouter();
-  useEffect(() => { router.replace("/sales/products"); }, [router]);
+  useEffect(() => { router.replace(to); }, [router, to]);
   return null;
 }
 export function OperationScreen({ area }: { area: OperationArea }) {
   const context = useApiWorkspace();
   if (!operationAllowed(area, context.identity, context.permissions.functionPermissions)) return <p role="alert">Bạn không có quyền xem chức năng này.</p>;
-  if (area === "purchase-receipts") return <Suspense><PurchaseReceiptsScreen /></Suspense>;
+  // The receipts are split into Nhập giống and Nhập vật tư; the old address moves to the screen of the receipt's kind.
+  if (area === "purchase-receipts") return <Suspense><LegacyReceiptsRedirect /></Suspense>;
+  if (area === "seed-lots") return <ScreenRedirect to={SEED_LOTS_PATH} />;
   if (process.env.NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT === "v2" && area === "supplier-payments") return <PaymentsV2Screen />;
   if (area === "job-types") return <JobTypesScreen />;
   if (area === "cultivation-cycles") return <CyclesScreen />;
   if (area === "seeding" || area === "material-usages" || area === "harvest") return <CultivationRecordsScreen area={area} />;
   // Only a trader reads the plain list here; the catalogue for everyone else is /sales/products.
-  if (area === "sales-products") return context.identity.subjectType === "Trader" ? <ProductsScreen /> : <ProductsRedirect />;
+  if (area === "sales-products") return context.identity.subjectType === "Trader" ? <ProductsScreen /> : <ScreenRedirect to="/sales/products" />;
   if (area === "sales-invoices") return <SalesInvoiceScreen />;
   if (area === "customer-payments") return <CustomerPaymentsScreen />;
   if (area === "harvest-yield") return <HarvestYieldScreen />;

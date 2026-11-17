@@ -16,6 +16,7 @@ import { claimReportsPlan, qualityClaimsPlan } from "./quality-claims-plan";
 import { waterOverviewPlan } from "./water-overview-plan";
 import { lotTracingPlan } from "./lot-tracing-plan";
 import { payrollPlan } from "./payroll-plan";
+import { seedLotsPlan } from "./seed-lots-plan";
 
 const id = z.guid(), empty = z.strictObject({});
 const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
@@ -37,6 +38,7 @@ export function planOperation(areaName: string, method: string, query: URLSearch
   if (area.data === "harvest-yield") return harvestYieldPlan(method, query, input);
   if (area.data === "sales-invoice-list") return salesInvoiceListPlan(method, query, input);
   if (area.data === "sales-returns") return salesReturnsPlan(method, query, input);
+  if (area.data === "seed-lots") return seedLotsPlan(method, query, input);
   if (area.data === "claim-reports") return claimReportsPlan(method, query, input);
   if (area.data === "quality-claims") return qualityClaimsPlan(method, query, input);
   if (area.data === "lot-tracing") return lotTracingPlan(method, query, input);

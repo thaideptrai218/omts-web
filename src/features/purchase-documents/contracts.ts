@@ -4,23 +4,30 @@ const id = z.guid(), text = z.string(), n = z.number(), date = z.iso.date(), sta
 const supplier = z.object({ id, code: opt(text), name: text, phoneNumber: text });
 const zone = z.object({ id, code: text, name: text });
 const account = z.object({ id, name: text });
+/** The kind of a receipt or return: Seed holds seed items only, Supply holds Material and Other. Missing on an API that has not split the documents yet. */
+export const documentKind = z.enum(["Seed", "Supply"]).nullish();
+/** The states of a seed lot, worked out from its quantities by the API (never stored). */
+export const seedLotStates = ["Unused", "Nursing", "PartlySeeded", "FullySeeded", "FullyReturned", "FullyLost", "UsedUp"] as const;
+export const seedLotState = z.enum(seedLotStates);
 const paged = <T extends z.ZodType>(row: T) => z.object({ items: z.array(row), page: n, pageSize: n, total: n });
 export const method = z.enum(["Cash", "BankTransfer", "Other"]);
 
 export const receiptRow = z.object({
   id, code: text, receiptDate: date, supplier, statusId: n, status: text, total: n, linesTotal: n, supplierCode: text, recordedByName: text,
   itemCount: n, returned: n, discount: n, payable: n, paid: n, zone: opt(zone), notes: opt(text), completedAt: opt(stamp), createdAt: stamp, updatedAt: opt(stamp),
-  receivedAt: opt(stamp), receivedByName: opt(text), returnCodes: z.array(text).optional(),
+  receivedAt: opt(stamp), receivedByName: opt(text), returnCodes: z.array(text).optional(), kind: documentKind, seedState: opt(seedLotState),
 });
 export const receiptSearch = z.object({ page: paged(receiptRow), totals: z.object({ count: n, completedCount: n, receiptsTotal: n, returnsTotal: n, netTotal: n }) });
 
 export const receiptView = z.object({
   id, code: text, supplier, receiptDate: date, total: n, returned: n, notes: opt(text), statusId: n, status: text, recordedBy: account,
   completedAt: opt(stamp), cancelledAt: opt(stamp), cancelReason: opt(text), rowVersion: text, discount: n, payable: n, paid: n, zone: opt(zone),
-  receivedAt: opt(stamp), receivedBy: opt(account),
+  receivedAt: opt(stamp), receivedBy: opt(account), kind: documentKind, seedState: opt(seedLotState),
   lines: z.array(z.object({
     id, lineNumber: n, itemId: opt(id), itemCode: opt(text), itemName: opt(text), group: opt(text), unit: text, itemUnitId: opt(id), unitFactor: opt(n), baseQuantity: opt(n), baseUnit: opt(text), quantity: opt(n), unitPrice: opt(n), lineAmount: opt(n),
     supplierLotCode: opt(text), raft: opt(z.object({ id, code: text, zoneId: id, zoneCode: text })), seedLotCode: opt(text), seeded: n, returnedQuantity: n, returnable: n, discount: opt(n), netUnitPrice: opt(n),
+    /** A seed line of a Seed receipt: where the lot stands now. */
+    seedLot: opt(z.object({ state: seedLotState, remainingQty: n })),
   })),
   returns: z.array(z.object({ id, code: text, returnDate: date, returnedAt: opt(stamp), reason: text, returnValue: n, statusId: n, status: text, discount: n, netValue: n })),
 });
@@ -33,12 +40,12 @@ export const receiptCopy = z.object({
 
 export const returnRow = z.object({
   id, code: text, returnDate: date, receiptId: opt(id), receiptCode: opt(text), supplier, supplierCode: text, zone: opt(zone), reason: text, statusId: n, status: text,
-  recordedBy: account, value: n, discount: n, netValue: n, itemCount: n, refunded: n, createdAt: stamp, returnedAt: opt(stamp),
+  recordedBy: account, value: n, discount: n, netValue: n, itemCount: n, refunded: n, createdAt: stamp, returnedAt: opt(stamp), kind: documentKind,
 });
 export const returnSearch = z.object({ page: paged(returnRow), totalValue: n });
 export const returnView = z.object({
   id, code: text, receipt: opt(z.object({ id, code: text })), supplier, zone: opt(zone), returnDate: date, returnedAt: opt(stamp), reason: text, discount: n, statusId: n, status: text,
-  cancelReason: opt(text), recordedBy: account, returnValue: n, netValue: n, rowVersion: text,
+  cancelReason: opt(text), recordedBy: account, returnValue: n, netValue: n, rowVersion: text, kind: documentKind,
   lines: z.array(z.object({ receiptLineId: opt(id), itemId: id, itemCode: text, itemName: text, unit: text, itemUnitId: opt(id), unitFactor: opt(n), baseQuantity: opt(n), quantity: n, unitPrice: n, returnValue: n })),
   refunds: z.array(z.object({ id, code: text, paymentDate: date, amount: n, method, bankReference: opt(text), statusId: n, status: text })),
 });

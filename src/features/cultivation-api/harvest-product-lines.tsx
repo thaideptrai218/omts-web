@@ -1,7 +1,5 @@
 "use client";
 import { useCallback } from "react";
-import { InterfaceIcon } from "@/components/ui/interface-icon";
-import { managementStyles } from "@/components/ui/management-screen/management-table";
 import { SelectBox } from "@/components/ui/select-box";
 import { useRemote } from "@/features/operations/ui";
 import { UnitInput } from "@/components/form/unit-input";
@@ -11,7 +9,7 @@ import { cageUnitOf } from "@/features/products/product-helpers";
 import { productRepository } from "@/features/products/repository";
 import styles from "./cultivation-flow.module.css";
 
-/** One product of a harvest trip: how many cages and how many kg. The kg follow cages × the product's Lồng factor while they are empty or still the value that rule gave; a kg typed over is kept. */
+/** The product line of a harvest trip (a lot holds one product): how many cages and how many kg. The kg follow cages × the product's Lồng factor while they are empty or still the value that rule gave; a kg typed over is kept. */
 export type HarvestLine = { key: string; productId: string; cages: string; kg: string };
 export type HarvestLinePayload = { productId: string; cageCount: number; kg: number | null };
 type SavedLine = { productId: string; productCode: string; productName: string; cageCount: number; kg: number };
@@ -24,7 +22,7 @@ const number = (value: string) => { const parsed = Number(value.replace(",", "."
 const round2 = (value: number) => Math.round(value * 100) / 100;
 const isTwoDecimals = (value: number) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6;
 
-/** The products a trip can be split into: those in use, plus the ones a lot being corrected already has (they stay allowed even if no longer sold). */
+/** The products a trip line can name: those in use, plus the ones the lot or the cycle already has (they stay allowed even if no longer sold). */
 export function useHarvestProducts(saved: readonly Pick<SavedLine, "productId" | "productCode" | "productName">[] = []) {
   const remote = useRemote<ProductRow[]>(useCallback((signal: AbortSignal) => productRepository.all({}, signal), []));
   const list = (remote.data ?? []).filter((product) => product.statusId === IN_USE || saved.some((line) => line.productId === product.id));
@@ -51,8 +49,10 @@ export const linesPayload = (lines: readonly HarvestLine[]): HarvestLinePayload[
 export const linesTotals = (lines: readonly HarvestLine[]) => ({ cages: round2(lines.reduce((sum, line) => sum + (number(line.cages) ?? 0), 0)), kg: round2(lines.reduce((sum, line) => sum + (number(line.kg) ?? 0), 0)) });
 
 /**
- * The product lines of a harvest trip: the product, the cages (QuantityStepper) and the kg, which follow cages × the product's Lồng factor until they are
- * typed over. A product without a Lồng unit leaves the kg to the lot's kg per cage when empty.
+ * The product line of a harvest trip: a lot holds one product, the one the cycle farms, so the line shows that product (read only) with the cages (QuantityStepper) and the kg,
+ * which follow cages × the product's Lồng factor until they are typed over. A product without a Lồng unit leaves the kg to the lot's kg per cage when empty.
+ * A line that has no product yet (a cycle that has none) offers the product to pick; there is no way to add a second line or to remove one. A lot made before this rule that
+ * still has several lines shows them all, so a correction does not drop one.
  */
 export function HarvestProductLines({ lines, products, loading, error, disabled, onChange }: {
   lines: HarvestLine[]; products: readonly ProductRow[]; loading?: boolean; error?: string; disabled?: boolean; onChange(lines: HarvestLine[]): void;
@@ -66,24 +66,24 @@ export function HarvestProductLines({ lines, products, loading, error, disabled,
   const setCages = (line: HarvestLine, cages: string) => patch(line.key, { cages, kg: refill(line, line.productId, cages) });
   const totals = linesTotals(lines);
   return <div className={styles.productLines}>
-    <table><thead><tr><th>Sản phẩm</th><th>Số lồng</th><th>Số kg</th><th /></tr></thead>
+    <table><thead><tr><th>Sản phẩm</th><th>Số lồng</th><th>Số kg</th></tr></thead>
       <tbody>{lines.map((line, index) => {
-        const position = index + 1, factor = factorOf(line.productId);
+        const position = index + 1, factor = factorOf(line.productId), product = products.find((row) => row.id === line.productId);
         return <tr key={line.key}>
-          <td><SelectBox aria-label={`Sản phẩm dòng ${position}`} className="omts-control" disabled={disabled || loading} value={line.productId} onChange={(event) => setProduct(line, event.target.value)}>
-            <option value="">{loading ? "Đang tải…" : "Chọn sản phẩm"}</option>
-            {products.filter((product) => product.id === line.productId || !lines.some((other) => other.productId === product.id)).map((product) => <option key={product.id} value={product.id}>{product.name} ({product.code})</option>)}
-          </SelectBox></td>
+          <td>{line.productId
+            ? <span aria-label={`Sản phẩm dòng ${position}`}>{product ? `${product.name}${product.code ? ` (${product.code})` : ""}` : loading ? "Đang tải…" : "Sản phẩm của chu kỳ"}</span>
+            : <SelectBox aria-label={`Sản phẩm dòng ${position}`} className="omts-control" disabled={disabled || loading} value={line.productId} onChange={(event) => setProduct(line, event.target.value)}>
+              <option value="">{loading ? "Đang tải…" : "Chọn sản phẩm"}</option>
+              {products.map((row) => <option key={row.id} value={row.id}>{row.name} ({row.code})</option>)}
+            </SelectBox>}</td>
           <td className={styles.cageCell}><UnitInput label={`Số lồng dòng ${position}`} unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} disabled={disabled} value={number(line.cages)} onChange={(cages) => setCages(line, cages === null ? "" : String(cages))} /></td>
           <td><input aria-label={`Số kg dòng ${position}`} className={`omts-control ${styles.kgInput}`} inputMode="decimal" disabled={disabled} value={line.kg}
             placeholder={factor ? undefined : "Theo kg/lồng của lô"} title={factor ? `1 lồng = ${fmt(factor)} kg; sửa được` : undefined}
             onChange={(event) => { const text = event.target.value.replace(/[^\d.,]/g, ""); patch(line.key, { kg: text }); }} /></td>
-          <td><button type="button" className={styles.lineRemove} disabled={disabled} aria-label={`Bỏ dòng ${position}`} title="Bỏ dòng" onClick={() => onChange(lines.filter((row) => row.key !== line.key))}><InterfaceIcon name="trash" /></button></td>
         </tr>;
       })}</tbody>
-      <tfoot><tr><th>Tổng</th><th>{fmt(totals.cages)} lồng</th><th>{fmt(Math.round(totals.kg * 100) / 100)} kg</th><th /></tr></tfoot>
+      {lines.length > 1 && <tfoot><tr><th>Tổng</th><th>{fmt(totals.cages)} lồng</th><th>{fmt(Math.round(totals.kg * 100) / 100)} kg</th></tr></tfoot>}
     </table>
     {error && <p role="alert" className={styles.harvestHint}>Không tải được danh sách sản phẩm. {error}</p>}
-    <div><button type="button" className={managementStyles.linkButton} disabled={disabled} onClick={() => onChange([...lines, blankLine()])}>+ Thêm sản phẩm</button></div>
   </div>;
 }

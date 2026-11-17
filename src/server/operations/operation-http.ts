@@ -41,7 +41,7 @@ function browserFiles(value: unknown): unknown {
 function exportFileName(area: string, query: URLSearchParams, exporting: boolean): string {
   const id = query.get("id");
   if (exporting && area === "sales-invoice-list" && id && /^[0-9a-f-]{36}$/i.test(id)) return `hoa-don-${id.slice(0, 8)}`;
-  return `${area === "harvest" ? "lo-thu-hoach" : area === "sales-returns" ? "tra-hang-ban" : area}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
+  return `${area === "harvest" ? "lo-thu-hoach" : area === "sales-returns" ? "tra-hang-ban" : area === "seed-lots" ? "lo-giong" : area}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
 }
 export async function handleOperationRequest(request: Request, areaName: string): Promise<Response> {
   if (areaName === "employees") return handleEmployeeApi(request);

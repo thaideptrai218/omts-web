@@ -10,6 +10,7 @@ import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { errorText, inputRepository } from "./repository";
+import { receiptHref, seedLotsHref } from "./stock-kind";
 import styles from "./input-items.module.css";
 
 /** Lô giống (seed items only): the lots of the item's receipts with what is left of each, and the quantity that belongs to no lot. */
@@ -34,8 +35,8 @@ export function ItemLotsTab({ itemId, canDelete, onChanged }: { itemId: string; 
         <th>Mã lô</th><th>Phiếu nhập</th><th>Ngày nhập</th><th>Nhà cung cấp</th><th>Mã lô nhà cung cấp</th><th className={styles.num}>Số lượng nhập{data.unit ? ` (${data.unit})` : ""}</th><th className={styles.num}>Còn lại</th>{canDelete && <th />}
       </tr></thead><tbody>
         {data.lots.map((lot) => <tr key={lot.seedLotLineId}>
-          <td className="font-mono">{lot.code}</td>
-          <td>{lot.receiptCode ? <Link className={styles.link} href={`/operations/purchase-receipts?code=${encodeURIComponent(lot.receiptCode)}`}>{lot.receiptCode}</Link> : "—"}</td>
+          <td className="font-mono"><Link className={styles.link} href={seedLotsHref(lot.code)}>{lot.code}</Link></td>
+          <td>{lot.receiptCode ? <Link className={styles.link} href={receiptHref(lot.receiptCode, "Seed")}>{lot.receiptCode}</Link> : "—"}</td>
           <td>{lot.receivedAt ? viDateTime(lot.receivedAt) : "—"}</td><td>{lot.supplierName || "—"}</td><td>{lot.supplierLotCode || "—"}</td>
           <td className={styles.num}>{fmt(lot.receivedQuantity)}</td><td className={styles.num}>{fmt(lot.onHand)}</td>
           {canDelete && <td>{lot.onHand > 0 && <Button className="w-auto" variant="ghost" disabled={busy === lot.seedLotLineId} onClick={() => void removeLot(lot.seedLotLineId, lot.code)}><InterfaceIcon name="trash" className="size-4" />Xóa lô</Button>}</td>}

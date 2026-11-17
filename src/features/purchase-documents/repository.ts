@@ -4,6 +4,7 @@ import type { WorkspaceResult } from "@/features/api-workspace/workspace-reposit
 import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { loadOptions } from "@/features/operations/lookups";
 import { inputRepository } from "@/features/input-items/repository";
+import { kindOfGroup, type StockKind } from "@/features/input-items/stock-kind";
 import * as c from "./contracts";
 import type { CancelPreview, ItemGroup, ItemOption, Page, PaymentMethod, PurchaseReturn, RaftOption, Receipt, ReceiptDraft, ReceiptPayment, ReceiptQuery, ReceiptRow, ReceiptTotals, ReturnDraft, ReturnQuery, ReturnRow, SupplierOption, ZoneRef } from "./types";
 
@@ -42,15 +43,17 @@ function netUnit(view: c.ReceiptView, line: c.ReceiptView["lines"][number]) {
   const goods = view.lines.reduce((sum, row) => sum + (row.lineAmount ?? 0), 0), unit = (line.unitPrice ?? 0) - (line.discount ?? 0);
   return goods > 0 ? Math.round(unit * view.payable / goods) : unit;
 }
+/** The kind a document carries; an API that has not split the documents yet sends none, so it is read from the first line. */
+const kindOf = (kind: StockKind | null | undefined, groups: readonly (string | null | undefined)[]): StockKind => kind ?? kindOfGroup(groups.find(Boolean));
 function toReceipt(view: c.ReceiptView): Receipt {
   return {
-    id: view.id, code: view.code, date: view.receiptDate, receivedAt: view.receivedAt ?? `${view.receiptDate}T00:00:00+07:00`, receivedBy: view.receivedBy ?? null, completedAt: view.completedAt ?? null, rowVersion: view.rowVersion, supplier: supplierOf(view.supplier), zone: zoneOf(view.zone),
+    id: view.id, code: view.code, kind: kindOf(view.kind, view.lines.map((line) => line.group)), seedState: view.seedState ?? null, date: view.receiptDate, receivedAt: view.receivedAt ?? `${view.receiptDate}T00:00:00+07:00`, receivedBy: view.receivedBy ?? null, completedAt: view.completedAt ?? null, rowVersion: view.rowVersion, supplier: supplierOf(view.supplier), zone: zoneOf(view.zone),
     recordedBy: view.recordedBy.name, statusId: view.statusId, discount: view.discount, payable: view.payable, paid: view.paid, notes: view.notes ?? null, cancelReason: view.cancelReason ?? null,
     lines: view.lines.map((line) => ({
       id: line.id, item: { id: line.itemId ?? "", code: line.itemCode ?? "—", name: line.itemName ?? "Chưa chọn hàng", unit: line.unit, group: groupOf(line.group), units: [] },
       itemUnitId: line.itemUnitId ?? null, unitFactor: line.unitFactor ?? 1,
       quantity: line.quantity ?? null, unitPrice: line.unitPrice ?? null, raft: line.raft ? { id: line.raft.id, code: line.raft.code, zoneId: line.raft.zoneId, zoneName: line.raft.zoneCode } : null,
-      supplierLotCode: line.supplierLotCode ?? null, seedLotCode: line.seedLotCode ?? null, seeded: line.seeded, returned: line.returnedQuantity, returnable: line.returnable, discount: line.discount ?? 0,
+      supplierLotCode: line.supplierLotCode ?? null, seedLotCode: line.seedLotCode ?? null, seedLot: line.seedLot ?? null, seeded: line.seeded, returned: line.returnedQuantity, returnable: line.returnable, discount: line.discount ?? 0,
       netUnitPrice: line.netUnitPrice ?? netUnit(view, line),
     })),
     returns: view.returns.map((item) => ({ id: item.id, code: item.code, date: item.returnDate, returnedAt: item.returnedAt ?? null, reason: item.reason, value: item.netValue, statusId: item.statusId })),
@@ -59,7 +62,7 @@ function toReceipt(view: c.ReceiptView): Receipt {
 function toReturn(view: c.ReturnView, items: readonly ItemOption[]): PurchaseReturn {
   const refund = view.refunds.find((row) => row.statusId === 1801);
   return {
-    id: view.id, code: view.code, date: view.returnDate, returnedAt: view.returnedAt ?? `${view.returnDate}T00:00:00+07:00`, rowVersion: view.rowVersion, receipt: view.receipt ?? null, supplier: supplierOf(view.supplier), zone: zoneOf(view.zone),
+    id: view.id, code: view.code, kind: kindOf(view.kind, view.lines.map((line) => items.find((item) => item.id === line.itemId)?.group)), date: view.returnDate, returnedAt: view.returnedAt ?? `${view.returnDate}T00:00:00+07:00`, rowVersion: view.rowVersion, receipt: view.receipt ?? null, supplier: supplierOf(view.supplier), zone: zoneOf(view.zone),
     recordedBy: view.recordedBy.name, statusId: view.statusId, reason: view.reason, discount: view.discount, value: view.returnValue, netValue: view.netValue, cancelReason: view.cancelReason ?? null,
     refund: refund ? { code: refund.code, amount: refund.amount, method: refund.method, bankReference: refund.bankReference ?? null } : null,
     lines: view.lines.map((line, index) => { const known = items.find((item) => item.id === line.itemId); return { id: `${view.id}:${index}`, receiptLineId: line.receiptLineId ?? null, itemUnitId: line.itemUnitId ?? null, unitFactor: line.unitFactor ?? 1, quantity: line.quantity, unitPrice: line.unitPrice,
@@ -72,8 +75,8 @@ export function listReceipts(query: ReceiptQuery, signal?: AbortSignal): Promise
   return read({ action: "receipts", ...receiptFilters(query), page: String(query.page), pageSize: String(query.pageSize) }, c.receiptSearch, signal).then((result) => map(result, (data) => ({
     items: data.page.items, page: data.page.page, total: data.page.total, totals: { received: data.totals.receiptsTotal, returned: data.totals.returnsTotal, net: data.totals.netTotal } })));
 }
-const receiptFilters = (query: ReceiptQuery): Params => ({ search: query.search.trim(), statusIds: query.statusId, itemGroups: query.group, supplierId: query.supplierId, from: query.from, to: query.to, sortBy: sortKey(query.sortBy), sortDir: query.sortDir });
-const returnFilters = (query: ReturnQuery): Params => ({ search: query.search.trim(), statusIds: query.statusId, source: query.source, supplierId: query.supplierId, from: query.from, to: query.to, sortBy: sortKey(query.sortBy), sortDir: query.sortDir });
+const receiptFilters = (query: ReceiptQuery): Params => ({ kind: query.kind, search: query.search.trim(), statusIds: query.statusId, itemGroups: query.group, supplierId: query.supplierId, from: query.from, to: query.to, sortBy: sortKey(query.sortBy), sortDir: query.sortDir });
+const returnFilters = (query: ReturnQuery): Params => ({ kind: query.kind, search: query.search.trim(), statusIds: query.statusId, source: query.source, supplierId: query.supplierId, from: query.from, to: query.to, sortBy: sortKey(query.sortBy), sortDir: query.sortDir });
 
 export const getReceipt = (id: string, signal?: AbortSignal) => read({ action: "receipt", id }, c.receiptView, signal).then((result) => map(result, toReceipt));
 export const getReceiptPayments = (id: string, signal?: AbortSignal): Promise<WorkspaceResult<ReceiptPayment[]>> => read({ action: "receipt-payments", id }, c.receiptPayments, signal).then((result) => map(result, (rows) =>
@@ -83,7 +86,7 @@ export const getReceiptCopy = (id: string, signal?: AbortSignal) => read({ actio
 export function saveReceipt(draft: ReceiptDraft, complete: boolean) {
   // The picker gives the cooperative's wall time; the API takes an instant with its +07:00 offset.
   const receivedAt = draft.receivedAt ? `${draft.receivedAt.slice(0, 16)}:00+07:00` : null;
-  const body = { code: draft.code.trim() || null, supplierId: draft.supplierId || null, receiptDate: receivedAt ? receivedAt.slice(0, 10) : null, receivedAt, receivedById: draft.receivedById || null, notes: draft.notes || null, discount: draft.discount, zoneId: null, complete, rowVersion: draft.rowVersion ?? null,
+  const body = { ...(draft.kind && !draft.id ? { kind: draft.kind } : {}), code: draft.code.trim() || null, supplierId: draft.supplierId || null, receiptDate: receivedAt ? receivedAt.slice(0, 10) : null, receivedAt, receivedById: draft.receivedById || null, notes: draft.notes || null, discount: draft.discount, zoneId: null, complete, rowVersion: draft.rowVersion ?? null,
     lines: draft.lines.map((line) => ({ lineId: line.lineId, itemId: line.itemId || null, itemUnitId: line.itemUnitId, quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode || null, raftId: null })) };
   return write({ action: "save-receipt", id: draft.id, body }, c.receiptView).then((result) => map(result, toReceipt));
 }

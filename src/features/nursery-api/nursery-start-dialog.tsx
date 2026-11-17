@@ -17,22 +17,23 @@ import { useToast } from "@/components/ui/toast-provider";
 import { RecordCrewPicker } from "@/features/cultivation-api/record-crew-picker";
 import { crewAssignmentNotice } from "@/features/cultivation-api/record-crew-assignment-notice";
 
-export function NurseryStartDialog({ zones, initialZone, onClose, onSaved }: { zones: readonly ZoneRow[]; initialZone: string; onClose(): void; onSaved(batch: NurseryDetail): void }) {
+/** `initialLotId` starts the form with that seed lot chosen (a link from the Lô giống screen); a lot the zone does not offer leaves the choice empty and the form asks for it. */
+export function NurseryStartDialog({ zones, initialZone, initialLotId = "", onClose, onSaved }: { zones: readonly ZoneRow[]; initialZone: string; initialLotId?: string; onClose(): void; onSaved(batch: NurseryDetail): void }) {
   const [zoneId, setZoneId] = useState(zones.some(zone => zone.id === initialZone) ? initialZone : zones[0]?.id ?? "");
   return <Dialog open size="lg" title="Bắt đầu ươm giống" onOpenChange={open => { if (!open) onClose(); }} onCloseRequest={onClose} dismissible={false}>
-    <StartForm key={zoneId} zones={zones} zoneId={zoneId} onZone={setZoneId} onClose={onClose} onSaved={onSaved} />
+    <StartForm key={zoneId} zones={zones} zoneId={zoneId} initialLotId={initialLotId} onZone={setZoneId} onClose={onClose} onSaved={onSaved} />
   </Dialog>;
 }
-function StartForm({ zones, zoneId, onZone, onClose, onSaved }: { zones: readonly ZoneRow[]; zoneId: string; onZone(id: string): void; onClose(): void; onSaved(batch: NurseryDetail): void }) {
+function StartForm({ zones, zoneId, initialLotId, onZone, onClose, onSaved }: { zones: readonly ZoneRow[]; zoneId: string; initialLotId: string; onZone(id: string): void; onClose(): void; onSaved(batch: NurseryDetail): void }) {
   const lots = useRemote(useCallback((signal: AbortSignal) => nurseryService.lots(zoneId, signal), [zoneId]));
-  const [lotId, setLotId] = useState(""), [quantity, setQuantity] = useState(""), [date, setDate] = useState(businessToday), [note, setNote] = useState(""), [crew, setCrew] = useState<string[]>([]);
+  const [lotId, setLotId] = useState(initialLotId), [quantity, setQuantity] = useState(""), [date, setDate] = useState(businessToday), [note, setNote] = useState(""), [crew, setCrew] = useState<string[]>([]);
   const [photos, setPhotos] = useState<NurseryPhotoDraft[]>([]), [photoBusy, setPhotoBusy] = useState(false), [review, setReview] = useState(false), [error, setError] = useState<string>();
   const { notify } = useToast(), mutation = useNurseryMutation(), confirmation = useActionDialog(), lot = lots.data?.lots.find(item => item.id === lotId);
   const zone = zones.find(item => item.id === zoneId);
   // The pieces leave the lot's stock at the start (no negative stock): above what is on hand is refused here, before the review, as well as by the backend.
   const typed = nurseryQuantityValue(quantity);
   const overStock = lot && lot.onHand != null && Number.isFinite(typed) && typed > lot.onHand ? `Số mảnh: lô ${lot.code} chỉ còn ${quantityText(lot.onHand, lot.unit)} trong kho. Nhập tối đa ${quantityText(lot.onHand, lot.unit)}.` : undefined;
-  async function leave(action: () => void) { if (!mutation.busy() && !photoBusy && (!(quantity || note || photos.length || lotId || crew.length) || await confirmation.confirm("Bỏ thông tin ươm giống chưa lưu?"))) action(); }
+  async function leave(action: () => void) { if (!mutation.busy() && !photoBusy && (!(quantity || note || photos.length || lotId !== initialLotId || crew.length) || await confirmation.confirm("Bỏ thông tin ươm giống chưa lưu?"))) action(); }
   function validate() {
     if (!lot) return "Lô giống: chọn lô giống trong kho.";
     if (!quantity || !Number.isFinite(nurseryQuantityValue(quantity)) || nurseryQuantityValue(quantity) <= 0) return "Số mảnh: nhập số lớn hơn 0, tối đa 2 chữ số thập phân.";

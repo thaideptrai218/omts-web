@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,12 +9,14 @@ import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/man
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
+import { productHref } from "@/features/products/product-helpers";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { DISCONTINUED, typeLabel, type ItemView, type UnitView } from "./contracts";
 import { baseUnitOf, inUnitPrice, inUnitQuantity } from "./item-helpers";
 import { ItemLotsTab } from "./item-lots-tab";
 import { ItemMovementsTab } from "./item-movements-tab";
+import { kindOfGroup, kindText } from "./stock-kind";
 import { errorText, inputRepository } from "./repository";
 import styles from "./input-items.module.css";
 
@@ -34,7 +37,7 @@ export function ItemDetailPanel({ id, unit, access, onEdit, onChanged, onRemoved
     <Subtabs<Tab> label="Nội dung vật tư" tabs={tabs} value={tab} onChange={setTab} />
     {tab === "info" && <InfoTab record={record} unit={unit} access={access} onEdit={onEdit} onChanged={changed} onRemoved={onRemoved} />}
     {tab === "description" && <DescriptionTab record={record} access={access} onEdit={onEdit} onChanged={changed} onRemoved={onRemoved} />}
-    {tab === "movements" && <ItemMovementsTab itemId={id} canExport={access.exportFile} note={unit && !unit.isBase ? <>Lưu ý: Nhập – xuất được tính theo đơn vị cơ bản ({baseUnitOf(record.units)?.name ?? record.unit}); còn lại tương ứng với đơn vị ({unit.name}) là: <strong>{fmt(inUnitQuantity(record.onHand, unit.factor))}</strong></> : undefined} />}
+    {tab === "movements" && <ItemMovementsTab itemId={id} group={record.group} canExport={access.exportFile} note={unit && !unit.isBase ? <>Lưu ý: Nhập – xuất được tính theo đơn vị cơ bản ({baseUnitOf(record.units)?.name ?? record.unit}); còn lại tương ứng với đơn vị ({unit.name}) là: <strong>{fmt(inUnitQuantity(record.onHand, unit.factor))}</strong></> : undefined} />}
     {tab === "lots" && <ItemLotsTab itemId={id} canDelete={access.owner} onChanged={onChanged} />}
   </section>;
 }
@@ -57,7 +60,7 @@ function InfoTab(props: TabProps) {
     ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
   ] : [
     ["Mã hàng", record.code], ["Tên hàng", record.name], ["Loại hàng", typeLabel(record.group)], ["Nhóm hàng", record.itemGroupName],
-    ...(record.group === "Seed" ? [["Loại hàu bán ra", record.productName] as [string, ReactNode]] : []),
+    ...(record.group === "Seed" ? [["Loại hàu bán ra", record.product?.code ? <Link key="product" className={styles.link} href={productHref(record.product.code)}>{record.product.name}</Link> : record.product?.name ?? record.productName] as [string, ReactNode]] : []),
     ["Đơn vị tính", <span key="units" className={styles.unitList}>{record.units.map((unit) => <span key={unit.id}>{unit.name} <small>· {unit.code}</small></span>)}</span>],
     ["Giá vốn", record.costPrice == null ? null : `${fmt(record.costPrice)} / ${base?.name ?? ""}`], ["Giá nhập cuối", record.lastPurchasePrice == null ? null : `${fmt(record.lastPurchasePrice)} / ${base?.name ?? ""}`],
     ["Còn lại", quantity(record.onHand)], ["Giá trị còn lại", fmt(record.stockValue)], ["Định mức tối thiểu", quantity(record.minQuantity)], ["Định mức tối đa", quantity(record.maxQuantity)],
@@ -123,7 +126,7 @@ function ItemActions({ record, access, onEdit, onChanged, onRemoved }: TabProps)
     </div>
     <div>
       {access.owner && !discontinued && <Button className="w-auto" disabled={pending} onClick={() => onEdit(record, false)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
-      {canReceive && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => router.push(`/operations/purchase-receipts/new?item=${record.id}`)}><InterfaceIcon name="receipt" className="size-4" />Nhập hàng</Button>}
+      {canReceive && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => router.push(`${kindText[kindOfGroup(record.group)].receiptsPath}/new?item=${record.id}`)}><InterfaceIcon name="receipt" className="size-4" />{kindText[kindOfGroup(record.group)].receipt}</Button>}
       {canIssue && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => router.push(`/inputs/uses/new?item=${record.id}`)}><InterfaceIcon name="material" className="size-4" />Xuất dùng</Button>}
       {access.owner && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => void toggle()}><InterfaceIcon name="lock" className="size-4" />{discontinued ? "Tiếp tục sử dụng" : "Ngừng sử dụng"}</Button>}
     </div>
