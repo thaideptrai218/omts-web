@@ -29,9 +29,10 @@ export function NurseryScreen() {
   const zones = useZoneChoice(allowed);
   if (!operationAllowed("cultivation-cycles", identity, permissions.functionPermissions)) return <p role="alert">Bạn không có quyền xem ươm giống.</p>;
   if (!zones.remote.data) return zones.remote.error ? <ListStateMessage error={zones.remote.error} onRetry={zones.remote.reload} /> : <ListSkeleton />;
-  return <NurseryDirectory key={`${params.get("code") ?? ""}:${params.get("zoneId") ?? ""}:${zones.zones.map(zone => zone.id).join(",")}`} zones={zones.zones} initialZone={params.get("zoneId") ?? ""} />;
+  // `lot` (from the Lô giống screen) opens the start dialog with that seed lot chosen.
+  return <NurseryDirectory key={`${params.get("code") ?? ""}:${params.get("zoneId") ?? ""}:${params.get("lot") ?? ""}:${zones.zones.map(zone => zone.id).join(",")}`} zones={zones.zones} initialZone={params.get("zoneId") ?? ""} initialLot={params.get("lot") ?? ""} />;
 }
-function NurseryDirectory({ zones, initialZone }: { zones: readonly ZoneRow[]; initialZone: string }) {
+function NurseryDirectory({ zones, initialZone, initialLot }: { zones: readonly ZoneRow[]; initialZone: string; initialLot: string }) {
   const params = useSearchParams(), code = params.get("code") ?? "";
   const { identity, permissions } = useApiWorkspace(), { notify } = useToast();
   const guard = useUnsavedGuard();
@@ -40,7 +41,7 @@ function NurseryDirectory({ zones, initialZone }: { zones: readonly ZoneRow[]; i
   const [time, setTime] = useState<TimeRangeValue>({ kind: "preset", preset: "all", from: "", to: "" });
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
   const [expanded, setExpanded] = useState<string>(), [linkPlaced, setLinkPlaced] = useState(!code), [detailVersion, setDetailVersion] = useState(0);
-  const [creating, setCreating] = useState(false), [completing, setCompleting] = useState<{ batch: NurseryDetail; mode: CompletionMode }>();
+  const [creating, setCreating] = useState(!!initialLot), [completing, setCompleting] = useState<{ batch: NurseryDetail; mode: CompletionMode }>();
   const [stored, store] = useStoredValue("omts-columns-nursery-v2", nurseryColumns.map(column => column.key).join(",")), visible = nurseryColumns.filter(column => stored.split(",").includes(column.key)).map(column => column.key);
   const list = useRemote(useCallback((signal: AbortSignal) => zoneId ? nurseryService.list({ zoneId, search, status: status || "all", ...(time.from ? { from: time.from } : {}), ...(time.to ? { to: time.to } : {}), page: String(page), pageSize: String(pageSize), sortBy: sort.key, sortDir: sort.direction }, signal)
     : Promise.resolve({ status: "success" as const, data: { items: [], page: 1, pageSize, total: 0 } }), [zoneId, search, status, time.from, time.to, page, pageSize, sort.key, sort.direction]));
@@ -62,7 +63,7 @@ function NurseryDirectory({ zones, initialZone }: { zones: readonly ZoneRow[]; i
       {list.loading ? <ListSkeleton /> : list.error ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại đợt ươm" /> : !rows.length ? <ListStateMessage>{search || status || time.from ? "Không có đợt ươm phù hợp bộ lọc." : "Chưa có đợt ươm giống nào."}</ListStateMessage>
         : <NurseryTable rows={rows} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expanded={expanded} onToggle={id => void guard.leave(() => setExpanded(value => value === id ? undefined : id))} detail={row => <NurseryDetailPanel key={`${row.id}:${detailVersion}`} id={row.id} zoneId={row.zoneId} guard={guard} onChanged={saved} onComplete={batch => setCompleting({ batch, mode: "complete" })} onCorrect={batch => setCompleting({ batch, mode: "survivors" })} />} />}
     </ManagementScroller>
-    {creating && <NurseryStartDialog zones={createZones} initialZone={zoneId} onClose={() => setCreating(false)} onSaved={batch => saved(batch, "Đã bắt đầu ươm giống, đợt")} />}
+    {creating && createZones.length > 0 && <NurseryStartDialog zones={createZones} initialZone={zoneId} initialLotId={initialLot} onClose={() => setCreating(false)} onSaved={batch => saved(batch, "Đã bắt đầu ươm giống, đợt")} />}
     {completing && <NurseryCompleteDialog batch={completing.batch} mode={completing.mode} onClose={() => setCompleting(undefined)} onSaved={batch => saved(batch, completing.mode === "complete" ? "Đã hoàn tất ươm, đợt" : "Đã sửa số sống sót (ước tính), đợt")} />}
   </ManagementLayout>;
 }

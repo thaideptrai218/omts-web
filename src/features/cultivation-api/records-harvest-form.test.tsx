@@ -37,8 +37,11 @@ it("records a lot from a plan line: lanes come from the plan and cannot be chang
   const fixed = screen.getByRole("group", { name: /theo kế hoạch KHT000001 \(cố định\)/ });
   const boxes = within(fixed).getAllByRole("checkbox") as HTMLInputElement[];
   expect(boxes.map((box) => [box.checked, box.disabled])).toEqual([[true, true], [true, true]]);
-  const select = await screen.findByLabelText("Sản phẩm dòng 1") as HTMLSelectElement;
-  await waitFor(() => expect(select.value).toBe(ids.product));
+  // The product of the line is the plan's: shown as text, with nothing to pick and no way to add or drop a line.
+  await waitFor(() => expect(screen.getByLabelText("Sản phẩm dòng 1").textContent).toBe("Hàu sữa (SP000001)"));
+  expect(screen.getByLabelText("Sản phẩm dòng 1").tagName).not.toBe("SELECT");
+  expect(screen.queryByRole("button", { name: "+ Thêm sản phẩm" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Bỏ dòng/ })).toBeNull();
   expect((screen.getByLabelText("Số lồng dòng 1") as HTMLInputElement).value).toBe("6");
   // Of the planned lanes the trip may finish some, like a normal harvest.
   await user.click(within(screen.getByRole("group", { name: "Làn đã thu hết hàu trong chuyến này" })).getByLabelText("Làn 3"));
@@ -56,7 +59,7 @@ it("takes half a cage on a product line and sends the sum of the lines as the ca
   const user = userEvent.setup();
   render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={{ lineId: ids.line, planCode: "KHT000001", laneNumbers: [2], expectedProductId: ids.product, expectedCageCount: 2.5 }} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
   expect((await screen.findByLabelText("Số lồng dòng 1") as HTMLInputElement).value).toBe("2,5");
-  await waitFor(() => expect((screen.getByLabelText("Sản phẩm dòng 1") as HTMLSelectElement).value).toBe(ids.product));
+  await waitFor(() => expect(screen.getByLabelText("Sản phẩm dòng 1").textContent).toBe("Hàu sữa (SP000001)"));
   await attachPhoto();
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await user.click(await screen.findByRole("button", { name: "Đồng ý" }));

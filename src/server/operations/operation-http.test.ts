@@ -15,22 +15,25 @@ function configure(subjectType = "CooperativeOwner", permissions: FunctionPermis
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 const get = (query: string) => new Request(`http://localhost:3002/api/operations/water?${query}`);
 describe("operations BFF authorization and evidence boundary", () => {
-  it("sends the product lines of a harvest lot as indexed form fields and leaves an empty kg out", async () => {
+  it("sends the one product line of a harvest lot as indexed form fields, leaves an empty kg out and refuses a second line", async () => {
     configure(); const raft = ids.receipt, zone = ids.item, product = ids.supplier ?? ids.receipt;
     const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ lot: { id: ids.receipt, lotCode: "L1" } }, { status: 201 }));
     const form = new FormData();
     form.append("files", new File([new Uint8Array([1])], "a.jpg", { type: "image/jpeg" }));
-    form.set("payload", JSON.stringify({ laneNumbers: [1], finishedLaneNumbers: [], cageCount: 5, estimatedKg: null, productLines: [{ productId: product, cageCount: 3, kg: 75 }, { productId: ids.item, cageCount: 2, kg: null }] }));
+    form.set("payload", JSON.stringify({ laneNumbers: [1], finishedLaneNumbers: [], cageCount: 5, estimatedKg: null, productLines: [{ productId: product, cageCount: 5, kg: null }] }));
     const request = new Request(`http://localhost:3002/api/operations/harvest?action=harvest-record&id=${raft}&zoneId=${zone}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form });
     expect((await handleOperationRequest(request, "harvest")).status).toBe(200);
     const sent = fetcher.mock.calls[0][1]!.body as FormData, keys = [...sent.keys()];
     expect(sent.get("productLines[0].productId")).toBe(product);
-    expect(sent.get("productLines[0].cageCount")).toBe("3");
-    expect(sent.get("productLines[0].kg")).toBe("75");
-    expect(sent.get("productLines[1].cageCount")).toBe("2");
-    expect(keys).not.toContain("productLines[1].kg");
-    expect(keys.filter((key) => key.startsWith("productLines"))).toHaveLength(5);
+    expect(sent.get("productLines[0].cageCount")).toBe("5");
+    expect(keys).not.toContain("productLines[0].kg");
+    expect(keys.filter((key) => key.startsWith("productLines"))).toHaveLength(2);
     expect(sent.get("cageCount")).toBe("5");
+    const two = new FormData();
+    two.append("files", new File([new Uint8Array([1])], "a.jpg", { type: "image/jpeg" }));
+    two.set("payload", JSON.stringify({ laneNumbers: [1], finishedLaneNumbers: [], cageCount: 5, estimatedKg: null, productLines: [{ productId: product, cageCount: 3, kg: 75 }, { productId: ids.item, cageCount: 2, kg: null }] }));
+    expect((await handleOperationRequest(new Request(`http://localhost:3002/api/operations/harvest?action=harvest-record&id=${raft}&zoneId=${zone}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: two }), "harvest")).status).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("sends the plan line of a lot recorded from a harvest plan as a form field and refuses a malformed one or one on a correction", async () => {
     configure(); const raft = ids.receipt, zone = ids.item, line = ids.supplier ?? ids.receipt;

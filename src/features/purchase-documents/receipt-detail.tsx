@@ -11,7 +11,9 @@ import { DatePickerField } from "@/components/ui/management-screen/date-picker-f
 import { PersonPicker } from "@/components/ui/management-screen/person-picker";
 import { ListStateMessage, Subtabs, managementStyles } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
+import { itemHref as itemLink, kindText, returnHref, seedLotsHref } from "@/features/input-items/stock-kind";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
+import { SeedLotStateBadge, combinedSeedLotState } from "@/features/seed-lots/seed-lot-state";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { errorText, fmt, methodLabel, nowLocal, viDate, viDateTime, vnLocal, type usePurchaseAccess } from "./document-parts";
 import { PriceSetupDialog } from "./price-setup-dialog";
@@ -28,14 +30,14 @@ export const supplierHref = (document: { supplier: { code?: string | null }; sup
   const code = document.supplierCode ?? document.supplier.code;
   return code ? `/workspace/suppliers?code=${encodeURIComponent(code)}` : "/workspace/suppliers";
 };
-/** Opens the catalogue on that one item, searched by its unique code. */
-export const itemHref = (code: string) => `/inputs/items?code=${encodeURIComponent(code)}`;
+/** Opens the catalogue of its kind on that one item, searched by its unique code; an item of unknown group goes to the address that looks it up. */
+export const itemHref = (code: string, group?: string | null) => itemLink(code, group);
 
 export function ReceiptDetailPanel({ id, access, onChanged }: { id: string; access: Access; onChanged(message: string): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => getReceipt(id, signal), [id]));
   const [tab, setTab] = useState<Tab>("info");
-  const receipt = remote.data;
-  const tabs = useMemo(() => [{ key: "info" as const, label: "Thông tin" }, ...(receipt?.statusId === RECEIPT.completed ? [{ key: "payments" as const, label: "Lịch sử thanh toán" }, { key: "returns" as const, label: "Trả hàng nhập" }] : [])], [receipt?.statusId]);
+  const receipt = remote.data, returnLabel = receipt ? kindText[receipt.kind].receiptReturn : "";
+  const tabs = useMemo(() => [{ key: "info" as const, label: "Thông tin" }, ...(receipt?.statusId === RECEIPT.completed ? [{ key: "payments" as const, label: "Lịch sử thanh toán" }, { key: "returns" as const, label: returnLabel }] : [])], [receipt?.statusId, returnLabel]);
   if (remote.loading) return <div className={listStyles.detail}><Skeleton /></div>;
   if (remote.error || !receipt) return <ListStateMessage error={remote.error ?? "Không tải được phiếu."} onRetry={remote.reload} retryLabel="Tải lại phiếu" />;
   return <section className={listStyles.detail} aria-label={`Chi tiết ${receipt.code}`}>
@@ -64,22 +66,24 @@ export function InfoTab({ receipt, header, editable, onHeader, headTools }: { re
   const receivers = receipt.receivedBy && !lookups.receivers.some((row) => row.id === receipt.receivedBy!.id) ? [receipt.receivedBy, ...lookups.receivers] : lookups.receivers;
   const goods = goodsTotal(receipt.lines), quantity = receipt.lines.reduce((sum, line) => sum + (line.quantity ?? 0), 0);
   const unitDiscounts = receipt.lines.some((line) => line.discount > 0);
+  // A seed receipt shows where its lots stand together (the API's `seedState`; the lines' own states stand in for an API without it); each line shows its own lot below.
+  const seedState = receipt.kind !== "Seed" ? undefined : receipt.seedState ?? combinedSeedLotState(receipt.lines.flatMap((line) => line.seedLot ? [line.seedLot.state] : []));
   return <>
-    <header className={styles.head}><div><h3>{receipt.code}</h3><ReceiptStatus statusId={receipt.statusId} />{headTools}</div></header>
+    <header className={styles.head}><div><h3>{receipt.code}</h3><ReceiptStatus statusId={receipt.statusId} />{seedState && <SeedLotStateBadge state={seedState} />}{headTools}</div></header>
     <div className={styles.headFacts}>
       <div><span>Người tạo:</span><strong>{receipt.recordedBy}</strong></div>
       <div><span>Người nhập:</span>{editable ? <PersonPicker label="Người nhập" people={receivers} value={header.receivedById} placeholder="Chọn người nhập" onChange={(receivedById) => onHeader({ receivedById })} /> : <strong>{receipt.receivedBy?.name ?? "—"}</strong>}</div>
       <div><span>Ngày nhập:</span>{editable ? <DatePickerField label="Ngày nhập" withTime value={header.receivedAt} max={nowLocal()} onChange={(receivedAt) => onHeader({ receivedAt })} /> : <strong>{header.receivedAt.replace("T", " ").split(" ").map((part, index) => index ? part : viDate(part)).join(" ")}</strong>}</div>
       <div><span>Tên NCC:</span><Link className={styles.link} href={supplierHref(receipt)}>{receipt.supplier.name}</Link></div>
-      {receipt.returns.some((item) => item.statusId === RETURN.recorded) && <div><span>Mã trả hàng:</span><span className={styles.codeList}>{receipt.returns.filter((item) => item.statusId === RETURN.recorded).map((item) => <Link key={item.id} className={styles.link} href={`/operations/purchase-returns?code=${item.code}`}>{item.code}</Link>)}</span></div>}
+      {receipt.returns.some((item) => item.statusId === RETURN.recorded) && <div><span>Mã trả hàng:</span><span className={styles.codeList}>{receipt.returns.filter((item) => item.statusId === RETURN.recorded).map((item) => <Link key={item.id} className={styles.link} href={returnHref(item.code, receipt.kind)}>{item.code}</Link>)}</span></div>}
       {receipt.cancelReason && <div><span>Lý do hủy:</span><span className={styles.danger}>{receipt.cancelReason}</span></div>}
     </div>
     <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>Mã hàng</th><th>Tên hàng</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Đơn giá</th><th className={styles.num}>Giảm giá</th><th className={styles.num}>Giá nhập</th><th className={styles.num}>Thành tiền</th></tr></thead>
       <tbody>
         <tr className={styles.lineSearch}><td style={{ width: 140 }}><input type="search" aria-label="Tìm mã hàng" placeholder="Tìm mã" value={codeTerm} onChange={(event) => setCodeTerm(event.target.value)} /></td><td><input type="search" aria-label="Tìm tên hàng" placeholder="Tìm tên hàng" value={nameTerm} onChange={(event) => setNameTerm(event.target.value)} /></td><td colSpan={5} /></tr>
         {shown.map((line) => <tr key={line.id}>
-          <td>{line.item.id ? <Link className={styles.link} href={itemHref(line.item.code)}>{line.item.code}</Link> : line.item.code}</td>
-          <td>{line.item.name} <span className={styles.sub}>{line.item.unit}{line.seedLotCode ? ` · Lô giống ${line.seedLotCode}` : ""}{line.supplierLotCode ? ` · Lô NCC ${line.supplierLotCode}` : ""}</span></td>
+          <td>{line.item.id ? <Link className={styles.link} href={itemHref(line.item.code, line.item.group)}>{line.item.code}</Link> : line.item.code}</td>
+          <td>{line.item.name} <span className={styles.sub}>{line.item.unit}{line.seedLotCode ? <> · Lô giống <Link className={styles.link} href={seedLotsHref(line.seedLotCode)}>{line.seedLotCode}</Link></> : ""}{line.seedLot ? <> · <SeedLotStateBadge state={line.seedLot.state} />{line.seedLot.remainingQty > 0 ? ` còn ${fmt(line.seedLot.remainingQty)}` : ""}</> : ""}{line.supplierLotCode ? ` · Lô NCC ${line.supplierLotCode}` : ""}</span></td>
           <td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}>{line.discount ? fmt(line.discount) : ""}</td>
           <td className={styles.num}>{fmt((line.unitPrice ?? 0) - line.discount)}</td><td className={styles.num}><strong>{fmt(lineAmount(line))}</strong></td></tr>)}
         {!shown.length && <tr><td colSpan={7} className={styles.empty}>Không có dòng hàng phù hợp.</td></tr>}
@@ -110,7 +114,7 @@ function PaymentsTab({ receipt }: { receipt: Receipt }) {
 function ReturnsTab({ receipt }: { receipt: Receipt }) {
   if (!receipt.returns.length) return <p className={styles.empty}>Phiếu này chưa có phiếu trả hàng.</p>;
   return <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>Mã phiếu trả</th><th>Thời gian trả</th><th>Lý do</th><th className={styles.num}>Giá trị</th><th>Trạng thái</th></tr></thead>
-    <tbody>{receipt.returns.map((item) => <tr key={item.id}><td><Link className={managementStyles.linkButton} href={`/operations/purchase-returns?code=${item.code}`}>{item.code}</Link></td><td>{item.returnedAt ? viDateTime(item.returnedAt) : viDate(item.date)}</td><td>{item.reason}</td><td className={styles.num}>{fmt(item.value)}</td><td>{returnStatusLabel[item.statusId]}</td></tr>)}</tbody></table></div>;
+    <tbody>{receipt.returns.map((item) => <tr key={item.id}><td><Link className={managementStyles.linkButton} href={returnHref(item.code, receipt.kind)}>{item.code}</Link></td><td>{item.returnedAt ? viDateTime(item.returnedAt) : viDate(item.date)}</td><td>{item.reason}</td><td className={styles.num}>{fmt(item.value)}</td><td>{returnStatusLabel[item.statusId]}</td></tr>)}</tbody></table></div>;
 }
 
 function Actions({ receipt, access, header, onChanged, onSaved }: { receipt: Receipt; access: Access; header?: Header; onChanged(message: string): void; onSaved(): void }) {
@@ -141,13 +145,13 @@ function Actions({ receipt, access, header, onChanged, onSaved }: { receipt: Rec
     <div>
       {draft && access.remove && <Button className="w-auto" variant="ghost" onClick={() => void remove()}><InterfaceIcon name="trash" className="size-4" />Xóa phiếu tạm</Button>}
       {completed && access.remove && <Button className="w-auto" variant="ghost" onClick={() => void openCancel()}><InterfaceIcon name="trash" className="size-4" />Hủy</Button>}
-      {!draft && access.create && <Button className="w-auto" variant="ghost" onClick={() => router.push(`/operations/purchase-receipts/new?copy=${receipt.id}`)}><InterfaceIcon name="document" className="size-4" />Sao chép</Button>}
+      {!draft && access.create && <Button className="w-auto" variant="ghost" onClick={() => router.push(`${kindText[receipt.kind].receiptsPath}/new?copy=${receipt.id}`)}><InterfaceIcon name="document" className="size-4" />Sao chép</Button>}
     </div>
     <div>
-      {canOpen && <Button className="w-auto" onClick={() => router.push(`/operations/purchase-receipts/${receipt.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Mở phiếu</Button>}
+      {canOpen && <Button className="w-auto" onClick={() => router.push(`${kindText[receipt.kind].receiptsPath}/${receipt.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Mở phiếu</Button>}
       {canOpen && <Button className="w-auto" variant="secondary" isPending={pending} disabled={!header} onClick={() => void saveHeader()}><InterfaceIcon name="check" className="size-4" />Lưu</Button>}
       {access.owner && receipt.statusId !== RECEIPT.cancelled && <Button className="w-auto" variant="secondary" onClick={() => setPricing(true)}><InterfaceIcon name="payment" className="size-4" />Thiết lập giá</Button>}
-      {canReturn && <Button className="w-auto" variant="secondary" onClick={() => router.push(`/operations/purchase-returns/new?receipt=${receipt.id}`)}><InterfaceIcon name="upload" className="size-4" />Trả hàng nhập</Button>}
+      {canReturn && <Button className="w-auto" variant="secondary" onClick={() => router.push(`${kindText[receipt.kind].returnsPath}/new?receipt=${receipt.id}`)}><InterfaceIcon name="upload" className="size-4" />{kindText[receipt.kind].receiptReturn}</Button>}
     </div>
     {pricing && <PriceSetupDialog receiptId={receipt.id} receiptCode={receipt.code} onClose={() => setPricing(false)} />}
     {preview && <CancelDialog receipt={receipt} preview={preview} onClose={() => setPreview(undefined)} onDone={() => { setPreview(undefined); onChanged(`Đã hủy phiếu ${receipt.code}.`); }} />}

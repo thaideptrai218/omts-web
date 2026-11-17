@@ -1,7 +1,8 @@
 "use client";
 import { useToast } from "@/components/ui/toast-provider";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { kindOfGroup, kindText, type StockKind } from "@/features/input-items/stock-kind";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -22,10 +23,13 @@ type Refund = { amount: number; method: PaymentMethod; bankReference: string };
 type FreeLine = { key: string; item: ItemOption; itemUnitId: string | null; unitName: string; unitFactor: number; quantity: number; unitPrice: number };
 const freeLineOf = (item: ItemOption): FreeLine => { const base = baseUnitOf(item); return { key: crypto.randomUUID(), item, itemUnitId: base?.id ?? null, unitName: base?.name ?? item.unit, unitFactor: base?.factor ?? 1, quantity: 0, unitPrice: 0 }; };
 type Start = { record?: PurchaseReturn; receipt?: Receipt };
-const LIST = "/operations/purchase-returns";
 
-/** A return is either bound to one receipt, where the receipt caps quantities and sets prices, or standalone with goods and prices typed in. */
-export function ReturnEditorPage({ id, receiptId }: { id?: string; receiptId?: string }) {
+/**
+ * A return is either bound to one receipt, where the receipt caps quantities and sets prices, or standalone with goods and prices typed in.
+ * `kind` fixes the screen to Trả giống nhập or Trả vật tư nhập. `lineId` (from a seed lot, with `receiptId`) starts the return with that receipt line at the quantity still returnable.
+ */
+export function ReturnEditorPage({ kind, id, receiptId, lineId }: { kind: StockKind; id?: string; receiptId?: string; lineId?: string }) {
+  const router = useRouter();
   const remote = useRemote<Start>(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<Start>> => {
     let record: PurchaseReturn | undefined;
     if (id) { const result = await getReturn(id, signal); if (result.status !== "success") return result; record = result.data; }
@@ -35,14 +39,24 @@ export function ReturnEditorPage({ id, receiptId }: { id?: string; receiptId?: s
     return receipt.status === "success" ? { status: "success", data: { record, receipt: receipt.data } } : receipt;
   }, [id, receiptId]));
   const lookups = usePurchaseLookups();
-  if (remote.loading || lookups.loading) return <Skeleton />;
+  // A return opened on the screen of the other kind (its own, or its receipt's) moves to the screen of its kind.
+  const actualKind = remote.data?.record?.kind ?? remote.data?.receipt?.kind, misplaced = !!actualKind && actualKind !== kind;
+  useEffect(() => {
+    if (!actualKind || actualKind === kind) return;
+    const target = kindText[actualKind].returnsPath;
+    router.replace(id ? `${target}/${id}/edit` : `${target}/new${receiptId ? `?receipt=${receiptId}${lineId ? `&line=${lineId}` : ""}` : ""}`);
+  }, [actualKind, kind, id, receiptId, lineId, router]);
+  if (remote.loading || lookups.loading || misplaced) return <Skeleton />;
   if (remote.error || !remote.data) return <ListStateMessage error={remote.error ?? "Không tải được phiếu."} onRetry={remote.reload} retryLabel="Tải lại" />;
   if (remote.data.record?.statusId === RETURN.cancelled) return <ListStateMessage>Phiếu {remote.data.record.code} đã hủy nên không sửa được.</ListStateMessage>;
-  return <Editor record={remote.data.record} receipt={remote.data.receipt} lookups={lookups} />;
+  return <Editor kind={kind} lineId={lineId} record={remote.data.record} receipt={remote.data.receipt} lookups={lookups} />;
 }
 
-function Editor({ record, receipt, lookups }: { record?: PurchaseReturn; receipt?: Receipt; lookups: ReturnType<typeof usePurchaseLookups> }) {
+function Editor({ kind, lineId, record, receipt, lookups }: { kind: StockKind; lineId?: string; record?: PurchaseReturn; receipt?: Receipt; lookups: ReturnType<typeof usePurchaseLookups> }) {
   const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog(), { notify } = useToast();
+  const text = kindText[kind], LIST = text.returnsPath;
+  // A standalone return offers only the items of its kind.
+  const kindItems = useMemo(() => lookups.items.filter((item) => kindOfGroup(item.group) === kind), [lookups.items, kind]);
   const recorded = record?.statusId === RETURN.recorded;
   // A recorded return already holds its own quantities, so editing it may go back up to what it holds plus what is still free.
   const own = Object.fromEntries(recorded ? record!.lines.flatMap((line) => line.receiptLineId ? [[line.receiptLineId, line.quantity]] : []) : []) as Record<string, number>;
@@ -50,7 +64,12 @@ function Editor({ record, receipt, lookups }: { record?: PurchaseReturn; receipt
   const limit = (line: Receipt["lines"][number]) => line.returnable / line.unitFactor + (own[line.id] ?? 0);
   const [returnedAt, setReturnedAt] = useState(record ? vnLocal(record.returnedAt) : nowLocal());
   const [prices, setPrices] = useState<Record<string, number>>(() => Object.fromEntries([...(receipt?.lines.map((line) => [line.id, line.netUnitPrice]) ?? []), ...(record?.lines.flatMap((line) => line.receiptLineId ? [[line.receiptLineId, line.unitPrice]] : []) ?? [])]));
-  const [linked, setLinked] = useState<Record<string, number>>(() => Object.fromEntries(record?.lines.flatMap((line) => line.receiptLineId ? [[line.receiptLineId, line.quantity]] : []) ?? []));
+  // A new return started from a seed lot (`line`) takes the whole quantity still returnable of that receipt line; the user lowers it.
+  const [linked, setLinked] = useState<Record<string, number>>(() => {
+    if (record) return Object.fromEntries(record.lines.flatMap((line) => line.receiptLineId ? [[line.receiptLineId, line.quantity]] : []));
+    const start = lineId ? receipt?.lines.find((line) => line.id === lineId) : undefined;
+    return start && start.returnable > 0 ? { [start.id]: start.returnable / start.unitFactor } : {};
+  });
   const [free, setFree] = useState<FreeLine[]>(() => record && !record.receipt ? record.lines.map((line) => ({ key: line.id, item: line.item, itemUnitId: line.itemUnitId, unitName: line.item.unit, unitFactor: line.unitFactor, quantity: line.quantity, unitPrice: line.unitPrice })) : []);
   const [code, setCode] = useState(record?.code ?? "");
   const [supplierId, setSupplierId] = useState(record?.supplier.id ?? receipt?.supplier.id ?? ""), [reason, setReason] = useState(record?.reason ?? ""), [discount, setDiscount] = useState(record?.discount ?? 0), [refund, setRefund] = useState<Refund | null>(null);
@@ -86,8 +105,8 @@ function Editor({ record, receipt, lookups }: { record?: PurchaseReturn; receipt
     if (result.status === "success") { notify({ tone: "success", title: `Đã xóa phiếu tạm ${record.code}.` }); router.push(LIST); } else setError(errorText(result));
   }
 
-  return <EditorFrame title={recorded ? `Sửa phiếu trả ${record!.code}` : record ? `Phiếu trả tạm ${record.code}` : "Trả hàng nhập"} backHref={LIST} source={receipt ? `Từ phiếu nhập ${receipt.code}, nhập ngày ${viDate(receipt.date)}` : undefined}
-    tools={<>{!receipt && <ItemFinder placeholder="Tìm hàng trả theo mã hoặc tên" items={lookups.items} onPick={(item) => setFree((current) => [...current, freeLineOf(item)])} />}{record?.statusId === RETURN.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
+  return <EditorFrame title={recorded ? `Sửa phiếu trả ${record!.code}` : record ? `Phiếu trả tạm ${record.code}` : text.receiptReturn} backHref={LIST} source={receipt ? `Từ phiếu nhập ${receipt.code}, nhập ngày ${viDate(receipt.date)}` : undefined}
+    tools={<>{!receipt && <ItemFinder placeholder={`Tìm ${text.noun} trả theo mã hoặc tên`} items={kindItems} onPick={(item) => setFree((current) => [...current, freeLineOf(item)])} />}{record?.statusId === RETURN.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
     {confirmation.dialog}
     <div className={styles.editorBody}>
       <div className={styles.linesPanel}>

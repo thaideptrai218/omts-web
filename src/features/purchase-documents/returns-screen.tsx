@@ -17,6 +17,7 @@ import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
+import { kindText, receiptHref, type StockKind } from "@/features/input-items/stock-kind";
 import { errorText, fmt, methodLabel, usePurchaseAccess, viDate, viDateTime } from "./document-parts";
 import { cancelReturn, download, getReturn, listReturns, removeReturn, usePurchaseLookups } from "./repository";
 import { RETURN, goodsTotal, returnStatusLabel, type Page, type ReturnQuery, type ReturnRow } from "./types";
@@ -28,7 +29,7 @@ const Status = ({ statusId }: { statusId: number }) => <StatusPill tone={tone(st
 const columns: readonly Column[] = [
   { key: "code", label: "Mã trả hàng", sort: "code", render: (row) => <span className="font-mono tabular-nums">{row.code}</span> },
   { key: "date", label: "Thời gian trả", sort: "date", render: (row) => row.returnedAt ? viDateTime(row.returnedAt) : viDate(row.returnDate) },
-  { key: "receipt", label: "Phiếu nhập", render: (row) => row.receiptCode ?? "—" },
+  { key: "receipt", label: "Phiếu nhập", render: (row) => row.receiptCode ? <Link className={styles.link} href={receiptHref(row.receiptCode, row.kind)} onClick={(event) => event.stopPropagation()}>{row.receiptCode}</Link> : "—" },
   { key: "supplierCode", label: "Mã NCC", hidden: true, render: (row) => row.supplierCode },
   { key: "supplier", label: "Nhà cung cấp", sort: "supplier", render: (row) => row.supplier.name },
   { key: "reason", label: "Lý do", hidden: true, render: (row) => row.reason || "—" },
@@ -48,19 +49,20 @@ const emptyFilters = { source: "", supplier: "", status: "" };
  * A link opens this list on one record by its code (`?code=…`). The list is keyed by that code so a link followed while
  * the list is already open starts it again: the search box shows the code and the row with exactly that code opens.
  */
-export function PurchaseReturnsScreen(props: { helpHref?: string }) {
+export function PurchaseReturnsScreen(props: { helpHref?: string; /** Fixes the screen to Trả giống nhập (Seed) or Trả vật tư nhập (Supply). */ kind: StockKind }) {
   const linkedCode = useSearchParams().get("code") ?? "";
-  return <ReturnsList key={linkedCode} linkedCode={linkedCode} {...props} />;
+  return <ReturnsList key={`${props.kind}:${linkedCode}`} linkedCode={linkedCode} {...props} />;
 }
 
-function ReturnsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
+function ReturnsList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCode: string; kind: StockKind }) {
   const access = usePurchaseAccess(), router = useRouter(), lookups = usePurchaseLookups(), exportFile = useMutation(), linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [time, setTime] = useState<TimeRangeValue>(() => linkedCode ? allTime : presetValue("thisMonth"));
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<Page<ReturnRow> & { totalValue: number }>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>(), { notify } = useToast();
-  const [stored, store] = useStoredValue("omts-columns-purchase-returns", defaults);
+  const [stored, store] = useStoredValue(`omts-columns-purchase-returns-${kind}`, defaults);
+  const text = kindText[kind];
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
-  const query = useMemo<ReturnQuery>(() => ({ search, statusId: filters.status, source: filters.source, supplierId: filters.supplier, from: time.from, to: time.to, sortBy: sort.key, sortDir: sort.direction, page, pageSize }), [search, filters, time, sort, page, pageSize]);
+  const query = useMemo<ReturnQuery>(() => ({ kind, search, statusId: filters.status, source: filters.source, supplierId: filters.supplier, from: time.from, to: time.to, sortBy: sort.key, sortDir: sort.direction, page, pageSize }), [kind, search, filters, time, sort, page, pageSize]);
   useEffect(() => {
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -85,11 +87,11 @@ function ReturnsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
     <FilterGroup legend="Nhà cung cấp"><SelectBox aria-label="Nhà cung cấp" className={styles.railSelect} value={filters.supplier} onChange={(event) => setFilter("supplier")(event.target.value)}><option value="">Tất cả nhà cung cấp</option>{lookups.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</SelectBox></FilterGroup>
     <FilterPills legend="Trạng thái" name="return-status" value={filters.status} options={[[String(RETURN.draft), "Phiếu tạm"], [String(RETURN.recorded), "Đã trả hàng"], [String(RETURN.cancelled), "Đã hủy"]]} onChange={setFilter("status")} />
   </>;
-  return <ManagementLayout storageKey="purchase-returns" icon="upload" title="Trả hàng nhập" filters={rail} filterLabel="Bộ lọc phiếu trả"
+  return <ManagementLayout storageKey={`purchase-returns-${kind}`} icon="upload" title={text.receiptReturn} filters={rail} filterLabel={`Bộ lọc ${text.receiptReturn.toLowerCase()}`}
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="phiếu" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm phiếu trả" placeholder="Theo mã phiếu trả, phiếu nhập, nhà cung cấp" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      {access.create && <Button className="w-auto" onClick={() => router.push("/operations/purchase-returns/new")}><InterfaceIcon name="add" className="mr-1 size-4" />Trả hàng nhập</Button>}
+      {access.create && <Button className="w-auto" onClick={() => router.push(`${text.returnsPath}/new`)}><InterfaceIcon name="add" className="mr-1 size-4" />{text.receiptReturn}</Button>}
       {access.exportFile && <Button className="w-auto" variant="secondary" isPending={exportFile.pending} onClick={() => void exportFile.run(() => download("returns", query), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
       <ColumnPicker columns={columns} visible={visible.map((column) => column.key)} onChange={(keys) => store(keys.join(","))} />
       <HelpLink helpHref={helpHref} />
@@ -107,14 +109,14 @@ function ReturnsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
                 <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => open(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
                 {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
               </OpenableTableRow>
-              {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><ReturnDetail id={row.id} owner={access.owner} canEdit={access.edit} canRemove={access.remove} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} /></div></td></tr>}
+              {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><ReturnDetail kind={kind} id={row.id} owner={access.owner} canEdit={access.edit} canRemove={access.remove} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} /></div></td></tr>}
             </Fragment>)}
           </tbody></table>}
     </ManagementScroller>
   </ManagementLayout>;
 }
 
-function ReturnDetail({ id, owner, canEdit, canRemove, onChanged }: { id: string; owner: boolean; canEdit: boolean; canRemove: boolean; onChanged(message: string): void }) {
+function ReturnDetail({ kind, id, owner, canEdit, canRemove, onChanged }: { kind: StockKind; id: string; owner: boolean; canEdit: boolean; canRemove: boolean; onChanged(message: string): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => getReturn(id, signal), [id])), confirmation = useActionDialog(), router = useRouter();
   const [error, setError] = useState<string>();
   const item = remote.data;
@@ -138,7 +140,7 @@ function ReturnDetail({ id, owner, canEdit, canRemove, onChanged }: { id: string
       <header className={styles.head}><div><h3>{item.code}</h3><Status statusId={item.statusId} /></div></header>
       <dl className={styles.facts}>
         <div><dt>Người lập</dt><dd>{item.recordedBy}</dd></div><div><dt>Thời gian trả</dt><dd>{viDateTime(item.returnedAt)}</dd></div><div><dt>Nhà cung cấp</dt><dd><Link className={styles.link} href={supplierHref(item)}>{item.supplier.name}</Link></dd></div>
-        {item.receipt && <div><dt>Phiếu nhập</dt><dd><Link className={managementStyles.linkButton} href={`/operations/purchase-receipts?code=${item.receipt.code}`}>{item.receipt.code}</Link></dd></div>}
+        {item.receipt && <div><dt>Phiếu nhập</dt><dd><Link className={managementStyles.linkButton} href={receiptHref(item.receipt.code, item.kind)}>{item.receipt.code}</Link></dd></div>}
         {item.refund && <div><dt>Phiếu NCC trả tiền</dt><dd>{item.refund.code} · {methodLabel[item.refund.method]}</dd></div>}
         {item.cancelReason && <div><dt>Lý do hủy</dt><dd className={styles.danger}>{item.cancelReason}</dd></div>}
       </dl>
@@ -149,7 +151,7 @@ function ReturnDetail({ id, owner, canEdit, canRemove, onChanged }: { id: string
       <ErrorNotice error={error} />
       {((draft && (canRemove || canEdit)) || (recorded && (owner || canEdit))) && <footer className={listStyles.tabFooter}>
         <div>{draft && canRemove && <Button className="w-auto" variant="ghost" onClick={() => void remove()}><InterfaceIcon name="lock" className="size-4" />Xóa phiếu tạm</Button>}{recorded && owner && <Button className="w-auto" variant="ghost" onClick={() => void cancel()}><InterfaceIcon name="lock" className="size-4" />Hủy phiếu trả</Button>}</div>
-        <div>{(draft || recorded) && canEdit && <Button className="w-auto" onClick={() => router.push(`/operations/purchase-returns/${item.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Mở phiếu</Button>}</div>
+        <div>{(draft || recorded) && canEdit && <Button className="w-auto" onClick={() => router.push(`${kindText[kind].returnsPath}/${item.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Mở phiếu</Button>}</div>
       </footer>}
     </div>
   </section>;

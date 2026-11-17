@@ -52,7 +52,8 @@ const twoDecimals = (value: number) => Math.abs(value * 100 - Math.round(value *
 export const harvestLineValues = z.strictObject({ productId: z.guid(), cageCount: z.number().positive().max(100_000).refine(twoDecimals), kg: z.number().positive().max(1_000_000_000).refine(twoDecimals).nullable() });
 const harvestBase = z.strictObject({ lanePercents: lanePercentValues.optional(), crew: crewIds.optional(), laneNumbers: numbers.min(1), finishedLaneNumbers: numbers,
   cageCount: z.number().positive().max(100_000).refine(twoDecimals), estimatedKg: z.number().positive().max(1_000_000_000).refine(twoDecimals).nullable(),
-  productLines: z.array(harvestLineValues).min(1).max(50).refine(v => new Set(v.map(line => line.productId)).size === v.length).optional() })
+  // A harvest lot holds one product, the one the cycle farms: at most one line.
+  productLines: z.array(harvestLineValues).min(1).max(1).optional() })
   .refine(v => new Set(v.laneNumbers).size === v.laneNumbers.length && new Set(v.finishedLaneNumbers).size === v.finishedLaneNumbers.length && v.finishedLaneNumbers.every(n => v.laneNumbers.includes(n)));
 /** A new trip may name the plan line (KHT) it is recorded from; it never names a purchase request. */
 export const harvestValues = harvestBase.safeExtend({ harvestPlanLineId: z.guid().optional() });

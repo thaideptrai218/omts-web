@@ -87,7 +87,7 @@ function Body({ issue, access, onChanged, onRemoved }: { issue: IssueView; acces
       <tbody>
         <tr className={styles.lineSearch}><td style={{ width: 140 }}><input type="search" aria-label="Tìm mã hàng" placeholder="Tìm mã" value={codeTerm} onChange={(event) => setCodeTerm(event.target.value)} /></td><td><input type="search" aria-label="Tìm tên hàng" placeholder="Tìm tên hàng" value={nameTerm} onChange={(event) => setNameTerm(event.target.value)} /></td><td colSpan={3} /></tr>
         {shown.map((line) => <tr key={line.id}>
-          <td><Link className={styles.link} href={itemHref(line.itemCode)}>{line.itemCode}</Link></td>
+          <td><Link className={styles.link} href={itemHref(line.itemCode, line.group)}>{line.itemCode}</Link></td>
           <td>{line.itemName} <span className={styles.sub}>{line.unit}{line.seedLotCode ? ` · Lô giống ${line.seedLotCode}` : ""}{line.note ? ` · ${line.note}` : ""}</span></td>
           <td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitCost)}</td><td className={styles.num}><strong>{fmt(line.value)}</strong></td></tr>)}
         {!shown.length && <tr><td colSpan={5} className={styles.empty}>{issue.lines.length ? "Không có dòng hàng phù hợp." : "Phiếu chưa có hàng."}</td></tr>}

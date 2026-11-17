@@ -12,7 +12,8 @@ export const kindInfo = {
   Use: { path: "/inputs/uses", title: "Xuất dùng", codeLabel: "Mã xuất dùng", noun: "phiếu xuất dùng", icon: "document" as const },
   Disposal: { path: "/inputs/disposals", title: "Xuất hủy", codeLabel: "Mã xuất hủy", noun: "phiếu xuất hủy", icon: "trash" as const },
 } as const;
-export const itemHref = (code: string) => `/inputs/items?code=${encodeURIComponent(code)}`;
+/** Opens the catalogue of the item's kind (Giống or Vật tư) on that item; an item of unknown group goes to the address that looks it up. */
+export { itemHref } from "@/features/input-items/stock-kind";
 
 /**
  * Use issues follow the zone-scoped function `INPUT_ISSUES`. Disposals have a function of their own to read and export, and only the

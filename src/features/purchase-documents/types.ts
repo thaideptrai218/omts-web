@@ -1,4 +1,11 @@
-import type { ReceiptRow, ReturnRow } from "./contracts";
+import type { StockKind } from "@/features/input-items/stock-kind";
+import type { ReceiptRow, ReturnRow, seedLotState } from "./contracts";
+import type { z } from "zod";
+
+export type { StockKind };
+export type SeedLotState = z.infer<typeof seedLotState>;
+/** Where the seed lot of a receipt line stands now (Seed receipts only). */
+export type LineSeedLot = { state: SeedLotState; remainingQty: number };
 
 export const RECEIPT = { draft: 1701, completed: 1702, cancelled: 1703 } as const;
 export const RETURN = { recorded: 1901, cancelled: 1902, draft: 1903 } as const;
@@ -28,7 +35,7 @@ export type ReceiptLine = {
   id: string; item: ItemOption; quantity: number | null; unitPrice: number | null; raft: RaftOption | null;
   /** The unit the line was typed in and how many base units it holds; `seeded`, `returned` and `returnable` are in base units. */
   itemUnitId: string | null; unitFactor: number;
-  supplierLotCode: string | null; seedLotCode: string | null; seeded: number; returned: number; returnable: number; discount: number;
+  supplierLotCode: string | null; seedLotCode: string | null; seedLot: LineSeedLot | null; seeded: number; returned: number; returnable: number; discount: number;
   /** What was actually paid per unit: (unit price − line discount) with the receipt's header discount spread by amount. */
   netUnitPrice: number;
 };
@@ -36,7 +43,9 @@ export type ReceiptPayment = { id: string; code: string; date: string; createdBy
 export type ReceiptReturnRef = { id: string; code: string; date: string; returnedAt: string | null; reason: string; value: number; statusId: number };
 
 export type Receipt = {
-  id: string; code: string; date: string; receivedAt: string; receivedBy: { id: string; name: string } | null; completedAt: string | null; rowVersion: string;
+  /** `seedState`: the combined state of the lots of a completed Seed receipt; empty on any other receipt. */
+  seedState: SeedLotState | null;
+  id: string; code: string; kind: StockKind; date: string; receivedAt: string; receivedBy: { id: string; name: string } | null; completedAt: string | null; rowVersion: string;
   supplier: SupplierOption; zone: ZoneRef | null; recordedBy: string; statusId: number; discount: number; payable: number; paid: number; notes: string | null;
   cancelReason: string | null; lines: ReceiptLine[]; returns: ReceiptReturnRef[];
 };
@@ -45,6 +54,8 @@ export const lineAmount = (line: { quantity: number | null; unitPrice: number | 
 export const goodsTotal = (lines: readonly { quantity: number | null; unitPrice: number | null; discount?: number | null }[]) => lines.reduce((sum, line) => sum + lineAmount(line), 0);
 
 export type ReceiptDraft = {
+  /** The kind of a new receipt (it never changes afterwards). */
+  kind?: StockKind;
   id?: string; rowVersion?: string; code: string; receivedAt: string; receivedById: string; supplierId: string; discount: number; notes: string;
   /** `lineId` keeps an existing line of a completed receipt; a line without it is new, and existing lines left out are removed. */
   lines: { lineId: string | null; itemId: string; itemUnitId: string | null; quantity: number | null; unitPrice: number | null; discount: number; supplierLotCode: string }[];
@@ -53,7 +64,7 @@ export type ReceiptDraft = {
 export type ReturnLine = { id: string; receiptLineId: string | null; item: ItemOption; itemUnitId: string | null; unitFactor: number; quantity: number; unitPrice: number };
 export type ReturnRefund = { code: string; amount: number; method: PaymentMethod; bankReference: string | null };
 export type PurchaseReturn = {
-  id: string; code: string; date: string; returnedAt: string; rowVersion: string; receipt: { id: string; code: string } | null;
+  id: string; code: string; kind: StockKind; date: string; returnedAt: string; rowVersion: string; receipt: { id: string; code: string } | null;
   supplier: SupplierOption; zone: ZoneRef | null; recordedBy: string; statusId: number; reason: string; discount: number; value: number; netValue: number;
   refund: ReturnRefund | null; cancelReason: string | null; lines: ReturnLine[];
 };
@@ -65,7 +76,8 @@ export type ReturnDraft = {
 };
 
 export type Page<T> = { items: T[]; page: number; total: number };
-export type ReceiptQuery = { search: string; statusId: string; group: string; supplierId: string; from: string; to: string; sortBy: string; sortDir: "asc" | "desc"; page: number; pageSize: number };
+/** `kind` fixes the screen to one kind of document; `group` narrows a Supply screen to Vật tư or Khác. */
+export type ReceiptQuery = { kind?: StockKind; search: string; statusId: string; group: string; supplierId: string; from: string; to: string; sortBy: string; sortDir: "asc" | "desc"; page: number; pageSize: number };
 export type ReceiptTotals = { received: number; returned: number; net: number };
-export type ReturnQuery = { search: string; statusId: string; source: string; supplierId: string; from: string; to: string; sortBy: string; sortDir: "asc" | "desc"; page: number; pageSize: number };
+export type ReturnQuery = { kind?: StockKind; search: string; statusId: string; source: string; supplierId: string; from: string; to: string; sortBy: string; sortDir: "asc" | "desc"; page: number; pageSize: number };
 export type CancelPreview = { canCancel: boolean; blockedBy: string | null; debtBefore: number; debtAfter: number };

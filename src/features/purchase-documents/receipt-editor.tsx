@@ -2,7 +2,7 @@
 import { useToast } from "@/components/ui/toast-provider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
@@ -11,6 +11,7 @@ import { PersonPicker } from "@/components/ui/management-screen/person-picker";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
+import { kindOfGroup, kindText, type StockKind } from "@/features/input-items/stock-kind";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { EditorFrame, ItemFinder, MoneyInput, OverflowMenu, QuantityStepper, QuickSupplierDialog, SideRow, SupplierPicker, errorText, fmt, nowLocal, usePurchaseAccess, vnLocal } from "./document-parts";
 import { itemHref } from "./receipt-detail";
@@ -26,7 +27,6 @@ import styles from "./purchases.module.css";
  */
 type Line = { key: string; lineId: string | null; item: ItemOption; itemUnitId: string | null; unitName: string; unitFactor: number; quantity: string; unitPrice: number | null; discount: number; supplierLotCode: string; floor: number };
 type Start = { receipt?: Receipt; copy?: { code: string; leftEmpty: string[]; supplierId: string; discount: number; notes: string; lines: { itemId: string; unitPrice: number | null; discount: number }[] } };
-const LIST = "/operations/purchase-receipts";
 const quantityOf = (value: string) => { const parsed = Number(value.replace(",", ".")); return value && parsed > 0 ? parsed : null; };
 /** A new line of an item starts in its base unit. */
 const newLine = (item: ItemOption, patch: Partial<Line> = {}): Line => {
@@ -37,9 +37,11 @@ const belowFloor = (line: Line) => (quantityOf(line.quantity) ?? 0) * line.unitF
 
 /**
  * Create a receipt, continue a draft, edit a completed receipt, or start from a copy: one page, the source decides the starting values.
- * `itemId` (from the catalogue's Nhập hàng) starts a new receipt with one line of that item.
+ * `kind` fixes the screen to Nhập giống or Nhập vật tư: the item finder offers only that kind and a new receipt is sent with it. `itemId` (from the catalogue's Nhập giống / Nhập vật tư)
+ * starts a new receipt with one line of that item.
  */
-export function ReceiptEditorPage({ id, copyFrom, itemId }: { id?: string; copyFrom?: string; itemId?: string }) {
+export function ReceiptEditorPage({ kind, id, copyFrom, itemId }: { kind: StockKind; id?: string; copyFrom?: string; itemId?: string }) {
+  const router = useRouter();
   const remote = useRemote<Start>(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<Start>> => {
     if (id) { const result = await getReceipt(id, signal); return result.status === "success" ? { status: "success", data: { receipt: result.data } } : result; }
     if (!copyFrom) return { status: "success", data: {} };
@@ -50,19 +52,25 @@ export function ReceiptEditorPage({ id, copyFrom, itemId }: { id?: string; copyF
       lines: (r.lines ?? []).filter((line) => line.itemId).map((line) => ({ itemId: line.itemId!, unitPrice: line.unitPrice ?? null, discount: line.discount ?? 0 })) } } };
   }, [id, copyFrom]));
   const lookups = usePurchaseLookups();
-  if (remote.loading || lookups.loading) return <Skeleton />;
+  // A receipt opened on the screen of the other kind moves to its own screen: the kind of a receipt never changes.
+  const actualKind = remote.data?.receipt?.kind;
+  useEffect(() => { if (id && actualKind && actualKind !== kind) router.replace(`${kindText[actualKind].receiptsPath}/${id}/edit`); }, [id, actualKind, kind, router]);
+  if (remote.loading || lookups.loading || id && actualKind && actualKind !== kind) return <Skeleton />;
   if (remote.error || !remote.data) return <ListStateMessage error={remote.error ?? "Không tải được phiếu."} onRetry={remote.reload} retryLabel="Tải lại phiếu" />;
   if (remote.data.receipt?.statusId === RECEIPT.cancelled) return <ListStateMessage>Phiếu {remote.data.receipt.code} đã hủy nên không sửa được.</ListStateMessage>;
-  return <Editor start={remote.data} lookups={lookups} itemId={itemId} />;
+  return <Editor kind={kind} start={remote.data} lookups={lookups} itemId={itemId} />;
 }
 
-function Editor({ start, lookups, itemId }: { start: Start; lookups: ReturnType<typeof usePurchaseLookups>; itemId?: string }) {
+function Editor({ kind, start, lookups, itemId }: { kind: StockKind; start: Start; lookups: ReturnType<typeof usePurchaseLookups>; itemId?: string }) {
   const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog(), { notify } = useToast();
+  const text = kindText[kind], LIST = text.receiptsPath;
+  // The finder, a copy and a starting item offer only the kind of this screen.
+  const kindItems = useMemo(() => lookups.items.filter((item) => kindOfGroup(item.group) === kind), [lookups.items, kind]);
   const { receipt, copy } = start, completed = receipt?.statusId === RECEIPT.completed;
   const [pricing, setPricing] = useState(false);
   const [lines, setLines] = useState<Line[]>(() => receipt ? receipt.lines.map((line) => ({ key: line.id, lineId: line.id, item: lookups.items.find((row) => row.id === line.item.id) ?? line.item, itemUnitId: line.itemUnitId, unitName: line.item.unit, unitFactor: line.unitFactor, quantity: line.quantity == null ? "" : String(line.quantity), unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "", floor: line.seeded + line.returned }))
-    : copy ? copy.lines.flatMap((line) => { const item = lookups.items.find((row) => row.id === line.itemId); return item ? [newLine(item, { quantity: "", unitPrice: line.unitPrice, discount: line.discount })] : []; })
-    : (() => { const item = itemId ? lookups.items.find((row) => row.id === itemId) : undefined; return item ? [newLine(item)] : []; })());
+    : copy ? copy.lines.flatMap((line) => { const item = kindItems.find((row) => row.id === line.itemId); return item ? [newLine(item, { quantity: "", unitPrice: line.unitPrice, discount: line.discount })] : []; })
+    : (() => { const item = itemId ? kindItems.find((row) => row.id === itemId) : undefined; return item ? [newLine(item)] : []; })());
   const [receivedAt, setReceivedAt] = useState(receipt ? vnLocal(receipt.receivedAt) : nowLocal()), [receivedById, setReceivedById] = useState(receipt?.receivedBy?.id ?? "");
   const [code, setCode] = useState(receipt?.code ?? "");
   const [supplierId, setSupplierId] = useState(receipt?.supplier.id ?? copy?.supplierId ?? ""), [discount, setDiscount] = useState(receipt?.discount ?? copy?.discount ?? 0), [notes, setNotes] = useState(receipt?.notes ?? copy?.notes ?? "");
@@ -90,7 +98,7 @@ function Editor({ start, lookups, itemId }: { start: Start; lookups: ReturnType<
       if (!(await confirmation.confirm(`Lưu thay đổi phiếu ${receipt.code}? ${effect}`))) return;
     } else if (complete && !(await confirmation.confirm(`Hoàn thành phiếu nhập? Công nợ tăng ${fmt(payable)} đ cho nhà cung cấp.`))) return;
     setPending(true); setError(undefined);
-    const result = await saveReceipt({ id: receipt?.id, rowVersion: receipt?.rowVersion, code, receivedAt, receivedById, supplierId, discount, notes,
+    const result = await saveReceipt({ kind: receipt ? undefined : kind, id: receipt?.id, rowVersion: receipt?.rowVersion, code, receivedAt, receivedById, supplierId, discount, notes,
       lines: lines.map((line) => ({ lineId: completed ? line.lineId : null, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: quantityOf(line.quantity), unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.item.group === "Seed" ? line.supplierLotCode : "" })) }, complete);
     setPending(false);
     if (result.status === "success") { notify({ tone: "success", title: `Đã lưu phiếu nhập ${result.data.code}.` }); router.push(`${LIST}?code=${result.data.code}`); } else setError(errorText(result));
@@ -101,9 +109,9 @@ function Editor({ start, lookups, itemId }: { start: Start; lookups: ReturnType<
     if (result.status === "success" && result.data) { notify({ tone: "success", title: `Đã xóa phiếu tạm ${receipt.code}.` }); router.push(LIST); } else setError(errorText(result) ?? "Không xóa được phiếu tạm.");
   }
 
-  return <EditorFrame title={completed ? `Sửa phiếu nhập ${receipt!.code}` : receipt ? `Phiếu tạm ${receipt.code}` : "Nhập hàng"} backHref={LIST}
+  return <EditorFrame title={completed ? `Sửa phiếu nhập ${receipt!.code}` : receipt ? `Phiếu tạm ${receipt.code}` : text.receipt} backHref={LIST}
     source={copy ? `Sao chép từ phiếu ${copy.code}; nhập lại số lượng.${copy.leftEmpty.length ? ` Đã bỏ trống vì không còn sử dụng: ${copy.leftEmpty.join(", ")}.` : ""}` : completed ? "Sửa số lượng, giá hoặc giảm giá: công nợ nhà cung cấp thay đổi đúng bằng phần chênh lệch." : undefined}
-    tools={<><ItemFinder placeholder="Tìm hàng hóa theo mã hoặc tên" items={lookups.items} onPick={add} />{receipt && access.owner && receipt.statusId !== RECEIPT.cancelled && <Button className="ml-auto w-auto" variant="secondary" onClick={() => setPricing(true)}>Thiết lập giá</Button>}{receipt?.statusId === RECEIPT.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
+    tools={<><ItemFinder placeholder={`Tìm ${text.noun} theo mã hoặc tên`} items={kindItems} onPick={add} />{receipt && access.owner && receipt.statusId !== RECEIPT.cancelled && <Button className="ml-auto w-auto" variant="secondary" onClick={() => setPricing(true)}>Thiết lập giá</Button>}{receipt?.statusId === RECEIPT.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
     {confirmation.dialog}
     <div className={styles.editorBody}>
       <div className={styles.linesPanel}>
@@ -111,7 +119,7 @@ function Editor({ start, lookups, itemId }: { start: Start; lookups: ReturnType<
           <tbody>{lines.map((line, index) => <tr key={line.key}>
             <td className={styles.narrow}>{line.floor > 0 ? null : <button type="button" className={styles.remove} aria-label={`Bỏ dòng ${index + 1}`} title="Bỏ dòng" onClick={() => setLines((current) => current.filter((row) => row.key !== line.key))}><InterfaceIcon name="trash" /></button>}</td>
             <td className={styles.narrow}>{index + 1}</td>
-            <td><Link className={styles.code} href={itemHref(line.item.code)} target="_blank">{line.item.code}</Link></td>
+            <td><Link className={styles.code} href={itemHref(line.item.code, line.item.group)} target="_blank">{line.item.code}</Link></td>
             <td>{line.item.name}{line.item.group === "Seed" && <input aria-label={`Mã lô của nhà cung cấp dòng ${index + 1}`} className={styles.lotInput} maxLength={50} placeholder="Mã lô của nhà cung cấp..." value={line.supplierLotCode} onChange={(event) => update(line.key, { supplierLotCode: event.target.value })} />}</td>
             <td><UnitCell line={line} index={index} onPick={(unitId) => pickUnit(line, unitId)} /></td>
             <td className={styles.num}><QuantityStepper label={`số lượng dòng ${index + 1}`} value={line.quantity} invalid={belowFloor(line)} onChange={(quantity) => update(line.key, { quantity })} />{line.floor > 0 && <span className={styles.cap}>tối thiểu {fmt(line.floor / line.unitFactor)}</span>}</td>
@@ -119,7 +127,7 @@ function Editor({ start, lookups, itemId }: { start: Start; lookups: ReturnType<
             <td><DiscountInput compact label={`Giảm giá dòng ${index + 1}`} base={line.unitPrice ?? 0} invalid={line.unitPrice != null && line.discount > line.unitPrice} value={line.discount} onChange={(value) => update(line.key, { discount: value })} /></td>
             <td className={styles.amount}>{fmt(lineAmount(priced[index]))}</td>
           </tr>)}</tbody></table>
-        {!lines.length && <div className={styles.emptyLines}><InterfaceIcon name="material" /><strong>Chưa có hàng trong phiếu</strong><span>Tìm hàng theo mã hoặc tên ở ô phía trên để thêm dòng.</span></div>}
+        {!lines.length && <div className={styles.emptyLines}><InterfaceIcon name="material" /><strong>Chưa có hàng trong phiếu</strong><span>Tìm {text.noun} theo mã hoặc tên ở ô phía trên để thêm dòng.</span></div>}
       </div>
       <aside className={styles.side} aria-label="Thông tin phiếu nhập">
         <div className={styles.sideScroll}>

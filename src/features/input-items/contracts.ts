@@ -15,7 +15,9 @@ export const unitView = z.object({ id, unitId: id, name: text, factor: num, code
 export const itemRow = z.object({
   id, code: text, name: text, group: text, itemGroupId: id.nullish(), itemGroupName: opt, unit: text, units: z.array(unitView), description: opt, notes: opt, photoUrl: opt,
   // "Loại hàu bán ra" of a seed item (the product its oysters are sold as); empty until set, and always empty for Material/Other.
-  productId: id.nullish(), productName: opt,
+  productId: id.nullish(), productName: opt, product: z.object({ id, code: opt, name: text }).nullish(),
+  // The seed is on a Completed receipt, a nursery batch or a seeding record: its product can no longer change. Only the detail answer carries it.
+  productLocked: z.boolean().nullish(),
   minQuantity: numOpt, maxQuantity: numOpt, costPrice: numOpt, lastPurchasePrice: numOpt, onHand: num, stockValue: num, isUsed: z.boolean().nullish(),
   statusId: count, status: text, createdAt: text, createdBy: opt, rowVersion: text,
 });
@@ -28,11 +30,11 @@ export const nextCode = z.object({ code: text });
  * GET /api/products relayed by the input-items BFF (the Owner's item form): tolerant of the shape (bare array or `items`) and of the "in use" flag
  * (`inUse`, or `statusId` 101; a product with neither is kept). Keeps the products in use, sorted by name: the choices of "Loại hàu bán ra".
  */
-const rawProduct = z.object({ id, name: text.min(1), statusId: numOpt, inUse: z.boolean().nullish() });
+const rawProduct = z.object({ id, code: opt, name: text.min(1), statusId: numOpt, inUse: z.boolean().nullish() });
 export const productList = z.union([z.array(rawProduct), z.object({ items: z.array(rawProduct) })]);
-export type ProductOption = { id: string; name: string };
+export type ProductOption = { id: string; code?: string; name: string };
 export const productsInUse = productList.transform((value): ProductOption[] => (Array.isArray(value) ? value : value.items)
-  .filter((row) => row.inUse ?? (row.statusId == null || row.statusId === IN_USE)).map((row) => ({ id: row.id, name: row.name })).sort((a, b) => a.name.localeCompare(b.name, "vi")));
+  .filter((row) => row.inUse ?? (row.statusId == null || row.statusId === IN_USE)).map((row) => ({ id: row.id, ...(row.code ? { code: row.code } : {}), name: row.name })).sort((a, b) => a.name.localeCompare(b.name, "vi")));
 export const removedItem = z.object({ disposalId: id.nullish(), disposalCode: opt, disposedQuantity: numOpt });
 export const removed = z.object({ done: z.literal(true) });
 
@@ -110,7 +112,7 @@ export const fieldNames: Record<string, string> = {
   Zone: "Vùng", Raft: "Bè", "Issue type": "Loại xuất", Receiver: "Người nhận", "Issued at": "Thời gian", Reason: "Lý do", Lines: "Hàng xuất", "Disposal fields": "Vùng, bè, loại xuất, người nhận",
   Ids: "Thứ tự", Parent: "Nhóm cha",
   "Unit price": "Giá bán", Category: "Nhóm sản phẩm", "Min kg": "Định mức tối thiểu", "Max kg": "Định mức tối đa", Factor: "Quy đổi", "Disposed at": "Thời gian",
-  "Product lines": "Sản phẩm thu hoạch",
+  "Product lines": "Sản phẩm thu hoạch", Product: "Loại hàu bán ra", Kind: "Loại phiếu", "Seed lot": "Lô giống",
   Advance: "Khách thanh toán", "Advance amount": "Số tiền khách thanh toán", "Advance method": "Phương thức thanh toán", "Cash account": "Tài khoản nhận", "Bank reference": "Mã giao dịch ngân hàng",
   "Purchase request": "Yêu cầu mua", "Received by": "Người nhận đặt", Customer: "Khách hàng", Source: "Nguồn đặt", "Pickup at": "Hẹn lấy hàng", "Ordered at": "Thời gian", Discount: "Giảm giá",
 };

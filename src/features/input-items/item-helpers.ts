@@ -1,5 +1,6 @@
 import { foldVietnamese } from "@/shared/presentation/fold-text";
 import type { InputGroup, ItemRow, ItemView, UnitView } from "./contracts";
+import { kindOfGroup, receiptHref, returnHref } from "./stock-kind";
 
 /** Pure parts of the catalogue screens: unit conversion, the form's values and the body of a save. */
 
@@ -24,9 +25,13 @@ export const movementKindLabel: Record<string, string> = {
   Opening: "Còn lại ban đầu", Receipt: "Nhập hàng", PurchaseReturn: "Trả hàng nhập", Issue: "Xuất dùng", Disposal: "Xuất hủy", Reversal: "Điều chỉnh",
 };
 /** The list that opens on the document of a movement, searched by its code; the opening row and corrections have no document to open. */
-export function movementHref(kind: string, code: string | null | undefined) {
+export function movementHref(kind: string, code: string | null | undefined, itemGroup?: string | null) {
   if (!code) return undefined;
-  const target = kind === "Receipt" ? "/operations/purchase-receipts" : kind === "PurchaseReturn" ? "/operations/purchase-returns" : kind === "Issue" ? "/inputs/uses" : kind === "Disposal" ? "/inputs/disposals" : undefined;
+  // The receipts and returns of a seed are on the Nhập giống screens, those of the other items on Nhập vật tư; an item of unknown group goes to the address that looks it up.
+  const stock = itemGroup ? kindOfGroup(itemGroup) : null;
+  if (kind === "Receipt") return receiptHref(code, stock);
+  if (kind === "PurchaseReturn") return returnHref(code, stock);
+  const target = kind === "Issue" ? "/inputs/uses" : kind === "Disposal" ? "/inputs/disposals" : undefined;
   return target ? `${target}?code=${encodeURIComponent(code)}` : undefined;
 }
 
@@ -69,6 +74,7 @@ const invalid = (value: number | null) => value !== null && !Number.isFinite(val
 /** The first thing wrong with the form, in the user's words; undefined when it can be sent. */
 export function validateForm(values: FormValues): string | undefined {
   if (!values.name.trim()) return "Nhập tên hàng.";
+  if (values.group === "Seed" && !values.productId) return "Chọn loại hàu bán ra của giống.";
   if (values.code && !/^[A-Za-z0-9_.-]{1,30}$/.test(values.code)) return "Mã hàng chỉ gồm chữ, số, dấu chấm, gạch ngang và gạch dưới, tối đa 30 ký tự.";
   const min = parseNumber(values.minQuantity), max = parseNumber(values.maxQuantity), cost = parseNumber(values.costPrice), opening = parseNumber(values.openingQuantity);
   if ([min, max, cost, opening].some(invalid) || [min, max, cost, opening].some((value) => value !== null && value < 0)) return "Giá vốn, định mức và số còn lại ban đầu phải là số không âm.";

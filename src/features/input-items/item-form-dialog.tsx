@@ -8,7 +8,10 @@ import { SelectBox } from "@/components/ui/select-box";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Field, Note, Select, control, useRemote } from "@/features/operations/ui";
+import Link from "next/link";
+import { productHref } from "@/features/products/product-helpers";
 import { itemTypes, type ItemType, type InputGroup, type InputUnit, type ItemView } from "./contracts";
+import { kindGroups, type StockKind } from "./stock-kind";
 import { MAX_PHOTOS, buildSaveBody, groupLabel, groupTree, initialValues, validateForm, type FormValues } from "./item-helpers";
 import { NameDialog, UnitFields } from "./item-unit-fields";
 import { errorText, inputRepository, problemText } from "./repository";
@@ -22,12 +25,14 @@ const decimalOnly = (value: string) => value.replace(/[^\d.,]/g, "");
  * "+ Tạo mới", "Sao chép" and "Chỉnh sửa": one form for the item. A copy starts from the record without its code, photos or unit codes.
  * `onSaved(saved, again)` runs after every save; with `again` the form stays open, emptied, for the next item.
  */
-export function ItemFormDialog({ record, copy, group, onClose, onSaved }: {
+export function ItemFormDialog({ record, copy, group, kind, onClose, onSaved }: {
   record: ItemView | null; copy: boolean; /** The type a new item starts with: the one picked from "+ Tạo mới" or filtered in the list. */ group?: ItemType;
+  /** The screen the form opens from: Giống offers Seed only, Vật tư offers Material and Other. Without it every type is offered. */ kind?: StockKind;
   onClose(): void; onSaved(saved: ItemView, again: boolean): void;
 }) {
   const editing = record !== null && !copy, confirmation = useActionDialog(), { notify } = useToast(), fileInput = useRef<HTMLInputElement>(null);
-  const [initial] = useState(() => { const values = initialValues(record, copy); return record === null && group ? { ...values, group } : values; });
+  const types = useMemo(() => kind ? itemTypes.filter(([key]) => (kindGroups[kind] as readonly string[]).includes(key)) : itemTypes, [kind]);
+  const [initial] = useState(() => { const values = initialValues(record, copy), start = group ?? (kind ? types[0][0] : undefined); return record === null && start ? { ...values, group: start } : values; });
   const [values, setValues] = useState<FormValues>(initial), [tab, setTab] = useState<Tab>("info"), [pending, setPending] = useState(false), [error, setError] = useState<string>();
   const [newPhotos, setNewPhotos] = useState<File[]>([]), [removedPhotos, setRemovedPhotos] = useState<string[]>([]);
   const [nextCode, setNextCode] = useState(""), [extraGroups, setExtraGroups] = useState<InputGroup[]>([]), [extraUnits, setExtraUnits] = useState<InputUnit[]>([]);
@@ -39,8 +44,9 @@ export function ItemFormDialog({ record, copy, group, onClose, onSaved }: {
   // "Loại hàu bán ra" belongs to seed items: the products in use are read once per dialog, when the item is (or becomes) a Seed; the one already linked stays selectable.
   const isSeed = values.group === "Seed";
   const products = useRemote(useCallback((signal: AbortSignal) => isSeed ? inputRepository.products(signal) : Promise.resolve({ status: "success" as const, data: [] }), [isSeed]));
-  const linkedId = record?.productId, linkedName = record?.productName;
+  const linkedId = record?.productId, linkedName = record?.product?.name ?? record?.productName;
   const productList = useMemo(() => [...(products.data ?? []), ...(linkedId && !products.data?.some((row) => row.id === linkedId) ? [{ id: linkedId, name: linkedName || "Loại hàu hiện tại" }] : [])], [products.data, linkedId, linkedName]);
+  const chosenProduct = productList.find((product) => product.id === values.productId);
   const existingPhotos = (editing ? record.photos ?? [] : []).filter((photo) => !removedPhotos.includes(photo.id));
   const previews = useMemo(() => newPhotos.map((file) => URL.createObjectURL(file)), [newPhotos]);
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
@@ -58,6 +64,7 @@ export function ItemFormDialog({ record, copy, group, onClose, onSaved }: {
   const dirty = JSON.stringify(values) !== JSON.stringify(initial) || newPhotos.length > 0 || removedPhotos.length > 0;
   const close = async () => { if (!pending && (!dirty || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose(); };
   const baseLocked = editing && record.hasMovements === true;
+  const productLocked = editing && record.productLocked === true;
 
   function pickPhotos(files: FileList | null) {
     const room = MAX_PHOTOS - existingPhotos.length - newPhotos.length, accepted: File[] = [];
@@ -103,7 +110,7 @@ export function ItemFormDialog({ record, copy, group, onClose, onSaved }: {
     return undefined;
   }
 
-  const title = editing ? `Sửa vật tư ${record.code}` : copy ? "Sao chép vật tư" : "Tạo vật tư";
+  const noun = kind === "Seed" ? "giống" : "vật tư", title = editing ? `Sửa ${noun} ${record.code}` : copy ? `Sao chép ${noun}` : `Tạo ${noun}`;
   const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "description" as const, label: "Mô tả" }];
   return <Dialog open size="xl" title={title} dismissible={!pending} onOpenChange={(open) => { if (!open) void close(); }}><div className={managementStyles.theme}>
     {confirmation.dialog}
@@ -114,16 +121,19 @@ export function ItemFormDialog({ record, copy, group, onClose, onSaved }: {
       <div className={styles.identity}>
         <div className={styles.identityFields}>
           <Field label="Mã hàng" maxLength={30} placeholder={nextCode || "Mã tự động"} title="Để trống để hệ thống tự cấp mã theo loại hàng" value={values.code} onChange={(event) => setValues((current) => ({ ...current, code: event.target.value.replace(/\s/g, "") }))} />
-          <Select label="Loại hàng" disabled={editing && record.isUsed === true} value={values.group} onChange={set("group")}>{itemTypes.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select>
+          <Select label="Loại hàng" disabled={types.length === 1 || editing && record.isUsed === true} value={values.group} onChange={set("group")}>{types.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select>
           <div className={styles.wide}><Field label="Tên hàng *" required maxLength={200} placeholder="Bắt buộc" value={values.name} onChange={set("name")} /></div>
           <label className={`${styles.wide} block text-xs font-medium text-text-muted`}>
             <span className={styles.labelRow}>Nhóm hàng<button type="button" className={managementStyles.linkButton} onClick={() => setCreating({ kind: "group" })}>Tạo mới</button></span>
             <SelectBox aria-label="Nhóm hàng" className={control} value={values.itemGroupId} onChange={set("itemGroupId")}><option value="">Chưa chọn</option>{groupTree(groupList).map((group) => <option key={group.id} value={group.id}>{groupLabel(group)}</option>)}</SelectBox>
           </label>
           {isSeed && <div className={styles.wide}>
-            <Select label="Loại hàu bán ra" disabled={products.loading} value={values.productId} onChange={set("productId")}>
-              <option value="">{products.loading ? "Đang tải..." : "Chưa chọn"}</option>{productList.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</Select>
-            <p className={styles.hint}>Chọn loại hàu mà giống này nuôi ra. Đơn mua của khách phải khớp loại hàu này khi thu hoạch.</p>
+            {productLocked
+              ? <><Field label="Loại hàu bán ra" readOnly value={chosenProduct?.name ?? linkedName ?? ""} /><p className={styles.hint}>Giống đã dùng nên không đổi được loại hàu bán ra</p></>
+              : <><Select label="Loại hàu bán ra *" required disabled={products.loading} value={values.productId} onChange={set("productId")}>
+                <option value="">{products.loading ? "Đang tải..." : "Chưa chọn"}</option>{productList.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</Select>
+              <p className={styles.hint}>Chọn loại hàu mà giống này nuôi ra. Mỗi chu kỳ chỉ nuôi một loại hàu, và đơn mua của khách phải khớp loại hàu này khi thu hoạch.</p></>}
+            {chosenProduct?.code && <p className={styles.hint}>Sản phẩm: <Link className={styles.link} href={productHref(chosenProduct.code)} target="_blank">{chosenProduct.name} ({chosenProduct.code})</Link></p>}
             {products.error && <p role="alert" className="mt-1 text-xs text-danger">Không tải được danh sách loại hàu. {products.error} <button type="button" className={managementStyles.linkButton} onClick={products.reload}>Tải lại</button></p>}
           </div>}
         </div>

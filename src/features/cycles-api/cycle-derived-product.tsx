@@ -16,5 +16,5 @@ export const noProductText = (seedItemName?: string | null) => `${seedItemName ?
 export function DerivedProductNote({ batch }: { batch: DerivedProduct | undefined }) {
   if (!batch) return null;
   if (batch.productName) return <p role="status" className="mt-1 text-xs font-medium">{startProductText(batch)}</p>;
-  return <p role="status" className="mt-1 text-xs text-text-muted">{noProductText(batch.seedItemName ?? batch.name)} Hãy chọn loại hàu cho giống trong <Link className="font-medium text-primary underline underline-offset-4" href="/inputs/items">Vật tư &amp; Giống</Link> rồi quay lại.</p>;
+  return <p role="status" className="mt-1 text-xs text-text-muted">{noProductText(batch.seedItemName ?? batch.name)} Hãy chọn loại hàu cho giống trong <Link className="font-medium text-primary underline underline-offset-4" href="/inputs/seeds">Giống</Link> rồi quay lại.</p>;
 }
