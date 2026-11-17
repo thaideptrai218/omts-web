@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -7,6 +8,7 @@ import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/man
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import inputStyles from "@/features/input-items/input-items.module.css";
+import { itemHref } from "@/features/input-items/stock-kind";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
@@ -46,14 +48,17 @@ function InfoTab(props: TabProps) {
   const discontinued = record.statusId === DISCONTINUED, photos = record.photos ?? [];
   const initials = record.name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join("").toUpperCase();
   const kg = (value: number | null | undefined) => value == null ? "—" : `${fmt(value)} kg`;
+  // The seeds this product is the "Loại hàu bán ra" of, read only: the link is made on the seed item, never here.
+  const seeds = record.sourceSeeds ?? [];
+  const sourceSeeds: [string, ReactNode] = ["Giống nguồn", seeds.length ? <span key="seeds" className={inputStyles.unitList}>{seeds.map((seed) => <Link key={seed.id} className={inputStyles.link} href={itemHref(seed.code, "Seed")}>{seed.name} <small>· {seed.code}</small></Link>)}</span> : null];
   const inUnit = (value: number | null | undefined) => value == null || !props.unit ? "—" : `${fmt(inUnitQuantity(value, props.unit.factor))} ${props.unit.name}`;
   // With a unit picked on the list only that unit shows (its code, price and quantity); otherwise the whole unit list.
   const facts: [string, ReactNode][] = props.unit ? [
-    ["Mã sản phẩm", props.unit.code], ["Tên sản phẩm", record.name], ["Nhóm sản phẩm", record.categoryName], ["Đơn vị tính", props.unit.name],
+    ["Mã sản phẩm", props.unit.code], ["Tên sản phẩm", record.name], ["Nhóm sản phẩm", record.categoryName], sourceSeeds, ["Đơn vị tính", props.unit.name],
     ["Giá bán", record.unitPrice == null ? null : `${fmt(unitSalePrice(record.unitPrice, props.unit))} đồng/${props.unit.name}`], ["Còn lại", inUnit(record.onHandKg)],
     ["Định mức tối thiểu", inUnit(record.minKg)], ["Định mức tối đa", inUnit(record.maxKg)], ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
   ] : [
-    ["Mã sản phẩm", record.code], ["Tên sản phẩm", record.name], ["Nhóm sản phẩm", record.categoryName],
+    ["Mã sản phẩm", record.code], ["Tên sản phẩm", record.name], ["Nhóm sản phẩm", record.categoryName], sourceSeeds,
     ["Đơn vị tính", <span key="units" className={inputStyles.unitList}>{record.units.map((unit) => <span key={unit.id}>{unit.isBase ? unit.name : `${unit.name} = ${fmt(unit.factor)} kg`} <small>· {unit.code}</small></span>)}</span>],
     ["Giá bán", record.unitPrice == null ? null : `${fmt(record.unitPrice)} đồng/kg`], ["Còn lại", kg(record.onHandKg)],
     ["Định mức tối thiểu", kg(record.minKg)], ["Định mức tối đa", kg(record.maxKg)], ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],

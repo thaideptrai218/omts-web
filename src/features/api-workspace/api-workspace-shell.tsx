@@ -24,6 +24,7 @@ import type { OperationArea } from "@/features/operations/permissions";
 import { workspaceRoleLabel } from "@/shared/presentation/actor-label";
 import { createPersonalRepository } from "@/features/personal-api/repository";
 import { canReadProducts } from "@/features/products/product-permissions";
+import { SEED_LOTS_PATH, kindText } from "@/features/input-items/stock-kind";
 
 const resourceIcons: Record<ResourceKey, InterfaceIconName> = {
   zones: "zone", rafts: "raft", "input-items": "material", suppliers: "supplier",
@@ -35,7 +36,7 @@ const operationIcons: Record<OperationArea, InterfaceIconName> = {
   seeding: "product", "material-usages": "material", harvest: "work",
   "cultivation-cycles": "raft",
   "purchase-receipts": "receipt", "supplier-payments": "payment", water: "water",
-  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "purchase-requests": "request", workforce: "attendance", "my-work": "work",
+  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "purchase-requests": "request", workforce: "attendance", "my-work": "work", "seed-lots": "product",
 };
 
 const settingsDescriptions: Partial<Record<ResourceKey, string>> = {
@@ -89,7 +90,8 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const productSettings: SettingsSection["items"] = canReadProducts(context.identity, context.permissions.functionPermissions) ? [{ href: "/settings?section=products", panel: "products", label: "Sản phẩm", icon: "product", description: "Nhóm sản phẩm hàu; đơn vị tính dùng chung với Vật tư & Giống." }] : [];
   const customerSettings: SettingsSection["items"] = holds("CUSTOMERS", "View") ? [{ href: "/settings?section=customers", panel: "customers", label: "Khách hàng", icon: "users", description: "Cảnh báo công nợ và thông tin bắt buộc khi thêm khách hàng." }] : [];
   const inputLinks: [string, string, InterfaceIconName][] = [
-    ...(resourceAllowed("input-items", context.identity, context.permissions.functionPermissions) ? [["/inputs/items", "Danh mục", "material"] as [string, string, InterfaceIconName]] : []),
+    // The catalogue is split: Giống (seed items) and Vật tư (the rest) are two screens and two entries.
+    ...(resourceAllowed("input-items", context.identity, context.permissions.functionPermissions) ? [[kindText.Seed.itemsPath, kindText.Seed.catalogue, "product"] as [string, string, InterfaceIconName], [kindText.Supply.itemsPath, kindText.Supply.catalogue, "material"] as [string, string, InterfaceIconName]] : []),
     ...(holds("INPUT_ISSUES", "View") ? [["/inputs/uses", "Xuất dùng", "work"] as [string, string, InterfaceIconName]] : []),
     ...(holds("INPUT_DISPOSALS", "View") ? [["/inputs/disposals", "Xuất hủy", "trash"] as [string, string, InterfaceIconName]] : []),
   ];
@@ -129,15 +131,17 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
         const inputs = group.label === INPUT_GROUP ? inputLinks : [];
         const sales: [string, string, InterfaceIconName][] = group.label === "Kinh doanh" ? productLinks : [];
         const plans = group.label === "Nuôi trồng" && !modules.some((entry) => entry.key === "harvest") ? harvestLinks : [];
-        return rows.length || modules.length || inputs.length || sales.length || plans.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
+        const seedLots = group.label === "Nuôi trồng" && operationAllowed("seed-lots", context.identity, context.permissions.functionPermissions);
+        return rows.length || modules.length || inputs.length || sales.length || plans.length || seedLots || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
+          {group.label === "Nuôi trồng" && operationAllowed("seed-lots", context.identity, context.permissions.functionPermissions) && link(SEED_LOTS_PATH, "Lô giống", "product")}
           {group.label === "Nuôi trồng" && operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions) && link("/farming/nursery", "Ươm giống", "product")}
           {inputs.map(([href, label, icon]) => link(href, label, icon))}
           {sales.map(([href, label, icon]) => link(href, label, icon))}
           {modules.flatMap((entry) => [link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]),
             ...(entry.key === "harvest" && group.label === "Nuôi trồng" ? harvestLinks.map((item) => link(...item)) : [])])}
           {plans.map(([href, label, icon]) => link(href, label, icon))}
-          {group.label === "Mua hàng" && purchasing && <>{link("/operations/purchase-receipts", "Nhập hàng", "receipt")}{link("/operations/purchase-returns", "Trả hàng nhập", "upload")}</>}
+          {group.label === "Mua hàng" && purchasing && <>{link(kindText.Seed.receiptsPath, kindText.Seed.receipt, "receipt")}{link(kindText.Supply.receiptsPath, kindText.Supply.receipt, "receipt")}{link(kindText.Seed.returnsPath, kindText.Seed.receiptReturn, "upload")}{link(kindText.Supply.returnsPath, kindText.Supply.receiptReturn, "upload")}</>}
         </div></NavigationGroup> : null;
       })}
       {cashBook && <NavigationGroup label="Sổ quỹ" compact={compact}><div className={styles.navigationItems}>{link("/operations/cash-book", "Sổ quỹ", "payment")}</div></NavigationGroup>}

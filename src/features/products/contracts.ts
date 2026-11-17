@@ -15,7 +15,9 @@ export const productRow = z.object({
   minKg: numOpt, maxKg: numOpt, onHandKg: numOpt, isUsed: z.boolean().nullish(), createdAt: text, createdBy: opt,
 });
 export const productPage = z.object({ items: z.array(productRow), page: count, pageSize: count, total: count, summary: z.object({ totalOnHandKg: num }).nullish() });
-export const productView = productRow.extend({ photos: z.array(z.object({ id, url: text })).nullish() });
+/** `sourceSeeds`: the seed items whose "Loại hàu bán ra" is this product (one in practice); the product never edits them. */
+export const sourceSeed = z.object({ id, code: text, name: text });
+export const productView = productRow.extend({ photos: z.array(z.object({ id, url: text })).nullish(), sourceSeeds: z.array(sourceSeed).optional() });
 /** A save answers `{ product, message, messageCode }`; the door passes on the product alone. */
 export const savedProduct = z.object({ product: productView }).transform((value) => value.product);
 export const removedProduct = z.object({ id, code: text, removed: z.boolean() });

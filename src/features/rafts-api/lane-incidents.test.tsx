@@ -70,7 +70,7 @@ describe("lane incidents", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     cleanup(); stock.all.mockResolvedValue({ status: "success", data: [] }); form({ action: "repair" });
     expect(await screen.findByText(/Kho chưa có vật tư/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Xem Vật tư & Giống" }).getAttribute("href")).toBe("/inputs/items");
+    expect(screen.getByRole("link", { name: "Xem Vật tư" }).getAttribute("href")).toBe("/inputs/supplies");
   });
   it("only exposes actions in the opened row, shows history materials and tolerates a 404", async () => {
     const raft = raftFixture(); raft.lanes = [{ ...raft.lanes[0], isDamaged: false, state: "Growing" }];

@@ -28,7 +28,8 @@ const issueRead: Access = { any: [["INPUT_ISSUES", "View"], ["INPUT_DISPOSALS", 
 const issueExport: Access = { any: [["INPUT_ISSUES", "Export"], ["INPUT_DISPOSALS", "Export"]] };
 const usageIssueAccess = (action: string): Access => ({ any: [["INPUT_ISSUES", action]] });
 
-const itemFilters = ["search", "group", "itemGroupId", "stock", "supplierId", "createdFrom", "createdTo", "status", "sortBy", "sortDir"] as const;
+/** `kind` (Seed | Supply) is the split of the catalogue into the Giống and the Vật tư screens; `group` narrows within it. */
+const itemFilters = ["search", "kind", "group", "itemGroupId", "stock", "supplierId", "createdFrom", "createdTo", "status", "sortBy", "sortDir"] as const;
 const issueFilters = ["search", "kind", "status", "from", "to", "zoneId", "raftId", "issueTypeId", "createdById", "receiverId", "sortBy", "sortDir"] as const;
 const paging = ["page", "pageSize"] as const;
 
@@ -46,7 +47,7 @@ const F = "/api/farming-input-items", I = "/api/input-issues", R = "/api/purchas
 type Read = (q: Query, ref: { id?: string; second?: string }) => Plan;
 const reads: Record<string, Read> = {
   items: (q) => ({ path: `${F}/search${forward(q, [...itemFilters, ...paging])}`, method: "GET", access: catalogRead, schema: c.itemPage }),
-  "items-all": (q) => ({ path: `${F}${forward(q, ["search", "group", "statusId"])}`, method: "GET", access: catalogRead, schema: c.itemList }),
+  "items-all": (q) => ({ path: `${F}${forward(q, ["search", "kind", "group", "statusId"])}`, method: "GET", access: catalogRead, schema: c.itemList }),
   "items-export": (q) => ({ path: `${F}/export${forward(q, itemFilters)}`, method: "GET", access: { any: [["PURCHASE_RECEIPTS", "Export"]] }, schema: noBody, file: "vat-tu-giong.xlsx" }),
   "items-template": () => ({ path: `${F}/import/template`, method: "GET", access: ownerOnly, schema: noBody, file: "mau-vat-tu-giong.xlsx" }),
   "item-next-code": (q) => ({ path: `${F}/next-code${forward(q, ["group"])}`, method: "GET", access: catalogRead, schema: c.nextCode }),

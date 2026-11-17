@@ -1,5 +1,5 @@
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
-export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "purchase-requests", "workforce", "my-work"] as const;
+export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "purchase-requests", "workforce", "my-work", "seed-lots"] as const;
 export type OperationArea = typeof operationAreas[number];
 export const operationModules: readonly { key: OperationArea; title: string; functionCode: string }[] = [
   { key: "job-types", title: "Loại công việc và đơn giá", functionCode: "PAY_RULES" },
@@ -27,6 +27,7 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "purchase-requests", title: "Yêu cầu mua hàu", functionCode: "PURCHASE_REQUESTS" },
   { key: "workforce", title: "Phân công và chấm công", functionCode: "WORK_ASSIGNMENTS" },
   { key: "my-work", title: "Công việc và nghỉ phép", functionCode: "" },
+  { key: "seed-lots", title: "Lô giống", functionCode: "PURCHASE_RECEIPTS" },
 ];
 export function operationAllowed(area: OperationArea, identity: { subjectType: string }, permissions: readonly FunctionPermission[], action = "View", zoneId?: string) {
   if (area === "my-work") return identity.subjectType === "Staff";
@@ -43,6 +44,11 @@ export function operationAllowed(area: OperationArea, identity: { subjectType: s
     if (identity.subjectType === "CooperativeOwner") return true;
     return identity.subjectType === "Staff" && ["View", "Review"].includes(action) && permissions.some((p) => p.functionCode === "PURCHASE_REQUESTS" && p.action === "View"
       && p.dataScope === "AssignedZone" && (p.scope.kind === "all-zones" || p.scope.zoneIds.length > 0));
+  }
+  // Lô giống follows the receipts: PURCHASE_RECEIPTS View reads the lots and Export takes the file, with no zone scope (a seed lot is a receipt line).
+  if (area === "seed-lots") {
+    if (identity.subjectType === "CooperativeOwner") return true;
+    return identity.subjectType === "Staff" && ["View", "Export"].includes(action) && permissions.some((p) => p.functionCode === "PURCHASE_RECEIPTS" && p.action === action);
   }
   if (area === "workforce") {
     if (identity.subjectType === "CooperativeOwner") return true;

@@ -31,7 +31,7 @@ import { EditorFrame, LaneChoices, harvestRepo } from "./records-shared";
 export function harvestInvalidFieldText(error: z.ZodError): string {
   const field = error.issues[0]?.path[0];
   switch (field) {
-    case "productLines": return "Thêm ít nhất một sản phẩm, mỗi sản phẩm một dòng với số lồng lớn hơn 0 và tối đa 2 số lẻ (được nhập 0,5).";
+    case "productLines": return "Sản phẩm thu hoạch: chọn sản phẩm và nhập số lồng lớn hơn 0, tối đa 2 số lẻ (được nhập 0,5).";
     case "laneNumbers": return "Làn thu hoạch: chọn ít nhất một làn thu được.";
     case "finishedLaneNumbers": return "Làn đã thu xong phải nằm trong các làn của chuyến này.";
     case "cageCount": return "Số lồng thu hoạch phải lớn hơn 0, tối đa 100.000 và có tối đa 2 số lẻ (được nhập 0,5).";
@@ -59,7 +59,8 @@ export function HarvestForm({ zoneId, raftId, data, plan, canConfigure = false, 
   const cycleProductId = data?.cycleProductId ?? data?.cycle?.productId ?? undefined, cycleProductName = data?.cycleProductName ?? data?.cycle?.productName ?? undefined;
   const [lines, setLines] = useState<HarvestLine[]>(() => [plan?.expectedProductId ? { ...blankLine(), productId: plan.expectedProductId, cages: plan.expectedCageCount ? String(plan.expectedCageCount) : "" } : cycleProductId ? { ...blankLine(), productId: cycleProductId } : blankLine()]);
   const [started] = useState(() => JSON.stringify(lines.map(line => [line.productId, line.cages])));
-  const products = useHarvestProducts();
+  // The cycle's own product stays offered even when it is no longer sold: the lot carries it.
+  const products = useHarvestProducts(cycleProductId ? [{ productId: cycleProductId, productCode: "", productName: cycleProductName ?? "" }] : []);
   const [error, setError] = useState<string>(), [photos, setPhotos] = useState<File[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false), [photoError, setPhotoError] = useState<string>();
   const [percents, setPercents] = useState<Record<string, string>>({}), [percentError, setPercentError] = useState<string>();
@@ -118,9 +119,9 @@ export function HarvestForm({ zoneId, raftId, data, plan, canConfigure = false, 
           </div>}
         </CollapsibleSection>
         <CollapsibleSection title="Nhân viên cùng thu" description="Những nhân viên tham gia chuyến thu này." columns={1}><RecordCrewPicker label="Nhân viên cùng thu" raftId={raftId} zoneId={zoneId} values={crew} onChange={setCrew} /></CollapsibleSection>
-        <CollapsibleSection title="Sản phẩm thu hoạch và ảnh" description="Chia chuyến thu theo sản phẩm: số lồng, số kg và ảnh ghi nhận." columns={1}>
+        <CollapsibleSection title="Sản phẩm thu hoạch và ảnh" description="Sản phẩm của chu kỳ: số lồng, số kg và ảnh ghi nhận." columns={1}>
           <HarvestProductLines lines={lines} products={products.products} loading={products.loading} error={products.error} disabled={editor.disabled} onChange={setLines} />
-          {lines.length > 0 && cycleProductId && !lines.some(line => line.productId === cycleProductId) && <p role="status" className="text-xs text-text-muted">Chuyến thu hoạch phải có sản phẩm của giống đang nuôi trong chu kỳ{cycleProductName ? ` (${cycleProductName})` : ""}.</p>}
+          <p className={flowStyles.harvestHint}>Mỗi lô thu hoạch chỉ có một sản phẩm: loại hàu của giống đang nuôi trong chu kỳ{cycleProductName ? ` (${cycleProductName})` : ""}.</p>
           <p className={flowStyles.harvestHint}>Số kg tự tính theo quy đổi Lồng của sản phẩm và sửa được; để trống thì hệ thống quy đổi theo kg/lồng của lô. Thời điểm thu hoạch được hệ thống ghi khi lưu.</p>
           {data && <HarvestEstimateHint cages={totals.cages} typedKg={allKgTyped ? String(totals.kg) : ""} kgPerCage={data.averageKgPerCage} />}
           {data && <p className="text-xs text-text-muted">kg/lồng hiện tại: {data.averageKgPerCage.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}{" "}

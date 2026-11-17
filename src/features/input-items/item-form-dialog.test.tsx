@@ -47,11 +47,11 @@ it("saves a new item with its base unit and a second unit as a multiple of the b
 it("offers the loại hàu bán ra only for a seed item, reads the products once, and sends the choice", async () => {
   repo.products.mockResolvedValue({ status: "success", data: [{ id: id(7), name: "Hàu béo" }, { id: id(8), name: "Hàu sữa" }] });
   const { user, onSaved } = await open();
-  expect(screen.queryByLabelText("Loại hàu bán ra")).toBeNull(); expect(repo.products).not.toHaveBeenCalled();
+  expect(screen.queryByLabelText(/^Loại hàu bán ra/)).toBeNull(); expect(repo.products).not.toHaveBeenCalled();
   await user.selectOptions(screen.getByLabelText("Loại hàng"), "Seed");
-  const select = await screen.findByLabelText("Loại hàu bán ra");
+  const select = await screen.findByLabelText(/^Loại hàu bán ra/);
   await waitFor(() => expect(within(select).getAllByRole("option")).toHaveLength(3));
-  expect(screen.getByText("Chọn loại hàu mà giống này nuôi ra. Đơn mua của khách phải khớp loại hàu này khi thu hoạch.")).toBeTruthy();
+  expect(screen.getByText("Chọn loại hàu mà giống này nuôi ra. Mỗi chu kỳ chỉ nuôi một loại hàu, và đơn mua của khách phải khớp loại hàu này khi thu hoạch.")).toBeTruthy();
   expect(repo.products).toHaveBeenCalledTimes(1);
   await user.type(screen.getByLabelText("Tên hàng *"), "Hàu giống 3 cm");
   await user.selectOptions(screen.getByLabelText("Đơn vị cơ bản"), id(3));
@@ -61,7 +61,7 @@ it("offers the loại hàu bán ra only for a seed item, reads the products once
   expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ group: "Seed", productId: id(7) }), undefined);
   // Back to another group: the field goes away and the body clears the link.
   await user.selectOptions(screen.getByLabelText("Loại hàng"), "Material");
-  expect(screen.queryByLabelText("Loại hàu bán ra")).toBeNull();
+  expect(screen.queryByLabelText(/^Loại hàu bán ra/)).toBeNull();
 });
 
 it("refuses a maximum below the minimum before calling the API", async () => {
@@ -92,4 +92,30 @@ it("shows the reason of a refused save inside the form and keeps what was typed"
   expect((await screen.findByRole("alert")).textContent).toMatch(/Kiểm tra: Mã/);
   expect(onSaved).not.toHaveBeenCalled();
   expect((screen.getByLabelText("Tên hàng *") as HTMLInputElement).value).toBe("Phao nhựa");
+});
+
+const seedRecord = (patch: object) => ({
+  ...saved, id: id(2), code: "GI000001", name: "Hàu giống 3 cm", group: "Seed", unit: "cái", productId: id(7), product: { id: id(7), code: "SP000007", name: "Hàu béo" }, photos: [],
+  units: [{ id: id(4), unitId: id(3), name: "cái", factor: 1, code: "GI000001", isBase: true }], ...patch,
+}) as never;
+
+it("shows the loại hàu bán ra of a seed in use as read-only text with the reason, and keeps it in the body", async () => {
+  repo.products.mockResolvedValue({ status: "success", data: [{ id: id(7), name: "Hàu béo" }, { id: id(8), name: "Hàu sữa" }] });
+  const { user, onSaved } = await open({ record: seedRecord({ productLocked: true, hasMovements: true, isUsed: true }) });
+  const field = screen.getByLabelText("Loại hàu bán ra") as HTMLInputElement;
+  expect(field.tagName).toBe("INPUT");
+  expect(field.readOnly).toBe(true);
+  expect(field.value).toBe("Hàu béo");
+  expect(screen.queryByLabelText(/^Loại hàu bán ra \*/)).toBeNull();
+  expect(screen.getByText("Giống đã dùng nên không đổi được loại hàu bán ra")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ group: "Seed", productId: id(7) }), id(2));
+});
+
+it("keeps the loại hàu bán ra of a seed not yet used as a select", async () => {
+  repo.products.mockResolvedValue({ status: "success", data: [{ id: id(7), name: "Hàu béo" }] });
+  await open({ record: seedRecord({ productLocked: false, hasMovements: false }) });
+  expect((await screen.findByLabelText(/^Loại hàu bán ra/)).tagName).toBe("SELECT");
+  expect(screen.queryByText("Giống đã dùng nên không đổi được loại hàu bán ra")).toBeNull();
 });

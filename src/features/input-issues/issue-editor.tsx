@@ -180,7 +180,7 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
             return <tr key={line.key}>
               <td className={purchaseStyles.narrow}><button type="button" className={purchaseStyles.remove} aria-label={`Bỏ dòng ${position}`} title="Bỏ dòng" onClick={() => setLines((current) => current.filter((row) => row.key !== line.key))}><InterfaceIcon name="trash" /></button></td>
               <td className={purchaseStyles.narrow}>{position}</td>
-              <td><Link className={purchaseStyles.code} href={itemHref(line.item.code)} target="_blank">{line.item.code}</Link></td>
+              <td><Link className={purchaseStyles.code} href={itemHref(line.item.code, line.item.group)} target="_blank">{line.item.code}</Link></td>
               <td className={styles.nameCell}>{line.item.name}<input className={styles.noteInline} aria-label={`Ghi chú dòng ${position}`} placeholder="Ghi chú..." maxLength={500} value={line.note} onChange={(event) => update(line.key, { note: event.target.value })} /></td>
               <td className={styles.unitCell}><UnitCell line={{ item: line.item, itemUnitId: line.unitId, unitName: line.unitName, unitFactor: line.unitFactor }} index={index} onPick={(unitId) => pickUnit(line, unitId)} /></td>
               {hasSeed && <td className={styles.lotCell}>{!seed ? "—" : !lot ? <span className={styles.muted}>Đang tải lô…</span> : "error" in lot ? <span className={styles.lotError} role="alert">{lot.error}</span>

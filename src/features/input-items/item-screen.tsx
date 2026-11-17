@@ -22,6 +22,9 @@ import { DISCONTINUED, itemTypes, typeLabel, type InputGroup, type ItemPage, typ
 import { ItemDetailPanel, type ItemAccess } from "./item-detail";
 import { ItemFormDialog } from "./item-form-dialog";
 import { chosenUnit, groupLabel, groupTree, inUnitPrice, inUnitQuantity } from "./item-helpers";
+import { kindGroups, kindText, type StockKind } from "./stock-kind";
+import { productHref } from "@/features/products/product-helpers";
+import Link from "next/link";
 import { ItemImportDialog } from "./item-import-dialog";
 import { errorText, inputRepository, type ListQuery } from "./repository";
 import styles from "./input-items.module.css";
@@ -42,7 +45,7 @@ const columns: readonly Column[] = [
     </span>}</span> },
   { key: "group", label: "Loại hàng", sort: "group", render: (row) => typeLabel(row.group) },
   { key: "itemGroup", label: "Nhóm hàng", defaultHidden: true, render: (row) => dash(row.itemGroupName) },
-  { key: "product", label: "Loại hàu bán ra", render: (row) => row.group === "Seed" ? dash(row.productName) : "" },
+  { key: "product", label: "Loại hàu bán ra", render: (row) => row.group !== "Seed" ? "" : row.product?.code ? <Link className={styles.link} href={productHref(row.product.code)} onClick={(event) => event.stopPropagation()}>{row.product.name}</Link> : dash(row.product?.name ?? row.productName) },
   { key: "cost", label: "Giá vốn", sort: "costPrice", numeric: true, render: (row, unitId) => perUnit(row.costPrice, chosenUnit(row, unitId).factor, "price") },
   { key: "last", label: "Giá nhập cuối", sort: "lastPurchasePrice", numeric: true, defaultHidden: true, render: (row, unitId) => perUnit(row.lastPurchasePrice, chosenUnit(row, unitId).factor, "price") },
   { key: "onHand", label: "Còn lại", sort: "onHand", numeric: true, render: (row, unitId) => <span className={row.onHand < 0 ? styles.neg : undefined}>{perUnit(row.onHand, chosenUnit(row, unitId).factor, "quantity")}</span> },
@@ -54,6 +57,8 @@ const columns: readonly Column[] = [
   { key: "status", label: "Trạng thái", sort: "status", render: (row) => <StatusPill tone={row.statusId === DISCONTINUED ? "neutral" : "success"}>{row.statusId === DISCONTINUED ? "Ngừng sử dụng" : "Đang sử dụng"}</StatusPill> },
 ];
 const emptyFilters = { group: "", itemGroupId: "", stock: "", supplierId: "", status: "InUse" };
+/** The types a screen offers: all three, or those of its kind (Giống is Seed alone; Vật tư is Material and Other). */
+const typesOf = (kind: StockKind | undefined) => kind ? itemTypes.filter(([key]) => (kindGroups[kind] as readonly string[]).includes(key)) : itemTypes;
 const stocks = [["InStock", "Còn hàng"], ["OutOfStock", "Hết hàng"], ["BelowMin", "Dưới định mức"], ["AboveMax", "Vượt định mức"]] as const;
 const statuses = [["InUse", "Đang sử dụng"], ["Discontinued", "Ngừng sử dụng"], ["All", "Tất cả"]] as const;
 const viewFunctions = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYCLES", "INPUT_ISSUES"];
@@ -62,7 +67,7 @@ const viewFunctions = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CY
  * "+ Tạo mới": with a type filtered in the rail (Giống, Vật tư, Khác) it opens the form for that type at once; with "Tất cả"
  * it drops down the three types to pick from first.
  */
-function NewItemMenu({ filtered, onPick }: { filtered?: ItemType; onPick(group: ItemType): void }) {
+function NewItemMenu({ filtered, types, onPick }: { filtered?: ItemType; types: readonly (readonly [ItemType, string])[]; onPick(group: ItemType): void }) {
   const [open, setOpen] = useState(false), root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -76,7 +81,7 @@ function NewItemMenu({ filtered, onPick }: { filtered?: ItemType; onPick(group: 
       onClick={() => filtered ? onPick(filtered) : setOpen((value) => !value)}>
       <InterfaceIcon name="add" className="mr-1 size-4" />Tạo mới{!filtered && <InterfaceIcon name="chevron-down" className="ml-1 size-4" />}
     </Button>
-    {open && <div role="menu" className={styles.menu}>{itemTypes.map(([key, label]) =>
+    {open && <div role="menu" className={styles.menu}>{types.map(([key, label]) =>
       <button key={key} type="button" role="menuitem" onClick={() => { setOpen(false); onPick(key); }}>{label}</button>)}</div>}
   </div>;
 }
@@ -85,12 +90,12 @@ function NewItemMenu({ filtered, onPick }: { filtered?: ItemType; onPick(group: 
  * A link opens this list on one item by its code (`?code=VT000001`). The list is keyed by that code so a link followed while the
  * list is already open starts it again: the search box shows the code and that item's row opens.
  */
-export function ItemScreen(props: { helpHref?: string }) {
+export function ItemScreen(props: { helpHref?: string; /** Fixes the screen to Giống (Seed) or Vật tư (Material and Other); without it the whole catalogue shows. */ kind?: StockKind }) {
   const linkedCode = useSearchParams().get("code") ?? "";
-  return <ItemList key={linkedCode} linkedCode={linkedCode} {...props} />;
+  return <ItemList key={`${props.kind ?? "all"}:${linkedCode}`} linkedCode={linkedCode} {...props} />;
 }
 
-function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
+function ItemList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCode: string; kind?: StockKind }) {
   const context = useApiWorkspace(), owner = context.identity.subjectType === "CooperativeOwner";
   const can = (fn: string, action: string) => owner || context.permissions.functionPermissions.some((p) => p.functionCode === fn && p.action === action);
   const canView = owner || viewFunctions.some((fn) => can(fn, "View"));
@@ -105,15 +110,18 @@ function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
   const groups = useRemote<InputGroup[]>(useCallback((signal: AbortSignal) => canView ? inputRepository.groups(signal) : Promise.resolve({ status: "success" as const, data: [] }), [canView]));
   const lookups = usePurchaseLookups();
 
-  const defaults = useMemo(() => columns.filter((column) => !column.defaultHidden).map((column) => column.key).join(","), []);
-  const [storedColumns, storeColumns] = useStoredValue("omts-columns-input-items", defaults);
-  const visible = useMemo(() => { const keys = storedColumns.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [storedColumns]);
+  // The product a seed grows into only exists on the Giống screen.
+  const screenColumns = useMemo(() => kind === "Supply" ? columns.filter((column) => column.key !== "product") : columns, [kind]);
+  const defaults = useMemo(() => screenColumns.filter((column) => !column.defaultHidden).map((column) => column.key).join(","), [screenColumns]);
+  const [storedColumns, storeColumns] = useStoredValue(kind ? `omts-columns-input-items-${kind}` : "omts-columns-input-items", defaults);
+  const visible = useMemo(() => { const keys = storedColumns.split(","), shown = screenColumns.filter((column) => keys.includes(column.key)); return shown.length ? shown : screenColumns; }, [storedColumns, screenColumns]);
+  const types = typesOf(kind), text = kind ? kindText[kind] : undefined;
 
   const query = useMemo<ListQuery>(() => {
-    const values: Record<string, string> = { search: search.trim(), group: filters.group, itemGroupId: filters.itemGroupId, stock: filters.stock, supplierId: filters.supplierId, status: filters.status,
+    const values: Record<string, string> = { search: search.trim(), kind: kind ?? "", group: kind === "Seed" ? "Seed" : filters.group, itemGroupId: filters.itemGroupId, stock: filters.stock, supplierId: filters.supplierId, status: filters.status,
       createdFrom: created.from, createdTo: created.to, sortBy: sort.key, sortDir: sort.direction };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ""));
-  }, [search, filters, created, sort]);
+  }, [search, filters, created, sort, kind]);
 
   useEffect(() => {
     if (!canView) return;
@@ -146,7 +154,7 @@ function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
   const supplierOptions = lookups.suppliers;
   const filterRail = <>
     <div className={styles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setFilters(emptyFilters); setCreated(allTime); })()}>Đặt lại</button></div>
-    <FilterPills legend="Loại hàng" name="item-type" value={filters.group} options={itemTypes} onChange={setFilter("group")} />
+    {types.length > 1 && <FilterPills legend="Loại hàng" name="item-type" value={filters.group} options={types} onChange={setFilter("group")} />}
     {!!groups.data?.length && <FilterGroup legend="Nhóm hàng"><SelectBox aria-label="Nhóm hàng" className={styles.railSelect} value={filters.itemGroupId} onChange={(event) => setFilter("itemGroupId")(event.target.value)}>
       <option value="">Tất cả nhóm hàng</option>{groupTree(groups.data).map((group) => <option key={group.id} value={group.id}>{groupLabel(group)} ({group.itemCount})</option>)}</SelectBox></FilterGroup>}
     <FilterPills legend="Còn lại" name="item-stock" value={filters.stock} options={stocks} onChange={setFilter("stock")} />
@@ -157,21 +165,22 @@ function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
   </>;
   const columnCount = visible.length + 1;
 
-  return <ManagementLayout storageKey="input-items" icon="material" title="Danh mục" filters={filterRail} filterLabel="Bộ lọc danh mục"
+  return <ManagementLayout storageKey={kind ? `input-items-${kind}` : "input-items"} icon="material" title={text?.catalogue ?? "Danh mục"} filters={filterRail} filterLabel={`Bộ lọc ${text?.noun ?? "danh mục"}`}
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="mặt hàng" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
-    search={<input type="search" aria-label="Tìm hàng" placeholder="Theo mã, tên hàng hoặc mã đơn vị" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
+    search={<input type="search" aria-label={`Tìm ${text?.noun ?? "hàng"}`} placeholder="Theo mã, tên hàng hoặc mã đơn vị" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      {owner && <NewItemMenu filtered={itemTypes.find(([key]) => key === filters.group)?.[0]} onPick={(group) => setEditor({ record: null, copy: false, group })} />}
-      {owner && <Button className="w-auto" variant="secondary" onClick={() => setImporting(true)}><InterfaceIcon name="upload" className="mr-1 size-4" />Import file</Button>}
+      {owner && <NewItemMenu types={types} filtered={types.length === 1 ? types[0][0] : types.find(([key]) => key === filters.group)?.[0]} onPick={(group) => setEditor({ record: null, copy: false, group })} />}
+      {/* The file import refuses seed rows (a seed needs its loại hàu bán ra), so the Giống screen has none. */}
+      {owner && kind !== "Seed" && <Button className="w-auto" variant="secondary" onClick={() => setImporting(true)}><InterfaceIcon name="upload" className="mr-1 size-4" />Import file</Button>}
       {access.exportFile && <Button className="w-auto" variant="secondary" isPending={exportFile.pending} onClick={() => void exportFile.run(() => inputRepository.exportList(query), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
-      <ColumnPicker columns={columns} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
+      <ColumnPicker columns={screenColumns} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
       <HelpLink helpHref={helpHref} />
     </>}>
     {exportFile.error && <div className={listStyles.feedback}><ErrorNotice error={exportFile.error} /></div>}
     <ManagementScroller busy={loading}>
       {error ? <ListStateMessage error={error} onRetry={reload} retryLabel="Tải lại" />
         : !data ? <div role="status" aria-label="Đang tải danh sách" className={listStyles.skeleton}>{[1, 2, 3, 4, 5].map((key) => <div key={key} />)}</div>
-        : !data.items.length ? <ListStateMessage>{search || hasFilter ? "Không có hàng phù hợp bộ lọc." : "Chưa có vật tư hay giống nào."}</ListStateMessage>
+        : !data.items.length ? <ListStateMessage>{search || hasFilter ? "Không có hàng phù hợp bộ lọc." : text ? `Chưa có ${text.noun} nào.` : "Chưa có vật tư hay giống nào."}</ListStateMessage>
         : <table className={listStyles.table}><thead><tr>
           <th scope="col" className={listStyles.expandCell}><span className="sr-only">Mở dòng</span></th>
           {visible.map((column) => <SortableHeader key={column.key} label={column.label} sortKey={column.sort} sort={sort} onSort={changed<SortState>(setSort)} className={column.numeric ? styles.num : undefined} />)}
@@ -190,10 +199,10 @@ function ItemList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>
-    {editor && <ItemFormDialog record={editor.record} copy={editor.copy} group={editor.group} onClose={() => setEditor(undefined)} onSaved={(saved, again) => {
+    {editor && <ItemFormDialog record={editor.record} copy={editor.copy} group={editor.group} kind={kind} onClose={() => setEditor(undefined)} onSaved={(saved, again) => {
       const edited = editor.record !== null && !editor.copy;
       if (!again) setEditor(undefined);
-      notify({ tone: "success", title: `Đã ${edited ? "lưu" : "tạo"} vật tư ${saved.code}.` });
+      notify({ tone: "success", title: `Đã ${edited ? "lưu" : "tạo"} ${text?.noun ?? "vật tư"} ${saved.code}.` });
       if (!edited) setExpanded(undefined);
       reload();
     }} />}

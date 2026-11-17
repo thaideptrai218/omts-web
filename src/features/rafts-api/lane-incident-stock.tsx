@@ -19,7 +19,7 @@ export function LaneIncidentStock({ lines, onChange, onLoaded }: { lines: Materi
   if (stock.loading) return <Skeleton />;
   if (stock.error) return <><ErrorNotice error={stock.error} /><Button type="button" variant="secondary" className="w-auto" onClick={stock.reload}>Tải lại tồn kho</Button></>;
   const items = stock.data?.filter(item => item.group === "Material" && item.statusId === 101 && item.onHand > 0) ?? [];
-  if (!items.length) return <p className="text-sm">Kho chưa có vật tư. <Link className="text-primary underline" href="/inputs/items">Xem Vật tư &amp; Giống</Link> để bổ sung vật tư trước khi sửa; nếu không thể sửa, chọn Ngừng hoạt động làn.</p>;
+  if (!items.length) return <p className="text-sm">Kho chưa có vật tư. <Link className="text-primary underline" href="/inputs/supplies">Xem Vật tư</Link> để bổ sung vật tư trước khi sửa; nếu không thể sửa, chọn Ngừng hoạt động làn.</p>;
   return <fieldset className="grid gap-2"><legend className="mb-2 text-sm font-medium">Vật tư đã dùng</legend>
     {items.map(item => {
       const selected = lines.find(line => line.itemId === item.id);

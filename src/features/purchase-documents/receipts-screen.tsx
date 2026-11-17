@@ -16,19 +16,21 @@ import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, useMutation } from "@/features/operations/ui";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
+import { kindGroups, kindText, returnHref, type StockKind } from "@/features/input-items/stock-kind";
+import { SeedLotStateBadge } from "@/features/seed-lots/seed-lot-state";
 import { errorText, fmt, usePurchaseAccess, viDate, viDateTime } from "./document-parts";
 import { ReceiptDetailPanel } from "./receipt-detail";
 import { download, listReceipts, removeReceipts, usePurchaseLookups } from "./repository";
 import { RECEIPT, itemGroups, receiptStatusLabel, type Page, type ReceiptQuery, type ReceiptRow, type ReceiptTotals } from "./types";
 import styles from "./purchases.module.css";
 
-type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: ReceiptRow): ReactNode };
+type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; /** Shown on the Nhập giống screen only. */ seedOnly?: boolean; render(row: ReceiptRow): ReactNode };
 const tone = (statusId: number) => statusId === RECEIPT.completed ? "success" as const : statusId === RECEIPT.cancelled ? "danger" as const : "neutral" as const;
 export const ReceiptStatus = ({ statusId }: { statusId: number }) => <StatusPill tone={tone(statusId)}>{receiptStatusLabel[statusId]}</StatusPill>;
 const columns: readonly Column[] = [
   { key: "code", label: "Mã nhập hàng", sort: "code", render: (row) => <span className="font-mono tabular-nums">{row.code}</span> },
   { key: "date", label: "Thời gian", sort: "date", render: (row) => row.receivedAt ? viDateTime(row.receivedAt) : viDate(row.receiptDate) },
-  { key: "returnCodes", label: "Mã trả hàng nhập", render: (row) => row.returnCodes?.length ? <span className={styles.codeList}>{row.returnCodes.map((code) => <Link key={code} className={styles.link} href={`/operations/purchase-returns?code=${code}`} onClick={(event) => event.stopPropagation()}>{code}</Link>)}</span> : "—" },
+  { key: "returnCodes", label: "Mã trả hàng nhập", render: (row) => row.returnCodes?.length ? <span className={styles.codeList}>{row.returnCodes.map((code) => <Link key={code} className={styles.link} href={returnHref(code, row.kind)} onClick={(event) => event.stopPropagation()}>{code}</Link>)}</span> : "—" },
   { key: "supplierCode", label: "Mã NCC", hidden: true, render: (row) => row.supplierCode },
   { key: "supplier", label: "Nhà cung cấp", sort: "supplier", render: (row) => row.supplier.name },
   { key: "phone", label: "SĐT NCC", hidden: true, render: (row) => row.supplier.phoneNumber },
@@ -43,6 +45,7 @@ const columns: readonly Column[] = [
   { key: "createdAt", label: "Thời gian tạo", hidden: true, render: (row) => viDateTime(row.createdAt) },
   { key: "updatedAt", label: "Ngày cập nhật", hidden: true, render: (row) => row.updatedAt ? viDateTime(row.updatedAt) : "—" },
   { key: "notes", label: "Ghi chú", hidden: true, render: (row) => row.notes ?? "—" },
+  { key: "seedState", label: "Lô giống", seedOnly: true, render: (row) => row.seedState ? <SeedLotStateBadge state={row.seedState} /> : "—" },
   { key: "status", label: "Trạng thái", sort: "status", render: (row) => <ReceiptStatus statusId={row.statusId} /> },
 ];
 const defaults = columns.filter((column) => !column.hidden).map((column) => column.key).join(",");
@@ -52,21 +55,23 @@ const emptyFilters = { group: "", supplier: "", status: "" };
  * A link opens this list on one record by its code (`?code=…`). The list is keyed by that code so a link followed while
  * the list is already open starts it again: the search box shows the code and the row with exactly that code opens.
  */
-export function PurchaseReceiptsScreen(props: { helpHref?: string }) {
+export function PurchaseReceiptsScreen(props: { helpHref?: string; /** Fixes the screen to Nhập giống (Seed) or Nhập vật tư (Supply). */ kind: StockKind }) {
   const linkedCode = useSearchParams().get("code") ?? "";
-  return <ReceiptsList key={linkedCode} linkedCode={linkedCode} {...props} />;
+  return <ReceiptsList key={`${props.kind}:${linkedCode}`} linkedCode={linkedCode} {...props} />;
 }
 
-function ReceiptsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
+function ReceiptsList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCode: string; kind: StockKind }) {
   const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog(), lookups = usePurchaseLookups(), exportFile = useMutation();
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [time, setTime] = useState<TimeRangeValue>(() => linkedCode ? allTime : presetValue("thisMonth"));
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<Page<ReceiptRow> & { totals: ReceiptTotals }>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set()), { notify } = useToast();
-  const [stored, store] = useStoredValue("omts-columns-purchase-receipts", defaults);
-  const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
-  const query = useMemo<ReceiptQuery>(() => ({ search, statusId: filters.status, group: filters.group, supplierId: filters.supplier, from: time.from, to: time.to, sortBy: sort.key, sortDir: sort.direction, page, pageSize }), [search, filters, time, sort, page, pageSize]);
+  const [stored, store] = useStoredValue(`omts-columns-purchase-receipts-${kind}`, defaults);
+  const text = kindText[kind], groupOptions = itemGroups.filter(([key]) => (kindGroups[kind] as readonly string[]).includes(key));
+  const screenColumns = useMemo(() => columns.filter((column) => !column.seedOnly || kind === "Seed"), [kind]);
+  const visible = useMemo(() => { const keys = stored.split(","), shown = screenColumns.filter((column) => keys.includes(column.key)); return shown.length ? shown : screenColumns; }, [stored, screenColumns]);
+  const query = useMemo<ReceiptQuery>(() => ({ kind, search, statusId: filters.status, group: filters.group, supplierId: filters.supplier, from: time.from, to: time.to, sortBy: sort.key, sortDir: sort.direction, page, pageSize }), [kind, search, filters, time, sort, page, pageSize]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -97,19 +102,19 @@ function ReceiptsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
 
   const rail = <>
     <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(presetValue("thisMonth")); })()}>Đặt lại</button></div>
-    <FilterPills legend="Nhóm hàng" name="receipt-group" value={filters.group} options={itemGroups} onChange={setFilter("group")} />
+    {groupOptions.length > 1 && <FilterPills legend="Nhóm hàng" name="receipt-group" value={filters.group} options={groupOptions} onChange={setFilter("group")} />}
     <TimeRangeFilter legend="Thời gian" value={time} onChange={changed<TimeRangeValue>(setTime)} />
     <FilterGroup legend="Nhà cung cấp"><SelectBox aria-label="Nhà cung cấp" className={styles.railSelect} value={filters.supplier} onChange={(event) => setFilter("supplier")(event.target.value)}><option value="">Tất cả nhà cung cấp</option>{lookups.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</SelectBox></FilterGroup>
     <FilterPills legend="Trạng thái" name="receipt-status" value={filters.status} options={[[String(RECEIPT.draft), "Phiếu tạm"], [String(RECEIPT.completed), "Đã nhập hàng"], [String(RECEIPT.cancelled), "Đã hủy"]]} onChange={setFilter("status")} />
   </>;
 
-  return <ManagementLayout storageKey="purchase-receipts" icon="receipt" title="Nhập hàng" filters={rail} filterLabel="Bộ lọc phiếu nhập"
+  return <ManagementLayout storageKey={`purchase-receipts-${kind}`} icon="receipt" title={text.receipt} filters={rail} filterLabel={`Bộ lọc ${text.receipt.toLowerCase()}`}
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="phiếu" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); setSelected(new Set()); }} onPageSize={changed<number>(setPageSize)} />}
-    search={<input type="search" aria-label="Tìm phiếu nhập" placeholder="Theo mã phiếu nhập, nhà cung cấp" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
+    search={<input type="search" aria-label={`Tìm phiếu ${text.receipt.toLowerCase()}`} placeholder="Theo mã phiếu nhập, nhà cung cấp" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      {access.create && <Button className="w-auto" onClick={() => router.push("/operations/purchase-receipts/new")}><InterfaceIcon name="add" className="mr-1 size-4" />Nhập hàng</Button>}
+      {access.create && <Button className="w-auto" onClick={() => router.push(`${text.receiptsPath}/new`)}><InterfaceIcon name="add" className="mr-1 size-4" />{text.receipt}</Button>}
       {access.exportFile && <Button className="w-auto" variant="secondary" isPending={exportFile.pending} onClick={() => void exportFile.run(() => download("receipts", query), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
-      <ColumnPicker columns={columns} visible={visible.map((column) => column.key)} onChange={(keys) => store(keys.join(","))} />
+      <ColumnPicker columns={screenColumns} visible={visible.map((column) => column.key)} onChange={(keys) => store(keys.join(","))} />
       <HelpLink helpHref={helpHref} />
     </>}>
     {confirmation.dialog}
@@ -119,7 +124,7 @@ function ReceiptsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
     <ManagementScroller busy={loading}>
       {error ? <ListStateMessage error={error} onRetry={reload} retryLabel="Tải lại" />
         : !data ? <div role="status" aria-label="Đang tải danh sách" className={listStyles.skeleton}>{[1, 2, 3, 4, 5].map((key) => <div key={key} />)}</div>
-        : !data.items.length ? <ListStateMessage>{access.create ? "Không có phiếu nhập phù hợp. Đổi bộ lọc hoặc bấm Nhập hàng để lập phiếu mới." : "Không có phiếu nhập phù hợp bộ lọc."}</ListStateMessage>
+        : !data.items.length ? <ListStateMessage>{access.create ? `Không có phiếu nhập phù hợp. Đổi bộ lọc hoặc bấm ${text.receipt} để lập phiếu mới.` : "Không có phiếu nhập phù hợp bộ lọc."}</ListStateMessage>
         : <table className={listStyles.table}><thead><tr>
           {access.remove && <th scope="col" className={listStyles.checkCell}><input type="checkbox" aria-label="Chọn tất cả phiếu tạm trên trang" disabled={!drafts.length} checked={allSelected} onChange={(event) => setSelected(event.target.checked ? new Set([...selected, ...drafts]) : new Set([...selected].filter((id) => !drafts.includes(id))))} /></th>}
           <th scope="col" className={listStyles.expandCell}><span className="sr-only">Mở dòng</span></th>

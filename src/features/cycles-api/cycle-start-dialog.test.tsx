@@ -54,7 +54,7 @@ describe("Bắt đầu chu kỳ nuôi", () => {
     fireEvent.change(select, { target: { value: batches[1].id } });
     expect(screen.queryByText(/Giống:/)).toBeNull();
     expect(screen.getByText(/Giống Hàu B chưa gắn loại hàu bán ra/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Vật tư & Giống" }).getAttribute("href")).toBe("/inputs/items");
+    expect(screen.getByRole("link", { name: "Giống" }).getAttribute("href")).toBe("/inputs/seeds");
   });
 
   it("says nothing is ready when no batch finished in the zone and points to the nursery screen", async () => {

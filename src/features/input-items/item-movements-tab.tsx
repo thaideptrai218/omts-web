@@ -13,10 +13,11 @@ import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { movementKinds } from "./contracts";
 import { movementHref, movementKindLabel, signed } from "./item-helpers";
 import { inputRepository } from "./repository";
+import { seedLotsHref } from "./stock-kind";
 import styles from "./input-items.module.css";
 
 /** Nhập – xuất: every movement of the item, newest first, with the balance after it; corrections are hidden together with the rows they undo. */
-export function ItemMovementsTab({ itemId, canExport, note }: { itemId: string; canExport: boolean; note?: ReactNode }) {
+export function ItemMovementsTab({ itemId, group, canExport, note }: { itemId: string; /** The group of the item: its receipts and returns are on the screens of its kind. */ group?: string; canExport: boolean; note?: ReactNode }) {
   const [kind, setKind] = useState(""), [reversals, setReversals] = useState(false), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
   const exportFile = useMutation();
   const remote = useRemote(useCallback((signal: AbortSignal) => inputRepository.movements(itemId,
@@ -38,12 +39,12 @@ export function ItemMovementsTab({ itemId, canExport, note }: { itemId: string; 
       : <div className={styles.innerScroll}><table className={styles.inner}><thead><tr>
         <th>Chứng từ</th><th>Thời gian</th><th>Loại</th><th>Đối tác</th><th>Lô giống</th><th className={styles.num}>Giá giao dịch</th><th className={styles.num}>Giá vốn</th><th className={styles.num}>Số lượng{unit ? ` (${unit})` : ""}</th><th className={styles.num}>Còn lại sau</th>
       </tr></thead><tbody>{data.items.map((row) => {
-        const href = movementHref(row.kind, row.documentCode);
+        const href = movementHref(row.kind, row.documentCode, group);
         // The opening row has no document: its stored code is the item's own.
         const code = row.kind === "Opening" ? undefined : row.documentCode, source = movementSourceLink(row);
         return <tr key={row.id} className={row.reversesMovementId ? styles.reversed : undone.has(row.id) ? styles.undone : undefined}>
           <td>{href ? <Link className={styles.link} href={href}>{code}</Link> : code ?? "—"}{source && <><br /><Link className={styles.link} href={source.href}>{source.label}</Link></>}</td>
-          <td>{viDateTime(row.occurredAt)}</td><td>{movementKindLabel[row.kind] ?? row.kind}</td><td>{row.partyName || "—"}</td><td>{row.seedLotCode || "—"}</td>
+          <td>{viDateTime(row.occurredAt)}</td><td>{movementKindLabel[row.kind] ?? row.kind}</td><td>{row.partyName || "—"}</td><td>{row.seedLotCode ? <Link className={styles.link} href={seedLotsHref(row.seedLotCode)}>{row.seedLotCode}</Link> : "—"}</td>
           <td className={styles.num}>{row.transactionPrice == null ? "—" : fmt(row.transactionPrice)}</td><td className={styles.num}>{row.unitCost == null ? "—" : fmt(row.unitCost)}</td>
           <td className={`${styles.num} ${row.quantity < 0 ? styles.neg : ""}`}>{signed(row.quantity, fmt)}</td><td className={styles.num}>{row.balanceAfter == null ? "—" : fmt(row.balanceAfter)}</td>
         </tr>;

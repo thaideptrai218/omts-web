@@ -13,8 +13,10 @@ const many = <T extends z.ZodType>(value: T) => z.union([value, z.array(value).m
 const sort = { sortBy: z.enum(["code", "date", "supplier", "total", "status"]).optional(), sortDir: z.enum(["asc", "desc"]).optional() };
 const period = { from: z.iso.date().optional(), to: z.iso.date().optional(), search: z.string().max(200).optional(), supplierId: z.guid().optional(), statusIds: many(z.enum(["1701", "1702", "1703", "1901", "1902", "1903"])), zoneIds: many(z.guid()) };
 const paging = { page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["15", "30", "50"]).optional() };
-const receiptFilters = { ...period, ...sort, itemGroups: many(z.enum(["Seed", "Material", "Other"])), raftId: z.guid().optional() };
-const returnFilters = { ...period, ...sort, source: z.enum(["receipt", "standalone"]).optional() };
+/** A receipt or a return is a Seed document or a Supply document (Material and Other) and never mixes them; the Giống and Vật tư screens each ask for one kind. */
+const documentKind = z.enum(["Seed", "Supply"]);
+const receiptFilters = { ...period, ...sort, kind: documentKind.optional(), itemGroups: many(z.enum(["Seed", "Material", "Other"])), raftId: z.guid().optional() };
+const returnFilters = { ...period, ...sort, kind: documentKind.optional(), source: z.enum(["receipt", "standalone"]).optional() };
 const read = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("receipts"), ...receiptFilters, ...paging }),
   z.strictObject({ action: z.literal("receipts-export"), ...receiptFilters }),
@@ -30,6 +32,8 @@ const money = z.number().int().nonnegative().max(1e13);
 const documentCode = z.string().regex(/^[A-Za-z0-9._-]{1,30}$/).nullable();
 const refund = z.strictObject({ amount: money, method: z.enum(["Cash", "BankTransfer"]), bankReference: z.string().max(100).nullable() });
 const receiptBody = z.strictObject({
+  /** Fixes the kind of a new receipt; every line must match it (the API answers 400 on the lines otherwise). It never changes afterwards, so an edit does not send it. */
+  kind: documentKind.optional(),
   code: documentCode, supplierId: z.guid().nullable(), receiptDate: z.iso.date().nullable(), receivedAt: z.iso.datetime({ offset: true }).nullable(), receivedById: z.guid().nullable(), notes: z.string().max(2000).nullable(), discount: money, zoneId: z.guid().nullable(), complete: z.boolean(), rowVersion: z.string().max(200).nullable(),
   lines: z.array(z.strictObject({ lineId: z.guid().nullable(), itemId: z.guid().nullable(), itemUnitId: z.guid().nullable().optional(), quantity: z.number().positive().nullable(), unitPrice: money.nullable(), discount: money, supplierLotCode: z.string().max(50).nullable(), raftId: z.guid().nullable() })).max(200),
 });
@@ -65,7 +69,9 @@ function query(values: Record<string, unknown>) {
   return params.size ? `?${params}` : "";
 }
 
-function planRead(q: z.infer<typeof read>): Plan {
+/** The checks and the plans of the door, exported so the tests can run them without a server. */
+export const purchaseReads = read, purchaseWrites = write;
+export function planRead(q: z.infer<typeof read>): Plan {
   switch (q.action) {
     case "receipts": return { path: R + query(q), method: "GET", permission: "View", schema: c.receiptSearch };
     case "receipts-export": return { path: `${R}/export${query(q)}`, method: "GET", permission: "Export", schema: z.never(), file: "nhap-hang.xlsx" };
@@ -85,7 +91,7 @@ function planRead(q: z.infer<typeof read>): Plan {
   }
 }
 
-function planWrite(p: z.infer<typeof write>): Plan {
+export function planWrite(p: z.infer<typeof write>): Plan {
   switch (p.action) {
     case "save-receipt": return { path: p.id ? `${R}/${p.id}` : R, method: p.id ? "PUT" : "POST", permission: p.id ? "Edit" : "Create", schema: c.receiptView, body: p.body };
     case "remove-receipt": return { path: `${R}/${p.id}`, method: "DELETE", permission: "Delete", schema: c.removed, noContent: true };
