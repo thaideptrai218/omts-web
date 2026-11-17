@@ -19,7 +19,7 @@ export function HistoryEntries({ entries }: { entries: readonly HistoryEntry[] }
   </ol>;
 }
 
-function Loaded({ kind, id, zoneId }: { kind: HistoryKind; id: string; zoneId: string }) {
+export function RecordHistoryList({ kind, id, zoneId }: { kind: HistoryKind; id: string; zoneId: string }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => readRecordHistory(kind, id, zoneId, signal), [kind, id, zoneId]));
   if (remote.loading) return <Skeleton />;
   // An error (also a 404 from a backend without the history endpoint) is an empty state with a retry, never a broken screen.
@@ -32,6 +32,6 @@ export function RecordHistory({ kind, id, zoneId }: { kind: HistoryKind; id: str
   const [open, setOpen] = useState(false);
   return <section aria-label="Lịch sử" className="mt-3 border-t border-border pt-2">
     <button type="button" className="text-xs font-semibold underline" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? "Ẩn lịch sử" : "Lịch sử"}</button>
-    {open && <div className="mt-2"><Loaded kind={kind} id={id} zoneId={zoneId} /></div>}
+    {open && <div className="mt-2"><RecordHistoryList kind={kind} id={id} zoneId={zoneId} /></div>}
   </section>;
 }

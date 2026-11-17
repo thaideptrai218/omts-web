@@ -4,11 +4,12 @@ import { z } from "zod";
 import { InvoiceEditorPage } from "@/features/sales-invoice-editor/invoice-editor";
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 export const instant = false;
-/** A new invoice is always made from an order: `?order=<id>` comes from "Xử lý đặt hàng". */
-export default async function Page({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
+/** A new invoice is always made from an order: `?order=<id>` comes from "Xử lý đặt hàng"; `&lot=<id>` (from Lô thu hoạch) starts the lines on that lot. */
+export default async function Page({ searchParams }: { searchParams: Promise<{ order?: string; lot?: string }> }) {
   await connection();
   if (getSessionGateway().mode !== "api") notFound();
-  const { order } = await searchParams, orderId = z.guid().safeParse(order);
+  const { order, lot } = await searchParams, orderId = z.guid().safeParse(order), lotId = z.guid().safeParse(lot);
   if (!orderId.success) notFound();
-  return <InvoiceEditorPage key={orderId.data} orderId={orderId.data} />;
+  const picked = lotId.success ? lotId.data : undefined;
+  return <InvoiceEditorPage key={`${orderId.data}:${picked ?? ""}`} orderId={orderId.data} lotId={picked} />;
 }

@@ -18,7 +18,7 @@ export type HistoryChange = z.infer<typeof historyChange>;
 const actions: Record<string, string> = {
   damaged: "Báo hỏng", repaired: "Sửa làn", outOfService: "Ngừng hoạt động", restored: "Khôi phục hoạt động",
   created: "Tạo mới", create: "Tạo mới", recorded: "Ghi nhận", corrected: "Điều chỉnh", correct: "Điều chỉnh", updated: "Cập nhật", edited: "Chỉnh sửa",
-  removed: "Xóa", remove: "Xóa", cancelled: "Hủy", closed: "Kết thúc", laneFinished: "Hoàn tất thu hoạch làn", completed: "Hoàn tất",
+  removed: "Xóa", remove: "Xóa", cancelled: "Hủy", closed: "Kết thúc", weighed: "Cân thực tế", reweighed: "Cân lại", reopened: "Mở lại", laneFinished: "Hoàn tất thu hoạch làn", completed: "Hoàn tất",
 };
 /** Vietnamese name of an action code ("HarvestLot.Corrected" -> "Điều chỉnh"); an unknown code is shown as it is. */
 export function historyActionLabel(action: string): string {

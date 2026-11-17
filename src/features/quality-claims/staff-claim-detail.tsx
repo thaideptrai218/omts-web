@@ -1,7 +1,13 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { operationAllowed } from "@/features/operations/permissions";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
+import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
+import { newReturnHref } from "@/features/sales-returns/return-labels";
 import { CLAIM_STATUS, staffClaim, type StaffClaim } from "./claim-contracts";
 import { claimStatus, claimTone } from "./claim-labels";
 import { claimRepository } from "./claim-repositories";
@@ -19,6 +25,7 @@ type Props = { id: string; canRespond: boolean; onChanged(): void };
  */
 export function StaffClaimDetail({ id, canRespond, onChanged }: Props) {
   const remote = useRemote(useCallback((signal: AbortSignal) => claimRepository.read("detail", { id }, staffClaim, signal), [id]));
+  const { identity, permissions } = useApiWorkspace(), mayReturn = operationAllowed("sales-returns", identity, permissions.functionPermissions, "Create");
   const [fresh, setFresh] = useState<StaffClaim>(), [dialog, setDialog] = useState<RespondKind>();
   const claim = fresh ?? remote.data;
   if (remote.loading && !claim) return <Skeleton />;
@@ -46,6 +53,11 @@ export function StaffClaimDetail({ id, canRespond, onChanged }: Props) {
         </div>
       )}
       {claim.statusId === CLAIM_STATUS.awaiting && !canRespond && <p className={s.muted}>Chỉ Chủ hợp tác xã được chấp nhận hoặc từ chối khiếu nại; bạn có thể xem nội dung và ảnh.</p>}
+      {claim.statusId === CLAIM_STATUS.accepted && claim.offer === "ReturnAllGoods" && mayReturn && (
+        <div className={f.footer} role="group" aria-label={`Trả hàng cho khiếu nại ${claim.code}`}>
+          <Link className={purchaseStyles.primaryLink} href={newReturnHref(claim.invoice.code)}><InterfaceIcon name="upload" />Tạo phiếu trả hàng bán</Link>
+        </div>
+      )}
       {dialog && <ClaimRespondDialog kind={dialog} claim={claim} onClose={() => setDialog(undefined)} onDone={done} onReload={reload} />}
     </div>
   );

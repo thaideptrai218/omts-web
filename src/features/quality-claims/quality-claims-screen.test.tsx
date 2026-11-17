@@ -111,4 +111,13 @@ describe("QualityClaimsScreen (owner)", () => {
     cleanup(); serve({ detail: staff(answered("ReturnAllGoods", 3703, null)) }); workspace.mockReturnValue(owner); await openRow();
     expect(screen.queryByRole("button", { name: "Từ chối" })).toBeNull();
   });
+
+  it("links a claim accepted with a return offer to the return editor of its invoice, and only that one", async () => {
+    serve({ detail: staff(answered("ReturnAllGoods", 3703, null)) }); await openRow();
+    expect(screen.getByRole("link", { name: "Tạo phiếu trả hàng bán" }).getAttribute("href")).toBe("/sales/returns/new?invoice=HD000123");
+    cleanup(); serve({ detail: staff(answered("PriceCutWholeInvoice", 3703, null)) }); await openRow();
+    expect(screen.queryByRole("link", { name: "Tạo phiếu trả hàng bán" })).toBeNull();
+    cleanup(); serve({ detail: staff() }); await openRow();
+    expect(screen.queryByRole("link", { name: "Tạo phiếu trả hàng bán" })).toBeNull();
+  });
 });

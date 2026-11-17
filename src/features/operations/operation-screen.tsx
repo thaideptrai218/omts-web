@@ -49,7 +49,7 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "sales-invoice-list") return <SalesInvoiceListScreen />;
   if (area === "claim-reports") return <ClaimReportScreen />;
   if (area === "quality-claims") return <QualityClaimsScreen />;
-  if (area === "sales-returns") return <SalesReturnsScreen />;
+  if (area === "sales-returns") return <Suspense><SalesReturnsScreen /></Suspense>;
   if (area === "payroll") return <Suspense><PayrollScreen /></Suspense>;
   if (area === "payroll-payments") return <PayrollPaymentsScreen />;
   if (area === "sales-report") return <SalesPerformanceScreen />;

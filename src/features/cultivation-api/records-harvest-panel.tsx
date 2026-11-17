@@ -18,6 +18,7 @@ import Link from "next/link";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { HarvestLanesBoard } from "./harvest-lanes-board";
 import { HarvestCycleProductBanner } from "./harvest-cycle-product-banner";
+import { lotStatusText } from "@/features/harvest-lots/lot-labels";
 import { HarvestPlanSummary } from "./harvest-plan-summary";
 
 
@@ -44,16 +45,8 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
   const [status, setStatus] = useState("");
   const [page, setPage] = useState<number>();
   const [selectedLot, setSelectedLot] = useState<string | undefined>(() => query.get("recordId") ?? undefined);
-  // The API reports lot status in either casing.
-  const statusLabel = (value: string) =>
-    ({
-      Open: "Đang mở",
-      Closed: "Đã đóng",
-      Reopened: "Mở lại",
-      OPEN: "Đang mở",
-      CLOSED: "Đã đóng",
-      REOPENED: "Mở lại",
-    })[value] ?? value;
+  // The API reports lot status in either casing; 2904 Chờ cân is a lot waiting to be weighed.
+  const statusLabel = (value: string) => lotStatusText(undefined, value);
   const rows =
     remote.data?.lots.filter(
       (lot) =>

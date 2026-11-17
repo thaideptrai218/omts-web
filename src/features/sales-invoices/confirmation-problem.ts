@@ -5,11 +5,14 @@ import { z } from "zod";
  * kèm cờ có tên trong `confirmationField`. Chỉ cho qua tên trường nằm trong danh sách cho phép và các con số;
  * câu chữ hiển thị do web tự dựng (không chuyển chuỗi lạ từ backend ra giao diện).
  */
-const fieldPattern = /^(lines\[\d{1,3}\]\.priceDecidedByOwner|discountDecidedByOwner|payment\.payLaterOwnerAgreed|payment\.subtractExtraFromDebt|wantsQrCode|confirmAboveDebt|confirmDuplicateBankReference|confirmOwedBack|customerId|cashGivenBack)$/;
+const fieldPattern = /^(lines\[\d{1,3}\]\.priceDecidedByOwner|discountDecidedByOwner|payment\.payLaterOwnerAgreed|payment\.subtractExtraFromDebt|wantsQrCode|confirmAboveDebt|confirmDuplicateBankReference|confirmOwedBack|customerId|cashGivenBack|ownerAgreed|thrownAwayLots|confirmNegativeRemaining)$/;
 // Sửa / hủy hóa đơn (SALE-07, SALE-08) thêm confirmOwedBack (MSG-SALE-17), customerId (MSG-SALE-19) và cashGivenBack (MSG-SALE-23, kèm paymentId):
 // các tên này thuộc nhánh backend chưa gộp feature/OMTS-224-correct-cancel.
 const amount = z.number().finite().nonnegative().optional();
+// Trả hàng bán (CLAIM-03): ownerAgreed (MSG-CLAIM-04, kèm returnValue), thrownAwayLots (MSG-HARVEST-02, một lô mỗi lần) và confirmNegativeRemaining (MSG-CLAIM-06, kèm lots).
+const returnLot = z.object({ lotCode: z.string().regex(/^[A-Za-z0-9\-_/.]{1,40}$/), remainingKg: z.number().finite() });
 const details = {
+  returnValue: amount, harvestLotId: z.guid().optional(), lotCode: z.string().regex(/^[A-Za-z0-9\-_/.]{1,40}$/).optional(), discardedKg: amount, remainingKg: z.number().finite().optional(), lots: z.array(returnLot).max(100).optional(),
   lineNumber: z.number().int().positive().optional(), laterAmount: amount, debtAmount: amount, excessAmount: amount, subtractAmount: amount, changeAmount: amount,
   amount, owedBackAmount: amount, paymentCode: z.string().regex(/^[A-Za-z0-9-]{1,40}$/).optional(), paymentDate: z.iso.date().optional(), paymentId: z.guid().optional(),
 };
