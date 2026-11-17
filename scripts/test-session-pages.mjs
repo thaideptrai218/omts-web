@@ -41,6 +41,19 @@ let checks = 0;
 async function get(path, headers = {}) {
   return fetch(origin + path, { headers, redirect: "manual", signal: AbortSignal.timeout(5000) });
 }
+// A page request without a usable access token is sent through GET /api/auth/refresh first (proxy.ts): the
+// refresh cookie is scoped to /api/auth, so only that route can tell a signed-out browser from an expired token.
+// Follow that one hop on this server (the redirect is built on OMTS_WEB_ORIGIN) and return where it lands.
+async function landing(path, headers = {}) {
+  const first = await get(path, headers);
+  const location = first.headers.get("location");
+  if (first.status !== 307 || !location) return { response: first, location, body: await first.text() };
+  const hop = new URL(location);
+  assert.equal(hop.pathname, "/api/auth/refresh", `${path} must renew through the refresh route`);
+  assert.equal(hop.searchParams.get("next"), path, `${path} must come back to itself after renewal`);
+  const second = await get(hop.pathname + hop.search, headers);
+  return { response: second, location: second.headers.get("location"), body: await second.text() };
+}
 function privateFree(body) {
   for (const value of ["Chủ HTX Trung Nam", "Lê Minh Hải", "Ngô Nam Trung", "Nguyễn Văn An", "demo123"]) {
     assert.ok(!body.includes(value), `Private/mock account data escaped into ${value}`);
@@ -64,9 +77,8 @@ try {
   const compiledAssetText = (extension) => assets.filter((name) => name.endsWith(extension)).map((name) => readFileSync(new URL(`../.next/static/chunks/${name}`, import.meta.url), "utf8")).join("\n");
   checks += checkSidebarStyles(compiledAssetText(".css"), compiledAssetText(".js"));
   for (const path of ["/dashboard", "/account", "/employees", "/access/accounts", "/access/roles", "/cooperative/profile", "/farming/zones", "/farming/rafts", "/operations/purchase-receipts", "/operations/supplier-payments", "/operations/water"]) {
-    const response = await get(path);
-    const body = await response.text();
-    assert.ok(response.headers.get("location") === "/login" || body.includes("/login"), "Missing anonymous redirect");
+    const { location, body } = await landing(path);
+    assert.ok(location === "/login" || body.includes("/login"), `Missing anonymous redirect: ${path} -> ${location}`);
     privateFree(body);
     checks++;
   }
@@ -82,9 +94,9 @@ try {
     assert.equal(privateRead.headers.get("set-cookie"), null);
     checks += 3;
   }
-  const invalid = await get("/dashboard", { Cookie: "__Host-omts_at=bad" });
-  const invalidBody = await invalid.text();
-  assert.ok(invalid.headers.get("location") === "/session/recover" || invalidBody.includes("/session/recover"));
+  // An unreadable access cookie is not a session: the page renews, finds no refresh token and signs in again.
+  const { location: invalidLocation, body: invalidBody } = await landing("/dashboard", { Cookie: "__Host-omts_at=bad" });
+  assert.equal(invalidLocation, "/login", `A bad access cookie must end at the login: ${invalidLocation}`);
   privateFree(invalidBody);
   checks++;
   const login = await get("/login");
