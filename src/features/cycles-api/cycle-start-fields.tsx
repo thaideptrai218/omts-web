@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { PhotoPicker } from "@/components/form/photo-picker";
 import { UnitField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
 import { ErrorNotice, Field, Note, Select, Skeleton, businessToday } from "@/features/operations/ui";
@@ -22,10 +21,10 @@ export function NurseryBatchSelect({ batches, loading, error, onReload, value, o
     <option value="">Chọn đợt ươm</option>{batches.map(batch => <option key={batch.id} value={batch.id}>{nurseryBatchLabel(batch)}</option>)}</Select>{fieldError(message)}</div>;
 }
 
-/** Step 1 of the start form: raft and zone (read only), the nursed batch, the planned yield, the start date, a note and 1-3 plan photos. */
-export function CycleStartFields({ raftCode, zoneLabel, values, errors, onValue, batchSelect, photos, onPhotos, onPhotoBusy }: {
+/** Step 1 of the start form: raft and zone (read only), the nursed batch, the planned yield, the start date and a note. */
+export function CycleStartFields({ raftCode, zoneLabel, values, errors, onValue, batchSelect }: {
   raftCode: string; zoneLabel: string; values: CycleStartValues; errors: CycleStartErrors; onValue(key: keyof CycleStartValues, value: string): void;
-  batchSelect: ReactNode; photos: File[]; onPhotos(files: File[]): void; onPhotoBusy(busy: boolean): void;
+  batchSelect: ReactNode;
 }) {
   return <>
     <div className="grid gap-3 sm:grid-cols-2"><Field label="Bè nuôi" value={raftCode} readOnly /><Field label="Vùng nuôi" value={zoneLabel} readOnly /></div>
@@ -36,6 +35,5 @@ export function CycleStartFields({ raftCode, zoneLabel, values, errors, onValue,
       <div><Field label="Ngày bắt đầu *" type="date" required max={businessToday()} value={values.startDate} aria-invalid={!!errors.startDate} onChange={event => onValue("startDate", event.target.value)} />{fieldError(errors.startDate)}</div>
     </div>
     <Note label="Ghi chú" maxLength={1000} value={values.note} onChange={event => onValue("note", event.target.value)} />
-    <PhotoPicker label="Ảnh kế hoạch" files={photos} onChange={onPhotos} onBusyChange={onPhotoBusy} error={errors.photos} />
   </>;
 }

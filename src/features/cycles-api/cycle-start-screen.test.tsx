@@ -12,7 +12,6 @@ vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams()
 vi.mock("./repository", () => ({ readCycles: (...args: [{ action: string }]) => readCycles(...args), writeCycle: mocks.write, readCycleSummary: vi.fn(() => new Promise(() => undefined)), readClosePreview: vi.fn(), closeCycle: vi.fn() }));
 vi.mock("@/features/history/record-history", () => ({ RecordHistory: () => null }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ children, title }: { children: ReactNode; title: string }) => <section role="dialog" aria-label={title}>{children}</section> }));
-vi.mock("@/components/form/photo-picker", () => ({ PhotoPicker: ({ onChange }: { onChange(files: File[]): void }) => <button type="button" onClick={() => onChange([new File(["photo"], "plan.jpg", { type: "image/jpeg" })])}>Chọn ảnh kế hoạch</button> }));
 import { CycleDetailPanel } from "./cycle-detail-panel";
 import { CyclePlanTab } from "./cycle-plan-tab";
 import type { CycleRow } from "./cycle-model";
@@ -58,7 +57,6 @@ describe("Bắt đầu chu kỳ nuôi on the Hành trình screen", () => {
     expect((within(dialog).getByLabelText("Vùng nuôi") as HTMLInputElement).value).toBe("DEMO-01 · Vùng ươm");
     fireEvent.change(await within(dialog).findByRole("combobox", { name: "Đợt ươm (loại giống đã ươm) *" }), { target: { value: "00000000-0000-4000-8000-0000000000b1" } });
     fireEvent.change(within(dialog).getByLabelText("Sản lượng dự kiến (kg) *"), { target: { value: "2000" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Chọn ảnh kế hoạch" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Tiếp tục" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Xác nhận bắt đầu chu kỳ" }));
     await waitFor(() => expect(onChanged).toHaveBeenCalledWith("Đã bắt đầu chu kỳ nuôi"));

@@ -7,8 +7,6 @@ const mocks = vi.hoisted(() => ({ available: vi.fn(), write: vi.fn() }));
 const raftId = "00000000-0000-4000-8000-0000000000a1", zoneId = "00000000-0000-4000-8000-000000000001", cycleId = "00000000-0000-4000-8000-0000000000c1";
 vi.mock("./repository", () => ({ writeCycle: mocks.write, readCycles: mocks.available }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ children, title }: { children: ReactNode; title: string }) => <section role="dialog" aria-label={title}>{children}</section> }));
-vi.mock("@/components/form/photo-picker", () => ({ PhotoPicker: ({ onChange, error }: { onChange(files: File[]): void; error?: string }) =>
-  <div><button type="button" onClick={() => onChange([new File(["photo"], "plan.jpg", { type: "image/jpeg" })])}>Chọn ảnh kế hoạch</button>{error && <p role="alert">{error}</p>}</div> }));
 import { CycleStartDialog } from "./cycle-start-dialog";
 
 const batches = [{ id: "00000000-0000-4000-8000-0000000000b1", code: "NU000007", name: "Hàu giống", seedItemName: "Hàu giống", productName: "Hàu múp", remaining: 9500 },
@@ -22,7 +20,6 @@ function mount() {
 const fill = async () => {
   fireEvent.change(await screen.findByRole("combobox", { name: "Đợt ươm (loại giống đã ươm) *" }), { target: { value: batches[0].id } });
   fireEvent.change(screen.getByLabelText("Sản lượng dự kiến (kg) *"), { target: { value: "2000" } });
-  click("Chọn ảnh kế hoạch");
 };
 
 beforeEach(() => {
@@ -68,7 +65,7 @@ describe("Bắt đầu chu kỳ nuôi", () => {
     expect((screen.getByRole("button", { name: "Tiếp tục" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("asks for the batch, the yield and the photos before the review step", async () => {
+  it("asks for the batch, and the yield before the review step", async () => {
     mount(); await screen.findByRole("combobox", { name: "Đợt ươm (loại giống đã ươm) *" });
     click("Tiếp tục");
     expect(screen.getByText("Bước 1/2 · Thông tin chu kỳ")).toBeTruthy();
@@ -81,14 +78,14 @@ describe("Bắt đầu chu kỳ nuôi", () => {
     const onStarted = mount(); await fill(); click("Tiếp tục");
     expect(screen.getByText("Bước 2/2 · Xem lại và xác nhận")).toBeTruthy();
     expect(screen.getByText("NU000007 · Hàu giống · còn 9.500 mảnh (ước tính)")).toBeTruthy();
-    expect(screen.getByText("Hàu giống")).toBeTruthy(); expect(screen.getByText("2000 kg")).toBeTruthy(); expect(screen.getByText("1 ảnh")).toBeTruthy();
+    expect(screen.getByText("Hàu giống")).toBeTruthy(); expect(screen.getByText("2000 kg")).toBeTruthy();
     expect(mocks.write).not.toHaveBeenCalled();
     click("Xác nhận bắt đầu chu kỳ");
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith(cycleId));
     const [action, id, form] = mocks.write.mock.calls[0] as [string, string, FormData];
     expect([action, id]).toEqual(["start", raftId]);
     expect(form.get("nurseryBatchId")).toBe(batches[0].id); expect(form.has("productId")).toBe(false); expect(form.get("targetYieldKg")).toBe("2000");
-    expect(form.get("startDate")).toMatch(/^\d{4}-\d{2}-\d{2}$/); expect(form.getAll("photos")).toHaveLength(1);
+    expect(form.get("startDate")).toMatch(/^\d{4}-\d{2}-\d{2}$/); expect(form.has("photos")).toBe(false);
   });
 
   it("sends a refusal about the batch back to step 1, at the batch field", async () => {
