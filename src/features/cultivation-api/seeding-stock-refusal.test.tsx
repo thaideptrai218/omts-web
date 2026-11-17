@@ -10,6 +10,7 @@ vi.mock("./records-shared", async (importOriginal) => {
   return { ...original, seedRepo: { read, write, upload }, useAllowed: () => () => true };
 });
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
+vi.mock("./record-crew-picker", () => ({ RecordCrewPicker: () => null }));
 // jsdom cannot decode images; the picker only needs the file back.
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
 import { attachPhoto, selectLane } from "./record-form-test-helpers";

@@ -9,6 +9,7 @@ import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import { displayTime } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import type * as c from "./records-contracts";
+import { RecordCrewDetail } from "./record-crew-detail";
 import flowStyles from "./cultivation-flow.module.css";
 
 /** Read-only detail of one seeding record; edit/delete are offered only while seeding is not completed. */
@@ -37,6 +38,7 @@ export function SeedingRecordDetails({ record: v, zoneId, nurseryCode, completed
     <p>Số lượng thuộc cả lần thả giống, không chia đều cho từng làn.</p>
     {completed && <p>Chu kỳ đã hoàn tất thả giống nên bản ghi chỉ được xem.</p>}
     {!completed && !v.canCorrect && <p>Bản ghi đã khóa theo trạng thái chu kỳ hoặc lô thu hoạch; hiện chỉ được xem.</p>}
+    <RecordCrewDetail label="Nhân viên thả giống" crew={v.crew} />
     <PhotoGallery photos={v.photos ?? []} label="Ảnh thả giống" />
     <RecordHistory kind="seeding" id={v.id} zoneId={zoneId} />
     <footer>

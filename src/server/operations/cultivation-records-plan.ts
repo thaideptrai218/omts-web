@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/cultivation-api/records-contracts";
 import { cycle } from "@/features/cultivation-api/contracts";
-import { crewSuggestions } from "@/features/cultivation-api/harvest-crew-contracts";
+import { crewSuggestions } from "@/features/cultivation-api/record-crew-contracts";
 import { historyList } from "@/features/history/history-contracts";
 import { finishHarvestResult, finishHarvestValues, matchesFinishedSelection } from "@/features/cultivation-api/finish-harvest-contracts";
 import type { OperationArea } from "@/features/operations/permissions";
@@ -53,6 +53,8 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
   if (!m.success) return;
   const { action, id, zoneId, body } = m.data;
   const base = { area, action, zoneId, method: "POST" as const, permission: action === "correct" ? "Edit" : action === "remove" ? "Delete" : "Create" };
+  // The Cooperative Owner may complete while employees are not checked out yet (MSG-LABOR-37), with a reason.
+  const ownerApproval = { ownerApproved: z.boolean().optional(), approvalReason: z.string().trim().min(1).max(1000).optional() };
   const version = { rowVersion: z.string().min(1) }, reason = { reason: z.string().trim().min(1), ...version };
   if (area === "harvest" && action === "finish-harvest") {
     const values = finishHarvestValues.safeParse(body);
@@ -62,9 +64,9 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
   if (action === "finish-harvest") return;
   if (area === "harvest" && action === "finish-lane") {
     // One decisive per-lane action (no body): the lane number is validated here and only ever enters the path as digits.
-    const lane = z.strictObject({ laneNumber: z.number().int().min(1).max(999_999) }).safeParse(body);
+    const lane = z.strictObject({ laneNumber: z.number().int().min(1).max(999_999), ...ownerApproval }).safeParse(body);
     if (!lane.success) return;
-    return { ...base, permission: "Create", path: `/api/rafts/${id}/lanes/${lane.data.laneNumber}/finish-harvest`, schema: c.finishLaneResult };
+    return { ...base, permission: "Create", path: `/api/rafts/${id}/lanes/${lane.data.laneNumber}/finish-harvest`, ...(lane.data.ownerApproved ? { body: { ownerApproved: true, approvalReason: lane.data.approvalReason } } : {}), schema: c.finishLaneResult };
   }
   if (area === "harvest" && action === "remove") {
     const values = z.strictObject(reason).safeParse(body);
@@ -72,7 +74,7 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     return { ...base, path: `/api/harvest-lots/${id}/remove`, body: values.data, schema: z.object({ done: z.literal(true) }), noContent: true };
   }
   if (seeding) {
-    const values = (action === "complete" ? z.strictObject({ ...version, confirmEmpty: z.boolean().optional() }) : action === "remove" ? z.strictObject(reason) : action === "correct" ? c.seedValues.safeExtend(reason) : c.seedValues).safeParse(body);
+    const values = (action === "complete" ? z.strictObject({ ...version, confirmEmpty: z.boolean().optional(), ...ownerApproval }) : action === "remove" ? z.strictObject(reason) : action === "correct" ? c.seedValues.safeExtend(reason) : c.seedValues).safeParse(body);
     if (!values.success) return;
     return { ...base, body: values.data, method: action === "correct" ? "PUT" : "POST", path: action === "correct" || action === "remove" ? `/api/seeding-records/${id}${action === "remove" ? "/remove" : ""}` : `/api/cultivation-cycles/${id}/${action === "complete" ? "seeding-complete" : "seeding-records"}`, schema: action === "remove" ? z.object({ done: z.literal(true) }) : action === "complete" ? z.object({ cycle }) : z.object({ record: c.seedingRecord }), ...(action === "remove" ? { noContent: true } : {}) };
   }

@@ -7,11 +7,14 @@ const quantity = z.number().finite().nonnegative().refine(value => Math.abs(valu
 const positive = quantity.refine(value => value > 0, "Số lượng phải lớn hơn 0.");
 const reason = z.string().trim().min(1).max(1000);
 const rowVersion = z.string().min(1).max(200);
-export const createValues = z.strictObject({ seedLotId: guid, quantity: positive, startDate: z.iso.date(), note: z.string().max(1000).optional() });
+// `crew`: the employees who did the nursery work (optional, max 100); `replaceCrew` on an edit sets exactly that list (none = clear).
+const crew = z.array(guid).max(100).refine(ids => new Set(ids).size === ids.length);
+export const createValues = z.strictObject({ seedLotId: guid, quantity: positive, startDate: z.iso.date(), note: z.string().max(1000).optional(), crew: crew.optional() });
 export const updateValues = z.strictObject({ quantity: positive.optional(), startDate: z.iso.date().optional(), note: z.string().max(1000).optional(), rowVersion,
-  keepPhotoIds: z.array(guid).max(3).optional() });
+  keepPhotoIds: z.array(guid).max(3).optional(), crew: crew.optional(), replaceCrew: z.boolean().optional() });
 // V2: completing a nursery only records survivors, date and photos; no raft allocation.
-export const completeValues = z.strictObject({ survivors: quantity, completedOn: z.iso.date().optional(), rowVersion });
+// The Cooperative Owner may complete while employees are not checked out yet (MSG-LABOR-37), with a reason.
+export const completeValues = z.strictObject({ survivors: quantity, completedOn: z.iso.date().optional(), rowVersion, ownerApproved: z.boolean().optional(), approvalReason: z.string().trim().min(1).max(1000).optional() });
 const cancelValues = z.strictObject({ reason, rowVersion });
 const survivorsValues = z.strictObject({ survivors: quantity, reason, rowVersion });
 const closeValues = z.strictObject({ reason: z.string().trim().max(1000).optional(), rowVersion });

@@ -14,6 +14,7 @@ import { NurseryResultStep } from "./nursery-result-step";
 import { NurseryReviewStep } from "./nursery-review-step";
 import { NurseryCompletionSteps, type NurseryCompletionStep } from "./nursery-completion-steps";
 import { useNurseryMutation } from "./use-nursery-mutation";
+import { AttendanceGatePanel, openAttendanceOf, openCrewOf, ownerOverride, useIsCooperativeOwner } from "@/features/cultivation-api/record-crew-attendance";
 
 export type CompletionMode = "complete" | "survivors";
 type CompletionProps = { batch: NurseryDetail; mode: CompletionMode; onClose(): void; onSaved(batch: NurseryDetail): void };
@@ -29,7 +30,9 @@ function NurseryCompletionForm({ batch, mode, onClose, onSaved }: CompletionProp
   const [photos, setPhotos] = useState<NurseryPhotoDraft[]>([]), [photoBusy, setPhotoBusy] = useState(false), [reason, setReason] = useState("");
   const [step, setStep] = useState<NurseryCompletionStep>("result"), [error, setError] = useState<string>();
   const mutation = useNurseryMutation(), confirmation = useActionDialog();
-  const review = step === "review", disabled = mutation.pending || mutation.blocked || photoBusy;
+  // MSG-LABOR-37: employees of this batch are not checked out yet; only the Owner may complete anyway, with a reason.
+  const openCrew = openAttendanceOf(mutation.failure as never) ?? (mode === "complete" ? openCrewOf(batch.crew) : undefined), isOwner = useIsCooperativeOwner(), [approval, setApproval] = useState("");
+  const review = step === "review", disabled = mutation.pending || mutation.blocked || photoBusy, gateClosed = !!openCrew && !isOwner;
 
   async function close() {
     if (!mutation.busy() && !photoBusy && await confirmation.confirm("Bỏ các thay đổi chưa lưu?")) onClose();
@@ -40,8 +43,9 @@ function NurseryCompletionForm({ batch, mode, onClose, onSaved }: CompletionProp
       ?? (mode === "survivors" && (!reason.trim() || reason.trim().length > 1000) ? "Lý do: nhập từ 1 đến 1.000 ký tự." : undefined);
     setError(found); if (found) return;
     if (!review) { setStep("review"); return; }
+    if (openCrew && isOwner && !approval.trim()) { setError("Nhập lý do hoàn tất khi nhân viên chưa ra về."); return; }
     const count = nurseryDraftNumber(survivors);
-    const body = mode === "complete" ? nurseryMultipart({ survivors: count, completedOn, rowVersion: batch.rowVersion }, photos.map(photo => photo.file))
+    const body = mode === "complete" ? nurseryMultipart({ survivors: count, completedOn, rowVersion: batch.rowVersion, ...(openCrew ? ownerOverride(openCrew, approval) : undefined) }, photos.map(photo => photo.file))
       : { survivors: count, reason: reason.trim(), rowVersion: batch.rowVersion };
     const result = await mutation.run(() => nurseryService.save(mode, batch.zoneId, body, batch.id));
     if (result) onSaved(result);
@@ -58,12 +62,13 @@ function NurseryCompletionForm({ batch, mode, onClose, onSaved }: CompletionProp
           {mode === "survivors" && <Note label="Lý do điều chỉnh" value={reason} required maxLength={1000} onChange={event => { setReason(event.target.value); setError(undefined); }} />}
         </>}
       </fieldset>
-      <ErrorNotice error={error ?? mutation.error} />
+      {openCrew ? <AttendanceGatePanel employees={openCrew} isOwner={isOwner} reason={approval} onReason={value => { setApproval(value); setError(undefined); }} /> : <ErrorNotice error={error ?? mutation.error} />}
+      {openCrew && error && <ErrorNotice error={error} />}
       {mutation.blocked && <p role="alert" className="text-sm">Đóng cửa sổ và tải lại bản ghi để đối chiếu trước khi ghi lại.</p>}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
         <Button key="cancel-completion" type="button" variant="secondary" className="w-auto" disabled={mutation.pending || photoBusy} onClick={() => void close()}>Bỏ qua</Button>
         {review && <Button key={`${mode}-${step}-back`} type="button" variant="secondary" className="w-auto" disabled={disabled} onClick={() => { setError(undefined); setStep("result"); }}>Quay lại</Button>}
-        <Button key={`${mode}-${step}-submit`} type="submit" className="w-auto max-w-full" isPending={mutation.pending} disabled={disabled}>
+        <Button key={`${mode}-${step}-submit`} type="submit" className="w-auto max-w-full" isPending={mutation.pending} disabled={disabled || gateClosed}>
           {review ? mode === "complete" ? "Xác nhận hoàn tất ươm" : "Xác nhận điều chỉnh" : "Tiếp tục"}</Button>
       </div>
     </form>

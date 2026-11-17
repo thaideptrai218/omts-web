@@ -6,6 +6,7 @@ const text = z.string().max(1000).optional().catch(undefined);
 const number = z.number().finite().nullish().catch(undefined);
 const problemSchema = z.object({ code: text, field: text, fields: z.array(z.string().max(100)).max(20).optional().catch(undefined),
   message: text, hint: text, reasonCode: text, currentRowVersion: text, raftId: text, raftCode: text, cycleId: text,
+  employees: z.array(z.object({ id: z.string().max(60), code: z.string().max(40).nullish().catch(undefined), name: z.string().max(200), checkedIn: z.boolean() })).max(100).optional().catch(undefined),
   onHand: number, balanceAfter: number, allocated: number, seeded: number, remaining: number, quantity: number, previousCloseDate: text });
 
 export async function readNurseryProblem(response: Response, signal: AbortSignal) {

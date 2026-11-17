@@ -17,7 +17,8 @@ import { HarvestLaneChoices } from "./harvest-lane-choices";
 import { HarvestEstimateHint, harvestEstimate } from "./harvest-estimate-hint";
 import { HarvestPlanSummary } from "./harvest-plan-summary";
 import { harvestWarningTexts } from "./harvest-warning-text";
-import { HarvestCrewPicker } from "./harvest-crew-picker";
+import { RecordCrewPicker } from "./record-crew-picker";
+import { crewAssignmentNotice } from "./record-crew-assignment-notice";
 import { HarvestCycleProductBanner } from "./harvest-cycle-product-banner";
 import { harvestOrderError, splitHarvestRead } from "./harvest-order-filter";
 import { HarvestOrderPicker, defaultHarvestOrderId } from "./harvest-order-picker";
@@ -73,6 +74,8 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
   const send = (parsed: z.infer<typeof c.harvestValues>) => harvestRepo.upload("harvest-record", photos, parsed, c.harvestSaved, raftId, zoneId);
   function done(saved: z.infer<typeof c.harvestSaved>) {
     notify({ tone: "success", title: `Đã ghi nhận chuyến thu hoạch ${saved.lot.lotCode}.`, ...(saved.everySeededLaneHarvested ? { description: "Tất cả làn đã thu xong. Có thể kết thúc chu kỳ." } : {}) });
+    const crewNotice = crewAssignmentNotice(saved.crewAssignment);
+    if (crewNotice) notify({ tone: saved.crewAssignment?.skipped.length ? "warning" : "info", title: crewNotice });
     const order = orderCompleteText(saved, pickedOrder?.code, pickedOrder?.acceptedCages);
     if (order) notify({ tone: order.complete ? "success" : "info", title: order.text });
     for (const text of harvestWarningTexts(saved.warnings)) notify({ tone: "warning", title: text });
@@ -111,7 +114,7 @@ export function HarvestForm({ zoneId, raftId, data, canConfigure = false, onClos
             {lanes.length > 0 && <LaneChoices lanes={lanes} values={finished} onChange={setFinished} label="Làn đã thu hết hàu trong chuyến này" />}
           </div>}
         </CollapsibleSection>
-        <CollapsibleSection title="Nhân viên cùng thu" description="Những nhân viên tham gia chuyến thu này." columns={1}><HarvestCrewPicker raftId={raftId} zoneId={zoneId} values={crew} onChange={setCrew} /></CollapsibleSection>
+        <CollapsibleSection title="Nhân viên cùng thu" description="Những nhân viên tham gia chuyến thu này." columns={1}><RecordCrewPicker label="Nhân viên cùng thu" raftId={raftId} zoneId={zoneId} values={crew} onChange={setCrew} /></CollapsibleSection>
         <CollapsibleSection title="Số lượng và ảnh" description="Số lồng thu hoạch và ảnh ghi nhận." columns={1}>
           <UnitField key="harvest-cages" label="Số lồng thu hoạch *" unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} required value={cages} onChange={value => { setTypedCages(value); setCagesError(undefined); }} error={cagesError ?? harvestCagesError(editor.mutation.failure?.problem)} />
           <UnitField key="harvest-estimated-kg" label="Kg ước tính (để trống: tính theo số lồng)" unit="kg ước tính" decimals={2} min={0.01} value={kg} onChange={setKg} />

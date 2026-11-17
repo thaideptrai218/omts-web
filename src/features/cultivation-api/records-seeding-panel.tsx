@@ -12,6 +12,7 @@ import { formatVietnameseDate } from "@/shared/format/date-only";
 import flowStyles from "./cultivation-flow.module.css";
 import * as c from "./records-contracts";
 import { CompleteSeeding } from "./records-complete-seeding-dialog";
+import { openCrewOf, useIsCooperativeOwner } from "./record-crew-attendance";
 import { SeedingForm } from "./records-seeding-form";
 import type { SortState } from "@/components/ui/management-screen/management-table";
 import { seedingCompletionPrompt } from "./seeding-completion-prompt";
@@ -41,6 +42,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
   const visible = records.slice((currentPage - 1) * 10, currentPage * 10);
   const fromNursery = !!data?.nurseryBatchId, completed = !!data?.seedingCompletedOn;
   // Nothing left to seed (nursed batch used up, or every seedable lane at 100%): ask for the completion and make its button the primary one.
+  const isOwner = useIsCooperativeOwner(), crewOpen = openCrewOf(...(data?.records ?? []).map(record => record.crew));
   const canComplete = !!data?.canMarkComplete && allowed("Create"), completionPrompt = data && canComplete ? seedingCompletionPrompt(data) : null;
   // Beside "Ghi nhận thả giống": enabled once a record exists (completion does not need every lane at 100%); before that it stays disabled with a reason. Hidden when completed.
   const hasRecords = !!data?.records.length, showComplete = !!data && !completed && allowed("Create") && (canComplete || !hasRecords);
@@ -59,7 +61,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
         <div className={flowStyles.actions}>
           {data?.canRecord && !completed && allowed("Create") && <Button type="button" variant={completionPrompt ? "secondary" : "primary"} disabled={remote.loading} onClick={() => setSelected(null)}>Ghi nhận thả giống</Button>}
           {showComplete && <Button type="button" variant={completionPrompt ? "primary" : "secondary"} className={completionPrompt ? "ring-2 ring-primary/40 ring-offset-2" : ""}
-            disabled={remote.loading || !hasRecords} title={hasRecords ? undefined : "Cần ít nhất một lần thả giống"} onClick={() => setCompleting(true)}>Hoàn tất thả giống</Button>}
+            disabled={remote.loading || !hasRecords || !!crewOpen && !isOwner} title={hasRecords ? crewOpen && !isOwner ? `Còn ${crewOpen.length} nhân viên chưa điểm danh ra về` : undefined : "Cần ít nhất một lần thả giống"} onClick={() => setCompleting(true)}>Hoàn tất thả giống</Button>}
           <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>Tải lại</Button>
         </div>
       </div>
@@ -103,7 +105,7 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
           </DataTable>
         </details>}
         {selected === null && !completed && form(null)}
-        {completing && !completed && <CompleteSeeding cycleId={cycleId} zoneId={zoneId} hasRecords={data.records.length > 0} onClose={() => setCompleting(false)} onSaved={() => { setCompleting(false); remote.reload(); }} />}
+        {completing && !completed && <CompleteSeeding cycleId={cycleId} zoneId={zoneId} hasRecords={data.records.length > 0} openCrew={crewOpen} onClose={() => setCompleting(false)} onSaved={() => { setCompleting(false); remote.reload(); }} />}
       </>}
     </section>
   );

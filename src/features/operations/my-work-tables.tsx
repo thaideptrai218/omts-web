@@ -12,7 +12,7 @@ export function MyAssignmentsTable({ rows }: { rows: readonly MyAssignment[] }) 
   return <table className={styles.table}>
     <thead><tr>{["Ngày", "Bè", "Công việc", "Vào làm", "Ra về"].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
     <tbody>{rows.map((row) => <tr key={row.id}>
-      <td className={styles.date}>{dateLabel(row.date)}</td><td>{row.raftCode || "—"}</td><td className={styles.name}>{row.job}</td>
+      <td className={styles.date}>{dateLabel(row.date)}</td><td>{row.raftCode || "Làm ở vùng"}</td><td className={styles.name}>{row.job}</td>
       <td>{recordedTime(row.checkedInAt)}</td><td>{recordedTime(row.checkedOutAt)}</td>
     </tr>)}</tbody>
   </table>;

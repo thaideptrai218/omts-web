@@ -30,10 +30,12 @@ const attendanceDaySchema = z.object({ date: z.iso.date(), checkedInAt: z.iso.da
 export const myWorkSchema = z.object({ employeeId: z.guid().nullable(), name: z.string().nullable(), assignments: z.array(assignmentSchema), attendance: z.array(attendanceDaySchema), requests: z.array(leaveSchema) });
 export const requestLeaveSchema = z.strictObject({ from: z.iso.date(), to: z.iso.date(), reason: z.string().trim().min(1).max(500), clientOperationId: z.uuid() }).refine((v) => v.to >= v.from);
 export const reviewLeaveSchema = z.strictObject({ approved: z.boolean(), response: z.string().max(500), rowVersion: z.string().min(1) }).refine((v) => v.approved || !!v.response.trim());
-export const workforceLookupsSchema = z.object({ jobs: z.array(z.object({ id: z.guid(), name: z.string() })), employees: z.array(z.object({ id: z.guid(), name: z.string(), onLeave: z.boolean() })) });
+export const workforceLookupsSchema = z.object({ jobs: z.array(z.object({ id: z.guid(), name: z.string() })), employees: z.array(z.object({ id: z.guid(), name: z.string(), onLeave: z.boolean(), assignment: z.object({ zoneId: z.guid(), raftId: z.guid().nullable(), raftCode: z.string().nullable(), jobTypeId: z.guid(), job: z.string() }).nullish().catch(undefined) })) });
 const employeeIds = z.array(z.guid()).min(1).max(100).refine((v) => new Set(v).size === v.length);
-export const assignWorkSchema = z.strictObject({ raftId: z.guid(), jobTypeId: z.guid(), date: z.iso.date(), employeeIds, moveExisting: z.boolean() });
-export const crewWorkSchema = z.strictObject({ raftId: z.guid(), jobTypeId: z.guid(), employeeIds });
+// Work is on a raft, or on a zone alone when there is no raft (a nursery): exactly one of raftId / zoneId.
+const raftOrZone = (v: { raftId?: string; zoneId?: string }) => !!v.raftId !== !!v.zoneId;
+export const assignWorkSchema = z.strictObject({ raftId: z.guid().optional(), zoneId: z.guid().optional(), jobTypeId: z.guid(), date: z.iso.date(), employeeIds, moveExisting: z.boolean() }).refine(raftOrZone, { path: ["raftId"] });
+export const crewWorkSchema = z.strictObject({ raftId: z.guid().optional(), zoneId: z.guid().optional(), jobTypeId: z.guid(), employeeIds }).refine(raftOrZone, { path: ["raftId"] });
 const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).transform((v) => v.length === 5 ? `${v}:00` : v);
 export const attendanceRoundingSchema = z.enum(["None", "Minutes15", "Minutes30", "Hour1"]);
 export const attendanceRoundingMinutes = { None: 0, Minutes15: 15, Minutes30: 30, Hour1: 60 } as const;

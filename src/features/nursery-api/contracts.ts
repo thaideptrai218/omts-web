@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { historyEntry } from "@/features/history/history-contracts";
+import { crewAssignmentResult, crewMember } from "@/features/cultivation-api/record-crew-contracts";
 
 const text = z.string(), number = z.number().finite(), nullableNumber = number.nullish().transform(value => value ?? null);
 const photo = z.object({ id: text, url: text });
@@ -23,7 +24,7 @@ export const nurseryUsageSchema = z.object({ cycleId: text, cycleCode: text.null
 export const nurseryDetailSchema = z.object({ ...nurseryRowFields, seedLot: seedLotSchema, seedLotOnHand: nullableNumber,
   note: text.nullish(), completedOn: text.nullish(), issueId: text.nullish(), issueCode: text.nullish(), cancelReason: text.nullish(),
   recordedByName: text.nullish(), startPhotos: z.array(photo).default([]), completionPhotos: z.array(photo).default([]),
-  usage: z.array(nurseryUsageSchema).nullish().transform(value => value ?? []),
+  usage: z.array(nurseryUsageSchema).nullish().transform(value => value ?? []), crew: z.array(crewMember).optional(), crewAssignment: crewAssignmentResult,
   canEdit: z.boolean().default(false), canComplete: z.boolean().default(false), canCorrectSurvivors: z.boolean().default(false) }).transform(normalizeInventory);
 export const nurseryListSchema = z.object({ items: z.array(nurseryRowSchema), page: number, pageSize: number, total: number });
 export const nurseryLotsSchema = z.object({ lots: z.array(seedLotSchema), message: text.nullish() });

@@ -9,6 +9,7 @@ import type { LaneOperatingScope } from "@/features/rafts-api/lane-operating-det
 import { compressLaneNumbers } from "@/features/farming-management/lane-ranges";
 import { ErrorNotice, operationError, useMutation } from "@/features/operations/ui";
 import { finishHarvestLanes, type FinishHarvestOutcome } from "./finish-harvest-repository";
+import { AttendanceGatePanel, openAttendanceOf, ownerOverride, useIsCooperativeOwner } from "./record-crew-attendance";
 
 type Props = Omit<ComponentProps<typeof LaneOverview>, "selected" | "onSelectionChange" | "selectionAction"> & {
   raftId: string; zoneId: string; rowVersion?: string; onChanged(): void; operatingScope?: LaneOperatingScope;
@@ -19,6 +20,8 @@ export function FinishHarvestOverview({ raftId, zoneId, rowVersion, onChanged, o
   const [selected, setSelected] = useState<number[]>([]), [confirming, setConfirming] = useState<number[]>();
   const [partial, setPartial] = useState<FinishHarvestOutcome>();
   const mutation = useMutation(), { notify } = useToast();
+  // MSG-LABOR-37: crew still at work; only the Owner may finish anyway, with a reason.
+  const [approval, setApproval] = useState(""), isOwner = useIsCooperativeOwner();
   const selectedEligible = selected.filter(number => !overview.eligibleLaneNumbers || overview.eligibleLaneNumbers.includes(number));
   function close() {
     if (mutation.busy()) return;
@@ -28,21 +31,22 @@ export function FinishHarvestOverview({ raftId, zoneId, rowVersion, onChanged, o
   }
   async function finish() {
     if (!confirming?.length || partial || mutation.busy() || mutation.blocked) return;
-    const outcome = await mutation.run(() => finishHarvestLanes(raftId, zoneId, confirming, rowVersion));
+    if (openCrew && isOwner && !approval.trim()) return;
+    const outcome = await mutation.run(() => finishHarvestLanes(raftId, zoneId, confirming, rowVersion, ownerOverride(openCrew, approval)));
     if (!outcome) return;
     if (outcome.finished.length) notify({ tone: "success", title: `Đã hoàn tất thu hoạch ${outcome.finished.length} làn` });
     else if (!outcome.failure) notify({ tone: "info", title: `${outcome.alreadyFinished.length} làn đã hoàn tất thu hoạch từ trước.` });
     if (outcome.failure) { setPartial(outcome); return; }
     setSelected([]); setConfirming(undefined); onChanged();
   }
-  const failure = partial?.failure ?? mutation.failure;
+  const failure = partial?.failure ?? mutation.failure, openCrew = openAttendanceOf(failure);
   return <>
     <OperatingLaneOverview {...overview} scope={operatingScope ?? { raftId, zoneId, onChanged }} selected={selectedEligible} onSelectionChange={setSelected} selectionDisabled={overview.selectionDisabled || mutation.pending}
       selectionAction={<Button type="button" className="w-auto" variant="secondary" disabled={!selectedEligible.length || overview.selectionDisabled || mutation.pending} onClick={() => { mutation.reviewed(); setPartial(undefined); setConfirming([...selectedEligible]); }}>Hoàn tất thu hoạch</Button>} />
     {confirming && <Dialog open title="Hoàn tất thu hoạch các làn đã chọn?" dismissible={!mutation.pending} mobileLayout="compact" onOpenChange={open => { if (!open) close(); }}>
       <p className="text-sm font-semibold">Làn {compressLaneNumbers(confirming)}</p>
       <p className="mt-2 text-sm text-text-muted">Các làn chuyển sang Đã thu xong và không ghi nhận thêm chuyến thu. Muốn hoàn tác phải sửa lô kèm lý do.</p>
-      <ErrorNotice error={partial?.failure ? operationError(partial.failure) : mutation.error} />
+      {openCrew ? <AttendanceGatePanel employees={openCrew} isOwner={isOwner} reason={approval} onReason={setApproval} /> : <ErrorNotice error={partial?.failure ? operationError(partial.failure) : mutation.error} />}
       {failure?.httpStatus === 409 && !partial && <p className="mt-2 text-sm">Chưa có làn nào được thay đổi. Hãy đối chiếu tình trạng làn trước khi thử lại.</p>}
       {!!failure?.problem?.lanes?.length && <ul className="mt-3 space-y-2 text-sm text-danger" aria-label="Các làn chưa thể hoàn tất">{failure.problem.lanes.map(lane => <li key={lane.laneNumber}><strong>Làn {lane.laneNumber}:</strong> {lane.message}</li>)}</ul>}
       {partial && <div className="mt-3 space-y-2 text-sm" role="status">
@@ -53,7 +57,7 @@ export function FinishHarvestOverview({ raftId, zoneId, rowVersion, onChanged, o
       {mutation.blocked && <p className="mt-3 text-sm" role="alert">Cần tải tình trạng mới để đối chiếu kết quả trước khi tiếp tục.</p>}
       <div className="mt-5 flex justify-end gap-3">
         <Button type="button" className="w-auto" variant="secondary" disabled={mutation.pending} onClick={close}>{partial || mutation.blocked ? "Đóng và tải lại" : "Bỏ qua"}</Button>
-        {!partial && <Button type="button" className="w-auto" disabled={mutation.blocked} isPending={mutation.pending} onClick={() => void finish()}>Hoàn tất thu hoạch</Button>}
+        {!partial && <Button type="button" className="w-auto" disabled={mutation.blocked || !!openCrew && (!isOwner || !approval.trim())} isPending={mutation.pending} onClick={() => void finish()}>Hoàn tất thu hoạch</Button>}
       </div>
     </Dialog>}
   </>;
