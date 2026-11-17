@@ -12,7 +12,7 @@ const overview = { area: "cultivation-cycles", title: "Hành trình", caption: "
 /** The farming flow in order. Nursery is not a step here: seed may be taken from an already nursed batch, so seeding can start without it. */
 const steps = [
   { area: "seeding", kind: "seeding", caption: "Đưa giống xuống từng làn", path: "/operations/seeding" },
-  { area: "harvest", kind: "harvest", caption: "Thu theo đơn mua", path: "/operations/harvest" },
+  { area: "harvest", kind: "harvest", caption: "Thu theo kế hoạch thu hoạch", path: "/operations/harvest" },
   { area: "material-usages", kind: "material", caption: "Cho ăn, thuốc, sửa chữa", path: "/operations/material-usages" },
   { area: "water", kind: "water", caption: "Đo độ mặn, nhiệt độ", path: "/operations/water" },
 ] as const;

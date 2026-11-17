@@ -20,7 +20,7 @@ describe("farming bar", () => {
     const flow = within(bar).getByRole("list", { name: "Các bước nuôi trồng" });
     expect(within(flow).queryByRole("link", { name: /Hành trình/ })).toBeNull();
     expect(within(flow).getAllByRole("link").map(link => link.textContent)).toEqual([
-      "1Thả giốngĐưa giống xuống từng làn", "2Thu hoạchThu theo đơn mua", "3Sử dụng vật tư (tùy chọn)Cho ăn, thuốc, sửa chữa"]);
+      "1Thả giốngĐưa giống xuống từng làn", "2Thu hoạchThu theo kế hoạch thu hoạch", "3Sử dụng vật tư (tùy chọn)Cho ăn, thuốc, sửa chữa"]);
     expect(within(flow).getByRole("link", { name: /Thả giống/ }).getAttribute("href")).toBe("/operations/seeding?zoneId=z1&raftId=r1&cycleId=c1");
     expect(within(flow).getByRole("link", { name: /Thu hoạch/ }).getAttribute("aria-current")).toBe("page");
   });
