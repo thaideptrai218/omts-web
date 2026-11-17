@@ -32,7 +32,7 @@ export function AnimatedOyster() {
         <path d="M100 0 120 0 320 365 270 350Z"/><path d="M340 0 350 0 520 330 490 315Z"/>
       </g>
       <g className={s.drift}><OysterArtwork id={id}/></g>
-      <g className={s.revealBubbles}>
+      <g className={s.revealBubbles} data-part="reveal-bubbles">
         <circle cx="224" cy="258" r="24" />
         <circle cx="267" cy="290" r="17" />
         <circle cx="310" cy="254" r="30" />
