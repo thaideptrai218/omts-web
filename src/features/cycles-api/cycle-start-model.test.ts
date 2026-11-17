@@ -7,27 +7,25 @@ const batch = "00000000-0000-4000-8000-0000000000b1";
 const filled = { nurseryBatchId: batch, targetYieldKg: "2000", startDate: "2026-11-12", note: "" };
 
 describe("start form validation", () => {
-  it("passes with a batch, a yield above 0, a date not after today and one photo", () => expect(validateCycleStart(filled, 1, "2026-11-13")).toEqual({}));
+  it("passes with a batch, a yield above 0, a date not after today", () => expect(validateCycleStart(filled, "2026-11-13")).toEqual({}));
   it("asks for every missing required input", () => {
-    const errors = validateCycleStart({ ...emptyCycleStart("2026-11-13"), startDate: "" }, 0, "2026-11-13");
-    expect(Object.keys(errors).sort()).toEqual(["nurseryBatchId", "photos", "startDate", "targetYieldKg"]);
+    const errors = validateCycleStart({ ...emptyCycleStart("2026-11-13"), startDate: "" }, "2026-11-13");
+    expect(Object.keys(errors).sort()).toEqual(["nurseryBatchId", "startDate", "targetYieldKg"]);
   });
-  it("refuses a zero yield, a future date and more than 3 photos", () => {
-    expect(validateCycleStart({ ...filled, targetYieldKg: "0" }, 1, "2026-11-13").targetYieldKg).toBeTruthy();
-    expect(validateCycleStart({ ...filled, targetYieldKg: "1,5" }, 1, "2026-11-13")).toEqual({});
-    expect(validateCycleStart({ ...filled, startDate: "2026-11-14" }, 1, "2026-11-13").startDate).toBeTruthy();
-    expect(validateCycleStart(filled, 4, "2026-11-13").photos).toBeTruthy();
+  it("refuses a zero yield, a future date", () => {
+    expect(validateCycleStart({ ...filled, targetYieldKg: "0" }, "2026-11-13").targetYieldKg).toBeTruthy();
+    expect(validateCycleStart({ ...filled, targetYieldKg: "1,5" }, "2026-11-13")).toEqual({});
+    expect(validateCycleStart({ ...filled, startDate: "2026-11-14" }, "2026-11-13").startDate).toBeTruthy();
   });
 });
 
 describe("start request", () => {
-  it("builds the multipart fields of the backend contract: batch, yield, date, optional note, photos", () => {
-    const photos = [new File(["a"], "a.jpg", { type: "image/jpeg" }), new File(["b"], "b.jpg", { type: "image/jpeg" })];
-    const form = cycleStartForm({ ...filled, targetYieldKg: "2000,5", note: " Lứa mới " }, photos);
-    expect([...form.keys()].filter(key => key !== "photos").sort()).toEqual(["note", "nurseryBatchId", "startDate", "targetYieldKg"]);
+  it("builds the multipart fields of the backend contract: batch, yield, date, optional note", () => {
+    const form = cycleStartForm({ ...filled, targetYieldKg: "2000,5", note: " Lứa mới " });
+    expect([...form.keys()].sort()).toEqual(["note", "nurseryBatchId", "startDate", "targetYieldKg"]);
     expect(form.get("nurseryBatchId")).toBe(batch); expect(form.get("targetYieldKg")).toBe("2000.5"); expect(form.get("note")).toBe("Lứa mới");
-    expect(form.getAll("photos")).toHaveLength(2);
-    expect(cycleStartForm(filled, photos).has("note")).toBe(false);
+    expect(form.has("photos")).toBe(false);
+    expect(cycleStartForm(filled).has("note")).toBe(false);
   });
   it("matches the server schema (no seed lot, no planned seed quantity, no harvest date)", () => {
     expect(cycleStartInput.safeParse({ nurseryBatchId: batch, startDate: "2026-11-12", targetYieldKg: 2000 }).success).toBe(true);
@@ -41,7 +39,6 @@ describe("start request", () => {
 describe("start refusals", () => {
   it("puts a named field at its input", () => {
     expect(cycleStartFailure({ code: "MSG-GEN-01", problem: { field: "Target yield", hint: "Sản lượng phải lớn hơn 0." } }, "x").errors.targetYieldKg).toBe("Sản lượng phải lớn hơn 0.");
-    expect(cycleStartFailure({ problem: { field: "Photos" } }, undefined).errors.photos).toBeTruthy();
     expect(cycleStartFailure({ problem: { field: "Nursery batch" } }, undefined).errors.nurseryBatchId).toBeTruthy();
   });
   it("puts a seed item without a loại hàu at the batch field, with the backend detail or a fixed sentence", () => {

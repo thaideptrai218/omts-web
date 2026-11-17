@@ -32,7 +32,9 @@ export async function readCyclePhotoUpload(request: Request) {
     const parsed = command.safeParse({ ...values, body });
     if (!parsed.success) return { problem: { field: String(parsed.error.issues[0]?.path.at(-1) ?? "Dữ liệu"), hint: "Vui lòng kiểm tra dữ liệu kế hoạch nuôi." } };
     const kept = "keepPhotoIds" in parsed.data.body ? parsed.data.body.keepPhotoIds?.length ?? 0 : 0;
-    if (photos.length + kept < 1 || photos.length + kept > 3) return { problem: photoProblem };
+    // A cycle starts without photos (owner decision of 17/11/2026); replacing the plan photos of a cycle still needs 1-3.
+    const least = parsed.data.action === "start" ? 0 : 1;
+    if (photos.length + kept < least || photos.length + kept > 3) return { problem: photoProblem };
     for (const photo of photos) {
       if (typeof photo === "string" || !["image/jpeg", "image/png"].includes(photo.type) || photo.size < 1 || photo.size > 10 * 1024 * 1024) return { problem: photoProblem };
       const signature = new Uint8Array(await photo.slice(0, 8).arrayBuffer());

@@ -13,7 +13,6 @@ import { RecordHistory } from "@/features/history/record-history";
 import { isNurseryBatchLocked, planBody, seedLockedFailure, seedWithoutProductText, planDraftOf, validatePlan, type CycleRow, type PlanDraft, type PlanField } from "./cycle-model";
 import { farmedSeedText } from "./cycle-farmed-seed";
 import { CyclePlanFields } from "./cycle-plan-fields";
-import { CyclePlanPhotos } from "./cycle-plan-photos";
 import { cycleProgress } from "./contracts";
 import { cycleNurseryText } from "./nursery-batch-options";
 import { readCycles, writeCycle } from "./repository";
@@ -23,11 +22,11 @@ const day = (value: string | null) => value ? formatVietnameseDate(value) : null
 /** "Kế hoạch": the cycle plan (planned yield, start date, note, nursed batch), edited in place; cancelling a mistaken cycle asks for confirmation. */
 export function CyclePlanTab({ row, zoneId, access, dirtyRef, onChanged }: { row: CycleRow; zoneId: string; access: CycleAccess; dirtyRef: RefObject<boolean>; onChanged(notice: string): void }) {
   const current = useStickyRemote(useCallback((signal: AbortSignal) => readCycles({ action: "progress", raftId: row.raftId, ...(row.cycle ? { cycleId: row.cycle.id } : { date: businessToday() }) }, cycleProgress, signal), [row.raftId, row.cycle]));
-  const [editing, setEditing] = useState(false), [draft, setDraft] = useState<PlanDraft>(), [photoDirty, setPhotoDirty] = useState(false);
+  const [editing, setEditing] = useState(false), [draft, setDraft] = useState<PlanDraft>();
   const [errors, setErrors] = useState<Partial<Record<PlanField, string>>>({}), [reloaded, setReloaded] = useState(false);
   const mutation = useMutation(), confirmation = useActionDialog();
   const cycle = row.cycle ? current.data?.cycle ?? null : null;
-  const dirty = photoDirty || editing && !!cycle && !!draft && JSON.stringify(draft) !== JSON.stringify(planDraftOf(cycle));
+  const dirty = editing && !!cycle && !!draft && JSON.stringify(draft) !== JSON.stringify(planDraftOf(cycle));
   useEffect(() => { dirtyRef.current = dirty; return () => { dirtyRef.current = false; }; }, [dirty, dirtyRef]);
   const locked = current.loading || mutation.pending;
   // The nursed batch is fixed once any lane was seeded (409 CYCLE_SEED_LOCKED).
@@ -61,7 +60,6 @@ export function CyclePlanTab({ row, zoneId, access, dirtyRef, onChanged }: { row
           ["Sản lượng dự kiến", cycle.targetYieldKg === null ? "Chưa lập" : `${cycle.targetYieldKg.toLocaleString("vi-VN")} kg`], ["Ghi chú", cycle.note],
           ["Thả giống hoàn tất", day(cycle.seedingCompletedOn)], ["Ngày đóng", day(cycle.closeDate)], ["Đánh giá", cycle.assessment]]} />}
     </fieldset>
-    <CyclePlanPhotos key={cycle.id} cycle={cycle} canEdit={access.edit && cycle.canEdit && !editing} onDirtyChange={setPhotoDirty} onSaved={() => { current.reload(); onChanged("Đã cập nhật ảnh kế hoạch nuôi."); }} />
     {cycle && <RecordHistory kind="cycle" id={cycle.id} zoneId="" />}
     <ErrorNotice error={seedLockedFailure(mutation.failure) ? "Đã thả giống, không đổi được đợt ươm (và loại hàu theo đợt). Hãy tải lại chu kỳ để đối chiếu." : seedWithoutProductText(mutation.failure) ?? (mutation.error || current.error)} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Hãy tải lại chu kỳ và đối chiếu trước khi lưu lại. Nội dung đang nhập vẫn được giữ.</p><div>
