@@ -85,7 +85,7 @@ it("select-all takes the visible page and the selection resets on filter, search
   const all = () => screen.getByRole("checkbox", { name: "Chọn tất cả trên trang" });
   const count = () => screen.queryByRole("region", { name: "Thao tác hàng loạt" })?.textContent ?? "";
   fireEvent.click(all()); expect(count()).toContain("Đã chọn 2");
-  fireEvent.click(screen.getByRole("radio", { name: "Nhân viên" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Nội bộ" }));
   await waitFor(() => expect(count()).toBe(""));
   fireEvent.click(all()); expect(count()).toContain("Đã chọn 2");
   fireEvent.click(screen.getByRole("button", { name: "Họ và tên" }));
