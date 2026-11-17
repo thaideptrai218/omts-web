@@ -63,7 +63,8 @@ describe("create employee dialog: groups", () => {
     save();
     expect(expanded(/Thông tin ngân hàng/)).toBe("true");
     expect(toggle(/Thông tin ngân hàng.*Có lỗi/).getAttribute("aria-expanded")).toBe("true");
-    const number = screen.getByLabelText("Số tài khoản", { exact: true });
+    // Once any bank field is filled, every bank field is required and marked.
+    const number = screen.getByLabelText("Số tài khoản *", { exact: true });
     expect(number.getAttribute("aria-invalid")).toBe("true");
     expect(number.getAttribute("aria-describedby")).toContain("employee-create-bank-help");
     await waitFor(() => expect(document.activeElement).toBe(number));

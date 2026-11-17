@@ -29,7 +29,7 @@ const dayOf = (instant: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "A
  * pickup time or is already closed.
  */
 export function daysUntilPickup(pickupAt: string | null | undefined, statusId: number, now: Date = new Date()): number | null {
-  if (!pickupAt || statusId !== 4101 && statusId !== 4102) return null;
+  if (!pickupAt || statusId !== 4401 && statusId !== 4402) return null;
   const pickup = new Date(pickupAt);
   if (Number.isNaN(pickup.getTime())) return null;
   const [py, pm, pd] = dayOf(pickup).split("-").map(Number), [ny, nm, nd] = dayOf(now).split("-").map(Number);

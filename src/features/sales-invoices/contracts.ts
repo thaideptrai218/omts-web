@@ -18,7 +18,7 @@ export const lotForSale = z.object({
   id, lotCode: z.string(), raftId: id, raftCode: z.string(), zoneId: id, zoneCode: z.string(), zoneName: z.string(),
   harvestDate: z.iso.date(), remainingKg: money, statusId: z.number().int(), status: z.string(), originState, withdrawnAt: at.nullable(),
   // Chưa có trong backend hiện tại; khi API trả thêm thì màn hình dùng số lồng/ratio của chính lô thay vì trung bình HTX.
-  cageCount: z.number().int().nonnegative().nullish(), kgPerCage: z.number().positive().nullish(),
+  cageCount: z.number().nonnegative().nullish(), kgPerCage: z.number().positive().nullish(),
   // Lô ghi từ kế hoạch thu hoạch (KHT) nào; `suggested` = kế hoạch đó phục vụ đơn đặt hàng đang xử lý (chỉ có khi hỏi theo đơn): các lô này đứng đầu danh sách.
   harvestPlanCode: z.string().nullish(), suggested: z.boolean().nullish(),
   // Sản phẩm của lô đã tách theo sản phẩm (rỗng với lô cũ); hóa đơn chỉ được bán các sản phẩm này từ lô.

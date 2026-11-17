@@ -109,7 +109,8 @@ export function plannedCages(lines: readonly FormLine[], productOf: (raftId: str
   return total;
 }
 
-const cageCount = (value: string) => { const parsed = Number(value.trim()); return value.trim() && Number.isInteger(parsed) && parsed > 0 ? parsed : null; };
+/** Cages typed with a comma or a point: above 0, at most 100.000 and at most 2 decimals (0,5 is half a cage), otherwise null. */
+const cageCount = (value: string) => { const parsed = Number(value.trim().replace(",", ".")); return value.trim() && Number.isFinite(parsed) && parsed > 0 && parsed <= 100_000 && Math.abs(parsed * 100 - Math.round(parsed * 100)) < 1e-6 ? parsed : null; };
 
 /** The first thing wrong with the form, in the user's words; undefined when it can be sent. */
 export function planFormProblem(form: PlanForm): string | undefined {
@@ -124,7 +125,7 @@ export function planFormProblem(form: PlanForm): string | undefined {
     if (rafts.has(line.raftId)) return `Dòng ${position}: bè đã có ở dòng khác của kế hoạch.`;
     rafts.add(line.raftId);
     if (!line.laneNumbers.length) return `Dòng ${position}: chọn ít nhất một luống.`;
-    if (line.cages.trim() && !cageCount(line.cages)) return `Dòng ${position}: lồng dự kiến phải là số nguyên lớn hơn 0.`;
+    if (line.cages.trim() && !cageCount(line.cages)) return `Dòng ${position}: lồng dự kiến phải lớn hơn 0 và có tối đa 2 số lẻ (được nhập 0,5).`;
   }
   return undefined;
 }

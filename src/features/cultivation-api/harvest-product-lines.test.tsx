@@ -21,21 +21,34 @@ it("fills the kg from cages times the Lồng factor of the product and lets the 
   let latest: HarvestLine[] = [];
   render(<Harness onChange={(lines) => { latest = lines; }} />);
   await userEvent.selectOptions(screen.getByLabelText("Sản phẩm dòng 1"), id(1));
-  await userEvent.type(screen.getByLabelText("số lồng dòng 1"), "4");
+  await userEvent.type(screen.getByLabelText("Số lồng dòng 1"), "4");
   expect((screen.getByLabelText("Số kg dòng 1") as HTMLInputElement).value).toBe("100");
-  await userEvent.click(screen.getByLabelText("Tăng số lồng dòng 1"));
+  await userEvent.clear(screen.getByLabelText("Số lồng dòng 1"));
+  await userEvent.type(screen.getByLabelText("Số lồng dòng 1"), "5");
   expect((screen.getByLabelText("Số kg dòng 1") as HTMLInputElement).value).toBe("125");
   await userEvent.clear(screen.getByLabelText("Số kg dòng 1"));
   await userEvent.type(screen.getByLabelText("Số kg dòng 1"), "118");
-  await userEvent.click(screen.getByLabelText("Tăng số lồng dòng 1"));
+  await userEvent.clear(screen.getByLabelText("Số lồng dòng 1"));
+  await userEvent.type(screen.getByLabelText("Số lồng dòng 1"), "6");
   expect((screen.getByLabelText("Số kg dòng 1") as HTMLInputElement).value).toBe("118");
   expect(linesPayload(latest)).toEqual([{ productId: id(1), cageCount: 6, kg: 118 }]);
+});
+
+it("takes half a cage and fills the kg of it", async () => {
+  let latest: HarvestLine[] = [];
+  render(<Harness onChange={(lines) => { latest = lines; }} />);
+  await userEvent.selectOptions(screen.getByLabelText("Sản phẩm dòng 1"), id(1));
+  await userEvent.type(screen.getByLabelText("Số lồng dòng 1"), "2,5");
+  expect((screen.getByLabelText("Số kg dòng 1") as HTMLInputElement).value).toBe("62.5");
+  expect(linesPayload(latest)).toEqual([{ productId: id(1), cageCount: 2.5, kg: 62.5 }]);
+  expect(linesProblem([{ ...blankLine(), productId: id(1), cages: "1.234" }], true)).toBe("Dòng 1: số lồng phải lớn hơn 0 và có tối đa 2 số lẻ (được nhập 0,5).");
+  expect(linesProblem(latest, true)).toBeUndefined();
 });
 
 it("leaves the kg empty for a product without a Lồng unit and names the first problem of the lines", async () => {
   render(<Harness />);
   await userEvent.selectOptions(screen.getByLabelText("Sản phẩm dòng 1"), id(2));
-  await userEvent.type(screen.getByLabelText("số lồng dòng 1"), "3");
+  await userEvent.type(screen.getByLabelText("Số lồng dòng 1"), "3");
   expect((screen.getByLabelText("Số kg dòng 1") as HTMLInputElement).value).toBe("");
   expect(linesProblem([], true)).toBe("Thêm ít nhất một sản phẩm thu hoạch.");
   expect(linesProblem([blankLine()], true)).toBe("Dòng 1: chọn sản phẩm.");

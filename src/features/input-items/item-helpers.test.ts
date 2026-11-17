@@ -79,4 +79,12 @@ describe("form values", () => {
     expect(copy.units.every((unit) => unit.id === null && unit.code === "" && !unit.isUsed)).toBe(true);
     expect(buildSaveBody(copy, null)).not.toHaveProperty("rowVersion");
   });
+  it("carries the loại hàu bán ra of a seed item, sends null to clear it and never for another group", () => {
+    const seed = { ...record, group: "Seed", productId: id(9), productName: "Hàu béo" };
+    expect(initialValues(seed, false).productId).toBe(id(9));
+    expect(buildSaveBody(initialValues(seed, false), seed).productId).toBe(id(9));
+    expect(buildSaveBody({ ...initialValues(seed, false), productId: "" }, seed).productId).toBeNull();
+    expect(buildSaveBody({ ...initialValues(seed, false), group: "Material" }, seed).productId).toBeNull();
+    expect(initialValues(null, false).productId).toBe("");
+  });
 });

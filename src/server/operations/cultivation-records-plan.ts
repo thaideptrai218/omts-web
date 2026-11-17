@@ -2,6 +2,9 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/cultivation-api/records-contracts";
 import { cycle } from "@/features/cultivation-api/contracts";
+import { crewSuggestions } from "@/features/cultivation-api/harvest-crew-contracts";
+import { historyList } from "@/features/history/history-contracts";
+import { finishHarvestResult, finishHarvestValues, matchesFinishedSelection } from "@/features/cultivation-api/finish-harvest-contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
 export function cultivationRecordsPlan(area: OperationArea, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
@@ -12,10 +15,22 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     if (!q.success) return;
     return { area, action: "photo", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/harvest-lots/${q.data.id}`, schema: c.harvestDetail, expectedId: q.data.id, file: "photo", index: Number(q.data.index) };
   }
+  if (method === "GET" && query.get("action") === "history") {
+    // Change history of one record (who, when, action, reason, changed fields); the backend route differs per record kind.
+    const q = z.strictObject({ action: z.literal("history"), id: z.guid(), zoneId: z.guid() }).safeParse(Object.fromEntries(query));
+    if (!q.success) return;
+    const root = area === "harvest" ? "harvest-lots" : seeding ? "seeding-records" : material ? "material-usages" : undefined;
+    return root && { area, action: "history", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/${root}/${q.data.id}/history`, schema: historyList };
+  }
   if (area === "harvest" && method === "GET" && query.get("action") === "detail") {
     const q = z.strictObject({ action: z.literal("detail"), id: z.guid(), zoneId: z.guid() }).safeParse(Object.fromEntries(query));
     if (!q.success) return;
     return { area, action: "detail", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/harvest-lots/${q.data.id}`, schema: c.harvestDetail, expectedId: q.data.id };
+  }
+  if (area === "harvest" && method === "GET" && query.get("action") === "crew-suggestions") {
+    const q = z.strictObject({ action: z.literal("crew-suggestions"), id: z.guid(), zoneId: z.guid(), date: z.iso.date() }).safeParse(Object.fromEntries(query));
+    if (!q.success) return;
+    return { area, action: "crew-suggestions", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/rafts/${q.data.id}/crew-suggestions?date=${q.data.date}`, schema: crewSuggestions };
   }
   if (area === "harvest" && method === "GET" && ["settings", "settings-preview"].includes(query.get("action") ?? "")) {
     const q = z.strictObject({ action: z.enum(["settings", "settings-preview"]), days: z.string().regex(/^\d{1,3}$/).refine(v => Number(v) >= 1 && Number(v) <= 365).optional() }).safeParse(Object.fromEntries(query));
@@ -34,20 +49,38 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     return { area, action, zoneId, permission: action === "preview" ? "Create" : "View", method: "GET", path: seeding ? action === "seed-lots" ? `/api/rafts/${id}/seed-lots` : `/api/cultivation-cycles/${id}/${action === "preview" ? "seeding-complete/preview" : "seeding-records"}` : `/api/rafts/${id}/${material ? "material-usages" : "harvest-lots"}`, schema: seeding ? action === "seed-lots" ? c.seedLots : action === "preview" ? c.seedingPreview : c.seedingList : material ? c.materialList : c.harvestList };
   }
   if (method !== "POST" || query.size) return;
-  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
+  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-lane", "finish-harvest"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
   if (!m.success) return;
   const { action, id, zoneId, body } = m.data;
   const base = { area, action, zoneId, method: "POST" as const, permission: action === "correct" ? "Edit" : action === "remove" ? "Delete" : "Create" };
   const version = { rowVersion: z.string().min(1) }, reason = { reason: z.string().trim().min(1), ...version };
+  if (area === "harvest" && action === "finish-harvest") {
+    const values = finishHarvestValues.safeParse(body);
+    if (!values.success) return;
+    return { ...base, permission: "Create", path: `/api/rafts/${id}/finish-harvest`, body: values.data, schema: finishHarvestResult.refine(result => matchesFinishedSelection(values.data.laneNumbers, result)) };
+  }
+  if (action === "finish-harvest") return;
+  if (area === "harvest" && action === "finish-lane") {
+    // One decisive per-lane action (no body): the lane number is validated here and only ever enters the path as digits.
+    const lane = z.strictObject({ laneNumber: z.number().int().min(1).max(999_999) }).safeParse(body);
+    if (!lane.success) return;
+    return { ...base, permission: "Create", path: `/api/rafts/${id}/lanes/${lane.data.laneNumber}/finish-harvest`, schema: c.finishLaneResult };
+  }
   if (area === "harvest" && action === "remove") {
     const values = z.strictObject(reason).safeParse(body);
     if (!values.success) return;
     return { ...base, path: `/api/harvest-lots/${id}/remove`, body: values.data, schema: z.object({ done: z.literal(true) }), noContent: true };
   }
   if (seeding) {
-    const values = (action === "complete" ? z.strictObject(version) : action === "remove" ? z.strictObject(reason) : action === "correct" ? c.seedValues.extend(reason) : c.seedValues).safeParse(body);
+    const values = (action === "complete" ? z.strictObject({ ...version, confirmEmpty: z.boolean().optional() }) : action === "remove" ? z.strictObject(reason) : action === "correct" ? c.seedValues.safeExtend(reason) : c.seedValues).safeParse(body);
     if (!values.success) return;
     return { ...base, body: values.data, method: action === "correct" ? "PUT" : "POST", path: action === "correct" || action === "remove" ? `/api/seeding-records/${id}${action === "remove" ? "/remove" : ""}` : `/api/cultivation-cycles/${id}/${action === "complete" ? "seeding-complete" : "seeding-records"}`, schema: action === "remove" ? z.object({ done: z.literal(true) }) : action === "complete" ? z.object({ cycle }) : z.object({ record: c.seedingRecord }), ...(action === "remove" ? { noContent: true } : {}) };
+  }
+  if (material && action === "remove") {
+    // Voiding a material usage (reverses its stock issue): reason and version, 204 like the seeding removal.
+    const values = z.strictObject(reason).safeParse(body);
+    if (!values.success) return;
+    return { ...base, path: `/api/material-usages/${id}/remove`, body: values.data, schema: z.object({ done: z.literal(true) }), noContent: true };
   }
   if (material && ["record", "correct"].includes(action)) {
     const validator = action === "record" ? c.materialValues : z.strictObject({ raftId: z.guid(), usageDate: z.iso.date(), itemId: z.guid(), quantity: z.number().positive(), repairReason: z.string().trim().min(1), ...reason });
@@ -58,6 +91,6 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
   if (area === "harvest" && action === "record") {
     const values = c.harvestValues.safeParse(body);
     if (!values.success) return;
-    return { ...base, path: `/api/rafts/${id}/harvest-lots`, body: values.data, multipartFields: true, schema: z.object({ lot: z.object({ id: z.guid(), lotCode: z.string() }) }) };
+    return { ...base, path: `/api/rafts/${id}/harvest-lots`, body: values.data, multipartFields: true, schema: c.harvestSaved };
   }
 }

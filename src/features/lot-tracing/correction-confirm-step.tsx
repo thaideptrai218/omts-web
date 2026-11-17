@@ -32,8 +32,8 @@ export function CorrectionConfirmStep({ rows, preview, pending, error, onBack, o
       {rows.length > 0 && <p className={s.question}>{manager ? "Chủ hợp tác xã đã đồng ý trực tiếp rằng dữ liệu hiện tại là sai và cần sửa?" : "Bạn xác nhận sửa dữ liệu truy xuất này?"}</p>}
       {error && <p role="alert" className={s.error}>{error}</p>}
       <div className={s.dialogActions}>
-        <Button className="w-auto" variant="secondary" disabled={pending} onClick={onBack}>Quay lại chỉnh sửa</Button>
-        <Button className="w-auto" disabled={!rows.length} isPending={pending} pendingLabel="Đang lưu..." onClick={onConfirm}>{manager ? "Chủ HTX đã đồng ý, lưu" : "Xác nhận lưu"}</Button>
+        <Button key="back-to-correction" type="button" className="w-auto" variant="secondary" disabled={pending} onClick={onBack}>Quay lại chỉnh sửa</Button>
+        <Button key="confirm-correction" type="button" className="w-auto" disabled={!rows.length} isPending={pending} pendingLabel="Đang lưu..." onClick={onConfirm}>{manager ? "Chủ HTX đã đồng ý, lưu" : "Xác nhận lưu"}</Button>
       </div>
     </div>
   );

@@ -2,34 +2,11 @@
 
 Web frontend for **OMTS — Oyster Management and Traceability System**, built for **Trung Nam Aquaculture Cooperative** as part of the SEP490_G83 capstone project.
 
-This repository contains the management portal built with **Next.js App Router and TypeScript**. It serves the Cooperative Owner and internal users according to their assigned permissions. Public QR-based provenance pages are part of the product scope but are not complete in the current version. User-facing UI text is Vietnamese.
+This repository contains the management portal built with **Next.js App Router and TypeScript**. It serves the Cooperative Owner and internal users according to their assigned permissions. User-facing UI text is Vietnamese.
+
+The app runs in **mock mode** by default, with no backend, database or Docker needed (section 2). It can also run against the real API through a Next.js server (BFF), see section 7. Product rules that differ from SRS v8 are listed in [docs/SRS_DEVIATIONS.md](docs/SRS_DEVIATIONS.md); the documentation index is [docs/README.md](docs/README.md).
 
 Team repositories: [Web](https://github.com/thaideptrai218/omts-web) · [Backend](https://github.com/thaideptrai218/omts-backend) · [Mobile](https://github.com/thaideptrai218/omts-mobile).
-
-## Current status
-
-**Reviewing this project for the first time?** Follow the [reviewer quick start and screen checklist](docs/REVIEW_GUIDE.md).
-
-For a presentation without development overlays, use `npm run build` followed by `npm run start`. Use `npm run dev` while editing code.
-
-> Last updated: **November 3, 2026**. This README describes the source on the branch you are viewing, not every planned OMTS feature.
-
-- **The UI can run with mock data** without a backend, database, or Docker.
-- Mock review mode and the real API workspace use separate repository adapters. The API workspace now includes cooperative, employee, account, role and personal workflows as described below.
-- Farming zones now have a searchable directory and profile dialogs. Owners can create, rename, edit and discontinue/reactivate zones, then add shared legal documents and replacement versions. Assigned internal users with View permission have read-only access. Renames keep stable zone IDs and update management pickers and role/scope labels from a shared source. Sample locations are not verified cooperative records.
-- Rafts now have a directory, profile dialogs, dated lane diagrams and segment-source details. Owners can create/edit rafts and layouts, upload JPEG/PNG photos and discontinue/reactivate eligible rafts. Open cultivation cycles block layout changes and discontinuation; historical layouts are retained. Assigned readers stay within their zone/record scope. Missing material cost remains unknown until purchase receipts are available.
-- Date fields use Vietnamese day/month/year entry and a Vietnamese picker while service values remain ISO dates. The desktop sidebar reserves layout space when it expands instead of covering page text.
-- The navigation now uses a light sidebar, opens by default on desktop, and supports explicit collapse/pinning plus delayed hover and keyboard expansion. Account name, role and scope appear on separate lines. The mobile drawer releases its scroll lock when resizing to desktop. The dashboard prioritizes raft usage and presents permitted shortcuts as a list.
-- The review build shares mock state between management screens: updated role permissions can be assigned, new accounts can be linked to employees, and dashboard counts update. Created staff accounts can complete first-login password/contact setup; account locking and password reset affect their mock login. Personal profile changes, password recovery, and notification settings can be demonstrated without a backend.
-- The approved October 27 role policy is now **three fixed zone roles: Zone Manager, Accountant, and Staff**. Owners can edit permissions and discontinue/reactivate roles; they cannot add, copy, or rename roles. Staff initially has no business permissions. This policy is implemented in the product mock; backend/SRS alignment is tracked separately.
-- Dashboard headings and permitted shortcuts render while metrics load. Management directories now include clearer rows, summaries and combined filters; editors continue to open in dialogs.
-- A local API workspace supports real login → permissions/profile → logout through the Next.js BFF, management screens, purchase receipts, supplier payments and water measurement workflows. Employee profiles support account link/unlink, working zones, bank details and separate employment changes with account follow-up. Saved zone profiles support shared licenses and renewal history; saved raft profiles support photos, dated lane conditions and receipt-backed costs. Use `npm run setup:api`, `npm run build` and `npm run start:api`; the default review mode remains mock. Staff contact activation and new-account creation still await backend alignment.
-- Personal API profiles show identity, verified contacts and current grants, with versioned display-name edits. Notification preferences use the backend account-type catalog; mandatory In-app cells are locked and Push is read-only. Owners can inspect role matrices, usage and grant history, then revoke an existing grant with a reason and confirmation. New grants and role edits await fixed-role alignment. Web supports the upcoming backend PR19 message codes alongside the current contract, including notification notice precedence and the removed null raft-source fields. See the [latest workflow evidence](docs/reports/WEB_PERSONAL_NOTIFICATIONS_ACCESS_API_2026-10-29.md) and [Jira/contract changes](docs/reports/WEB_JIRA_PR19_CONTRACT_UPDATE_2026-10-29.md); planned SRS changes are not deployed APIs.
-- Password recovery (SMS code to the phone number) and contact verification/change (email or phone, from the profile) run through the BFF. The state of a verification in progress lives in one short-lived, AES-GCM sealed `HttpOnly` cookie (`__Secure-omts_vf`, only sent to `/api/verifications`), keyed by the session key ring and bound to the API session id and account when signed in; browsers receive opaque flow IDs and safe metadata. The API alone enforces single-use codes and tokens, so a replayed older cookie can at most repeat an attempt the API then refuses, until the flow expires (5 minutes for the code, 10 for the proof). The Web has no self-registration: Traders register in the Mini App, and the Web no longer offers email as a sign-in, recovery or password-change proof. Verified contacts wait for explicit profile Save. Independent name/contact writes report partial success truthfully and retain remaining drafts. Password changes replace the session cookies with the new tokens the API returns. See [G2 validation and limits](docs/reports/WEB_G2_VERIFICATION_API_2026-10-29.md); Staff contact onboarding and other backend contract blockers remain open.
-- The current UI work is on `feature/OMTS-132-web-foundation` and has not been merged into `develop`. Check out the correct branch to review the screens and configuration described below.
-- In API mode, cooperative profiles now support editable industry rows, validation, name/address preview and confirmation, plus separate PNG/JPEG/WebP logo upload/removal. Drafts survive logo changes and conflicts. Receiving-bank integration still awaits the existing BA/backend decision; see the [tester flow and limitations](docs/reports/WEB_COOPERATIVE_API_2026-10-29.md).
-- Docker/API verification is available without changing the older QA databases: the latest isolated runtime uses API `8082` and SQL Server `1436`, while the existing develop/QA runtimes remain on `8080`/`8081`. See the [Docker/API/Vercel runtime report](docs/reports/WEB_DOCKER_API_VERCEL_2026-11-03.md).
-- The production Vercel alias is [omts-web.vercel.app](https://omts-web.vercel.app). It currently runs the safe mock mode; a real Vercel API deployment still requires a stable HTTPS backend and hosted Redis with TLS/authentication.
 
 ## 1. Prerequisites
 
@@ -59,11 +36,7 @@ git clone https://github.com/thaideptrai218/omts-web.git
 cd omts-web
 ```
 
-To review the current foundation work, switch to this branch **before installing dependencies**:
-
-```bash
-git switch feature/OMTS-132-web-foundation
-```
+Check out the branch you want to run **before installing dependencies**, for example `git switch develop` or your feature branch.
 
 If you already have a checkout, open a terminal in its `omts-web` directory instead of cloning again. Check `git branch --show-current` before running the app. Do not reset or overwrite uncommitted work just to switch branches.
 
@@ -128,15 +101,15 @@ These accounts exist only in the **frontend mock**. They are not backend or QA c
 | `trader` | Thương lái; kiểm tra sản phẩm, yêu cầu mua hàng và các màn dành cho đối tác |
 | `sysadmin` | System Administrator; chỉ dùng cho màn cấp HTX/provisioning |
 
-Các tài khoản mock trên dùng chung **`Demo@1234`**. Đây là bộ tài khoản QA đơn giản, không phải credential backend production. Các fixture username cũ như `nguyen.an`, `pham.cuong`, `staff-verified` và `tran.binh` không còn là tài khoản hướng dẫn chính.
+Các tài khoản mock trên dùng chung **`Demo@1234`**. Đây là bộ tài khoản QA đơn giản, không phải credential backend production. 
 
 For newly created mock staff accounts, use the generated username shown in the delivery receipt and the same **public mock password** `Demo@1234`. The first login requires a new password and one verified contact. In this review mode, OTP codes are `123456` for the initial send, then `654321` and `112233` after resends. No actual email or SMS is sent. These values are not backend credential-generation rules or production secrets.
 
 Để kiểm tra nhanh, dùng **`owner / Demo@1234`**. Fixtures được định nghĩa trong [mock-auth-repository.ts](src/features/auth/repositories/mock-auth-repository.ts).
 
-Đăng nhập trên Web là **số điện thoại + mật khẩu**; email không còn là định danh đăng nhập và biểu mẫu từ chối giá trị có `@`. Riêng chế độ mock vẫn nhận các username demo ở trên để xem trước (Owner cũng đăng nhập được bằng `0900000000`).
+The Web login form accepts a phone number or a username with the password. An email address is refused (the form rejects any value containing `@`). In mock mode the demo usernames above and the phone number `0900000000` (Owner) also work.
 
-The API runtime has separate seeded accounts. The Web form signs in by phone number and password only, so use the phone number of the seeded account; the username column only names the account (the API still accepts a username, the Web form does not). For local API testing at `http://localhost:3002/login`, every active account below uses `Demo@1234` unless its password was changed later:
+The API runtime has separate seeded accounts. The Web login form accepts the phone number or the username of the seeded account, with its password. For local API testing at `http://localhost:3002/login`, every active account below uses `Demo@1234` unless its password was changed later:
 
 | Username | Role and test scope |
 | --- | --- |
@@ -144,7 +117,7 @@ The API runtime has separate seeded accounts. The Web form signs in by phone num
 | `quanlyvung1` | Zone Manager, DEMO-01 |
 | `quanlyvung2` | Zone Manager, DEMO-02 |
 | `ketoan` | Accountant, all zones |
-| `sysadmin` | System Administrator in the isolated meeting API runtime; account directory, detail, lock/unlock and administration history at `/system/accounts` |
+| `sysadmin` | System Administrator in the isolated API runtime; account directory, detail, lock/unlock and administration history at `/system/accounts` |
 | `thuonglai1` | Active Trader |
 | `thuonglai2` | Locked Trader; login should be rejected |
 | `nhanvien.doimk` | Staff; first-login password change |
@@ -159,20 +132,22 @@ The mock does not send real email or SMS. Mock data is separate from backend dat
 
 Sign in with the appropriate account and use the sidebar to navigate. Opening a URL directly does not bypass permission checks.
 
-| Route | Screen | Demo account |
+| Route | Screen | Who can open it |
 | --- | --- | --- |
-| `/login` | Sign in | Signed-out users |
-| `/recover` | Password recovery | Signed-out users |
-| `/dashboard` | Dashboard with sample metrics and no-data states | Owner / Staff |
-| `/cooperative/profile` | Cooperative profile | Owner |
-| `/farming/zones` | Zone directory, metadata, legal documents and renewal history | Owner writes; permitted internal users read assigned zones |
-| `/employees` | Employee list/editor and account linking/unlinking | Owner |
-| `/access/accounts` | Internal accounts, account status, and zone-based access grants | Owner |
-| `/access/roles` | Roles and permissions | Owner |
-| `/account` | Personal profile, change-password dialog, and notification-preferences dialog | Signed-in users, subject to each action's permissions and prerequisites |
-| `/system/cooperatives/new` | Cooperative provisioning | Sysadmin |
-
-This table lists existing UI screens, not use cases accepted against a real API. Income, expenses, rafts, and harvest metrics display the appropriate no-data state when their data sources are unavailable.
+| `/login`, `/recover`, `/session/recover`, `/onboarding/*` | Sign in, password recovery, first-login onboarding | Signed-out users, or accounts in onboarding |
+| `/` | Public landing page | Everyone |
+| `/dashboard` | Dashboard with metrics and no-data states | Signed-in users, per permissions |
+| `/cooperative/profile`, `/cooperative/certifications`, `/cooperative/receiving-bank-account` | Cooperative profile, certifications, receiving bank account | Owner |
+| `/farming/zones`, `/farming/rafts`, `/farming/cycles` | Zones, rafts and cultivation cycles | Owner writes; permitted internal users read assigned zones |
+| `/inputs/items`, `/inputs/uses`, `/inputs/disposals` | Input items, stock usage and disposal | Per permissions |
+| `/operations/purchase-receipts`, `/operations/purchase-returns`, `/operations/purchase-requests/[id]`, `/operations/supplier-debts`, `/operations/cash-book` | Purchasing, supplier debts, cash book | Per permissions |
+| `/employees` | Employee list, profile tabs and account creation | Owner |
+| `/access/accounts`, `/access/roles` | Internal accounts and zone grants; roles and permissions | Owner |
+| `/trader-requests` | Trader access requests | Owner |
+| `/notifications`, `/account`, `/account/security`, `/account/devices` | Notifications, personal profile, security and devices | Signed-in users |
+| `/audit` | Audit log | Owner |
+| `/system/accounts`, `/system/cooperatives/new` | System account directory; cooperative provisioning | System Administrator |
+| `/origin/{qrToken}` | Public provenance page opened from an invoice QR code | Anyone with the link |
 
 ## 5. Project structure
 
@@ -200,6 +175,10 @@ Within a feature, the UI calls a **service → repository interface → mock or 
 | `npm test` | Run Vitest unit, contract, and component tests; no live backend required |
 | `npm run build` | Create a production build |
 | `npm run start` | Serve the production build **after a successful build** |
+| `npm run dev:api` | Start the development server against the real API workspace (see section 7) |
+| `npm run setup:api` | Generate the ignored `.env.api.local` for the API workspace |
+| `npm run start:api` | Serve the production build against the real API workspace |
+| `npm run test:api-roles` | Check the API role matrix (needs the API runtime) |
 
 Before requesting a review, run these commands sequentially:
 
@@ -230,7 +209,7 @@ CI currently runs `npm ci → lint → typecheck → test → build → test:ses
 
 ## 7. Real API integration
 
-The agreed architecture is a **BFF (Backend for Frontend)**: the browser calls the Next.js server, which communicates with the .NET backend. The BFF holds no session state. The access token (`__Host-omts_at`, sent to every route) and the refresh token (`__Secure-omts_rt`, `Path=/api/auth`, so it is only sent to the auth routes) are `HttpOnly; Secure; SameSite=Lax` cookies (`omts_at_dev` / `omts_rt_dev` on the explicit loopback HTTP profile). `src/proxy.ts` sends a protected page navigation with a missing or nearly expired access cookie through `/api/auth/refresh`, which renews both cookies and returns to the page; client calls go through `bffFetch`, which renews once on a 401 under the shared Web Lock and retries. A refresh answered from the API grace window carries the refresh token the browser already holds, so only the access cookie is rewritten. Cookies are cleared only when the API definitively refuses the refresh token (401/403), never on a timeout or 5xx. Nothing is stored on the BFF: no Redis or other database is needed.
+The browser calls the Next.js server (the BFF), which calls the .NET backend. The BFF holds no session state, so no Redis or other database is needed. Sign-in cookies, refresh and session rules are listed in [docs/SRS_DEVIATIONS.md](docs/SRS_DEVIATIONS.md), section "Quy ước riêng của Web".
 
 Use the [local tester guide](docs/REVIEW_GUIDE.md#real-api-workspace--local-tester-run) to start the backend and API workspace on `http://localhost:3002`. Supported management, purchasing and water screens use dedicated BFF adapters; existing mock screens stay separate. API mode requires the session/coordination configuration generated in the ignored `.env.api.local`, beyond the backend URL. Set `OMTS_BFF_SHARED_SECRET` (the same value as the API `BffClient:SharedSecret`) and `OMTS_WEB_CLIENT_IP_SOURCE` so the API sees the real client address and browser; see [`.env.example`](.env.example).
 
@@ -286,11 +265,10 @@ For scope and remaining contract gaps, read the [INP/ENV integration report](doc
 
 ## 9. Further reading
 
-- [Project context and current status](docs/PROJECT_CONTEXT.md).
-- [Web implementation plan](docs/WEB_IMPLEMENTATION_PLAN.md) and [detailed page blueprints](docs/UI_PAGE_BLUEPRINTS.md).
-- [Real API implementation plan](docs/WEB_REAL_API_IMPLEMENTATION_PLAN.md).
+- [Documentation index](docs/README.md): every document, report and decision.
+- [SRS deviations](docs/SRS_DEVIATIONS.md): what differs from SRS v8 and what to update in the SRS.
+- [Project context](docs/PROJECT_CONTEXT.md), [implementation plan](docs/WEB_REAL_API_IMPLEMENTATION_PLAN.md), [page blueprints](docs/UI_PAGE_BLUEPRINTS.md).
 - [Open business questions and decisions](docs/decisions/OPEN_QUESTIONS.md).
-- [Review reports](docs/reports/).
 - [Contribution, branching, and pull request guidelines](CONTRIBUTING.md).
 
 Reports capture evidence at the time they were written. Check the current source and approved decisions; plans and passing mock tests do not prove a feature works against the backend or QA environment.

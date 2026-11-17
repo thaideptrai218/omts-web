@@ -1,5 +1,7 @@
 "use client";
+import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { useState, type FormEvent } from "react";
+import { MoneyField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorNotice, Field, businessToday } from "@/features/operations/ui";
@@ -19,7 +21,7 @@ export function JobTypeCreateDialog({ onClose, onCreated }: { onClose(): void; o
     if (!checked.ok) { setErrors(checked.errors); return; }
     setErrors(undefined);
     const { value } = checked;
-    const created = await editor.submit(`Thêm loại công việc ${value.name} với đơn giá ${value.hourlyRate.toLocaleString("vi-VN")} đồng/giờ từ ${value.effectiveFrom}?`, () => jobTypesRepository.write("create", value, jobType));
+    const created = await editor.submit(`Thêm loại công việc ${value.name} với đơn giá ${formatVndWithSymbol(value.hourlyRate)}/giờ từ ${value.effectiveFrom}?`, () => jobTypesRepository.write("create", value, jobType));
     if (created) onCreated(created);
   }
   return <Dialog open dismissible={false} onCloseRequest={() => void editor.close()} title="Thêm loại công việc" onOpenChange={() => {}}>{editor.dialog}
@@ -27,7 +29,7 @@ export function JobTypeCreateDialog({ onClose, onCreated }: { onClose(): void; o
       <ErrorNotice error={editor.mutation.error} />
       <fieldset disabled={editor.disabled} className="space-y-4">
         <div><Field label="Tên loại công việc *" required maxLength={100} value={name} aria-invalid={!!errors?.name} onChange={event => setName(event.target.value)} />{errors?.name && <p role="alert" className={styles.fieldError}>{errors.name}</p>}</div>
-        <div><Field label="Đơn giá (đồng/giờ) *" type="number" min={1} step={1} required value={rate} aria-invalid={!!errors?.hourlyRate} onChange={event => setRate(event.target.value)} />{errors?.hourlyRate && <p role="alert" className={styles.fieldError}>{errors.hourlyRate}</p>}</div>
+        <div><MoneyField label="Đơn giá mỗi giờ *" min={1} max={999999999} autoThousands required value={rate} invalid={!!errors?.hourlyRate} onChange={setRate} />{errors?.hourlyRate && <p role="alert" className={styles.fieldError}>{errors.hourlyRate}</p>}</div>
         <div><Field label="Ngày hiệu lực *" type="date" required value={date} onChange={event => setDate(event.target.value)} />{errors?.effectiveFrom && <p role="alert" className={styles.fieldError}>{errors.effectiveFrom}</p>}</div>
       </fieldset>
       <div className="mt-5 flex flex-wrap justify-end gap-3">

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ownerResponseSchema } from "@/features/trader-purchases/contracts";
 
 /** Trạng thái yêu cầu mua (StatusIds.PurchaseRequest): bộ lọc `statusId` của GET /api/purchase-requests. "Hoàn thành" chỉ là cờ `fulfilled`, không có mã riêng. */
-export const REQUEST_STATUS_FILTERS = ["3201", "3202", "3203", "3204", "3205"] as const;
+export const REQUEST_STATUS_FILTERS = ["3201", "3202", "3203", "3204", "3206"] as const;
 export const requestStatusFilterSchema = z.enum(REQUEST_STATUS_FILTERS);
 const customerSchema = z.object({ id: z.guid(), name: z.string(), phoneNumber: z.string().nullable(), currentDebt: z.number() });
 export const requestSendingSchema = z.object({ channel: z.string(), phoneNumber: z.string().nullable(), deliveryStatusId: z.number().int().nullable(), deliveryStatus: z.string().nullable(), deliveryStatusAt: z.iso.datetime({ offset: true }).nullable() });

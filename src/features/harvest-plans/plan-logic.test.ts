@@ -124,7 +124,8 @@ describe("plan form", () => {
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], zoneId: "" }] })).toBe("Dòng 1: chọn vùng.");
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], raftId: "" }] })).toBe("Dòng 1: chọn bè.");
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], laneNumbers: [] }] })).toBe("Dòng 1: chọn ít nhất một luống.");
-    expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], cages: "2,5" }] })).toBe("Dòng 1: lồng dự kiến phải là số nguyên lớn hơn 0.");
+    expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], cages: "2,555" }] })).toBe("Dòng 1: lồng dự kiến phải lớn hơn 0 và có tối đa 2 số lẻ (được nhập 0,5).");
+    expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], cages: "2,5" }] })).toBeUndefined();
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], cages: "" }] })).toBeUndefined();
     const twice = filled().lines[0];
     expect(planFormProblem({ ...filled(), lines: [twice, { ...twice, key: "other" }] })).toBe("Dòng 2: bè đã có ở dòng khác của kế hoạch.");

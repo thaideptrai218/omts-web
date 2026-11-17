@@ -10,8 +10,12 @@ import { useStickyRemote } from "./use-sticky-remote";
  * selection, starting on the zone named by `?zoneId=` (a link from the zone screen) or else the first one.
  */
 export function useZoneChoice(allowed?: (zone: ZoneRow) => boolean) {
-  const params = useSearchParams(), [choice, setChoice] = useState(params?.get("zoneId") ?? "");
+  const params = useSearchParams(), linkedZone = params?.get("zoneId") ?? "";
+  const [selection, setSelection] = useState({ linkedZone, choice: linkedZone });
+  // Same-route links can change zone without remounting this hook.
+  const choice = selection.linkedZone === linkedZone ? selection.choice : linkedZone;
+  const setChoice = (next: string) => setSelection({ linkedZone, choice: next });
   const remote = useStickyRemote(readAllZones);
-  const scoped = useScopedZones((remote.data ?? []).filter(zone => !allowed || allowed(zone)), choice);
+  const scoped = useScopedZones((remote.data ?? []).filter(zone => !allowed || allowed(zone)), choice, linkedZone);
   return { remote, zones: scoped.zones, zoneId: scoped.zoneId || scoped.zones[0]?.id || "", setChoice };
 }

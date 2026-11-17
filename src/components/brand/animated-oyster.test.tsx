@@ -22,7 +22,7 @@ it("renders edible shell anatomy without mascot features or a bead", () => {
   }
   expect(container.innerHTML).not.toMatch(/pearl|blush|smile|eye|face|sparkle|heart/i);
   // Circles are reserved exclusively for the water, never the oyster itself.
-  expect(container.querySelectorAll("circle:not([data-part='bubbles'] > circle)")).toHaveLength(0);
+  expect(container.querySelectorAll("circle:not([data-part='bubbles'] > circle, [data-part='reveal-bubbles'] > circle)")).toHaveLength(0);
   const source = readFileSync("src/components/brand/oyster-artwork.tsx", "utf8");
   expect(source).not.toMatch(/#(?:f5c8be|d89191|b97f88|f9ded3|eda5a1|fff1de)/i);
 });

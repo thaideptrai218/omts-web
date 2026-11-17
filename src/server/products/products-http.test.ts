@@ -55,7 +55,7 @@ describe("products BFF", () => {
     expect((await handleProducts(get("action=disposals-export"))).status).toBe(403);
     expect(fetcher).not.toHaveBeenCalled();
     setup([["PRODUCT_DISPOSALS", "Create"]]);
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ id, code: "XHS000001", statusId: 4001, status: "Draft", disposedAt: "2026-11-12T08:00:00+07:00", zoneId: id, zoneCode: "Z1", reason: null, notes: null, totalKg: 0,
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ id, code: "XHS000001", statusId: 4301, status: "Draft", disposedAt: "2026-11-12T08:00:00+07:00", zoneId: id, zoneCode: "Z1", reason: null, notes: null, totalKg: 0,
       createdAt: "2026-11-12T08:00:00+07:00", createdBy: null, completedAt: null, cancelledAt: null, cancelReason: null, rowVersion: "v", lines: [] }, { status: 201 }));
     expect((await handleProducts(post({ action: "disposal-create", body: { zoneId: id, lines: [] } }))).status).toBe(200);
   });

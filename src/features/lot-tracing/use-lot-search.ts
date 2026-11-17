@@ -9,11 +9,23 @@ export type SearchMode = "lotCode" | "invoiceCode";
 export type SearchState = { status: "idle" } | { status: "loading" } | { status: "done"; lots: SearchItem[] } | { status: "error"; message: string };
 
 /** Bước 1 của TRACE-02: tìm lô theo mã lô hoặc mã hóa đơn bán. Một kết quả duy nhất mở thẳng lô đó; nhiều kết quả cho chọn. */
-/** `linkedCode` (from `?code=`) is searched once on opening, as a lot code. */
-export function useLotSearch(linkedCode = "") {
-  const [mode, setMode] = useState<SearchMode>("lotCode"), [text, setText] = useState(linkedCode);
-  const [state, setState] = useState<SearchState>({ status: "idle"}), [lotId, setLotId] = useState<string>();
+export function useLotSearch(initialCode = "", initialRecordId?: string) {
+  const [mode, setMode] = useState<SearchMode>("lotCode"), [text, setText] = useState(initialCode);
+  const [state, setState] = useState<SearchState>({ status: initialCode ? "loading" : "idle" }), [lotId, setLotId] = useState<string>();
   const ticket = useRef(0);
+  useEffect(() => {
+    if (!initialCode.trim()) return;
+    const mine = ++ticket.current;
+    let active = true;
+    void repo.read("search", { lotCode: initialCode.trim() }, searchResult).then(result => {
+      if (!active || mine !== ticket.current) return;
+      if (result.status !== "success") return setState({ status: "error", message: operationError(result) });
+      setState({ status: "done", lots: result.data.lots });
+      const exact = result.data.lots.find(lot => initialRecordId ? lot.id === initialRecordId : lot.lotCode === initialCode.trim());
+      if (exact) setLotId(exact.id);
+    });
+    return () => { active = false; };
+  }, [initialCode, initialRecordId]);
   const value = text.trim(), valid = value.length > 0 && value.length <= 100;
 
   async function search() {
@@ -26,7 +38,5 @@ export function useLotSearch(linkedCode = "") {
     setState({ status: "done", lots: result.data.lots });
     if (result.data.lots.length === 1) setLotId(result.data.lots[0].id);
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once for the linked code
-  useEffect(() => { if (linkedCode) void Promise.resolve().then(search); }, []);
   return { mode, setMode, text, setText, state, valid, search, lotId, openLot: setLotId };
 }

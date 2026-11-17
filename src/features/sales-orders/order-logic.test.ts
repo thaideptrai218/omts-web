@@ -78,17 +78,17 @@ describe("order form", () => {
 describe('Số ngày chờ: số ngày còn lại đến ngày hẹn lấy hàng', () => {
   const now = new Date('2026-11-12T10:00:00+07:00');
   it('đếm theo ngày lịch giờ Việt Nam, không theo giờ', () => {
-    expect(daysUntilPickup('2026-11-14T08:30:00+07:00', 4101, now)).toBe(2);
-    expect(daysUntilPickup('2026-11-12T23:59:00+07:00', 4102, now)).toBe(0);
-    expect(daysUntilPickup('2026-11-12T00:00:00+07:00', 4102, now)).toBe(0);
-    expect(daysUntilPickup('2026-11-13T00:30:00+07:00', 4101, new Date('2026-11-12T23:50:00+07:00'))).toBe(1);
-    expect(daysUntilPickup('2026-11-10T08:00:00+07:00', 4101, now)).toBe(-2);
+    expect(daysUntilPickup('2026-11-14T08:30:00+07:00', 4401, now)).toBe(2);
+    expect(daysUntilPickup('2026-11-12T23:59:00+07:00', 4402, now)).toBe(0);
+    expect(daysUntilPickup('2026-11-12T00:00:00+07:00', 4402, now)).toBe(0);
+    expect(daysUntilPickup('2026-11-13T00:30:00+07:00', 4401, new Date('2026-11-12T23:50:00+07:00'))).toBe(1);
+    expect(daysUntilPickup('2026-11-10T08:00:00+07:00', 4401, now)).toBe(-2);
   });
   it('không có hẹn lấy hàng hoặc đơn đã đóng thì không có số', () => {
-    expect(daysUntilPickup(null, 4101, now)).toBeNull();
-    expect(daysUntilPickup('2026-11-14T08:30:00+07:00', 4103, now)).toBeNull();
-    expect(daysUntilPickup('2026-11-14T08:30:00+07:00', 4104, now)).toBeNull();
-    expect(daysUntilPickup('không phải ngày', 4101, now)).toBeNull();
+    expect(daysUntilPickup(null, 4401, now)).toBeNull();
+    expect(daysUntilPickup('2026-11-14T08:30:00+07:00', 4403, now)).toBeNull();
+    expect(daysUntilPickup('2026-11-14T08:30:00+07:00', 4404, now)).toBeNull();
+    expect(daysUntilPickup('không phải ngày', 4401, now)).toBeNull();
   });
   it('hiển thị: số ngày, Quá N ngày khi đã quá hẹn, gạch ngang khi không có', () => {
     expect(waitingText(3)).toBe('3'); expect(waitingText(0)).toBe('0'); expect(waitingText(-2)).toBe('Quá 2 ngày'); expect(waitingText(null)).toBe('—');

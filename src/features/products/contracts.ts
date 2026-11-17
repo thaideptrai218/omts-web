@@ -39,8 +39,8 @@ export const productLot = z.object({
 export const productLots = z.object({ productId: id, productCode: text, lots: z.array(productLot), totalRemainingKg: num });
 export const priceChange = z.object({ id, unitId: id.nullish(), unitCode: opt, unitName: opt, oldPrice: numOpt, newPrice: num, changedAt: text, changedById: id.nullish(), changedBy: opt });
 
-export const DISPOSAL = { draft: 4001, completed: 4002, cancelled: 4003 } as const;
-export const disposalStatusLabel: Record<number, string> = { 4001: "Phiếu tạm", 4002: "Hoàn thành", 4003: "Đã hủy" };
+export const DISPOSAL = { draft: 4301, completed: 4302, cancelled: 4303 } as const;
+export const disposalStatusLabel: Record<number, string> = { 4301: "Phiếu tạm", 4302: "Hoàn thành", 4303: "Đã hủy" };
 export const disposalLine = z.object({ id, lineNumber: count, productId: id, productCode: text, productName: text, harvestLotId: id, lotCode: text, kg: num, note: opt });
 const disposalHead = {
   id, code: text, statusId: count, status: text, disposedAt: text, zoneId: id, zoneCode: text, reason: opt, notes: opt, totalKg: num,

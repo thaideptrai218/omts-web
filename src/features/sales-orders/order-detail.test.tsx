@@ -12,7 +12,7 @@ import { OrderDetailPanel } from "./order-detail";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
 const order = {
-  id: ids.order, code: "DH000001", statusId: 4102, status: "Delivering", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null,
+  id: ids.order, code: "DH000001", statusId: 4402, status: "Delivering", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null,
   customer: { id: ids.customer, code: "KH000001", name: "Thương lái An", phoneNumber: "0900000001" }, walkInCustomer: false, source: "Phone", receivedBy: { id: ids.customer, name: "Chủ" }, createdBy: null,
   note: null, subtotal: 300000, discount: 0, discountDecidedByOwner: false, total: 300000, invoicedTotal: 100000, customerPaid: 50000, advanceLeft: 50000, advanceReserved: true,
   lines: [], progress: [],

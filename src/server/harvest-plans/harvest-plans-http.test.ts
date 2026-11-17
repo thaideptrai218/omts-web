@@ -17,7 +17,7 @@ const post = (body: unknown, headers: Record<string, string> = {}) => new Reques
 });
 const view = {
   id, code: "KHT000001", statusId: 4201, status: "Draft", zones: [{ id, code: "Z1", name: "Vùng 1" }], plannedAt: "2026-11-14T06:00:00+07:00", note: null, createdBy: { id, name: "Chủ" },
-  assignedAt: null, completedAt: null, cancelledAt: null, cancelReason: null, orders: [{ id: other, code: "DH000001", statusId: 4101, status: "Draft", customer: { id, code: "KH000001", name: "An" } }],
+  assignedAt: null, completedAt: null, cancelledAt: null, cancelReason: null, orders: [{ id: other, code: "DH000001", statusId: 4401, status: "Draft", customer: { id, code: "KH000001", name: "An" } }],
   lines: [{ id: line, lineNumber: 1, raftId: other, raftCode: "B1", zone: { id, code: "Z1", name: "Vùng 1" }, expectedProduct: null, expectedCageCount: 12, note: null, state: "Open", lot: null, canHarvest: true, locked: true,
     lanes: [{ laneId: id, laneNumber: 1, state: "Planned" }, { laneId: other, laneNumber: 2, state: "Skipped", skipReason: "Hàu chưa đủ cỡ" }] }],
   progress: { lines: 1, linesDone: 0, lanes: 2, lanesHarvested: 0, lanesSkipped: 1 }, allowedActions: ["Edit", "Assign"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "v1",
@@ -35,7 +35,7 @@ describe("harvest plans BFF", () => {
     expect(url.searchParams.getAll("statusIds")).toEqual(["4201", "4202"]);
     expect(url.searchParams.get("zoneId")).toBe(id);
     expect(url.searchParams.has("evil")).toBe(false);
-    for (const bad of ["statusIds=4101", "from=yesterday", "zoneId=nope", "action=plan", "action=plan&id=nope", "action=nothing", "action=plan-by-code&code=a%20b", `action=plans&salesOrderId=x`]) expect((await handleHarvestPlans(get(bad))).status).toBe(400);
+    for (const bad of ["statusIds=4401", "from=yesterday", "zoneId=nope", "action=plan", "action=plan&id=nope", "action=nothing", "action=plan-by-code&code=a%20b", `action=plans&salesOrderId=x`]) expect((await handleHarvestPlans(get(bad))).status).toBe(400);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
@@ -118,6 +118,12 @@ describe("harvest plans BFF", () => {
     expect((await handleHarvestPlans(post({ action: "plan-create", body: { ...body, plannedAt: "tomorrow" } }))).status).toBe(400);
     expect((await handleHarvestPlans(post({ action: "plan-create", body: { ...body, lines: [{ ...body.lines[0], laneNumbers: [] }] } }))).status).toBe(400);
     expect((await handleHarvestPlans(post({ action: "plan-update", id, body }))).status).toBe(400);
+    // Half a cage is a valid expectation; three decimals, zero and a negative are not.
+    const withCages = (expectedCageCount: number) => post({ action: "plan-create", body: { ...body, lines: [{ ...body.lines[0], expectedCageCount }] } });
+    expect((await handleHarvestPlans(withCages(2.5))).status).toBe(200);
+    expect((await handleHarvestPlans(withCages(2.555))).status).toBe(400);
+    expect((await handleHarvestPlans(withCages(0))).status).toBe(400);
+    expect((await handleHarvestPlans(withCages(-1))).status).toBe(400);
   });
 
   it("answers a command that has no content as done, and passes a rejected call on with its code and the API's own sentence", async () => {

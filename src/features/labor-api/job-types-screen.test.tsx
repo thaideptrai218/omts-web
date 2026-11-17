@@ -93,7 +93,7 @@ it("renames in place: Bỏ qua discards, Lưu sends the rename with the row vers
   expect((await screen.findAllByText("Đã lưu")).length).toBeGreaterThan(0);
 });
 
-it("never reuses the Chỉnh sửa / Thêm mốc button node as the submit button (browser would submit at once)", async () => {
+it("never reuses the Chỉnh sửa / Đổi đơn giá button node as the submit button (browser would submit at once)", async () => {
   const user = userEvent.setup();
   await open(user);
   const edit = screen.getByRole("button", { name: "Chỉnh sửa" });
@@ -101,8 +101,8 @@ it("never reuses the Chỉnh sửa / Thêm mốc button node as the submit butto
   expect(edit.isConnected).toBe(false);
   expect(screen.getByRole("button", { name: "Lưu" })).not.toBe(edit);
   expect(state.write).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("tab", { name: "Lịch sử đơn giá" }));
-  const add = screen.getByRole("button", { name: "Thêm mốc đơn giá" });
+  await user.click(screen.getByRole("button", { name: "Bỏ qua" }));
+  const add = screen.getByRole("button", { name: "Đổi đơn giá" });
   await user.click(add);
   expect(add.isConnected).toBe(false);
   expect(screen.getByRole("button", { name: "Lưu" })).not.toBe(add);
@@ -111,9 +111,12 @@ it("never reuses the Chỉnh sửa / Thêm mốc button node as the submit butto
 
 async function startRate(user: ReturnType<typeof userEvent.setup>) {
   await open(user);
+  // The history tab only lists versions; a new rate starts from the info tab.
   await user.click(screen.getByRole("tab", { name: "Lịch sử đơn giá" }));
   expect(screen.getByText("Hiện tại")).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Thêm mốc đơn giá" }));
+  expect(screen.queryByRole("button", { name: "Thêm mốc đơn giá" })).toBeNull();
+  await user.click(screen.getByRole("tab", { name: "Thông tin" }));
+  await user.click(screen.getByRole("button", { name: "Đổi đơn giá" }));
 }
 
 it("adds a rate point inline and validates the rate before sending", async () => {
@@ -125,7 +128,7 @@ it("adds a rate point inline and validates the rate before sending", async () =>
   await user.type(screen.getByLabelText("Đơn giá mới (đồng/giờ)"), "30000");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(state.write).toHaveBeenCalledWith("rate", { hourlyRate: 30000, effectiveFrom: businessToday(), rowVersion: "v1" }, expect.anything(), job(1).id));
-  await waitFor(() => expect(screen.getByRole("button", { name: "Thêm mốc đơn giá" })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole("button", { name: "Đổi đơn giá" })).toBeTruthy());
 });
 
 it("discards the inline rate row on Bỏ qua", async () => {
@@ -144,7 +147,7 @@ it("shows a rate that cannot cover a finalized month inline and keeps the draft"
   await user.type(screen.getByLabelText("Đơn giá mới (đồng/giờ)"), "30000");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   expect((await screen.findByText(/đã chốt lương/)).getAttribute("role")).toBe("alert");
-  expect((screen.getByLabelText("Đơn giá mới (đồng/giờ)") as HTMLInputElement).value).toBe("30000");
+  expect((screen.getByLabelText("Đơn giá mới (đồng/giờ)") as HTMLInputElement).value).toBe("30.000");
 });
 
 it("blocks on a version conflict (MSG06), keeps the draft and saves again after re-reading", async () => {
@@ -155,7 +158,7 @@ it("blocks on a version conflict (MSG06), keeps the draft and saves again after 
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await user.click(await screen.findByRole("button", { name: "Đọc hồ sơ hiện tại" }));
   expect((await screen.findByText(/Đã đọc hồ sơ hiện tại/)).textContent).toContain("Bản mới");
-  expect((screen.getByLabelText("Đơn giá mới (đồng/giờ)") as HTMLInputElement).value).toBe("30000");
+  expect((screen.getByLabelText("Đơn giá mới (đồng/giờ)") as HTMLInputElement).value).toBe("30.000");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(state.write).toHaveBeenLastCalledWith("rate", expect.objectContaining({ rowVersion: "v9" }), expect.anything(), job(1).id));
 });
@@ -186,7 +189,7 @@ it("creates a job type from the dialog after confirmation", async () => {
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   expect(state.write).not.toHaveBeenCalled();
   await user.type(screen.getByLabelText("Tên loại công việc *"), "Phân loại hàu");
-  await user.type(screen.getByLabelText("Đơn giá (đồng/giờ) *"), "27000");
+  await user.type(screen.getByLabelText("Đơn giá mỗi giờ *"), "27000");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
   await waitFor(() => expect(state.write).toHaveBeenCalledWith("create", { name: "Phân loại hàu", hourlyRate: 27000, effectiveFrom: businessToday() }, expect.anything()));

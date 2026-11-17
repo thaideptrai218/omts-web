@@ -1,5 +1,6 @@
 "use client";
 import type { Dispatch, SetStateAction } from "react";
+import { phoneInputProps, phoneInputValue } from "@/components/form/phone-input-rules";
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { businessToday, control, Field } from "@/features/operations/ui";
@@ -37,10 +38,11 @@ export function EmployeeEditorFields(props: EmployeeEditorFieldsProps & { active
       <h3 className={styles.sectionTitle}>Thông tin cá nhân</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Họ và tên *" required maxLength={100} {...errorProps("fullName")} value={values.fullName} onChange={event => setValues({ ...values, fullName: event.target.value })} />
-        <Field label="Số điện thoại" type="tel" {...errorProps("phone")} value={values.phone} onChange={event => setValues({ ...values, phone: event.target.value })} />
+        <div><Field label="Số điện thoại" {...phoneInputProps} {...errorProps("phone")} value={values.phone} onChange={event => setValues({ ...values, phone: phoneInputValue(event.target.value) })} />
+          {props.fieldError?.("phone") && <p id={errorProps("phone")["aria-describedby"]} role="alert" className="text-xs text-danger">{props.fieldError("phone")}</p>}</div>
       </div>
       <label className="block text-sm font-semibold">Ngày sinh
-        <DatePickerField className={control} label="Ngày sinh" name="birthday" invalid={errorProps("birthday")["aria-invalid"]} describedBy={errorProps("birthday")["aria-describedby"]} value={values.birthday} max={businessToday()} onChange={birthday => setValues({ ...values, birthday })} />
+        <DatePickerField allowClear className={control} label="Ngày sinh" name="birthday" invalid={errorProps("birthday")["aria-invalid"]} describedBy={errorProps("birthday")["aria-describedby"]} value={values.birthday} max={businessToday()} onChange={birthday => setValues({ ...values, birthday })} />
       </label>
       <EmployeeAddressFields values={values} setValues={setValues} errorProps={errorProps} />
     </div>

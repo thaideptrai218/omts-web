@@ -1,4 +1,5 @@
 import { Field } from "@/features/operations/ui";
+import { digitsOnly } from "@/components/form/phone-input-rules";
 import type { EmployeeEditorFieldsProps } from "./employee-editor-fields";
 import styles from "./employee-screen.module.css";
 
@@ -16,7 +17,11 @@ export function EmployeeEditorBankFields({ values, setValues, errorProps, fieldE
           ["accountHolderName", "Chủ tài khoản"],
         ].map(([key, label]) => (
           <div key={key}><Field
-            label={label}
+            label={label + (Object.values(values.bankAccount).some(value => value.trim()) ? " *" : "")}
+            required={Object.values(values.bankAccount).some(value => value.trim())}
+            maxLength={key === "accountNumber" ? 20 : 100}
+            inputMode={key === "accountNumber" ? "numeric" : undefined}
+            pattern={key === "accountNumber" ? "[0-9]{6,20}" : undefined}
             {...errorProps(`bankAccount.${key}`)}
             value={values.bankAccount[key as keyof typeof values.bankAccount]}
             onChange={(event) =>
@@ -25,7 +30,7 @@ export function EmployeeEditorBankFields({ values, setValues, errorProps, fieldE
                 bankAccount: {
                   ...values.bankAccount,
                   // The account holder name is upper-cased as it is typed.
-                  [key]: key === "accountHolderName" ? event.target.value.toUpperCase() : event.target.value,
+                  [key]: key === "accountHolderName" ? event.target.value.toUpperCase() : key === "accountNumber" ? digitsOnly(event.target.value, 20) : event.target.value,
                 },
               })
             }

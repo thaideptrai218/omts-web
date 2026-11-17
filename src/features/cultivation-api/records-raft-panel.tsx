@@ -1,13 +1,22 @@
 "use client";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
+import { CycleProgressTab } from "@/features/cycles-api/cycle-progress-tab";
+import { CycleStartAction } from "@/features/cycles-api/cycle-start-action";
+import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { operationAllowed } from "@/features/operations/permissions";
+import { replaceUrlParams } from "@/features/farming-management/replace-url-params";
 import { useMemo, useState, type ReactNode } from "react";
 import { StatusPill } from "@/components/ui/management-page";
 import { Subtabs } from "@/components/ui/management-screen/management-table";
-import { cycleStateLabel, cycleStateOf, type CycleRow } from "@/features/cycles-api/cycle-model";
+import { canStartCycle, cycleStateLabel, cycleStateOf, type CycleRow } from "@/features/cycles-api/cycle-model";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import { CultivationProgress } from "./cultivation-progress";
+
 import flowStyles from "./cultivation-flow.module.css";
 import { HarvestPanel } from "./records-harvest-panel";
+import { HarvestLotPreview } from "./harvest-lot-preview";
 import { MaterialsPanel } from "./records-materials-panel";
 import { SeedingPanel } from "./records-seeding-panel";
 import type { RecordsArea } from "./records-shared";
@@ -15,19 +24,35 @@ import type { RecordsArea } from "./records-shared";
 type TabKey = "records" | "progress";
 const recordsLabel: Record<RecordsArea, string> = { seeding: "Thả giống", "material-usages": "Sử dụng vật tư", harvest: "Thu hoạch" };
 
+/** Older lots have a supported detail endpoint even though the raft list only exposes its latest cycle. */
+function HistoricalHarvestRecord({ id, zoneId }: { id: string; zoneId: string }) {
+  const [open, setOpen] = useState(true), [revision, setRevision] = useState(0);
+  return open ? <HarvestLotPreview key={revision} id={id} zoneId={zoneId} onClose={() => setOpen(false)} onSaved={() => setRevision(value => value + 1)} />
+    : <button type="button" className="p-3 text-sm text-primary underline" onClick={() => setOpen(true)}>Mở lại chi tiết lô thu hoạch</button>;
+}
+
 /** Opened raft row of the seeding, material-use and harvest screens: the area's records and the lane progress, in place. */
-export function RecordsRaftPanel({ area, row, zoneId }: { area: RecordsArea; row: CycleRow; zoneId: string }) {
+export function RecordsRaftPanel({ area, row, zoneId, zoneLabel, onChanged }: { area: RecordsArea; row: CycleRow; zoneId: string; zoneLabel: string; onChanged(notice: string): void }) {
+  const { identity, permissions } = useApiWorkspace();
+  const canStart = canStartCycle(row) && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Create", zoneId);
+  // A cycle started here opens right on this screen: its id goes to the URL, the list reloads and the records panel replaces the empty state.
+  const started = (cycleId: string | undefined) => { replaceUrlParams({ ...(cycleId ? { cycleId } : {}) }); onChanged("Đã bắt đầu chu kỳ nuôi"); };
+  // The screen writes raftId and cycleId of the open row itself; the URL can lag a render behind, so only this raft's cycleId counts.
+  const params = useSearchParams(), selectedCycleId = (params.get("raftId") ?? row.raftId) === row.raftId ? params.get("cycleId") ?? row.cycle?.id : row.cycle?.id;
   const [tab, setTab] = useState<TabKey>("records"), prefix = `records-${area}-${row.raftId}`;
   const tabs = useMemo(() => [{ key: "records" as const, label: recordsLabel[area] }, ...(area === "material-usages" ? [] : [{ key: "progress" as const, label: "Tiến độ làn" }])], [area]);
   const state = cycleStateOf(row);
+  const unavailableHarvestCycle = area === "harvest" && !!selectedCycleId && selectedCycleId !== row.cycle?.id;
+  const harvestRecordId = area === "harvest" ? params.get("recordId") : null;
+  const noOpenCycle = !selectedCycleId || state !== "open";
   const content: Record<TabKey, ReactNode> = {
-    records: area === "seeding" ? row.cycle ? <SeedingPanel zoneId={zoneId} raftId={row.raftId} cycleId={row.cycle.id} /> : <p className={flowStyles.empty}>Bè chưa có chu kỳ nuôi. Mở chu kỳ trước khi ghi nhận thả giống.</p>
-      : area === "material-usages" ? <MaterialsPanel zoneId={zoneId} raftId={row.raftId} /> : <HarvestPanel zoneId={zoneId} raftId={row.raftId} />,
-    progress: <CultivationProgress raftId={row.raftId} zoneId={zoneId} />,
+    records: area === "seeding" ? !noOpenCycle && selectedCycleId ? <SeedingPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} cycleStartDate={row.cycle?.id === selectedCycleId ? row.cycle.startDate : undefined} /> : <div className={flowStyles.empty}><p>Bè chưa có chu kỳ nuôi. Hãy bắt đầu chu kỳ nuôi trước</p>{canStart && <div className="mt-2"><CycleStartAction row={row} zoneId={zoneId} zoneLabel={zoneLabel} canCreate variant="button" onStarted={started} /></div>}</div>
+      : area === "material-usages" ? <MaterialsPanel zoneId={zoneId} raftId={row.raftId} cycleId={selectedCycleId} /> : unavailableHarvestCycle && harvestRecordId ? <HistoricalHarvestRecord key={harvestRecordId} id={harvestRecordId} zoneId={zoneId} /> : unavailableHarvestCycle ? <div className="space-y-2 p-3 text-sm"><p>Chu kỳ đã chọn không phải chu kỳ gần nhất của bè. Màn ghi nhận thu hoạch chỉ hỗ trợ chu kỳ gần nhất; chọn một lô trong Sản lượng nuôi để xem thu hoạch cũ.</p><Link className="text-primary underline" href={farmingReferenceHref("yield", { zoneId, raftId: row.raftId, cycleId: selectedCycleId })}>Xem thu hoạch của chu kỳ đã chọn</Link><br /><Link className="text-primary underline" href={farmingReferenceHref("harvest", { zoneId, raftId: row.raftId })}>Mở thu hoạch chu kỳ gần nhất</Link></div> : <HarvestPanel zoneId={zoneId} raftId={row.raftId} />,
+    progress: <CycleProgressTab row={row} zoneId={zoneId} canSeeFlow={true} />,
   };
   return <section id={`cycle-preview-${row.raftId}`} className={styles.detail} aria-label="Hồ sơ vận hành của bè">
-    <header className={styles.header}><h3>Bè {row.raftCode}</h3><StatusPill tone={state === "open" ? "success" : "neutral"}>{cycleStateLabel(state)}</StatusPill>
-      <span className={styles.hint}>{row.laneCount} làn nuôi{row.cycle ? ` · Chu kỳ từ ${formatVietnameseDate(row.cycle.startDate)}` : ""}</span></header>
+    <header className={styles.header}><h3><Link href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>Bè {row.raftCode}</Link></h3><StatusPill tone={state === "open" ? "success" : "neutral"}>{cycleStateLabel(state)}</StatusPill>
+      <span className={styles.hint}>{row.laneCount} làn nuôi{row.cycle ? <> · <Link href={farmingReferenceHref("cycle", { zoneId, raftId: row.raftId, cycleId: row.cycle.id, tab: "journey" })}>Hành trình chu kỳ từ {formatVietnameseDate(row.cycle.startDate)}</Link></> : ""}</span></header>
     <Subtabs<TabKey> label="Hồ sơ vận hành của bè" tabs={tabs} value={tab} idPrefix={prefix} onChange={setTab} />
     <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={`${styles.body} ${flowStyles.page}`}>{content[tab]}</div>
   </section>;

@@ -5,7 +5,7 @@ import { z } from "zod";
  * with offset, enums travel as strings. A plan is one planned time with lines over rafts of any zones; a line is one raft (its zone is the zone of the raft) with its
  * lanes, the product its raft farms and the cages expected, and the lot recorded from it. A lane is Planned, Harvested (it is in the lot of its line) or Skipped ("Không thu", with a reason).
  */
-const id = z.guid(), text = z.string(), opt = text.nullish(), count = z.number().int();
+const id = z.guid(), text = z.string(), opt = text.nullish(), count = z.number().int(), cages = z.number();
 
 export const PLAN = { draft: 4201, assigned: 4202, harvesting: 4203, completed: 4204, cancelled: 4205 } as const;
 export const laneStates = ["Planned", "Harvested", "Skipped"] as const;
@@ -16,11 +16,11 @@ export type PlanAction = "Edit" | "Assign" | "Finish" | "Cancel" | "Harvest" | "
 const account = z.object({ id, name: text });
 export const zoneRef = z.object({ id, code: text, name: text });
 export const planLane = z.object({ laneId: id, laneNumber: count, state: z.enum(laneStates), lotCode: opt, skippedAt: opt, skippedBy: account.nullish(), skipReason: opt });
-export const planLot = z.object({ id, lotCode: text, cageCount: count, estimatedKg: z.number(), harvestedAt: text });
+export const planLot = z.object({ id, lotCode: text, cageCount: cages, estimatedKg: z.number(), harvestedAt: text });
 export const planLine = z.object({
   id, lineNumber: count, raftId: id, raftCode: text, zone: zoneRef,
   /** The product the raft farms, read from the raft when the plan was saved: never typed on the plan. */
-  expectedProduct: z.object({ id, code: text, name: text }).nullish(), expectedCageCount: count.nullish(), note: opt,
+  expectedProduct: z.object({ id, code: text, name: text }).nullish(), expectedCageCount: cages.nullish(), note: opt,
   state: z.enum(["Open", "Harvested", "Skipped"]), lot: planLot.nullish(), lanes: z.array(planLane),
   /** A lot can be recorded from the line now, or lanes left out (the caller still needs HARVESTS Create). */
   canHarvest: z.boolean(),
@@ -43,7 +43,7 @@ export const nextCode = z.object({ code: text });
 /** The form of a new plan made from an order: the order and its pickup time, and its products with the cages worked out where the product has a Lồng unit (for reference only). */
 export const planDraft = z.object({
   salesOrder: planOrder, plannedAt: opt,
-  products: z.array(z.object({ productId: id, productCode: text, productName: text, unitId: id, unitCode: text, unitName: text, quantity: z.number(), expectedCageCount: count.nullish() })),
+  products: z.array(z.object({ productId: id, productCode: text, productName: text, unitId: id, unitCode: text, unitName: text, quantity: z.number(), expectedCageCount: cages.nullish() })),
 });
 /** A lane of a raft the plan can still use: Free, waiting in another open plan (`planCode`), or already harvested in the cycle. */
 export const eligibleLaneStates = ["Free", "InAnotherPlan", "Harvested"] as const;

@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
-import { Field, Select } from "@/features/operations/ui";
+import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
+import { presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
+import { Select } from "@/features/operations/ui";
 import { FRAME_EMPTY_TEXT } from "./frame-parts";
 import s from "./report-frame.module.css";
 
@@ -23,28 +25,10 @@ export function RadioFilter({ legend, name, options, value, onChange }: Readonly
   );
 }
 
-const PERIOD_OPTIONS: readonly FilterOption[] = [
-  { value: "this-month", label: "Tháng này" },
-  { value: "last-month", label: "Tháng trước" },
-  { value: "custom", label: "Tùy chỉnh" },
-];
-
-/** Period selector: preset months or a custom date range (local state only). */
-export function PeriodFilter({ name }: Readonly<{ name: string }>) {
-  const [preset, setPreset] = useState("this-month");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  return (
-    <>
-      <RadioFilter legend="Thời gian" name={name} options={PERIOD_OPTIONS} value={preset} onChange={setPreset} />
-      {preset === "custom" && (
-        <div className={s.group}>
-          <Field type="date" label="Từ ngày" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} />
-          <Field type="date" label="Đến ngày" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} />
-        </div>
-      )}
-    </>
-  );
+/** Period selector: the shared time filter (quick presets or a custom range), local state only; the default is the current month. */
+export function PeriodFilter() {
+  const [time, setTime] = useState<TimeRangeValue>(() => presetValue("thisMonth"));
+  return <TimeRangeFilter legend="Thời gian" value={time} onChange={setTime} />;
 }
 
 /** Checklist whose options come from the backend (zones, products); none are available without a data source. */

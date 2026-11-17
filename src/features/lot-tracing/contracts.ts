@@ -31,7 +31,7 @@ const traceInvoice = z.object({
 });
 
 export const lotTrace = z.object({
-  lotId: id, lotCode: z.string(), harvestedAt: at, harvestDate: day, cageCount: z.number().int(), estimatedKg: kg, statusId: z.number().int(), status: z.string(), originState,
+  lotId: id, lotCode: z.string(), harvestedAt: at, harvestDate: day, cageCount: z.number(), estimatedKg: kg, statusId: z.number().int(), status: z.string(), originState,
   publishedAt: at.nullable(), withdrawnAt: at.nullable(), corrections: z.array(correctionMark), raftId: id, raftCode: z.string(), zoneId: id, zoneCode: z.string(), zoneName: z.string(),
   cycleId: id, cycleStartDate: day, cycleCloseDate: day.nullable(), cycleStatus: z.string(), lanes: z.array(traceLane), missing: z.array(originGap),
   invoices: z.array(traceInvoice), invoicedKg: kg, canPublish: z.boolean(), canCorrect: z.boolean(), canExport: z.boolean(),

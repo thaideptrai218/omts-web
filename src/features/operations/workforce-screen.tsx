@@ -10,6 +10,7 @@ import { workforceColumns } from "./workforce-columns";
 import { WorkforceFilterRail } from "./workforce-filter-rail";
 import { OwnerLeavesDialog, ReviewLeave } from "./workforce-leave-dialogs";
 import styles from "./workforce-screen.module.css";
+import { JobTypeCreateDialog } from "@/features/labor-api/job-types-create-dialog";
 import { WorkforceSetupDialog } from "./workforce-setup-dialog";
 import { WorkforceTable } from "./workforce-table";
 import { WorkforceToolbarActions } from "./workforce-toolbar-actions";
@@ -51,7 +52,9 @@ export function WorkforceScreen() {
       <AssignmentEditor mode={form} initialDay={board.day || businessToday()} onClose={() => setForm(undefined)}
         onSaved={() => { setForm(undefined); rows.reload(); board.setNotice("Đã lưu phân công."); }} />
     )}
-    {(form === "job" || form === "settings") && <WorkforceSetupDialog mode={form} onClose={() => setForm(undefined)} />}
+    {form === "settings" && <WorkforceSetupDialog onClose={() => setForm(undefined)} />}
+    {/* Job types live on /api/job-types: same dialog and repository as the "Loại công việc và đơn giá" screen. */}
+    {form === "job" && <JobTypeCreateDialog onClose={() => setForm(undefined)} onCreated={job => { setForm(undefined); board.setNotice(`Đã thêm loại công việc ${job.name}.`); }} />}
     {form === "leaves" && <OwnerLeavesDialog onClose={() => setForm(undefined)} />}
   </ManagementLayout>;
 }

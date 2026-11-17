@@ -6,7 +6,7 @@ import { ORDER, type OrderSource } from "./contracts";
 export const ORDERS_PATH = "/sales/orders";
 /** An order is opened in its list by its code. */
 export const orderHref = (code: string) => `${ORDERS_PATH}?code=${encodeURIComponent(code)}`;
-export const orderStatusLabel: Record<number, string> = { 4101: "Phiếu tạm", 4102: "Đang giao", 4103: "Hoàn thành", 4104: "Đã hủy" };
+export const orderStatusLabel: Record<number, string> = { 4401: "Phiếu tạm", 4402: "Đang giao", 4403: "Hoàn thành", 4404: "Đã hủy" };
 export const sourceLabel: Record<OrderSource, string> = { App: "Ứng dụng", Phone: "Điện thoại", AtPort: "Tại cảng" };
 export const orderSourceOptions: readonly (readonly [OrderSource, string])[] = [["App", "Ứng dụng"], ["Phone", "Điện thoại"], ["AtPort", "Tại cảng"]];
 export const advanceMethodLabel: Record<string, string> = { Cash: "Tiền mặt", OtherTransfer: "Chuyển khoản", VietQrInvoice: "VietQR", EWallet: "Ví điện tử" };

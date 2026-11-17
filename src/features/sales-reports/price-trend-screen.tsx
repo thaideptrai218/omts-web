@@ -32,7 +32,7 @@ export function PriceTrendScreen() {
         <>
           {/* TODO(api): product and zone options come from the backend lists; values feed the report query. */}
           <ChecklistFilter legend="Sản phẩm" />
-          <PeriodFilter name="price-trend-period" />
+          <PeriodFilter />
           <RadioFilter legend="Đơn vị thời gian" name="price-trend-unit" options={UNIT_OPTIONS} value={unit} onChange={setUnit} />
           <ChecklistFilter legend="Vùng nuôi" />
         </>

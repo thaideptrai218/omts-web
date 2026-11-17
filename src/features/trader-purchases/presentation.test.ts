@@ -52,6 +52,6 @@ describe("kg input", () => {
 
 describe("ordered request", () => {
   it("shows a request the cooperative made an order from as done, not as waiting", () => {
-    expect(statusKey({ statusId: 3205, fulfilled: false })).toBe("fulfilled");
+    expect(statusKey({ statusId: 3206, fulfilled: false })).toBe("fulfilled");
   });
 });

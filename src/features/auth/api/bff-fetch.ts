@@ -61,6 +61,10 @@ function replayable(body: BodyInit | null | undefined): boolean {
  * anything; every other write keeps its uncertain outcome for the caller to report.
  */
 export async function bffFetch(input: string, init: RequestInit = {}, options: Readonly<{ lockHeld?: boolean }> = {}): Promise<Response> {
+  return bffFetchRequest(input, init, options);
+}
+
+async function bffFetchRequest(input: string, init: RequestInit, options: Readonly<{ lockHeld?: boolean }>): Promise<Response> {
   const send = () => fetch(input, withDisplayedAccount(init));
   const response = await send();
   if (response.status === 409 && response.headers.get(AUTH_REJECTION_HEADER) === AUTH_REJECTION_RELOAD_REQUIRED) {

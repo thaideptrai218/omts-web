@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -27,7 +29,7 @@ export function WithdrawDialog({ preview, result, pending, uncertain, error, onC
           <>
             <p role="status" className={s.success}>Trang nguồn gốc của lô {result.lot.lotCode} không còn hiển thị thông tin nguồn gốc.</p>
             <WithdrawalNoticeList notices={result.notices} walkInInvoiceCodes={result.walkInInvoiceCodes} />
-            <div className={s.dialogActions}><Button className="w-auto" onClick={onClose}>Đóng</Button></div>
+            <div className={s.dialogActions}><Button key="close-result" type="button" className="w-auto" onClick={onClose}>Đóng</Button></div>
           </>
         ) : (
           <form noValidate onSubmit={(event) => { event.preventDefault(); setTouched(true); if (!problem && !locked) onConfirm(reason.trim()); }}>
@@ -43,8 +45,8 @@ export function WithdrawDialog({ preview, result, pending, uncertain, error, onC
             <ErrorNotice error={error} />
             {uncertain && <p role="alert" className={s.warn}>Chưa rõ lệnh thu hồi đã được ghi hay chưa. Hệ thống sẽ không gửi lại. Hãy đóng hộp thoại để tải lại trạng thái lô và xem mục Thông báo đã gửi.</p>}
             <div className={s.dialogActions}>
-              <Button className="w-auto" variant="secondary" disabled={pending} onClick={onClose}>{uncertain ? "Đóng và kiểm tra lại" : "Hủy"}</Button>
-              {!uncertain && <Button className="w-auto" type="submit" variant="danger" isPending={pending} pendingLabel="Đang thu hồi...">Thu hồi nguồn gốc</Button>}
+              <Button key="discard" type="button" className="w-auto" variant="secondary" disabled={pending} onClick={onClose}>{uncertain ? "Đóng và kiểm tra lại" : "Bỏ qua"}</Button>
+              {!uncertain && <Button key="confirm-withdrawal" className="w-auto" type="submit" variant="danger" isPending={pending} pendingLabel="Đang thu hồi...">Thu hồi nguồn gốc</Button>}
             </div>
           </form>
         )}
@@ -67,7 +69,7 @@ function WithdrawalAudience({ preview }: { preview: WithdrawPreview }) {
               {preview.traders.map((trader) => (
                 <tr key={trader.customerId}>
                   <th scope="row">{trader.customerName || "—"}</th>
-                  <td className={s.code}>{trader.invoiceCodes.join(", ")}</td>
+                  <td className={s.code}>{trader.invoiceCodes.map(code => <Link key={code} className="mr-2 underline" href={farmingReferenceHref("salesInvoice", { code })}>{code}</Link>)}</td>
                   <td className={s.code}>{trader.phoneNumber ?? <span className={s.mark}>Chưa có số điện thoại, cần gọi điện</span>}</td>
                 </tr>
               ))}
@@ -75,7 +77,7 @@ function WithdrawalAudience({ preview }: { preview: WithdrawPreview }) {
           </table>
         </div>
       )}
-      {preview.walkInInvoiceCodes.length > 0 && <p className={s.hint}>Hóa đơn bán lẻ không có khách hàng để thông báo: <span className={s.code}>{preview.walkInInvoiceCodes.join(", ")}</span>.</p>}
+      {preview.walkInInvoiceCodes.length > 0 && <p className={s.hint}>Hóa đơn bán lẻ không có khách hàng để thông báo: <span className={s.code}>{preview.walkInInvoiceCodes.map(code => <Link key={code} className="mr-2 underline" href={farmingReferenceHref("salesInvoice", { code })}>{code}</Link>)}</span>.</p>}
     </div>
   );
 }

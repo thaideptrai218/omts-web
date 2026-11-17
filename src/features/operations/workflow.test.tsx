@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render as baseRender, screen, waitFor } from "@testing-library/react";
+import { ToastProvider } from "@/components/ui/toast-provider";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), upload: vi.fn(), download: vi.fn() }));
@@ -12,6 +13,7 @@ import { ReceiptEditor } from "./receipt-screen";
 import { PaymentEditor } from "./payment-screen";
 import { MeasurementEditor, NewMeasurement } from "./water-screen";
 import { ids, receiptFixture, waterFixture } from "./__tests__/fixtures";
+const render = (ui: ReactNode) => baseRender(<ToastProvider>{ui}</ToastProvider>);
 
 beforeEach(() => { vi.clearAllMocks(); vi.spyOn(window, "confirm").mockReturnValue(true); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -61,17 +63,17 @@ describe("tester workflow safeguards", () => {
     render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={onClose} onSaved={vi.fn()} />);
     const picker = screen.getByLabelText("Ảnh máy đo * (JPEG/PNG, tối đa 10 MB)");
     await userEvent.upload(picker, new File(["png"], "qa.png", { type: "image/png" }));
-    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bỏ qua" }));
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
     expect((picker as HTMLInputElement).files?.[0]?.name).toBe("qa.png");
-    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bỏ qua" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
     expect(repository.write).not.toHaveBeenCalled(); expect(repository.upload).not.toHaveBeenCalled();
   });
   it.each([
-    ["Ngày trả *", "2026-01-01"],
+    ["Ngày trả *", "01/01/2026"],
     ["Hình thức *", "BankTransfer"],
     ["Nhà cung cấp *", ids.supplier],
   ])("keeps a payment draft when only %s changed until explicit discard", async (label, value) => {
@@ -83,7 +85,7 @@ describe("tester workflow safeguards", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
-    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(label === "Ngày trả *" ? value.split("-").reverse().join("/") : value);
+    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(value);
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
@@ -92,7 +94,7 @@ describe("tester workflow safeguards", () => {
   it("closes untouched or restored measurement and payment forms without a discard prompt", async () => {
     const closeMeasurement = vi.fn();
     const measurement = render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={closeMeasurement} onSaved={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bỏ qua" }));
     expect(closeMeasurement).toHaveBeenCalledOnce(); measurement.unmount();
     const closePayment = vi.fn(); repository.read.mockResolvedValue({ status: "success", data: undefined });
     render(<PaymentEditor payment={null} suppliers={[]} canCreate initialSupplierId={ids.supplier} onClose={closePayment} onSaved={vi.fn()} />);
@@ -144,14 +146,14 @@ describe("tester workflow safeguards", () => {
     const picker = await screen.findByLabelText("Phiếu nhập hoàn thành *");
     await screen.findByRole("option", { name: /PN-QA-01/ });
     fireEvent.change(picker, { target: { value: ids.receipt } });
-    fireEvent.change(screen.getByLabelText("Số tiền đã trả (đồng) *"), { target: { value: "1000" } });
+    fireEvent.change(screen.getByLabelText("Số tiền đã trả *"), { target: { value: "1000" } });
     fireEvent.click(screen.getByRole("button", { name: "Xác nhận ghi nhận thanh toán" }));
     expect(repository.write).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Đồng ý ghi nhận" }));
     await screen.findByText(/Chưa gửi lại khoản tiền/);
     const originalPayload = repository.write.mock.calls[0][1];
     expect(originalPayload.deduplicationKey).toMatch(/^[a-f0-9-]{36}$/);
-    expect((screen.getByLabelText("Số tiền đã trả (đồng) *") as HTMLInputElement).matches(":disabled")).toBe(true);
+    expect((screen.getByLabelText("Số tiền đã trả *") as HTMLInputElement).matches(":disabled")).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Tải lịch sử để đối chiếu" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đã đối chiếu, cho phép xác nhận lại khoản đang nhập" }));
     expect(repository.write).toHaveBeenCalledTimes(1);
@@ -172,15 +174,17 @@ describe("tester workflow safeguards", () => {
     render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={vi.fn()} onSaved={onSaved} />);
     await userEvent.upload(screen.getByLabelText("Ảnh máy đo * (JPEG/PNG, tối đa 10 MB)"), new File(["png"], "qa.png", { type: "image/png" }));
     // jsdom's native file-required validator does not observe user-event's FileList; submit the real handler.
-    fireEvent.submit(screen.getByRole("button", { name: "Nhận dạng từ ảnh" }).closest("form")!);
+    const recognizeButton = screen.getByRole("button", { name: "Nhận dạng từ ảnh" });
+    fireEvent.submit(recognizeButton.closest("form")!);
     expect(await screen.findByText("Chưa đọc được pH, độ mặn, nhiệt độ.")).toBeTruthy();
     expect(repository.upload.mock.calls[0].slice(0, 3)).toEqual(["recognize", [expect.any(File)], {}]);
     expect(repository.write).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Lưu phép đo" })).not.toBe(recognizeButton);
     await screen.findByRole("option", { name: "B-QA" });
     fireEvent.change(screen.getByLabelText("Bè đo *"), { target: { value: ids.raft } });
     fireEvent.change(screen.getByLabelText("pH (0–14) *"), { target: { value: "7.5" } });
-    fireEvent.change(screen.getByLabelText("Độ mặn (0–100 ‰) *"), { target: { value: "25" } });
-    fireEvent.change(screen.getByLabelText("Nhiệt độ (°C) *"), { target: { value: "26" } });
+    fireEvent.change(screen.getByLabelText("Độ mặn (‰, 0–50) *"), { target: { value: "25" } });
+    fireEvent.change(screen.getByLabelText("Nhiệt độ (°C, 0–45) *"), { target: { value: "26" } });
     fireEvent.submit(screen.getByRole("button", { name: "Lưu phép đo" }).closest("form")!);
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(recorded, ocr));
     expect(repository.write.mock.calls[0].slice(0, 2)).toEqual(["record", expect.objectContaining({
@@ -191,10 +195,15 @@ describe("tester workflow safeguards", () => {
     const record = waterFixture(), onSaved = vi.fn();
     repository.write.mockResolvedValue({ status: "success", data: waterFixture({ ph: 7.8 }) });
     render(<MeasurementEditor record={record} onClose={vi.fn()} onSaved={onSaved} onOpen={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Hiệu chỉnh" }));
-    fireEvent.change(screen.getByLabelText("pH *"), { target: { value: "7.8" } });
+    const editButton = screen.getByRole("button", { name: "Hiệu chỉnh" });
+    expect(editButton.getAttribute("type")).toBe("button");
+    await userEvent.click(editButton);
+    expect(repository.write).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Lưu" })).not.toBe(editButton);
+    expect(screen.getByRole("button", { name: "Lưu" }).getAttribute("type")).toBe("submit");
+    fireEvent.change(screen.getByLabelText("pH (0–14) *"), { target: { value: "7.8" } });
     fireEvent.change(screen.getByLabelText("Lý do hiệu chỉnh *"), { target: { value: "Đọc lại ảnh" } });
-    fireEvent.click(screen.getByRole("button", { name: "Lưu bản hiệu chỉnh" }));
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
     expect(repository.write.mock.calls[0].slice(0, 3)).toEqual(["correct", { raftId: ids.raft, measuredAt: "2026-10-01T08:00:00+07:00", ph: 7.8, salinity: 25, temperature: 26, reason: "Đọc lại ảnh" }, expect.anything()]);
     expect(onSaved).toHaveBeenCalledOnce();
@@ -202,18 +211,29 @@ describe("tester workflow safeguards", () => {
   it("voids an active measurement with only a reason after confirmation", async () => {
     repository.write.mockResolvedValue({ status: "success", data: waterFixture({ statusCode: "VOIDED", status: "Voided", voidReason: "Đo nhầm bè" }) });
     render(<MeasurementEditor record={waterFixture()} onClose={vi.fn()} onSaved={vi.fn()} onOpen={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Hủy phép đo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hủy bỏ phép đo" }));
     fireEvent.change(screen.getByLabelText("Lý do hủy *"), { target: { value: "Đo nhầm bè" } });
     fireEvent.click(screen.getByRole("button", { name: "Xác nhận hủy phép đo" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
     expect(repository.write.mock.calls[0].slice(0, 2)).toEqual(["void", { reason: "Đo nhầm bè" }]);
   });
   it("does not offer editing or voiding a voided measurement", () => {
     render(<MeasurementEditor record={waterFixture({ statusCode: "VOIDED", status: "Voided", voidReason: "Đo nhầm bè" })} onClose={vi.fn()} onSaved={vi.fn()} onOpen={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "Hiệu chỉnh" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Hủy phép đo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Hủy bỏ phép đo" })).toBeNull();
     expect(screen.getByText("Lý do hủy: Đo nhầm bè")).toBeTruthy();
     expect(repository.write).not.toHaveBeenCalled();
+  });
+  it("retains the cancellation reason and confirmation when the server refuses the change", async () => {
+    repository.write.mockResolvedValue({ status: "error", httpStatus: 400, uncertain: false });
+    render(<MeasurementEditor record={waterFixture()} onClose={vi.fn()} onSaved={vi.fn()} onOpen={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Hủy bỏ phép đo" }));
+    fireEvent.change(screen.getByLabelText("Lý do hủy *"), { target: { value: "Đo nhầm bè" } });
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận hủy phép đo" }));
+    await waitFor(() => expect(repository.write).toHaveBeenCalledOnce());
+    expect(screen.getByRole("dialog", { name: "Hủy bỏ phép đo?" })).toBeTruthy();
+    expect((screen.getByLabelText("Lý do hủy *") as HTMLTextAreaElement).value).toBe("Đo nhầm bè");
+    expect(screen.getAllByRole("alert").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Đã hủy phép đo tại/)).toBeNull();
   });
 });

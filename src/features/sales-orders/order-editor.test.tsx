@@ -32,7 +32,7 @@ const draft = {
   lines: [{ productId: ids.product, productCode: "SP000001", productName: "Hàu sữa", unitId: ids.kg, unitCode: "K", unitName: "kg", quantity: 120.5, unitPrice: 60000 }], pickupAt: "2026-11-14T00:00:00+07:00", source: "App", note: "Lấy sớm",
 };
 const order = {
-  id: ids.order, code: "DH000001", statusId: 4101, status: "Draft", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null, customer: null, walkInCustomer: true,
+  id: ids.order, code: "DH000001", statusId: 4401, status: "Draft", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null, customer: null, walkInCustomer: true,
   source: "AtPort", receivedBy: { id: ids.customer, name: "Chủ" }, createdBy: null, note: null, subtotal: 60000, discount: 0, discountDecidedByOwner: false, total: 60000, invoicedTotal: 0, customerPaid: 0,
   advanceLeft: 0, advanceReserved: false, lines: [], progress: [], advances: [], invoices: [], harvestPlans: [], purchaseRequest: null, allowedActions: ["Edit"],
   createdAt: "2026-11-12T08:00:00+07:00", completedAt: null, completedManually: false, cancelledAt: null, cancelReason: null, rowVersion: "v1",
@@ -99,7 +99,7 @@ it("keeps what was typed and shows the first problem when the form is incomplete
 });
 
 const openOrder = {
-  ...order, customer: { id: ids.customer, code: "KH000001", name: "Thương lái An", phoneNumber: "0900000001" }, walkInCustomer: false, allowedActions: ["Edit", "AddAdvance"], statusId: 4102, status: "Delivering",
+  ...order, customer: { id: ids.customer, code: "KH000001", name: "Thương lái An", phoneNumber: "0900000001" }, walkInCustomer: false, allowedActions: ["Edit", "AddAdvance"], statusId: 4402, status: "Delivering",
   lines: [{ id: ids.request, lineNumber: 1, productId: ids.product, productCode: "SP000001", productName: "Hàu sữa", unitId: ids.kg, unitCode: "K", unitName: "kg", factor: 1, quantity: 1, unitPrice: 60000, listPrice: 60000, amount: 60000, deliveredQuantity: 0, note: null }],
 };
 

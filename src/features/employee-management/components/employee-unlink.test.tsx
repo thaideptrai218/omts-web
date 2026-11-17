@@ -193,7 +193,7 @@ describe("employee unlink through list and editor", () => {
     const number = within(editor).getByRole("textbox", { name: "Số tài khoản" });
     await waitFor(() => expect(number.getAttribute("aria-invalid")).toBe("true"));
     expect(within(editor).getByRole("textbox", { name: "Tên chủ tài khoản" }).getAttribute("aria-invalid")).toBe("true");
-    expect(document.getElementById(number.getAttribute("aria-describedby")!)?.textContent).toContain("Vui lòng kiểm tra lại");
+    expect(document.getElementById(number.getAttribute("aria-describedby")!)?.textContent).toContain("Nhập số tài khoản");
     await waitFor(() => expect(document.activeElement).toBe(number));
     expect(notes.value).toBe("Bản nháp chưa lưu");
     expect(service.save).not.toHaveBeenCalled();

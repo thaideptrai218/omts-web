@@ -15,6 +15,6 @@ export function CultivationRecordsScreen({ area }: { area: Area }) {
   // useSearchParams needs a Suspense boundary.
   return <Suspense fallback={<Skeleton />}>
     <RaftCycleWorkspace storageKey={area} icon={area === "material-usages" ? "material" : "raft"} title={titles[area]} area={area} loadRows={loadRaftRows}
-      renderDetail={({ row, zoneId }) => <RecordsRaftPanel area={area} row={row} zoneId={zoneId} />} />
+      renderDetail={({ row, zoneId, zoneLabel, refresh }) => <RecordsRaftPanel area={area} row={row} zoneId={zoneId} zoneLabel={zoneLabel} onChanged={refresh} />} />
   </Suspense>;
 }

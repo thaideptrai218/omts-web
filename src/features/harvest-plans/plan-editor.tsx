@@ -13,7 +13,8 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { useKgPerCage } from "@/features/harvest-settings-lookup/use-kg-per-cage";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
-import { EditorFrame, QuantityStepper, SideRow, nowLocal, viDateTime, vnLocal } from "@/features/purchase-documents/document-parts";
+import { UnitInput } from "@/components/form/unit-input";
+import { EditorFrame, SideRow, nowLocal, viDateTime, vnLocal } from "@/features/purchase-documents/document-parts";
 import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import styles from "./plans.module.css";
 import { PLAN, type EligibleRaft, type PlanDraft, type PlanView } from "./contracts";
@@ -153,7 +154,7 @@ function Editor({ access, start, eligible }: { access: PlanAccess; start: Start;
             <td>{raft ? line.locked ? <span>{line.laneNumbers.map((lane) => `Luống ${lane}`).join(", ")}</span>
               : <PlanLanePicker lanes={raft.lanes} ownPlanCode={plan?.code} label={`Luống dòng ${position}`} value={line.laneNumbers} disabled={off} onChange={(laneNumbers) => patchLine(line.key, { laneNumbers })} />
               : <span className={purchaseStyles.sub}>Chọn bè để chọn luống</span>}</td>
-            <td className={purchaseStyles.num}><QuantityStepper label={`lồng dự kiến dòng ${position}`} value={line.cages} onChange={(cages) => patchLine(line.key, { cages: cages.replace(/[.,].*$/, "") })} /></td>
+            <td className={purchaseStyles.num}><UnitInput label={`lồng dự kiến dòng ${position}`} unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} disabled={off} value={line.cages.trim() === "" ? null : Number(line.cages.replace(",", "."))} onChange={(cages) => patchLine(line.key, { cages: cages === null ? "" : String(cages) })} /></td>
             <td><input className={purchaseStyles.lotInput} aria-label={`Ghi chú dòng ${position}`} placeholder="Ghi chú..." maxLength={500} disabled={off} value={line.note} onChange={(event) => patchLine(line.key, { note: event.target.value })} /></td>
           </tr>;
         })}</tbody></table>

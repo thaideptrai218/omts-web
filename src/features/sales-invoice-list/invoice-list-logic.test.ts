@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { allTime, presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { allowedSet, changeErrorText, dateText, deliveryStatus, invoiceStatus, paidState, paymentMethod, paymentStatus } from "./invoice-labels";
-import { emptyFilters, timeProblem, toQuery } from "./invoice-list-logic";
+import { emptyFilters, periodRange, timeProblem, toQuery } from "./invoice-list-logic";
+
+describe("khoảng ngày của bộ lọc thời gian", () => {
+  it("mốc nhanh tính lại từ ngày hôm nay theo giờ Việt Nam, tuần bắt đầu từ thứ Hai", () => {
+    expect(periodRange(presetValue("today"), "2026-11-09")).toEqual({ from: "2026-11-09", to: "2026-11-09" });
+    expect(periodRange(presetValue("thisMonth"), "2026-11-18")).toEqual({ from: "2026-11-01", to: "2026-11-30" });
+    // 2026-11-09 là thứ Hai; 2026-11-15 là Chủ nhật: tuần vẫn bắt đầu 09/11.
+    expect(periodRange(presetValue("thisWeek"), "2026-11-09").from).toBe("2026-11-09");
+    expect(periodRange(presetValue("thisWeek"), "2026-11-15").from).toBe("2026-11-09");
+    expect(periodRange(presetValue("thisWeek"), "2026-11-01").from).toBe("2026-10-26");
+  });
+  it("tùy chỉnh dùng ngày đã chọn", () => {
+    expect(periodRange({ kind: "custom", from: "2026-10-01", to: "2026-10-28" }, "2026-11-09")).toEqual({ from: "2026-10-01", to: "2026-10-28" });
+  });
+});
 
 describe("kiểm tra kỳ xem", () => {
   const custom = (from: string, to: string): TimeRangeValue => ({ kind: "custom", from, to });

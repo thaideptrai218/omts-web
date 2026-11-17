@@ -1,11 +1,12 @@
 "use client";
 import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useState, type FormEvent } from "react";
+import { MoneyInput } from "@/components/form/money-input";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorNotice, money, operationError, useMutation } from "@/features/operations/ui";
 import type { PayableEmployee } from "./contracts";
-import { PaymentHeaderFields, digits, newPaymentHeader, paidAtInstant } from "./payroll-payment-fields";
+import { PaymentHeaderFields, newPaymentHeader, paidAtInstant } from "./payroll-payment-fields";
 import { payrollRepository } from "./repository";
 import s from "./payroll-screen.module.css";
 
@@ -54,7 +55,7 @@ export function StandalonePaymentDialog({ employee, onClose, onPaid }: { employe
         </div></>}
         <label htmlFor="payroll-amount">Số tiền chi</label>
         <div>
-          <input id="payroll-amount" type="text" inputMode="numeric" value={amount} aria-invalid={submitted && value < 1 || undefined} aria-describedby={advance ? "payroll-advance-help" : undefined} onChange={(event) => setAmount(digits(event.target.value))} />
+          <MoneyInput id="payroll-amount" autoThousands showWords value={amount ? Number(amount) : null} invalid={submitted && value < 1} aria-describedby={advance ? "payroll-advance-help" : undefined} onChange={(next) => setAmount(next === null ? "" : String(next))} />
           {advance && <p id="payroll-advance-help" className={s.muted}>Nhân viên không còn phiếu lương cần trả: khoản này là tạm ứng lương và sẽ được trừ vào kỳ lương tiếp theo khi chốt lương.</p>}
           {submitted && value < 1 && <p className={s.fieldError} role="alert">Nhập số tiền lớn hơn 0.</p>}
         </div>

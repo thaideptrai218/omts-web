@@ -23,7 +23,7 @@ import listStyles from "@/features/suppliers-api/suppliers.module.css";
 export type CustomerAccess = { edit: boolean; remove: boolean; history: boolean; requests: boolean; debt: boolean; pay: boolean; adjust: boolean; confirm: boolean; exportDebt: boolean };
 type Tab = "info" | "sales" | "requests" | "debt";
 const invoiceStatus: Record<number, string> = { 3501: "Hoàn thành", 3502: "Đã hủy" };
-const requestStatus: Record<number, string> = { 3201: "Chờ phản hồi", 3202: "Đã chấp nhận", 3203: "Đã từ chối", 3204: "Đã hủy", 3205: "Hoàn thành" };
+const requestStatus: Record<number, string> = { 3201: "Chờ phản hồi", 3202: "Đã chấp nhận", 3203: "Đã từ chối", 3204: "Đã hủy", 3206: "Hoàn thành" };
 const signed = (value: number) => value < 0 ? `-${fmt(-value)}` : fmt(value);
 
 export function CustomerDetailPanel({ id, access, onEdit, onChanged, onRemoved }: { id: string; access: CustomerAccess; onEdit(record: CustomerDetail): void; onChanged(): void; onRemoved(): void }) {

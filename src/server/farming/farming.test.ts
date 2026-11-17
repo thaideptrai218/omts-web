@@ -81,6 +81,25 @@ describe("farming BFF authorization, uploads and file projection", () => {
     expect(fetcher.mock.calls[0][0].toString()).toBe(`http://127.0.0.1:8080/api/rafts/${ids.license}/photos`);
     const text = await response.text(); expect(text).not.toContain("private"); expect(text).toContain(`/api/operations/raft-details?action=photo&id=${ids.raft}&photoId=${ids.lane}`);
   });
+  it("plans a raft photo delete as POST from the browser and DELETE upstream, only for a raft id plus a photo id", () => {
+    const plan = planFarming("raft-details", "POST", new URLSearchParams({ action: "delete-photo", id: ids.raft, photoId: ids.lane }));
+    expect(plan).toMatchObject({ method: "DELETE", path: `/api/rafts/${ids.raft}/photos/${ids.lane}`, unwrap: "raft", ownerOnly: true });
+    for (const query of [{ action: "delete-photo", id: ids.raft }, { action: "delete-photo", photoId: ids.lane }, { action: "delete-photo", id: ids.raft, photoId: ids.lane, zoneId: ids.zone }] as Record<string, string>[])
+      expect(planFarming("raft-details", "POST", new URLSearchParams(query))).toBeUndefined();
+    expect(planFarming("raft-details", "GET", new URLSearchParams({ action: "delete-photo", id: ids.raft, photoId: ids.lane }))).toBeUndefined();
+    expect(planFarming("zone-licenses", "POST", new URLSearchParams({ action: "delete-photo", id: ids.raft, photoId: ids.lane }))).toBeUndefined();
+  });
+  it("deletes a raft photo upstream with DELETE, needs the CSRF header and returns the raft without signed URLs", async () => {
+    const raft = raftFixture({ photos: [] });
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ raft, message: "Raft saved.", messageCode: "MSG-GEN-05" }));
+    const url = `http://localhost:3002/api/operations/raft-details?action=delete-photo&id=${ids.raft}&photoId=${ids.lane}`;
+    expect((await handleFarmingRequest(new Request(url, { method: "POST", headers: { Origin: "http://localhost:3002" } }), "raft-details")).status).toBe(403);
+    expect(fetcher).not.toHaveBeenCalled();
+    const response = await handleFarmingRequest(new Request(url, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" } }), "raft-details");
+    expect(response.status).toBe(200);
+    expect(fetcher.mock.calls[0][1]?.method).toBe("DELETE");
+    expect(fetcher.mock.calls[0][0].toString()).toBe(`http://127.0.0.1:8080/api/rafts/${ids.raft}/photos/${ids.lane}`);
+  });
   it("proxies one raft photo chosen by its id", async () => {
     const raft = raftFixture({ photos: [{ id: ids.lane, sortOrder: 1, url: "/api/files/local/a.png?sig=private&expires=123" }] });
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(raft)).mockResolvedValueOnce(new Response(new Uint8Array([1]), { headers: { "Content-Type": "image/png" } }));

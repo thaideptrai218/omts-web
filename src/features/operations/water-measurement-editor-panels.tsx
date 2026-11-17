@@ -1,4 +1,6 @@
 import { EvidenceGallery } from "@/components/ui/evidence-gallery";
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import type * as c from "./contracts";
 import type { WaterRecognition } from "./water-measurement-shared";
 
@@ -29,10 +31,10 @@ const range = (min: number | null, max: number | null) => `${min ?? "Chưa đặ
 export function MeasurementEvidenceAside({ record }: { record: c.WaterMeasurement }) {
   const photos = record.photoUrl ? [{ id: record.id, url: record.photoUrl, label: "Ảnh được lưu cùng phép đo" }] : [];
   const meta = [
-    ["Vùng", record.zoneName],
-    ["Bè", record.raftCode],
+    ["Vùng", <Link key="zone" href={farmingReferenceHref("zone", { recordId: record.zoneId, search: record.zoneCode })}>{record.zoneName}</Link>],
+    ["Bè", <Link key="raft" href={farmingReferenceHref("raft", { zoneId: record.zoneId, recordId: record.raftId, search: record.raftCode })}>{record.raftCode}</Link>],
     ["Người đo", record.measuredBy?.name ?? "—"],
-  ];
+  ] as const;
   const { thresholdsUsed } = record;
 
   return (

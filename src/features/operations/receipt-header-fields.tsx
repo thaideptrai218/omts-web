@@ -1,4 +1,5 @@
 "use client";
+import { MoneyField } from "@/components/form/number-fields";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import * as c from "./contracts";
 import type { ReceiptFormValues } from "./receipt-payload";
@@ -79,21 +80,19 @@ export function ReceiptHeaderFields({
           </option>
         ))}
       </Select>
-      <Field
-        label="Chiết khấu (đồng)"
-        type="number"
-        min="0"
-        step="1000"
+      <MoneyField
+        label="Chiết khấu"
+        min={0}
+        autoThousands
         value={values.discountAmount}
-        onChange={(e) => change("discountAmount", e.target.value)}
+        onChange={(next) => change("discountAmount", next)}
       />
-      <Field
-        label="Trả ngay (đồng)"
-        type="number"
-        min="0"
-        step="1000"
+      <MoneyField
+        label="Trả ngay"
+        min={0}
+        autoThousands
         value={values.amountPaidNow}
-        onChange={(e) => change("amountPaidNow", e.target.value)}
+        onChange={(next) => change("amountPaidNow", next)}
       />
       <Select
         label="Hình thức trả ngay"

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { StatusPill } from "@/components/ui/management-page";
-import { VietnameseDateInput } from "@/components/form/vietnamese-date-input";
+import { Field } from "@/features/operations/ui";
 import {
   formatVietnameseDate,
   isDateOnly,
@@ -23,7 +23,6 @@ import {
 } from "../domain/zone-document-state";
 import type { FarmingZoneService } from "../services/farming-zone-service";
 import { ZoneDocumentEditor } from "./zone-document-editor";
-import { zoneInputStyles } from "./zone-field";
 
 export function ZoneDocuments({
   zoneId,
@@ -37,7 +36,6 @@ export function ZoneDocuments({
   onSaved(result: Extract<ZoneMutationResult, { status: "saved" }>): void;
 }) {
   const [date, setDate] = useState(vietnameseBusinessDate());
-  const dateId = useId();
   const [editing, setEditing] = useState<{
     mode: "add" | "edit" | "renew";
     document?: ZoneDocument;
@@ -111,17 +109,8 @@ export function ZoneDocuments({
         )}
       </div>
       <div className="mt-4 max-w-xs">
-        <label htmlFor={dateId} className="text-sm font-semibold">
-          Xem hiệu lực tại ngày
-        </label>
-        <VietnameseDateInput
-          id={dateId}
-          value={date}
-          onValueChange={setDate}
-          className={zoneInputStyles}
-          calendarLabel="Chọn ngày tra cứu hồ sơ"
-          aria-invalid={!dateValid}
-        />
+        <Field label="Xem hiệu lực tại ngày" type="date" value={date}
+          onChange={event => setDate(event.target.value)} aria-invalid={!dateValid} />
       </div>
       {!dateValid ? (
         <p role="alert" className="mt-2 text-sm text-danger">

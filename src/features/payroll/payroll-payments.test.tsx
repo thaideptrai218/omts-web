@@ -30,7 +30,7 @@ it("pay pop-up: default amount is what is owed, finished slips are disabled, par
   for (const heading of ["Mã phiếu lương", "Nhân viên", "Lương thực nhận", "Đã trả", "Còn cần trả", "Tiền trả nhân viên"]) expect(within(dialog).getByRole("columnheader", { name: heading })).toBeTruthy();
   expect(within(dialog).getByLabelText("Bảng lương cần thanh toán").textContent).toContain("BL000001 · Bảng lương tháng 5/2026");
   expect(within(dialog).getByLabelText("Bảng lương cần thanh toán").textContent).toContain("01/05/2026 - 31/05/2026");
-  expect(within(dialog).getByLabelText("Tiền trả Nguyễn Văn A")).toHaveProperty("value", "2000000");
+  expect(within(dialog).getByLabelText("Tiền trả Nguyễn Văn A")).toHaveProperty("value", "2.000.000");
   expect((within(dialog).getByLabelText("Tiền trả Trần Thị B") as HTMLInputElement).disabled).toBe(true);
   expect((within(dialog).getByRole("checkbox", { name: "Trả Trần Thị B" }) as HTMLInputElement).disabled).toBe(true);
   expect(within(dialog).getByLabelText("Phương thức thanh toán")).toHaveProperty("value", "Cash");

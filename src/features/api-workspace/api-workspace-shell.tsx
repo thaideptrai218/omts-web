@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { Suspense, createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import type { PermissionProjection } from "@/features/access/domain/function-permission";
 import type { BrowserIdentityDto } from "@/server/backend/browser-dto";
 import { LOCAL_SIGN_OUT_MESSAGE, logoutWithApi } from "@/features/auth/api/api-auth-client";
@@ -11,6 +11,7 @@ import { InboxBell } from "@/features/inbox-api/inbox-bell";
 import { SelectedZonesProvider } from "./selected-zones";
 import { ZonePicker } from "./zone-picker";
 import { NavigationGroup } from "@/components/layout/navigation-group";
+import { FarmingWorkflowNav } from "@/features/farming-management/farming-workflow-nav";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
@@ -18,7 +19,6 @@ import type { SettingsSection } from "@/components/layout/header-menu";
 import { InterfaceIcon, type InterfaceIconName } from "@/components/ui/interface-icon";
 import { ManagementHeading } from "@/components/ui/management-page";
 import styles from "@/components/layout/app-shell.module.css";
-import topStyles from "@/components/layout/top-shell.module.css";
 import type { ResourceKey } from "./resources";
 import type { OperationArea } from "@/features/operations/permissions";
 import { workspaceRoleLabel } from "@/shared/presentation/actor-label";
@@ -47,7 +47,7 @@ const settingsDescriptions: Partial<Record<ResourceKey, string>> = {
 const INPUT_GROUP = "Vật tư & Giống";
 const inputReaders = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYCLES", "INPUT_ISSUES"];
 const workspaceGroups = [
-  { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["cultivation-cycles", "seeding", "material-usages", "harvest", "harvest-yield", "lot-tracing", "water"] },
+  { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["cultivation-cycles", "seeding", "harvest", "material-usages", "harvest-yield", "lot-tracing", "water"] },
   { label: INPUT_GROUP, resources: [], operations: [] },
   { label: "Mua hàng", resources: ["suppliers"], operations: ["supplier-payments"] },
   { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "my-work"] },
@@ -101,7 +101,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   /** Kế hoạch thu hoạch sits in Nuôi trồng right after Thu hoạch. */
   const harvestPlanLink: [string, string, InterfaceIconName] | undefined = holds("HARVEST_PLANS", "View") ? ["/farming/harvest-plans", "Kế hoạch thu hoạch", "calendar"] : undefined;
   const settingsSections: SettingsSection[] = [
-    { label: "Quản lý", items: [...cashItems, ...inputSettings, ...productSettings, ...customerSettings] },
+    { label: "Quản lý", items: [...cashItems, ...inputSettings, ...productSettings, ...customerSettings, ...(isOwner ? [{ href: "/settings?section=harvest", panel: "harvest" as const, label: "Thiết lập thu hoạch", icon: "work" as const, description: "Khối lượng trung bình mỗi lồng và số ngày tự động đóng lô." }] : [])] },
     { label: "Phân quyền", items: (["accounts", "roles"] as const).filter((key) => visible.includes(key)).map((key) => ({ href: `/workspace/${key}`, label: resources[key].title, icon: resourceIcons[key], description: settingsDescriptions[key] })) },
     { label: "Hợp tác xã", items: isOwner ? [{ href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã." }, { href: "/cooperative/receiving-bank-account", label: "Ngân hàng nhận tiền", icon: "payment", description: "Tài khoản dùng để nhận chuyển khoản và tạo mã VietQR." }] : [] },
     { label: "Cấu hình nghiệp vụ", items: operationModules.filter((entry) => entry.key === "job-types" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => ({ href: `/operations/${entry.key}`, label: entry.title, icon: operationIcons[entry.key], description: "Đơn giá theo giờ và lịch sử ngày hiệu lực của từng loại công việc." })) },
@@ -128,6 +128,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
         const plans = group.label === "Nuôi trồng" && harvestPlanLink && !modules.some((entry) => entry.key === "harvest") ? [harvestPlanLink] : [];
         return rows.length || modules.length || inputs.length || sales.length || plans.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
+          {group.label === "Nuôi trồng" && operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions) && link("/farming/nursery", "Ươm giống", "product")}
           {inputs.map(([href, label, icon]) => link(href, label, icon))}
           {sales.map(([href, label, icon]) => link(href, label, icon))}
           {modules.flatMap((entry) => [link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]),
@@ -150,7 +151,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       else { setError("Chưa thể đăng xuất. Kiểm tra kết nối rồi thử lại."); setPending(false); }
     }}>
       {error && <p role="alert" className="mb-4 rounded-control border border-danger/30 bg-surface p-4 text-danger">{error}</p>}
-      {!financeWorkspace && (pathname.startsWith("/farming/cycles") || ["cultivation-cycles","seeding","material-usages","harvest","water"].some(key => pathname.startsWith(`/operations/${key}`))) && <nav className={topStyles.contextNav} aria-label="Các bước nuôi trồng">{([...operationModules].sort((a,b) => ["cultivation-cycles","seeding","material-usages","harvest","water"].indexOf(a.key) - ["cultivation-cycles","seeding","material-usages","harvest","water"].indexOf(b.key))).filter(entry => ["cultivation-cycles","seeding","material-usages","harvest","water"].includes(entry.key) && operationAllowed(entry.key,context.identity,context.permissions.functionPermissions)).map(entry => {const href=entry.key==="cultivation-cycles"?"/farming/cycles":`/operations/${entry.key}`;return <Link key={entry.key} href={href} aria-current={active(href)?"page":undefined}>{entry.title}</Link>;})}</nav>}
+      {!financeWorkspace && <Suspense><FarmingWorkflowNav identity={context.identity} permissions={context.permissions} /></Suspense>}
       {children}
     </AppShell>
   </SelectedZonesProvider></WorkspaceContext.Provider>;

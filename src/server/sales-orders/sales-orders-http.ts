@@ -30,7 +30,7 @@ const listFilters = ["search", "from", "to", "pickupFrom", "pickupTo", "customer
 const paging = ["page", "pageSize"] as const;
 const guidFilters = ["customerId", "createdById", "receivedById"];
 const dateFilters = ["from", "to", "pickupFrom", "pickupTo"];
-const statusIds = new Set(["4101", "4102", "4103", "4104"]);
+const statusIds = new Set(["4401", "4402", "4403", "4404"]);
 const codePattern = /^[A-Za-z0-9._-]{1,30}$/;
 
 type Query = Record<string, string>;

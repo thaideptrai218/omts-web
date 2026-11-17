@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
+import { MoneyField } from "@/components/form/number-fields";
+import { UnitInput } from "@/components/form/unit-input";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { Button } from "@/components/ui/button";
 import * as c from "./contracts";
-import { control, DataTable, Field, MethodOptions, Note, Select, businessToday } from "./ui";
+import { DataTable, Field, MethodOptions, Note, Select, businessToday } from "./ui";
 
 export type ReceiptActionMode = "cancel" | "return";
 
@@ -101,16 +103,15 @@ export function ReceiptActionForm({
                     {row.returnable} {row.unit}
                   </td>
                   <td>
-                    <input
-                      aria-label={`Số lượng trả ${row.itemName}`}
-                      className={control}
-                      type="number"
-                      min="0"
+                    <UnitInput
+                      label={`Số lượng trả ${row.itemName}`}
+                      unit={row.unit}
+                      decimals={3}
+                      min={0}
                       max={row.returnable}
-                      step="0.001"
                       disabled={row.returnable <= 0}
-                      value={quantities[row.id] ?? ""}
-                      onChange={(e) => setQuantities((current) => ({ ...current, [row.id]: e.target.value }))}
+                      value={quantities[row.id] ? Number(quantities[row.id]) : null}
+                      onChange={(next) => setQuantities((current) => ({ ...current, [row.id]: next === null ? "" : String(next) }))}
                     />
                   </td>
                 </tr>
@@ -120,27 +121,11 @@ export function ReceiptActionForm({
               Giá trị trả tính theo giá trị hàng sau chiết khấu và làm tròn tiền của phiếu. Tiền hoàn cộng giảm nợ phải
               khớp giá trị trả.
             </p>
-            <Field
-              label="Tiền hoàn nhận lại (đồng)"
-              required
-              type="number"
-              min="0"
-              step="1000"
-              value={refund}
-              onChange={(e) => setRefund(e.target.value)}
-            />
+            <MoneyField label="Tiền hoàn nhận lại" required min={0} autoThousands value={refund} onChange={setRefund} />
             <Select label="Hình thức hoàn tiền" value={method} onChange={(e) => setMethod(e.target.value)}>
               <MethodOptions />
             </Select>
-            <Field
-              label="Giảm công nợ (đồng)"
-              required
-              type="number"
-              min="0"
-              step="1000"
-              value={reduction}
-              onChange={(e) => setReduction(e.target.value)}
-            />
+            <MoneyField label="Giảm công nợ" required min={0} autoThousands value={reduction} onChange={setReduction} />
           </>
         )}
         <div className="flex flex-wrap gap-2">

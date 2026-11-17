@@ -76,13 +76,13 @@ export const saveReturnSchema = z.strictObject({ returnDate: z.iso.date(), reaso
 export const recordPaymentSchema = z.strictObject({ supplierId: id, receiptId: id, amount: amount.positive(), paymentDate: z.iso.date(), method: paymentMethod,
   referenceCode: text.max(100).nullable(), deduplicationKey: z.uuid() });
 export const allocatePaymentSchema = z.strictObject({ receiptId: id });
-const waterValues = { raftId: id, measuredAt: time, ph: number.min(0).max(14), salinity: number.min(0).max(100), temperature: number.min(0).max(100) };
+const waterValues = { raftId: id, measuredAt: time, ph: number.min(0).max(14), salinity: number.min(0).max(50), temperature: number.min(0).max(45) };
 export const recordWaterSchema = z.strictObject({ ...waterValues, photoKey: text.min(1), clientOperationId: z.uuid() });
 export const correctWaterSchema = z.strictObject({ ...waterValues, reason });
 export const voidWaterSchema = z.strictObject({ reason });
 export const setThresholdsSchema = z.strictObject({ phMin: number.min(0).max(14).nullable(), phMax: number.min(0).max(14).nullable(),
-  salinityMin: number.min(0).max(100).nullable(), salinityMax: number.min(0).max(100).nullable(),
-  temperatureMin: number.min(0).max(100).nullable(), temperatureMax: number.min(0).max(100).nullable() }).refine((v) =>
+  salinityMin: number.min(0).max(50).nullable(), salinityMax: number.min(0).max(50).nullable(),
+  temperatureMin: number.min(0).max(45).nullable(), temperatureMax: number.min(0).max(45).nullable() }).refine((v) =>
   (v.phMin === null && v.phMax === null || v.phMin !== null && v.phMax !== null && v.phMin < v.phMax)
   && (v.salinityMin === null && v.salinityMax === null || v.salinityMin !== null && v.salinityMax !== null && v.salinityMin < v.salinityMax)
   && (v.temperatureMin === null && v.temperatureMax === null || v.temperatureMin !== null && v.temperatureMax !== null && v.temperatureMin < v.temperatureMax));

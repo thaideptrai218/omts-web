@@ -1,4 +1,4 @@
-import { isAllTime, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
+import { fromQueryDate, isAllTime, presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 
 /** Bộ lọc của danh sách hóa đơn bán (SALE-09) và các phép tính thuần: quy ra tham số truy vấn của BFF. Kỳ xem do bộ lọc thời gian dùng chung giữ (`TimeRangeValue`). */
 export type Picked = { id: string; title: string; sub?: string };
@@ -18,11 +18,18 @@ export function timeProblem(time: TimeRangeValue): string | null {
   return null;
 }
 
+/** Khoảng ngày gửi BFF, tính từ ngày hôm nay theo giờ Việt Nam (không theo múi giờ trình duyệt): mốc nhanh tính lại từ `today`, "Toàn thời gian" thành 5 năm gần nhất, khoảng tùy chỉnh giữ đúng ngày đã chọn. */
+export function periodRange(time: TimeRangeValue, today: string): { from: string; to: string } {
+  if (isAllTime(time)) return { from: fiveYearsBefore(today), to: today };
+  if (time.kind === "preset") { const { from, to } = presetValue(time.preset, fromQueryDate(today)); return { from, to }; }
+  return { from: time.from, to: time.to };
+}
+
 /** Tham số truy vấn gửi BFF; ô tìm theo mã hóa đơn đi vào `code`. */
 export function toQuery(input: { search: string; time: TimeRangeValue; filters: Filters }, today: string): Record<string, string | undefined> {
-  const { search, time, filters: f } = input, all = isAllTime(time);
+  const { search, time, filters: f } = input, { from, to } = periodRange(time, today);
   return {
-    from: all ? fiveYearsBefore(today) : time.from, to: all ? today : time.to, zoneId: f.zoneId || undefined, customerId: f.customer?.id, harvestLotId: f.lot?.id,
+    from, to, zoneId: f.zoneId || undefined, customerId: f.customer?.id, harvestLotId: f.lot?.id,
     statusId: f.status || undefined, paid: f.paid || undefined, code: search.trim() || undefined, cashCollectedByMe: f.cashMine ? "true" : undefined,
   };
 }

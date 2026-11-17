@@ -9,7 +9,9 @@ export const NO_RATE = "Chưa có đơn giá hiệu lực";
 
 /** Every rate point of a job, newest effective date first; the current rate is one of them. */
 export function allRates(job: Job): Rate[] {
-  return [...(job.currentRate ? [job.currentRate] : []), ...job.otherRates].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+  const rates = new Map<string, Rate>();
+  for (const rate of [...(job.currentRate ? [job.currentRate] : []), ...job.otherRates]) if (!rates.has(rate.effectiveFrom)) rates.set(rate.effectiveFrom, rate);
+  return [...rates.values()].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
 }
 
 export type RateFieldErrors = { hourlyRate?: string; effectiveFrom?: string; name?: string };
@@ -40,3 +42,10 @@ export function validateNewJob(name: string, rate: string, date: string) {
 /** MSG-LABOR-04: a rate point may not change a month whose payroll is already finalized. */
 export const FINALIZED_MONTH_CODE = "MSG-LABOR-04";
 export const FINALIZED_MONTH_MESSAGE = "Đơn giá này sẽ thay đổi một tháng đã chốt lương. Hãy chọn ngày hiệu lực sau kỳ lương đã chốt.";
+
+/** The backend still checks all finalized-payroll dependencies when these optional facts are absent. */
+export function rateDateError(job: Job, date: string): string | undefined {
+  if (allRates(job).some(rate => rate.effectiveFrom === date)) return "Ngày này đã có phiên bản đơn giá. Chọn ngày hiệu lực khác để tạo phiên bản mới.";
+  if (job.finalizedPeriods?.some(period => date <= period.to)) return FINALIZED_MONTH_MESSAGE;
+  return undefined;
+}

@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { z } from "zod";
+import { UnitField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { product as productSchema } from "@/features/sales-api/contracts";
@@ -47,7 +48,7 @@ export function PlaceRequestDialog({ onClose, onSent }: { onClose(): void; onSen
             {choices.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Select>
           {!catalog.loading && !catalog.error && !choices.length && <p className={s.hint}>Hiện chưa có sản phẩm nào nhận yêu cầu mua.</p>}
-          <Field label="Số lượng cần mua (kg) *" required inputMode="decimal" autoComplete="off" placeholder="Ví dụ 500" value={values.kg} disabled={mutation.pending} onChange={(event) => setValues({ ...values, kg: event.target.value })} />
+          <UnitField label="Số lượng cần mua *" unit="kg" decimals={3} required placeholder="Ví dụ 500" value={values.kg} disabled={mutation.pending} onChange={(next) => setValues({ ...values, kg: next })} />
           <Field label="Ngày lấy hàng *" type="date" required min={businessToday()} value={values.pickupDate} disabled={mutation.pending} onChange={(event) => setValues({ ...values, pickupDate: event.target.value })} />
           <Note label="Ghi chú" maxLength={MAX_TEXT_LENGTH} value={values.note} disabled={mutation.pending} onChange={(event) => setValues({ ...values, note: event.target.value })} />
           <p className={s.hint}>Yêu cầu chỉ là một thông báo: không có giá và không giữ hàng cho bạn. Hợp tác xã sẽ phản hồi lại.</p>

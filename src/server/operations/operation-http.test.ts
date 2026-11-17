@@ -19,6 +19,7 @@ describe("operations BFF authorization and evidence boundary", () => {
     configure(); const raft = ids.receipt, zone = ids.item, product = ids.supplier ?? ids.receipt;
     const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ lot: { id: ids.receipt, lotCode: "L1" } }, { status: 201 }));
     const form = new FormData();
+    form.append("files", new File([new Uint8Array([1])], "a.jpg", { type: "image/jpeg" }));
     form.set("payload", JSON.stringify({ laneNumbers: [1], finishedLaneNumbers: [], cageCount: 5, estimatedKg: null, productLines: [{ productId: product, cageCount: 3, kg: 75 }, { productId: ids.item, cageCount: 2, kg: null }] }));
     const request = new Request(`http://localhost:3002/api/operations/harvest?action=harvest-record&id=${raft}&zoneId=${zone}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form });
     expect((await handleOperationRequest(request, "harvest")).status).toBe(200);
@@ -35,7 +36,7 @@ describe("operations BFF authorization and evidence boundary", () => {
     configure(); const raft = ids.receipt, zone = ids.item, line = ids.supplier ?? ids.receipt;
     const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ lot: { id: ids.receipt, lotCode: "L1" } }, { status: 201 }));
     const record = (payload: object, action = "harvest-record", id = raft) => {
-      const form = new FormData(); form.set("payload", JSON.stringify(payload));
+      const form = new FormData(); form.set("payload", JSON.stringify(payload)); form.append("files", new File([new Uint8Array([1])], "a.jpg", { type: "image/jpeg" }));
       return new Request(`http://localhost:3002/api/operations/harvest?action=${action}&id=${id}&zoneId=${zone}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form });
     };
     const lot = { laneNumbers: [1, 2], finishedLaneNumbers: [], cageCount: 5, estimatedKg: null, productLines: [{ productId: ids.item, cageCount: 5, kg: null }] };

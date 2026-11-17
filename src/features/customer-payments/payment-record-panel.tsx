@@ -1,4 +1,5 @@
 "use client";
+import { MoneyField } from "@/components/form/number-fields";
 import { SelectBox } from "@/components/ui/select-box";
 import { Button } from "@/components/ui/button";
 import { CustomerSearch } from "@/features/customer-lookup/customer-search";
@@ -42,7 +43,7 @@ export function PaymentRecordPanel({ onRecorded }: { onRecorded: () => void }) {
         <h2 id="pay-title" className={s.h2}>{paying ? "Ghi nhận khách thanh toán" : "Ghi nhận trả lại tiền"}</h2>
         <div className={s.grid}>
           <Field label="Ngày" type="date" value={f.date} disabled={r.saving} onChange={(e) => r.setForm({ date: e.target.value })} />
-          <label className={s.field}><span>Số tiền (₫)</span><input inputMode="numeric" className={`${control} ${s.num}`} placeholder="0" value={f.amount} disabled={r.saving} onChange={(e) => r.setForm({ amount: e.target.value })} /></label>
+          <div className={s.field}><MoneyField label="Số tiền" autoThousands showWords placeholder="0" value={f.amount} disabled={r.saving} onChange={(next) => r.setForm({ amount: next })} /></div>
           <label className={s.field}><span>Hình thức</span>
             <SelectBox className={control} value={f.method} disabled={r.saving} onChange={(e) => r.setForm({ method: e.target.value as "Cash" | "OtherTransfer" })}>
               <option value="Cash">Tiền mặt</option><option value="OtherTransfer">Chuyển khoản</option></SelectBox></label>

@@ -26,17 +26,17 @@ describe("employee creation with a login account: request", () => {
   it("accepts a profile with a username only and trims the username", () => {
     const plan = planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: { ...profile(), account: { username: " nhanvien.moi " } } });
     expect(plan).toMatchObject({ path: "/api/employees", method: "POST", receipt: true, body: { account: { username: "nhanvien.moi" } } });
-    expect(planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: { ...profile(), account: { username: "u" } } })).toMatchObject({ receipt: true });
+    expect(planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: { ...profile(), account: { username: "nv.moi" } } })).toMatchObject({ receipt: true });
   });
   it("keeps the plain create plan free of the receipt path", () => {
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: profile() })).toMatchObject({ receipt: false });
   });
-  it.each([{ username: "" }, { username: "u", email: "a@example.test" }, { username: "u", grants: [] }, { username: "u", subjectType: "CooperativeOwner" }, { username: "u", temporaryPassword: "x" }])("rejects account %j", account => {
+  it.each([{ username: "" }, { username: "u" }, { username: "123456" }, { username: "nv.moi", email: "a@example.test" }, { username: "nv.moi", grants: [] }, { username: "nv.moi", subjectType: "CooperativeOwner" }, { username: "nv.moi", temporaryPassword: "x" }])("rejects account %j", account => {
     expect(createEmployeeRequestSchema.safeParse({ ...profile(), account }).success).toBe(false);
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: { ...profile(), account } })).toBeUndefined();
   });
   it("refuses account creation on update", () => {
-    expect(planEmployeeApi("POST", new URLSearchParams(), { action: "update", id: employeeId, body: { ...profile(), rowVersion: "AQID", account: { username: "u" } } })).toBeUndefined();
+    expect(planEmployeeApi("POST", new URLSearchParams(), { action: "update", id: employeeId, body: { ...profile(), rowVersion: "AQID", account: { username: "nv.moi" } } })).toBeUndefined();
   });
 });
 
@@ -61,7 +61,7 @@ describe("employee creation with a login account: BFF", () => {
     configure();
     for (const broken of [{ ...saved(), temporaryPassword: undefined }, { ...saved(), employee: { ...employeeDetailFixture(), account: null } }]) {
       vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(broken, { status: 201 }));
-      expect((await handleEmployeeApi(create({ ...profile(), account: { username: "u" } }))).status).toBe(502);
+      expect((await handleEmployeeApi(create({ ...profile(), account: { username: "nv.moi" } }))).status).toBe(502);
     }
   });
   it("never leaks a password when no account was requested", async () => {
@@ -72,24 +72,24 @@ describe("employee creation with a login account: BFF", () => {
   });
   it.each(["Staff", "Trader", "SystemAdministrator"])("refuses %s before contacting the backend", async subject => {
     configure(subject); const fetcher = vi.spyOn(globalThis, "fetch");
-    expect((await handleEmployeeApi(create({ ...profile(), account: { username: "u" } }))).status).toBe(403);
+    expect((await handleEmployeeApi(create({ ...profile(), account: { username: "nv.moi" } }))).status).toBe(403);
     expect(fetcher).not.toHaveBeenCalled();
   });
   it("checks CSRF and discards the password if the session changed", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch");
-    expect((await handleEmployeeApi(create({ ...profile(), account: { username: "u" } }, "https://evil.test"))).status).toBe(403);
+    expect((await handleEmployeeApi(create({ ...profile(), account: { username: "nv.moi" } }, "https://evil.test"))).status).toBe(403);
     expect(fetcher).not.toHaveBeenCalled();
     const payload = saved();
     gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce({ status: "missing" });
     fetcher.mockResolvedValue(Response.json(payload, { status: 201 }));
-    const response = await handleEmployeeApi(create({ ...profile(), account: { username: "u" } }));
+    const response = await handleEmployeeApi(create({ ...profile(), account: { username: "nv.moi" } }));
     expect(response.status).toBe(401);
     expect(await response.text()).not.toContain(payload.temporaryPassword);
   });
   it("returns only the safe code when the username is taken", async () => {
     configure(); const secret = crypto.randomUUID();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ code: "MSG-ACCOUNT-09", detail: secret, params: { password: secret } }, { status: 409 }));
-    const result = await (await handleEmployeeApi(create({ ...profile(), account: { username: "u" } }))).json();
+    const result = await (await handleEmployeeApi(create({ ...profile(), account: { username: "nv.moi" } }))).json();
     expect(result).toMatchObject({ status: "rejected", code: "MSG-ACCOUNT-09" });
     expect(JSON.stringify(result)).not.toContain(secret);
   });

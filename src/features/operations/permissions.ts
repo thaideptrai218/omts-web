@@ -6,7 +6,7 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "seeding", title: "Thả giống", functionCode: "CULTIVATION_CYCLES" },
   { key: "material-usages", title: "Sử dụng vật tư", functionCode: "CULTIVATION_CYCLES" },
   { key: "harvest", title: "Thu hoạch", functionCode: "HARVESTS" },
-  { key: "cultivation-cycles", title: "Chu kỳ nuôi", functionCode: "CULTIVATION_CYCLES" },
+  { key: "cultivation-cycles", title: "Hành trình", functionCode: "CULTIVATION_CYCLES" },
   { key: "purchase-receipts", title: "Phiếu nhập vật tư", functionCode: "PURCHASE_RECEIPTS" },
   { key: "supplier-payments", title: "Thanh toán nhà cung cấp", functionCode: "SUPPLIER_PAYMENTS" },
   { key: "water", title: "Theo dõi chất lượng nước", functionCode: "WATER_MEASUREMENTS" },

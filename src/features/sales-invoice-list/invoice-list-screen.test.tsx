@@ -119,7 +119,7 @@ describe("cancel and price-cut dialogs", () => {
   async function openCancel() { serve({ detail: detail({}, true) }); await openRow(); fireEvent.click(screen.getByRole("button", { name: "Hủy hóa đơn" })); return screen.getByRole("dialog"); }
 
   it("warns that a completed order is reopened and says what happens to its advance", async () => {
-    orderDetail.mockResolvedValue({ status: "success", data: { statusId: 4103 } });
+    orderDetail.mockResolvedValue({ status: "success", data: { statusId: 4403 } });
     const dialog = await openCancel();
     expect(await within(dialog).findByText(/DH000010 đang Hoàn thành sẽ được mở lại, chuyển về Đang giao/)).toBeTruthy();
     expect(within(dialog).getByText(/Tiền ứng của đơn DH000010/)).toBeTruthy();
@@ -127,7 +127,7 @@ describe("cancel and price-cut dialogs", () => {
   });
 
   it("does not warn about reopening when the order is still delivering", async () => {
-    orderDetail.mockResolvedValue({ status: "success", data: { statusId: 4102 } });
+    orderDetail.mockResolvedValue({ status: "success", data: { statusId: 4402 } });
     const dialog = await openCancel();
     await waitFor(() => expect(orderDetail).toHaveBeenCalled());
     expect(within(dialog).queryByText(/Đơn đặt hàng DH000010/)).toBeNull();
@@ -162,7 +162,7 @@ describe("cancel and price-cut dialogs", () => {
   it("validates a price cut after a complaint and sends only the amount with the row version", async () => {
     serve({ detail: detail({}, true) }); await openRow(); fireEvent.click(screen.getByRole("tab", { name: "Lịch sử chỉnh sửa" })); fireEvent.click(screen.getByRole("button", { name: "Giảm giá sau khiếu nại" }));
     const dialog = screen.getByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Khoản giảm giá (₫)"), { target: { value: "50.000" } });
+    fireEvent.change(within(dialog).getByLabelText("Khoản giảm giá"), { target: { value: "50.000" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Lưu giảm giá" })); expect(await within(dialog).findByText("Nhập lý do giảm giá.")).toBeTruthy();
     expect(write).not.toHaveBeenCalled();
     fireEvent.change(within(dialog).getByLabelText(/Lý do giảm giá/), { target: { value: "Hàu nhỏ hơn thỏa thuận" } });

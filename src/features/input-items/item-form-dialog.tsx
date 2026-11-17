@@ -36,6 +36,11 @@ export function ItemFormDialog({ record, copy, group, onClose, onSaved }: {
   const units = useRemote(useCallback((signal: AbortSignal) => inputRepository.units(signal), []));
   const groupList = useMemo(() => [...(groups.data ?? []), ...extraGroups.filter((extra) => !groups.data?.some((row) => row.id === extra.id))], [groups.data, extraGroups]);
   const unitList = useMemo(() => [...(units.data ?? []), ...extraUnits.filter((extra) => !units.data?.some((row) => row.id === extra.id))], [units.data, extraUnits]);
+  // "Loại hàu bán ra" belongs to seed items: the products in use are read once per dialog, when the item is (or becomes) a Seed; the one already linked stays selectable.
+  const isSeed = values.group === "Seed";
+  const products = useRemote(useCallback((signal: AbortSignal) => isSeed ? inputRepository.products(signal) : Promise.resolve({ status: "success" as const, data: [] }), [isSeed]));
+  const linkedId = record?.productId, linkedName = record?.productName;
+  const productList = useMemo(() => [...(products.data ?? []), ...(linkedId && !products.data?.some((row) => row.id === linkedId) ? [{ id: linkedId, name: linkedName || "Loại hàu hiện tại" }] : [])], [products.data, linkedId, linkedName]);
   const existingPhotos = (editing ? record.photos ?? [] : []).filter((photo) => !removedPhotos.includes(photo.id));
   const previews = useMemo(() => newPhotos.map((file) => URL.createObjectURL(file)), [newPhotos]);
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
@@ -115,6 +120,12 @@ export function ItemFormDialog({ record, copy, group, onClose, onSaved }: {
             <span className={styles.labelRow}>Nhóm hàng<button type="button" className={managementStyles.linkButton} onClick={() => setCreating({ kind: "group" })}>Tạo mới</button></span>
             <SelectBox aria-label="Nhóm hàng" className={control} value={values.itemGroupId} onChange={set("itemGroupId")}><option value="">Chưa chọn</option>{groupTree(groupList).map((group) => <option key={group.id} value={group.id}>{groupLabel(group)}</option>)}</SelectBox>
           </label>
+          {isSeed && <div className={styles.wide}>
+            <Select label="Loại hàu bán ra" disabled={products.loading} value={values.productId} onChange={set("productId")}>
+              <option value="">{products.loading ? "Đang tải..." : "Chưa chọn"}</option>{productList.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</Select>
+            <p className={styles.hint}>Chọn loại hàu mà giống này nuôi ra. Đơn mua của khách phải khớp loại hàu này khi thu hoạch.</p>
+            {products.error && <p role="alert" className="mt-1 text-xs text-danger">Không tải được danh sách loại hàu. {products.error} <button type="button" className={managementStyles.linkButton} onClick={products.reload}>Tải lại</button></p>}
+          </div>}
         </div>
         <div className={styles.photos}>
           {existingPhotos.map((photo) => <span key={photo.id} className={styles.photoTile}>

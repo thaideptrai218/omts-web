@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { StatusPill } from "@/components/ui/management-page";
 import type { WithdrawalNotice } from "./withdraw-contracts";
 import { channelLabel, deliveryLabel, deliveryTone, toCallCount } from "./withdraw-format";
@@ -20,7 +22,7 @@ export function WithdrawalNoticeList({ notices, walkInInvoiceCodes }: Props) {
               {notices.map((notice) => (
                 <tr key={notice.customerId}>
                   <th scope="row">{notice.customerName || "—"}</th>
-                  <td className={s.code}>{notice.invoiceCodes.join(", ")}</td>
+                  <td className={s.code}>{notice.invoiceCodes.map(code => <Link key={code} className="mr-2 underline" href={farmingReferenceHref("salesInvoice", { code })}>{code}</Link>)}</td>
                   <td className={s.code}>{notice.phoneNumber ?? "Chưa có số điện thoại"}</td>
                   <td><StatusPill tone={deliveryTone(notice.deliveryStatusId)}>{channelLabel(notice.channel)}: {deliveryLabel(notice.deliveryStatusId)}</StatusPill>{notice.toCall && <span className={s.mark}>Cần gọi điện</span>}</td>
                   <td>{notice.notifiedInApp ? "Đã gửi" : "Không có tài khoản"}</td>
@@ -30,7 +32,7 @@ export function WithdrawalNoticeList({ notices, walkInInvoiceCodes }: Props) {
           </table>
         </div>
       )}
-      {walkInInvoiceCodes.length > 0 && <p className={s.hint}>Hóa đơn bán lẻ không có khách hàng để thông báo: <span className={s.code}>{walkInInvoiceCodes.join(", ")}</span>.</p>}
+      {walkInInvoiceCodes.length > 0 && <p className={s.hint}>Hóa đơn bán lẻ không có khách hàng để thông báo: <span className={s.code}>{walkInInvoiceCodes.map(code => <Link key={code} className="mr-2 underline" href={farmingReferenceHref("salesInvoice", { code })}>{code}</Link>)}</span>.</p>}
     </div>
   );
 }

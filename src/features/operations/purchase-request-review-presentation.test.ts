@@ -46,8 +46,8 @@ describe("order from a request", () => {
   it("lets the Owner order a waiting request or an accepted one nothing has fulfilled, and shows the order of an ordered one", () => {
     expect(canOrderRequest({ statusId: 3201, fulfilled: false })).toBe(true);
     expect(canOrderRequest({ statusId: 3202, fulfilled: false })).toBe(true);
-    for (const request of [{ statusId: 3202, fulfilled: true }, { statusId: 3203, fulfilled: false }, { statusId: 3204, fulfilled: false }, { statusId: 3205, fulfilled: false }]) expect(canOrderRequest(request)).toBe(false);
-    expect(reviewResponseSummary(backendRequest({ statusId: 3205, salesOrderCode: "DH000007" }))).toEqual({ headline: "Đã đặt hàng DH000007", note: null });
-    expect(purchaseRequestSchema.safeParse(backendRequest({ statusId: 3205, salesOrderId: id, salesOrderCode: "DH000007" })).success).toBe(true);
+    for (const request of [{ statusId: 3202, fulfilled: true }, { statusId: 3203, fulfilled: false }, { statusId: 3204, fulfilled: false }, { statusId: 3206, fulfilled: false }]) expect(canOrderRequest(request)).toBe(false);
+    expect(reviewResponseSummary(backendRequest({ statusId: 3206, salesOrderCode: "DH000007" }))).toEqual({ headline: "Đã đặt hàng DH000007", note: null });
+    expect(purchaseRequestSchema.safeParse(backendRequest({ statusId: 3206, salesOrderId: id, salesOrderCode: "DH000007" })).success).toBe(true);
   });
 });

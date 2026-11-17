@@ -31,7 +31,7 @@ const lot = (id: string, code: string, plan?: string) => ({ id, lotCode: code, r
 const unit = (unitId: string, name: string, factor: number, isBase: boolean, salePrice: number) => ({ id: unitId, unitId, name, factor, code: name, isBase, salePrice });
 const product = (id: string, code: string, name: string, units: ReturnType<typeof unit>[]) => ({ id, code, name, unitPrice: 50_000, statusId: 101, status: "In Use", rowVersion: "v", unit: "kg", createdAt: "x", units });
 const draft = {
-  order: { id: ids.order, code: "DH000001", statusId: 4101, status: "Draft", canFinish: false }, zone: { id: ids.zone, code: "VP01", name: "Vùng" },
+  order: { id: ids.order, code: "DH000001", statusId: 4401, status: "Draft", canFinish: false }, zone: { id: ids.zone, code: "VP01", name: "Vùng" },
   customer: { id: ids.customer, code: "KH000001", name: "Thương lái An", phoneNumber: null }, walkInCustomer: false,
   lines: [
     { salesOrderLineId: ids.kgOrderLine, lineNumber: 1, productId: ids.kgProduct, productCode: "SP000001", productName: "Hàu sữa", unitId: ids.kgUnit, unitCode: "K", unitName: "kg", factor: 1, orderedQuantity: 100, deliveredQuantity: 40, quantity: 60,
@@ -41,7 +41,7 @@ const draft = {
   ],
   subtotal: 5_400_000, orderDiscount: 100_000, discountShare: 72_973, total: 5_327_027, advanceLeft: 500_000, advanceUse: 500_000, nextCode: "HD000002",
 };
-const saved = (canFinish: boolean) => ({ invoice: { id: ids.invoice, code: "HD000001" }, change: 0, subtractedFromDebt: 0, message: "ok", messageCode: "MSG-GEN-05", order: { id: ids.order, code: "DH000001", statusId: 4102, canFinish } });
+const saved = (canFinish: boolean) => ({ invoice: { id: ids.invoice, code: "HD000001" }, change: 0, subtractedFromDebt: 0, message: "ok", messageCode: "MSG-GEN-05", order: { id: ids.order, code: "DH000001", statusId: 4402, canFinish } });
 const invoice = {
   id: ids.invoice, code: "HD000001", invoicedAt: "2026-11-12T09:00:00+07:00", invoiceDate: "2026-11-12", zone: { id: ids.zone, code: "VP01", name: "Vùng" }, customer: { id: ids.customer, name: "Thương lái An", phoneNumber: null, code: "KH000001" },
   walkInCustomer: false, salesOrder: { id: ids.order, code: "DH000001" }, note: "cũ", purchaseRequestId: null, takesRequestInFull: false, totalKg: 60, subtotal: 3_000_000, discount: 40_541, discountDecidedByOwner: false, otherCharges: 0, priceCutTotal: 0, total: 2_959_459,

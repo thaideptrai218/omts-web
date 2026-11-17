@@ -1,5 +1,7 @@
 "use client";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
+import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
+import type { TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { Field, FilterPanel, Select, statusLabel } from "./ui";
 
 export type ReceiptListFilterValues = {
@@ -10,14 +12,14 @@ export type ReceiptListFilterValues = {
   itemId: string;
   itemGroup: string;
   statusId: string;
-  from: string;
-  to: string;
 };
 
 /** Filter bar of the receipt list; the raft filter only appears after a zone is chosen. */
 export function ReceiptListFilters({
   filters,
   filter,
+  time,
+  onTime,
   zones,
   narrowed,
   suppliers,
@@ -26,6 +28,8 @@ export function ReceiptListFilters({
 }: {
   filters: ReceiptListFilterValues;
   filter(key: keyof ReceiptListFilterValues, value: string): void;
+  time: TimeRangeValue;
+  onTime(value: TimeRangeValue): void;
   zones: ApiRecord[] | undefined;
   /** True when the zone picker already narrowed the list to specific zones. */
   narrowed: boolean;
@@ -60,8 +64,7 @@ export function ReceiptListFilters({
           </option>
         ))}
       </Select>
-      <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => filter("from", e.target.value)} />
-      <Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => filter("to", e.target.value)} />
+      <TimeRangeFilter legend="Thời gian nhập" value={time} onChange={onTime} />
       <Select label="Nhóm vật tư" value={filters.itemGroup} onChange={(e) => filter("itemGroup", e.target.value)}>
         <option value="">Tất cả</option>
         <option value="Seed">Giống</option>

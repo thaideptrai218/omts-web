@@ -5,6 +5,8 @@ import { DayPicker, type DateRange } from "react-day-picker";
 import { vi } from "react-day-picker/locale";
 import "react-day-picker/style.css";
 import { InterfaceIcon } from "../interface-icon";
+import { CalendarDropdown } from "./calendar-dropdown";
+import calendarStyles from "./date-picker-field.module.css";
 import { FilterGroup } from "./management-layout";
 import { fromQueryDate, presetValue, timePresetGroups, timePresetLabel, toDisplayDate, toQueryDate, type TimePreset, type TimeRangeValue } from "./time-range-model";
 import screenStyles from "./management-screen.module.css";
@@ -27,7 +29,7 @@ export function Popover({ anchor, label, onClose, children, placement = "side" }
       // modal dialog. Measure where the current values actually land and correct by that offset.
       const shown = element.getBoundingClientRect();
       const originX = shown.left - (parseFloat(element.style.left) || 0), originY = shown.top - (parseFloat(element.style.top) || 0);
-      const set = (left: number, top: number, arrow?: number) => setPosition({ left: left - originX, top: top - originY, arrow });
+      const set = (left: number, top: number, arrow?: number) => setPosition(previous => previous.left === left - originX && previous.top === top - originY && previous.arrow === arrow ? previous : { left: left - originX, top: top - originY, arrow });
       if (placement === "side" && box.right + SIDE_GAP + width <= window.innerWidth - MARGIN) {
         const centre = box.top + box.height / 2;
         const sideTop = Math.max(MARGIN, Math.min(centre - height / 2, window.innerHeight - height - MARGIN));
@@ -41,31 +43,48 @@ export function Popover({ anchor, label, onClose, children, placement = "side" }
       set(left, top);
     };
     place();
+    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(place);
+    if (panel.current) observer?.observe(panel.current);
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
-    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
+    return () => { observer?.disconnect(); window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
   }, [anchor, placement]);
-  useEffect(() => { panel.current?.focus(); }, []);
+  useEffect(() => { if (!panel.current?.contains(document.activeElement)) panel.current?.focus(); }, []);
   useEffect(() => {
     const pointer = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (!panel.current?.contains(target) && !anchor.current?.contains(target)) onClose(false);
+      if (!panel.current?.contains(target) && !anchor.current?.contains(target) && !(target instanceof Element && target.closest(".omts-select-menu"))) onClose(false);
     };
     const keyboard = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.stopPropagation(); onClose(true); return; }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        // A month/year/time list is a separate top-layer popover. Its own document listener
+        // handles this first Escape; keep the calendar open until the next one.
+        if (panel.current?.querySelector(".omts-select-trigger[data-open]")) return;
+        onClose(true);
+        return;
+      }
       const element = panel.current;
       if (event.key !== "Tab" || !element?.contains(document.activeElement)) return;
-      const items = [...element.querySelectorAll<HTMLElement>("button:not([disabled]):not([tabindex='-1'])")];
+      const items = [...element.querySelectorAll<HTMLElement>("button:not([disabled]):not([tabindex='-1']), select:not([disabled]), input:not([disabled])")];
       if (!items.length) return;
       const first = items[0], last = items[items.length - 1], active = document.activeElement;
       if (event.shiftKey && (active === first || active === element)) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); }
     };
-    document.addEventListener("mousedown", pointer);
+    document.addEventListener("pointerdown", pointer);
     document.addEventListener("keydown", keyboard);
-    return () => { document.removeEventListener("mousedown", pointer); document.removeEventListener("keydown", keyboard); };
+    return () => { document.removeEventListener("pointerdown", pointer); document.removeEventListener("keydown", keyboard); };
   }, [anchor, onClose]);
-  return createPortal(<div ref={panel} role="dialog" aria-label={label} tabIndex={-1} className={`${screenStyles.theme} ${styles.popover}`} data-side={position.arrow === undefined ? undefined : "right"} style={{ left: position.left, top: position.top, "--arrow-top": `${position.arrow ?? 0}px` } as CSSProperties}><div className={styles.popoverBody}>{children}</div></div>, anchor.current?.closest("dialog") ?? document.body);
+  // Native popovers escape clipping; keeping the dialog parent preserves modal interactivity.
+  function showInTopLayer(element: HTMLDivElement | null) {
+    panel.current = element;
+    if (element && typeof element.showPopover === "function") {
+      try { if (!element.matches(":popover-open")) element.showPopover(); } catch { /* Fixed-position fallback for older browsers. */ }
+    }
+  }
+  return createPortal(<div ref={showInTopLayer} popover="manual" role="dialog" aria-label={label} tabIndex={-1} className={`${screenStyles.theme} ${styles.popover}`} data-side={position.arrow === undefined ? undefined : "right"} style={{ left: position.left, top: position.top, "--arrow-top": `${position.arrow ?? 0}px` } as CSSProperties}><div className={styles.popoverBody}>{children}</div></div>, anchor.current?.closest("dialog") ?? document.body);
 }
 
 const monthOf = (date: Date, offset = 0) => new Date(date.getFullYear(), date.getMonth() + offset, 1);
@@ -89,8 +108,8 @@ function CustomCalendar({ value, onApply, onCancel }: { value: TimeRangeValue; o
   const line = preview ?? draft;
   const pick = (_: DateRange | undefined, clicked: Date) => { const next = afterClick(clicked); setDraft(next.range); setEditing(next.editing); };
   function today() { const now = new Date(), day = new Date(now.getFullYear(), now.getMonth(), now.getDate()); setDraft({ from: day, to: day }); setEditing("from"); setLeftMonth(monthOf(day)); setRightMonth(monthOf(day, 1)); }
-  const calendar = (month: Date, onMonthChange: (next: Date) => void) => <DayPicker mode="range" navLayout="around" locale={vi} weekStartsOn={1} month={month} onMonthChange={onMonthChange} selected={draft} onSelect={pick} fixedWeeks
-    onDayMouseEnter={(day) => setHovered(day)} modifiers={{ preview: preview?.from ? { from: preview.from, to: preview.to ?? preview.from } : false }} modifiersClassNames={{ preview: styles.preview }} />;
+  const calendar = (month: Date, onMonthChange: (next: Date) => void) => <div className={calendarStyles.calendar}><DayPicker mode="range" navLayout="around" captionLayout="dropdown" startMonth={new Date(1940, 0, 1)} endMonth={new Date(new Date().getFullYear() + 5, 11, 31)} components={{ Dropdown: CalendarDropdown }} labels={{ labelMonthDropdown: () => "Tháng", labelYearDropdown: () => "Năm", labelPrevious: () => "Tháng trước", labelNext: () => "Tháng sau" }} locale={vi} weekStartsOn={1} month={month} onMonthChange={onMonthChange} selected={draft} onSelect={pick} fixedWeeks formatters={{ formatWeekdayName: day => ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][day.getDay()], formatMonthDropdown: day => `Tháng ${day.getMonth() + 1}` }}
+    onDayMouseEnter={(day) => setHovered(day)} modifiers={{ preview: preview?.from ? { from: preview.from, to: preview.to ?? preview.from } : false }} modifiersClassNames={{ preview: styles.preview }} /></div>;
   return <div className={styles.calendar}>
     <p className={styles.rangeLine} aria-live="polite">
       <button type="button" className={styles.endChip} aria-pressed={editing === "from"} onClick={() => setEditing("from")}>Từ ngày: <strong>{shown(line?.from)}</strong></button>

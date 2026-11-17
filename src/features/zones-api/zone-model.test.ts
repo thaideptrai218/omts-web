@@ -10,9 +10,16 @@ describe("zone list", () => {
     expect(filterZones(rows, { search: "ngoc vung", statusId: "", license: "" }).map(zone => zone.code)).toEqual(["V10"]);
     expect(filterZones(rows, { search: "dao minh", statusId: "", license: "" }).map(zone => zone.code)).toEqual(["V01"]);
   });
-  it("filters by status and treats a missing license state as Missing", () => {
+  it("filters by status; no badge on the list is NOT Missing, the flag computed from the licence overview is", () => {
     expect(filterZones(rows, { search: "", statusId: "102", license: "" }).map(zone => zone.code)).toEqual(["V02"]);
-    expect(filterZones(rows, { search: "", statusId: "", license: "Missing" }).map(zone => zone.code)).toEqual(["V02"]);
+    expect(filterZones(rows, { search: "", statusId: "", license: "Missing" })).toEqual([]);
+    const flags = new Map([[rows[1].id, "Missing"], [rows[2].id, "Expired"]]);
+    expect(filterZones(rows, { search: "", statusId: "", license: "Missing" }, flags).map(zone => zone.code)).toEqual(["V02"]);
+    expect(filterZones(rows, { search: "", statusId: "", license: "Valid" }, flags).map(zone => zone.code)).toEqual(["V10"]);
+    expect(filterZones(rows, { search: "", statusId: "", license: "Expired" }, flags).map(zone => zone.code)).toEqual(["V01"]);
+  });
+  it("sorts zones with an unknown licence flag last", () => {
+    expect(sortZones(rows, "license", "asc", undefined, new Map()).map(zone => zone.code)).toEqual(["V01", "V10", "V02"]);
   });
   it("sorts the whole set by number or natural text in both directions", () => {
     expect(sortZones(rows, "code", "asc").map(zone => zone.code)).toEqual(["V01", "V02", "V10"]);

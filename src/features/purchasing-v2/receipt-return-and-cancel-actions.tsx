@@ -1,8 +1,9 @@
 "use client";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { z } from "zod";
+import { UnitField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
-import { DataTable, Field, Money, type useMutation } from "@/features/operations/ui";
+import { DataTable, Money, type useMutation } from "@/features/operations/ui";
 import type { useOperationEditor } from "@/features/operations/use-operation-editor";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import * as c from "./contracts";
@@ -72,16 +73,16 @@ export function ReceiptReturnAndCancelActions({
           {record.lines
             .filter((v) => v.returnable > 0)
             .map((v) => (
-              <Field
+              <UnitField
                 key={v.id}
                 label={`${v.itemName ?? "Vật tư"} · Còn được trả ${v.returnable} ${v.unit}`}
-                type="number"
+                unit={v.unit}
+                decimals={3}
                 min={0}
                 max={v.returnable}
-                step="0.001"
                 disabled={editor.disabled}
                 value={returnQuantities[v.id] ?? ""}
-                onChange={(e) => setReturns((q) => ({ ...q, [v.id]: e.target.value }))}
+                onChange={(next) => setReturns((q) => ({ ...q, [v.id]: next }))}
               />
             ))}
           {!owner && (

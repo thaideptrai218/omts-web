@@ -44,7 +44,7 @@ export function AfterSalesIssuesScreen() {
       filters={
         <>
           {/* TODO(api): filter values feed the report query; zone and customer options come from the backend lists. */}
-          <PeriodFilter name="after-sales-period" />
+          <PeriodFilter />
           <RadioFilter legend="Nhóm theo" name="after-sales-group" options={GROUP_OPTIONS} value={groupBy} onChange={setGroupBy} />
           <ChecklistFilter legend="Vùng nuôi" />
           <AllOptionSelect label="Khách hàng" allLabel="Tất cả khách hàng" />

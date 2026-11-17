@@ -30,7 +30,7 @@ export function WaterZoneFilters({ zones, zoneId, time, filters, rafts, canReset
         <option value="">Tất cả bè</option>
         {rafts.map(([id, code]) => <option key={id} value={id}>{code}</option>)}
       </SelectBox></FilterGroup>
-      <FilterGroup legend="Cảnh báo"><label className={local.check}><input type="checkbox" checked={filters.exceeded} onChange={event => onFilter("exceeded", event.target.checked)} />Chỉ số vượt ngưỡng</label></FilterGroup>
+      <FilterPills legend="Cảnh báo" name="water-exceeded" value={filters.exceeded ? "exceeded" : "all"} options={[["all", "Tất cả"], ["exceeded", "Vượt ngưỡng"]]} onChange={value => onFilter("exceeded", value === "exceeded")} />
     </>}
   </>;
 }

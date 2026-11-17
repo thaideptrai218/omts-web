@@ -24,7 +24,7 @@ import { ToastProvider } from "@/components/ui/toast-provider";
 
 const zone = { id: ids.zone, code: "DEMO-01", name: "Vùng 1" }, zone2 = { id: ids.zone2, code: "DEMO-02", name: "Vùng 2" }, zone3 = { id: ids.zone3, code: "DEMO-03", name: "Vùng 3" };
 const draft = {
-  salesOrder: { id: ids.order, code: "DH000001", statusId: 4101, status: "Draft", customer: null }, plannedAt: "2026-11-14T06:00:00+07:00",
+  salesOrder: { id: ids.order, code: "DH000001", statusId: 4401, status: "Draft", customer: null }, plannedAt: "2026-11-14T06:00:00+07:00",
   products: [{ productId: ids.product, productCode: "SP000001", productName: "Hàu sữa", unitId: ids.person, unitCode: "K", unitName: "kg", quantity: 120, expectedCageCount: 8 }],
 };
 const eligLane = (laneNumber: number, stateName: string, planCode: string | null = null) => ({ laneId: `0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0c0${laneNumber}`, laneNumber, state: stateName, planCode });
@@ -38,10 +38,10 @@ const others = [
   { raftId: ids.raft4, raftCode: "B4", zone: zone3, product: { id: ids.product, code: "SP000001", name: "Hàu sữa" }, lanes: [eligLane(1, "Harvested"), eligLane(2, "InAnotherPlan", "KHT000002")] },
 ];
 const saved = (patch: object = {}) => ({
-  id: ids.plan, code: "KHT000001", statusId: 4201, status: "Draft", zones: [zone], plannedAt: "2026-11-14T06:00:00+07:00", note: null, createdBy: null, orders: [{ id: ids.order, code: "DH000001", statusId: 4101, status: "Draft", customer: { id: ids.person, code: "KH1", name: "An" } }],
+  id: ids.plan, code: "KHT000001", statusId: 4201, status: "Draft", zones: [zone], plannedAt: "2026-11-14T06:00:00+07:00", note: null, createdBy: null, orders: [{ id: ids.order, code: "DH000001", statusId: 4401, status: "Draft", customer: { id: ids.person, code: "KH1", name: "An" } }],
   lines: [], progress: { lines: 0, linesDone: 0, lanes: 0, lanesHarvested: 0, lanesSkipped: 0 }, allowedActions: ["Edit", "Assign"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "v1", ...patch,
 });
-const orderRow = (id: string, code: string, customerName: string) => ({ id, code, statusId: 4101, status: "Draft", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null, customerName, walkInCustomer: false, source: "Phone", total: 1, invoicedTotal: 0, customerPaid: 0, invoiceCodes: [], progress: [], rowVersion: "v" });
+const orderRow = (id: string, code: string, customerName: string) => ({ id, code, statusId: 4401, status: "Draft", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null, customerName, walkInCustomer: false, source: "Phone", total: 1, invoicedTotal: 0, customerPaid: 0, invoiceCodes: [], progress: [], rowVersion: "v" });
 
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
@@ -56,7 +56,7 @@ beforeEach(() => {
   state.orderDraft.mockResolvedValue({ status: "success", data: draft });
   state.eligible.mockResolvedValue({ status: "success", data: [...eligible, ...others] });
   state.orders.mockResolvedValue({ status: "success", data: { items: [orderRow(ids.order, "DH000001", "An"), orderRow(ids.order2, "DH000002", "Bình")], page: 1, pageSize: 20, total: 2 } });
-  state.orderDetail.mockResolvedValue({ status: "success", data: { id: ids.order, statusId: 4101, lines: [{ productId: ids.product, productName: "Hàu sữa", unitId: ids.person, unitName: "kg", factor: 1, quantity: 120, deliveredQuantity: 20 }] } });
+  state.orderDetail.mockResolvedValue({ status: "success", data: { id: ids.order, statusId: 4401, lines: [{ productId: ids.product, productName: "Hàu sữa", unitId: ids.person, unitName: "kg", factor: 1, quantity: 120, deliveredQuantity: 20 }] } });
   state.create.mockResolvedValue({ status: "success", data: saved() });
   state.assign.mockResolvedValue({ status: "success", data: { done: true } });
 });
@@ -240,7 +240,7 @@ it("does not turn cages into kg without a kg per cage, so it neither prefills no
 });
 
 it("starts the next raft from what the first raft leaves short", async () => {
-  state.orderDetail.mockResolvedValue({ status: "success", data: { id: ids.order, statusId: 4101, lines: [{ productId: ids.product, productName: "Hàu sữa", unitId: ids.person, unitName: "Lồng", factor: 25, quantity: 80, deliveredQuantity: 0 }] } });
+  state.orderDetail.mockResolvedValue({ status: "success", data: { id: ids.order, statusId: 4401, lines: [{ productId: ids.product, productName: "Hàu sữa", unitId: ids.person, unitName: "Lồng", factor: 25, quantity: 80, deliveredQuantity: 0 }] } });
   state.eligible.mockResolvedValue({ status: "success", data: [eligible[0], { ...eligible[0], raftId: ids.raft3, raftCode: "B3" }] });
   const user = userEvent.setup();
   render(<ToastProvider><PlanEditorPage orderIds={[ids.order]} /></ToastProvider>);

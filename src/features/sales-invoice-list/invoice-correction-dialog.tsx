@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
+import { MoneyField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { ErrorNotice, Field, Note } from "@/features/operations/ui";
+import { ErrorNotice, Note } from "@/features/operations/ui";
 import { buildCorrection, initialCorrection, type CorrectionFields, type CorrectionForm } from "./invoice-correction-form";
 import { InvoiceChangeQuestionDialog } from "./invoice-change-question-dialog";
 import type { InvoiceDetail } from "./invoice-list-contracts";
@@ -30,7 +31,7 @@ export function InvoiceCorrectionDialog({ invoice, onClose, onDone, onReload }: 
   return (
     <>
       <Dialog open title={`Giảm giá sau khiếu nại: hóa đơn ${invoice.code}`} dismissible={!busy} onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
-        <div className="mt-3"><Field label="Khoản giảm giá (₫)" inputMode="numeric" value={form.cut} disabled={busy} onChange={(e) => patch({ cut: e.target.value })} />
+        <div className="mt-3"><MoneyField label="Khoản giảm giá" autoThousands showWords value={form.cut} disabled={busy} onChange={(next) => patch({ cut: next })} />
           <p className={styles.hint}>Tổng cộng hiện tại {vnd(invoice.total)}. Các dòng hàng không thay đổi.</p></div>
         <div className="mt-3"><Note label="Lý do giảm giá (bắt buộc)" maxLength={500} value={form.reason} disabled={busy} onChange={(e) => patch({ reason: e.target.value })} /></div>
         <ErrorNotice error={problem ?? change.error} />

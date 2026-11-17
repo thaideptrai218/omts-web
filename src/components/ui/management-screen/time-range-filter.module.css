@@ -5,7 +5,7 @@
 .input svg { flex:none; width:14px; height:14px; color:var(--omts-color-text-muted); }
 .input:hover, .input[aria-expanded="true"] { border-color:var(--omts-color-primary); }
 
-.popover { position:fixed; z-index:70; max-width:calc(100vw - 16px); border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); color:var(--omts-color-text); box-shadow:var(--omts-shadow-raised); font-size:13px; }
+.popover { margin:0; padding:0; inset:auto; position:fixed; z-index:70; max-width:calc(100vw - 16px); border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); color:var(--omts-color-text); box-shadow:var(--omts-shadow-raised); font-size:13px; }
 .popover[data-side="right"]::before { content:""; position:absolute; left:-7px; top:var(--arrow-top); width:12px; height:12px; transform:translateY(-50%) rotate(45deg); border-left:1px solid var(--omts-color-border); border-bottom:1px solid var(--omts-color-border); background:var(--omts-color-surface); }
 .popoverBody { position:relative; max-height:calc(100dvh - 16px); overflow:auto; padding:16px; border-radius:8px; }
 .popover:focus { outline:none; }
@@ -25,18 +25,7 @@
 .endChip { flex:1 1 0; height:30px; padding:0 10px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); text-align:left; white-space:nowrap; }
 .endChip[aria-pressed="true"] { border-color:var(--omts-color-primary); box-shadow:0 0 0 1px var(--omts-color-primary); background:var(--omts-color-primary-soft); }
 .months { display:flex; gap:20px; }
-.calendar :global(.rdp-root) { --rdp-accent-color:var(--omts-color-primary); font-size:12px; }
-.calendar :global(.rdp-month_caption) { height:28px; justify-content:center; }
-.calendar :global(.rdp-caption_label) { font-size:13px; font-weight:600; }
-.calendar :global(.rdp-button_previous), .calendar :global(.rdp-button_next) { width:26px; height:28px; }
-.calendar :global(.rdp-chevron) { width:14px; height:14px; }
-.calendar :global(.rdp-weekday) { padding:0; height:26px; font-size:11px; font-weight:600; color:var(--omts-color-text-muted); }
-.calendar :global(.rdp-day) { width:32px; height:28px; padding:0; font-size:12px; background:none; }
-.calendar :global(.rdp-day_button) { width:32px; height:28px; border:1px solid transparent; border-radius:6px; font:inherit; color:var(--omts-color-text); }
-.calendar :global(.rdp-day_button):hover { border-color:var(--omts-color-primary); background:var(--omts-color-surface); color:var(--omts-color-primary); }
-.calendar :global(.rdp-today) :global(.rdp-day_button) { color:var(--omts-color-primary); font-weight:700; }
 .calendar .preview { background:var(--omts-color-primary-soft); }
-.calendar :global(.rdp-selected) { font-size:12px; font-weight:400; }
 .calendar :global(.rdp-range_middle) { background:var(--omts-color-primary-soft); }
 .calendar :global(.rdp-range_middle) :global(.rdp-day_button) { border-color:transparent; border-radius:0; background:none; color:var(--omts-color-text); }
 .calendar :global(.rdp-range_start), .calendar :global(.rdp-range_end) { background:var(--omts-color-primary-soft); }

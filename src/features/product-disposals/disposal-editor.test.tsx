@@ -26,7 +26,7 @@ const product = { id: ids.product, code: "SP000001", name: "Hàu sữa", unitPri
 const lots = { productId: ids.product, productCode: "SP000001", totalRemainingKg: 150, lots: [
   { lotId: ids.lotA, lotCode: "B1-LOT", zoneId: ids.zoneA, zoneCode: "DEMO-01", harvestDate: "2026-11-10", lotStatusId: 1, harvestedKg: 100, soldKg: 0, disposedKg: 0, returnedKg: 0, remainingKg: 100 },
   { lotId: ids.lotB, lotCode: "B2-LOT", zoneId: ids.zoneB, zoneCode: "DEMO-02", harvestDate: "2026-11-10", lotStatusId: 1, harvestedKg: 50, soldKg: 0, disposedKg: 0, returnedKg: 0, remainingKg: 50 }] };
-const saved = { id: ids.doc, code: "XHS000001", statusId: 4002, status: "Completed", disposedAt: "2026-11-12T08:00:00+07:00", zoneId: ids.zoneA, zoneCode: "DEMO-01", reason: "Hàu chết", notes: null, totalKg: 30,
+const saved = { id: ids.doc, code: "XHS000001", statusId: 4302, status: "Completed", disposedAt: "2026-11-12T08:00:00+07:00", zoneId: ids.zoneA, zoneCode: "DEMO-01", reason: "Hàu chết", notes: null, totalKg: 30,
   createdAt: "2026-11-12T08:00:00+07:00", createdBy: "Chủ", completedAt: null, cancelledAt: null, cancelReason: null, rowVersion: "v1", lines: [] };
 
 beforeEach(() => {

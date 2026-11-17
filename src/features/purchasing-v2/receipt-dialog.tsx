@@ -1,4 +1,5 @@
 "use client";
+import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -153,7 +154,7 @@ function ReceiptEditor({ record, onClose, onSaved }: { record: Receipt | null; o
         read
           .run(() => receipts.read("detail", { id: record.id }, c.receipt), true)
           .then((v) =>
-            v ? `${v.code} · ${stateLabel(v.statusId)} · ${v.total.toLocaleString("vi-VN")} đồng` : undefined,
+            v ? `${v.code} · ${stateLabel(v.statusId)} · ${formatVndWithSymbol(v.total)}` : undefined,
           )
     : undefined;
 

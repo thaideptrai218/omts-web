@@ -4,6 +4,7 @@ import { createEmployeePersonalSchema } from "@/features/employee-management/sch
 import { employeeBankSchema } from "@/features/employee-management/schemas/employee-bank-schema";
 import { employeeBusinessDate, employeeDateOnlySchema } from "@/features/employee-management/schemas/employee-date-only";
 import { normalizeEmployeePhone } from "@/features/employee-management/schemas/employee-phone";
+import { validVietnamesePhone, vietnamesePhoneMessage } from "@/components/form/phone-input-rules";
 
 import type { Employee } from "./contracts";
 
@@ -97,15 +98,15 @@ export function buildEmployeeSaveBody(data: z.infer<typeof employeeApiEditorSche
 
 /** API form validation stays separate from the legacy mock editor. */
 export const employeeApiEditorSchema = createEmployeePersonalSchema().extend({
- phone: z.string().trim().refine(value => !value || normalizeEmployeePhone(value) !== null, "Số điện thoại không hợp lệ."),
+ phone: z.string().trim().refine(value => !value || validVietnamesePhone(value), vietnamesePhoneMessage),
  code: z.string().trim().regex(/^([A-Za-z0-9-]{1,20})?$/u, "Mã gồm chữ, số và dấu gạch ngang, tối đa 20 ký tự."),
  gender: z.enum(["", "Male", "Female", "Other"], { error: "Chọn giới tính." }),
  idNumber: z.string().trim().regex(/^(\d{9}|\d{12})?$/u, "CCCD gồm 9 hoặc 12 chữ số."),
  startDate: z.string().refine(value => !value || (employeeDateOnlySchema.safeParse(value).success && value <= employeeBusinessDate(new Date())), "Ngày bắt đầu không hợp lệ hoặc ở tương lai."),
  employeeType: z.enum(["", "SeasonalWorker", "Staff"], { error: "Chọn loại nhân viên." }),
  employeeTypeFrom: z.string().refine(value => !value || employeeDateOnlySchema.safeParse(value).success, "Ngày áp dụng không hợp lệ."),
- jobTypeIds: z.array(z.guid()).refine(ids => new Set(ids).size === ids.length),
- workingZoneIds: z.array(z.guid()).refine(ids => new Set(ids).size === ids.length),
+ jobTypeIds: z.array(z.guid({ error: "Chọn loại công việc hợp lệ." })).refine(ids => new Set(ids).size === ids.length, "Không chọn trùng loại công việc."),
+ workingZoneIds: z.array(z.guid({ error: "Chọn vùng làm việc hợp lệ." })).refine(ids => new Set(ids).size === ids.length, "Không chọn trùng vùng làm việc."),
  bankAccount: employeeBankSchema,
 });
 export const genderLabel = (value: string | null | undefined) => value === "Male" ? "Nam" : value === "Female" ? "Nữ" : value === "Other" ? "Khác" : "";

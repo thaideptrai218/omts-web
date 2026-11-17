@@ -116,6 +116,7 @@ export function Dialog({
         // React also propagates cancel to ancestor dialogs. Escape belongs only
         // to the topmost dialog; closing its parent would discard the editor.
         event.stopPropagation();
+        // A dialog that is not dismissible (a running request, a one-time secret) ignores Escape unless it supplies its own close handler.
         if (onCloseRequest) onCloseRequest();
         else if (dismissible) onOpenChange(false);
       }}
@@ -140,10 +141,11 @@ export function Dialog({
             )}
           </div>
 
+          {/* A dialog that is not dismissible (a running request, a one-time secret) shows no close button unless it supplies its own close handler, which may confirm unsaved changes. */}
           {(dismissible || onCloseRequest) && (
             <button
               aria-label="Đóng hộp thoại"
-              className="grid size-11 shrink-0 place-items-center rounded-control text-xl text-text-muted transition hover:bg-surface-subtle hover:text-text"
+              className="grid size-9 shrink-0 place-items-center rounded-control text-2xl leading-none text-text-muted transition hover:bg-surface-subtle hover:text-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
               onClick={() => onCloseRequest ? onCloseRequest() : onOpenChange(false)}
               type="button"
             >

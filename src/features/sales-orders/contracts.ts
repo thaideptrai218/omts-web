@@ -8,8 +8,8 @@ import { qrView } from "@/features/customers/contracts";
 const id = z.guid(), text = z.string(), opt = text.nullish(), num = z.number(), count = z.number().int();
 const person = z.object({ id, name: text });
 
-export const ORDER = { draft: 4101, delivering: 4102, completed: 4103, cancelled: 4104 } as const;
-export const REQUEST_ORDERED = 3205;
+export const ORDER = { draft: 4401, delivering: 4402, completed: 4403, cancelled: 4404 } as const;
+export const REQUEST_ORDERED = 3206;
 export const orderSources = ["App", "Phone", "AtPort"] as const;
 export const advanceMethods = ["Cash", "OtherTransfer", "VietQr"] as const;
 export type OrderSource = (typeof orderSources)[number];

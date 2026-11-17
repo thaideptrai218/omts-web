@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+
 import { createOperationsRepository } from "@/features/operations/repository";
 import { ErrorNotice, Field, Note, Select, Skeleton, useRemote } from "@/features/operations/ui";
 import { corrected, preview, seedLotOptions, type SeedingItem } from "./correction-contracts";
@@ -14,18 +14,18 @@ import s from "./lot-tracing.module.css";
 const repo = createOperationsRepository("lot-tracing");
 type Props = { item: SeedingItem; raftId: string; onClose(): void; onSaved(published: string[]): void };
 
-/** Sửa phiên thả giống (TRACE-03.0): ngày, lô giống, luống, số lượng và lý do; lưu kèm phiên bản đã đọc (NFR-09). */
+/** Sửa phiên thả giống (TRACE-03.0): ngày, lô giống, làn, số lượng và lý do; lưu kèm phiên bản đã đọc (NFR-09). */
 export function SeedingCorrectionDialog({ item, raftId, onClose, onSaved }: Props) {
   const lots = useRemote(useCallback((signal: AbortSignal) => repo.read("seed-lots", { id: raftId }, seedLotOptions, signal), [raftId]));
   return (
-    <Dialog open size="lg" title={`Sửa phiên thả giống ${formatDay(item.seedingDate)}`} onOpenChange={(open) => !open && onClose()}>
+    <section aria-label={`Sửa phiên thả giống ${formatDay(item.seedingDate)}`}>
       <div className={s.dialogBody}>
         {lots.loading && <Skeleton />}
         <ErrorNotice error={lots.error} />
-        {lots.error && <Button className="w-auto" variant="secondary" onClick={lots.reload}>Tải lại</Button>}
+        {lots.error && <Button type="button" className="w-auto" variant="secondary" onClick={lots.reload}>Tải lại</Button>}
         {lots.data && <SeedingForm item={item} options={lots.data.lots} onClose={onClose} onSaved={onSaved} />}
       </div>
-    </Dialog>
+    </section>
   );
 }
 
@@ -48,16 +48,16 @@ function SeedingForm({ item, options, onClose, onSaved }: { item: SeedingItem; o
         <Select label="Lô giống" required value={draft.seedLotId} disabled={busy} onChange={(e) => set({ seedLotId: e.target.value })}>
           {choices.map((o) => <option key={o.id} value={o.id}>{o.itemName ?? "Lô giống"} · {o.code} · {o.supplierName}</option>)}
         </Select>
-        <Field label="Luống (cách nhau bởi dấu phẩy)" inputMode="numeric" required value={draft.lanes} disabled={busy} onChange={(e) => set({ lanes: e.target.value })} />
-        <Field label="Số lượng (dây)" inputMode="decimal" required value={draft.quantity} disabled={busy} onChange={(e) => set({ quantity: e.target.value })} />
+        <Field label="Làn (cách nhau bởi dấu phẩy)" inputMode="numeric" required value={draft.lanes} disabled={busy} onChange={(e) => set({ lanes: e.target.value })} />
+        <Field label="Số lượng" inputMode="decimal" required value={draft.quantity} disabled={busy} onChange={(e) => set({ quantity: e.target.value })} />
       </div>
       <Note label="Lý do sửa" required maxLength={1000} value={draft.reason} disabled={busy} onChange={(e) => set({ reason: e.target.value })} />
       {item.lotCodes.length > 0 && <p className={s.hint}>Phiên này đang thuộc nguồn gốc của lô {item.lotCodes.join(", ")}.</p>}
       <ErrorNotice error={flow.mutation.error} />
       {!flow.built.ok && <p className={s.hint}>{flow.built.problem}</p>}
       <div className={s.dialogActions}>
-        <Button className="w-auto" variant="secondary" disabled={busy} onClick={onClose}>Hủy</Button>
-        <Button className="w-auto" type="submit" disabled={!flow.built.ok} isPending={busy} pendingLabel="Đang kiểm tra...">Xem lại thay đổi</Button>
+        <Button key="discard-correction" type="button" className="w-auto" variant="secondary" disabled={busy} onClick={onClose}>Bỏ qua</Button>
+        <Button key="review-correction" className="w-auto" type="submit" disabled={!flow.built.ok} isPending={busy} pendingLabel="Đang kiểm tra...">Xem lại thay đổi</Button>
       </div>
     </form>
   );

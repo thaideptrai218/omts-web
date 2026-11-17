@@ -4,7 +4,8 @@ import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { managementStyles } from "@/components/ui/management-screen/management-table";
 import { SelectBox } from "@/components/ui/select-box";
 import { useRemote } from "@/features/operations/ui";
-import { QuantityStepper, fmt } from "@/features/purchase-documents/document-parts";
+import { UnitInput } from "@/components/form/unit-input";
+import { fmt } from "@/features/purchase-documents/document-parts";
 import { IN_USE, type ProductRow } from "@/features/products/contracts";
 import { cageUnitOf } from "@/features/products/product-helpers";
 import { productRepository } from "@/features/products/repository";
@@ -21,6 +22,7 @@ export const linesFromLot = (lines: readonly SavedLine[]): HarvestLine[] => line
 
 const number = (value: string) => { const parsed = Number(value.replace(",", ".")); return value.trim() && Number.isFinite(parsed) ? parsed : null; };
 const round2 = (value: number) => Math.round(value * 100) / 100;
+const isTwoDecimals = (value: number) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6;
 
 /** The products a trip can be split into: those in use, plus the ones a lot being corrected already has (they stay allowed even if no longer sold). */
 export function useHarvestProducts(saved: readonly Pick<SavedLine, "productId" | "productCode" | "productName">[] = []) {
@@ -40,13 +42,13 @@ export function linesProblem(lines: readonly HarvestLine[], required: boolean): 
     if (!line.productId) return `Dòng ${position}: chọn sản phẩm.`;
     if (seen.has(line.productId)) return `Dòng ${position}: mỗi sản phẩm chỉ có một dòng.`;
     seen.add(line.productId);
-    if (cages === null || !Number.isInteger(cages) || cages <= 0) return `Dòng ${position}: số lồng phải là số nguyên lớn hơn 0.`;
+    if (cages === null || cages <= 0 || cages > 100_000 || !isTwoDecimals(cages)) return `Dòng ${position}: số lồng phải lớn hơn 0 và có tối đa 2 số lẻ (được nhập 0,5).`;
     if (line.kg.trim() && (kg === null || kg <= 0)) return `Dòng ${position}: số kg phải lớn hơn 0.`;
   }
   return undefined;
 }
 export const linesPayload = (lines: readonly HarvestLine[]): HarvestLinePayload[] => lines.map((line) => ({ productId: line.productId, cageCount: Number(line.cages), kg: number(line.kg) === null ? null : round2(number(line.kg)!) }));
-export const linesTotals = (lines: readonly HarvestLine[]) => ({ cages: lines.reduce((sum, line) => sum + (number(line.cages) ?? 0), 0), kg: lines.reduce((sum, line) => sum + (number(line.kg) ?? 0), 0) });
+export const linesTotals = (lines: readonly HarvestLine[]) => ({ cages: round2(lines.reduce((sum, line) => sum + (number(line.cages) ?? 0), 0)), kg: round2(lines.reduce((sum, line) => sum + (number(line.kg) ?? 0), 0)) });
 
 /**
  * The product lines of a harvest trip: the product, the cages (QuantityStepper) and the kg, which follow cages × the product's Lồng factor until they are
@@ -72,7 +74,7 @@ export function HarvestProductLines({ lines, products, loading, error, disabled,
             <option value="">{loading ? "Đang tải…" : "Chọn sản phẩm"}</option>
             {products.filter((product) => product.id === line.productId || !lines.some((other) => other.productId === product.id)).map((product) => <option key={product.id} value={product.id}>{product.name} ({product.code})</option>)}
           </SelectBox></td>
-          <td><QuantityStepper label={`số lồng dòng ${position}`} value={line.cages} onChange={(cages) => setCages(line, cages.replace(/[.,].*$/, ""))} /></td>
+          <td className={styles.cageCell}><UnitInput label={`Số lồng dòng ${position}`} unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} disabled={disabled} value={number(line.cages)} onChange={(cages) => setCages(line, cages === null ? "" : String(cages))} /></td>
           <td><input aria-label={`Số kg dòng ${position}`} className={`omts-control ${styles.kgInput}`} inputMode="decimal" disabled={disabled} value={line.kg}
             placeholder={factor ? undefined : "Theo kg/lồng của lô"} title={factor ? `1 lồng = ${fmt(factor)} kg; sửa được` : undefined}
             onChange={(event) => { const text = event.target.value.replace(/[^\d.,]/g, ""); patch(line.key, { kg: text }); }} /></td>

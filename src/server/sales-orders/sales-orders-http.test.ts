@@ -16,7 +16,7 @@ const post = (body: unknown, headers: Record<string, string> = {}) => new Reques
   method: "POST", headers: { Origin: "https://web.example.test", "X-OMTS-Request": "web", "Content-Type": "application/json", ...headers }, body: typeof body === "string" ? body : JSON.stringify(body),
 });
 const view = {
-  id, code: "DH000001", statusId: 4101, status: "Draft", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null, customer: { id, code: "KH000001", name: "An", phoneNumber: null },
+  id, code: "DH000001", statusId: 4401, status: "Draft", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null, customer: { id, code: "KH000001", name: "An", phoneNumber: null },
   walkInCustomer: false, source: "Phone", receivedBy: { id, name: "Chủ" }, createdBy: { id, name: "Chủ" }, note: null, subtotal: 120000, discount: 0, discountDecidedByOwner: false, total: 120000,
   invoicedTotal: 0, customerPaid: 0, advanceLeft: 0, advanceReserved: false, lines: [], progress: [], advances: [], invoices: [], harvestPlans: [], purchaseRequest: null, allowedActions: ["Edit"],
   createdAt: "2026-11-12T08:00:00+07:00", completedAt: null, completedManually: false, cancelledAt: null, cancelReason: null, rowVersion: "v1",
@@ -28,10 +28,10 @@ describe("sales orders BFF", () => {
   it("forwards only the filters of the list, repeating the statuses, and refuses a malformed value before the API", async () => {
     setup([["SALES_ORDERS", "View"]]);
     const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 15, total: 0, summary: { total: 0, invoiced: 0, customerPaid: 0 } }));
-    expect((await handleSalesOrders(get("action=orders&statusIds=4101,4102&source=AtPort&from=2026-11-01&sortBy=code&sortDir=desc&evil=1&pageSize=15"))).status).toBe(200);
+    expect((await handleSalesOrders(get("action=orders&statusIds=4401,4402&source=AtPort&from=2026-11-01&sortBy=code&sortDir=desc&evil=1&pageSize=15"))).status).toBe(200);
     const url = new URL(String(fetcher.mock.calls[0][0]));
     expect(url.pathname).toBe("/api/sales-orders");
-    expect(url.searchParams.getAll("statusIds")).toEqual(["4101", "4102"]);
+    expect(url.searchParams.getAll("statusIds")).toEqual(["4401", "4402"]);
     expect(url.searchParams.get("source")).toBe("AtPort");
     expect(url.searchParams.has("evil")).toBe(false);
     for (const bad of ["statusIds=9999", "source=Fax", "from=yesterday", "action=order", "action=order&id=nope", "action=nothing", "action=order-by-code&code=a%20b"]) expect((await handleSalesOrders(get(bad))).status).toBe(400);

@@ -35,26 +35,28 @@ export type ZoneSortKey = "code" | "name" | "location" | "area" | "rafts" | "lic
 export type ZoneFilters = { search: string; statusId: string; license: string };
 export const emptyZoneFilters: ZoneFilters = { search: "", statusId: "", license: "" };
 
-export function filterZones(rows: readonly ZoneRow[], filters: ZoneFilters): ZoneRow[] {
+/** The list only has a badge (Expired / ExpiringSoon); `flags` is the flag computed from each zone's licence overview. No badge is NOT "Missing". */
+export const licenseOf = (row: ZoneRow, flags?: ReadonlyMap<string, string>): string | null => flags?.get(row.id) ?? row.licenseState ?? null;
+export function filterZones(rows: readonly ZoneRow[], filters: ZoneFilters, flags?: ReadonlyMap<string, string>): ZoneRow[] {
   const term = foldVietnamese(filters.search.trim());
   return rows.filter(row => (!filters.statusId || String(row.statusId) === filters.statusId)
-    && (!filters.license || (row.licenseState ?? "Missing") === filters.license)
+    && (!filters.license || licenseOf(row, flags) === filters.license)
     && (!term || foldVietnamese(`${row.code} ${row.name} ${row.location ?? ""}`).includes(term)));
 }
-const sortValue = (row: ZoneRow, key: ZoneSortKey): string | number => {
+const sortValue = (row: ZoneRow, key: ZoneSortKey, flags?: ReadonlyMap<string, string>): string | number => {
   switch (key) {
     case "area": return row.area ?? -1;
     case "rafts": return row.inUseRaftCount;
-    case "license": return row.licenseState ?? "Missing";
+    case "license": return licenseOf(row, flags) ?? "ZZ";
     case "status": return row.statusId;
     case "location": return row.location ?? "";
     default: return row[key as "code" | "name"];
   }
 };
 /** `latestWater` maps zone id to its newest measurement time; it only matters for the `water` column. */
-export function sortZones(rows: readonly ZoneRow[], key: ZoneSortKey, direction: "asc" | "desc", latestWater?: ReadonlyMap<string, string | null>): ZoneRow[] {
+export function sortZones(rows: readonly ZoneRow[], key: ZoneSortKey, direction: "asc" | "desc", latestWater?: ReadonlyMap<string, string | null>, flags?: ReadonlyMap<string, string>): ZoneRow[] {
   const sign = direction === "asc" ? 1 : -1;
-  const value = (row: ZoneRow) => key === "water" ? Date.parse(latestWater?.get(row.id) ?? "") || 0 : sortValue(row, key);
+  const value = (row: ZoneRow) => key === "water" ? Date.parse(latestWater?.get(row.id) ?? "") || 0 : sortValue(row, key, flags);
   return [...rows].sort((a, b) => {
     const left = value(a), right = value(b);
     const order = typeof left === "number" && typeof right === "number" ? left - right : String(left).localeCompare(String(right), "vi", { numeric: true });

@@ -1,14 +1,14 @@
 "use client";
 import { FilterChecks } from "@/components/ui/filter-checks";
-import { Field, Select, businessToday, type useRemote } from "@/features/operations/ui";
+import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
+import { allTime, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
+import { Select, type useRemote } from "@/features/operations/ui";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
-import styles from "./purchasing.module.css";
 
 /** Receipt list filters; `status` and `group` hold "|"-joined multi-selections ("-" = none ticked). */
 export type ReceiptListFilterValues = {
   code: string;
-  from: string;
-  to: string;
+  time: TimeRangeValue;
   status: string;
   supplier: string;
   raft: string;
@@ -17,8 +17,7 @@ export type ReceiptListFilterValues = {
 
 export const emptyReceiptListFilters: ReceiptListFilterValues = {
   code: "",
-  from: "",
-  to: "",
+  time: allTime,
   status: "",
   supplier: "",
   raft: "",
@@ -42,21 +41,7 @@ export function ReceiptsListFilters({
 }) {
   return (
     <>
-      <fieldset className={styles.filterGroup}>
-        <legend>Thời gian</legend>
-        <button
-          type="button"
-          className={styles.textAction}
-          onClick={() => {
-            const today = businessToday();
-            onChange({ from: `${today.slice(0, 7)}-01`, to: today });
-          }}
-        >
-          Tháng này
-        </button>
-        <Field label="Từ ngày" type="date" value={filters.from} onChange={(e) => onChange({ from: e.target.value })} />
-        <Field label="Đến ngày" type="date" value={filters.to} onChange={(e) => onChange({ to: e.target.value })} />
-      </fieldset>
+      <TimeRangeFilter legend="Thời gian" value={filters.time} onChange={(time) => onChange({ time })} />
       <FilterChecks
         label="Nhóm hàng"
         value={filters.group}

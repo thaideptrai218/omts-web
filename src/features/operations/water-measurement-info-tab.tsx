@@ -1,8 +1,10 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useEffect, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { Facts, TabFooter } from "@/features/farming-management/detail-parts";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import styles from "@/features/farming-management/farming-management.module.css";
 import * as c from "./contracts";
 import { loadOptions } from "./lookups";
@@ -67,7 +69,7 @@ export function WaterMeasurementInfoTab({ record, zoneName, canChange, busy, dir
     {record.violatedValues && !editing && <p role="alert" className={local.alertLine}>Vượt ngưỡng: {record.violatedValues}</p>}
     <fieldset disabled={locked || mutation.blocked} className="min-w-0 border-0 p-0">
       {editing ? <WaterEditFields draft={draft} setDraft={setDraft} rafts={raftOptions} /> : <>
-        <Facts items={[["Thời điểm đo", displayTime(record.measuredAt)], ["Vùng nuôi", zoneName || record.zoneName], ["Bè đo", record.raftCode], ["Người ghi", record.measuredBy?.name],
+        <Facts items={[["Thời điểm đo", displayTime(record.measuredAt)], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: record.zoneId, search: record.zoneCode })}>{zoneName || record.zoneName}</Link>], ["Bè đo", <Link key="raft" className={styles.link} href={farmingReferenceHref("raft", { zoneId: record.zoneId, recordId: record.raftId, search: record.raftCode })}>{record.raftCode}</Link>], ["Người ghi", record.measuredBy?.name],
           ["Trạng thái", statusLabel(record.statusCode)], ["Cảnh báo", statusLabel(record.alertState)], ["Lý do hủy", record.voidReason]]} />
         <ThresholdsUsed record={record} />
       </>}

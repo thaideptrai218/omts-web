@@ -1,9 +1,12 @@
 import "server-only";
 import { z } from "zod";
+import { raftGeometryRequest } from "@/features/rafts-api/raft-geometry";
 import { resourceKeys, resources, resourceCategoryFilters, projectResource, resourceAllowed, type ResourceKey } from "@/features/api-workspace/resources";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
+import { readFarmingProblem } from "../backend/farming-problem-copy";
+import { projectCoordinateWarnings } from "@/features/farming-api/coordinate-warnings";
 import { readBackendResponse } from "../backend/backend-response";
 import { sameEmployeeSession } from "../employees/employee-session";
 
@@ -36,7 +39,9 @@ export async function handleResourceRequest(request: Request, resourceName: stri
       if (new Set(keys).size !== keys.length || keys.some((name) => !["proposal", "id", "zoneId", "search", "page", "pageSize", "statusId", ...(category ? [category.key] : [])].includes(name))) return json({ status: "invalid-input" }, 400);
       if (category && query.has(category.key) && (query.has("id") || !category.options.some(([value]) => value === query.get(category.key)))) return json({ status: "invalid-input" }, 400);
       if (query.has("proposal")) {
-        if (key !== "input-items" || query.size !== 1 || query.get("proposal") !== "1") return json({ status: "invalid-input" }, 400);
+        // Code proposals: input items, zones (KV01...) and rafts (needs the zone id in the query).
+        const proposable = key === "input-items" || key === "zones" || key === "rafts";
+        if (!proposable || query.size !== (key === "rafts" ? 2 : 1) || query.get("proposal") !== "1" || (key === "rafts") !== query.has("zoneId")) return json({ status: "invalid-input" }, 400);
         action = "proposal";
       }
       if (query.has("id")) {
@@ -64,7 +69,11 @@ export async function handleResourceRequest(request: Request, resourceName: stri
         || (key === "customers" && !["create", "update"].includes(action))
         || (["lock", "unlock"].includes(action) && key !== "accounts")) return json({ status: "invalid-input" }, 400);
       const allowed = [...resources[key].fields.map((field) => field.key), "rowVersion", "reason",
-        ...(key === "employees" ? ["workingZoneIds", "bankAccount", "accountId"] : []), ...(key === "rafts" ? ["laneCount"] : [])];
+        ...(key === "employees" ? ["workingZoneIds", "bankAccount", "accountId"] : []), ...(key === "rafts" ? ["laneCount", "lengthM", "widthM", "laneLengths"] : [])];
+      if (key === "rafts" && ["create", "update"].includes(action)) {
+        const { lengthM, widthM, laneLengths } = body;
+        if (!raftGeometryRequest.safeParse({ lengthM, widthM, laneLengths }).success) return json({ status: "invalid-input" }, 400);
+      }
       if (Object.keys(body).some((field) => !allowed.includes(field))) return json({ status: "invalid-input" }, 400);
     }
     const initial = await gateway.resolve(request.headers.get("cookie"));
@@ -92,25 +101,29 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     const controller = new AbortController();
     const onAbort = () => controller.abort(); request.signal.addEventListener("abort", onAbort, { once: true });
     const timeout = setTimeout(onAbort, config.config.timeoutMs);
-    let upstream;
+    let upstream, failedCopy: Response | undefined;
     try {
       const response = await fetch(target, { method, headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`,
         ...(payload ? { "Content-Type": "application/json" } : {}) }, body: payload ? JSON.stringify(payload) : undefined,
         credentials: "omit", redirect: "error", cache: "no-store", signal: controller.signal });
+      failedCopy = response.ok || key !== "zones" && key !== "rafts" ? undefined : response.clone();
       upstream = await readBackendResponse(response, "profileRead", ["suppliers", "input-items"].includes(key));
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", onAbort); }
     const current = await gateway.resolve(request.headers.get("cookie"));
     if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
     if (request.signal.aborted) return json({ status: "unavailable" }, 503);
-    if (upstream.status === "http-error") return json({ status: "rejected", code: upstream.code, ...(upstream.catalogueProblem ? { catalogueProblem: upstream.catalogueProblem } : {}) }, upstream.httpStatus);
+    if (upstream.status === "http-error") return json({ status: "rejected", code: upstream.code, ...(await readFarmingProblem(failedCopy).then(problem => problem ? { problem } : {})), ...(upstream.catalogueProblem ? { catalogueProblem: upstream.catalogueProblem } : {}) }, upstream.httpStatus);
     if (upstream.status !== "success" || ![200, 201].includes(upstream.httpStatus)) return json({ status: "unavailable" }, 503);
     if (action === "proposal") {
-      const proposal = z.object({ code: z.string().min(1).max(30), seedUnit: z.string().min(1).max(50).nullable() }).safeParse(upstream.data);
+      const proposal = z.object({ code: z.string().min(1).max(30), seedUnit: z.string().min(1).max(50).nullish() }).safeParse(upstream.data);
       return proposal.success ? json({ status: "success", data: proposal.data }) : json({ status: "invalid-response" }, 502);
     }
     const result = projectResource(key, upstream.data, action !== "list", action === "list"
       ? { page: Number(query.get("page") ?? 1), pageSize: Number(query.get("pageSize") ?? 20), search: query.get("search") ?? undefined } : undefined);
     if (recordId && (!result || typeof result !== "object" || !("id" in result) || result.id !== recordId)) return json({ status: "invalid-response" }, 502);
-    return result === undefined ? json({ status: "invalid-response" }, 502) : json({ status: "success", data: result });
+    if (result === undefined) return json({ status: "invalid-response" }, 502);
+    // Zone and raft saves may carry non-blocking coordinate warnings (outside Vietnam, raft far from its zone); pass the allow-listed ones on with the record.
+    const warnings = (key === "zones" || key === "rafts") && (action === "create" || action === "update") ? projectCoordinateWarnings(upstream.data) : [];
+    return json({ status: "success", data: warnings.length && typeof result === "object" ? { ...result, warnings } : result });
   } catch { return json({ status: "unavailable" }, 503); }
 }

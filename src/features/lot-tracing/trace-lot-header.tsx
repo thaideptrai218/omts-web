@@ -20,11 +20,7 @@ export function TraceLotHeader({ trace, exporting, publishing, onExport, onPubli
             <span>Công bố nguồn gốc <StatusPill tone={originTone(trace.originState)}>{originLabel(trace.originState)}</StatusPill></span>
           </div>
         </div>
-        <div className={s.actions}>
-          {trace.canCorrect && <Button className="w-auto" variant="secondary" onClick={onCorrect}>Sửa dữ liệu truy xuất của bè {trace.raftCode}</Button>}
-          {trace.canExport && <Button className="w-auto" variant="secondary" isPending={exporting} pendingLabel="Đang xuất..." onClick={onExport}>Xuất file</Button>}
-          {trace.canPublish && <Button className="w-auto" isPending={publishing} pendingLabel="Đang kiểm tra..." onClick={onPublish}>{trace.originState === "Withdrawn" ? "Công bố lại" : "Công bố"}</Button>}
-        </div>
+
       </div>
       <dl className={s.facts}>
         <div><dt>Thu hoạch</dt><dd>{formatDateTime(trace.harvestedAt)}</dd></div>
@@ -36,6 +32,11 @@ export function TraceLotHeader({ trace, exporting, publishing, onExport, onPubli
       </dl>
       {trace.originState === "NotPublished" && trace.invoices.length > 0 && <p className={s.hint}>Lô có trên {trace.invoices.length} hóa đơn bán. Khi công bố, trang nguồn gốc của mọi hóa đơn có mã QR bán lô này sẽ hiển thị thông tin nguồn gốc.</p>}
       {trace.corrections.length > 0 && <p className={s.hint}>Dữ liệu thu hoạch của lô đã được sửa ngày {formatDay(trace.corrections[0].correctedAt)}. <Marks marks={trace.corrections} /></p>}
+        <div className={s.actions}>
+          {trace.canCorrect && <Button type="button" className="w-auto" variant="secondary" onClick={onCorrect}>Sửa dữ liệu truy xuất của bè {trace.raftCode}</Button>}
+          {trace.canExport && <Button type="button" className="w-auto" variant="secondary" isPending={exporting} pendingLabel="Đang xuất..." onClick={onExport}>Xuất file</Button>}
+          {trace.canPublish && <Button type="button" className="w-auto" isPending={publishing} pendingLabel="Đang kiểm tra..." onClick={onPublish}>{trace.originState === "Withdrawn" ? "Công bố lại" : "Công bố"}</Button>}
+        </div>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import { SelectBox } from "@/components/ui/select-box";
+import { MoneyInput as SharedMoneyInput } from "@/components/form/money-input";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -45,8 +46,9 @@ export function QuantityStepper({ value, onChange, label, max, invalid }: { valu
   </div>;
 }
 
+/** Document-screen money box: the shared MoneyInput with the older number-only call signature (empty = 0). */
 export function MoneyInput({ value, onChange, label, disabled, invalid, className }: { value: number | null; onChange(value: number): void; label: string; disabled?: boolean; invalid?: boolean; className?: string }) {
-  return <input aria-label={label} aria-invalid={invalid || undefined} inputMode="numeric" className={className} disabled={disabled} value={value ? fmt(value) : ""} onChange={(event) => onChange(digits(event.target.value))} />;
+  return <SharedMoneyInput label={label} invalid={invalid} className={className} disabled={disabled} value={value || null} onChange={(next) => onChange(next ?? 0)} />;
 }
 
 export function ItemFinder({ placeholder, items, onPick }: { placeholder: string; items: readonly ItemOption[]; onPick(item: ItemOption): void }) {

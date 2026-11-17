@@ -1,5 +1,7 @@
 "use client";
+import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { useMemo, useState } from "react";
+import { MoneyField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { loadOptions } from "@/features/operations/lookups";
@@ -85,8 +87,8 @@ export function PaymentEditor({
     const advanceNote = confirmAdvance ? "(đã xác nhận trả trước)" : "";
     const duplicateNote = confirmDuplicate ? " (đã xác nhận mã ngân hàng trùng)" : "";
     const discountNote =
-      kind === "Payment" && Number(discount) > 0 ? `, chiết khấu ${Number(discount).toLocaleString("vi-VN")} đồng` : "";
-    const question = `${verb} ${Number(amount || 0).toLocaleString("vi-VN")} đồng${discountNote} ${advanceNote}${duplicateNote}?`;
+      kind === "Payment" && Number(discount) > 0 ? `, chiết khấu ${formatVndWithSymbol(Number(discount))}` : "";
+    const question = `${verb} ${formatVndWithSymbol(Number(amount || 0))}${discountNote} ${advanceNote}${duplicateNote}?`;
     if (await editor.submit(question, () => payments.write("create", parsed.data, c.payment))) onSaved();
   }
 
@@ -155,27 +157,26 @@ export function PaymentEditor({
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
-            <Field
-              label="Số tiền (đồng) *"
-              type="number"
+            <MoneyField
+              label="Số tiền *"
               min={0}
-              step={1}
+              autoThousands
+              showWords
               required
               value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
+              onChange={(next) => {
+                setAmount(next);
                 setAdvance(false);
               }}
             />
             {kind === "Payment" && (
-              <Field
-                label="Chiết khấu thanh toán (đồng)"
-                type="number"
+              <MoneyField
+                label="Chiết khấu thanh toán"
                 min={0}
-                step={1}
+                autoThousands
                 value={record ? String((record as { discountAmount?: number }).discountAmount ?? 0) : discount}
-                onChange={(e) => {
-                  setDiscount(e.target.value);
+                onChange={(next) => {
+                  setDiscount(next);
                   setAdvance(false);
                 }}
               />

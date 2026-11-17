@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { createOperationsRepository } from "@/features/operations/repository";
+import { useToast } from "@/components/ui/toast-provider";
 import { useMutation } from "@/features/operations/ui";
 import { withdrawPreview, withdrawn, type WithdrawPreview, type Withdrawn } from "./withdraw-contracts";
 
@@ -11,6 +12,7 @@ const repo = createOperationsRepository("lot-tracing");
  * Thu hồi đi qua useMutation: khi chưa rõ kết quả thì khóa, không gửi lại; đóng hộp thoại sẽ tải lại trạng thái lô.
  */
 export function useWithdrawal(lotId: string, onDone: () => void) {
+  const { notify } = useToast();
   const previewing = useMutation(), submitting = useMutation();
   const [preview, setPreview] = useState<WithdrawPreview>(), [result, setResult] = useState<Withdrawn>();
 
@@ -23,6 +25,7 @@ export function useWithdrawal(lotId: string, onDone: () => void) {
     const data = await submitting.run(() => repo.write("withdraw", { reason }, withdrawn, lotId));
     if (!data) return;
     setResult(data);
+    notify({ tone: "success", title: `Đã thu hồi thông tin nguồn gốc lô ${data.lot.lotCode}.` });
   }
   /** Đóng hộp thoại rồi làm mới lô khi đã thu hồi, chưa rõ kết quả hoặc lô đã đổi trạng thái (409). Làm mới sớm hơn sẽ làm mất danh sách khách cần gọi. */
   function close() {

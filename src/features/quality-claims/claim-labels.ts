@@ -1,3 +1,4 @@
+import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { CLAIM_STATUS, type ClaimOffer } from "./claim-contracts";
 
 /**
@@ -19,7 +20,7 @@ export const sendingChannel = (channel: string) => lookup({ Sms: "Tin nhắn SMS
 
 const vnNumber = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 });
 export const num = (value: number) => vnNumber.format(value);
-export const vnd = (value: number | null) => (value === null ? "—" : `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)} ₫`);
+export const vnd = (value: number | null) => (value === null ? "—" : formatVndWithSymbol(value));
 /** "2026-11-09" -> "09/11/2026" (ghép chuỗi, không qua múi giờ). */
 export const dateText = (iso: string) => { const [y, m, d] = iso.slice(0, 10).split("-"); return `${d}/${m}/${y}`; };
 export const dateTimeText = (iso: string) => new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(iso));

@@ -1,4 +1,5 @@
 "use client";
+import { RecordPhotoPicker } from "@/features/cultivation-api/record-photo-picker";
 import { photoProblem } from "./correction-draft";
 import s from "./lot-tracing.module.css";
 
@@ -14,20 +15,11 @@ export function PhotoKeeper({ existing, keep, files, max, min, disabled, onChang
       {existing.length > 0 && (
         <ul className={s.photoList}>
           {existing.map((key, index) => (
-            <li key={key}><label className={s.check}><input type="checkbox" checked={keep.includes(key)} onChange={() => toggle(key)} /><span>Giữ ảnh {index + 1}</span></label></li>
+            <li key={key}><label className={s.check}><input type="checkbox" className="omts-check" checked={keep.includes(key)} onChange={() => toggle(key)} /><span>Giữ ảnh {index + 1}</span></label></li>
           ))}
         </ul>
       )}
-      <input type="file" accept="image/jpeg,image/png" multiple aria-label="Thêm ảnh mới" className={s.file}
-        onChange={(event) => { const picked = [...(event.target.files ?? [])]; event.target.value = ""; onChange({ keep, files: [...files, ...picked].slice(0, max) }); }} />
-      {files.length > 0 && (
-        <ul className={s.photoList}>
-          {files.map((file, index) => (
-            <li key={`${file.name}-${index}`} className={s.fileRow}><span>{file.name}</span>
-              <button type="button" className={s.linkBtn} onClick={() => onChange({ keep, files: files.filter((_, i) => i !== index) })}>Bỏ</button></li>
-          ))}
-        </ul>
-      )}
+      <RecordPhotoPicker label="Thêm ảnh mới" files={files} disabled={disabled} onChange={picked => onChange({ keep, files: picked })} />
       {problem && <p role="alert" className={s.error}>{problem}</p>}
       {total > max && <p role="alert" className={s.error}>Tối đa {max} ảnh.</p>}
       {total < min && <p role="alert" className={s.error}>Cần ít nhất {min} ảnh.</p>}

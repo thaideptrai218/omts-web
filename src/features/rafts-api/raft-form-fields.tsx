@@ -1,22 +1,54 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/management-screen/management-table";
 import type { Dispatch, SetStateAction } from "react";
-import { Field, Note } from "@/features/operations/ui";
+import { Field, Skeleton } from "@/features/operations/ui";
+import { RaftConditionNoteField } from "./raft-condition-note";
+import { LocationPicker } from "@/features/farming-api/location-picker";
 import styles from "@/features/farming-management/farming-management.module.css";
 import type { RaftDraft, RaftField } from "./raft-model";
+import { RaftGeometryFields } from "./raft-geometry-fields";
+import type { RaftDetail } from "./raft-model";
+import { useRaftLocationPins } from "./use-raft-location-pins";
 
 const labels: readonly (readonly [RaftField, string, boolean])[] = [["code", "Mã bè", true], ["size", "Kích thước", true], ["laneCount", "Số làn đang dùng", true], ["location", "Vị trí", false],
-  ["latitude", "Vĩ độ", true], ["longitude", "Kinh độ", true], ["conditionNotes", "Tình trạng bè", false]];
-/** One input per raft field, in the same order and grid as the read-only facts. `only` limits the fields of a collapsible group. */
-export function RaftFormFields({ draft, setDraft, errors, only }: {
-  draft: RaftDraft; setDraft: Dispatch<SetStateAction<RaftDraft>>; errors: Partial<Record<RaftField, string>>; only?: readonly RaftField[];
+  ["conditionNotes", "Tình trạng bè", false]];
+const isCoordinate = (key: RaftField) => key === "latitude" || key === "longitude";
+/**
+ * One input per raft field, in the same order and grid as the read-only facts. `only` limits the fields of a collapsible group.
+ * Latitude and longitude are chosen on a map next to the zone and its other rafts (`zoneId`), never typed. `selfId` leaves the raft being edited out of those pins.
+ */
+export function RaftFormFields({ draft, setDraft, errors, only, zoneId, selfId, laneCountLocked, lanes, canEditLaneLengths, requireLocation = false }: {
+  draft: RaftDraft; setDraft: Dispatch<SetStateAction<RaftDraft>>; errors: Partial<Record<RaftField, string>>; only?: readonly RaftField[]; zoneId: string; selfId?: string; laneCountLocked?: string; lanes?: RaftDetail["lanes"]; canEditLaneLengths?: boolean;
+  /** Creating a raft requires the written location (the text, not the map point); editing keeps old rafts without one saveable. */
+  requireLocation?: boolean;
 }) {
-  return <div className={styles.fields}>{labels.filter(([key]) => !only || only.includes(key)).map(([key, label, required]) => {
-    const common = { name: key, value: draft[key], "aria-invalid": !!errors[key], "aria-describedby": errors[key] ? `raft-error-${key}` : undefined,
-      onChange: (event: { target: { value: string } }) => setDraft(current => ({ ...current, [key]: event.target.value })) };
-    return <div key={key}>
-      {key === "conditionNotes" ? <Note label={label} maxLength={1000} {...common} />
-        : <Field label={required ? `${label} *` : label} required={required} maxLength={key === "location" || key === "size" ? 300 : 100} inputMode={key === "latitude" || key === "longitude" ? "decimal" : key === "laneCount" ? "numeric" : undefined} {...common} />}
-      {errors[key] && <p id={`raft-error-${key}`} role="alert" className={styles.fieldError}>{errors[key]}</p>}
-    </div>;
-  })}</div>;
+  if (!only) return <div className="space-y-3">
+    <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} only={["code"]} />
+    <CollapsibleSection title="Kích thước và làn nuôi" description="Diện tích tự tính và bố trí các làn." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} only={["size", "laneCount"]} /></CollapsibleSection>
+    <CollapsibleSection title="Vị trí trên bản đồ" description="Địa điểm và tọa độ của bè." defaultOpen={false} columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={selfId} only={["location", "latitude", "longitude"]} /></CollapsibleSection>
+    <CollapsibleSection title="Ghi chú hiện trạng" description="Không bắt buộc." columns={1}><RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} only={["conditionNotes"]} /></CollapsibleSection>
+  </div>;
+  const withMap = !only || only.some(isCoordinate), shown = labels.filter(([key]) => key !== "laneCount" && (!only || only.includes(key)));
+  return <>
+    {shown.length > 0 && <div className={shown.some(([key]) => key === "size" || key === "conditionNotes") ? "min-w-0" : styles.fields}>{shown.map(([key, label, required]) => {
+      const common = { name: key, value: draft[key], "aria-invalid": !!errors[key], "aria-describedby": errors[key] ? `raft-error-${key}` : undefined,
+        onChange: (event: { target: { value: string } }) => setDraft(current => ({ ...current, [key]: event.target.value })) };
+      if (key === "size") return <div key={key}><RaftGeometryFields draft={draft} setDraft={setDraft} error={errors.size || errors.laneCount} laneCountLocked={laneCountLocked} lanes={lanes} canEditLaneLengths={canEditLaneLengths} /></div>;
+      return <div key={key}>
+        {key === "conditionNotes" ? <RaftConditionNoteField value={draft.conditionNotes} onChange={common.onChange} />
+          : <Field label={required || key === "location" && requireLocation ? `${label} *` : label} required={required || key === "location" && requireLocation} maxLength={key === "location" ? 300 : 100} inputMode={key === "laneCount" ? "numeric" : undefined} {...common} />}
+        {errors[key] && <p id={`raft-error-${key}`} role="alert" className={styles.fieldError}>{errors[key]}</p>}
+      </div>;
+    })}</div>}
+    {withMap && <div className={shown.length ? "mt-4" : undefined}>
+      <RaftLocationSection draft={draft} setDraft={setDraft} error={errors.latitude || errors.longitude ? "Chọn vị trí của bè trên bản đồ." : undefined} zoneId={zoneId} selfId={selfId} />
+    </div>}
+  </>;
+}
+
+/** Own component so the zone and raft reads only happen where a map is actually shown. */
+function RaftLocationSection({ draft, setDraft, error, zoneId, selfId }: { draft: RaftDraft; setDraft: Dispatch<SetStateAction<RaftDraft>>; error?: string; zoneId: string; selfId?: string }) {
+  const context = useRaftLocationPins(zoneId, selfId);
+  return context.loading ? <Skeleton /> : <LocationPicker id="raft-location" latitude={draft.latitude} longitude={draft.longitude} pins={context.pins} error={error}
+    onChange={next => setDraft(current => ({ ...current, ...next }))} />;
 }

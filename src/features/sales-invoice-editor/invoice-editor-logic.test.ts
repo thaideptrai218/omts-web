@@ -157,7 +157,7 @@ describe("thân yêu cầu", () => {
   });
   it("hợp đồng của form xử lý đặt hàng khớp phản hồi của backend, dòng đã đủ không có lô gợi ý", () => {
     const draft = invoiceDraft.parse({
-      order: { id: id(50), code: "DH000001", statusId: 4101, status: "Draft", canFinish: false }, zone: { id: id(91), code: "VP01", name: "V" }, customer: null, walkInCustomer: true,
+      order: { id: id(50), code: "DH000001", statusId: 4401, status: "Draft", canFinish: false }, zone: { id: id(91), code: "VP01", name: "V" }, customer: null, walkInCustomer: true,
       lines: [{ salesOrderLineId: id(11), lineNumber: 1, productId: id(1), productCode: "SP1", productName: "H", unitId: id(21), unitCode: "K", unitName: "kg", factor: 1, orderedQuantity: 1, deliveredQuantity: 1, quantity: 0, unitPrice: 5, listPrice: 5, amount: 0,
         suggestedLotId: null, suggestedLotCode: null, suggestedByPlan: false }],
       subtotal: 0, orderDiscount: 0, discountShare: 0, total: 0, advanceLeft: 0, advanceUse: 0, nextCode: "HD000002",

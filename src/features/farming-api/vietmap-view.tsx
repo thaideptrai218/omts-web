@@ -4,12 +4,12 @@ import type { Map as VietMap } from "@vietmap/vietmap-gl-js/dist/vietmap-gl";
 import "@vietmap/vietmap-gl-js/dist/vietmap-gl.css";
 import { Button } from "@/components/ui/button";
 import type { MapZone } from "./zone-map-contract";
-const apiKey = process.env.NEXT_PUBLIC_VIETMAP_API_KEY?.trim();
+export const apiKey = process.env.NEXT_PUBLIC_VIETMAP_API_KEY?.trim();
 export type MapSelection = { kind: "zones" | "rafts"; id: string; zoneId: string; label: string };
 function coordinate(point: { latitude: number | null; longitude: number | null }): [number, number] | undefined {
   return typeof point.latitude === "number" && typeof point.longitude === "number" && Number.isFinite(point.latitude) && Number.isFinite(point.longitude) && Math.abs(point.latitude) <= 90 && Math.abs(point.longitude) <= 180 ? [point.longitude, point.latitude] : undefined;
 }
-function failure(cause: unknown) {
+export function failure(cause: unknown) {
   const event = cause as { status?: number; error?: { status?: number } } | undefined;
   const status = event?.status ?? event?.error?.status;
   if (status === 423 || status === 429) return "Dịch vụ bản đồ đang giới hạn lượt truy cập. Vui lòng thử lại sau.";
@@ -28,7 +28,8 @@ export default function VietMapView({ zones, onSelect, fill }: { zones: MapZone[
     return result;
   }), [zones]);
   useEffect(() => {
-    if (!apiKey || !points.length || !container.current) return;
+    const key = apiKey;
+    if (!key || !points.length || !container.current) return;
     let map: VietMap | undefined, observer: ResizeObserver | undefined, disposed = false, loaded = false;
     const events = new AbortController();
     const timeout = setTimeout(() => { if (!disposed && !loaded) setError("Bản đồ đang tải lâu hơn dự kiến. Hãy kiểm tra kết nối hoặc thử lại."); }, 12_000);
@@ -36,7 +37,7 @@ export default function VietMapView({ zones, onSelect, fill }: { zones: MapZone[
       if (disposed || !container.current) return;
       setReady(false); setError(undefined); setSelected(undefined);
       try {
-        map = new sdk.Map({ container: container.current, style: `https://maps.vietmap.vn/maps/styles/hm/style.json?apikey=${encodeURIComponent(apiKey)}`, center: points[0].position, zoom: 15, attributionControl: {} });
+        map = new sdk.Map({ container: container.current, style: `https://maps.vietmap.vn/maps/styles/hm/style.json?apikey=${encodeURIComponent(key)}`, center: points[0].position, zoom: 15, attributionControl: {} });
         map.addControl(new sdk.NavigationControl(), "top-right");
         map.on("error", cause => { if (!disposed) setError(failure(cause)); });
         map.on("load", () => {

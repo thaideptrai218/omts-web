@@ -3,7 +3,7 @@ import { employeeViewSchema } from "@/features/employee-management/api/employee-
 
 /** No grants or subject type cross this step; roles are assigned in account management. */
 export const issueEmployeeAccountRequestSchema = z.strictObject({
-  username: z.string().trim().min(1),
+  username: z.string().trim().regex(/^(?=[A-Za-z0-9._-]*[A-Za-z])[A-Za-z0-9._-]{3,50}$/u, "Tên đăng nhập gồm 3–50 ký tự: chữ, số, dấu chấm, gạch ngang hoặc gạch dưới; cần ít nhất một chữ cái."),
 });
 
 /** One-use handover only. Never use this schema for a cached employee read. */

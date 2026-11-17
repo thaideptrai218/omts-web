@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { useCallback, useState } from "react";
 import { ListStateMessage, ManagementPagination } from "@/components/ui/management-screen/management-table";
 import { StatusPill } from "@/components/ui/management-page";
@@ -24,12 +25,12 @@ export function ZoneStaffTab({ zoneId }: { zoneId: string }) {
       : <>
         <table className={styles.subTable}><thead><tr><th scope="col">Họ và tên</th><th scope="col">Số điện thoại</th><th scope="col">Loại nhân viên</th><th scope="col">Công việc</th><th scope="col">Tình trạng</th></tr></thead>
           <tbody>{remote.data.items.map(employee => <tr key={employee.id}>
-            <td><Link className={styles.link} href={`/employees?recordId=${encodeURIComponent(employee.id)}&search=${encodeURIComponent(employee.fullName)}`}>{employee.fullName}</Link></td>
+            <td><Link className={styles.link} href={farmingReferenceHref("employee", { recordId: employee.id, search: employee.fullName })}>{employee.fullName}</Link></td>
             <td>{employee.phoneNumber ?? "—"}</td><td>{employeeTypeLabel(employee.employeeType)}</td><td>{employee.jobTypes.map(job => job.name).join(", ") || "—"}</td>
             <td><StatusPill tone={employee.status === "Employed" ? "success" : "neutral"}>{employmentLabel(employee.status)}</StatusPill></td>
           </tr>)}</tbody></table>
         <ManagementPagination page={remote.data.page} pageSize={pageSize} total={remote.data.total} unit="nhân viên" onPage={setPage} onPageSize={size => { setPageSize(size); setPage(1); }} />
       </>}
-    <TabFooter right={<Link className={styles.footerLink} href="/employees">Mở danh sách nhân viên</Link>} />
+    <TabFooter right={<Link className={styles.footerLink} href={farmingReferenceHref("employee")}>Mở danh sách nhân viên</Link>} />
   </>;
 }
