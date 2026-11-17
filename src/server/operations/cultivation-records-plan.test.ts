@@ -124,6 +124,8 @@ describe("seeding complete: confirm an empty seeding", () => {
     expect(post("seeding", { action: "complete", id: cycle, zoneId: zone, body: { rowVersion: "AAAA", confirmEmpty: true } })?.body).toEqual({ rowVersion: "AAAA", confirmEmpty: true });
     expect(post("seeding", { action: "complete", id: cycle, zoneId: zone, body: { rowVersion: "AAAA" } })?.body).toEqual({ rowVersion: "AAAA" });
     expect(post("seeding", { action: "complete", id: cycle, zoneId: zone, body: { rowVersion: "AAAA", confirmEmpty: "yes" } })).toBeUndefined();
-    expect(post("seeding", { action: "complete", id: cycle, zoneId: zone, body: { rowVersion: "AAAA", ownerApproved: true } })).toBeUndefined();
+    // The Owner may complete while crew is not checked out (MSG-LABOR-37), with a reason; anything else stays refused.
+    expect(post("seeding", { action: "complete", id: cycle, zoneId: zone, body: { rowVersion: "AAAA", ownerApproved: true, approvalReason: "Quên điểm danh" } })?.body).toEqual({ rowVersion: "AAAA", ownerApproved: true, approvalReason: "Quên điểm danh" });
+    expect(post("seeding", { action: "complete", id: cycle, zoneId: zone, body: { rowVersion: "AAAA", ownerApproved: true, extra: 1 } })).toBeUndefined();
   });
 });

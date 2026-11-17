@@ -10,7 +10,7 @@ vi.mock("./records-shared", async (importOriginal) => {
   return { ...original, seedRepo: { read, write, upload }, harvestRepo: { read, write, upload }, useAllowed: () => () => true };
 });
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
-vi.mock("./harvest-crew-picker", () => ({ HarvestCrewPicker: ({ onChange }: { onChange(ids: string[]): void }) => <button type="button" onClick={() => onChange(["00000000-0000-4000-8000-000000000001"])}>Chọn An cùng thu</button> }));
+vi.mock("./record-crew-picker", () => ({ RecordCrewPicker: ({ onChange }: { onChange(ids: string[]): void }) => <button type="button" onClick={() => onChange(["00000000-0000-4000-8000-000000000001"])}>Chọn An cùng thu</button> }));
 vi.mock("@/features/products/repository", async (original) => ({ ...(await original<typeof import("@/features/products/repository")>()), productRepository: { all: vi.fn().mockResolvedValue({ status: "success", data: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", code: "SP000001", name: "Hàu sữa", unitPrice: 60000, statusId: 101, status: "In Use", rowVersion: "v", unit: "kg", createdAt: "x", units: [] }] }) } }));
 // jsdom cannot decode images; the picker only needs the file back.
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));

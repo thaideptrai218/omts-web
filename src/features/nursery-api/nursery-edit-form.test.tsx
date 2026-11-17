@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const save = vi.hoisted(() => vi.fn());
+vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify: vi.fn() }) }));
+vi.mock("@/features/cultivation-api/record-crew-picker", () => ({ RecordCrewPicker: () => null }));
 vi.mock("./service", async importOriginal => ({ ...await importOriginal<typeof import("./service")>(), nurseryService: { save } }));
 import { nurseryDetailSchema } from "./contracts";
 import { NurseryEditForm, type NurseryEditGuard } from "./nursery-edit-form";

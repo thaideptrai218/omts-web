@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@/features/cultivation-api/record-crew-attendance", async importOriginal => ({ ...(await importOriginal<typeof import("@/features/cultivation-api/record-crew-attendance")>()), useIsCooperativeOwner: () => false }));
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { completionBatch as batch } from "./nursery-completion-test-fixtures";
 import { NurseryCompleteDialog } from "./nursery-complete-dialog";

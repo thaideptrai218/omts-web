@@ -14,7 +14,7 @@ export function farmingRecordUpload(area: OperationArea, action: string, id?: st
   let plan: OperationPlan, validator: z.ZodType, requiredPhotos = false;
   if (area === "seeding" && ["seeding-record", "seeding-correct"].includes(action)) {
     const correcting = action === "seeding-correct";
-    plan = { ...base, path: correcting ? `/api/seeding-records/${id}` : `/api/cultivation-cycles/${id}/seeding-records`, method: correcting ? "PUT" : "POST", permission: correcting ? "Edit" : "Create", schema: z.object({ record: c.seedingRecord }) };
+    plan = { ...base, path: correcting ? `/api/seeding-records/${id}` : `/api/cultivation-cycles/${id}/seeding-records`, method: correcting ? "PUT" : "POST", permission: correcting ? "Edit" : "Create", schema: c.seedingSaved };
     validator = correcting ? c.seedCorrection : c.seedValues; requiredPhotos = !correcting;
   } else if (area === "harvest" && ["harvest-record", "harvest-correct"].includes(action)) {
     const correcting = action === "harvest-correct";

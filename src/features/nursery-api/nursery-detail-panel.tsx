@@ -19,6 +19,8 @@ import { nurseryStatus, nurseryStatusTone, quantityText, type NurseryDetail } fr
 import { NurseryEditForm, type NurseryEditGuard } from "./nursery-edit-form";
 import { NurseryHistoryTab } from "./nursery-history-tab";
 import { nurseryDisplayText } from "./nursery-display-text";
+import { RecordCrewDetail } from "@/features/cultivation-api/record-crew-detail";
+import { openCrewOf, useIsCooperativeOwner } from "@/features/cultivation-api/record-crew-attendance";
 import { NurseryPhotoGallery } from "./nursery-photo-gallery";
 import { NurseryUsage } from "./nursery-usage";
 import { NurseryInventoryFacts } from "./nursery-inventory-facts";
@@ -49,6 +51,8 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
   const correct = batch?.statusId === 4002 && can("Edit");
   const close = batch?.statusId === 4002 && batch.remaining > 0 && can("Edit");
   const busy = detail.loading || mutation.pending || mutation.blocked;
+  // Employees of this batch not checked out yet lock "Hoàn tất ươm" (only the Owner may still complete, with a reason).
+  const isOwner = useIsCooperativeOwner(), crewOpen = batch ? openCrewOf(batch.crew) : undefined;
   function saved(record: NurseryDetail) { detail.replace(record); setEditing(false); setClosing(false); onChanged(record); }
   async function leaveEditor(action: () => void) {
     if (editing && !(await editGuard.current?.canLeave())) return;
@@ -80,13 +84,15 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
             ...(batch.completedOn ? [["Ngày hoàn tất", formatVietnameseDate(batch.completedOn)]] as const : []),
             ...(batch.closedOn ? [["Ngày đóng đợt ươm", formatVietnameseDate(batch.closedOn)]] as const : []),
             ["Ghi chú", nurseryDisplayText(batch.note)], ...(batch.cancelReason ? [["Lý do hủy", nurseryDisplayText(batch.cancelReason)]] as const : [])]} />
+          <RecordCrewDetail label="Nhân viên ươm" crew={batch.crew} />
+          {complete && crewOpen && <p role="status" className="my-2 text-sm text-warning">Còn {crewOpen.length} nhân viên chưa điểm danh ra về nên chưa thể hoàn tất ươm.{isOwner ? " Chủ hợp tác xã vẫn có thể hoàn tất kèm lý do." : " Hãy chấm công ra về cho nhân viên trước."}</p>}
           <NurseryInventoryFacts batch={batch} />
           <NurseryUsage batch={batch} />
           <TabFooter left={edit && <Button key="cancel-nursery" type="button" variant="secondary" className="w-auto border-danger text-danger" disabled={busy} onClick={() => void cancel()}>Xóa đợt ươm</Button>}
             right={<>{edit && <Button key="edit-nursery" type="button" variant="secondary" className="w-auto" disabled={busy} onClick={() => setEditing(true)}>Chỉnh sửa</Button>}
               {correct && <Button key="correct-nursery" type="button" variant="secondary" className="w-auto" disabled={busy} onClick={() => onCorrect(batch)}>Sửa số sống sót (ước tính)</Button>}
               {close && <Button key="close-nursery" type="button" variant="secondary" className="w-auto" disabled={busy} onClick={() => setClosing(true)}>Đóng đợt ươm</Button>}
-              {complete && <Button key="complete-nursery" type="button" className="w-auto" disabled={busy} onClick={() => onComplete(batch)}>Hoàn tất ươm</Button>}</>} />
+              {complete && <Button key="complete-nursery" type="button" className="w-auto" disabled={busy || !!crewOpen && !isOwner} title={crewOpen && !isOwner ? `Còn ${crewOpen.length} nhân viên chưa điểm danh ra về` : undefined} onClick={() => onComplete(batch)}>Hoàn tất ươm</Button>}</>} />
         </>)}
         {tab === "photos" && <NurseryPhotoGallery batch={batch} />}
         {tab === "history" && <NurseryHistoryTab key={batch.rowVersion} id={batch.id} zoneId={batch.zoneId} />}

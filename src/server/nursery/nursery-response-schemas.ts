@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { historyChange, historyEntry } from "@/features/history/history-contracts";
+import { crewAssignmentResult, crewMember } from "@/features/cultivation-api/record-crew-contracts";
 
 const number = z.number().finite();
 const text = z.string().nullish();
@@ -32,10 +33,10 @@ export const nurseryDetail = z.object({ ...common, seedLot: lot, seedLotOnHand: 
   note: text, issueId: text, issueCode: text, cancelReason: text, cancelledAt: text,
   recordedByAccountId: text, recordedByName: text, createdAt: text,
   startPhotos: z.array(photo).default([]), completionPhotos: z.array(photo).default([]),
-  usage: z.array(usage).nullish(),
+  usage: z.array(usage).nullish(), crew: z.array(crewMember).optional(),
   canEdit: z.boolean().default(false), canComplete: z.boolean().default(false), canCorrectSurvivors: z.boolean().default(false), canClose: z.boolean().optional(),
 });
-export const nurserySaved = z.object({ batch: nurseryDetail });
+export const nurserySaved = z.object({ batch: nurseryDetail, crewAssignment: crewAssignmentResult });
 export const nurseryLots = z.object({ zoneId: z.string(), lots: z.array(lot.extend({ onHand: number })), message: text, messageCode: text });
 export const nurseryHistory = z.object({ recordType: z.string(), recordId: z.string(), recordCode: text,
   entries: z.array(historyEntry.extend({ eventId: text, byRoleCode: text, actionCode: text, actionLabel: text,

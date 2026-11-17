@@ -13,6 +13,9 @@ import { NurseryReviewTable } from "./nursery-review-table";
 import { useNurseryMutation } from "./use-nursery-mutation";
 import { nurseryDisplayText } from "./nursery-display-text";
 import { nurseryQuantityValue } from "./nursery-quantity-value";
+import { useToast } from "@/components/ui/toast-provider";
+import { RecordCrewPicker } from "@/features/cultivation-api/record-crew-picker";
+import { crewAssignmentNotice } from "@/features/cultivation-api/record-crew-assignment-notice";
 
 export function NurseryStartDialog({ zones, initialZone, onClose, onSaved }: { zones: readonly ZoneRow[]; initialZone: string; onClose(): void; onSaved(batch: NurseryDetail): void }) {
   const [zoneId, setZoneId] = useState(zones.some(zone => zone.id === initialZone) ? initialZone : zones[0]?.id ?? "");
@@ -22,14 +25,14 @@ export function NurseryStartDialog({ zones, initialZone, onClose, onSaved }: { z
 }
 function StartForm({ zones, zoneId, onZone, onClose, onSaved }: { zones: readonly ZoneRow[]; zoneId: string; onZone(id: string): void; onClose(): void; onSaved(batch: NurseryDetail): void }) {
   const lots = useRemote(useCallback((signal: AbortSignal) => nurseryService.lots(zoneId, signal), [zoneId]));
-  const [lotId, setLotId] = useState(""), [quantity, setQuantity] = useState(""), [date, setDate] = useState(businessToday), [note, setNote] = useState("");
+  const [lotId, setLotId] = useState(""), [quantity, setQuantity] = useState(""), [date, setDate] = useState(businessToday), [note, setNote] = useState(""), [crew, setCrew] = useState<string[]>([]);
   const [photos, setPhotos] = useState<NurseryPhotoDraft[]>([]), [photoBusy, setPhotoBusy] = useState(false), [review, setReview] = useState(false), [error, setError] = useState<string>();
-  const mutation = useNurseryMutation(), confirmation = useActionDialog(), lot = lots.data?.lots.find(item => item.id === lotId);
+  const { notify } = useToast(), mutation = useNurseryMutation(), confirmation = useActionDialog(), lot = lots.data?.lots.find(item => item.id === lotId);
   const zone = zones.find(item => item.id === zoneId);
   // The pieces leave the lot's stock at the start (no negative stock): above what is on hand is refused here, before the review, as well as by the backend.
   const typed = nurseryQuantityValue(quantity);
   const overStock = lot && lot.onHand != null && Number.isFinite(typed) && typed > lot.onHand ? `Số mảnh: lô ${lot.code} chỉ còn ${quantityText(lot.onHand, lot.unit)} trong kho. Nhập tối đa ${quantityText(lot.onHand, lot.unit)}.` : undefined;
-  async function leave(action: () => void) { if (!mutation.busy() && !photoBusy && (!(quantity || note || photos.length || lotId) || await confirmation.confirm("Bỏ thông tin ươm giống chưa lưu?"))) action(); }
+  async function leave(action: () => void) { if (!mutation.busy() && !photoBusy && (!(quantity || note || photos.length || lotId || crew.length) || await confirmation.confirm("Bỏ thông tin ươm giống chưa lưu?"))) action(); }
   function validate() {
     if (!lot) return "Lô giống: chọn lô giống trong kho.";
     if (!quantity || !Number.isFinite(nurseryQuantityValue(quantity)) || nurseryQuantityValue(quantity) <= 0) return "Số mảnh: nhập số lớn hơn 0, tối đa 2 chữ số thập phân.";
@@ -42,8 +45,12 @@ function StartForm({ zones, zoneId, onZone, onClose, onSaved }: { zones: readonl
     if (mutation.busy() || mutation.blocked || photoBusy) return;
     const found = validate(); setError(found); if (found) return;
     if (!review) { setReview(true); return; }
-    const result = await mutation.run(() => nurseryService.save("create", zoneId, nurseryMultipart({ seedLotId: lotId, quantity: nurseryQuantityValue(quantity), startDate: date, note }, photos.map(photo => photo.file))));
-    if (result) onSaved(result);
+    const result = await mutation.run(() => nurseryService.save("create", zoneId, nurseryMultipart({ seedLotId: lotId, quantity: nurseryQuantityValue(quantity), startDate: date, note, ...(crew.length ? { crew } : {}) }, photos.map(photo => photo.file))));
+    if (result) {
+      const crewNotice = crewAssignmentNotice(result.crewAssignment);
+      if (crewNotice) notify({ tone: result.crewAssignment?.skipped.length ? "warning" : "info", title: crewNotice });
+      onSaved(result);
+    }
   }
   return <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>{confirmation.dialog}
     <p className="mb-3 text-sm font-medium">Bước {review ? "2/2 · Xem lại và xác nhận" : "1/2 · Thông tin ươm giống"}</p>
@@ -54,6 +61,7 @@ function StartForm({ zones, zoneId, onZone, onClose, onSaved }: { zones: readonl
         {!lots.loading && !lots.error && !lots.data?.lots.length && <p className="text-sm">Không có lô giống còn tồn kho trong vùng này.</p>}
         <div className="grid gap-3 sm:grid-cols-2"><UnitField label="Số mảnh vào ươm" unit="mảnh" decimals={2} min={0} value={quantity} onChange={setQuantity} required hint={lot?.onHand != null ? `Tồn kho của lô: ${quantityText(lot.onHand, lot.unit)}` : undefined} error={overStock} /><Field label="Ngày bắt đầu ươm *" type="date" value={date} onChange={event => setDate(event.target.value)} max={businessToday()} required /></div>
         <Note label="Ghi chú" value={note} onChange={event => setNote(event.target.value)} maxLength={1000} />
+        <RecordCrewPicker label="Nhân viên ươm" zoneId={zoneId} values={crew} onChange={setCrew} />
         <NurseryPhotoField photos={photos} onChange={setPhotos} onBusy={setPhotoBusy} />
       </> : <NurseryReviewTable rows={[["Vùng ươm", zone ? `${zone.code} · ${zone.name}` : "—"], ["Lô giống", lot?.code], ["Nhà cung cấp", lot?.supplierName ?? "—"], ["Số mảnh vào ươm", quantityText(nurseryQuantityValue(quantity))], ["Ngày bắt đầu", date.split("-").reverse().join("/")], ["Tồn trước khi ươm", quantityText(lot?.onHand, lot?.unit)], ["Tồn sau khi ươm", lot?.onHand == null ? "—" : quantityText(lot.onHand - nurseryQuantityValue(quantity), lot.unit)], ["Ảnh hiện trường", `${photos.length} ảnh`], ["Ghi chú", nurseryDisplayText(note) || "—"]]} />}
     </fieldset>

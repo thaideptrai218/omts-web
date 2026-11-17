@@ -16,7 +16,8 @@ import { HarvestLaneChoices } from "./harvest-lane-choices";
 import { HarvestEstimateHint, harvestEstimate } from "./harvest-estimate-hint";
 import { HarvestPlanSummary } from "./harvest-plan-summary";
 import { harvestWarningTexts } from "./harvest-warning-text";
-import { HarvestCrewPicker } from "./harvest-crew-picker";
+import { RecordCrewPicker } from "./record-crew-picker";
+import { crewAssignmentNotice } from "./record-crew-assignment-notice";
 import { HarvestCycleProductBanner } from "./harvest-cycle-product-banner";
 import { laneSummary } from "./harvest-lane-ranges";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
@@ -81,6 +82,8 @@ export function HarvestForm({ zoneId, raftId, data, plan, canConfigure = false, 
   const send = (parsed: z.infer<typeof c.harvestValues>) => harvestRepo.upload("harvest-record", photos, parsed, c.harvestSaved, raftId, zoneId);
   function done(saved: z.infer<typeof c.harvestSaved>) {
     notify({ tone: "success", title: `Đã ghi nhận chuyến thu hoạch ${saved.lot.lotCode}.`, ...(saved.everySeededLaneHarvested ? { description: "Tất cả làn đã thu xong. Có thể kết thúc chu kỳ." } : {}) });
+    const crewNotice = crewAssignmentNotice(saved.crewAssignment);
+    if (crewNotice) notify({ tone: saved.crewAssignment?.skipped.length ? "warning" : "info", title: crewNotice });
     for (const text of harvestWarningTexts(saved.warnings)) notify({ tone: "warning", title: text });
     onSaved();
   }
@@ -114,7 +117,7 @@ export function HarvestForm({ zoneId, raftId, data, plan, canConfigure = false, 
             {lanes.length > 0 && <LaneChoices lanes={lanes} values={finished} onChange={setFinished} label="Làn đã thu hết hàu trong chuyến này" />}
           </div>}
         </CollapsibleSection>
-        <CollapsibleSection title="Nhân viên cùng thu" description="Những nhân viên tham gia chuyến thu này." columns={1}><HarvestCrewPicker raftId={raftId} zoneId={zoneId} values={crew} onChange={setCrew} /></CollapsibleSection>
+        <CollapsibleSection title="Nhân viên cùng thu" description="Những nhân viên tham gia chuyến thu này." columns={1}><RecordCrewPicker label="Nhân viên cùng thu" raftId={raftId} zoneId={zoneId} values={crew} onChange={setCrew} /></CollapsibleSection>
         <CollapsibleSection title="Sản phẩm thu hoạch và ảnh" description="Chia chuyến thu theo sản phẩm: số lồng, số kg và ảnh ghi nhận." columns={1}>
           <HarvestProductLines lines={lines} products={products.products} loading={products.loading} error={products.error} disabled={editor.disabled} onChange={setLines} />
           {lines.length > 0 && cycleProductId && !lines.some(line => line.productId === cycleProductId) && <p role="status" className="text-xs text-text-muted">Chuyến thu hoạch phải có sản phẩm của giống đang nuôi trong chu kỳ{cycleProductName ? ` (${cycleProductName})` : ""}.</p>}

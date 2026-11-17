@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/management-page";
@@ -10,6 +11,7 @@ import { useMutation } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { laneBlockedReason, laneStateChip } from "./harvest-lane-choices";
 import { finishLaneResult, type harvestList } from "./records-contracts";
+import { AttendanceGatePanel, openAttendanceOf, ownerOverride, useIsCooperativeOwner } from "./record-crew-attendance";
 import { harvestRepo } from "./records-shared";
 import { FinishHarvestOverview } from "./finish-harvest-overview";
 import { eligibleToFinish } from "./finish-harvest-model";
@@ -22,12 +24,16 @@ export function HarvestLanesBoard(props: BoardProps) {
 }
 function LanesBoardBody({ data, zoneId, raftId, canFinish, onChanged }: BoardProps) {
   const mutation = useMutation(), confirmation = useActionDialog(), { notify } = useToast();
-  async function finish(laneNumber: number) {
+  // MSG-LABOR-37: the crew of this lane is still at work; only the Owner may finish anyway, with a reason.
+  const [approval, setApproval] = useState(""), [refusedLane, setRefusedLane] = useState<number>(), isOwner = useIsCooperativeOwner(), openCrew = openAttendanceOf(mutation.failure);
+  async function finish(laneNumber: number, retry = false) {
     if (mutation.busy() || mutation.blocked) return;
-    const accepted = await confirmation.confirm(`Hoàn tất thu hoạch làn ${laneNumber}? Làn chuyển sang Đã thu xong và không ghi nhận thêm chuyến thu cho làn này. Muốn hoàn tác phải sửa lô kèm lý do.`);
+    if (retry && (!isOwner || !approval.trim())) return;
+    const accepted = retry || await confirmation.confirm(`Hoàn tất thu hoạch làn ${laneNumber}? Làn chuyển sang Đã thu xong và không ghi nhận thêm chuyến thu cho làn này. Muốn hoàn tác phải sửa lô kèm lý do.`);
     if (!accepted) return;
-    const saved = await mutation.run(() => harvestRepo.write("finish-lane", { laneNumber }, finishLaneResult, raftId, zoneId));
-    if (!saved) return;
+    const saved = await mutation.run(() => harvestRepo.write("finish-lane", { laneNumber, ...(retry ? ownerOverride(true, approval) : undefined) }, finishLaneResult, raftId, zoneId));
+    if (!saved) { setRefusedLane(laneNumber); return; }
+    setRefusedLane(undefined); setApproval("");
     notify(saved.changed ? { tone: "success", title: `Đã hoàn tất thu hoạch làn ${laneNumber}.`, ...(saved.everySeededLaneHarvested ? { description: "Tất cả làn đã thu xong. Có thể kết thúc chu kỳ." } : {}) } : { tone: "info", title: `Làn ${laneNumber} đã thu xong từ trước.` });
     onChanged();
   }
@@ -35,7 +41,9 @@ function LanesBoardBody({ data, zoneId, raftId, canFinish, onChanged }: BoardPro
     {confirmation.dialog}
     <h4 className="mb-2 text-sm font-semibold">Làn</h4>
     {canFinish && <FinishHarvestOverview lanes={data.lanes.map(lane => ({ ...lane, state: lane.state ?? undefined }))} raftId={raftId} zoneId={zoneId} eligibleLaneNumbers={data.lanes.filter(eligibleToFinish).map(lane => lane.laneNumber)} onChanged={onChanged} label="Sơ đồ làn thu hoạch" selectionDisabled={mutation.pending} />}
-    {mutation.error && <p role="alert" className="mb-2 rounded-control border border-danger/30 bg-danger/5 p-2 text-sm text-danger">{mutation.error}</p>}
+    {openCrew && refusedLane !== undefined && <><AttendanceGatePanel employees={openCrew} isOwner={isOwner} reason={approval} onReason={setApproval} />
+      <Button type="button" className="mb-3 w-auto" variant="secondary" disabled={!isOwner || !approval.trim() || mutation.pending} isPending={mutation.pending} onClick={() => void finish(refusedLane, true)}>Vẫn hoàn tất làn {refusedLane}</Button></>}
+    {mutation.error && !openCrew && <p role="alert" className="mb-2 rounded-control border border-danger/30 bg-danger/5 p-2 text-sm text-danger">{mutation.error}</p>}
     <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {data.lanes.map(lane => {
         const chip = lane.state ? laneStateChip[lane.state] : undefined, blocked = laneBlockedReason(lane);

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+vi.mock("./record-crew-attendance", async importOriginal => ({ ...(await importOriginal<typeof import("./record-crew-attendance")>()), useIsCooperativeOwner: () => false }));
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
