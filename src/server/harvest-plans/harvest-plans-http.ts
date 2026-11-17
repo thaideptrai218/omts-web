@@ -10,7 +10,7 @@ import { sameEmployeeSession } from "../employees/employee-session";
 
 /**
  * The browser's door to Kế hoạch thu hoạch (api/harvest-plans): the list, one plan by id or by code, the plans given out to the caller's zones, the next
- * code, the form of a plan made from an order, and the writes (save, assign, finish, cancel, skip and unskip lanes). Each action names the backend call, who
+ * code, the form of a plan made from an order, the Nhân công of a plan (read, and set the crew of one line), and the writes (save, assign, finish, cancel, skip and unskip lanes). Each action names the backend call, who
  * may make it and the shape the answer must have; query values are forwarded only for the names an action lists. The harvest of a lane plan itself goes
  * through the existing harvest door (api/operations/harvest) with the line id.
  */
@@ -25,6 +25,8 @@ type Access = { any: readonly (readonly [string, string])[] };
 const plans = (action: string): Access => ({ any: [["HARVEST_PLANS", action]] });
 /** Recording a lot from a plan line or marking lanes "Không thu" is the zone manager's work and needs the right to record a harvest. */
 const harvests = (action: string): Access => ({ any: [["HARVESTS", action]] });
+/** Choosing the crew of a plan line gives its employees work assignments, so it needs the right to create them (the API checks the zone and the status of the plan). */
+const assignments = (action: string): Access => ({ any: [["WORK_ASSIGNMENTS", action]] });
 
 const listFilters = ["search", "zoneId", "from", "to", "salesOrderId"] as const;
 const paging = ["page", "pageSize"] as const;
@@ -49,6 +51,7 @@ type Read = (q: Query, ref: { id?: string }) => Plan;
 const reads: Record<string, Read> = {
   plans: (q) => ({ path: `${P}${forward(q, [...listFilters, ...paging])}`, method: "GET", access: plans("View"), schema: c.planPage }),
   plan: (_q, ref) => ({ path: `${P}/${ref.id}`, method: "GET", access: plans("View"), schema: c.planView, expectedId: ref.id }),
+  "plan-staffing": (_q, ref) => ({ path: `${P}/${ref.id}/staffing`, method: "GET", access: plans("View"), schema: c.planStaffing, expectedId: ref.id }),
   "plan-by-code": (q) => ({ path: `${P}/by-code/${encodeURIComponent(q.code)}`, method: "GET", access: plans("View"), schema: c.planView }),
   "plan-next-code": () => ({ path: `${P}/next-code`, method: "GET", access: plans("Create"), schema: c.nextCode }),
   "plan-eligible-rafts": (q) => ({ path: `${P}/eligible-rafts${forward(q, ["zoneId"])}`, method: "GET", access: plans("Create"), schema: c.eligibleRafts }),
@@ -56,13 +59,14 @@ const reads: Record<string, Read> = {
   "plans-assigned": () => ({ path: `${P}/assigned`, method: "GET", access: harvests("View"), schema: c.planList }),
 };
 /** The reads that need the id of a record. */
-const needsId = new Set(["plan", "plan-order-draft"]);
+const needsId = new Set(["plan", "plan-order-draft", "plan-staffing"]);
 
 const lineBody = z.strictObject({ id: id.optional(), raftId: id, laneNumbers: lanes, expectedCageCount: z.number().positive().max(100_000).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6).nullable().optional(), note: text(500) });
 const planBody = z.strictObject({
   code, plannedAt: instant, note: text(1000), salesOrderIds: z.array(id).max(20), lines: z.array(lineBody).min(1).max(50), rowVersion: rowVersion.optional(),
 });
 const versioned = z.strictObject({ rowVersion: rowVersion.optional() });
+const crew = z.array(id).max(100).refine((values) => new Set(values).size === values.length);
 const write = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("plan-create"), body: planBody.omit({ rowVersion: true }) }),
   z.strictObject({ action: z.literal("plan-update"), id, body: planBody.required({ rowVersion: true }) }),
@@ -71,6 +75,7 @@ const write = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("plan-cancel"), id, body: z.strictObject({ reason: cancelReason, rowVersion: rowVersion.optional() }) }),
   z.strictObject({ action: z.literal("plan-skip-lanes"), id, lineId: id, body: z.strictObject({ laneNumbers: lanes, reason }) }),
   z.strictObject({ action: z.literal("plan-unskip-lanes"), id, lineId: id, body: z.strictObject({ laneNumbers: lanes }) }),
+  z.strictObject({ action: z.literal("plan-line-staffing"), id, lineId: id, body: z.strictObject({ employeeIds: crew, moveExisting: z.boolean().optional(), rowVersion: rowVersion.optional() }) }),
 ]);
 
 function planWrite(p: z.infer<typeof write>): Plan {
@@ -81,6 +86,7 @@ function planWrite(p: z.infer<typeof write>): Plan {
     case "plan-finish": return { path: `${P}/${p.id}/finish`, method: "POST", access: plans("Edit"), schema: c.ack, body: p.body };
     case "plan-cancel": return { path: `${P}/${p.id}/cancel`, method: "POST", access: plans("Delete"), schema: c.ack, body: p.body };
     case "plan-skip-lanes": return { path: `${P}/${p.id}/lines/${p.lineId}/skip-lanes`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
+    case "plan-line-staffing": return { path: `${P}/${p.id}/lines/${p.lineId}/staffing`, method: "PUT", access: assignments("Create"), schema: c.staffingLine, body: p.body };
     case "plan-unskip-lanes": return { path: `${P}/${p.id}/lines/${p.lineId}/unskip-lanes`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
   }
 }
@@ -153,7 +159,8 @@ export async function handleHarvestPlans(request: Request) {
     }
     if (result.status !== "success" || ![200, 201].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
     const value = plan.schema.safeParse(result.data);
-    if (!value.success || plan.expectedId && (value.data as { id?: string }).id !== plan.expectedId) return json({ status: "invalid-response" }, 502);
+    const answered = value.success ? value.data as { id?: string; planId?: string } : undefined;
+    if (!value.success || plan.expectedId && (answered?.id ?? answered?.planId) !== plan.expectedId) return json({ status: "invalid-response" }, 502);
     return json({ status: "success", data: value.data });
   } catch { return json({ status: "unavailable" }, 503); }
 }

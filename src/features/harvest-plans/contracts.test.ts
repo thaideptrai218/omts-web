@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eligibleRafts, planList, planView } from "./contracts";
+import { eligibleRafts, planList, planStaffing, planView, staffingLine } from "./contracts";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 const zone = { id: id(1), code: "Z1", name: "Vùng 1" };
@@ -30,5 +30,15 @@ describe("harvest plan contracts", () => {
     expect(view.zones.map((row) => row.code)).toEqual(["Z1"]);
     expect(view).not.toHaveProperty("zone");
     expect(planView.safeParse({ ...plan, lines: [{ ...plan.lines[0], zone: undefined }] }).success).toBe(false);
+  });
+
+  it("reads the Nhân công of a plan and one saved line, and refuses a line without its day", () => {
+    const line = { lineId: id(7), raftId: id(2), raftCode: "B1", zoneId: id(1), zoneCode: "Z1", laneNumbers: [1, 2], plannedDate: "2026-11-18", canEdit: true,
+      employees: [{ employeeId: id(8), code: "NV000001", name: "An", assignmentId: id(9), checkedIn: true }] };
+    const staffing = planStaffing.parse({ planId: id(6), planCode: "KHT000001", rowVersion: "v", canEdit: true, lines: [line] });
+    expect(staffing.lines[0]).toMatchObject({ raftCode: "B1", laneNumbers: [1, 2], employees: [{ name: "An", checkedIn: true }] });
+    expect(staffingLine.parse(line).plannedDate).toBe("2026-11-18");
+    expect(staffingLine.safeParse({ ...line, plannedDate: "18/11/2026" }).success).toBe(false);
+    expect(staffingLine.safeParse({ ...line, employees: [{ ...line.employees[0], checkedIn: "yes" }] }).success).toBe(false);
   });
 });

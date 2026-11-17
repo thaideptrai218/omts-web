@@ -10,6 +10,19 @@ const own = (result: Failure) => result.code?.startsWith("MSG-PLAN-") && result.
 export const errorText = (result: Result<unknown>) => result.status === "success" ? undefined : own(result) ?? inputErrorText(result);
 export const problemText = (result: Failure) => own(result) ?? inputProblemText(result);
 
+const vietnamese = /[ăâđêôơưàáạảãèéẹẻẽìíịỉĩòóọỏõùúụủũỳýỵỷỹ]/i;
+/**
+ * The text of a failed Nhân công save. The plan's own refusals (MSG-GEN-09: the plan is over, its day has passed, no job type Thu hoạch, another day taken) come in Vietnamese from the API and say which one; the two work
+ * assignment questions are worded here because their API text is English and the picker keeps them from happening except when two people choose at once.
+ */
+export function staffingErrorText(result: Result<unknown>) {
+  if (result.status === "success") return undefined;
+  if (result.code === "MSG-LABOR-06") return "Có nhân viên vừa được phân công ở bè khác trong ngày này. Hãy tải lại danh sách nhân viên rồi chọn lại.";
+  if (result.code === "MSG-LABOR-07") return "Nhân viên đã điểm danh vào ca nên không thể bỏ khỏi bè này.";
+  const message = result.code === "MSG-GEN-09" ? result.problem?.message : undefined;
+  return message && vietnamese.test(message) ? message : errorText(result);
+}
+
 export const planRepository = {
   list: (values: ListQuery, signal?: AbortSignal) => read("plans", values, c.planPage, signal),
   detail: (id: string, signal?: AbortSignal) => read("plan", { id }, c.planView, signal),
@@ -28,4 +41,9 @@ export const planRepository = {
   cancel: (id: string, reason: string, rowVersion?: string) => json("plan-cancel", { id, body: { reason, ...(rowVersion ? { rowVersion } : {}) } }, c.ack),
   skipLanes: (id: string, lineId: string, laneNumbers: number[], reason: string) => json("plan-skip-lanes", { id, lineId, body: { laneNumbers, reason } }, c.ack),
   unskipLanes: (id: string, lineId: string, laneNumbers: number[]) => json("plan-unskip-lanes", { id, lineId, body: { laneNumbers } }, c.ack),
+  /** The Nhân công of a plan: the employees of each line the caller sees. */
+  staffing: (id: string, signal?: AbortSignal) => read("plan-staffing", { id }, c.planStaffing, signal),
+  /** Sets the whole crew of one line (employees left out are taken off); answers the line. */
+  saveStaffing: (id: string, lineId: string, employeeIds: string[], rowVersion?: string) =>
+    json("plan-line-staffing", { id, lineId, body: { employeeIds, ...(rowVersion ? { rowVersion } : {}) } }, c.staffingLine),
 };

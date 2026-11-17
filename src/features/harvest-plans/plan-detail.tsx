@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
-import { ListStateMessage } from "@/components/ui/management-screen/management-table";
+import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/management-table";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import issueStyles from "@/features/input-issues/input-issues.module.css";
@@ -18,18 +18,25 @@ import type { PlanAccess } from "./plan-access";
 import { PLANS_PATH, PlanStatus } from "./plan-labels";
 import { laneChip, planTotals } from "./plan-logic";
 import { PlanLineActions } from "./plan-line-actions";
+import { PlanStaffingTab } from "./plan-staffing-tab";
 import styles from "./plans.module.css";
 import { errorText, planRepository, type Result } from "./repository";
 
+type Tab = "info" | "staffing";
+const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "staffing" as const, label: "Nhân công" }];
 const dash = (value: string | null | undefined) => value || "—";
 const zoneCodes = (zones: readonly { code: string }[]) => zones.map((zone) => zone.code).join(", ") || "—";
 
-/** The row opened under the list: the plan with its lines and lanes, and the buttons the API allows now. */
+/** The row opened under the list: the plan with its lines and lanes, and the buttons the API allows now, and under "Nhân công" the employees chosen for each line. */
 export function PlanDetailPanel({ id, access, onChanged }: { id: string; access: PlanAccess; onChanged(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => planRepository.detail(id, signal), [id]));
+  const [tab, setTab] = useState<Tab>("info");
   if (remote.loading) return <div className={listStyles.detail}><Skeleton /></div>;
   if (remote.error || !remote.data) return <ListStateMessage error={remote.error ?? "Không tải được kế hoạch thu hoạch."} onRetry={remote.reload} retryLabel="Tải lại kế hoạch" />;
-  return <section className={listStyles.detail} aria-label={`Chi tiết ${remote.data.code}`}><Body key={remote.data.rowVersion} plan={remote.data} access={access} onChanged={() => { remote.reload(); onChanged(); }} /></section>;
+  return <section className={listStyles.detail} aria-label={`Chi tiết ${remote.data.code}`}>
+    <Subtabs<Tab> label="Nội dung kế hoạch thu hoạch" tabs={tabs} value={tab} onChange={setTab} />
+    {tab === "info" ? <Body key={remote.data.rowVersion} plan={remote.data} access={access} onChanged={() => { remote.reload(); onChanged(); }} /> : <PlanStaffingTab key={remote.data.rowVersion} plan={remote.data} access={access} />}
+  </section>;
 }
 
 function LaneChips({ plan, line, access, onChanged, setError }: { plan: PlanView; line: PlanLine; access: PlanAccess; onChanged(): void; setError(text: string | undefined): void }) {
