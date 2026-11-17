@@ -63,7 +63,7 @@ export function EmployeeCreateBasicFields({ values, setValues, errorProps, field
         <Select label="Loại nhân viên *" required {...errorProps("employeeType")} value={values.employeeType} onChange={event => set({ employeeType: event.target.value })}>
           <option value="">Chọn loại nhân viên</option>
           <option value="SeasonalWorker">Thời vụ</option>
-          <option value="Staff">Nhân viên</option>
+          <option value="Staff">Nội bộ</option>
         </Select>
         <FieldError path="employeeType" fieldError={fieldError} />
       </div>
