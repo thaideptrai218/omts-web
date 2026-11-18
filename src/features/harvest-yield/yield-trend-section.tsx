@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import type { YieldGroup } from "./contracts";
 import { formatKg } from "./yield-logic";
-import { YieldTrendChart, zonePalette } from "./yield-trend-chart";
+import { YieldTrendChart } from "./yield-trend-chart";
 import { aggregateTrend, cumulative, type TrendMetric, type TrendUnit } from "./yield-trend-model";
 import s from "./yield-screen.module.css";
 
@@ -36,15 +36,7 @@ export function YieldTrendSection({ groups }: { groups: readonly YieldGroup[] })
             <thead><tr><th scope="col">Kỳ</th><th scope="col" className={s.num}>Kg ước tính</th><th scope="col" className={s.num}>Số lồng</th><th scope="col" className={s.num}>Cộng dồn ({unitName})</th></tr></thead>
             <tbody>{buckets.map((bucket, index) => <tr key={bucket.key}><th scope="row">{bucket.label}</th><td className={s.num}>{formatKg(bucket.kg)} kg</td><td className={s.num}>{formatKg(bucket.cages)} lồng</td><td className={s.num}>{formatKg(total[index])} {unitName}</td></tr>)}</tbody>
           </table></div>
-            : <>
-              <YieldTrendChart buckets={buckets} metric={metric} byZone={byZone} zones={zones} targetKg={single?.targetYieldKg} />
-              <p className={s.legend}>
-                {!byZone && <span><i className={s.swatch} style={{ background: "#2f8f83" }} />Cột: {unitName} theo kỳ</span>}
-                {byZone && zones.map((zone, index) => <span key={zone}><i className={s.swatch} style={{ background: zonePalette[index % zonePalette.length] }} />{zone}</span>)}
-                <span><i className={s.swatchLine} />Đường: cộng dồn ({formatKg(total.at(-1) ?? 0)} {unitName})</span>
-                {single && metric === "kg" && <span><i className={s.swatchTarget} />Mục tiêu của chu kỳ</span>}
-              </p>
-            </>}
+            : <YieldTrendChart buckets={buckets} metric={metric} byZone={byZone} zones={zones} targetKg={single?.targetYieldKg} />}
       </div>
     </details>
   );

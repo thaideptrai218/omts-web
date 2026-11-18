@@ -11,6 +11,12 @@ import { salesInvoicesPlan } from "./sales-invoices-plan";
 import { customerPaymentsPlan } from "./customer-payments-plan";
 import { harvestYieldPlan } from "./harvest-yield-plan";
 import { salesInvoiceListPlan } from "./sales-invoice-list-plan";
+import { salesReportPlan } from "./sales-report-plan";
+import { dashboardPlan } from "./dashboard-plan";
+import { endOfDayReportPlan } from "./end-of-day-report-plan";
+import { productReportPlan } from "./product-report-plan";
+import { supplierReportPlan } from "./supplier-report-plan";
+import { financialReportPlan } from "./financial-report-plan";
 import { salesReturnsPlan } from "./sales-returns-plan";
 import { claimReportsPlan, qualityClaimsPlan } from "./quality-claims-plan";
 import { waterOverviewPlan } from "./water-overview-plan";
@@ -27,7 +33,7 @@ const querySchema = z.strictObject({ action: z.string().default("list"), id: id.
   index: z.string().regex(/^\d{1,3}$/).optional() });
 const mutationSchema = z.strictObject({ action: z.string(), id: id.optional(), zoneId: id.optional(), body: z.unknown().default({}) });
 export type OperationPlan = { area: OperationArea; action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE";
-  permission: string; zoneId?: string; body?: unknown; multipartFields?: boolean; schema: z.ZodType; file?: "export" | "invoice" | "photo"; index?: number; expectedId?: string; noContent?: boolean };
+  permission: string; zoneId?: string; body?: unknown; multipartFields?: boolean; schema: z.ZodType; file?: "export" | "invoice" | "photo"; /** Định dạng tệp xuất; bỏ trống = Excel. */ exportFormat?: "pdf"; index?: number; expectedId?: string; noContent?: boolean };
 
 export function planOperation(areaName: string, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   const area = z.enum(operationAreas).safeParse(areaName);
@@ -36,6 +42,12 @@ export function planOperation(areaName: string, method: string, query: URLSearch
   if (area.data === "sales-invoices") return salesInvoicesPlan(method, query, input);
   if (area.data === "customer-payments") return customerPaymentsPlan(method, query, input);
   if (area.data === "harvest-yield") return harvestYieldPlan(method, query, input);
+  if (area.data === "sales-report" && query.get("action") === "dashboard") return dashboardPlan(method, query);
+  if (area.data === "end-of-day-report") return endOfDayReportPlan(method, query, input);
+  if (area.data === "sales-report" || area.data === "customer-report") return salesReportPlan(area.data, method, query, input);
+  if (area.data === "product-report") return productReportPlan(method, query, input);
+  if (area.data === "supplier-report") return supplierReportPlan(method, query, input);
+  if (area.data === "financial-report") return financialReportPlan(method, query, input);
   if (area.data === "sales-invoice-list") return salesInvoiceListPlan(method, query, input);
   if (area.data === "sales-returns") return salesReturnsPlan(method, query, input);
   if (area.data === "seed-lots") return seedLotsPlan(method, query, input);
