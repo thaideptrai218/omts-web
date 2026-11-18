@@ -10,9 +10,11 @@ import { RecordCrewPicker } from "@/features/cultivation-api/record-crew-picker"
 import { employeeLink } from "@/features/farming-management/entity-links";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { ErrorNotice, Skeleton, businessToday, useRemote } from "@/features/operations/ui";
+import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { PLAN, type PlanStaffing, type PlanView, type StaffingLine } from "./contracts";
 import type { PlanAccess } from "./plan-access";
+import styles from "./plans.module.css";
 import { planRepository, staffingErrorText } from "./repository";
 
 const viDate = (day: string) => day.split("-").reverse().join("/");
@@ -67,28 +69,30 @@ function Staffing({ plan, staffing, access }: { plan: PlanView; staffing: PlanSt
 
   const note = canEdit ? undefined : closedNote(plan, staffing);
   return <div className={listStyles.tabBody}>
-    {!lines.length ? <p className="text-sm text-text-muted">Kế hoạch chưa có dòng nào để chọn nhân công.</p>
-      : <div className="space-y-3">{lines.map((line) => <section key={line.lineId} aria-label={`Nhân công bè ${line.raftCode}`} className="space-y-2 rounded-card border border-border p-3">
-        <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h4 className="font-medium"><Link className="text-primary underline" href={farmingReferenceHref("raft", { zoneId: line.zoneId, recordId: line.raftId, search: line.raftCode })}>{line.raftCode}</Link></h4>
-          <span className="text-sm text-text-muted">Vùng {line.zoneCode} · Luống {line.laneNumbers.join(", ") || "—"} · Ngày {viDate(line.plannedDate)}</span>
+    {!lines.length ? <p className={styles.crewEmpty}>Kế hoạch chưa có dòng nào để chọn nhân công.</p>
+      : <div className={styles.crewList}>{lines.map((line) => <section key={line.lineId} aria-label={`Nhân công bè ${line.raftCode}`} className={styles.crewCard}>
+        <header className={styles.crewHead}>
+          <h4><Link className={purchaseStyles.link} href={farmingReferenceHref("raft", { zoneId: line.zoneId, recordId: line.raftId, search: line.raftCode })}>{line.raftCode}</Link></h4>
+          <span>Vùng {line.zoneCode} · Luống {line.laneNumbers.join(", ") || "—"} · Ngày {viDate(line.plannedDate)}</span>
         </header>
+        <div className={styles.crewBody}>
         {editing && editable(line)
           ? <RecordCrewPicker label={`Nhân viên bè ${line.raftCode}`} raftId={line.raftId} zoneId={line.zoneId} day={line.plannedDate}
               values={draft[line.lineId] ?? ids(line)} locked={line.employees.filter((employee) => employee.checkedIn).map((employee) => employee.employeeId)}
               onChange={(values) => setDraft((current) => ({ ...current, [line.lineId]: values }))} />
           : line.employees.length
-            ? <ul className="flex flex-wrap gap-2">{line.employees.map((employee) => {
+            ? <ul className={styles.crewMembers}>{line.employees.map((employee) => {
               const href = employeeLink(employee.employeeId);
-              return <li key={employee.assignmentId} className="flex items-center gap-2 rounded-control border border-border px-2 py-1 text-sm">
-                {href ? <Link className="text-primary underline" href={href}>{employee.name}</Link> : employee.name}
-                {employee.code && <small className="text-text-muted">{employee.code}</small>}
+              return <li key={employee.assignmentId} className={styles.crewMember}>
+                {href ? <Link className={purchaseStyles.link} href={href}>{employee.name}</Link> : employee.name}
+                {employee.code && <small>{employee.code}</small>}
                 {employee.checkedIn && <StatusPill tone="success">Đã điểm danh</StatusPill>}
               </li>;
             })}</ul>
-            : <p className="text-sm text-text-muted">Chưa chọn nhân công cho bè này.</p>}
+            : <p className={styles.crewEmpty}>Chưa chọn nhân công cho bè này.</p>}
+        </div>
       </section>)}</div>}
-    {note && <p className="mt-3 text-sm text-text-muted">{note}</p>}
+    {note && <p className={styles.crewNote}>{note}</p>}
     <ErrorNotice error={error} />
     {canEdit && <footer className={listStyles.tabFooter}>
       <div />

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import {afterEach,expect,it,vi} from "vitest";
 import {cleanup,fireEvent,render,screen} from "@testing-library/react";
-import {NavigationGroup} from "./navigation-group";
+import {NavigationGroup,NavigationSection} from "./navigation-group";
 vi.mock("next/navigation",()=>({usePathname:()=>"/dashboard"}));
 afterEach(cleanup);
 it("opens a topnav group and closes it on Escape, outside pointer and destination selection",()=>{render(<><NavigationGroup label="Nuôi trồng"><a href="/farming/rafts" onClick={e=>e.preventDefault()}>Bè nuôi</a></NavigationGroup><button>Bên ngoài</button></>);const summary=screen.getByText("Nuôi trồng"),details=summary.closest("details")!;fireEvent.click(summary);expect(details.open).toBe(true);fireEvent.keyDown(summary,{key:"Escape"});expect(details.open).toBe(false);fireEvent.click(summary);fireEvent.pointerDown(screen.getByRole("button",{name:"Bên ngoài"}));expect(details.open).toBe(false);fireEvent.click(summary);fireEvent.click(screen.getByRole("link",{name:"Bè nuôi"}));expect(details.open).toBe(false);});
+it("renders titled columns when the group asks for them and plain children otherwise",()=>{const {container}=render(<><NavigationGroup label="Nuôi trồng" columns><NavigationSection title="Cơ sở"><a href="/farming/rafts">Bè nuôi</a></NavigationSection><NavigationSection title="Thu hoạch"><a href="/farming/harvest-lots">Lô thu hoạch</a></NavigationSection></NavigationGroup><NavigationGroup label="Báo cáo"><a href="/x">Một</a></NavigationGroup></>);const [farming,reports]=[...container.querySelectorAll("details")];expect([...farming.querySelectorAll("section")].map(s=>[s.querySelector("h3")!.textContent,s.querySelector("a")!.textContent])).toEqual([["Cơ sở","Bè nuôi"],["Thu hoạch","Lô thu hoạch"]]);expect(farming.querySelector("section")!.getAttribute("aria-label")).toBe("Cơ sở");expect(reports.querySelector("section")).toBeNull();});

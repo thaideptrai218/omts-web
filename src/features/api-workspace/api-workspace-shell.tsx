@@ -10,7 +10,7 @@ import { OwnerOverview } from "./owner-overview";
 import { InboxBell } from "@/features/inbox-api/inbox-bell";
 import { SelectedZonesProvider } from "./selected-zones";
 import { ZonePicker } from "./zone-picker";
-import { NavigationGroup } from "@/components/layout/navigation-group";
+import { NavigationGroup, NavigationSection } from "@/components/layout/navigation-group";
 import { FarmingWorkflowNav } from "@/features/farming-management/farming-workflow-nav";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -46,14 +46,18 @@ const settingsDescriptions: Partial<Record<ResourceKey, string>> = {
 
 /** The group whose links are the input catalogue and the two issue lists; they are built from permissions, not from the generic resource list. */
 const INPUT_GROUP = "Vật tư & Giống";
+const FARMING_GROUP = "Nuôi trồng";
+/** Moved out of Nuôi trồng into Kinh doanh and Báo cáo; they stay hidden from the finance workspace like the group they came from. */
+const farmingReports = ["harvest-yield", "lot-tracing"];
 const inputReaders = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYCLES", "INPUT_ISSUES"];
 const workspaceGroups = [
-  { label: "Nuôi trồng", resources: ["zones", "rafts"], operations: ["cultivation-cycles", "seeding", "harvest", "material-usages", "harvest-yield", "lot-tracing", "water"] },
+  // Thả giống, Thu hoạch and Sử dụng vật tư are steps of Hành trình (FarmingWorkflowNav), not menu entries; their routes stay.
+  { label: FARMING_GROUP, resources: ["zones", "rafts"], operations: ["cultivation-cycles", "water"] },
   { label: INPUT_GROUP, resources: [], operations: [] },
-  { label: "Mua hàng", resources: ["suppliers"], operations: ["supplier-payments"] },
+  { label: "Mua hàng", resources: ["suppliers"], operations: [] },
   { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "my-work"] },
-  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests"] },
-  { label: "Báo cáo", resources: [], operations: ["sales-report", "price-trend-report", "after-sales-report"] },
+  { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests", "lot-tracing"] },
+  { label: "Báo cáo", resources: [], operations: ["sales-report", "price-trend-report", "after-sales-report", "harvest-yield"] },
 ];
 
 type Context = Readonly<{ identity: BrowserIdentityDto; permissions: PermissionProjection }>;
@@ -91,7 +95,10 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const customerSettings: SettingsSection["items"] = holds("CUSTOMERS", "View") ? [{ href: "/settings?section=customers", panel: "customers", label: "Khách hàng", icon: "users", description: "Cảnh báo công nợ và thông tin bắt buộc khi thêm khách hàng." }] : [];
   const inputLinks: [string, string, InterfaceIconName][] = [
     // The catalogue is split: Giống (seed items) and Vật tư (the rest) are two screens and two entries.
-    ...(resourceAllowed("input-items", context.identity, context.permissions.functionPermissions) ? [[kindText.Seed.itemsPath, kindText.Seed.catalogue, "product"] as [string, string, InterfaceIconName], [kindText.Supply.itemsPath, kindText.Supply.catalogue, "material"] as [string, string, InterfaceIconName]] : []),
+    ...(resourceAllowed("input-items", context.identity, context.permissions.functionPermissions) ? [[kindText.Seed.itemsPath, kindText.Seed.catalogue, "product"] as [string, string, InterfaceIconName]] : []),
+    // Lô giống follows its catalogue; it is hidden from the finance workspace as it was in Nuôi trồng.
+    ...(!financeWorkspace && operationAllowed("seed-lots", context.identity, context.permissions.functionPermissions) ? [[SEED_LOTS_PATH, "Lô giống", "product"] as [string, string, InterfaceIconName]] : []),
+    ...(resourceAllowed("input-items", context.identity, context.permissions.functionPermissions) ? [[kindText.Supply.itemsPath, kindText.Supply.catalogue, "material"] as [string, string, InterfaceIconName]] : []),
     ...(holds("INPUT_ISSUES", "View") ? [["/inputs/uses", "Xuất dùng", "work"] as [string, string, InterfaceIconName]] : []),
     ...(holds("INPUT_DISPOSALS", "View") ? [["/inputs/disposals", "Xuất hủy", "trash"] as [string, string, InterfaceIconName]] : []),
   ];
@@ -100,9 +107,9 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
     ...(holds("SALES_ORDERS", "View") ? [["/sales/orders", "Đặt hàng", "request"] as [string, string, InterfaceIconName]] : []),
     ...(holds("PRODUCT_DISPOSALS", "View") ? [["/sales/disposals", "Xuất hủy hàu", "trash"] as [string, string, InterfaceIconName]] : []),
   ];
-  /** Kế hoạch thu hoạch sits in Nuôi trồng right after Thu hoạch. */
+  /** Kế hoạch thu hoạch opens the THU HOẠCH column of Nuôi trồng. */
   const harvestPlanLink: [string, string, InterfaceIconName] | undefined = holds("HARVEST_PLANS", "View") ? ["/farming/harvest-plans", "Kế hoạch thu hoạch", "calendar"] : undefined;
-  /** Lô thu hoạch sits right after Kế hoạch thu hoạch; anyone who may read the harvest records may read it. */
+  /** Lô thu hoạch follows Kế hoạch thu hoạch; anyone who may read the harvest records may read it. */
   const harvestLotLink: [string, string, InterfaceIconName] | undefined = operationAllowed("harvest", context.identity, context.permissions.functionPermissions) ? ["/farming/harvest-lots", "Lô thu hoạch", "product"] : undefined;
   const harvestLinks = [harvestPlanLink, harvestLotLink].filter((entry): entry is [string, string, InterfaceIconName] => !!entry);
   const settingsSections: SettingsSection[] = [
@@ -123,24 +130,28 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       </div></NavigationGroup>
       {context.identity.subjectType === "SystemAdministrator" && <NavigationGroup label="Quản trị hệ thống" compact={compact}><div className={styles.navigationItems}>{link("/system/accounts", "Tài khoản & nhật ký", "roles")}</div></NavigationGroup>}
       {workspaceGroups.map((group) => {
-        if (financeWorkspace && group.label === "Nuôi trồng") return null;
+        if (financeWorkspace && group.label === FARMING_GROUP) return null;
         const rows = visible.filter((key) => group.resources.includes(key));
         // The product catalogue has its own screen for everyone but a trader, who keeps the plain list.
-        const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && !(entry.key === "sales-products" && context.identity.subjectType !== "Trader") && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).sort((a, b) => group.operations.indexOf(a.key) - group.operations.indexOf(b.key));
+        const modules = operationModules.filter((entry) => group.operations.includes(entry.key) && !(entry.key === "sales-products" && context.identity.subjectType !== "Trader") && !(financeWorkspace && farmingReports.includes(entry.key)) && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).sort((a, b) => group.operations.indexOf(a.key) - group.operations.indexOf(b.key));
         const purchasing = operationAllowed("purchase-receipts", context.identity, context.permissions.functionPermissions);
+        const modulePath = (key: string) => key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${key}`;
+        if (group.label === FARMING_GROUP) {
+          const cycles = operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions);
+          const columns = [
+            { title: "Cơ sở", items: rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key])) },
+            { title: "Chu kỳ nuôi", items: [cycles && link("/farming/nursery", "Ươm giống", "product"), ...modules.map((entry) => link(modulePath(entry.key), entry.key === "water" ? "Chất lượng nước" : entry.title, operationIcons[entry.key]))].filter(Boolean) },
+            { title: "Thu hoạch", items: harvestLinks.map((item) => link(...item)) },
+          ].filter((column) => column.items.length);
+          return columns.length ? <NavigationGroup key={group.label} label={group.label} compact={compact} columns>{columns.map((column) => <NavigationSection key={column.title} title={column.title}>{column.items}</NavigationSection>)}</NavigationGroup> : null;
+        }
         const inputs = group.label === INPUT_GROUP ? inputLinks : [];
         const sales: [string, string, InterfaceIconName][] = group.label === "Kinh doanh" ? productLinks : [];
-        const plans = group.label === "Nuôi trồng" && !modules.some((entry) => entry.key === "harvest") ? harvestLinks : [];
-        const seedLots = group.label === "Nuôi trồng" && operationAllowed("seed-lots", context.identity, context.permissions.functionPermissions);
-        return rows.length || modules.length || inputs.length || sales.length || plans.length || seedLots || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
+        return rows.length || modules.length || inputs.length || sales.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>
           {rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]))}
-          {group.label === "Nuôi trồng" && operationAllowed("seed-lots", context.identity, context.permissions.functionPermissions) && link(SEED_LOTS_PATH, "Lô giống", "product")}
-          {group.label === "Nuôi trồng" && operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions) && link("/farming/nursery", "Ươm giống", "product")}
           {inputs.map(([href, label, icon]) => link(href, label, icon))}
           {sales.map(([href, label, icon]) => link(href, label, icon))}
-          {modules.flatMap((entry) => [link(entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`, entry.title, operationIcons[entry.key]),
-            ...(entry.key === "harvest" && group.label === "Nuôi trồng" ? harvestLinks.map((item) => link(...item)) : [])])}
-          {plans.map(([href, label, icon]) => link(href, label, icon))}
+          {modules.map((entry) => link(modulePath(entry.key), entry.title, operationIcons[entry.key]))}
           {group.label === "Mua hàng" && purchasing && <>{link(kindText.Seed.receiptsPath, kindText.Seed.receipt, "receipt")}{link(kindText.Supply.receiptsPath, kindText.Supply.receipt, "receipt")}{link(kindText.Seed.returnsPath, kindText.Seed.receiptReturn, "upload")}{link(kindText.Supply.returnsPath, kindText.Supply.receiptReturn, "upload")}</>}
         </div></NavigationGroup> : null;
       })}

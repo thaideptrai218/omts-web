@@ -23,3 +23,11 @@
 .contextNav a.journeyLink[aria-current="page"] .journeyCaption{color:#e3ebf7}
 .contextNav a.journeyOverview{flex:none;align-self:center}
 .journeyDivider{flex:none;align-self:center;width:1px;height:28px;background:#dce3ed}
+
+/* Grouped dropdown (NavigationGroup columns): titled columns side by side, one list on narrow screens. */
+.dropdown.dropdownColumns{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:0;padding:8px 4px}
+.dropdownSection{min-width:0;padding:0 4px}
+.dropdownSection+.dropdownSection{border-left:1px solid #e3e9f1}
+.dropdownSectionTitle{margin:0;padding:4px 12px 6px;font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--omts-brand,#315a96)}
+.dropdownSectionItems{display:grid;gap:2px}
+@media(max-width:900px){.dropdown.dropdownColumns{grid-auto-flow:row;grid-auto-columns:auto;padding:7px}.dropdownSection{padding:0}.dropdownSection+.dropdownSection{border-left:0;border-top:1px solid #e3e9f1;margin-top:6px;padding-top:6px}}

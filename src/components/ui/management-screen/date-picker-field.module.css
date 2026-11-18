@@ -1,14 +1,20 @@
 ﻿.field { display:grid; min-width:0; gap:4px; }
-.control { display:flex; align-items:center; min-width:0; height:34px; border:1px solid var(--omts-color-border-strong, #cbd5e1); border-radius:6px; background:var(--omts-color-surface, #fff); color:var(--omts-color-text, #243447); }
-.control:focus-within { border-color:var(--omts-color-primary, var(--omts-brand)); box-shadow:0 0 0 2px var(--omts-color-primary-soft, #edf3fc); }
-.control[data-invalid] { border-color:#dc2626; }
-.control input { min-width:0; width:100%; height:100%; border:0; outline:0; background:transparent; padding:0 9px; font-size:13px; color:inherit; font-variant-numeric:tabular-nums; }
-.control input:disabled { opacity:.6; }
-.control button { display:grid; place-items:center; flex:none; width:32px; height:30px; border-radius:4px; color:var(--omts-color-text-muted, #64748b); }
+/* One omts-control look (34px, 13px text): the wrapper owns the border, the inner input is bare. The `.field >` and `.control .input` selectors outrank
+   ancestor rules such as `.kv input` and the `omts-control` class some callers add to the wrapper, so no inner border or padding can leak in. */
+.field > .control { display:flex; align-items:center; gap:4px; box-sizing:border-box; width:100%; min-width:0; height:34px; min-height:34px; padding:0 0 0 8px; border:1px solid var(--omts-color-border-strong, #8496ad); border-radius:6px; background:var(--omts-color-surface, #fff); color:var(--omts-color-text, #182f47); font-size:13px; line-height:20px; text-align:left; transition:border-color 120ms ease, box-shadow 120ms ease; }
+.field > .control:hover:not([data-disabled]) { border-color:var(--omts-brand, var(--omts-color-primary)); }
+.field > .control:focus-within { border-color:var(--omts-brand, var(--omts-color-primary)); box-shadow:0 0 0 3px color-mix(in srgb, var(--omts-brand, var(--omts-color-primary)) 18%, transparent); }
+.field > .control[data-invalid] { border-color:#dc2626; }
+.field > .control[data-disabled] { border-color:transparent; background:var(--omts-color-surface-subtle, #f3f6fb); color:var(--omts-color-text-muted, #5b6f86); }
+/* The date takes only the width of "dd/mm/yyyy" and may shrink; the time never shrinks, so it cannot be pushed out of the field. */
+.control .input { flex:0 1 10ch; min-width:6ch; width:10ch; height:100%; margin:0; padding:0; border:0; border-radius:0; outline:0; background:transparent; box-shadow:none; font:inherit; color:inherit; text-align:left; font-variant-numeric:tabular-nums; }
+.control .input:read-only, .control .input:disabled { background:transparent; border:0; color:inherit; }
+.control .input::placeholder { color:#94a3b8; }
+.control button { display:grid; place-items:center; flex:none; width:24px; height:30px; margin:0 1px 0 auto; padding:0; border-radius:4px; color:var(--omts-color-text-muted, #64748b); }
 .control button:hover:not(:disabled) { color:var(--omts-color-primary); background:var(--omts-color-primary-soft); }
 .control button:focus-visible { outline:2px solid var(--omts-color-primary); outline-offset:-2px; }
 .control svg { width:16px; height:16px; }
-.timeValue { font-size:12px; font-variant-numeric:tabular-nums; }
+.timeValue { flex:none; font-size:13px; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .error { font-size:12px; line-height:1.4; color:#b91c1c; }
 /* One fixed calendar width: seven equal day columns (44px) so nothing inside can push the grid wider than the popover and get clipped. */
 .calendar { width:308px; max-width:calc(100vw - 50px); display:grid; gap:12px; box-sizing:border-box; }
@@ -41,4 +47,4 @@
 .footer { display:flex; align-items:center; gap:12px; padding-top:10px; border-top:1px solid var(--omts-color-border); font-size:12px; }
 .close { margin-left:auto; min-height:30px; padding:0 12px; border:1px solid var(--omts-color-border-strong); border-radius:6px; font-weight:600; }
 .close:hover { color:var(--omts-color-primary); border-color:var(--omts-color-primary); }
-@media (max-width:620px) { .control input { font-size:16px; } }
+@media (max-width:620px) { .control .input { font-size:16px; } }
