@@ -41,5 +41,5 @@ it("says so when the search finds nothing", async () => {
   const user = userEvent.setup();
   await user.click(container.querySelector<HTMLElement>(".omts-select-trigger")!);
   await user.type(within(document.querySelector<HTMLElement>(".omts-select-menu")!).getByRole("searchbox", { hidden: true }), "zzz");
-  expect(screen.getByText("Không có kết quả phù hợp.")).toBeTruthy();
+  expect(screen.getByText("Không tìm thấy “zzz”.")).toBeTruthy();
 });

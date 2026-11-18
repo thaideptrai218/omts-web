@@ -6,6 +6,10 @@ import { addressNeedsReview, addressReviewHint, type AddressValue } from "./mode
 import { addressRepository, unitsError } from "./repository";
 import { useUnits } from "./use-units";
 
+/** Map icons in the boxes: a pin for the province, a building for the ward. */
+const PinIcon = <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21Z" /><circle cx="12" cy="9.5" r="2.5" /></svg>;
+const WardIcon = <svg viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12" /><path d="M9 21v-6h6v6" /></svg>;
+
 function Failed({ kind, onRetry }: { kind: "province" | "ward"; onRetry(): void }) {
   return <p role="alert" className="mt-1 text-xs text-danger">{unitsError(kind)} <button type="button" className={managementStyles.linkButton} onClick={onRetry}>Thử lại</button></p>;
 }
@@ -37,14 +41,14 @@ export function AddressFields({ value, onChange, required = false, disabled = fa
 
   return <>
     <div>
-      <Select searchable searchLabel="Tìm tỉnh/thành" label={`Tỉnh/thành${star}`} value={provinceCode ? String(provinceCode) : ""} disabled={disabled || provinces.loading || provinces.failed} onChange={(event) => pickProvince(event.target.value)}>
+      <Select searchable searchLabel="Tìm tỉnh/thành" leading={PinIcon} label={`Tỉnh/thành${star}`} value={provinceCode ? String(provinceCode) : ""} disabled={disabled || provinces.loading || provinces.failed} onChange={(event) => pickProvince(event.target.value)}>
         <option value="">{provincePlaceholder}</option>
         {provinces.data?.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
       </Select>
       {provinces.failed && <Failed kind="province" onRetry={provinces.retry} />}
     </div>
     <div>
-      <Select searchable searchLabel="Tìm phường/xã" label={`Phường/xã${star}`} value={value.wardCode ? String(value.wardCode) : ""} disabled={disabled || !provinceCode || wards.loading || wards.failed} onChange={(event) => pickWard(event.target.value)}>
+      <Select searchable searchLabel="Tìm phường/xã" leading={WardIcon} label={`Phường/xã${star}`} value={value.wardCode ? String(value.wardCode) : ""} disabled={disabled || !provinceCode || wards.loading || wards.failed} onChange={(event) => pickWard(event.target.value)}>
         <option value="">{wardPlaceholder}</option>
         {wards.data?.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
       </Select>

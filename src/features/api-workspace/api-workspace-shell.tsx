@@ -140,6 +140,28 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
           ].filter((column) => column.items.length);
           return columns.length ? <NavigationGroup key={group.label} label={group.label} compact={compact} columns>{columns.map((column) => <NavigationSection key={column.title} title={column.title}>{column.items}</NavigationSection>)}</NavigationGroup> : null;
         }
+        // Vật tư & Giống, Mua hàng and Kinh doanh open into titled columns like Nuôi trồng; empty columns are dropped.
+        const pick = (hrefs: readonly string[], links: readonly [string, string, InterfaceIconName][]) => links.filter(([href]) => hrefs.includes(href)).map((item) => link(...item));
+        const ops = (keys: readonly string[]) => modules.filter((entry) => keys.includes(entry.key)).sort((a, b) => keys.indexOf(a.key) - keys.indexOf(b.key)).map((entry) => link(modulePath(entry.key), entry.title, operationIcons[entry.key]));
+        const res = (keys: readonly string[]) => rows.filter((key) => keys.includes(key)).map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key]));
+        const sectioned: { title: string; items: ReactNode[] }[] | undefined =
+          group.label === INPUT_GROUP ? [
+            { title: "Giống", items: pick([kindText.Seed.itemsPath, SEED_LOTS_PATH], inputLinks) },
+            { title: "Vật tư", items: pick([kindText.Supply.itemsPath], inputLinks) },
+            { title: "Xuất kho", items: pick(["/inputs/uses", "/inputs/disposals"], inputLinks) },
+          ] : group.label === "Mua hàng" ? [
+            { title: "Đối tác", items: res(["suppliers"]) },
+            { title: "Nhập hàng", items: purchasing ? [link(kindText.Seed.receiptsPath, kindText.Seed.receipt, "receipt"), link(kindText.Supply.receiptsPath, kindText.Supply.receipt, "receipt")] : [] },
+            { title: "Trả hàng", items: purchasing ? [link(kindText.Seed.returnsPath, kindText.Seed.receiptReturn, "upload"), link(kindText.Supply.returnsPath, kindText.Supply.receiptReturn, "upload")] : [] },
+          ] : group.label === "Kinh doanh" ? [
+            { title: "Bán hàng", items: [...pick(["/sales/orders"], productLinks), ...ops(["sales-invoice-list", "sales-returns"]), ...pick(["/sales/disposals"], productLinks)] },
+            { title: "Khách hàng", items: [...res(["customers"]), ...ops(["purchase-requests", "quality-claims", "claim-reports"])] },
+            { title: "Hàng hóa", items: [...pick(["/sales/products"], productLinks), ...ops(["sales-products", "lot-tracing"])] },
+          ] : undefined;
+        if (sectioned) {
+          const columns = sectioned.filter((column) => column.items.length);
+          return columns.length ? <NavigationGroup key={group.label} label={group.label} compact={compact} columns>{columns.map((column) => <NavigationSection key={column.title} title={column.title}>{column.items}</NavigationSection>)}</NavigationGroup> : null;
+        }
         const inputs = group.label === INPUT_GROUP ? inputLinks : [];
         const sales: [string, string, InterfaceIconName][] = group.label === "Kinh doanh" ? productLinks : [];
         return rows.length || modules.length || inputs.length || sales.length || (group.label === "Mua hàng" && purchasing) ? <NavigationGroup key={group.label} label={group.label} compact={compact}><div className={styles.navigationItems}>

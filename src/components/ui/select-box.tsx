@@ -37,9 +37,11 @@ const setNativeValue = Object.getOwnPropertyDescriptor(typeof HTMLSelectElement 
  * or inside the modal dialog the box sits in, so scrolling lists never clip it and a dialog never hides it). Picking an item sets the native select and fires its real change
  * event, so `onChange={(event) => event.target.value}` handlers work unchanged.
  */
-export function SelectBox({ className = "", children, style, ref, onChange, searchable = false, searchLabel = "Tìm trong danh sách", ...props }: ComponentProps<"select"> & {
+export function SelectBox({ className = "", children, style, ref, onChange, searchable = false, searchLabel = "Tìm trong danh sách", leading, ...props }: ComponentProps<"select"> & {
   /** Puts a search box on top of the list that filters the items by their text, ignoring case and diacritics. */
   searchable?: boolean; searchLabel?: string;
+  /** A small icon shown before the value in the box (e.g. a map pin for an address). */
+  leading?: ReactNode;
 }) {
   const native = useRef<HTMLSelectElement | null>(null), trigger = useRef<HTMLButtonElement>(null), list = useRef<HTMLUListElement>(null);
   const options = optionsOf(children);
@@ -87,7 +89,8 @@ export function SelectBox({ className = "", children, style, ref, onChange, sear
   }
 
   const needle = fold(query.trim());
-  const shownOptions = searchable && needle ? options.filter((option) => option.value !== "" && fold(option.label).includes(needle)) : options;
+  // A searchable list leaves out its empty "Chọn …" placeholder: it is the box's prompt, not a choice.
+  const shownOptions = searchable ? options.filter((option) => option.value !== "" && (!needle || fold(option.label).includes(needle))) : options;
 
   function pick(value: string) {
     setOpen(false); setQuery("");
@@ -107,17 +110,20 @@ export function SelectBox({ className = "", children, style, ref, onChange, sear
       onChange={(event) => { setUncontrolled(event.target.value); onChange?.(event); }}
     >{children}</select>
     <button ref={trigger} type="button" tabIndex={-1} aria-hidden="true" disabled={props.disabled} className={`omts-select-trigger ${className}`} style={style} onClick={() => { setQuery(""); setOpen((value) => !value); }} data-open={open || undefined} title={props.title}>
+      {leading && <span className="omts-select-lead" aria-hidden="true">{leading}</span>}
       <span className="omts-select-value" data-placeholder={!shown?.value || undefined}>{shown?.label ?? ""}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
     {open && box && createPortal(<ul ref={showInTopLayer} popover="manual" aria-hidden="true" className="omts-select-menu" data-up={box.up || undefined}
       style={{ left: box.left, width: box.width, ...(box.up ? { top: box.top - 4, translate: "0 -100%" } : { top: box.top + 4 }) }}>
       {searchable && <li className="omts-select-search">
-        <input autoFocus type="search" aria-label={searchLabel} placeholder="Tìm…" autoComplete="off" value={query}
+        <svg className="omts-select-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input autoFocus type="search" aria-label={searchLabel} placeholder={`${searchLabel}…`} autoComplete="off" value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); const first = shownOptions.find((option) => !option.disabled && option.value !== ""); if (first) pick(first.value); } }} />
       </li>}
-      {searchable && needle && !shownOptions.length && <li className="omts-select-empty">Không có kết quả phù hợp.</li>}
+      {searchable && needle && !shownOptions.length && <li className="omts-select-empty">Không tìm thấy “{query.trim()}”.</li>}
+      {searchable && needle && shownOptions.length > 0 && <li className="omts-select-count">{shownOptions.length} kết quả</li>}
       {shownOptions.map((option) => <li key={option.value}>
         <button type="button" tabIndex={-1} disabled={option.disabled} data-selected={option.value === current || undefined} onClick={() => pick(option.value)}>
           <span>{option.label}</span>
