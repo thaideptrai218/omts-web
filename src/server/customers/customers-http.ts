@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { addressBodyFields, invoiceBodyFields } from "@/features/address-invoice/contracts";
 import * as c from "@/features/customers/contracts";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
@@ -44,9 +45,10 @@ const read = z.discriminatedUnion("action", [
 
 const text = (max: number) => z.string().max(max).nullable().optional();
 const saveBody = z.strictObject({
-  name: z.string().max(200), phoneNumber: text(40), address: text(500), note: text(2000), rowVersion: z.string().min(1).max(200).optional(), code: z.string().regex(/^[A-Za-z0-9._-]{1,30}$/).nullable().optional(),
+  name: z.string().max(200), phoneNumber: text(40), note: text(2000), rowVersion: z.string().min(1).max(200).optional(), code: z.string().regex(/^[A-Za-z0-9._-]{1,30}$/).nullable().optional(),
   customerType: z.enum(["Individual", "Company"]).nullable().optional(), gender: z.enum(["Male", "Female"]).nullable().optional(), birthDate: day.nullable().optional(), phoneNumber2: text(40), email: text(256), facebook: text(300),
-  province: text(100), ward: text(100), companyName: text(200), taxCode: text(20), identityNumber: text(20), bankBin: z.string().regex(/^\d{6}$/).nullable().optional(), bankAccountNumber: text(30),
+  taxCode: text(20), bankBin: z.string().regex(/^\d{6}$/).nullable().optional(), bankAccountNumber: text(30),
+  ...addressBodyFields, ...invoiceBodyFields(true),
 });
 const wholeMoney = z.number().int().max(9_999_999_999_999);
 const paymentBody = z.strictObject({

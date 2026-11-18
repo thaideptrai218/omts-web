@@ -10,7 +10,7 @@ import { OwnerOverview } from "./owner-overview";
 import { InboxBell } from "@/features/inbox-api/inbox-bell";
 import { SelectedZonesProvider } from "./selected-zones";
 import { ZonePicker } from "./zone-picker";
-import { NavigationGroup, NavigationSection } from "@/components/layout/navigation-group";
+import { NavigationGroup, NavigationLink, NavigationSection } from "@/components/layout/navigation-group";
 import { FarmingWorkflowNav } from "@/features/farming-management/farming-workflow-nav";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -115,19 +115,14 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const settingsSections: SettingsSection[] = [
     { label: "Quản lý", items: [...cashItems, ...inputSettings, ...productSettings, ...customerSettings, ...(isOwner ? [{ href: "/settings?section=harvest", panel: "harvest" as const, label: "Thiết lập thu hoạch", icon: "work" as const, description: "Khối lượng trung bình mỗi lồng và số ngày tự động đóng lô." }] : [])] },
     { label: "Phân quyền", items: (["accounts", "roles"] as const).filter((key) => visible.includes(key)).map((key) => ({ href: `/workspace/${key}`, label: resources[key].title, icon: resourceIcons[key], description: settingsDescriptions[key] })) },
-    { label: "Hợp tác xã", items: isOwner ? [{ href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã." }, { href: "/cooperative/receiving-bank-account", label: "Ngân hàng nhận tiền", icon: "payment", description: "Tài khoản dùng để nhận chuyển khoản và tạo mã VietQR." }] : [] },
+    { label: "Hợp tác xã", items: isOwner ? [{ href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã." }, { href: "/cooperative/receiving-bank-account", label: "Ngân hàng nhận tiền", icon: "payment", description: "Tài khoản dùng để nhận chuyển khoản và tạo mã VietQR." }, { href: "/cooperative/certifications", label: "Chứng nhận HTX", icon: "document", description: "Hồ sơ chứng nhận, thời hạn hiệu lực và tệp đính kèm của hợp tác xã." }] : [] },
+    { label: "Hệ thống", items: isOwner ? [{ href: "/audit", label: "Nhật ký thao tác", icon: "search", description: "Tra cứu ai đã thao tác, lúc nào và bản ghi nào bị thay đổi." }] : [] },
     { label: "Cấu hình nghiệp vụ", items: operationModules.filter((entry) => entry.key === "job-types" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => ({ href: `/operations/${entry.key}`, label: entry.title, icon: operationIcons[entry.key], description: "Đơn giá theo giờ và lịch sử ngày hiệu lực của từng loại công việc." })) },
   ];
   const navigation = ({ compact, onNavigate }: { compact: boolean; onNavigate?: () => void }) => {
     const link = (href: string, label: string, icon: InterfaceIconName) => <Link key={href} className={styles.navigationLink} href={href} aria-current={active(href) ? "page" : undefined} aria-label={label} title={compact ? label : undefined} onClick={onNavigate}><span className={styles.iconSlot}><InterfaceIcon name={icon}/></span><span className={styles.linkLabel}>{label}</span></Link>;
     return <nav aria-label="Chức năng" className={styles.navigation}>
-      <NavigationGroup label="Điều hành" compact={compact}><div className={styles.navigationItems}>
-        {link("/dashboard", "Tổng quan HTX", "dashboard")}
-        {context.identity.subjectType === "CooperativeOwner" && link("/audit", "Nhật ký thao tác", "search")}
-        {context.identity.subjectType === "CooperativeOwner" && link("/cooperative/certifications", "Chứng nhận HTX", "document")}
-        {(context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some(p => p.functionCode === "SUPPLIER_PAYMENTS" && p.action === "View")) && link("/operations/supplier-debts", "Đối chiếu công nợ", "payment")}
-        {context.identity.subjectType === "CooperativeOwner" && link("/trader-requests", "Yêu cầu đăng ký thương lái", "request")}
-      </div></NavigationGroup>
+      <NavigationLink href="/dashboard" label="Tổng quan" active={active("/dashboard")} onNavigate={onNavigate} />
       {context.identity.subjectType === "SystemAdministrator" && <NavigationGroup label="Quản trị hệ thống" compact={compact}><div className={styles.navigationItems}>{link("/system/accounts", "Tài khoản & nhật ký", "roles")}</div></NavigationGroup>}
       {workspaceGroups.map((group) => {
         if (financeWorkspace && group.label === FARMING_GROUP) return null;

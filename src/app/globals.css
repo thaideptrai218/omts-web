@@ -306,6 +306,10 @@ input.omts-check:focus-visible { outline: 2px solid var(--omts-brand, var(--omts
 .omts-select-menu button[data-selected] { color: var(--omts-brand, var(--omts-color-primary)); font-weight: 600; }
 .omts-select-menu button:disabled { color: #a3b0c0; cursor: not-allowed; }
 .omts-select-menu svg { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.omts-select-search { position: sticky; top: -4px; z-index: 1; margin: -4px -4px 4px; padding: 6px; background: #fff; border-bottom: 1px solid var(--omts-color-border, #dce3ed); }
+.omts-select-search input { width: 100%; min-height: 30px; padding: 4px 8px; border: 1px solid var(--omts-color-border-strong, #8496ad); border-radius: 6px; font-size: 13px; }
+.omts-select-search input:focus { outline: none; border-color: var(--omts-brand, var(--omts-color-primary)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--omts-brand, var(--omts-color-primary)) 18%, transparent); }
+.omts-select-empty { padding: 8px 10px; font-size: 13px; color: var(--omts-color-text-muted, #5b6f86); }
 @keyframes omts-select-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @keyframes omts-select-in-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .omts-select-menu { animation: none; } }

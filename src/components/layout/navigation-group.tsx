@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./top-shell.module.css";
 /** `columns`: the children are `NavigationSection`s laid out side by side (one list on narrow screens). */
@@ -12,4 +13,8 @@ export function NavigationGroup({label,columns=false,children}:{label:string;com
 /** One titled column of a `columns` group. */
 export function NavigationSection({title,children}:{title:string;children:ReactNode}) {
  return <section className={styles.dropdownSection} aria-label={title}><h3 className={styles.dropdownSectionTitle}>{title}</h3><div className={styles.dropdownSectionItems}>{children}</div></section>;
+}
+/** A top-level destination that has no dropdown: the same bar item as a group, but a plain link. */
+export function NavigationLink({href,label,active,onNavigate}:{href:string;label:string;active:boolean;onNavigate?:()=>void}) {
+ return <Link className={styles.topLink} href={href} aria-current={active?"page":undefined} onClick={onNavigate}>{label}</Link>;
 }

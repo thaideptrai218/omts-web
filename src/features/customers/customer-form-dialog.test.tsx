@@ -5,13 +5,22 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const repo = vi.hoisted(() => ({ save: vi.fn(), setPhoto: vi.fn(), removePhoto: vi.fn() }));
 vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), customerRepository: repo }));
+vi.mock("@/features/address-invoice/repository", async (original) => ({
+  ...(await original<typeof import("@/features/address-invoice/repository")>()),
+  addressRepository: {
+    provinces: vi.fn(async () => ({ status: "success", data: [{ code: 92, name: "Thành phố Cần Thơ" }] })),
+    wards: vi.fn(async () => ({ status: "success", data: [{ code: 920101, name: "Phường Ninh Kiều", provinceCode: 92 }] })),
+    lookupTaxCode: vi.fn(),
+  },
+}));
 vi.mock("@/features/cash-book/repository", () => ({ listBanks: vi.fn(async () => ({ status: "success", data: [{ bin: "970436", shortName: "Vietcombank", name: "Ngân hàng TMCP Ngoại thương" }] })) }));
 import { CustomerFormDialog } from "./customer-form-dialog";
 import { spread } from "./allocation";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
-const record = { id: "122bb318-a72e-49aa-a8d7-a6169f889007", code: "KH000001", name: "Chú Ba", phoneNumber: "0900000000", email: "a@b.vn", address: "Ấp 1", note: null, phoneLocked: true, traderAccount: null, mergedIntoCustomerId: null, rowVersion: "v1",
-  statusId: 101, status: "In Use", customerType: "Company", gender: "Male", birthDate: "1980-05-20", phoneNumber2: null, facebook: null, province: "Cần Thơ", ward: null, companyName: "Cty Ba", taxCode: "0312345678", identityNumber: "012345678901",
+const record = { id: "122bb318-a72e-49aa-a8d7-a6169f889007", code: "KH000001", name: "Chú Ba", phoneNumber: "0900000000", email: "a@b.vn", address: "Ấp 1", street: "Ấp 1", note: null, phoneLocked: true, traderAccount: null, mergedIntoCustomerId: null, rowVersion: "v1",
+  statusId: 101, status: "In Use", customerType: "Company", gender: "Male", birthDate: "1980-05-20", phoneNumber2: null, facebook: null, province: "Thành phố Cần Thơ", provinceCode: 92, provinceName: "Thành phố Cần Thơ", ward: "Phường Ninh Kiều", wardCode: 920101, wardName: "Phường Ninh Kiều", companyName: "Cty Ba", taxCode: "0312345678",
+  invoiceBuyerType: "Organization", invoiceName: "Cty Ba", invoiceAddressSameAsContact: true, invoiceEmail: "hoadon@ba.vn", personalTaxId: null,
   bankBin: "970436", bankName: "Vietcombank", bankAccountNumber: "0011", photoUrl: null, createdAt: "2026-11-09T00:00:00Z", createdBy: "Chủ", isUsed: true, currentDebt: 0 };
 
 beforeEach(() => {
@@ -30,9 +39,14 @@ it("sends every field when it edits, so that the replacing save clears nothing b
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
   expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({
-    name: "Chú Ba mới", code: "KH000001", phoneNumber: "0900000000", email: "a@b.vn", birthDate: "1980-05-20", gender: "Male", customerType: "Company", companyName: "Cty Ba", taxCode: "0312345678",
-    identityNumber: "012345678901", bankBin: "970436", bankAccountNumber: "0011", province: "Cần Thơ", phoneNumber2: null, facebook: null, rowVersion: "v1",
+    name: "Chú Ba mới", code: "KH000001", phoneNumber: "0900000000", email: "a@b.vn", birthDate: "1980-05-20", gender: "Male", customerType: "Company",
+    bankBin: "970436", bankAccountNumber: "0011", phoneNumber2: null, facebook: null, rowVersion: "v1",
+    provinceCode: 92, provinceName: "Thành phố Cần Thơ", wardCode: 920101, wardName: "Phường Ninh Kiều", street: "Ấp 1", province: "Thành phố Cần Thơ", ward: "Phường Ninh Kiều", address: "Ấp 1",
+    invoiceBuyerType: "Organization", invoiceName: "Cty Ba", taxCode: "0312345678", personalTaxId: null, invoiceAddressSameAsContact: true, invoiceEmail: "hoadon@ba.vn",
+    invoiceProvinceCode: null, invoiceWardCode: null, invoiceStreet: null,
   }), record.id);
+  // The personal ID number (CCCD) is no longer a field of the profile.
+  expect(repo.save.mock.calls[0][0]).not.toHaveProperty("identityNumber");
 });
 
 it("refuses a new customer without a name or phone before calling the API", async () => {
@@ -50,8 +64,9 @@ it("marks the fields the settings require and asks for them before calling the A
   const required = { phoneNumber2: false, email: true, gender: false, birthDate: false, address: true, facebook: false, bank: false, taxCode: true };
   render(<ToastProvider><CustomerFormDialog record={null} required={required} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
   expect(screen.getByLabelText("Email *")).toBeTruthy();
+  // A cooperative that requires the tax code starts a new customer as an organisation, which has one.
   expect(screen.getByLabelText("Mã số thuế *")).toBeTruthy();
-  expect(screen.getByLabelText("Tỉnh/thành *")).toBeTruthy();
+  expect(screen.getByRole("combobox", { name: "Tỉnh/thành *" })).toBeTruthy();
   expect(screen.queryByLabelText("Facebook *")).toBeNull();
   await user.type(screen.getByLabelText("Tên khách hàng *"), "Anh Tư");
   await user.type(screen.getByLabelText("Số điện thoại 1 *"), "0911111111");
@@ -60,7 +75,7 @@ it("marks the fields the settings require and asks for them before calling the A
   expect(repo.save).not.toHaveBeenCalled();
   await user.type(screen.getByLabelText("Email *"), "tu@b.vn");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
-  expect((await screen.findByRole("alert")).textContent).toBe("Nhập địa chỉ.");
+  expect((await screen.findByRole("alert")).textContent).toBe("Chọn tỉnh/thành.");
 });
 
 it("spreads a payment over the unpaid invoices oldest first", () => {
@@ -81,4 +96,46 @@ it("keeps a draft when discarding is declined and closes only after explicit con
   await user.click(screen.getByRole("button", { name: "Bỏ qua" }));
   await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
   await waitFor(() => expect(close).toHaveBeenCalled());
+});
+
+it("refuses an organisation whose invoice address, taken from the contact address, is empty, naming what to fix, before calling the API", async () => {
+  const user = userEvent.setup();
+  render(<ToastProvider><CustomerFormDialog record={null} onClose={vi.fn()} onSaved={vi.fn()} /></ToastProvider>);
+  await user.type(screen.getByLabelText("Tên khách hàng *"), "Anh Tư");
+  await user.type(screen.getByLabelText("Số điện thoại 1 *"), "0911111111");
+  await user.click(screen.getByRole("radio", { name: "Doanh nghiệp / Tổ chức" }));
+  await user.type(screen.getByLabelText("Tên đơn vị *"), "Cty Tư");
+  await user.type(screen.getByLabelText("Mã số thuế *"), "0312345678");
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  expect((await screen.findByRole("alert")).textContent).toContain("lấy theo địa chỉ liên hệ");
+  expect(repo.save).not.toHaveBeenCalled();
+});
+
+it("saves a new customer as a consumer with no invoice info and the contact address it was given", async () => {
+  const user = userEvent.setup(), saved = vi.fn();
+  repo.save.mockResolvedValue({ status: "success", data: { customer: { ...record, code: "KH000002" } } });
+  render(<ToastProvider><CustomerFormDialog record={null} onClose={vi.fn()} onSaved={saved} /></ToastProvider>);
+  await user.type(screen.getByLabelText("Tên khách hàng *"), "Anh Tư");
+  await user.type(screen.getByLabelText("Số điện thoại 1 *"), "0911111111");
+  await waitFor(() => expect((screen.getByRole("combobox", { name: "Tỉnh/thành" }) as HTMLSelectElement).disabled).toBe(false));
+  fireEvent.change(screen.getByRole("combobox", { name: "Tỉnh/thành" }), { target: { value: "92" } });
+  await waitFor(() => expect((screen.getByRole("combobox", { name: "Phường/xã" }) as HTMLSelectElement).disabled).toBe(false));
+  fireEvent.change(screen.getByRole("combobox", { name: "Phường/xã" }), { target: { value: "920101" } });
+  await user.type(screen.getByLabelText("Số nhà, đường"), "5 Lý Tự Trọng");
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({
+    provinceCode: 92, provinceName: "Thành phố Cần Thơ", wardCode: 920101, wardName: "Phường Ninh Kiều", street: "5 Lý Tự Trọng",
+    invoiceBuyerType: "Consumer", invoiceName: null, taxCode: null, personalTaxId: null, invoiceEmail: null,
+  }), undefined);
+});
+
+it("edits in place, in the open row, when it is inline: no dialog, the same fields and the same save", async () => {
+  const user = userEvent.setup(), saved = vi.fn();
+  const { container } = render(<ToastProvider><CustomerFormDialog inline record={record} onClose={vi.fn()} onSaved={saved} /></ToastProvider>);
+  expect(container.querySelector("dialog")).toBeNull();
+  const name = screen.getByLabelText("Tên khách hàng *");
+  await user.clear(name); await user.type(name, "Chú Ba mới");
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
 });

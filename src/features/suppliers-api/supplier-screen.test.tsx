@@ -18,7 +18,7 @@ const grant = (...pairs: [string, string][]) => { state.context.permissions.func
 beforeEach(() => {
   try { window.localStorage.clear(); } catch { /* storage may be unavailable */ }
   state.list.mockResolvedValue({ status: "success", data: { items: [row], page: 1, pageSize: 15, total: 1 } });
-  state.detail.mockResolvedValue({ status: "success", data: { ...row, identityNumber: null, certificates: [], rowVersion: "v" } });
+  state.detail.mockResolvedValue({ status: "success", data: { ...row, certificates: [], rowVersion: "v" } });
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 

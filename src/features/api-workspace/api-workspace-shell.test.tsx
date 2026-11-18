@@ -42,8 +42,13 @@ describe("shared API navigation shell", () => {
   it("puts the overview first and moves settings destinations into the header settings menu", () => {
     const view = setup("CooperativeOwner");
     const nav = within(view.container).getByRole("navigation", { name: "Chức năng" });
-    expect(nav.querySelector("details summary")?.textContent).toBe("Điều hành");
-    expect(nav.querySelector('details a[href="/dashboard"]')).toBeTruthy();
+    // Tổng quan is a plain top-level link (active on /dashboard), not a one-item dropdown; the four pages that left the menu moved to settings or stay by URL.
+    const overview = within(nav).getByRole("link", { name: "Tổng quan" });
+    expect(overview.getAttribute("href")).toBe("/dashboard");
+    expect(overview.getAttribute("aria-current")).toBe("page");
+    expect(overview.closest("details")).toBeNull();
+    expect(within(nav).queryByText("Điều hành")).toBeNull();
+    for (const href of ["/audit", "/cooperative/certifications", "/operations/supplier-debts", "/trader-requests"]) expect(nav.querySelector(`a[href="${href}"]`)).toBeNull();
     expect(nav.querySelector('a[href="/cooperative/profile"]')).toBeNull();
     expect(nav.querySelector('a[href="/cooperative/receiving-bank-account"]')).toBeNull();
     const settings = within(view.container).getByRole("button", { name: "Cài đặt" });
@@ -52,6 +57,8 @@ describe("shared API navigation shell", () => {
     expect(settings.getAttribute("aria-expanded")).toBe("true");
     expect(within(view.container).getByRole("link", { name: "Hồ sơ hợp tác xã" }).getAttribute("href")).toBe("/cooperative/profile");
     expect(within(view.container).getByRole("link", { name: "Ngân hàng nhận tiền" }).getAttribute("href")).toBe("/cooperative/receiving-bank-account");
+    expect(within(view.container).getByRole("link", { name: "Chứng nhận HTX" }).getAttribute("href")).toBe("/cooperative/certifications");
+    expect(within(view.container).getByRole("link", { name: "Nhật ký thao tác" }).getAttribute("href")).toBe("/audit");
     fireEvent.keyDown(settings, { key: "Escape" });
     expect(settings.getAttribute("aria-expanded")).toBe("false");
   });

@@ -44,7 +44,7 @@ export function Field({ label, ref, ...props }: ComponentProps<"input"> & { labe
   }
   return <label className="block text-xs font-medium text-text-muted">{label}<input {...props} ref={ref} className={control} /></label>;
 }
-export function Select({ label, children, ...props }: ComponentProps<"select"> & { label: string }) {
+export function Select({ label, children, ...props }: ComponentProps<typeof SelectBox> & { label: string }) {
   return <label className="block text-xs font-medium text-text-muted">{label}<SelectBox aria-label={label} {...props} className={control}>{children}</SelectBox></label>;
 }
 export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: string }) {

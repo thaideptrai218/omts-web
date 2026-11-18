@@ -16,7 +16,7 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { workspaceError } from "@/features/api-workspace/workspace-error";
 import { ErrorNotice, Money, useMutation } from "@/features/operations/ui";
-import { IN_USE, supplierTypes, typeLabel, type BulkResult, type SupplierDetail, type SupplierPage, type SupplierRow } from "./contracts";
+import { IN_USE, supplierTypes, typeLabel, type BulkResult, type SupplierPage, type SupplierRow } from "./contracts";
 import { supplierRepository, type SupplierQuery } from "./repository";
 import { SupplierDetailPanel, type SupplierAccess } from "./supplier-detail";
 import { SupplierFormDialog } from "./supplier-form-dialog";
@@ -31,9 +31,9 @@ const columns: readonly Column[] = [
   { key: "type", label: "Nhóm", sort: "type", render: (row) => typeLabel(row.supplierType) },
   { key: "phone", label: "Điện thoại", sort: "phone", render: (row) => row.phoneNumber },
   { key: "email", label: "Email", render: (row) => row.email ?? "—", defaultHidden: true },
-  { key: "address", label: "Địa chỉ", render: (row) => row.address ?? "—", defaultHidden: true },
-  { key: "province", label: "Khu vực", sort: "province", render: (row) => row.province ?? "—", defaultHidden: true },
-  { key: "company", label: "Công ty", render: (row) => row.companyName ?? "—", defaultHidden: true },
+  { key: "address", label: "Địa chỉ", render: (row) => row.street ?? row.address ?? "—", defaultHidden: true },
+  { key: "province", label: "Khu vực", sort: "province", render: (row) => row.provinceName ?? row.province ?? "—", defaultHidden: true },
+  { key: "company", label: "Công ty", render: (row) => (row.invoiceBuyerType === "Organization" ? row.invoiceName ?? row.companyName : row.invoiceBuyerType ? null : row.companyName) ?? "—", defaultHidden: true },
   { key: "taxCode", label: "Mã số thuế", render: (row) => row.taxCode ?? "—", defaultHidden: true },
   { key: "createdBy", label: "Người tạo", render: (row) => row.createdBy ?? "—", defaultHidden: true },
   { key: "createdAt", label: "Ngày tạo", sort: "createdAt", render: (row) => shortDate(row.createdAt), defaultHidden: true },
@@ -67,7 +67,7 @@ function SupplierList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SupplierPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [editor, setEditor] = useState<SupplierDetail | null>(), [importing, setImporting] = useState(false), { notify } = useToast(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();
+  const [creating, setCreating] = useState(false), [importing, setImporting] = useState(false), { notify } = useToast(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();
   const bulk = useMutation(), exportFile = useMutation(), confirmation = useActionDialog();
 
   const offered = useMemo(() => columns.filter((column) => column.gate === "total" ? canTotal : column.gate === "debt" ? canDebt : true), [canTotal, canDebt]);
@@ -134,7 +134,7 @@ function SupplierList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="nhà cung cấp" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); setSelected(new Set()); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm nhà cung cấp" placeholder="Theo tên, điện thoại hoặc mã" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      {canCreate && <Button className="w-auto" onClick={() => setEditor(null)}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm nhà cung cấp</Button>}
+      {canCreate && <Button className="w-auto" onClick={() => setCreating(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm nhà cung cấp</Button>}
       {canCreate && <Button className="w-auto" variant="secondary" onClick={() => setImporting(true)}><InterfaceIcon name="upload" className="mr-1 size-4" />Import file</Button>}
       {canExport && <Button className="w-auto" variant="secondary" isPending={exportFile.pending} disabled={rangeError} onClick={() => void exportFile.run(() => supplierRepository.download("export", query, "nha-cung-cap.xlsx"), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
       <ColumnPicker columns={offered} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
@@ -164,10 +164,10 @@ function SupplierList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
             <td className={styles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.name}`} onClick={() => setExpanded((value) => value === row.id ? undefined : row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
             {visible.map((column) => <td key={column.key}>{column.render(row)}</td>)}
           </OpenableTableRow>
-          {expanded === row.id && <tr><td colSpan={visible.length + (canEdit ? 2 : 1)} className={styles.detailCell}><div className={managementStyles.viewWidth}><SupplierDetailPanel id={row.id} access={access} onEdit={setEditor} onChanged={reload} /></div></td></tr>}
+          {expanded === row.id && <tr><td colSpan={visible.length + (canEdit ? 2 : 1)} className={styles.detailCell}><div className={managementStyles.viewWidth}><SupplierDetailPanel id={row.id} access={access} onChanged={reload} /></div></td></tr>}
         </Fragment>)}</tbody></table>}
     </ManagementScroller>
-    {editor !== undefined && <SupplierFormDialog record={editor} onClose={() => setEditor(undefined)} onSaved={() => { setEditor(undefined); notify({ tone: "success", title: "Đã lưu nhà cung cấp." }); setExpanded(undefined); reload(); }} />}
+    {creating && <SupplierFormDialog record={null} onClose={() => setCreating(false)} onSaved={(saved) => { setCreating(false); notify({ tone: "success", title: `Đã tạo nhà cung cấp ${saved.code}.` }); setExpanded(undefined); reload(); }} />}
     {importing && <SupplierImportDialog onClose={() => setImporting(false)} onImported={(count) => { setImporting(false); notify({ tone: "success", title: `Đã nhập ${count} nhà cung cấp.` }); reload(); }} />}
   </ManagementLayout>;
 }

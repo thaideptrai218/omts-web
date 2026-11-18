@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { addressBodyFields, invoiceBodyFields } from "@/features/address-invoice/contracts";
 import { bulkResult, historyPage, importResult, supplierDetail, supplierPage } from "@/features/suppliers-api/contracts";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
@@ -26,8 +27,8 @@ const getSchema = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("history"), id: z.guid(), ...pageParams }),
 ]);
 const optionalText = z.string().max(2000).nullable().optional();
-const saveBody = z.strictObject({ code: z.string().regex(/^[A-Za-z0-9._-]{1,30}$/).nullable().optional(), name: z.string().max(200), supplierType: z.enum(["Seed", "Material", "Other"]).nullable(), phoneNumber: z.string().max(40), address: optionalText, email: optionalText,
-  province: optionalText, ward: optionalText, note: optionalText, companyName: optionalText, taxCode: optionalText, identityNumber: optionalText, rowVersion: z.string().max(200).optional() });
+const saveBody = z.strictObject({ code: z.string().regex(/^[A-Za-z0-9._-]{1,30}$/).nullable().optional(), name: z.string().max(200), supplierType: z.enum(["Seed", "Material", "Other"]).nullable(), phoneNumber: z.string().max(40), email: optionalText,
+  note: optionalText, taxCode: z.string().max(20).nullable().optional(), rowVersion: z.string().max(200).optional(), ...addressBodyFields, ...invoiceBodyFields(false) });
 const postSchema = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("create"), body: saveBody }),
   z.strictObject({ action: z.literal("update"), id: z.guid(), body: saveBody.required({ rowVersion: true }) }),

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -8,6 +8,14 @@ vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.linked ? { code: state.linked } : {}) }));
 vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), customerRepository: { list: state.list, detail: state.detail, settings: state.settings, debt: vi.fn(), invoices: vi.fn(), requests: vi.fn(), bulk: vi.fn(), save: vi.fn(), exportList: vi.fn(), template: vi.fn(), import: vi.fn() } }));
 vi.mock("@/features/cash-book/repository", () => ({ listCollectors: vi.fn(async () => ({ status: "success", data: [] })), listBanks: vi.fn(async () => ({ status: "success", data: [] })) }));
+vi.mock("@/features/address-invoice/repository", async (original) => ({
+  ...(await original<typeof import("@/features/address-invoice/repository")>()),
+  addressRepository: {
+    provinces: vi.fn(async () => ({ status: "success", data: [{ code: 92, name: "Thành phố Cần Thơ" }] })),
+    wards: vi.fn(async () => ({ status: "success", data: [{ code: 920101, name: "Phường Ninh Kiều", provinceCode: 92 }] })),
+    lookupTaxCode: vi.fn(),
+  },
+}));
 import { CustomerScreen } from "./customer-screen";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
@@ -92,4 +100,27 @@ it("does not describe a failed read as an empty customer list", async () => {
   await screen.findByRole("alert");
   expect(screen.queryByText("Chưa có khách hàng.")).toBeNull();
   expect(screen.getByRole("button", { name: "Tải lại" })).toBeTruthy();
+});
+
+it("shows the address and the invoice buyer read-only, asks to pick an old address again, and edits them in the open row", async () => {
+  grant(["CUSTOMERS", "View"], ["CUSTOMERS", "Edit"]);
+  state.detail.mockResolvedValue({ status: "success", data: { ...detail, traderAccount: null, isUsed: false, address: "Ấp 1", province: "Can Tho", ward: "Ninh Kieu", addressNeedsReview: true,
+    invoiceBuyerType: "Organization", invoiceName: "Cty Ba", taxCode: "0312345678", invoiceAddressSameAsContact: true, invoiceEmail: "hoadon@ba.vn" } });
+  const user = userEvent.setup();
+  render(<ToastProvider><CustomerScreen /></ToastProvider>);
+  await user.click(await screen.findByText("Chú Ba"));
+  expect(await screen.findByText("Ấp 1, Ninh Kieu, Can Tho")).toBeTruthy();
+  expect(screen.getByText("Địa chỉ cũ chưa khớp danh mục mới — chọn lại")).toBeTruthy();
+  expect(screen.getByText("Doanh nghiệp / Tổ chức")).toBeTruthy();
+  expect(screen.getByText("0312345678")).toBeTruthy();
+  expect(screen.getByText("hoadon@ba.vn")).toBeTruthy();
+  expect(screen.getByText("Giống địa chỉ liên hệ")).toBeTruthy();
+  expect(screen.queryByText(/CCCD/)).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Chỉnh sửa" }));
+  const form = await screen.findByLabelText("Tên khách hàng *");
+  expect(form.closest("dialog")).toBeNull();
+  expect(within(form.closest("form") as HTMLElement).getByRole("combobox", { name: "Tỉnh/thành" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Bỏ qua" }));
+  expect(await screen.findByRole("button", { name: "Chỉnh sửa" })).toBeTruthy();
 });

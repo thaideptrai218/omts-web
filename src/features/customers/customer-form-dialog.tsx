@@ -6,6 +6,9 @@ import { CollapsibleSection, managementStyles } from "@/components/ui/management
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
+import { AddressFields } from "@/features/address-invoice/address-fields";
+import { InvoiceInfoSection } from "@/features/address-invoice/invoice-info-section";
+import { contactAddressOf, contactBody, invoiceBody, invoiceInfoOf, invoiceInfoProblem, sameAddress, type AddressValue, type InvoiceInfoValue } from "@/features/address-invoice/model";
 import { listBanks } from "@/features/cash-book/repository";
 import { ErrorNotice, Field, Note, Select, useRemote } from "@/features/operations/ui";
 import { businessToday } from "@/features/operations/ui";
@@ -13,17 +16,17 @@ import { customerTypes, genders, noRequiredFields, type CustomerDetail, type Req
 import { customerRepository, errorText, type Failure } from "./repository";
 import styles from "./customers.module.css";
 
-type Values = Record<"code" | "name" | "phoneNumber" | "phoneNumber2" | "birthDate" | "gender" | "email" | "facebook" | "address" | "province" | "ward" | "note" | "customerType" | "companyName" | "taxCode" | "identityNumber" | "bankBin" | "bankAccountNumber", string>;
+type Values = Record<"code" | "name" | "phoneNumber" | "phoneNumber2" | "birthDate" | "gender" | "email" | "facebook" | "note" | "customerType" | "bankBin" | "bankAccountNumber", string>;
 const fieldNames: Record<string, string> = {
   Code: "Mã khách hàng", Name: "Tên khách hàng", "Phone number": "Số điện thoại 1", "Second phone number": "Số điện thoại 2", Email: "Email", "Birth date": "Sinh nhật", Facebook: "Facebook", Address: "Địa chỉ",
-  Province: "Tỉnh/thành", Ward: "Phường/xã", Note: "Ghi chú", "Company name": "Tên đơn vị", "Tax code": "Mã số thuế", "Identity number": "Số CCCD", Bank: "Ngân hàng", "Bank account number": "Số tài khoản",
-  "Customer type": "Loại khách", Gender: "Giới tính",
+  Province: "Tỉnh/thành", Ward: "Phường/xã", Street: "Số nhà, đường", Note: "Ghi chú", "Company name": "Tên đơn vị", "Tax code": "Mã số thuế", "Personal tax id": "MST / Số định danh cá nhân", Bank: "Ngân hàng", "Bank account number": "Số tài khoản",
+  "Customer type": "Loại khách", Gender: "Giới tính", "Invoice buyer type": "Loại người mua hóa đơn", "Invoice name": "Tên người mua hóa đơn", "Invoice email": "Email nhận hóa đơn điện tử", "Invoice address": "Địa chỉ xuất hóa đơn",
 };
 const photoTypes = ["image/jpeg", "image/png"], maxPhoto = 2 * 1024 * 1024;
 const initialValues = (record: CustomerDetail | null): Values => ({
   code: record?.code ?? "", name: record?.name ?? "", phoneNumber: record?.phoneNumber ?? "", phoneNumber2: record?.phoneNumber2 ?? "", birthDate: record?.birthDate?.slice(0, 10) ?? "", gender: record?.gender ?? "",
-  email: record?.email ?? "", facebook: record?.facebook ?? "", address: record?.address ?? "", province: record?.province ?? "", ward: record?.ward ?? "", note: record?.note ?? "",
-  customerType: record?.customerType ?? "Individual", companyName: record?.companyName ?? "", taxCode: record?.taxCode ?? "", identityNumber: record?.identityNumber ?? "", bankBin: record?.bankBin ?? "", bankAccountNumber: record?.bankAccountNumber ?? "",
+  email: record?.email ?? "", facebook: record?.facebook ?? "", note: record?.note ?? "",
+  customerType: record?.customerType ?? "Individual", bankBin: record?.bankBin ?? "", bankAccountNumber: record?.bankAccountNumber ?? "",
 });
 const star = (required: boolean) => required ? " *" : "";
 /**
@@ -44,28 +47,29 @@ export function missingRequired(values: Record<string, string>, required: Requir
   const empty = (key: string) => !values[key]?.trim();
   const rules: [boolean, boolean, string][] = [
     [required.phoneNumber2, empty("phoneNumber2"), "Nhập số điện thoại 2."], [required.email, empty("email"), "Nhập email."], [required.gender, empty("gender"), "Chọn giới tính."],
-    [required.birthDate, empty("birthDate"), "Chọn ngày sinh."], [required.address, empty("address"), "Nhập địa chỉ."], [required.address, empty("province"), "Nhập tỉnh/thành."],
-    [required.address, empty("ward"), "Nhập phường/xã."], [required.facebook, empty("facebook"), "Nhập Facebook."], [required.bank, empty("bankBin") || empty("bankAccountNumber"), "Chọn ngân hàng và nhập số tài khoản."],
+    [required.birthDate, empty("birthDate"), "Chọn ngày sinh."], [required.address, empty("province"), "Chọn tỉnh/thành."],
+    [required.address, empty("ward"), "Chọn phường/xã."], [required.address, empty("address"), "Nhập số nhà, đường."], [required.facebook, empty("facebook"), "Nhập Facebook."], [required.bank, empty("bankBin") || empty("bankAccountNumber"), "Chọn ngân hàng và nhập số tài khoản."],
     [required.taxCode, empty("taxCode"), "Nhập mã số thuế."],
   ];
   return rules.find(([on, missing]) => on && missing)?.[2];
 }
 
 /**
- * "+ Khách hàng" and "Chỉnh sửa": every field of the profile; the save replaces all of them, so all are always sent. `required` are the optional fields the
- * cooperative's customer settings make required (marked with *); the name and the first phone number always are.
+ * "+ Khách hàng" (a dialog) and "Chỉnh sửa" (`inline`: the same form in the open row): every field of the profile; the save replaces all of them, so all are
+ * always sent. `required` are the optional fields the customer settings of the cooperative make required (marked with *); the name and the first phone number always are.
  */
-export function CustomerFormDialog({ record, required = noRequiredFields, onClose, onSaved }: { record: CustomerDetail | null; required?: RequiredFields; onClose(): void; onSaved(saved: CustomerDetail): void }) {
+export function CustomerFormDialog({ record, required = noRequiredFields, inline = false, onClose, onSaved }: { record: CustomerDetail | null; required?: RequiredFields; inline?: boolean; onClose(): void; onSaved(saved: CustomerDetail): void }) {
   const confirmation = useActionDialog(), { notify } = useToast(), fileInput = useRef<HTMLInputElement>(null);
-  const [initial] = useState(() => initialValues(record));
+  const [initial] = useState(() => initialValues(record)), [initialContact] = useState(() => contactAddressOf(record)), [initialInvoice] = useState(() => invoiceInfoOf(record, required.taxCode ? "Organization" : "Consumer"));
   const [values, setValues] = useState(initial), [pending, setPending] = useState(false), [error, setError] = useState<string>();
+  const [contact, setContact] = useState<AddressValue>(initialContact), [invoice, setInvoice] = useState<InvoiceInfoValue>(initialInvoice);
   const [photo, setPhoto] = useState<File>(), [removePhoto, setRemovePhoto] = useState(false);
   const preview = useMemo(() => photo ? URL.createObjectURL(photo) : undefined, [photo]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   const banks = useRemote(useCallback((signal: AbortSignal) => listBanks(signal), []));
   const locked = record?.phoneLocked === true, today = businessToday();
   const set = (key: keyof Values) => (event: { target: { value: string } }) => setValues((current) => ({ ...current, [key]: event.target.value }));
-  const dirty = (Object.keys(values) as (keyof Values)[]).some((key) => values[key] !== initial[key]) || !!photo || removePhoto;
+  const dirty = (Object.keys(values) as (keyof Values)[]).some((key) => values[key] !== initial[key]) || !sameAddress(contact, initialContact) || JSON.stringify(invoice) !== JSON.stringify(initialInvoice) || !!photo || removePhoto;
   const close = async () => { if (!pending && (!dirty || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose(); };
   const shownPhoto = removePhoto ? undefined : preview ?? record?.photoUrl ?? undefined;
 
@@ -81,16 +85,18 @@ export function CustomerFormDialog({ record, required = noRequiredFields, onClos
     if (pending) return;
     if (!values.name.trim()) { setError("Nhập tên khách hàng."); return; }
     if (!values.phoneNumber.trim()) { setError("Nhập số điện thoại 1."); return; }
-    const missing = missingRequired(values, required);
-    if (missing) { setError(missing); return; }
+    const taxId = invoice.buyerType === "Organization" ? invoice.taxCode : invoice.buyerType === "Individual" ? invoice.personalTaxId : "";
+    const missing = missingRequired({ ...values, address: contact.street, province: contact.provinceName, ward: contact.wardName, taxCode: taxId }, required);
+    if (missing) { setError(invoice.buyerType === "Consumer" && required.taxCode && missing === "Nhập mã số thuế." ? "Hợp tác xã yêu cầu mã số thuế: chọn Doanh nghiệp / Tổ chức hoặc Cá nhân ở mục Thông tin xuất hóa đơn và nhập mã số thuế." : missing); return; }
+    const invoiceIssue = invoiceInfoProblem(invoice, contact);
+    if (invoiceIssue) { setError(invoiceIssue); return; }
     setPending(true); setError(undefined);
     // The save replaces every field: what is left empty is sent as null so that it is cleared.
     const blank = (value: string) => value.trim() || null;
     const result = await customerRepository.save({
       name: values.name.trim(), code: blank(values.code), phoneNumber: values.phoneNumber.trim(), phoneNumber2: blank(values.phoneNumber2), birthDate: blank(values.birthDate), gender: blank(values.gender),
-      email: blank(values.email), facebook: blank(values.facebook), address: blank(values.address), province: blank(values.province), ward: blank(values.ward), note: blank(values.note),
-      customerType: values.customerType || "Individual", companyName: blank(values.companyName), taxCode: blank(values.taxCode), identityNumber: blank(values.identityNumber),
-      bankBin: blank(values.bankBin), bankAccountNumber: blank(values.bankAccountNumber), ...(record ? { rowVersion: record.rowVersion } : {}),
+      email: blank(values.email), facebook: blank(values.facebook), note: blank(values.note), customerType: values.customerType || "Individual",
+      bankBin: blank(values.bankBin), bankAccountNumber: blank(values.bankAccountNumber), ...contactBody(contact), ...invoiceBody(invoice), ...(record ? { rowVersion: record.rowVersion } : {}),
     }, record?.id);
     if (result.status !== "success") { setPending(false); setError(problemText(result)); return; }
     let saved = result.data.customer;
@@ -105,7 +111,8 @@ export function CustomerFormDialog({ record, required = noRequiredFields, onClos
 
   const bankList = banks.data ?? [];
   const bankKnown = !values.bankBin || bankList.some((bank) => bank.bin === values.bankBin);
-  return <Dialog open size="xl" title={record ? `Sửa khách hàng ${record.code}` : "Thêm khách hàng"} dismissible={!pending} onOpenChange={(open) => { if (!open) void close(); }}><div className={managementStyles.theme}>{confirmation.dialog}
+  const invoiceOpen = !!record && initialInvoice.buyerType !== "Consumer" || required.taxCode;
+  const content = <div className={managementStyles.theme}>{confirmation.dialog}
     <form onSubmit={submit}>
       <ErrorNotice error={error} />
       <fieldset disabled={pending} className="min-w-0">
@@ -136,7 +143,8 @@ export function CustomerFormDialog({ record, required = noRequiredFields, onClos
           </div>
           </div>
         </CollapsibleSection>
-        <CollapsibleSection title="Thông tin cá nhân" description="Sinh nhật, giới tính và các kênh liên hệ khác.">
+        <CollapsibleSection title="Thông tin cá nhân" description="Loại khách, sinh nhật, giới tính và các kênh liên hệ khác.">
+          <Select label="Loại khách" value={values.customerType} onChange={set("customerType")}>{customerTypes.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select>
           <div className="block text-xs font-medium text-text-muted"><span>Sinh nhật{star(required.birthDate)}</span>
             <div className="mt-1.5 flex items-center">
               <DatePickerField label="Sinh nhật" value={values.birthDate} max={today} onChange={(value) => setValues((current) => ({ ...current, birthDate: value }))} />
@@ -147,19 +155,14 @@ export function CustomerFormDialog({ record, required = noRequiredFields, onClos
           <Field label={`Email${star(required.email)}`} type="email" maxLength={256} value={values.email} onChange={set("email")} />
           <Field label={`Facebook${star(required.facebook)}`} maxLength={300} value={values.facebook} onChange={set("facebook")} />
         </CollapsibleSection>
-        <CollapsibleSection title="Địa chỉ">
-          <div className={styles.wide}><Field label={`Địa chỉ${star(required.address)}`} maxLength={500} value={values.address} onChange={set("address")} /></div>
-          <Field label={`Tỉnh/thành${star(required.address)}`} maxLength={100} value={values.province} onChange={set("province")} />
-          <Field label={`Phường/xã${star(required.address)}`} maxLength={100} value={values.ward} onChange={set("ward")} />
+        <CollapsibleSection title="Địa chỉ" description="Chọn tỉnh/thành, phường/xã rồi nhập số nhà, đường.">
+          <AddressFields required={required.address} value={contact} onChange={setContact} />
         </CollapsibleSection>
         <CollapsibleSection title="Ghi chú" defaultOpen={!!record?.note}>
           <div className={styles.wide}><Note label="Ghi chú" maxLength={2000} value={values.note} onChange={set("note")} /></div>
         </CollapsibleSection>
-        <CollapsibleSection title="Thông tin xuất hóa đơn" description="Chỉ cần khi khách lấy hóa đơn đỏ." defaultOpen={!!record && (record.customerType === "Company" || !!record.companyName || !!record.taxCode || !!record.identityNumber) || required.taxCode}>
-          <Select label="Loại khách" value={values.customerType} onChange={set("customerType")}>{customerTypes.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select>
-          <Field label="Tên đơn vị" maxLength={200} value={values.companyName} onChange={set("companyName")} />
-          <Field label={`Mã số thuế${star(required.taxCode)}`} maxLength={14} value={values.taxCode} onChange={set("taxCode")} />
-          <Field label="Số CCCD" maxLength={12} inputMode="numeric" autoComplete="off" value={values.identityNumber} onChange={set("identityNumber")} />
+        <CollapsibleSection title="Thông tin xuất hóa đơn" description="Người mua trên hóa đơn điện tử. Khách lấy hóa đơn đỏ cần khai đủ." defaultOpen={invoiceOpen}>
+          <InvoiceInfoSection allowConsumer contactName={values.name.trim()} value={invoice} onChange={setInvoice} />
         </CollapsibleSection>
         <CollapsibleSection title="Ngân hàng" description="Tài khoản của khách, dùng khi chuyển trả tiền." defaultOpen={!!record?.bankBin || required.bank}>
           <Select label={`Ngân hàng${star(required.bank)}`} value={values.bankBin} disabled={!!banks.error || banks.loading} onChange={(event) => setValues((current) => ({ ...current, bankBin: event.target.value, ...(event.target.value ? {} : { bankAccountNumber: "" }) }))}>
@@ -176,5 +179,7 @@ export function CustomerFormDialog({ record, required = noRequiredFields, onClos
         <Button className="w-auto" type="submit" isPending={pending} disabled={record !== null && !dirty}>Lưu</Button>
       </div>
     </form>
-  </div></Dialog>;
+  </div>;
+  if (inline) return content;
+  return <Dialog open size="xl" title={record ? `Sửa khách hàng ${record.code}` : "Thêm khách hàng"} dismissible={!pending} onOpenChange={(open) => { if (!open) void close(); }}>{content}</Dialog>;
 }
