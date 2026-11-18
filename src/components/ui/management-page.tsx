@@ -97,7 +97,7 @@ export function StatusPill({
         : "border-border/60 bg-[#f5f6f5] text-text-muted";
   return (
     <span
-      className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-[5px] border px-1.5 py-0.5 text-[11px] font-medium leading-4 ${color}`}
+      className={`inline-flex w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[5px] border px-1.5 py-0.5 text-[11px] font-medium leading-4 ${color}`}
     >
       <span aria-hidden="true" className="size-1 rounded-full bg-current" />
       {children}

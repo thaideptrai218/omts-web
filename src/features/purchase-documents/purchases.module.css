@@ -134,6 +134,8 @@
   .editorBody { grid-template-columns:minmax(0,1fr); }
   .linesPanel { max-height:55vh; }
   .foot { grid-template-columns:minmax(0,1fr); }
+  /* Line table keeps readable column widths on phones; the panel scrolls sideways. */
+  .lines { min-width:640px; }
 }
 .moneyRow { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:30px; font-size:13px; font-variant-numeric:tabular-nums; }
 .moneyRow input { width:170px; height:34px; padding:0 10px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:15px; text-align:right; }
@@ -195,3 +197,4 @@
 .voucherInput:hover:not(:read-only), .voucherNote:hover:not(:read-only) { border-color:var(--omts-brand, var(--omts-color-primary)); }
 .voucherInput:focus, .voucherNote:focus { outline:none; border-color:var(--omts-brand, var(--omts-color-primary)); box-shadow:0 0 0 3px color-mix(in srgb, var(--omts-brand, var(--omts-color-primary)) 18%, transparent); }
 .cellInput { transition:border-color 120ms ease; }
+@media (max-width:600px) { .headFacts { grid-template-columns:minmax(0,1fr); } }

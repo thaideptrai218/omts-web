@@ -2,7 +2,7 @@
 import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createOperationsRepository } from "@/features/operations/repository";
-import { businessToday, operationError, useRemote } from "@/features/operations/ui";
+import { businessTime, operationError, toApiTime, useRemote } from "@/features/operations/ui";
 import type { PickedCustomer } from "@/features/customer-lookup/customer-search";
 import type { InvoiceConfirmation } from "@/features/sales-invoices/confirmation-problem";
 import { toMoney } from "@/features/sales-invoices/invoice-draft";
@@ -12,7 +12,7 @@ const repository = createOperationsRepository("customer-payments");
 export type Kind = "Payment" | "PaidBack";
 export type Form = { kind: Kind; customer: PickedCustomer | null; date: string; amount: string; method: "Cash" | "OtherTransfer"; collector: string; bankReference: string; note: string };
 export type PaymentQuestion = { confirmation: InvoiceConfirmation; reply(yes: boolean): void };
-const blank = (kind: Kind, customer: PickedCustomer | null): Form => ({ kind, customer, date: businessToday(), amount: "", method: "Cash", collector: "", bankReference: "", note: "" });
+const blank = (kind: Kind, customer: PickedCustomer | null): Form => ({ kind, customer, date: businessTime(), amount: "", method: "Cash", collector: "", bankReference: "", note: "" });
 
 /** Lỗi nhập liệu đầu tiên (tiếng Việt) hoặc undefined nếu có thể gửi. */
 export function formProblem(f: Form, owedBack: number | undefined): string | undefined {
@@ -48,7 +48,7 @@ export function usePaymentRecorder(onRecorded: () => void) {
     try {
       for (;;) {
         const body = recordPayment.safeParse({
-          customerId: form.customer.id, paymentDate: form.date, amount: toMoney(form.amount), method: form.method,
+          customerId: form.customer.id, paymentDate: form.date.slice(0, 10), paidAt: toApiTime(form.date) ?? undefined, amount: toMoney(form.amount), method: form.method,
           bankReference: form.method === "OtherTransfer" ? form.bankReference.trim() : null, collectedByAccountId: form.method === "Cash" && form.kind === "Payment" ? form.collector : null,
           note: form.note.trim() || null, confirmAboveDebt: flags.current.above, confirmDuplicateBankReference: flags.current.duplicate, deduplicationKey: key.current,
         });

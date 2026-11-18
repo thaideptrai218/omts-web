@@ -27,7 +27,7 @@ export const confirmed = z.object({ confirmed: z.array(paymentDetails), cancelle
 
 /** Ghi nhận thanh toán hoặc trả lại tiền: khách, ngày, số tiền nguyên, hình thức; tiền mặt cần người nhận, chuyển khoản cần mã giao dịch. */
 export const recordPayment = z.strictObject({
-  customerId: id, paymentDate: date, amount: z.number().int().positive().max(999_999_999_999), method: z.enum(["Cash", "OtherTransfer"]),
+  customerId: id, paymentDate: date, paidAt: at.optional(), amount: z.number().int().positive().max(999_999_999_999), method: z.enum(["Cash", "OtherTransfer"]),
   bankReference: z.string().trim().max(100).nullable(), collectedByAccountId: id.nullable(), note: z.string().trim().max(500).nullable(),
   confirmAboveDebt: z.boolean().optional(), confirmDuplicateBankReference: z.boolean().optional(), deduplicationKey: z.uuid(),
 }).refine((v) => v.method === "OtherTransfer" ? !!v.bankReference : true).refine((v) => v.method === "Cash" ? v.collectedByAccountId !== null : true);

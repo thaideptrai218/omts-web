@@ -34,16 +34,17 @@ it("splits the catalogue and the purchase documents into Giống and Vật tư e
   expect(nav.querySelector('a[href="/operations/supplier-payments"]')).toBeNull();
 });
 
-it("groups Nuôi trồng into three titled columns and moves the report and tracing links out", () => {
+it("groups Nuôi trồng into four titled columns and moves the report and tracing links out", () => {
   const nav = setup("CooperativeOwner");
   const farming = open(nav, "Nuôi trồng");
   const columns = [...farming.querySelectorAll("section")].map((section) => [section.querySelector("h3")!.textContent, hrefs(section).map(([label]) => label)]);
   expect(columns).toEqual([
     ["Cơ sở", ["Vùng nuôi", "Bè nuôi"]],
-    ["Chu kỳ nuôi", ["Ươm giống", "Hành trình", "Chất lượng nước"]],
+    ["Ươm và chu kỳ nuôi", ["Ươm giống", "Bắt đầu chu kỳ nuôi"]],
+    ["Theo dõi", ["Hành trình", "Chất lượng nước"]],
     ["Thu hoạch", ["Kế hoạch thu hoạch", "Lô thu hoạch"]],
   ]);
-  for (const href of ["/operations/seeding", "/operations/harvest", "/operations/material-usages", "/farming/seed-lots", "/operations/harvest-yield", "/operations/lot-tracing"]) expect(farming.querySelector(`a[href="${href}"]`)).toBeNull();
+  for (const href of ["/operations/harvest", "/operations/material-usages", "/farming/seed-lots", "/operations/harvest-yield", "/operations/lot-tracing"]) expect(farming.querySelector(`a[href="${href}"]`)).toBeNull();
   expect(hrefs(open(nav, "Báo cáo"))).toContainEqual(["Sản lượng nuôi", "/operations/harvest-yield"]);
   expect(hrefs(open(nav, "Kinh doanh"))).toContainEqual(["Truy xuất lô hàng", "/operations/lot-tracing"]);
 });

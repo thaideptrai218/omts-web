@@ -5,7 +5,7 @@ import { MoneyField } from "@/components/form/number-fields";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { loadOptions } from "@/features/operations/lookups";
-import { DataTable, ErrorNotice, Field, Money, Note, Select, businessToday, useRemote } from "@/features/operations/ui";
+import { DataTable, ErrorNotice, Field, Money, Note, Select, businessTime, businessToday, toApiTime, useRemote } from "@/features/operations/ui";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import * as c from "./contracts";
 import { EditorClose } from "./editor-close-panel";
@@ -39,7 +39,7 @@ export function PaymentEditor({
   const [supplier, setSupplier] = useState(record?.supplier.id ?? initialDraft?.supplierId ?? "");
   const [kind, setKind] = useState<PaymentKind>(record?.kind ?? initialDraft?.kind ?? "Payment");
   const [amount, setAmount] = useState(String(record?.amount ?? initialDraft?.amount ?? ""));
-  const [date, setDate] = useState(record?.paymentDate ?? businessToday());
+  const [date, setDate] = useState(record?.paymentDate ?? businessTime());
   const [method, setMethod] = useState<PaymentMethod>(record?.method ?? "Cash");
   const [reference, setReference] = useState(record?.bankReference ?? "");
   const [note, setNote] = useState(record?.note ?? initialDraft?.note ?? "");
@@ -68,7 +68,8 @@ export function PaymentEditor({
     const parsed = c.paymentValues.safeParse({
       supplierId: supplier,
       kind,
-      paymentDate: date,
+      paymentDate: date.slice(0, 10),
+      ...(record ? {} : { paidAt: toApiTime(date) ?? undefined }),
       amount: Number(amount || 0),
       discountAmount: kind === "Payment" ? Number(discount || 0) : 0,
       method,
@@ -78,7 +79,7 @@ export function PaymentEditor({
       confirmDuplicateBankReference: confirmDuplicate,
       deduplicationKey: key,
     });
-    if (!parsed.success || date > businessToday() || (method === "BankTransfer" && !reference.trim())) {
+    if (!parsed.success || date.slice(0, 10) > businessToday() || (!record && date > businessTime()) || (method === "BankTransfer" && !reference.trim())) {
       setError("Chọn nhà cung cấp, ngày không vượt hôm nay, số tiền hoặc chiết khấu lớn hơn 0 và mã giao dịch khi chuyển khoản.");
       return;
     }
@@ -150,9 +151,9 @@ export function PaymentEditor({
               <option value="PaidBack">Nhà cung cấp trả lại tiền</option>
             </Select>
             <Field
-              label="Ngày thanh toán *"
-              type="date"
-              max={businessToday()}
+              label={record ? "Ngày thanh toán *" : "Thời gian thanh toán *"}
+              type={record ? "date" : "datetime-local"}
+              max={record ? businessToday() : businessTime()}
               required
               value={date}
               onChange={(e) => setDate(e.target.value)}

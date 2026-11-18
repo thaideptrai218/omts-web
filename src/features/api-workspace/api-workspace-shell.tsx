@@ -135,7 +135,8 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
           const cycles = operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions);
           const columns = [
             { title: "Cơ sở", items: rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key])) },
-            { title: "Chu kỳ nuôi", items: [cycles && link("/farming/nursery", "Ươm giống", "product"), ...modules.map((entry) => link(modulePath(entry.key), entry.key === "water" ? "Chất lượng nước" : entry.title, operationIcons[entry.key]))].filter(Boolean) },
+            { title: "Ươm và chu kỳ nuôi", items: [cycles && link("/farming/nursery", "Ươm giống", "product"), operationAllowed("seeding", context.identity, context.permissions.functionPermissions) && link(modulePath("seeding"), "Bắt đầu chu kỳ nuôi", operationIcons.seeding)].filter(Boolean) },
+            { title: "Theo dõi", items: modules.map((entry) => link(modulePath(entry.key), entry.key === "water" ? "Chất lượng nước" : entry.title, operationIcons[entry.key])) },
             { title: "Thu hoạch", items: harvestLinks.map((item) => link(...item)) },
           ].filter((column) => column.items.length);
           return columns.length ? <NavigationGroup key={group.label} label={group.label} compact={compact} columns>{columns.map((column) => <NavigationSection key={column.title} title={column.title}>{column.items}</NavigationSection>)}</NavigationGroup> : null;
@@ -153,6 +154,10 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
             { title: "Đối tác", items: res(["suppliers"]) },
             { title: "Nhập hàng", items: purchasing ? [link(kindText.Seed.receiptsPath, kindText.Seed.receipt, "receipt"), link(kindText.Supply.receiptsPath, kindText.Supply.receipt, "receipt")] : [] },
             { title: "Trả hàng", items: purchasing ? [link(kindText.Seed.returnsPath, kindText.Seed.receiptReturn, "upload"), link(kindText.Supply.returnsPath, kindText.Supply.receiptReturn, "upload")] : [] },
+          ] : group.label === "Nhân sự" ? [
+            { title: "Nhân viên", items: res(["employees"]) },
+            { title: "Phân công và chấm công", items: ops(["workforce", "my-work", "job-types"]) },
+            { title: "Tiền lương", items: ops(["payroll", "payroll-payments"]) },
           ] : group.label === "Kinh doanh" ? [
             { title: "Bán hàng", items: [...pick(["/sales/orders"], productLinks), ...ops(["sales-invoice-list", "sales-returns"]), ...pick(["/sales/disposals"], productLinks)] },
             { title: "Khách hàng", items: [...res(["customers"]), ...ops(["purchase-requests", "quality-claims", "claim-reports"])] },
