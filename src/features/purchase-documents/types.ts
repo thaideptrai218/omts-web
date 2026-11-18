@@ -20,7 +20,8 @@ export type ZoneRef = { id: string; name: string };
 export type RaftOption = { id: string; code: string; zoneId: string; zoneName: string };
 /** One unit an item is counted in: `factor` base units make one of it (the base unit is 1). */
 export type ItemUnit = { id: string; name: string; factor: number; code: string; isBase: boolean };
-export type ItemOption = { id: string; code: string; name: string; unit: string; group: ItemGroup; units: ItemUnit[] };
+/** `basePrice` is the price a new receipt line suggests per base unit: the last purchase price, else the cost price; null when the item has neither. */
+export type ItemOption = { id: string; code: string; name: string; unit: string; group: ItemGroup; units: ItemUnit[]; basePrice?: number | null };
 /** The units a line may pick from; an item missing from the catalogue lists (discontinued) keeps just the unit its line already has. */
 export function unitChoices(item: ItemOption, current?: { itemUnitId: string | null; unit: string; unitFactor: number }): ItemUnit[] {
   if (item.units.length) return item.units;

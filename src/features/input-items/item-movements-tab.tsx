@@ -39,14 +39,18 @@ export function ItemMovementsTab({ itemId, group, canExport, note }: { itemId: s
       : <div className={styles.innerScroll}><table className={styles.inner}><thead><tr>
         <th>Chứng từ</th><th>Thời gian</th><th>Loại</th><th>Đối tác</th><th>Lô giống</th><th className={styles.num}>Giá giao dịch</th><th className={styles.num}>Giá vốn</th><th className={styles.num}>Số lượng{unit ? ` (${unit})` : ""}</th><th className={styles.num}>Còn lại sau</th>
       </tr></thead><tbody>{data.items.map((row) => {
-        const href = movementHref(row.kind, row.documentCode, group);
-        // The opening row has no document: its stored code is the item's own.
-        const code = row.kind === "Opening" ? undefined : row.documentCode, source = movementSourceLink(row);
+        // A cost update opens the document that moved the cost: a receipt, a return or its correction on this page, else the receipt
+        // of a price setup. A cost typed on the item itself carries the item's own code, like the opening row, and opens nothing.
+        const onItem = row.documentId === itemId;
+        const linkKind = row.kind !== "CostAdjustment" ? row.kind
+          : data.items.find((other) => other.documentId === row.documentId && other.kind !== "CostAdjustment" && other.kind !== "Reversal")?.kind ?? "Receipt";
+        const href = onItem ? undefined : movementHref(linkKind, row.documentCode, group);
+        const code = row.kind === "Opening" || onItem ? undefined : row.documentCode, source = movementSourceLink(row);
         return <tr key={row.id} className={row.reversesMovementId ? styles.reversed : undone.has(row.id) ? styles.undone : undefined}>
           <td>{href ? <Link className={styles.link} href={href}>{code}</Link> : code ?? "—"}{source && <><br /><Link className={styles.link} href={source.href}>{source.label}</Link></>}</td>
           <td>{viDateTime(row.occurredAt)}</td><td>{movementKindLabel[row.kind] ?? row.kind}</td><td>{row.partyName || "—"}</td><td>{row.seedLotCode ? <Link className={styles.link} href={seedLotsHref(row.seedLotCode)}>{row.seedLotCode}</Link> : "—"}</td>
-          <td className={styles.num}>{row.transactionPrice == null ? "—" : fmt(row.transactionPrice)}</td><td className={styles.num}>{row.unitCost == null ? "—" : fmt(row.unitCost)}</td>
-          <td className={`${styles.num} ${row.quantity < 0 ? styles.neg : ""}`}>{signed(row.quantity, fmt)}</td><td className={styles.num}>{row.balanceAfter == null ? "—" : fmt(row.balanceAfter)}</td>
+          <td className={styles.num}>{row.transactionPrice == null ? "—" : fmt(row.transactionPrice)}</td><td className={styles.num}>{row.kind === "CostAdjustment" && row.previousUnitCost != null && row.unitCost != null ? <span title="Giá vốn trước → sau">{fmt(row.previousUnitCost)} → {fmt(row.unitCost)}</span> : row.unitCost == null ? "—" : fmt(row.unitCost)}</td>
+          <td className={`${styles.num} ${row.quantity < 0 ? styles.neg : ""}`}>{row.kind === "CostAdjustment" ? "—" : signed(row.quantity, fmt)}</td><td className={styles.num}>{row.balanceAfter == null ? "—" : fmt(row.balanceAfter)}</td>
         </tr>;
       })}</tbody></table></div>}
     {data && <ManagementPagination page={data.page} pageSize={data.pageSize} total={data.total} unit="dòng" onPage={setPage} onPageSize={(size) => { setPageSize(size); setPage(1); }} />}

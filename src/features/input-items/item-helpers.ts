@@ -22,7 +22,7 @@ export const groupLabel = (group: GroupNode) => group.depth ? ` └ ${group.na
 export const signed =(value: number, format: (value: number) => string) => value > 0 ? `+${format(value)}` : value < 0 ? `−${format(-value)}` : format(0);
 
 export const movementKindLabel: Record<string, string> = {
-  Opening: "Còn lại ban đầu", Receipt: "Nhập hàng", PurchaseReturn: "Trả hàng nhập", Issue: "Xuất dùng", Disposal: "Xuất hủy", Reversal: "Điều chỉnh",
+  Opening: "Còn lại ban đầu", Receipt: "Nhập hàng", PurchaseReturn: "Trả hàng nhập", Issue: "Xuất dùng", Disposal: "Xuất hủy", CostAdjustment: "Cập nhật giá vốn", Reversal: "Điều chỉnh",
 };
 /** The list that opens on the document of a movement, searched by its code; the opening row and corrections have no document to open. */
 export function movementHref(kind: string, code: string | null | undefined, itemGroup?: string | null) {
