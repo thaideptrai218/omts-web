@@ -2,6 +2,12 @@ export const recordNames: Record<string, string> = { SupplierPayment: "Giao dị
 export const actionNames: Record<string, string> = { Create: "Tạo mới", Created: "Tạo mới", Update: "Cập nhật", Updated: "Cập nhật", Edit: "Chỉnh sửa", Delete: "Xóa", Deleted: "Xóa", Remove: "Gỡ bỏ", Cancel: "Hủy", Cancelled: "Hủy", Complete: "Hoàn thành", Completed: "Hoàn thành", Correct: "Hiệu chỉnh", Corrected: "Hiệu chỉnh", Start: "Mở chu kỳ", Close: "Đóng chu kỳ", Resume: "Khôi phục sử dụng", Discontinue: "Ngừng sử dụng", StatusChanged: "Đổi trạng thái", ChangeStatus: "Đổi trạng thái" };
 const values: Record<string, string> = { Payment: "Thanh toán nhà cung cấp", PaidBack: "Nhà cung cấp hoàn tiền", Cash: "Tiền mặt", BankTransfer: "Chuyển khoản", Open: "Đang nuôi", Closed: "Đã kết thúc", Draft: "Nháp", Completed: "Hoàn thành", Cancelled: "Đã hủy", Active: "Đang dùng", Inactive: "Ngừng dùng", InUse: "Đang dùng", Discontinued: "Ngừng dùng" };
 Object.assign(recordNames, { AccessGrant: "Phân quyền vùng", Cooperative: "Hồ sơ hợp tác xã", FarmingInputItem: "Vật tư", MaterialUsage: "Sử dụng vật tư", Role: "Vai trò", ZoneLicense: "Giấy phép vùng", WaterThreshold: "Ngưỡng chất lượng nước" });
+// Record types written by the sales, harvest planning, nursery, labour and cash modules.
+Object.assign(recordNames, {
+  AttendanceSettingsVersion: "Thiết lập chấm công", CashAccount: "Tài khoản quỹ", Customer: "Khách hàng", CustomerPayment: "Phiếu thu khách hàng", HarvestPlan: "Kế hoạch thu hoạch",
+  InputIssue: "Phiếu xuất vật tư", InputUnit: "Đơn vị tính", JobType: "Loại công việc", NurseryBatch: "Đợt ươm", Payroll: "Bảng lương", Product: "Sản phẩm", ProductCategory: "Nhóm sản phẩm",
+  SalesInvoice: "Hóa đơn bán", SalesOrder: "Đơn đặt hàng", SalesReturn: "Phiếu trả hàng bán", WagePayment: "Phiếu chi lương", WorkAssignment: "Phân công làm việc",
+});
 Object.assign(actionNames, { Started: "Mở chu kỳ", Recorded: "Ghi nhận", Confirmed: "Xác nhận", Voided: "Hủy kết quả", Granted: "Cấp quyền", Registered: "Đăng ký", Updated: "Cập nhật", SeedingCompleted: "Hoàn thành thả giống", LanesChanged: "Thay đổi số làn", PhotosChanged: "Thay đổi ảnh bè", CoverPhotoChanged: "Thay đổi ảnh bìa", LogoChanged: "Thay đổi biểu trưng", Replaced: "Thay thế giấy tờ", DemoCredentialsSet: "Cập nhật tài khoản thử nghiệm" });
 export const auditAction = (action: string) => actionNames[action] ?? actionNames[action.split(".").at(-1) ?? ""] ?? "Ghi nhận thao tác";
 type Format = "money" | "date" | "text" | "number";
@@ -32,3 +38,14 @@ export function importantChanges(before: unknown, after: unknown) {
   });
 }
 export const auditTime = (value: string) => new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "medium" }).format(new Date(value));
+/** An action as the filter lists it: the verb alone repeats across record types ("Ghi nhận"), so the record it belongs to comes first. */
+export function actionOptionLabel(action: string) {
+  const [type, verb] = action.includes(".") ? [action.slice(0, action.indexOf(".")), action.slice(action.indexOf(".") + 1)] : ["", action];
+  const name = type ? recordNames[type] ?? type : "";
+  return name ? `${name} · ${actionNames[verb] ?? auditAction(action)}` : actionNames[verb] ?? auditAction(action);
+}
+/** The log is kept 5 years and the backend refuses a longer period, so "all time" asks for the longest period it accepts (two days of margin for the clock). */
+export function longestAuditFrom(now = new Date()) {
+  const from = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate() + 2);
+  return `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, "0")}-${String(from.getDate()).padStart(2, "0")}`;
+}

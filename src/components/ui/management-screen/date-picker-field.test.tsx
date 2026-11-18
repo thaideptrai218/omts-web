@@ -62,6 +62,17 @@ describe("floating date field", () => {
     fireEvent.change(input, { target: { value: "" } });
     expect(change).toHaveBeenCalledWith("");
   });
+  it("shows the date and the time inside one bordered control and marks a read-only one", () => {
+    const view = render(<DatePickerField withTime label="Thời gian" value="2026-11-18T12:48" onChange={vi.fn()} />);
+    const input = screen.getByRole("textbox", { name: "Thời gian" }) as HTMLInputElement;
+    const control = input.parentElement!;
+    expect(input.value).toBe("18/11/2026");
+    expect(within(control).getByText("12:48")).toBeTruthy();
+    expect(within(control).getByRole("button", { name: /Thời gian: 18\/11\/2026 12:48/ })).toBeTruthy();
+    expect(control.hasAttribute("data-disabled")).toBe(false);
+    view.rerender(<DatePickerField withTime readOnly label="Thời gian" value="2026-11-18T12:48" onChange={vi.fn()} />);
+    expect(control.hasAttribute("data-disabled")).toBe(true);
+  });
   it("opens with ArrowDown and returns focus on Escape", () => {
     render(<DatePickerField label="Ngày ghi" value="2026-11-11" onChange={vi.fn()} />);
     const input = screen.getByRole("textbox", { name: "Ngày ghi" });

@@ -65,8 +65,8 @@ export function DatePickerField({ id, inputRef, required, readOnly, onBlur, onFo
   }
   return <span className={styles.field}>
     {name && <input type="hidden" name={name} value={value} disabled={disabled} />}
-    <span ref={anchor} className={`${styles.control} ${className ?? ""}`} data-invalid={invalid || !!error || !!valueError || undefined}>
-      <input id={id} ref={input} required={required} readOnly={readOnly} onFocus={onFocus} onInvalid={onInvalid} type="text" value={text} inputMode="numeric" maxLength={10} placeholder="dd/mm/yyyy" aria-label={label} disabled={disabled} aria-invalid={invalid || !!error || !!valueError || undefined} aria-describedby={[describedBy, error || valueError ? errorId : ""].filter(Boolean).join(" ") || undefined}
+    <span ref={anchor} className={`${styles.control} ${className ?? ""}`} data-invalid={invalid || !!error || !!valueError || undefined} data-disabled={disabled || readOnly || undefined}>
+      <input className={styles.input} id={id} ref={input} required={required} readOnly={readOnly} onFocus={onFocus} onInvalid={onInvalid} type="text" value={text} inputMode="numeric" maxLength={10} placeholder="dd/mm/yyyy" aria-label={label} disabled={disabled} aria-invalid={invalid || !!error || !!valueError || undefined} aria-describedby={[describedBy, error || valueError ? errorId : ""].filter(Boolean).join(" ") || undefined}
         onChange={event => { event.currentTarget.setCustomValidity(""); typeDate(event.target.value); }} onBlur={event => { validate(); onBlur?.(event); }}
         onKeyDown={event => { if (!readOnly && event.key === "ArrowDown") { event.preventDefault(); setOpen(true); } }} />
       {withTime && timePart && <span className={styles.timeValue}>{timePart.slice(0, 5)}</span>}

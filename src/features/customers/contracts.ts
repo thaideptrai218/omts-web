@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { addressViewFields, invoiceViewFields } from "@/features/address-invoice/contracts";
 
 /**
  * Shapes of the customer module of the backend (api/customers, api/customer-debts, api/customer-payments), as the BFF at
@@ -13,10 +14,10 @@ export const genders = [["Male", "Nam"], ["Female", "Nữ"]] as const;
 export const typeLabel = (value: string | null | undefined) => customerTypes.find(([key]) => key === value)?.[1] ?? "Cá nhân";
 export const genderLabel = (value: string | null | undefined) => genders.find(([key]) => key === value)?.[1] ?? "";
 
-/** The list never carries the identity number or the bank; the figures are null without the debt permission. */
+/** The list carries the contact address and the kind of invoice buyer, never the personal tax number or the bank; the figures are null without the debt permission. */
 export const customerRow = z.object({
   id, code: text, name: text, phoneNumber: opt, address: opt, hasTraderAccount: z.boolean(), rowVersion: text, statusId: count, status: text,
-  customerType: text, gender: opt, birthDate: opt, phoneNumber2: opt, email: opt, facebook: opt, province: opt, ward: opt, companyName: opt, taxCode: opt, note: opt,
+  customerType: text, gender: opt, birthDate: opt, phoneNumber2: opt, email: opt, facebook: opt, province: opt, ward: opt, companyName: opt, taxCode: opt, note: opt, ...addressViewFields, invoiceBuyerType: opt, invoiceName: opt,
   photoUrl: opt, lastTransactionAt: opt, createdAt: text, createdBy: opt, currentDebt: money.nullish(), totalSales: money.nullish(), netSales: money.nullish(),
   overDebtLimit: z.boolean().nullish(), overDebtAmount: z.boolean().nullish(), overDebtDays: z.boolean().nullish(), debtDays: count.nullish(),
 });
@@ -28,7 +29,7 @@ export const customerDetail = z.object({
   id, code: text, name: text, phoneNumber: opt, email: opt, address: opt, note: opt, phoneLocked: z.boolean(),
   traderAccount: z.object({ accountId: id, username: opt, displayName: text }).nullish(), mergedIntoCustomerId: id.nullish(), currentDebt: money.nullish(), rowVersion: text,
   statusId: count, status: text, customerType: text, gender: opt, birthDate: opt, phoneNumber2: opt, facebook: opt, province: opt, ward: opt, companyName: opt, taxCode: opt,
-  identityNumber: opt, bankBin: opt, bankName: opt, bankAccountNumber: opt, photoUrl: opt, createdAt: text, createdBy: opt, isUsed: z.boolean().nullish(),
+  ...addressViewFields, ...invoiceViewFields, bankBin: opt, bankName: opt, bankAccountNumber: opt, photoUrl: opt, createdAt: text, createdBy: opt, isUsed: z.boolean().nullish(),
 });
 export const customerSaved = z.object({ customer: customerDetail });
 export const bulkResult = z.object({ succeeded: count, failed: count, outcomes: z.array(z.object({ id, succeeded: z.boolean(), code: opt, message: opt })) });

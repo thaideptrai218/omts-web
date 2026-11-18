@@ -19,9 +19,12 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { listCollectors } from "@/features/cash-book/repository";
 import { ErrorNotice, Money, useMutation, useRemote } from "@/features/operations/ui";
 import { viDate, viDateTime } from "@/features/purchase-documents/document-parts";
-import { IN_USE, genderLabel, typeLabel, customerTypes, genders, noRequiredFields, overLimitReason, type BulkResult, type CustomerDetail, type CustomerPage, type CustomerRow } from "./contracts";
+import { IN_USE, genderLabel, typeLabel, customerTypes, genders, noRequiredFields, overLimitReason, type BulkResult, type CustomerPage, type CustomerRow } from "./contracts";
 import { CustomerDetailPanel, type CustomerAccess } from "./customer-detail";
 import { CustomerFormDialog } from "./customer-form-dialog";
+import { ProvinceFilter } from "@/features/address-invoice/province-filter";
+import { TraderRequestsDialog } from "@/features/trader-requests-api/requests-dialog";
+import { readTraderRequests } from "@/features/trader-requests-api/repository";
 import { CustomerImportDialog } from "./customer-import-dialog";
 import { customerRepository, errorText, type ListQuery } from "./repository";
 import { useCustomerSettings } from "./use-customer-settings";
@@ -40,10 +43,10 @@ const columns: readonly Column[] = [
   { key: "facebook", label: "Facebook", defaultHidden: true, render: (row) => dash(row.facebook) },
   { key: "gender", label: "Giới tính", defaultHidden: true, render: (row) => dash(genderLabel(row.gender)) },
   { key: "birthDate", label: "Sinh nhật", defaultHidden: true, render: (row) => row.birthDate ? viDate(row.birthDate) : "—" },
-  { key: "address", label: "Địa chỉ", defaultHidden: true, render: (row) => dash(row.address) },
-  { key: "province", label: "Tỉnh/thành", sort: "province", defaultHidden: true, render: (row) => dash(row.province) },
-  { key: "ward", label: "Phường/xã", defaultHidden: true, render: (row) => dash(row.ward) },
-  { key: "company", label: "Tên đơn vị", defaultHidden: true, render: (row) => dash(row.companyName) },
+  { key: "address", label: "Địa chỉ", defaultHidden: true, render: (row) => dash(row.street ?? row.address) },
+  { key: "province", label: "Tỉnh/thành", sort: "province", defaultHidden: true, render: (row) => dash(row.provinceName ?? row.province) },
+  { key: "ward", label: "Phường/xã", defaultHidden: true, render: (row) => dash(row.wardName ?? row.ward) },
+  { key: "company", label: "Tên đơn vị", defaultHidden: true, render: (row) => dash(row.invoiceBuyerType === "Organization" ? row.invoiceName ?? row.companyName : row.invoiceBuyerType ? null : row.companyName) },
   { key: "taxCode", label: "Mã số thuế", defaultHidden: true, render: (row) => dash(row.taxCode) },
   { key: "last", label: "Ngày giao dịch cuối", sort: "lastTransaction", render: (row) => row.lastTransactionAt ? viDateTime(row.lastTransactionAt) : "—" },
   { key: "debt", label: "Nợ hiện tại", sort: "currentDebt", numeric: true, gate: "debt", render: (row) => <Figure value={row.currentDebt} over={overLimitReason(row)} /> },
@@ -84,7 +87,10 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<CustomerPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [editor, setEditor] = useState<CustomerDetail | null>(), [importing, setImporting] = useState(false), { notify } = useToast(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();
+  const [creating, setCreating] = useState(false), [importing, setImporting] = useState(false), { notify } = useToast(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();
+  // Trader sign-up requests are decided by the Owner here: an approved trader becomes a customer of this list.
+  const isOwner = context.identity.subjectType === "CooperativeOwner", [requestsOpen, setRequestsOpen] = useState(false);
+  const pendingRequests = useRemote(useCallback((signal: AbortSignal) => isOwner ? readTraderRequests(false, signal) : Promise.resolve({ status: "success" as const, data: [] }), [isOwner]));
   const bulk = useMutation(), exportFile = useMutation(), confirmation = useActionDialog();
   // The people who may have made a customer come from the cash book's list of staff, which only its readers can see.
   const canPeople = can("CASH_BOOK", "View");
@@ -161,7 +167,7 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
       <label className={layoutStyles.pill}><input type="checkbox" className="sr-only" checked={filters.overLimit === "true"} onChange={(event) => setFilter("overLimit")(event.target.checked ? "true" : "")} />Vượt hạn mức nợ</label>
     </div></FilterGroup>}
     {rangeError && <p role="alert" className={listStyles.rangeError}>Giá trị &quot;từ&quot; phải nhỏ hơn hoặc bằng giá trị &quot;đến&quot;.</p>}
-    <FilterGroup legend="Tỉnh/thành"><input type="search" aria-label="Tỉnh/thành" className="h-[30px] w-full rounded-md border border-border-strong px-2 text-[13px]" maxLength={100} placeholder="Nhập tỉnh/thành" value={filters.province} onChange={(event) => setFilter("province")(event.target.value)} /></FilterGroup>
+    <FilterGroup legend="Tỉnh/thành"><ProvinceFilter className="h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]" value={filters.province} onChange={setFilter("province")} /></FilterGroup>
     <FilterGroup legend="Trạng thái"><div className={layoutStyles.pills}>{statuses.map(([key, label]) => <label key={key} className={layoutStyles.pill}><input type="radio" className="sr-only" name="customer-status" checked={filters.status === key} onChange={() => setFilter("status")(key)} />{label}</label>)}</div></FilterGroup>
     {creators.data && <FilterGroup legend="Người tạo"><SelectBox aria-label="Người tạo" className="h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]" value={filters.createdById} onChange={(event) => setFilter("createdById")(event.target.value)}>
       <option value="">Tất cả</option>{creators.data.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</SelectBox></FilterGroup>}
@@ -173,7 +179,8 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="khách hàng" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); setSelected(new Set()); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm khách hàng" placeholder="Theo mã, tên hoặc điện thoại" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      {canCreate && <Button className="w-auto" onClick={() => setEditor(null)}><InterfaceIcon name="add" className="mr-1 size-4" />Khách hàng</Button>}
+      {canCreate && <Button className="w-auto" onClick={() => setCreating(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Khách hàng</Button>}
+      {isOwner && <Button className="w-auto" variant="secondary" onClick={() => setRequestsOpen(true)}><InterfaceIcon name="request" className="mr-1 size-4" />Yêu cầu đăng ký{pendingRequests.data?.length ? ` (${pendingRequests.data.length})` : ""}</Button>}
       {canCreate && <Button className="w-auto" variant="secondary" onClick={() => setImporting(true)}><InterfaceIcon name="upload" className="mr-1 size-4" />Import file</Button>}
       {canExport && <Button className="w-auto" variant="secondary" isPending={exportFile.pending} disabled={rangeError} onClick={() => void exportFile.run(() => customerRepository.exportList(query), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
       <ColumnPicker columns={offered} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
@@ -210,12 +217,13 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
             {expanded === row.id && <tr><td colSpan={columnCount} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
-              <CustomerDetailPanel id={row.id} access={access} onEdit={setEditor} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
+              <CustomerDetailPanel id={row.id} access={access} required={settings?.requiredFields ?? noRequiredFields} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
             </div></td></tr>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>
-    {editor !== undefined && <CustomerFormDialog record={editor} required={settings?.requiredFields ?? noRequiredFields} onClose={() => setEditor(undefined)} onSaved={(saved) => { const created = editor === null; setEditor(undefined); notify({ tone: "success", title: `Đã ${created ? "tạo" : "lưu"} khách hàng ${saved.code}.` }); if (created) setExpanded(undefined); reload(); }} />}
+    {creating && <CustomerFormDialog record={null} required={settings?.requiredFields ?? noRequiredFields} onClose={() => setCreating(false)} onSaved={(saved) => { setCreating(false); notify({ tone: "success", title: `Đã tạo khách hàng ${saved.code}.` }); setExpanded(undefined); reload(); }} />}
+    {requestsOpen && <TraderRequestsDialog onClose={() => { setRequestsOpen(false); pendingRequests.reload(); reload(); }} />}
     {importing && <CustomerImportDialog onClose={() => setImporting(false)} onImported={(count) => { setImporting(false); notify({ tone: "success", title: `Đã nhập ${count} khách hàng.` }); reload(); }} />}
   </ManagementLayout>;
 }

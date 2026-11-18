@@ -1,0 +1,72 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
+const id = (n: number) => `00000000-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`;
+const state = vi.hoisted(() => ({ detail: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
+vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), planRepository: { detail: state.detail } }));
+vi.mock("@/features/products/lot-link", async () => {
+  const { lotHref } = await import("@/features/products/product-helpers");
+  return { LotLink: ({ code }: { code: string }) => <a href={lotHref(code)}>{code}</a> };
+});
+import { ToastProvider } from "@/components/ui/toast-provider";
+import type { PlanView } from "./contracts";
+import type { PlanAccess } from "./plan-access";
+import { PlanDetailPanel } from "./plan-detail";
+
+const owner = { create: true, edit: true, remove: true, harvest: true, staff: true } as PlanAccess;
+const lane = (laneNumber: number, state: string, lotCode: string | null = null) => ({ laneId: id(60 + laneNumber), laneNumber, state, lotCode });
+const view = (patch: object = {}) => ({
+  id: id(1), code: "KHT000005", statusId: 4202, status: "Assigned", zones: [{ id: id(6), code: "DEMO-01", name: "Vùng demo" }], plannedAt: "2026-11-18T06:00:00+07:00", note: "ghi chú kế hoạch",
+  createdBy: { id: id(8), name: "Nguyễn Văn Hải" }, assignedAt: "2026-11-18T01:17:00+07:00", completedAt: null, cancelledAt: null, cancelReason: null,
+  orders: [{ id: id(9), code: "DH000005" }],
+  lines: [{ id: id(2), lineNumber: 1, raftId: id(4), raftCode: "B1-01", zone: { id: id(6), code: "DEMO-01", name: "Vùng demo" }, note: null, lanes: [lane(3, "Harvested", "DEMO-01-B1-01-20261118")], expectedProduct: { id: id(10), code: "SP000001", name: "Hàu sữa" }, expectedCageCount: 2.5, state: "Harvested", canHarvest: false, lot: { id: id(11), lotCode: "DEMO-01-B1-01-20261118" } }],
+  progress: { lines: 1, linesDone: 1, lanes: 1, lanesHarvested: 1, lanesSkipped: 0 }, allowedActions: ["Edit", "Assign", "Cancel"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "p1", ...patch,
+}) as unknown as PlanView;
+const open = async (plan: PlanView, access = owner) => {
+  state.detail.mockResolvedValue({ status: "success", data: plan });
+  render(<ToastProvider><PlanDetailPanel id={plan.id} access={access} onChanged={vi.fn()} /></ToastProvider>);
+  return screen.findByRole("heading", { name: plan.code });
+};
+
+beforeEach(() => state.detail.mockReset());
+afterEach(cleanup);
+
+it("lays the plan out like the invoice row: facts, linked lines, note and sums", async () => {
+  await open(view());
+  const facts = screen.getByText("Thời gian dự kiến:").parentElement!.parentElement!;
+  expect(within(facts).getByRole("link", { name: "DEMO-01" }).getAttribute("href")).toBe(`/farming/zones?recordId=${id(6)}&search=DEMO-01`);
+  expect(within(facts).getByRole("link", { name: "DH000005" }).getAttribute("href")).toContain("DH000005");
+  expect(within(facts).getByText("Nguyễn Văn Hải")).toBeTruthy();
+  expect(within(facts).getByText("Hoàn thành lúc:")).toBeTruthy();
+  const table = screen.getByRole("table", { name: "Dòng của kế hoạch thu hoạch" });
+  expect(within(table).getByRole("link", { name: "B1-01" }).getAttribute("href")).toBe(`/farming/rafts?zoneId=${id(6)}&recordId=${id(4)}&search=B1-01`);
+  expect(within(table).getByRole("link", { name: "Hàu sữa (SP000001)" }).getAttribute("href")).toBe("/sales/products?code=SP000001");
+  expect(within(table).getAllByRole("link", { name: "DEMO-01-B1-01-20261118" })).not.toHaveLength(0);
+  expect((screen.getByRole("textbox", { name: "Ghi chú" }) as HTMLTextAreaElement).value).toBe("ghi chú kế hoạch");
+  expect((screen.getByRole("textbox", { name: "Ghi chú" }) as HTMLTextAreaElement).readOnly).toBe(true);
+  const sums = screen.getByRole("textbox", { name: "Ghi chú" }).nextElementSibling as HTMLElement;
+  for (const [label, value] of [["Số bè / luống", "1 bè · 1 luống"], ["Lồng dự kiến", "2,5"], ["Đã thu dòng / luống", "1/1 dòng · 1/1 luống"], ["Không thu luống", "0"]]) {
+    expect(within(sums).getByText(label).nextElementSibling!.textContent).toBe(value);
+  }
+});
+
+it("puts Sao chép and Hủy kế hoạch on the left and Chỉnh sửa, Giao QLV on the right, as the API allows", async () => {
+  await open(view());
+  const [left, right] = [...document.querySelectorAll("footer > div")];
+  expect([...left.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Sao chép", "Hủy kế hoạch"]);
+  expect([...right.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Chỉnh sửa", "Giao QLV"]);
+  cleanup();
+  await open(view({ allowedActions: [] }), { ...owner, create: false });
+  expect(screen.queryByRole("button", { name: "Hủy kế hoạch" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Sao chép" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Chỉnh sửa" })).toBeNull();
+});
+
+it("shows when and why a cancelled plan was cancelled instead of the completion time", async () => {
+  await open(view({ statusId: 4205, status: "Cancelled", cancelledAt: "2026-11-19T09:30:00+07:00", cancelReason: "Mưa bão", allowedActions: [] }));
+  expect(screen.getByText("Hủy lúc:")).toBeTruthy();
+  expect(screen.getByText("Mưa bão")).toBeTruthy();
+  expect(screen.queryByText("Hoàn thành lúc:")).toBeNull();
+});

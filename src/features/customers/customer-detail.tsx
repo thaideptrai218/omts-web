@@ -1,5 +1,6 @@
 "use client";
 import { SelectBox } from "@/components/ui/select-box";
+import { AddressInvoiceFacts } from "@/features/address-invoice/address-invoice-facts";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,9 @@ import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { DataTable, ErrorNotice, Money, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import { fmt, viDate, viDateTime } from "@/features/purchase-documents/document-parts";
-import { DISCONTINUED, genderLabel, kindLabel, methodLabel, typeLabel, type CustomerDetail, type DebtEntry } from "./contracts";
+import { DISCONTINUED, genderLabel, kindLabel, methodLabel, noRequiredFields, typeLabel, type DebtEntry, type RequiredFields } from "./contracts";
 import { invoiceHref } from "./customer-links";
+import { CustomerFormDialog } from "./customer-form-dialog";
 import { CustomerMergeDialog } from "./customer-merge-dialog";
 import { AdjustmentDialog, CustomerPaymentDialog, CustomerPaymentView } from "./customer-payment-dialogs";
 import { CustomerQrDialog } from "./customer-qr-dialog";
@@ -26,22 +28,22 @@ const invoiceStatus: Record<number, string> = { 3501: "Hoàn thành", 3502: "Đ�
 const requestStatus: Record<number, string> = { 3201: "Chờ phản hồi", 3202: "Đã chấp nhận", 3203: "Đã từ chối", 3204: "Đã hủy", 3206: "Hoàn thành" };
 const signed = (value: number) => value < 0 ? `-${fmt(-value)}` : fmt(value);
 
-export function CustomerDetailPanel({ id, access, onEdit, onChanged, onRemoved }: { id: string; access: CustomerAccess; onEdit(record: CustomerDetail): void; onChanged(): void; onRemoved(): void }) {
+export function CustomerDetailPanel({ id, access, required = noRequiredFields, onChanged, onRemoved }: { id: string; access: CustomerAccess; required?: RequiredFields; onChanged(): void; onRemoved(): void }) {
   const [tab, setTab] = useState<Tab>("info");
   const tabs = useMemo(() => [{ key: "info" as const, label: "Thông tin" }, ...(access.history ? [{ key: "sales" as const, label: "Lịch sử bán" }] : []),
     ...(access.requests ? [{ key: "requests" as const, label: "Yêu cầu mua" }] : []), ...(access.debt ? [{ key: "debt" as const, label: "Nợ cần thu" }] : [])], [access.history, access.requests, access.debt]);
   return <section className={listStyles.detail} aria-label="Chi tiết khách hàng">
     <Subtabs<Tab> label="Nội dung khách hàng" tabs={tabs} value={tab} onChange={setTab} />
-    {tab === "info" && <InfoTab id={id} access={access} onEdit={onEdit} onChanged={onChanged} onRemoved={onRemoved} />}
+    {tab === "info" && <InfoTab id={id} access={access} required={required} onChanged={onChanged} onRemoved={onRemoved} />}
     {tab === "sales" && <SalesTab id={id} withCuts={access.debt} />}
     {tab === "requests" && <RequestsTab id={id} />}
     {tab === "debt" && <DebtTab id={id} access={access} onChanged={onChanged} />}
   </section>;
 }
 
-function InfoTab({ id, access, onEdit, onChanged, onRemoved }: { id: string; access: CustomerAccess; onEdit(record: CustomerDetail): void; onChanged(): void; onRemoved(): void }) {
+function InfoTab({ id, access, required, onChanged, onRemoved }: { id: string; access: CustomerAccess; required: RequiredFields; onChanged(): void; onRemoved(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.detail(id, signal), [id]));
-  const confirmation = useActionDialog(), { notify } = useToast(), [error, setError] = useState<string>(), [pending, setPending] = useState(false), [merging, setMerging] = useState(false);
+  const confirmation = useActionDialog(), { notify } = useToast(), [error, setError] = useState<string>(), [pending, setPending] = useState(false), [merging, setMerging] = useState(false), [editing, setEditing] = useState(false);
   const record = remote.data;
   if (remote.loading) return <Skeleton />;
   if (remote.error || !record) return <ListStateMessage error={remote.error ?? "Không tải được hồ sơ."} onRetry={remote.reload} retryLabel="Tải lại hồ sơ" />;
@@ -64,10 +66,15 @@ function InfoTab({ id, access, onEdit, onChanged, onRemoved }: { id: string; acc
     setError(result.problem?.canDiscontinue ? `${record!.name} đã có dữ liệu liên quan${used ? ` (${used})` : ""} nên không xóa được. Hãy dùng Ngừng hoạt động.` : customerError(result));
   }
   const facts: [string, string | null | undefined][] = [["Mã khách hàng", record.code], ["Loại khách", typeLabel(record.customerType)], ["Giới tính", genderLabel(record.gender)], ["Sinh nhật", record.birthDate ? viDate(record.birthDate) : null],
-    ["Điện thoại 1", record.phoneNumber], ["Điện thoại 2", record.phoneNumber2], ["Email", record.email], ["Facebook", record.facebook], ["Địa chỉ", record.address], ["Tỉnh/thành", record.province], ["Phường/xã", record.ward],
-    ["Tên đơn vị", record.companyName], ["Mã số thuế", record.taxCode], ["Số CCCD", record.identityNumber], ["Ngân hàng", record.bankName], ["Số tài khoản", record.bankAccountNumber],
+    ["Điện thoại 1", record.phoneNumber], ["Điện thoại 2", record.phoneNumber2], ["Email", record.email], ["Facebook", record.facebook]];
+  const moreFacts: [string, string | null | undefined][] = [["Ngân hàng", record.bankName], ["Số tài khoản", record.bankAccountNumber],
     ...(access.debt ? [["Nợ hiện tại", record.currentDebt == null ? null : signed(record.currentDebt)] as [string, string | null]] : []),
     ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)], ["Ghi chú", record.note]];
+  // The profile is edited in place, in the open row, with the same form as the creation dialog.
+  if (editing) return <div className={listStyles.tabBody}>
+    <CustomerFormDialog inline record={record} required={required} onClose={() => setEditing(false)}
+      onSaved={(saved) => { setEditing(false); notify({ tone: "success", title: `Đã lưu khách hàng ${saved.code}.` }); remote.reload(); onChanged(); }} />
+  </div>;
   const initials = record.name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join("").toUpperCase();
   return <div className={listStyles.tabBody}>{confirmation.dialog}
     <header className={styles.infoHead}>
@@ -78,7 +85,11 @@ function InfoTab({ id, access, onEdit, onChanged, onRemoved }: { id: string; acc
       <h3>{record.name}</h3><StatusPill tone={discontinued ? "neutral" : "success"}>{discontinued ? "Ngừng hoạt động" : "Đang hoạt động"}</StatusPill>
       {record.traderAccount && <span className={`${styles.badge} ${styles.badgeWarn}`} title={`Tài khoản ${record.traderAccount.username ?? record.traderAccount.displayName}`}>Tài khoản thương lái</span>}
     </header>
-    <dl className={listStyles.facts}>{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}</dl>
+    <dl className={listStyles.facts}>
+      {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}
+      <AddressInvoiceFacts record={record} fallback="Consumer" />
+      {moreFacts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}
+    </dl>
     <ErrorNotice error={error} />
     {access.edit || access.remove ? <footer className={listStyles.tabFooter}>
       <div>
@@ -86,7 +97,7 @@ function InfoTab({ id, access, onEdit, onChanged, onRemoved }: { id: string; acc
         {access.edit && !discontinued && <Button className="w-auto" variant="ghost" disabled={pending} onClick={() => setMerging(true)}><InterfaceIcon name="users" className="size-4" />Gộp hồ sơ</Button>}
       </div>
       {access.edit && <div>
-        {!discontinued && <Button className="w-auto" onClick={() => onEdit(record)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
+        {!discontinued && <Button className="w-auto" onClick={() => setEditing(true)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
         <Button className="w-auto" variant="secondary" isPending={pending} onClick={() => void toggle()}><InterfaceIcon name="lock" className="size-4" />{discontinued ? "Sử dụng lại" : "Ngừng hoạt động"}</Button>
       </div>}
     </footer> : null}

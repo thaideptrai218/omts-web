@@ -26,6 +26,9 @@ function optionsOf(children: ReactNode): Option[] {
   return found;
 }
 
+/** Lower case without diacritics, so that "can tho" finds "Cần Thơ" and "dak lak" finds "Đắk Lắk". */
+const fold = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
+
 const setNativeValue = Object.getOwnPropertyDescriptor(typeof HTMLSelectElement === "undefined" ? Object : HTMLSelectElement.prototype, "value")?.set;
 
 /**
@@ -34,12 +37,18 @@ const setNativeValue = Object.getOwnPropertyDescriptor(typeof HTMLSelectElement 
  * or inside the modal dialog the box sits in, so scrolling lists never clip it and a dialog never hides it). Picking an item sets the native select and fires its real change
  * event, so `onChange={(event) => event.target.value}` handlers work unchanged.
  */
-export function SelectBox({ className = "", children, style, ref, onChange, ...props }: ComponentProps<"select">) {
+export function SelectBox({ className = "", children, style, ref, onChange, searchable = false, searchLabel = "Tìm trong danh sách", leading, ...props }: ComponentProps<"select"> & {
+  /** Puts a search box on top of the list that filters the items by their text, ignoring case and diacritics. */
+  searchable?: boolean; searchLabel?: string;
+  /** A small icon shown before the value in the box (e.g. a map pin for an address). */
+  leading?: ReactNode;
+}) {
   const native = useRef<HTMLSelectElement | null>(null), trigger = useRef<HTMLButtonElement>(null), list = useRef<HTMLUListElement>(null);
   const options = optionsOf(children);
   const [uncontrolled, setUncontrolled] = useState(() => String(props.defaultValue ?? options[0]?.value ?? ""));
   const current = props.value !== undefined ? String(props.value) : uncontrolled;
   const shown = options.find((option) => option.value === current) ?? (props.value === undefined ? options[0] : undefined);
+  const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false), [box, setBox] = useState<{ left: number; top: number; width: number; up: boolean; host: HTMLElement }>();
 
   useLayoutEffect(() => {
@@ -79,8 +88,12 @@ export function SelectBox({ className = "", children, style, ref, onChange, ...p
     if (element && !element.matches(":popover-open")) { try { element.showPopover(); } catch { /* no popover support: stays a fixed element */ } }
   }
 
+  const needle = fold(query.trim());
+  // A searchable list leaves out its empty "Chọn …" placeholder: it is the box's prompt, not a choice.
+  const shownOptions = searchable ? options.filter((option) => option.value !== "" && (!needle || fold(option.label).includes(needle))) : options;
+
   function pick(value: string) {
-    setOpen(false);
+    setOpen(false); setQuery("");
     const select = native.current;
     if (!select || value === select.value) return;
     setNativeValue?.call(select, value);
@@ -96,13 +109,22 @@ export function SelectBox({ className = "", children, style, ref, onChange, ...p
       tabIndex={props.tabIndex}
       onChange={(event) => { setUncontrolled(event.target.value); onChange?.(event); }}
     >{children}</select>
-    <button ref={trigger} type="button" tabIndex={-1} aria-hidden="true" disabled={props.disabled} className={`omts-select-trigger ${className}`} style={style} onClick={() => setOpen((value) => !value)} data-open={open || undefined} title={props.title}>
+    <button ref={trigger} type="button" tabIndex={-1} aria-hidden="true" disabled={props.disabled} className={`omts-select-trigger ${className}`} style={style} onClick={() => { setQuery(""); setOpen((value) => !value); }} data-open={open || undefined} title={props.title}>
+      {leading && <span className="omts-select-lead" aria-hidden="true">{leading}</span>}
       <span className="omts-select-value" data-placeholder={!shown?.value || undefined}>{shown?.label ?? ""}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
     {open && box && createPortal(<ul ref={showInTopLayer} popover="manual" aria-hidden="true" className="omts-select-menu" data-up={box.up || undefined}
       style={{ left: box.left, width: box.width, ...(box.up ? { top: box.top - 4, translate: "0 -100%" } : { top: box.top + 4 }) }}>
-      {options.map((option) => <li key={option.value}>
+      {searchable && <li className="omts-select-search">
+        <svg className="omts-select-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input autoFocus type="search" aria-label={searchLabel} placeholder={`${searchLabel}…`} autoComplete="off" value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); const first = shownOptions.find((option) => !option.disabled && option.value !== ""); if (first) pick(first.value); } }} />
+      </li>}
+      {searchable && needle && !shownOptions.length && <li className="omts-select-empty">Không tìm thấy “{query.trim()}”.</li>}
+      {searchable && needle && shownOptions.length > 0 && <li className="omts-select-count">{shownOptions.length} kết quả</li>}
+      {shownOptions.map((option) => <li key={option.value}>
         <button type="button" tabIndex={-1} disabled={option.disabled} data-selected={option.value === current || undefined} onClick={() => pick(option.value)}>
           <span>{option.label}</span>
           {option.value === current && <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>}

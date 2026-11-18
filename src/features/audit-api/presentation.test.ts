@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditAction, importantChanges } from "./presentation";
+import { actionOptionLabel, auditAction, importantChanges, longestAuditFrom } from "./presentation";
 describe("owner-facing audit summary", () => {
   it("explains a supplier refund without exposing internal IDs, nulls or enum codes", () => {
     const changes = importantChanges(null, { Kind: "PaidBack", SupplierId: "internal-supplier-id", Amount: 1000, PaymentDate: "2026-11-06", Method: "Cash", BankReference: null, Note: "Hoàn tiền trả hàng" });
@@ -19,5 +19,15 @@ describe("owner-facing audit summary", () => {
     ]);
     expect(importantChanges({ Amount: 5 }, { amount: 5 })).toEqual([]);
     expect(auditAction("SupplierPayment.Recorded")).toBe("Ghi nhận");
+  });
+});
+describe("audit filter presentation", () => {
+  it("names a filter action by its record type and verb, and falls back for unknown values", () => {
+    expect(actionOptionLabel("SupplierPayment.Recorded")).toBe("Giao dịch nhà cung cấp · Ghi nhận");
+    expect(actionOptionLabel("Deleted")).toBe("Xóa");
+    expect(actionOptionLabel("Mystery.Thing")).toBe("Mystery · Ghi nhận thao tác");
+  });
+  it("asks for the longest period the backend accepts when all time is chosen", () => {
+    expect(longestAuditFrom(new Date(2026, 10, 18))).toBe("2021-11-20");
   });
 });

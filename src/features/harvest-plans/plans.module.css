@@ -28,3 +28,17 @@
 .coverageState[data-state="short"] { color:var(--omts-color-danger, #b42318); }
 .coverageState[data-state="over"] { color:#9a6700; }
 .retry { color:var(--omts-color-primary); text-decoration:underline; }
+/* The facts of an opened plan: labels such as "Thời gian dự kiến" and "Hoàn thành lúc" need more than the 96px of the shared fact grid. */
+div.planFacts > div { grid-template-columns:118px minmax(0,1fr); }
+/* The Nhân công subtab: one block per line, the head in the same tint as the table heads of the Thông tin subtab. */
+.crewList { display:grid; gap:10px; }
+.crewCard { display:grid; gap:0; border:1px solid var(--omts-color-border); border-radius:8px; overflow:hidden; font-size:13px; }
+.crewHead { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:7px 12px; background:var(--omts-color-primary-soft); }
+.crewHead h4 { font-size:13px; font-weight:650; }
+.crewHead span { font-size:12px; color:var(--omts-color-text-muted); }
+.crewBody { padding:10px 12px; }
+.crewMembers { display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0; list-style:none; }
+.crewMember { display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:2px 10px; border:1px solid var(--omts-color-border-strong); border-radius:14px; background:var(--omts-color-surface); font-size:13px; }
+.crewMember small { font-size:12px; color:var(--omts-color-text-muted); }
+.crewEmpty { color:var(--omts-color-text-muted); }
+.crewNote { margin-top:10px; font-size:13px; color:var(--omts-color-text-muted); }

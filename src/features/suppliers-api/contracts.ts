@@ -1,19 +1,20 @@
 import { z } from "zod";
+import { addressViewFields, invoiceViewFields } from "@/features/address-invoice/contracts";
 
 const text = z.string();
 const optional = text.nullable();
 const type = z.enum(["Seed", "Material", "Other"]);
 
-/** The identity number (CCCD) is deliberately absent from the list: the backend sends it on the detail only. */
+/** The list carries the contact address and the kind of invoice buyer; the rest of the invoice info is on the detail only. */
 export const supplierRow = z.object({
   id: z.guid(), name: text, code: text, supplierType: type, phoneNumber: text, statusId: z.number().int(), status: text,
-  email: optional, address: optional, province: optional, ward: optional, companyName: optional, taxCode: optional, note: optional,
+  email: optional, address: optional, province: optional, ward: optional, companyName: optional, taxCode: optional, note: optional, ...addressViewFields, invoiceBuyerType: optional.optional(), invoiceName: optional.optional(),
   createdAt: text, createdBy: optional, totalPurchased: z.number().nullable(), currentDebt: z.number().nullable(),
 });
 export const supplierPage = z.object({ items: z.array(supplierRow), page: z.number().int(), pageSize: z.number().int(), total: z.number().int() });
 export const supplierDetail = z.object({
   id: z.guid(), name: text, code: text, supplierType: type, phoneNumber: text, statusId: z.number().int(), status: text,
-  email: optional, address: optional, province: optional, ward: optional, companyName: optional, taxCode: optional, note: optional, identityNumber: optional,
+  email: optional, address: optional, province: optional, ward: optional, companyName: optional, taxCode: optional, note: optional, ...addressViewFields, ...invoiceViewFields,
   createdAt: text, createdBy: optional, certificates: z.array(z.object({ index: z.number().int() })), rowVersion: text.min(1),
 });
 export const historyPage = z.object({

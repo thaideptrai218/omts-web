@@ -7,9 +7,11 @@ import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/management-table";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
-import issueStyles from "@/features/input-issues/input-issues.module.css";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { viDateTime } from "@/features/purchase-documents/document-parts";
+import docStyles from "@/features/purchase-documents/purchases.module.css";
+import { productHref } from "@/features/products/product-helpers";
 import { LotLink } from "@/features/products/lot-link";
 import { orderHref } from "@/features/sales-orders/order-labels";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
@@ -81,45 +83,48 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
   }
 
   return <div className={listStyles.tabBody}>{confirmation.dialog}
-    <header className={issueStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} /></div></header>
-    <div className={issueStyles.headFacts}>
+    <header className={docStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} /></div></header>
+    <div className={`${docStyles.headFacts} ${styles.planFacts}`}>
       <div><span>Thời gian dự kiến:</span><strong>{viDateTime(plan.plannedAt)}</strong></div>
-      <div><span>Vùng:</span><strong>{zoneCodes(plan.zones)}</strong></div>
-      <div><span>Số bè / luống:</span><strong>{totals.rafts} bè · {totals.lanes} luống</strong></div>
-      <div><span>Lồng dự kiến:</span><strong>{totals.cages == null ? "—" : totals.cages.toLocaleString("vi-VN")}</strong></div>
-      <div><span>Đã thu:</span><strong>{plan.progress.linesDone}/{plan.progress.lines} dòng · {plan.progress.lanesHarvested}/{plan.progress.lanes} luống</strong></div>
-      <div><span>Không thu:</span><strong>{plan.progress.lanesSkipped} luống</strong></div>
+      <div><span>Vùng:</span>{plan.zones.length ? <strong className="flex flex-wrap gap-x-2">{plan.zones.map((zone) => <Link key={zone.id} className={docStyles.link} href={farmingReferenceHref("zone", { recordId: zone.id, search: zone.code })}>{zone.code}</Link>)}</strong> : <strong>—</strong>}</div>
+      <div><span>Đơn đặt hàng:</span>{plan.orders.length ? <strong className="flex flex-wrap gap-x-2">{plan.orders.map((order) => <Link key={order.id} className={docStyles.link} href={orderHref(order.code)}>{order.code}</Link>)}</strong> : <strong>—</strong>}</div>
       <div><span>Người tạo:</span><strong>{dash(plan.createdBy?.name)}</strong></div>
-      {plan.assignedAt && <div><span>Giao lúc:</span><strong>{viDateTime(plan.assignedAt)}</strong></div>}
-      {plan.completedAt && <div><span>Hoàn thành lúc:</span><strong>{viDateTime(plan.completedAt)}</strong></div>}
-      {plan.statusId === PLAN.cancelled && <>
-        <div><span>Hủy lúc:</span><strong>{plan.cancelledAt ? viDateTime(plan.cancelledAt) : "—"}</strong></div>
-        <div><span>Lý do hủy:</span><span className={issueStyles.danger}>{dash(plan.cancelReason)}</span></div>
-      </>}
-      <div><span>Đơn đặt hàng:</span>{plan.orders.length ? <strong className="flex flex-wrap gap-x-2">{plan.orders.map((order) => <Link key={order.id} className={issueStyles.link} href={orderHref(order.code)}>{order.code}</Link>)}</strong> : <strong>—</strong>}</div>
+      <div><span>Giao lúc:</span><strong>{plan.assignedAt ? viDateTime(plan.assignedAt) : "—"}</strong></div>
+      {plan.statusId === PLAN.cancelled
+        ? <><div><span>Hủy lúc:</span><strong>{plan.cancelledAt ? viDateTime(plan.cancelledAt) : "—"}</strong></div>
+          <div><span>Lý do hủy:</span><span className={docStyles.danger}>{dash(plan.cancelReason)}</span></div></>
+        : <div><span>Hoàn thành lúc:</span><strong>{plan.completedAt ? viDateTime(plan.completedAt) : "—"}</strong></div>}
     </div>
-    <div className={issueStyles.innerScroll}><table className={issueStyles.inner}><thead><tr><th>Vùng</th><th>Bè</th><th>Luống</th><th>Sản phẩm</th><th className={issueStyles.num}>Lồng dự kiến</th><th>Lô thu hoạch</th><th /></tr></thead>
+    <div className={docStyles.innerScroll}><table className={docStyles.inner} aria-label="Dòng của kế hoạch thu hoạch"><thead><tr><th>Vùng</th><th>Bè</th><th>Luống</th><th>Sản phẩm</th><th className={docStyles.num}>Lồng dự kiến</th><th>Lô thu hoạch</th><th /></tr></thead>
       <tbody>{plan.lines.map((line) => <tr key={line.id}>
         <td>{line.zone.code}</td>
-        <td>{line.raftCode}{line.note && <span className={issueStyles.sub}>{line.note}</span>}</td>
+        <td><Link className={docStyles.link} href={farmingReferenceHref("raft", { zoneId: line.zone.id, recordId: line.raftId, search: line.raftCode })}>{line.raftCode}</Link>{line.note && <span className={docStyles.sub}>{line.note}</span>}</td>
         <td><LaneChips plan={plan} line={line} access={access} onChanged={onChanged} setError={setError} /></td>
-        <td>{line.expectedProduct ? `${line.expectedProduct.name} (${line.expectedProduct.code})` : "—"}</td>
-        <td className={issueStyles.num}>{line.expectedCageCount == null ? "—" : line.expectedCageCount.toLocaleString("vi-VN")}</td>
-        <td>{line.lot ? <LotLink className={issueStyles.link} code={line.lot.lotCode} /> : "—"}</td>
+        <td>{line.expectedProduct ? <Link className={docStyles.link} href={productHref(line.expectedProduct.code)}>{line.expectedProduct.name} ({line.expectedProduct.code})</Link> : "—"}</td>
+        <td className={docStyles.num}>{line.expectedCageCount == null ? "—" : line.expectedCageCount.toLocaleString("vi-VN")}</td>
+        <td>{line.lot ? <LotLink className={docStyles.link} code={line.lot.lotCode} /> : "—"}</td>
         <td><PlanLineActions plan={plan} line={line} access={access} onChanged={onChanged} /></td>
       </tr>)}
-      {!plan.lines.length && <tr><td colSpan={7} className={issueStyles.empty}>Kế hoạch chưa có dòng nào.</td></tr>}</tbody></table></div>
-    {plan.note && <p className="whitespace-pre-wrap text-sm">{plan.note}</p>}
+      {!plan.lines.length && <tr><td colSpan={7} className={docStyles.empty}>Kế hoạch chưa có dòng nào.</td></tr>}</tbody></table></div>
+    <div className={docStyles.foot}>
+      <textarea className={docStyles.noteEdit} aria-label="Ghi chú" placeholder="Ghi chú..." readOnly value={plan.note ?? ""} />
+      <div className={docStyles.sums}>
+        <div><span>Số bè / luống</span><span>{totals.rafts} bè · {totals.lanes} luống</span></div>
+        <div><span>Lồng dự kiến</span><span>{totals.cages == null ? "—" : totals.cages.toLocaleString("vi-VN")}</span></div>
+        <div><span>Đã thu dòng / luống</span><span>{plan.progress.linesDone}/{plan.progress.lines} dòng · {plan.progress.lanesHarvested}/{plan.progress.lanes} luống</span></div>
+        <div><span>Không thu luống</span><span>{plan.progress.lanesSkipped}</span></div>
+      </div>
+    </div>
     <ErrorNotice error={error} />
     <footer className={listStyles.tabFooter}>
       <div>
-        {can("Cancel") && access.remove && <Button className="w-auto" variant="ghost" isPending={pending} onClick={() => void cancel()}><InterfaceIcon name="trash" className="size-4" />Hủy</Button>}
         {access.create && <Button className="w-auto" variant="ghost" disabled={pending} onClick={() => router.push(`${PLANS_PATH}/new?copy=${plan.id}`)}><InterfaceIcon name="document" className="size-4" />Sao chép</Button>}
+        {can("Cancel") && access.remove && <Button className="w-auto" variant="ghost" isPending={pending} onClick={() => void cancel()}><InterfaceIcon name="trash" className="size-4" />Hủy kế hoạch</Button>}
       </div>
       <div>
+        {can("Edit") && access.edit && <Button className="w-auto" disabled={pending} onClick={() => router.push(`${PLANS_PATH}/${plan.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
         {can("Assign") && access.edit && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => void assign()}><InterfaceIcon name="check" className="size-4" />Giao QLV</Button>}
         {can("Finish") && access.edit && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => void finish()}><InterfaceIcon name="check" className="size-4" />Kết thúc</Button>}
-        {can("Edit") && access.edit && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => router.push(`${PLANS_PATH}/${plan.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
       </div>
     </footer>
   </div>;

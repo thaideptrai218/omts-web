@@ -2,4 +2,6 @@ import { z } from "zod";
 const actor = z.object({ kind: z.string(), accountId: z.guid().nullable(), employeeId: z.guid().nullable(), name: z.string(), username: z.string().nullable() });
 export const auditPage = z.object({ page: z.object({ items: z.array(z.object({ id: z.guid(), occurredAt: z.string(), actor, action: z.string(), recordType: z.string(), recordId: z.guid().nullable(), recordCode: z.string().nullable(), zoneId: z.guid().nullable(), reason: z.string().nullable() })), page: z.number(), pageSize: z.number(), total: z.number() }), from: z.string(), to: z.string(), message: z.string().nullable(), messageCode: z.string().nullable() });
 export const auditDetail = z.object({ id: z.guid(), occurredAt: z.string(), actor, action: z.string(), recordType: z.string(), recordId: z.guid().nullable(), recordCode: z.string().nullable(), zoneId: z.guid().nullable(), reason: z.string().nullable(), before: z.unknown().nullable(), after: z.unknown().nullable() });
+export const auditFacets = z.object({ actions: z.array(z.string()), recordTypes: z.array(z.string()), people: z.array(actor) });
+export type AuditFacets = z.infer<typeof auditFacets>;
 export type AuditPage = z.infer<typeof auditPage>; export type AuditDetail = z.infer<typeof auditDetail>;

@@ -1,5 +1,6 @@
 "use client";
 import { useToast } from "@/components/ui/toast-provider";
+import { AddressInvoiceFacts } from "@/features/address-invoice/address-invoice-facts";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -14,7 +15,8 @@ import { ReceiptViewDialog, ReturnViewDialog } from "@/features/purchase-documen
 import { PaymentCreateDialog, PaymentVoucherDialog } from "@/features/purchase-documents/payment-dialogs";
 import { SupplierDocumentsDialog } from "@/features/supplier-api/documents-dialog";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import { DISCONTINUED, typeLabel, type SupplierDetail as Detail } from "./contracts";
+import { DISCONTINUED, typeLabel } from "./contracts";
+import { SupplierFormDialog } from "./supplier-form-dialog";
 import { supplierRepository } from "./repository";
 import styles from "./suppliers.module.css";
 
@@ -24,20 +26,20 @@ const dateTime = (value: string) => { const d = new Intl.DateTimeFormat("en-GB",
 const receiptStatus: Record<number, string> = { 1701: "Nháp", 1702: "Hoàn thành", 1703: "Đã hủy", 1901: "Đã ghi nhận", 1902: "Đã hủy" };
 const kinds = { Receipt: "Nhập hàng", Return: "Trả hàng nhập", ReturnRefund: "Hoàn tiền trả hàng", Payment: "Thanh toán", PaidBack: "Nhà cung cấp trả lại tiền" } as const;
 
-export function SupplierDetailPanel({ id, access, onEdit, onChanged }: { id: string; access: SupplierAccess; onEdit(record: Detail): void; onChanged(): void }) {
+export function SupplierDetailPanel({ id, access, onChanged }: { id: string; access: SupplierAccess; onChanged(): void }) {
   const [tab, setTab] = useState<Tab>("info");
   const tabs = useMemo(() => [{ key: "info" as const, label: "Thông tin" }, ...(access.history ? [{ key: "history" as const, label: "Lịch sử nhập/trả hàng" }] : []), ...(access.debt ? [{ key: "debt" as const, label: "Nợ cần trả nhà cung cấp" }] : [])], [access.history, access.debt]);
   return <section className={styles.detail} aria-label="Chi tiết nhà cung cấp">
     <Subtabs<Tab> label="Nội dung nhà cung cấp" tabs={tabs} value={tab} onChange={setTab} />
-    {tab === "info" && <InfoTab id={id} canEdit={access.edit} onEdit={onEdit} onChanged={onChanged} />}
+    {tab === "info" && <InfoTab id={id} canEdit={access.edit} onChanged={onChanged} />}
     {tab === "history" && <HistoryTab id={id} />}
     {tab === "debt" && <DebtTab id={id} access={access} onChanged={onChanged} />}
   </section>;
 }
 
-function InfoTab({ id, canEdit, onEdit, onChanged }: { id: string; canEdit: boolean; onEdit(record: Detail): void; onChanged(): void }) {
+function InfoTab({ id, canEdit, onChanged }: { id: string; canEdit: boolean; onChanged(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => supplierRepository.detail(id, signal), [id]));
-  const confirmation = useActionDialog(), { notify } = useToast(), [error, setError] = useState<string>(), [pending, setPending] = useState(false), [documents, setDocuments] = useState(false);
+  const confirmation = useActionDialog(), { notify } = useToast(), [error, setError] = useState<string>(), [pending, setPending] = useState(false), [documents, setDocuments] = useState(false), [editing, setEditing] = useState(false);
   const record = remote.data;
   if (remote.loading) return <Skeleton />;
   if (remote.error || !record) return <ListStateMessage error={remote.error ?? "Không tải được hồ sơ."} onRetry={remote.reload} retryLabel="Tải lại hồ sơ" />;
@@ -50,15 +52,19 @@ function InfoTab({ id, canEdit, onEdit, onChanged }: { id: string; canEdit: bool
     setPending(false);
     if (result.status === "success") { notify({ tone: "success", title: discontinued ? `Đã sử dụng lại ${record!.name}.` : `Đã ngừng hoạt động ${record!.name}.` }); remote.reload(); onChanged(); } else setError(workspaceError(result));
   }
-  const facts: [string, string | null][] = [["Mã nhà cung cấp", record.code], ["Người tạo", record.createdBy], ["Ngày tạo", dateTime(record.createdAt)], ["Nhóm", typeLabel(record.supplierType)], ["Điện thoại", record.phoneNumber], ["Email", record.email],
-    ["Địa chỉ", record.address], ["Tỉnh/thành", record.province], ["Phường/xã", record.ward], ["Tên công ty", record.companyName], ["Mã số thuế", record.taxCode], ["Số CCCD", record.identityNumber], ["Ghi chú", record.note]];
+  const facts: [string, string | null][] = [["Mã nhà cung cấp", record.code], ["Người tạo", record.createdBy], ["Ngày tạo", dateTime(record.createdAt)], ["Nhóm", typeLabel(record.supplierType)], ["Điện thoại", record.phoneNumber], ["Email", record.email]];
+  // The profile is edited in place, in the open row, with the same form as the creation dialog.
+  if (editing) return <div className={styles.tabBody}>
+    <SupplierFormDialog inline record={record} onClose={() => setEditing(false)}
+      onSaved={(saved) => { setEditing(false); notify({ tone: "success", title: `Đã lưu nhà cung cấp ${saved.code}.` }); remote.reload(); onChanged(); }} />
+  </div>;
   return <div className={styles.tabBody}>{confirmation.dialog}
     <header className={styles.infoHead}><h3>{record.name}</h3><StatusPill tone={discontinued ? "neutral" : "success"}>{discontinued ? "Ngừng dùng" : "Đang dùng"}</StatusPill></header>
-    <dl className={styles.facts}>{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}<div><dt>Chứng nhận</dt><dd><button type="button" className={managementStyles.linkButton} onClick={() => setDocuments(true)}>{record.certificates.length} chứng nhận</button></dd></div></dl>
+    <dl className={styles.facts}>{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}<AddressInvoiceFacts record={record} fallback="Individual" /><div><dt>Ghi chú</dt><dd>{record.note || "—"}</dd></div><div><dt>Chứng nhận</dt><dd><button type="button" className={managementStyles.linkButton} onClick={() => setDocuments(true)}>{record.certificates.length} chứng nhận</button></dd></div></dl>
     <ErrorNotice error={error} />
     {canEdit && <footer className={styles.tabFooter}>
       <div>
-        {!discontinued && <Button className="w-auto" onClick={() => onEdit(record)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
+        {!discontinued && <Button className="w-auto" onClick={() => setEditing(true)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
         <Button className="w-auto" variant="secondary" isPending={pending} onClick={() => void toggle()}><InterfaceIcon name="lock" className="size-4" />{discontinued ? "Sử dụng lại" : "Ngừng hoạt động"}</Button>
       </div>
     </footer>}
