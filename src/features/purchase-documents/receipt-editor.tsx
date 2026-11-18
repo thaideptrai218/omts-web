@@ -28,10 +28,12 @@ import styles from "./purchases.module.css";
 type Line = { key: string; lineId: string | null; item: ItemOption; itemUnitId: string | null; unitName: string; unitFactor: number; quantity: string; unitPrice: number | null; discount: number; supplierLotCode: string; floor: number };
 type Start = { receipt?: Receipt; copy?: { code: string; leftEmpty: string[]; supplierId: string; discount: number; notes: string; lines: { itemId: string; unitPrice: number | null; discount: number }[] } };
 const quantityOf = (value: string) => { const parsed = Number(value.replace(",", ".")); return value && parsed > 0 ? parsed : null; };
-/** A new line of an item starts in its base unit. */
+/** The price a line of the item suggests in a unit of `factor` base units, to the dong; null when the item has no price yet. */
+const suggestedPrice = (item: ItemOption, factor: number) => item.basePrice == null ? null : Math.round(item.basePrice * factor);
+/** A new line of an item starts in its base unit at the suggested price, which the user may change. */
 const newLine = (item: ItemOption, patch: Partial<Line> = {}): Line => {
-  const base = baseUnitOf(item);
-  return { key: crypto.randomUUID(), lineId: null, item, itemUnitId: base?.id ?? null, unitName: base?.name ?? item.unit, unitFactor: base?.factor ?? 1, quantity: "1", unitPrice: null, discount: 0, supplierLotCode: "", floor: 0, ...patch };
+  const base = baseUnitOf(item), factor = base?.factor ?? 1;
+  return { key: crypto.randomUUID(), lineId: null, item, itemUnitId: base?.id ?? null, unitName: base?.name ?? item.unit, unitFactor: factor, quantity: "1", unitPrice: suggestedPrice(item, factor), discount: 0, supplierLotCode: "", floor: 0, ...patch };
 };
 const belowFloor = (line: Line) => (quantityOf(line.quantity) ?? 0) * line.unitFactor < line.floor - 1e-9;
 
@@ -81,7 +83,9 @@ function Editor({ kind, start, lookups, itemId }: { kind: StockKind; start: Star
   const receivers = receipt?.receivedBy && !lookups.receivers.some((row) => row.id === receipt.receivedBy!.id) ? [receipt.receivedBy, ...lookups.receivers] : lookups.receivers;
   const update = (key: string, patch: Partial<Line>) => setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
   const add = (item: ItemOption) => setLines((current) => [...current, newLine(item)]);
-  const pickUnit = (line: Line, unitId: string) => { const unit = unitChoices(line.item, { itemUnitId: line.itemUnitId, unit: line.unitName, unitFactor: line.unitFactor }).find((row) => row.id === unitId); if (unit) update(line.key, { itemUnitId: unit.id, unitName: unit.name, unitFactor: unit.factor }); };
+  const pickUnit = (line: Line, unitId: string) => { const unit = unitChoices(line.item, { itemUnitId: line.itemUnitId, unit: line.unitName, unitFactor: line.unitFactor }).find((row) => row.id === unitId); if (unit) update(line.key, { itemUnitId: unit.id, unitName: unit.name, unitFactor: unit.factor,
+    // A price still at the suggestion follows the unit (a box of 50 costs 50 times the piece); a price the user typed stays.
+    ...(line.unitPrice != null && line.unitPrice === suggestedPrice(line.item, line.unitFactor) ? { unitPrice: suggestedPrice(line.item, unit.factor) } : {}) }); };
 
   async function save(complete: boolean) {
     if (!supplierId) { setError("Chọn nhà cung cấp."); return; }
