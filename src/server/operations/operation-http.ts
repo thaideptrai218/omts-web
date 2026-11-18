@@ -169,7 +169,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
       }
       if (plan.file === "invoice" || plan.file === "photo") {
         const record = data as Record<string, unknown>;
-        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : area.data === "harvest" || area.data === "claim-reports" || area.data === "quality-claims" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
+        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : area.data === "harvest" || area.data === "seeding" || area.data === "claim-reports" || area.data === "quality-claims" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
         const target = localFileTarget(raw, backend.config.origin);
         if (!target) return json({ status: "not-found" }, 404);
         const file = await fetch(target, { cache: "no-store", redirect: "error", credentials: "omit", signal: controller.signal });

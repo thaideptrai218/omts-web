@@ -74,6 +74,15 @@ describe("workforce day board in the management design", () => {
     expect(mocks.write.mock.calls[0][3]).toBe("a");
   });
 
+  it("lets a zone-level assignment with no raft be checked in and out", async () => {
+    mocks.read.mockResolvedValue({ status: "success", data: [row("z", "Nhân viên Zin", { raftId: null, raftCode: null })] });
+    render(<WorkforceScreen />);
+    await screen.findByText("Nhân viên Zin");
+    fireEvent.click(screen.getByRole("button", { name: "Mở phân công Nhân viên Zin" }));
+    expect(screen.getByRole("button", { name: "Ghi vào làm" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ghi ra về" })).toBeTruthy();
+  });
+
   it("queries the stepped day and the owner-only actions stay in the more menu", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: [] });
     render(<WorkforceScreen />);

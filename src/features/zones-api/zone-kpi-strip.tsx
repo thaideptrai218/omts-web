@@ -4,6 +4,7 @@ import { useCallback, type ReactNode } from "react";
 import { zoneCycles } from "@/features/cycles-api/contracts";
 import { readCycles } from "@/features/cycles-api/repository";
 import { licenseOverviewSchema, stateLabel } from "@/features/farming-api/contracts";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { businessToday, useRemote } from "@/features/operations/ui";
 import type { ZoneAccess } from "./zone-detail-panel";
@@ -73,5 +74,5 @@ function WaterChip({ zoneId, onOpenTab }: Props) {
 }
 function YieldChip({ zoneId, onOpenTab }: Props) {
   const remote = useRemote(useCallback((signal: AbortSignal) => readZoneYield(zoneId, signal), [zoneId]));
-  return <Chip label="Thu hoạch tháng này:" remote={remote} target={{ href: "/operations/harvest-yield" }} onOpenTab={onOpenTab} show={totals => ({ value: `${totals.lotCount} lô · ${kg(totals.estimatedKg)}` })} />;
+  return <Chip label="Thu hoạch tháng này:" remote={remote} target={{ href: farmingReferenceHref("yield", { zoneId }) }} onOpenTab={onOpenTab} show={totals => ({ value: `${totals.lotCount} lô · ${kg(totals.estimatedKg)}` })} />;
 }

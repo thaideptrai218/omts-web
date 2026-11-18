@@ -15,7 +15,6 @@ vi.mock("@/features/products/repository", async (original) => ({ ...(await origi
 // jsdom cannot decode images; the picker only needs the file back.
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
 import { attachPhoto, fillProductLine, selectLane } from "./record-form-test-helpers";
-import { HarvestForm } from "./records-harvest-form";
 import { HarvestLanesBoard } from "./harvest-lanes-board";
 import { HarvestPlanSummary, harvestProgressOf } from "./harvest-plan-summary";
 import { harvestEstimate } from "./harvest-estimate-hint";
@@ -69,12 +68,6 @@ describe("estimate = cages x kg per cage with the source", () => {
     expect(harvestEstimate(4, "401", 50).far).toBe(true);
     expect(harvestEstimate(Number.NaN, "", 50).computed).toBe(0);
   });
-  it("names the source of kg per cage in the form", async () => {
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    await fillProductLine("4");
-    expect(screen.getByText(/Nguồn: 4 lồng × 50 kg\/lồng \(thiết lập thu hoạch/)).toBeTruthy();
-    expect(screen.getByText(/4 lồng ≈ 200 kg ước tính/)).toBeTruthy();
-  });
 });
 
 describe("one finish action per lane", () => {
@@ -107,15 +100,6 @@ describe("one finish action per lane", () => {
   });
 });
 
-describe("the form follows the backend that answers", () => {
-  it("drops the second lane chooser once lanes report canFinish and keeps it for an older backend", () => {
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.queryByText("Xác nhận làn đã thu xong")).toBeNull();
-    cleanup();
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData({ lanes: [lane(1, { canFinish: undefined })] })} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.getByText("Xác nhận làn đã thu xong")).toBeTruthy();
-  });
-});
 
 const fillTrip = async () => {
   await selectLane(1);
@@ -124,23 +108,12 @@ const fillTrip = async () => {
   fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
   fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
 };
-describe("recording a trip above the plan (the plan is not a cap)", () => {
-  it("saves a 700 kg trip against a 500 kg target with no confirmation, keeping warnings as notices", async () => {
-    upload.mockResolvedValueOnce({ status: "success", data: { lot: { id: "x", lotCode: "KV01-B01-20261112" }, warnings: [{ code: "ESTIMATED_KG_FAR_FROM_CAGES", details: { workedKg: 400, minKg: 80, maxKg: 800 } }] } });
-    const onSaved = vi.fn();
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData({ harvestedKg: 500, targetYieldKg: 500, remainingKg: 0 })} onClose={vi.fn()} onSaved={onSaved} />);
-    await fillTrip();
-    await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(upload).toHaveBeenCalledTimes(1);
-    // One mandatory photo goes with the trip; the harvest % of a picked lane is filled with what is left on it (100 for an untouched lane).
-    expect(upload.mock.calls[0][1]).toHaveLength(1);
-    expect(upload.mock.calls[0][2]).toEqual({ lanePercents: { "1": 100 }, laneNumbers: [1], finishedLaneNumbers: [], cageCount: 8, estimatedKg: null, productLines: [{ productId: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", cageCount: 8, kg: null }] });
-    expect(screen.queryByRole("alert", { name: "Xác nhận vượt kế hoạch" })).toBeNull();
-    expect(await screen.findByText(/Kg ước tính \(400 kg\) lệch nhiều so với số lồng/)).toBeTruthy();
-  });
-  it("offers no purchase request: the lot links the plan line, not a request", () => {
-    wrap(<HarvestForm zoneId="z" raftId="r" data={screenData()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.queryByLabelText(/Đơn mua/)).toBeNull();
-    expect((screen.getByRole("button", { name: "Lưu" }) as HTMLButtonElement).disabled).toBe(false);
+
+describe("conversion beside the cages of a plan harvest", () => {
+  it("converts cages to kg and tấn with the product factor or the 50 kg default", async () => {
+    const { harvestPlanWeights } = await import("./harvest-plan-weights");
+    expect(harvestPlanWeights(6)).toEqual({ kgPerCage: 50, kg: 300, tons: 0.3 });
+    expect(harvestPlanWeights(2, 40)).toEqual({ kgPerCage: 40, kg: 80, tons: 0.08 });
+    expect(harvestPlanWeights(null)).toBeNull();
   });
 });

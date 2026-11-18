@@ -23,6 +23,11 @@ const lotActions = new Set(["weigh", "reopen", "close"]);
 export function cultivationRecordsPlan(area: OperationArea, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   if (new Set(query.keys()).size !== query.size) return;
   const seeding = area === "seeding", material = area === "material-usages";
+  if (seeding && method === "GET" && query.get("action") === "photo") {
+    const q = z.strictObject({ action: z.literal("photo"), id: z.guid(), zoneId: z.guid(), index: z.string().regex(/^[0-9]$/) }).safeParse(Object.fromEntries(query));
+    if (!q.success) return;
+    return { area, action: "photo", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/seeding-records/${q.data.id}`, schema: c.seedingRecord, expectedId: q.data.id, file: "photo", index: Number(q.data.index) };
+  }
   if (area === "harvest" && method === "GET" && query.get("action") === "photo") {
     const q = z.strictObject({ action: z.literal("photo"), id: z.guid(), zoneId: z.guid(), index: z.string().regex(/^[0-9]$/) }).safeParse(Object.fromEntries(query));
     if (!q.success) return;

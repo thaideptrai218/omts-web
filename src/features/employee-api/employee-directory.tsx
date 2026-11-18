@@ -30,7 +30,7 @@ export function EmployeeDirectory() {
   // A link from another screen (for example a zone's staff tab) opens one employee: ?recordId=<id>&search=<name>.
   const params = useSearchParams(), linkedSearch = params?.get("search") ?? "", linkedId = params?.get("recordId") ?? undefined;
   const [search, setSearch] = useState(linkedSearch), [term, setTerm] = useState(linkedSearch.trim());
-  const [statusId, setStatusId] = useState(linkedId ? "" : "401"), [zoneId, setZoneId] = useState("");
+  const [statusId, setStatusId] = useState(linkedId ? "" : "401"), [zoneId, setZoneId] = useState(params?.get("zoneId") ?? "");
   const [employeeType, setEmployeeType] = useState(""), [jobTypeId, setJobTypeId] = useState("");
   // No header chosen: the backend keeps its own default order.
   const [sort, setSort] = useState<SortState>();

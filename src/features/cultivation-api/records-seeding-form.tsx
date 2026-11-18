@@ -49,7 +49,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
   const [reason, setReason] = useState(""), [overReason, setOverReason] = useState(""), [asked, setAsked] = useState(false), [error, setError] = useState<string>();
   const [laneDirty, setLaneDirty] = useState(false), [lanePending, setLanePending] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]), [photoBusy, setPhotoBusy] = useState(false);
-  const [kept, setKept] = useState(record?.photos ?? []), [photoError, setPhotoError] = useState<string>();
+  const [kept, setKept] = useState((record?.photos ?? []).map((photo, index) => ({ ...photo, url: `/api/operations/seeding?action=photo&id=${record!.id}&zoneId=${zoneId}&index=${index}` }))), [photoError, setPhotoError] = useState<string>();
   const [crew, setCrew] = useState<string[]>(() => record?.crew?.map(member => member.id) ?? []);
   const [percents, setPercents] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(record?.lanePercents ?? {}).map(([lane, value]) => [lane, String(value)])));
   const [percentError, setPercentError] = useState<string>();
@@ -105,12 +105,14 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     if (!fromNursery && plan.hard) return `Tổng giống thả sẽ là ${plan.percent}% kế hoạch, vượt 150% nên không thể xác nhận. Hãy sửa lại số liệu hoặc điều chỉnh kế hoạch chu kỳ.`;
     return undefined;
   }
+  const footerProblem = error || stockError || editor.mutation.error || percentError || photoError || lots.error;
   async function save() {
     if (lanePending || laneDirty) { setError("Lưu hoặc bỏ thay đổi của làn trước khi lưu lần thả giống."); return; }
     const photosBad = photoValidationMessage(kept.length + photos.length, !record || !!record.photos?.length);
     const percentsBad = percentsProblem();
     setPhotoError(photosBad); setPercentError(percentsBad);
-    if (photosBad || percentsBad || photoBusy) return;
+    if (photoBusy) { setError("Đang xử lý ảnh, vui lòng đợi xong rồi bấm Lưu lại."); return; }
+    if (photosBad || percentsBad) { setError(photosBad ?? percentsBad); return; }
     const parsed = values(false), blocked = problem(parsed);
     if (blocked || !parsed.success) { setError(blocked); return; }
     setError(undefined);
@@ -122,7 +124,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
     const photosBad = photoValidationMessage(kept.length + photos.length, !record || !!record.photos?.length);
     const percentsBad = percentsProblem();
     setPhotoError(photosBad); setPercentError(percentsBad);
-    if (lanePending || laneDirty || photoBusy || photosBad || percentsBad) return;
+    if (lanePending || laneDirty || photoBusy || photosBad || percentsBad) { setError(photosBad ?? percentsBad ?? (photoBusy ? "Đang xử lý ảnh, vui lòng đợi xong rồi thử lại." : "Lưu hoặc bỏ thay đổi của làn trước khi xác nhận.")); return; }
     const parsed = values(true), blocked = problem(parsed);
     if (blocked || !parsed.success) { setError(blocked ?? "Nhập lý do vượt kế hoạch (tối đa 1.000 ký tự)."); return; }
     setError(undefined);
@@ -156,6 +158,8 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
       {question && editable && <OverPlanConfirm reason={overReason} onReason={setOverReason} pending={editor.mutation.pending} dismissLabel="Sửa lại số liệu" confirmLabel="Xác nhận vượt kế hoạch" onDismiss={() => { setAsked(false); editor.mutation.reviewed(); }} onConfirm={() => void confirmOver()}
         message={`Tổng giống thả sẽ là ${n(plan.total)} ${plan.seedUnit ?? seedUnit}${plan.planned !== null ? `, ${n(plan.percent!)}% kế hoạch ${n(plan.planned)}` : ", vượt kế hoạch của chu kỳ"}.`} />}
       <RecordFormFooter>
+        {/* The sticky footer is what the user is looking at when pressing Lưu, so every refusal is repeated here (the dialog's top notice may be scrolled out of view). */}
+        {footerProblem && <p role="alert" className="w-full rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{footerProblem}</p>}
         <Button className="w-auto" key="discard-seeding" type="button" variant="secondary" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
         {editable && <Button className="w-auto" key="save-seeding" type="submit" disabled={editor.disabled || laneDirty || lots.loading || !!lots.error || question || nurseryExhausted || !fromNursery && plan.hard}>Lưu</Button>}
       </RecordFormFooter>

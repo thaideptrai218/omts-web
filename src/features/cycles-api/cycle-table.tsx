@@ -20,6 +20,14 @@ export const cycleColumns: readonly Column[] = [
   { key: "close", label: "Ngày đóng", weight: 17, sort: "close", render: row => row.cycle?.closeDate ? formatVietnameseDate(row.cycle.closeDate) : "—" },
 ];
 
+/** Only the raft code leaves for the raft screen; the rest of the row (and the cell text under it) just opens the preview in place. */
+function RaftCell({ row, zoneId }: { row: CycleRow; zoneId?: string }) {
+  return <>
+    <Link className={`${styles.truncated} ${styles.name} ${styles.link}`} title={`Mở bè ${row.raftCode}`} href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })} onClick={event => event.stopPropagation()}>{row.raftCode}</Link>
+    <small className={styles.meta}>{row.laneCount} làn nuôi{row.cycle && !row.cycle.closeDate ? ` · Đang nuôi: ${farmedSeedText(row.cycle)}` : ""}</small>
+  </>;
+}
+
 /** One row per raft of the chosen zone with its latest cycle; a row opens the raft's record in place (`renderDetail`). */
 export function CycleTable({ zoneId, rows, visible, sort, onSort, expandedId, onToggle, renderDetail }: {
   zoneId?: string; rows: readonly CycleRow[]; visible: readonly string[]; sort: SortState; onSort(next: SortState): void; expandedId?: string; onToggle(id: string): void;
@@ -34,7 +42,7 @@ export function CycleTable({ zoneId, rows, visible, sort, onSort, expandedId, on
     <tbody>{rows.map(row => <Fragment key={row.raftId}>
       <OpenableTableRow id={`cycle-row-${row.raftId}`} data-selected={expandedId === row.raftId || undefined} onOpen={() => onToggle(row.raftId)}>
         <td className={styles.expandCell}><button type="button" aria-expanded={expandedId === row.raftId} aria-controls={`cycle-preview-${row.raftId}`} aria-label={`${expandedId === row.raftId ? "Thu gọn" : "Xem"} bè ${row.raftCode}`} onClick={() => onToggle(row.raftId)}><InterfaceIcon name={expandedId === row.raftId ? "chevron-down" : "chevron-right"} /></button></td>
-        {columns.map(column => <td key={column.key} data-label={column.label}>{column.key === "raft" ? <Link className={styles.link} href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>{column.render(row)}</Link> : column.render(row)}</td>)}
+        {columns.map(column => <td key={column.key} data-label={column.label}>{column.key === "raft" ? <RaftCell row={row} zoneId={zoneId} /> : column.render(row)}</td>)}
       </OpenableTableRow>
       {expandedId === row.raftId && <tr><td colSpan={columns.length + 1} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
         {renderDetail(row)}

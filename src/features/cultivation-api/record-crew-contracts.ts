@@ -15,5 +15,15 @@ export const crewAssignmentResult = z.object({
   created: z.number().int().nonnegative(),
   skipped: z.array(z.object({ employeeId: z.guid(), reason: z.string().max(60) })).default([]),
 }).nullish();
+/** Answer of cancelling a record that had a crew: assignments given back, and who keeps the attendance because they already checked in. */
+export const crewReleaseResult = z.object({ removed: z.number().int().nonnegative(), kept: z.array(z.string()).default([]) }).nullish();
+export type CrewReleaseResult = z.infer<typeof crewReleaseResult>;
+export function crewReleaseNotice(result: CrewReleaseResult, record = "đợt ươm"): string | undefined {
+  if (!result || (!result.removed && !result.kept.length)) return undefined;
+  const parts: string[] = [];
+  if (result.removed) parts.push(`Đã hủy ${result.removed} phân công của ${record}.`);
+  if (result.kept.length) parts.push(`Giữ nguyên chấm công của ${result.kept.join(", ")} vì đã vào làm.`);
+  return parts.join(" ");
+}
 export const crewAssignmentFields = { crewAssignment: crewAssignmentResult };
 export type CrewAssignmentResult = z.infer<typeof crewAssignmentResult>;

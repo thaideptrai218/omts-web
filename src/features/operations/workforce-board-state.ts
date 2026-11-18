@@ -39,6 +39,8 @@ export function useWorkforceBoard() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [expanded, setExpanded] = useState<string>();
+  // The row whose check-in/out/removal is being sent: only its buttons show progress, the list stays as it is.
+  const [pendingId, setPendingId] = useState<string>();
   const zones = useRemote(useMemo(() => (signal: AbortSignal) => loadOptions("zones", signal), []));
   const rows = useRemote(
     useMemo(
@@ -82,24 +84,27 @@ export function useWorkforceBoard() {
     if (isDateOnly(next)) changed(setDay)(next);
   }
   async function act(row: Assignment, action: AssignmentAction) {
-    const result = await editor.submit(actionQuestion(row, action), () =>
-      repository.write<unknown>(
+    const result = await editor.submit(actionQuestion(row, action), () => {
+      setPendingId(row.id);
+      return repository.write<unknown>(
         action,
         action === "remove" ? {} : { qrCode: null },
         action === "remove" ? z.object({ done: z.literal(true) }) : c.assignmentSchema,
         row.id,
         row.zoneId,
-      ),
-    );
+      );
+    });
+    setPendingId(undefined);
     if (result) {
       setNotice("Đã ghi nhận thao tác.");
-      setExpanded(undefined);
-      rows.reload();
+      // Only a removed row closes; otherwise the opened row, the page and the scroll position stay, and the list is refetched without a loading state.
+      if (action === "remove") setExpanded(undefined);
+      rows.refresh();
     }
   }
 
   return {
-    context, day, form, setForm, notice, setNotice, zoneId, search, status, mode, sort, pageSize, expanded,
+    context, day, form, setForm, notice, setNotice, zoneId, search, status, mode, sort, pageSize, expanded, pendingId,
     zones, rows, editor, allowed, zoneName, zoneOptions, scopedRows, filteredRows, visibleRows, currentPage,
     hasFilter: !!zoneId || !!search || !!status,
     setDay: changed(setDay), setZoneId: changed(setZoneId), setSearch: changed(setSearch), setStatus: changed(setStatus),

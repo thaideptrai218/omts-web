@@ -7,7 +7,7 @@ export type NurseryHistoryEntry = z.infer<typeof nurseryHistorySchema>["entries"
 type Change = NurseryHistoryEntry["changes"][number];
 const actions: Record<string, string> = {
   created: "Bắt đầu ươm", edited: "Sửa đợt ươm", cancelled: "Xóa đợt ươm", completed: "Hoàn tất ươm",
-  survivorscorrected: "Sửa số sống sót (ước tính)", closed: "Đóng đợt ươm", allocationschanged: "Cập nhật đợt ươm",
+  survivorscorrected: "Sửa số sống sót (ước tính)", closed: "Đóng đợt ươm", reopened: "Mở lại đợt ươm", allocationschanged: "Cập nhật đợt ươm",
 };
 const fields: Record<string, string> = {
   quantity: "Số mảnh vào ươm", quantityin: "Số mảnh vào ươm", startdate: "Ngày bắt đầu ươm",

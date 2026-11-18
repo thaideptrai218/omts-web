@@ -14,6 +14,17 @@ export type AssignmentAction = "remove" | "check-in" | "check-out";
 export const attendanceState = (row: Assignment) =>
   row.checkedOutAt ? (row.checkedInAt ? "finished" : "missing") : row.checkedInAt ? "working" : "planned";
 
+/** "7 giờ 30 phút"; "—" while the day has no check-in and check-out to count. */
+export function formatWorked(minutes: number | null) {
+  if (minutes === null) return "—";
+  const hours = Math.floor(minutes / 60), rest = minutes % 60;
+  return hours ? (rest ? `${hours} giờ ${rest} phút` : `${hours} giờ`) : `${rest} phút`;
+}
+
+/** Paid time of the day: break taken off and rounded down by the attendance settings (computed by the server). */
+export const workedLabel = (row: Assignment) => formatWorked(row.workedMinutes);
+export const breakLabel = (row: Assignment) => (row.workedMinutes === null ? "—" : row.breakMinutes ? `${row.breakMinutes} phút (nghỉ trưa được trừ)` : "Không có giờ nghỉ nằm trong ca");
+
 export const attendanceLabel = {
   planned: "Chưa vào làm",
   working: "Đang làm",

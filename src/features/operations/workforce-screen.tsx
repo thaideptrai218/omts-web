@@ -50,7 +50,7 @@ export function WorkforceScreen() {
     <ManagementScroller busy={rows.loading}><WorkforceTable board={board} columns={columns} /></ManagementScroller>
     {(form === "assign" || form === "crew") && (
       <AssignmentEditor mode={form} initialDay={board.day || businessToday()} onClose={() => setForm(undefined)}
-        onSaved={() => { setForm(undefined); rows.reload(); board.setNotice("Đã lưu phân công."); }} />
+        onSaved={() => { setForm(undefined); rows.refresh(); board.setNotice("Đã lưu phân công."); }} />
     )}
     {form === "settings" && <WorkforceSetupDialog onClose={() => setForm(undefined)} />}
     {/* Job types live on /api/job-types: same dialog and repository as the "Loại công việc và đơn giá" screen. */}

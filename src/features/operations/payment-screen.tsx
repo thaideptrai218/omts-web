@@ -12,7 +12,7 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "./permissions";
 import * as c from "./contracts";
 import { createOperationsRepository, type Query } from "./repository";
-import { DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, OperationHeading, Paging, Select, Skeleton, businessToday, methodLabel, money, statusLabel, useMutation, useRemote } from "./ui";
+import { DataTable, ErrorNotice, Field, FilterPanel, MethodOptions, Money, OperationHeading, Paging, Select, Skeleton, businessTime, methodLabel, money, statusLabel, toApiTime, useMutation, useRemote } from "./ui";
 
 const repository = createOperationsRepository("supplier-payments");
 const loadDebts = (signal: AbortSignal) => repository.read("debts", {}, c.debtsSchema, signal);
@@ -85,7 +85,7 @@ export function PaymentScreen() {
 
 export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId, onClose, onSaved }: { payment: c.Payment | null; suppliers: Debts; canCreate: boolean; initialSupplierId: string; onClose(): void; onSaved(payment: c.Payment): void }) {
   const confirmation = useActionDialog();
-  const [initialDraft] = useState(() => ({ supplierId: payment?.supplier.id ?? initialSupplierId, date: businessToday() }));
+  const [initialDraft] = useState(() => ({ supplierId: payment?.supplier.id ?? initialSupplierId, date: businessTime() }));
   const [supplierId, setSupplierId] = useState(initialDraft.supplierId), [receiptId, setReceiptId] = useState(""), [amount, setAmount] = useState("");
   const [date, setDate] = useState(initialDraft.date), [method, setMethod] = useState("Cash"), [reference, setReference] = useState("");
   const [deduplicationKey] = useState(() => crypto.randomUUID()), [review, setReview] = useState<z.infer<typeof c.paymentSearchSchema>>();
@@ -98,7 +98,7 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
   const dirty = !payment && (supplierId !== initialDraft.supplierId || !!receiptId || !!amount || !!reference || date !== initialDraft.date || method !== "Cash") || canAllocate && !!receiptId;
   const close = async () => { if (!mutation.busy() && (!dirty || await confirmation.confirm("Đóng và bỏ thông tin chưa xác nhận? Nếu lần gửi trước chưa rõ kết quả, hãy đối chiếu lịch sử trước khi lập khoản mới."))) onClose(); };
   async function submit() {
-    const body = canAllocate ? { receiptId } : { supplierId, receiptId, amount: Number(amount), paymentDate: date, method, referenceCode: reference || null, deduplicationKey };
+    const body = canAllocate ? { receiptId } : { supplierId, receiptId, amount: Number(amount), paymentDate: date.slice(0, 10), paidAt: toApiTime(date) ?? undefined, method, referenceCode: reference || null, deduplicationKey };
     if (!mutation.uncertain) frozen.current = body;
     const saved = await mutation.run(() => repository.write(payment ? "allocate" : "record", mutation.uncertain ? frozen.current : body, c.paymentSchema, payment?.id));
     if (saved) onSaved(saved);
@@ -114,7 +114,7 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
         {debt.loading && supplierId ? <Skeleton /> : <Select label="Phiếu nhập hoàn thành *" required value={receiptId} onChange={(e) => setReceiptId(e.target.value)}><option value="">Chọn phiếu</option>{debt.data?.receipts.filter((row) => row.outstanding > 0).map((row) => <option key={row.receiptId} value={row.receiptId}>{row.code} · Còn nợ {money(row.outstanding)}</option>)}</Select>}
         {target && <p className="rounded-control bg-primary-soft p-3">Còn nợ trên phiếu: <strong><Money value={target.outstanding} /></strong></p>}
         {!payment && <><MoneyField label="Số tiền đã trả *" min={1000} max={target?.outstanding} autoThousands showWords required value={amount} onChange={setAmount} />
-          <Field label="Ngày trả *" type="date" max={businessToday()} required value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Hình thức *" value={method} onChange={(e) => setMethod(e.target.value)}><MethodOptions /></Select>
+          <Field label="Thời gian trả *" type="datetime-local" max={businessTime()} required value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Hình thức *" value={method} onChange={(e) => setMethod(e.target.value)}><MethodOptions /></Select>
           <Field label="Mã tham chiếu" maxLength={100} value={reference} onChange={(e) => setReference(e.target.value)} /></>}
       </fieldset>
       {mutation.blocked && <div className="rounded-control border border-border p-4"><p>Chưa gửi lại khoản tiền. Hãy đối chiếu lịch sử nhà cung cấp.</p><Button className="mt-3 w-auto" variant="secondary" disabled={mutation.pending} onClick={async () => { const result = await mutation.run(() => repository.read("list", { supplierId, page: "1", pageSize: "100" }, c.paymentSearchSchema), true); if (result) setReview(result); }}>Tải lịch sử để đối chiếu</Button>
@@ -125,7 +125,7 @@ export function PaymentEditor({ payment, suppliers, canCreate, initialSupplierId
       {confirming ? <section aria-label="Xác nhận thanh toán" className="space-y-3 rounded-control border border-primary bg-primary-soft p-4"><h3 className="font-semibold">Đối chiếu trước khi ghi nhận</h3>
         <p>{payment?.supplier.name ?? suppliers.find((row) => row.supplierId === supplierId)?.supplierName} · Phiếu {target?.code ?? "—"}</p>
         <p>Số tiền: <strong><Money value={payment?.amount ?? Number(amount)} /></strong></p>
-        {!payment && <p>Ngày {date} · {methodLabel(method)} · Tham chiếu {reference || "không có"}</p>}
+        {!payment && <p>Thời gian {date.replace("T", " ")} · {methodLabel(method)} · Tham chiếu {reference || "không có"}</p>}
         <div className="flex flex-wrap gap-2"><Button className="w-auto" isPending={mutation.pending} disabled={mutation.blocked} onClick={() => { setConfirming(false); void submit(); }}>Đồng ý ghi nhận</Button><Button className="w-auto" variant="secondary" disabled={mutation.pending} onClick={() => setConfirming(false)}>Quay lại chỉnh sửa</Button></div>
       </section> : <Button className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked || !receiptId}>{payment ? "Phân bổ vào phiếu" : "Xác nhận ghi nhận thanh toán"}</Button>}
     </form>}

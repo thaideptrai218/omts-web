@@ -12,6 +12,7 @@ vi.mock("./records-shared", async (importOriginal) => {
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: import("react").ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
 // jsdom cannot decode images; the picker only needs the file back.
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
+import { photoValidationMessage } from "@/components/form/photo-compression";
 import { attachPhoto, selectLane } from "./record-form-test-helpers";
 import { SeedingForm } from "./records-seeding-form";
 import { seedingList } from "./records-contracts";
@@ -56,6 +57,18 @@ describe("seeding from a nursery cycle takes a free daily quantity from the batc
 
     expect((await screen.findAllByText(/Chỉ còn 6\.000 mảnh trong kho ươm/)).length).toBeGreaterThan(0);
     await new Promise(resolve => setTimeout(resolve, 50));
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("repeats a refusal in the sticky footer beside Lưu instead of failing silently (missing photo)", async () => {
+    open();
+    type("500");
+    await selectLane(2);
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+
+    const message = photoValidationMessage(0, true)!;
+    const alerts = await screen.findAllByText(message);
+    expect(alerts.some(node => node.getAttribute("role") === "alert" && node.closest("[class*=recordFormFooter]"))).toBe(true);
     expect(upload).not.toHaveBeenCalled();
   });
 
