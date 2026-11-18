@@ -58,11 +58,11 @@ describe("lot detail, tab Thông tin", () => {
   it("lists the product lines with what was sold of each, and the sums of the lot", async () => {
     const panel = await open();
     const table = within(panel.getByRole("table", { name: "Dòng sản phẩm của lô" }));
-    expect(table.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(["Sản phẩm", "Lồng", "Kg ước tính", "Kg cân", "Đã bán", "Còn lại"]);
+    expect(table.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(["Sản phẩm", "Lồng", "Kg cân", "Đã bán", "Còn lại"]);
     const row = table.getByText("Hàu sữa").closest("tr")!;
     expect(within(row).getByRole("link", { name: "Hàu sữa" }).getAttribute("href")).toBe("/sales/products?code=SP1");
-    expect(within(row).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["Hàu sữaSP1", "4", "200", "195,5", "95", "100,5"]);
-    for (const [label, value] of [["Ước tính", "200 kg"], ["Cân thực tế", "195,5 kg"], ["Đã bán", "95 kg"], ["Trả lại", "5 kg"], ["Hao hụt", "0 kg"], ["Còn lại", "100,5 kg"]]) {
+    expect(within(row).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["Hàu sữaSP1", "4", "195,5", "95", "100,5"]);
+    for (const [label, value] of [["Cân thực tế", "195,5 kg"], ["Đã bán", "95 kg"], ["Trả lại", "5 kg"], ["Hao hụt", "0 kg"], ["Còn lại", "100,5 kg"]]) {
       const line = panel.getAllByText(label, { selector: "span" }).map((element) => element.parentElement!).find((element) => element.textContent === `${label}${value}`);
       expect(line, label).toBeTruthy();
     }
@@ -79,15 +79,15 @@ describe("lot detail, tab Thông tin", () => {
   });
   it("says the lot is not weighed yet and offers no sale button for it", async () => {
     const panel = await open({ statusId: 2904, status: "AwaitingWeighing", weighedKg: null, weighedAt: null, weighedByName: null, productLines: [{ lineNumber: 1, productId: ids.product, productCode: "SP1", productName: "Hàu sữa", cageCount: 4, kg: 200 }], productStocks: [] });
-    expect(panel.getByText("Chờ cân")).toBeTruthy();
+    expect(panel.getAllByText("Chờ cân").length).toBeTruthy();
     expect(panel.getByText(/Chưa cân: lô chỉ được bán sau khi cân/)).toBeTruthy();
-    expect(panel.getAllByText("Chưa cân").length).toBeGreaterThanOrEqual(2);
-    expect(within(panel.getByRole("table", { name: "Dòng sản phẩm của lô" })).getByText("Chưa cân")).toBeTruthy();
+    expect(panel.getAllByText("Chưa cân").length).toBeGreaterThanOrEqual(1);
+    expect(within(panel.getByRole("table", { name: "Dòng sản phẩm của lô" })).getAllByText("Chờ cân").length).toBeTruthy();
   });
-  it("shows the estimate as what is left of a lot that is not weighed yet, whose ledger is still zero", async () => {
+  it("shows nothing sold or left for a lot that is not weighed yet, whose ledger is still zero", async () => {
     const panel = await open({ statusId: 2904, status: "AwaitingWeighing", weighedKg: null, productLines: [{ lineNumber: 1, productId: ids.product, productCode: "SP1", productName: "Hàu sữa", cageCount: 4, kg: 200 }], productStocks: [{ productId: ids.product, productCode: "SP1", productName: "Hàu sữa", harvestedKg: 0, soldKg: 0, returnedKg: 0, remainingKg: 0 }] });
     const row = within(panel.getByRole("table", { name: "Dòng sản phẩm của lô" })).getByText("Hàu sữa").closest("tr")!;
-    expect(within(row).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["Hàu sữaSP1", "4", "200", "Chưa cân", "0", "200"]);
+    expect(within(row).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["Hàu sữaSP1", "4", "Chờ cân", "—", "—"]);
   });
   it("shows a dash for a link the API did not give and an empty line table for a lot without lines", async () => {
     const panel = await open({ productLines: [], productStocks: [], harvestPlan: null, references: { seedLots: [], salesOrders: [] } });

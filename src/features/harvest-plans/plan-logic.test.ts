@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EligibleLane, PlanLane, PlanLine } from "./contracts";
-import { blankFormLine, buildPlanBody, coverage, coverageText, formLineOf, harvestPlanFor, laneChip, laneSelectable, lineCanHarvest, planFormProblem, planTotals, plannedCages, plannedLaneNumbers, shortageText, type OrderNeedLine, type PlanForm } from "./plan-logic";
+import { blankFormLine, buildPlanBody, coverage, coverageText, formLineOf, harvestPlanFor, laneChip, lineCanHarvest, planFormProblem, planTotals, plannedCages, plannedLaneNumbers, shortageText, type OrderNeedLine, type PlanForm } from "./plan-logic";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 const lane = (laneNumber: number, state: PlanLane["state"], extra: Partial<PlanLane> = {}): PlanLane => ({ laneId: id(laneNumber), laneNumber, state, ...extra });
@@ -17,23 +17,12 @@ describe("lane chips", () => {
 });
 
 describe("lanes that can be planned or harvested", () => {
-  const eligible = (laneNumber: number, state: EligibleLane["state"], planCode?: string): EligibleLane => ({ laneId: id(laneNumber), laneNumber, state, planCode });
-
-  it("lets a plan take free lanes and its own, never lanes of another open plan or already harvested, unless already chosen", () => {
-    expect(laneSelectable(eligible(1, "Free"), undefined, [])).toBe(true);
-    expect(laneSelectable(eligible(2, "InAnotherPlan", "KHT000002"), "KHT000001", [])).toBe(false);
-    expect(laneSelectable(eligible(2, "InAnotherPlan", "KHT000001"), "KHT000001", [])).toBe(true);
-    expect(laneSelectable(eligible(2, "InAnotherPlan", "KHT000001"), undefined, [])).toBe(false);
-    expect(laneSelectable(eligible(3, "Harvested"), "KHT000001", [])).toBe(false);
-    expect(laneSelectable(eligible(3, "Harvested"), "KHT000001", [3])).toBe(true);
-  });
-
-  it("takes the lanes to harvest from a line: planned ones only, and none once the line has a lot", () => {
+  it("reads the lanes of an old plan, and lets a line (a raft) be harvested until it has a lot", () => {
     const open = line(1, [lane(3, "Planned"), lane(1, "Planned"), lane(2, "Skipped"), lane(4, "Harvested")]);
     expect(plannedLaneNumbers(open)).toEqual([1, 3]);
     expect(lineCanHarvest(open)).toBe(true);
     expect(lineCanHarvest({ ...open, lot: done })).toBe(false);
-    expect(lineCanHarvest(line(2, [lane(1, "Skipped")]))).toBe(false);
+    expect(lineCanHarvest(line(2, []))).toBe(true);
     expect(lineCanHarvest({ ...open, canHarvest: false })).toBe(false);
     expect(harvestPlanFor({ code: "KHT000001" }, { ...open, expectedProduct: { id: id(8), code: "SP8", name: "Hàu" }, expectedCageCount: 12 })).toEqual({
       lineId: open.id, planCode: "KHT000001", raftId: open.raftId, raftCode: "B1", laneNumbers: [1, 3], expectedProductId: id(8), expectedCageCount: 12,
@@ -42,9 +31,9 @@ describe("lanes that can be planned or harvested", () => {
 });
 
 describe("plan totals", () => {
-  it("counts rafts, lanes, expected cages, recorded lots and lanes by state", () => {
+  it("counts rafts, expected cages and recorded lots", () => {
     const lines = [line(1, [lane(1, "Harvested"), lane(2, "Planned")], { expectedCageCount: 10, lot: done }), line(2, [lane(1, "Skipped")], { expectedCageCount: 5 })];
-    expect(planTotals(lines)).toEqual({ rafts: 2, lanes: 3, cages: 15, lots: 1, lines: 2, harvested: 1, skipped: 1 });
+    expect(planTotals(lines)).toEqual({ rafts: 2, cages: 15, lots: 1, lines: 2 });
     expect(planTotals([line(1, [lane(1, "Planned")])]).cages).toBeNull();
     expect(planTotals([]).rafts).toBe(0);
   });
@@ -95,11 +84,12 @@ describe("coverage of the linked orders", () => {
   });
 
   it("falls back to kg when orders mix units of one product, and cannot compare without kg per cage", () => {
-    const mixed = [need({ quantity: 10 }), need({ unitName: "kg", unitId: id(8), factor: 1, quantity: 200 })];
+    const mixed = [need({ quantity: 10, factor: 50 }), need({ unitName: "kg", unitId: id(8), factor: 1, quantity: 200 })];
     const row = only(coverage(mixed, planned(12), 50));
-    expect(row).toMatchObject({ unit: "kg", need: 450, planned: 600, gap: 150, state: "over" });
-    expect(coverageText(row)).toBe("Dư 150 kg");
-    const unknown = only(coverage(mixed, planned(12)));
+    expect(row).toMatchObject({ unit: "kg", need: 700, planned: 600, gap: -100, state: "short" });
+    expect(coverageText(row)).toBe("Thiếu 100 kg");
+    // No Lồng line to say what a cage weighs and no ratio given: the quantities cannot be compared.
+    const unknown = only(coverage([need({ unitName: "kg", unitId: id(8), factor: 1, quantity: 200 }), need({ unitName: "Thùng", unitId: id(9), factor: 25, quantity: 4 })], planned(12)));
     expect(unknown).toMatchObject({ unit: "kg", planned: null, gap: null, state: "unknown", cagesShort: 0 });
     expect(coverageText(unknown)).toBe("Chưa quy đổi được");
     expect(shortageText([unknown])).toBeUndefined();
@@ -115,7 +105,7 @@ describe("coverage of the linked orders", () => {
 });
 
 describe("plan form", () => {
-  const filled = (): PlanForm => ({ code: "", plannedAt: "2026-11-14T06:00", note: "", orderIds: [id(7)], lines: [{ ...blankFormLine(id(1)), raftId: id(5), laneNumbers: [2, 1], cages: "12", note: " ghi chú " }] });
+  const filled = (): PlanForm => ({ code: "", plannedAt: "2026-11-14T06:00", note: "", orderIds: [id(7)], lines: [{ ...blankFormLine(id(1)), raftId: id(5), cages: "12", note: " ghi chú " }] });
 
   it("names the first problem in the user's words", () => {
     expect(planFormProblem(filled())).toBeUndefined();
@@ -123,7 +113,6 @@ describe("plan form", () => {
     expect(planFormProblem({ ...filled(), lines: [] })).toBe("Thêm ít nhất một dòng bè.");
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], zoneId: "" }] })).toBe("Dòng 1: chọn vùng.");
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], raftId: "" }] })).toBe("Dòng 1: chọn bè.");
-    expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], laneNumbers: [] }] })).toBe("Dòng 1: chọn ít nhất một luống.");
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], cages: "2,555" }] })).toBe("Dòng 1: lồng dự kiến phải lớn hơn 0 và có tối đa 2 số lẻ (được nhập 0,5).");
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], cages: "2,5" }] })).toBeUndefined();
     expect(planFormProblem({ ...filled(), lines: [{ ...filled().lines[0], cages: "" }] })).toBeUndefined();
@@ -131,10 +120,10 @@ describe("plan form", () => {
     expect(planFormProblem({ ...filled(), lines: [twice, { ...twice, key: "other" }] })).toBe("Dòng 2: bè đã có ở dòng khác của kế hoạch.");
   });
 
-  it("builds the body: instant at +07:00, sorted lanes, empty values as null and the ids of existing lines", () => {
+  it("builds the body: instant at +07:00, no lanes, empty values as null and the ids of existing lines", () => {
     expect(buildPlanBody(filled())).toEqual({
       code: null, plannedAt: "2026-11-14T06:00:00+07:00", note: null, salesOrderIds: [id(7)],
-      lines: [{ raftId: id(5), laneNumbers: [1, 2], expectedCageCount: 12, note: "ghi chú" }],
+      lines: [{ raftId: id(5), laneNumbers: [], expectedCageCount: 12, note: "ghi chú" }],
     });
     const existing = { ...filled(), code: " KHT9 ", rowVersion: "v3", lines: [{ ...filled().lines[0], id: id(2), cages: "" }] };
     expect(buildPlanBody(existing)).toMatchObject({ code: "KHT9", rowVersion: "v3", lines: [{ id: id(2), expectedCageCount: null }] });
@@ -146,7 +135,6 @@ describe("plan form", () => {
     const open = line(1, [lane(1, "Planned")]), skipped = line(2, [lane(1, "Skipped"), lane(2, "Planned")], { locked: true }), lot = line(3, [lane(1, "Harvested")], { lot: done, locked: true });
     expect([open, skipped, lot].map((row) => formLineOf(row, true).locked)).toEqual([false, true, true]);
     expect([open, skipped, lot].map((row) => formLineOf(row, false).locked)).toEqual([false, false, false]);
-    expect(formLineOf(skipped, true).laneNumbers).toEqual([1, 2]);
     expect(formLineOf(skipped, true).zoneId).toBe(id(1));
   });
 });

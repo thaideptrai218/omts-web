@@ -47,11 +47,11 @@ describe("the state of a lot and of a receipt of lots", () => {
 });
 
 describe("the history of a lot", () => {
-  it("lists what happened oldest first, with the receipt first, and links the documents by code", () => {
+  it("lists what happened newest first, with the receipt last, and links the documents by code", () => {
     const entries = seedLotTimeline(seedLotDetailFixture());
-    expect(entries.map((entry) => entry.title)).toEqual(["Nhập lô", "Bắt đầu ươm", "Trả hàng nhà cung cấp", "Xuất hủy", "Thả giống"]);
-    expect(entries[0]).toMatchObject({ detail: "Phiếu PN000004: 1.000 mảnh", href: "/operations/seed-receipts?code=PN000004" });
-    expect(entries[1].href).toBe("/farming/nursery?code=NU000002");
+    expect(entries.map((entry) => entry.title)).toEqual(["Thả giống", "Xuất hủy", "Trả hàng nhà cung cấp", "Bắt đầu ươm", "Nhập lô"]);
+    expect(entries[4]).toMatchObject({ detail: "Phiếu PN000004: 1.000 mảnh", href: "/operations/seed-receipts?code=PN000004" });
+    expect(entries[3].href).toBe("/farming/nursery?code=NU000002");
     expect(entries[2].href).toBe("/operations/seed-returns?code=TH000001");
   });
   it("puts an event with no time last instead of inventing one", () => {

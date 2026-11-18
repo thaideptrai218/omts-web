@@ -36,7 +36,12 @@ it("shows the five tabs and, on Thông tin, the facts with links, the quantity b
   expect(within(table).getAllByRole("row").slice(1).map((row) => (row as HTMLTableRowElement).cells[0].textContent)).toEqual(["Nhập", "Đã trả nhà cung cấp", "Đang ươm", "Hao hụt khi ươm", "Đã treo", "Xuất khác", "Còn lại"]);
   expect(within(within(table).getByText("Nhập").closest("tr")!).getByText("1.000")).toBeTruthy();
   expect(within(within(table).getByText("Đã trả nhà cung cấp").closest("tr")!).getByText("10%")).toBeTruthy();
-  expect(within(panel).getByText("Lô đã được treo một phần, phần còn lại chưa dùng.")).toBeTruthy();
+  expect(within(panel).queryByText("Lô đã được treo một phần, phần còn lại chưa dùng.")).toBeNull();
+  const chips = within(panel).getByRole("list", { name: "Tình hình sử dụng lô giống" });
+  expect(within(chips).getAllByRole("listitem").map((item) => item.firstElementChild!.textContent)).toEqual(["Đã nhập", "Đang ươm", "Đã thả nuôi", "Thu hoạch", "Đã bán", "Còn trong kho"]);
+  expect(within(chips).getByText("195,5 (ước tính)")).toBeTruthy();
+  expect(within(chips).getByText("120 (ước tính)")).toBeTruthy();
+  expect(within(chips).getByText("Ươm xong: sống 250")).toBeTruthy();
 });
 
 it.each<[SeedLotState, boolean]>([["Unused", true], ["PartlySeeded", true], ["Nursing", false], ["FullySeeded", false], ["FullyReturned", false], ["FullyLost", false], ["UsedUp", false]])(
@@ -107,11 +112,11 @@ it("lists the seedings, the cycles and the harvest lots on Treo, and the returns
   expect(within(screen.getByRole("table", { name: "Phiếu xuất của lô giống" })).getByRole("link", { name: "XH000001" }).getAttribute("href")).toBe("/inputs/disposals?code=XH000001");
 });
 
-it("shows the history oldest first", async () => {
+it("shows the history newest first", async () => {
   await mount(); tab("Lịch sử");
   const items = within(screen.getByRole("list", { name: "Lịch sử của lô giống" })).getAllByRole("listitem");
-  expect(items[0].textContent).toContain("Nhập lô");
-  expect(items.at(-1)?.textContent).toContain("Thả giống");
+  expect(items[0].textContent).toContain("Thả giống");
+  expect(items.at(-1)?.textContent).toContain("Nhập lô");
 });
 
 it("shows an error with a retry, and a loading state before", async () => {

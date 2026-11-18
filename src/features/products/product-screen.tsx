@@ -21,6 +21,7 @@ import { ProductDetailPanel } from "./product-detail";
 import { useProductAccess } from "./product-access";
 import { ProductFormDialog } from "./product-form-dialog";
 import { chosenUnit, inUnitQuantity, unitSalePrice } from "./product-helpers";
+import { sizeFigure } from "./product-size";
 import { ProductImportDialog } from "./product-import-dialog";
 import { errorText, productRepository } from "./repository";
 import type { ListQuery } from "@/features/input-items/repository";
@@ -43,6 +44,7 @@ const columns: readonly Column[] = [
   { key: "category", label: "Nhóm sản phẩm", sort: "category", render: (row) => dash(row.categoryName) },
   { key: "price", label: "Giá bán", sort: "unitPrice", numeric: true, render: (row, unitId) => { const unit = chosenUnit(row, unitId); return row.unitPrice == null ? "—" : <>{fmt(unitSalePrice(row.unitPrice, unit))}<span className={inputStyles.muted}> /{unit.name}</span></>; } },
   { key: "onHand", label: "Còn lại", sort: "onHand", numeric: true, render: (row, unitId) => { const unit = chosenUnit(row, unitId); return <span className={(row.onHandKg ?? 0) < 0 ? inputStyles.neg : undefined}>{perUnit(row.onHandKg, unit.factor)}<span className={inputStyles.muted}> {unit.name}</span></span>; } },
+  { key: "size", label: "Cỡ thương phẩm (cm)", render: (row) => dash(sizeFigure(row.sizeMinCm, row.sizeMaxCm)) },
   { key: "min", label: "Định mức tối thiểu (kg)", numeric: true, defaultHidden: true, render: (row) => fmt(row.minKg) },
   { key: "max", label: "Định mức tối đa (kg)", numeric: true, defaultHidden: true, render: (row) => fmt(row.maxKg) },
   { key: "createdBy", label: "Người tạo", defaultHidden: true, render: (row) => dash(row.createdBy) },

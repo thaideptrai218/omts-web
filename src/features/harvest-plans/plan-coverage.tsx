@@ -2,7 +2,7 @@
 import { SideRow } from "@/features/purchase-documents/document-parts";
 import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import styles from "./plans.module.css";
-import { coverageQuantity, coverageText, type CoverageRow } from "./plan-logic";
+import { coverageQuantityWithEquivalent, coverageText, type CoverageRow } from "./plan-logic";
 
 /**
  * The side block of the plan editor that sets what the linked orders still need of each product against the cages the lines of the plan expect of it:
@@ -16,8 +16,8 @@ export function PlanCoverage({ rows, loading, error, onRetry }: { rows: readonly
         : !rows.length ? <p className={purchaseStyles.sub}>Các đơn liên kết không còn hàng phải giao.</p>
           : rows.map((row) => <div key={row.productId} className={styles.coverage}>
             <strong>{row.productName}</strong>
-            <SideRow label="Cần">{coverageQuantity(row.need, row.unit)}</SideRow>
-            <SideRow label="Dự kiến">{row.planned == null ? "—" : coverageQuantity(row.planned, row.unit)}</SideRow>
+            <SideRow label="Cần">{coverageQuantityWithEquivalent(row, row.need)}</SideRow>
+            <SideRow label="Dự kiến">{row.planned == null ? "—" : coverageQuantityWithEquivalent(row, row.planned)}</SideRow>
             <SideRow label="Trạng thái"><span className={styles.coverageState} data-state={row.state}>{coverageText(row)}</span></SideRow>
           </div>)}
     {!loading && rows.some((row) => row.state === "unknown") && <p className={purchaseStyles.sub}>Chưa có số kg/lồng trung bình nên chưa quy đổi lồng ra đơn vị của đơn.</p>}

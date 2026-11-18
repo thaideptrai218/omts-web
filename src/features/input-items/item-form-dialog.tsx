@@ -133,6 +133,8 @@ export function ItemFormDialog({ record, copy, group, kind, onClose, onSaved }: 
               : <><Select label="Loại hàu bán ra *" required disabled={products.loading} value={values.productId} onChange={set("productId")}>
                 <option value="">{products.loading ? "Đang tải..." : "Chưa chọn"}</option>{productList.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</Select>
               <p className={styles.hint}>Chọn loại hàu mà giống này nuôi ra. Mỗi chu kỳ chỉ nuôi một loại hàu, và đơn mua của khách phải khớp loại hàu này khi thu hoạch.</p></>}
+            <Field label="Thời gian trưởng thành (ngày)" inputMode="numeric" maxLength={4} placeholder="Ví dụ 240" value={values.maturityDays} onChange={set("maturityDays")} />
+            <p className={styles.hint}>Số ngày từ lúc thả giống đến khi hàu thu hoạch được; dùng để dự kiến ngày thu hoạch của bè. Có thể để trống.</p>
             {chosenProduct?.code && <p className={styles.hint}>Sản phẩm: <Link className={styles.link} href={productHref(chosenProduct.code)} target="_blank">{chosenProduct.name} ({chosenProduct.code})</Link></p>}
             {products.error && <p role="alert" className="mt-1 text-xs text-danger">Không tải được danh sách loại hàu. {products.error} <button type="button" className={managementStyles.linkButton} onClick={products.reload}>Tải lại</button></p>}
           </div>}

@@ -7,7 +7,7 @@ const qty = (value: number, unit: string) => `${new Intl.NumberFormat("vi-VN", {
 const issueKinds: Record<string, string> = { Use: "Xuất dùng", Disposal: "Xuất hủy" };
 
 /**
- * "Lịch sử" of a seed lot, made from what the API says happened to it: the receipt, each nursery batch, each seeding, each return and each issue, oldest first.
+ * "Lịch sử" of a seed lot, made from what the API says happened to it: the receipt, each nursery batch, each seeding, each return and each issue, newest first.
  * An event with no time is put last: the lot is never shown with an invented date.
  */
 export function seedLotTimeline(lot: SeedLotDetail): TimelineEntry[] {
@@ -19,5 +19,5 @@ export function seedLotTimeline(lot: SeedLotDetail): TimelineEntry[] {
     ...lot.issues.map((item) => ({ key: `issue-${item.id}`, at: item.issuedAt ?? null, title: issueKinds[item.kind] ?? "Xuất kho", detail: `Phiếu ${item.code}: ${qty(item.quantity, unit)}` })),
   ];
   const time = (entry: TimelineEntry) => entry.at ? new Date(entry.at.length === 10 ? `${entry.at}T00:00:00+07:00` : entry.at).getTime() : Number.POSITIVE_INFINITY;
-  return entries.map((entry, index) => ({ entry, index })).sort((a, b) => time(a.entry) - time(b.entry) || a.index - b.index).map(({ entry }) => entry);
+  return entries.map((entry, index) => ({ entry, index })).sort((a, b) => (Number.isFinite(time(a.entry)) ? 0 : 1) - (Number.isFinite(time(b.entry)) ? 0 : 1) || time(b.entry) - time(a.entry) || a.index - b.index).map(({ entry }) => entry);
 }

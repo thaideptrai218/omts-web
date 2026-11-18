@@ -14,6 +14,7 @@ import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { DISCONTINUED, type ProductUnit, type ProductView } from "./contracts";
 import { inUnitQuantity, unitSalePrice } from "./product-helpers";
+import { sizeFigure } from "./product-size";
 import { ProductLotsTab, ProductMovementsTab, ProductPriceHistoryTab } from "./product-tabs";
 import { errorText, productRepository } from "./repository";
 
@@ -56,12 +57,12 @@ function InfoTab(props: TabProps) {
   const facts: [string, ReactNode][] = props.unit ? [
     ["Mã sản phẩm", props.unit.code], ["Tên sản phẩm", record.name], ["Nhóm sản phẩm", record.categoryName], sourceSeeds, ["Đơn vị tính", props.unit.name],
     ["Giá bán", record.unitPrice == null ? null : `${fmt(unitSalePrice(record.unitPrice, props.unit))} đồng/${props.unit.name}`], ["Còn lại", inUnit(record.onHandKg)],
-    ["Định mức tối thiểu", inUnit(record.minKg)], ["Định mức tối đa", inUnit(record.maxKg)], ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
+    ["Cỡ thương phẩm", sizeFigure(record.sizeMinCm, record.sizeMaxCm)], ["Định mức tối thiểu", inUnit(record.minKg)], ["Định mức tối đa", inUnit(record.maxKg)], ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
   ] : [
     ["Mã sản phẩm", record.code], ["Tên sản phẩm", record.name], ["Nhóm sản phẩm", record.categoryName], sourceSeeds,
     ["Đơn vị tính", <span key="units" className={inputStyles.unitList}>{record.units.map((unit) => <span key={unit.id}>{unit.isBase ? unit.name : `${unit.name} = ${fmt(unit.factor)} kg`} <small>· {unit.code}</small></span>)}</span>],
     ["Giá bán", record.unitPrice == null ? null : `${fmt(record.unitPrice)} đồng/kg`], ["Còn lại", kg(record.onHandKg)],
-    ["Định mức tối thiểu", kg(record.minKg)], ["Định mức tối đa", kg(record.maxKg)], ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
+    ["Cỡ thương phẩm", sizeFigure(record.sizeMinCm, record.sizeMaxCm)], ["Định mức tối thiểu", kg(record.minKg)], ["Định mức tối đa", kg(record.maxKg)], ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
   ];
   return <div className={listStyles.tabBody}>
     <header className={inputStyles.infoHead}><h3>{record.name}{props.unit ? ` - ${props.unit.name}` : ""}</h3><StatusPill tone={discontinued ? "neutral" : "success"}>{discontinued ? "Ngừng bán" : "Đang bán"}</StatusPill></header>

@@ -6,7 +6,10 @@ import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import { ORDER, type OrderView } from "@/features/sales-orders/contracts";
 import { orderRepository } from "@/features/sales-orders/repository";
-import type { PlanView } from "./contracts";
+import Link from "next/link";
+import { PLAN, type PlanView } from "./contracts";
+import { planHref } from "./plan-labels";
+import { planRepository } from "./repository";
 
 type Entry = { id: string; code: string; customer: string; pickupAt: string | null };
 
@@ -21,7 +24,7 @@ function Remaining({ order, loading }: { order?: OrderView; loading: boolean }) 
  * The orders a plan serves, as many as needed: a search box over the orders that are still open (Phiếu tạm or Đang giao) of any zone, and each chosen order as a
  * chip that can be taken off, with what is left to deliver of it for reference. Orders already linked stay listed even when the order has since closed.
  */
-export function PlanOrderPicker({ value, known, details, detailsLoading, disabled, onToggle }: { value: readonly string[]; known: PlanView["orders"]; details?: ReadonlyMap<string, OrderView>; detailsLoading: boolean; disabled?: boolean; onToggle(orderId: string, picked: boolean): void }) {
+export function PlanOrderPicker({ value, known, ownPlanId, details, detailsLoading, disabled, onToggle }: { value: readonly string[]; known: PlanView["orders"]; ownPlanId?: string; details?: ReadonlyMap<string, OrderView>; detailsLoading: boolean; disabled?: boolean; onToggle(orderId: string, picked: boolean): void }) {
   const [term, setTerm] = useState(""), [query, setQuery] = useState(""), [open, setOpen] = useState(false);
   const [seen, setSeen] = useState(() => new Map<string, Entry>(known.map((order) => [order.id, { id: order.id, code: order.code, customer: order.customer?.name ?? "", pickupAt: null }])));
   const root = useRef<HTMLDivElement>(null);
@@ -34,6 +37,11 @@ export function PlanOrderPicker({ value, known, details, detailsLoading, disable
   const remote = useRemote(useCallback((signal: AbortSignal) => open
     ? orderRepository.list({ statusIds: `${ORDER.draft},${ORDER.delivering}`, ...(query ? { search: query } : {}), page: "1", pageSize: "20", sortBy: "code", sortDir: "desc" }, signal)
     : Promise.resolve({ status: "success" as const, data: undefined }), [open, query]));
+  // An order has at most one active plan (MSG-PLAN-08): the orders that already have one, other than the plan being changed, are listed with its code and cannot be chosen.
+  const planned = useRemote(useCallback((signal: AbortSignal) => open
+    ? planRepository.list({ page: "1", pageSize: "100" }, signal)
+    : Promise.resolve({ status: "success" as const, data: undefined }), [open]));
+  const planOf = new Map((planned.data?.items ?? []).filter((plan) => plan.statusId !== PLAN.cancelled && plan.id !== ownPlanId).flatMap((plan) => plan.orders.map((order) => [order.id, plan.code] as const)));
   const found = (remote.data?.items ?? []).filter((row) => !value.includes(row.id));
   const pick = (row: (typeof found)[number]) => {
     setSeen((current) => new Map(current).set(row.id, { id: row.id, code: row.code, customer: row.walkInCustomer ? "Khách lẻ" : row.customerName ?? "", pickupAt: row.pickupAt ?? null }));
@@ -52,7 +60,7 @@ export function PlanOrderPicker({ value, known, details, detailsLoading, disable
       <input type="search" aria-label="Tìm đơn đặt hàng" placeholder="Tìm đơn theo mã hoặc khách hàng" maxLength={100} value={term} onFocus={() => setOpen(true)} onChange={(event) => { setTerm(event.target.value); setOpen(true); }} />
       {open && <div className={purchaseStyles.finderList}>
         {remote.loading ? <p className={purchaseStyles.empty}>Đang tìm…</p> : remote.error ? <p className={purchaseStyles.empty} role="alert">{remote.error}</p> : <>
-          {found.map((row) => <button key={row.id} type="button" onClick={() => pick(row)}><span>{row.code}{row.walkInCustomer ? " · Khách lẻ" : row.customerName ? ` · ${row.customerName}` : ""}</span><small>{row.pickupAt ? `hẹn ${viDateTime(row.pickupAt)}` : ""}</small></button>)}
+          {found.map((row) => planOf.has(row.id) ? <div key={row.id} className={purchaseStyles.empty} aria-disabled="true"><span>{row.code}{row.walkInCustomer ? " · Khách lẻ" : row.customerName ? ` · ${row.customerName}` : ""}</span> <small>Đã có kế hoạch <Link href={planHref(planOf.get(row.id)!)} target="_blank">{planOf.get(row.id)}</Link></small></div> : <button key={row.id} type="button" onClick={() => pick(row)}><span>{row.code}{row.walkInCustomer ? " · Khách lẻ" : row.customerName ? ` · ${row.customerName}` : ""}</span><small>{row.pickupAt ? `hẹn ${viDateTime(row.pickupAt)}` : ""}</small></button>)}
           {!found.length && <p className={purchaseStyles.empty}>Không có đơn đặt hàng đang mở phù hợp.</p>}</>}
       </div>}
     </div>}

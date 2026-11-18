@@ -11,7 +11,7 @@ export type EditorUnit = { id: string; name: string; factor: number; salePrice: 
  * with: the price of the order line, or the list price of a line added outside the order. `kg` is the weighed kg (always required); for a line counted in kg it equals the quantity.
  */
 export type EditorLine = {
-  key: string; lineId: string | null; orderLineId: string | null; productId: string; productCode: string; productName: string;
+  key: string; lineId: string | null; orderLineId: string | null; productId: string; productCode: string; productName: string; sizeMinCm?: number | null; sizeMaxCm?: number | null;
   units: EditorUnit[]; unitId: string | null; unitName: string; factor: number;
   quantity: string; kg: string; lotId: string; lotCode: string; unitPrice: number | null; referencePrice: number | null;
   ordered: number | null; delivered: number | null;
@@ -37,12 +37,27 @@ export function withQuantity(line: EditorLine, value: string): EditorLine {
   return countsInKg(line) ? { ...line, quantity: value, kg: value } : { ...line, quantity: value };
 }
 
+/**
+ * Choosing a weighed lot fills the quantity with the kg of the line's product still available on it (in the unit of the line), so nothing is retyped; a quantity already typed (or the order's remainder)
+ * is only lowered to what the lot has. A lot the API lists has been weighed: its kg are the weighed ones.
+ */
+export function fillFromLot(line: EditorLine, lot: LotForSale | undefined): EditorLine {
+  if (!lot) return line;
+  const kg = lot.products?.find((own) => own.productId === line.productId)?.remainingKg ?? lot.remainingKg;
+  const available = Math.floor((kg / (line.factor || 1)) * 100) / 100;
+  if (!(available > 0)) return line;
+  const current = Number(line.quantity.replace(",", ".")) || 0;
+  const quantity = current > 0 ? Math.min(current, available) : available, filled = withQuantity(line, String(quantity));
+  // A line counted in another unit (a cage) also gets the kg that quantity weighs.
+  return countsInKg(line) ? filled : { ...filled, kg: String(Math.round(quantity * (line.factor || 1) * 1000) / 1000) };
+}
+
 /** A line of the draft from "Xử lý đặt hàng": what is left to deliver, at the price and in the unit of the order line, with the lot the draft proposes already chosen. */
 export function lineFromDraft(source: DraftLine, key: string, productUnits: readonly EditorUnit[]): EditorLine {
   const remaining = source.quantity > 0 ? source.quantity : 0;
   const unit: EditorUnit = { id: source.unitId, name: source.unitName, factor: source.factor, salePrice: source.listPrice ?? null };
   return {
-    key, lineId: null, orderLineId: source.salesOrderLineId, productId: source.productId, productCode: source.productCode, productName: source.productName,
+    key, lineId: null, orderLineId: source.salesOrderLineId, productId: source.productId, productCode: source.productCode, productName: source.productName, sizeMinCm: source.sizeMinCm, sizeMaxCm: source.sizeMaxCm,
     units: productUnits.some((row) => row.id === unit.id) ? [...productUnits] : [unit, ...productUnits], unitId: unit.id, unitName: unit.name, factor: unit.factor,
     quantity: remaining ? kgText(remaining) : "", kg: source.factor === 1 && remaining ? kgText(remaining) : "", lotId: source.suggestedLotId ?? "", lotCode: source.suggestedLotCode ?? "",
     unitPrice: source.unitPrice, referencePrice: source.unitPrice, ordered: source.orderedQuantity, delivered: source.deliveredQuantity,

@@ -64,16 +64,15 @@ export function LotInfoTab({ lot }: { lot: Lot }) {
       {lot.reopenedOn && <div><span>Mở lại ngày:</span><strong>{viDate(lot.reopenedOn)}</strong></div>}
       <div><span>Truy xuất:</span><Link className={styles.link} href={lotHref(lot.lotCode)}>Truy xuất lô</Link></div>
     </div>
-    <div className={styles.innerScroll}><table className={styles.inner} aria-label="Dòng sản phẩm của lô"><thead><tr><th>Sản phẩm</th><th className={styles.num}>Lồng</th><th className={styles.num}>Kg ước tính</th><th className={styles.num}>Kg cân</th><th className={styles.num}>Đã bán</th><th className={styles.num}>Còn lại</th></tr></thead>
+    <div className={styles.innerScroll}><table className={styles.inner} aria-label="Dòng sản phẩm của lô"><thead><tr><th>Sản phẩm</th><th className={styles.num}>Lồng</th><th className={styles.num}>Kg cân</th><th className={styles.num}>Đã bán</th><th className={styles.num}>Còn lại</th></tr></thead>
       <tbody>{rows.map((row) => <tr key={row.key}>
         <td><Link className={styles.link} href={productHref(row.productCode)}>{row.productName}</Link><span className={styles.sub}>{row.productCode}</span></td>
-        <td className={styles.num}>{fmt(row.cages)}</td><td className={styles.num}>{fmt(row.estimatedKg)}</td><td className={styles.num}>{row.weighedKg == null ? awaiting ? "Chưa cân" : "—" : fmt(row.weighedKg)}</td>
-        <td className={styles.num}>{fmt(row.soldKg)}</td><td className={styles.num}>{fmt(row.remainingKg)}</td></tr>)}
-      {!rows.length && <tr><td colSpan={6} className={styles.empty}>Lô chưa có dòng sản phẩm.</td></tr>}</tbody></table></div>
+        <td className={styles.num}>{fmt(row.cages)}</td><td className={styles.num}>{row.weighedKg == null ? awaiting ? "Chờ cân" : "—" : fmt(row.weighedKg)}</td>
+        <td className={styles.num}>{awaiting && row.weighedKg == null ? "—" : fmt(row.soldKg)}</td><td className={styles.num}>{awaiting && row.weighedKg == null ? "—" : fmt(row.remainingKg)}</td></tr>)}
+      {!rows.length && <tr><td colSpan={5} className={styles.empty}>Lô chưa có dòng sản phẩm.</td></tr>}</tbody></table></div>
     <div className={styles.foot}>
       <p className={styles.noteBox}>{figures.notFinal ? "Số liệu chưa chốt vì lô còn đang bán." : "Số liệu đã chốt: lô không còn bán."}</p>
       <div className={styles.sums}>
-        <div><span>Ước tính</span><span>{fmt(lot.estimatedKg)} kg</span></div>
         <div><span>Cân thực tế</span><span>{lot.weighedKg == null ? "Chưa cân" : `${fmt(lot.weighedKg)} kg`}</span></div>
         <div><span>Đã bán</span><span>{fmt(figures.soldKg)} kg</span></div>
         <div><span>Trả lại</span><span>{fmt(figures.returnedKg)} kg</span></div>

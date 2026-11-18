@@ -20,6 +20,8 @@ export const seedLotRow = z.object({
   /** remaining - nursing: the stock still on hand, what Ươm, Treo and Trả hàng can take. `nursingQty` includes the pool of Completed batches. */
   availableQty: qty,
   state: z.enum(seedLotStates), lastUsedAt: opt,
+  /** Kg the cycles of the lot gave and sold (invoiced less returned); shared by pieces when a cycle had several lots, then `figuresEstimated` and the screen says "(ước tính)". Older API: 0. */
+  harvestedKg: qty.default(0), soldKg: qty.default(0), returnedFromSaleKg: qty.default(0), figuresEstimated: z.boolean().default(false),
 });
 /** The sums of the figure columns over the whole filter. Read by name, so a column the API does not total shows a dash. */
 export const seedLotTotals = z.object({}).catchall(qty);
@@ -44,4 +46,4 @@ export type SeedLotPage = z.infer<typeof seedLotPage>;
 export type SeedLotDetail = z.infer<typeof seedLotDetail>;
 
 /** Filters of the list, as the query of the BFF carries them (every value is text; an empty one is left out). */
-export type SeedLotListQuery = Partial<Record<"from" | "to" | "supplierId" | "itemId" | "zoneId" | "state" | "search" | "sort" | "sortDir" | "page" | "pageSize", string>>;
+export type SeedLotListQuery = Partial<Record<"from" | "to" | "supplierId" | "itemId" | "zoneId" | "search" | "sort" | "sortDir" | "page" | "pageSize", string>>;

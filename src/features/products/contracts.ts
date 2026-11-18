@@ -12,7 +12,7 @@ export const productUnit = z.object({ id, unitId: id, name: text, factor: num, c
 export const productRow = z.object({
   id, code: text, name: text, unitPrice: numOpt, statusId: count, status: text, rowVersion: text,
   categoryId: id.nullish(), categoryName: opt, unit: text, units: z.array(productUnit), description: opt, note: opt, photoUrl: opt,
-  minKg: numOpt, maxKg: numOpt, onHandKg: numOpt, isUsed: z.boolean().nullish(), createdAt: text, createdBy: opt,
+  minKg: numOpt, maxKg: numOpt, sizeMinCm: numOpt, sizeMaxCm: numOpt, onHandKg: numOpt, isUsed: z.boolean().nullish(), createdAt: text, createdBy: opt,
 });
 export const productPage = z.object({ items: z.array(productRow), page: count, pageSize: count, total: count, summary: z.object({ totalOnHandKg: num }).nullish() });
 /** `sourceSeeds`: the seed items whose "Loại hàu bán ra" is this product (one in practice); the product never edits them. */

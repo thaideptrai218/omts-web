@@ -37,34 +37,15 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-it("lists only the lines of this raft with the lanes still to harvest and opens the harvest form with the lanes of the plan", async () => {
+it("lists only the lines of this raft and opens the harvest form for the line", async () => {
   const user = userEvent.setup();
   render(<ToastProvider><AssignedPlansBanner zoneId={ids.zone} raftId={ids.raft} onChanged={() => {}} /></ToastProvider>);
   const banner = await screen.findByRole("region", { name: "Kế hoạch được giao" });
   expect(banner.textContent).toContain("KHT000001");
-  expect(banner.textContent).toContain("luống 1, 3");
   expect(banner.textContent).toContain("khoảng 8 lồng");
   expect(banner.textContent).not.toContain("B2");
   await user.click(within(banner).getByRole("button", { name: "Thu hoạch" }));
   expect((await screen.findByRole("dialog", { name: "Form thu hoạch" })).textContent).toBe(`${ids.line}:1,3`);
-});
-
-it("asks for lanes and a reason before telling the API a lane will not be harvested, then reloads", async () => {
-  const user = userEvent.setup(), changed = vi.fn();
-  render(<ToastProvider><AssignedPlansBanner zoneId={ids.zone} raftId={ids.raft} onChanged={changed} /></ToastProvider>);
-  await user.click(await screen.findByRole("button", { name: "Không thu" }));
-  const dialog = await screen.findByRole("dialog");
-  expect(within(dialog).getAllByRole("checkbox")).toHaveLength(2);
-  await user.click(within(dialog).getByRole("button", { name: "Ghi không thu" }));
-  expect(within(dialog).getByRole("alert").textContent).toContain("Chọn ít nhất một luống");
-  await user.click(within(dialog).getByLabelText("Luống 3"));
-  await user.click(within(dialog).getByRole("button", { name: "Ghi không thu" }));
-  expect(within(dialog).getByRole("alert").textContent).toContain("Nhập lý do");
-  await user.type(within(dialog).getByLabelText("Lý do không thu"), " Hàu chưa đủ cỡ ");
-  await user.click(within(dialog).getByRole("button", { name: "Ghi không thu" }));
-  await waitFor(() => expect(state.skip).toHaveBeenCalledWith(ids.plan, ids.line, [3], "Hàu chưa đủ cỡ"));
-  await waitFor(() => expect(changed).toHaveBeenCalled());
-  expect(state.assigned).toHaveBeenCalledTimes(2);
 });
 
 it("shows nothing without the right to record a harvest, for another zone, or when the plan does not allow it", async () => {

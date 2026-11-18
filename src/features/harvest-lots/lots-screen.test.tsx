@@ -48,7 +48,7 @@ it("lists lots newest code first with every column, the totals of the filtered l
   owner(); mount();
   await screen.findByText("LTH000007");
   expect(state.list.mock.calls[0][0]).toMatchObject({ sort: "code", desc: "true", page: "1", pageSize: "15" });
-  for (const heading of ["Mã lô", "Thời gian thu", "Vùng / bè", "Sản phẩm", "Lồng", "Kg ước tính", "Kg cân", "Đã bán", "Còn lại", "Hao hụt", "KHT", "Trạng thái"]) expect(screen.getByRole("columnheader", { name: new RegExp(heading) })).toBeTruthy();
+  for (const heading of ["Mã lô", "Thời gian thu", "Vùng / bè", "Sản phẩm", "Lồng", "Kg cân", "Đã bán", "Còn lại", "Hao hụt", "KHT", "Trạng thái"]) expect(screen.getByRole("columnheader", { name: new RegExp(heading) })).toBeTruthy();
   const totalsRow = screen.getByRole("row", { name: "Tổng hợp theo bộ lọc" });
   expect(within(totalsRow).getByText("Tổng (1 lô)")).toBeTruthy();
   expect(within(totalsRow).getByText("195,5")).toBeTruthy();

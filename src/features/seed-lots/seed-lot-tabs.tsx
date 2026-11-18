@@ -9,6 +9,7 @@ import styles from "@/features/purchase-documents/purchases.module.css";
 import { returnStatusLabel } from "@/features/purchase-documents/types";
 import type { SeedLotDetail } from "./contracts";
 import { cycleFromBatchHref, SeedLotFooter, useCanStartCycle } from "./seed-lot-actions";
+import { HistoryOrderToggle, sortHistory, useHistoryOrder } from "@/features/history/history-order";
 import { seedLotTimeline } from "./seed-lot-timeline";
 
 /** A nursery batch that is finished (Đã ươm xong): its pieces wait in the pool to be hung. */
@@ -68,9 +69,9 @@ export function SeedLotReturnsTab({ lot }: { lot: SeedLotDetail }) {
 
 /** Tab "Lịch sử": what happened to the lot, oldest first, made from the nursery batches, seedings, returns and issues of the lot. */
 export function SeedLotHistoryTab({ lot }: { lot: SeedLotDetail }) {
-  const entries = seedLotTimeline(lot);
-  return <ol aria-label="Lịch sử của lô giống" className="grid gap-2">{entries.map((entry) => <li key={entry.key} className="rounded-control border border-border bg-surface p-2 text-xs">
+  const [order, setOrder] = useHistoryOrder(), entries = sortHistory(seedLotTimeline(lot), entry => entry.at, order);
+  return <><HistoryOrderToggle order={order} onChange={setOrder} /><ol aria-label="Lịch sử của lô giống" className="grid gap-2">{entries.map((entry) => <li key={entry.key} className="rounded-control border border-border bg-surface p-2 text-xs">
     <p><strong>{entry.title}</strong> · {when(entry.at)}</p>
     <p>{entry.href ? <Link className={styles.link} href={entry.href}>{entry.detail}</Link> : entry.detail}</p>
-  </li>)}</ol>;
+  </li>)}</ol></>;
 }

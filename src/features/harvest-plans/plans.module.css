@@ -42,3 +42,11 @@ div.planFacts > div { grid-template-columns:118px minmax(0,1fr); }
 .crewMember small { font-size:12px; color:var(--omts-color-text-muted); }
 .crewEmpty { color:var(--omts-color-text-muted); }
 .crewNote { margin-top:10px; font-size:13px; color:var(--omts-color-text-muted); }
+
+/* Maturity and product notes under a raft / cages cell, and the early-harvest warning of the editor (a warning, never a block). */
+.cellNote { display:block; margin-top:2px; font-size:12px; color:var(--omts-color-text-muted, #5b6472); overflow-wrap:anywhere; }
+.cellNote[data-tone="ready"] { color:#1f7a4a; }
+.cellNote[data-tone="waiting"] { color:#9a6700; }
+.cellNote[data-tone="mismatch"] { color:var(--omts-color-danger, #b42318); }
+.earlyWarning { margin:0; padding:8px 10px; border:1px solid #e7c26b; border-radius:6px; background:#fff8e6; color:#7a5200; font-size:13px; }
+.earlyWarning ul { margin:0; padding-left:16px; }

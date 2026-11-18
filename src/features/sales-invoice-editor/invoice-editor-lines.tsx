@@ -6,9 +6,10 @@ import { MoneyInput, QuantityStepper, fmt } from "@/features/purchase-documents/
 import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import { UnitCell } from "@/features/purchase-documents/unit-cell";
 import { productHref } from "@/features/products/product-helpers";
+import { ProductSizeChip } from "@/features/products/product-size";
 import type { LotForSale } from "@/features/sales-invoices/contracts";
 import { InvoiceLotSelect } from "./invoice-lot-select";
-import { countsInKg, isActive, lineMoney, lotOptions, withQuantity, type EditorLine } from "./invoice-editor-logic";
+import { countsInKg, fillFromLot, isActive, lineMoney, lotOptions, withQuantity, type EditorLine } from "./invoice-editor-logic";
 
 type Props = {
   lines: readonly EditorLine[]; lots: readonly LotForSale[]; notWholeLots: ReadonlySet<string>; kgPerCage?: number;
@@ -47,7 +48,7 @@ export function InvoiceEditorLines({ lines, lots, notWholeLots, onChange, onRemo
       <td className={purchaseStyles.narrow}><button type="button" className={purchaseStyles.remove} aria-label={`Bỏ dòng ${position}`} title="Bỏ dòng" onClick={() => onRemove(line.key)}><InterfaceIcon name="trash" /></button></td>
       <td className={purchaseStyles.narrow}>{position}</td>
       <td>{line.productCode ? <Link className={purchaseStyles.code} href={productHref(line.productCode)} target="_blank">{line.productCode}</Link> : "—"}</td>
-      <td>{line.productName}{outside && <span className={purchaseStyles.sub}>Thêm ngoài đơn đặt hàng</span>}</td>
+      <td>{line.productName}<ProductSizeChip size={line} />{outside && <span className={purchaseStyles.sub}>Thêm ngoài đơn đặt hàng</span>}</td>
       <td><UnitCell line={unitCellLine(line)} index={index} locked={!outside} onPick={(unitId) => onPickUnit(line.key, unitId)} /></td>
       {progress && <><td className={purchaseStyles.num}>{line.ordered === null ? "—" : fmt(line.ordered)}</td><td className={purchaseStyles.num}>{line.delivered === null ? "—" : fmt(line.delivered)}</td></>}
       <td className={purchaseStyles.num}><QuantityStepper label={`số lượng dòng ${position}`} max={left ?? undefined} value={kg ? line.kg : line.quantity} onChange={(value) => onChange(line.key, (current) => withQuantity(current, capped(value, left)))} />
@@ -56,7 +57,7 @@ export function InvoiceEditorLines({ lines, lots, notWholeLots, onChange, onRemo
             onWholeLot(line.lotId, event.target.checked);
             if (event.target.checked) onChange(line.key, (current) => withQuantity(current, String(left)));
           }} /> Bán hết</label> /{fmt(left)}</span>}</td>
-      <td><InvoiceLotSelect position={position} options={lotOptions(line, lots)} value={line.lotId} onPick={(lotId, lotCode) => onChange(line.key, (current) => ({ ...current, lotId, lotCode }))} /></td>
+      <td><InvoiceLotSelect position={position} options={lotOptions(line, lots)} value={line.lotId} onPick={(lotId, lotCode) => onChange(line.key, (current) => fillFromLot({ ...current, lotId, lotCode }, lots.find((lot) => lot.id === lotId)))} /></td>
       <td className={purchaseStyles.num}>{kg ? <span title="Hàng tính theo kg: số kg cân là số lượng">{line.kg ? fmt(Number(line.kg.replace(",", "."))) : "—"}</span>
         : <input aria-label={`Kg cân dòng ${position}`} inputMode="decimal" className={purchaseStyles.cellInput} value={line.kg} onChange={(event) => onChange(line.key, (current) => ({ ...current, kg: event.target.value.replace(/[^\d.,]/g, "") }))} />}</td>
       <td><MoneyInput label={`Đơn giá dòng ${position}`} className={purchaseStyles.cellInput} value={line.unitPrice} onChange={(unitPrice) => onChange(line.key, (current) => ({ ...current, unitPrice: unitPrice || null }))} />

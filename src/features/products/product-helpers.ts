@@ -36,7 +36,7 @@ export function suggestUnitCode(productCode: string, unitName: string) {
 /** `salePrice` is the price typed for the unit; null means "factor × the kg price", which a new unit follows until a price is typed. */
 export type UnitDraft = { key: string; id: string | null; unitId: string; factor: string; code: string; salePrice: number | null };
 export type FormValues = {
-  code: string; name: string; categoryId: string; unitPrice: number; minKg: string; maxKg: string; description: string; note: string; units: UnitDraft[];
+  code: string; name: string; categoryId: string; unitPrice: number; minKg: string; maxKg: string; sizeMinCm: string; sizeMaxCm: string; description: string; note: string; units: UnitDraft[];
 };
 export const MAX_PHOTOS = 5;
 
@@ -54,7 +54,7 @@ export function initialValues(record: ProductView | null, copy: boolean): FormVa
   const units: UnitDraft[] = (record?.units ?? []).filter((unit) => !unit.isBase).map((unit) => ({ key: newKey(), id: copy ? null : unit.id, unitId: unit.unitId, factor: String(unit.factor), code: copy ? "" : unit.code, salePrice: unit.salePrice ?? null }));
   return {
     code: record && !copy ? record.code : "", name: record ? (copy ? `${record.name} (bản sao)` : record.name) : "", categoryId: record?.categoryId ?? "", unitPrice: record?.unitPrice ?? 0,
-    minKg: text(record?.minKg), maxKg: text(record?.maxKg), description: record?.description ?? "", note: record?.note ?? "", units,
+    minKg: text(record?.minKg), maxKg: text(record?.maxKg), sizeMinCm: text(record?.sizeMinCm), sizeMaxCm: text(record?.sizeMaxCm), description: record?.description ?? "", note: record?.note ?? "", units,
   };
 }
 
@@ -76,6 +76,11 @@ export function validateForm(values: FormValues): string | undefined {
   if ([min, max].some(invalid) || [min, max].some((value) => value !== null && value < 0)) return "Định mức phải là số không âm.";
   if ([min, max].some((value) => value !== null && decimals(value) > 3)) return "Định mức tối đa 3 chữ số thập phân.";
   if (min !== null && max !== null && max < min) return "Định mức tối đa phải lớn hơn hoặc bằng định mức tối thiểu.";
+  const sizeMin = parseNumber(values.sizeMinCm), sizeMax = parseNumber(values.sizeMaxCm);
+  if (sizeMin === null && sizeMax !== null) return "Nhập cỡ trung bình từ trước khi nhập cỡ đến.";
+  if ([sizeMin, sizeMax].some(invalid) || [sizeMin, sizeMax].some((value) => value !== null && (value <= 0 || value > 60))) return "Cỡ trung bình phải lớn hơn 0 và tối đa 60 cm.";
+  if ([sizeMin, sizeMax].some((value) => value !== null && decimals(value) > 1)) return "Cỡ trung bình tối đa 1 chữ số thập phân.";
+  if (sizeMin !== null && sizeMax !== null && sizeMax < sizeMin) return "Cỡ đến phải lớn hơn hoặc bằng cỡ từ.";
   const seen = new Set<string>();
   for (const unit of values.units) {
     if (!unit.unitId) return "Chọn đơn vị cho mỗi dòng đơn vị tính.";
@@ -94,7 +99,7 @@ export function buildSaveBody(values: FormValues, record: ProductView | null): R
   const blank = (value: string) => value.trim() || null;
   return {
     code: blank(values.code), name: values.name.trim(), unitPrice: values.unitPrice, categoryId: values.categoryId || null, description: blank(values.description), note: blank(values.note),
-    minKg: parseNumber(values.minKg), maxKg: parseNumber(values.maxKg),
+    minKg: parseNumber(values.minKg), maxKg: parseNumber(values.maxKg), sizeMinCm: parseNumber(values.sizeMinCm), sizeMaxCm: parseNumber(values.sizeMaxCm),
     units: values.units.map((unit) => ({ id: unit.id, unitId: unit.unitId, factor: parseNumber(unit.factor), code: blank(unit.code), salePrice: unit.salePrice ?? defaultUnitPrice(parseNumber(unit.factor), values.unitPrice) })),
     ...(record ? { rowVersion: record.rowVersion } : {}),
   };

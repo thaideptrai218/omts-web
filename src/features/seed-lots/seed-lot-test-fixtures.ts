@@ -11,7 +11,8 @@ export function seedLotRowFixture(patch: Record<string, unknown> = {}) {
   return seedLotRow.parse({
     id: ids.line, seedLotCode: "PN000004-1", receiptId: ids.receipt, receiptCode: "PN000004", receivedAt: "2026-11-10T08:00:00+07:00", supplier: { id: ids.supplier, code: "NCC000001", name: "Trại giống Vân Đồn" },
     item: { id: ids.item, code: "GG000001", name: "Hàu giống 3 cm" }, product: { id: ids.product, code: "SP000001", name: "Hàu sữa" }, unitName: "mảnh",
-    receivedQty: 1000, returnedQty: 100, nursingQty: 0, nurseryLossQty: 0, seededQty: 400, issuedOtherQty: 0, remainingQty: 500, availableQty: 500, state: "PartlySeeded", lastUsedAt: "2026-11-14T07:00:00+07:00", ...patch,
+    receivedQty: 1000, returnedQty: 100, nursingQty: 0, nurseryLossQty: 0, seededQty: 400, issuedOtherQty: 0, remainingQty: 500, availableQty: 500, state: "PartlySeeded", lastUsedAt: "2026-11-14T07:00:00+07:00",
+    harvestedKg: 195.5, soldKg: 120, returnedFromSaleKg: 0, figuresEstimated: true, ...patch,
   });
 }
 
