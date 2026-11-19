@@ -13,14 +13,15 @@ import { RaftConditionNoteCard } from "./raft-condition-note";
 import { useRaftLaneLock } from "./use-raft-lane-lock";
 import { RaftLaneDiagram } from "./raft-lane-diagram";
 import { geometryOf } from "./raft-geometry";
+import { mergeLiveLanes, type LiveLane } from "./raft-live-model";
 import { formatRaftSize } from "./raft-size";
 import { useCoordinateWarnings } from "@/features/farming-api/use-coordinate-warnings";
 import { DISCONTINUED, parseRaftDetail, raftBody, raftDraftOf, raftStatusLabel, validateRaftDraft, type RaftDetail, type RaftDraft, type RaftField } from "./raft-model";
 
 const repository = createWorkspaceRepository("rafts");
 /** "Thông tin": read-only facts, or the same grid as inputs with `Bỏ qua` / `Lưu` in the footer. */
-export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, onSaved, onReload, onStatus }: {
-  raft: RaftDetail; zoneId: string; zoneLabel: string; canEdit: boolean; busy: boolean; dirtyRef: RefObject<boolean>;
+export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, liveLanes, onSaved, onReload, onStatus }: {
+  raft: RaftDetail; zoneId: string; zoneLabel: string; canEdit: boolean; busy: boolean; dirtyRef: RefObject<boolean>; liveLanes?: readonly LiveLane[];
   onSaved(raft: RaftDetail): void; onReload(): void; onStatus(): void;
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState<RaftDraft>(() => raftDraftOf(raft));
@@ -54,7 +55,7 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
       ]} />}
       {!editing && <RaftConditionNoteCard value={raft.conditionNotes} />}
     </fieldset>
-    {!editing && <RaftLaneDiagram lanes={raft.lanes} length={geometryOf(raft).length} harvestScope={{ raftId: raft.id, zoneId, rowVersion: raft.rowVersion, onChanged: onReload, onDirty: setLaneDirty, onPending: setLanePending }} />}
+    {!editing && <RaftLaneDiagram lanes={mergeLiveLanes(raft.lanes, liveLanes)} length={geometryOf(raft).length} harvestScope={{ raftId: raft.id, zoneId, rowVersion: raft.rowVersion, onChanged: onReload, onDirty: setLaneDirty, onPending: setLanePending }} />}
     {editing && laneLock.failed && <Button key="retry-cycle" type="button" variant="secondary" className="w-auto" onClick={laneLock.reload}>Kiểm tra lại chu kỳ</Button>}
     <ErrorNotice error={mutation.error} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Chưa xác nhận được kết quả lưu. Hãy tải hồ sơ mới để đối chiếu; nội dung đang nhập vẫn được giữ.</p><div>

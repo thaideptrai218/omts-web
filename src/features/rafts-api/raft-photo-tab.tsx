@@ -1,7 +1,6 @@
 "use client";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { ImageFileInput } from "@/components/form/image-file-input";
@@ -12,10 +11,14 @@ import { createOperationsRepository } from "@/features/operations/repository";
 import { ErrorNotice, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { LaneIncidentsBoard } from "./lane-incidents-board";
+import { RaftLiveLaneTable } from "./raft-live-lane-table";
+import { buildGallery } from "./raft-live-model";
+import { RaftPhotoGallery } from "./raft-photo-gallery";
+import type { RaftLive } from "./use-raft-live";
 
 const MAX_PHOTO = 10 * 1024 * 1024, MAX_PHOTOS = 3;
 /** "Ảnh và làn": up to three raft photos (upload for those who may edit) and the lanes of the raft. */
-export function RaftPhotoTab({ raftId, canEdit, dirtyRef, pendingRef }: { raftId: string; canEdit: boolean; dirtyRef?: RefObject<boolean>; pendingRef?: RefObject<boolean> }) {
+export function RaftPhotoTab({ raftId, canEdit, dirtyRef, pendingRef, live }: { raftId: string; canEdit: boolean; dirtyRef?: RefObject<boolean>; pendingRef?: RefObject<boolean>; live?: RaftLive }) {
   const repository = useMemo(() => createOperationsRepository("raft-details"), []), mutation = useMutation();
   const [saved, setSaved] = useState<Raft>(), [latest, setLatest] = useState<Raft>(), [file, setFile] = useState<File>(), [fileError, setFileError] = useState<string>(), [fileKey, setFileKey] = useState(0);
   const { notify } = useToast(), confirmation = useActionDialog();
@@ -41,13 +44,14 @@ export function RaftPhotoTab({ raftId, canEdit, dirtyRef, pendingRef }: { raftId
   if (detail.loading) return <Skeleton />;
   if (detail.error || !record) return <ListStateMessage error={detail.error ?? "Không tải được ảnh và làn của bè."} onRetry={detail.reload} retryLabel="Tải lại" />;
   const canAdd = canEdit && record.photos.length < MAX_PHOTOS;
+  const gallery = buildGallery({ raftCode: record.code, zoneId: record.zone.id, raftPhotos: record.photos, records: live?.seeding.data?.records, logs: live?.logs.data });
   return <><form noValidate onSubmit={event => { event.preventDefault(); void upload(); }}>
     {confirmation.dialog}
     <ErrorNotice error={mutation.error || fileError} />
     {saved && <p role="status" className={styles.hint}>Đã cập nhật ảnh bè.</p>}
-    {record.photos.length ? <ul className="grid gap-3 sm:grid-cols-3" aria-label="Ảnh bè">{record.photos.map(photo => <li key={photo.id}><a href={photo.url} target="_blank" rel="noreferrer" className={styles.link}>
-      <Image key={record.rowVersion} src={photo.url} alt={`Ảnh ${photo.sortOrder} của bè ${record.code}`} width={600} height={400} unoptimized className="max-h-48 w-full rounded-control object-contain" />Xem ảnh gốc</a>{canEdit && <Button key={`delete-photo-${photo.id}`} type="button" variant="ghost" className="mt-1 w-auto" disabled={mutation.pending || mutation.blocked} onClick={() => void removePhoto(photo)}>Xóa ảnh {photo.sortOrder}</Button>}</li>)}</ul>
-      : <p className={styles.hint}>Chưa có ảnh bè.</p>}
+    {live && <RaftLiveLaneTable lanes={live.progress.data?.lanes ?? []} records={live.seeding.data?.records ?? []} seedingLoading={live.seeding.loading && !live.seeding.data} />}
+    <RaftPhotoGallery photos={gallery} rowVersion={record.rowVersion} canRemove={canEdit} busy={mutation.pending || mutation.blocked} loadingMore={!!live && (live.seeding.loading && !live.seeding.data || live.logs.loading && !live.logs.data)}
+      onRemove={photo => { const own = record.photos.find(item => item.id === photo.raftPhotoId); if (own) void removePhoto(own); }} />
     {canEdit && !canAdd && <p className={styles.hint}>Bè đã có đủ {MAX_PHOTOS} ảnh.</p>}
     {canAdd && <fieldset disabled={mutation.pending || mutation.blocked} className="mt-3 min-w-0 border-0 p-0">
       <ImageFileInput key={fileKey} label="Thêm ảnh bè (JPEG/PNG, tối đa 10 MB)" accept="image/jpeg,image/png" onChange={event => {
@@ -59,5 +63,5 @@ export function RaftPhotoTab({ raftId, canEdit, dirtyRef, pendingRef }: { raftId
       {latest && <><span>Hệ thống đang có {latest.photos.length} ảnh bè.</span><Button key="adopt" type="button" className="w-auto" variant="secondary" onClick={() => { setSaved(latest); setLatest(undefined); setFile(undefined); setFileKey(value => value + 1); mutation.reviewed(); }}>Đã đối chiếu, dùng dữ liệu hiện tại</Button></>}
     </div></div>}
     {canAdd && <TabFooter right={<Button key="save-photo" type="submit" className="w-auto" isPending={mutation.pending} disabled={!file || mutation.blocked}>Lưu ảnh bè</Button>} />}
-  </form><LaneIncidentsBoard raft={record} onChanged={() => { setSaved(undefined); detail.reload(); }} onDirty={setIncidentDirty} onPending={setIncidentPending} /></>;
+  </form><LaneIncidentsBoard raft={record} liveLanes={live?.progress.data?.lanes} onChanged={() => { setSaved(undefined); detail.reload(); live?.reload(); }} onDirty={setIncidentDirty} onPending={setIncidentPending} /></>;
 }
