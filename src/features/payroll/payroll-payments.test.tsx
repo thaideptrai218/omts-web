@@ -85,9 +85,9 @@ it("footer buttons are explicit type=button and never submit a surrounding form 
   await clickAll();
   // Provisional -> Finalized at the same place: the right-hand "Chốt lương" node must not turn into a submit button.
   rerender(view(finalized, "slips"));
-  expect(within(group()).getAllByRole("button").map((button) => button.textContent)).toEqual(["Xuất file", "Thanh toán"]);
+  expect(within(group()).getAllByRole("button").map((button) => button.textContent)).toEqual(["Tải xuống▾", "Thanh toán"]);
   expect(within(group()).getAllByRole("button").every((button) => button.getAttribute("type") === "button")).toBe(true);
-  await user.click(within(group()).getByRole("button", { name: "Xuất file" }));
+  await user.click(within(group()).getByRole("button", { name: "Tải xuống" }));
   expect(submit).not.toHaveBeenCalled();
 });
 
@@ -140,7 +140,7 @@ it("standalone payment: server search by name, and the advance option lists ever
   expect(state.repo.payStandalone).not.toHaveBeenCalled();
   await user.type(within(dialog).getByLabelText("Số tiền chi"), "300000");
   await user.click(within(dialog).getByRole("button", { name: "Tạo phiếu chi" }));
-  await waitFor(() => expect(state.repo.payStandalone).toHaveBeenCalledWith(expect.objectContaining({ employeeId: ids.empB, amount: 300_000, method: "Cash", note: "" })));
+  await waitFor(() => expect(state.repo.payStandalone).toHaveBeenCalledWith(expect.objectContaining({ employeeId: ids.empB, amount: 300_000, method: "Cash", note: "" }), expect.any(String)));
   expect(await screen.findByText("Đã tạo phiếu chi. Phiếu chi xuất hiện trong Sổ quỹ.")).toBeTruthy();
   await waitFor(() => expect(state.repo.payments.mock.calls.length).toBeGreaterThan(1));
 });

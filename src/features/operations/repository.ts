@@ -5,6 +5,7 @@ import { invoiceConfirmationSchema } from "@/features/sales-invoices/confirmatio
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import type { OperationArea } from "./permissions";
 import { projectFarmingProblem } from "@/features/cultivation-api/farming-problem";
+import { projectHrProblem } from "@/shared/messages/hr-problem";
 import { employeeProblemMetadataSchema } from "@/features/employee-management/api/employee-problem-metadata";
 type RepositoryArea = OperationArea | "zone-licenses" | "raft-details" | "employees";
 
@@ -26,7 +27,8 @@ async function send<T>(area: RepositoryArea, query: Query, schema: z.ZodType<T>,
     const employeeProblem = area === "employees" ? employeeProblemMetadataSchema.safeParse(result.employeeProblem) : undefined;
     const invoiceConfirmation = ["sales-invoices", "customer-payments", "sales-invoice-list", "sales-returns"].includes(area) ? invoiceConfirmationSchema.safeParse(result.invoiceConfirmation) : undefined;
     const farming = projectFarmingProblem(result.problem);
-    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}), ...(invoiceConfirmation?.success ? { invoiceConfirmation: invoiceConfirmation.data } : {}), ...(farming ? { problem: farming } : {}),
+    const hr = projectHrProblem(result.hrProblem);
+    return { status: "error", httpStatus: response.status, code: typeof result.code === "string" ? result.code : undefined, ...(employeeProblem?.success ? { employeeProblem: employeeProblem.data } : {}), ...(invoiceConfirmation?.success ? { invoiceConfirmation: invoiceConfirmation.data } : {}), ...(farming ? { problem: farming } : {}), ...(hr ? { hrProblem: hr } : {}),
       uncertain: body !== undefined && (response.status >= 500 || response.ok || response.status === 401) };
   } catch { return { status: "error", httpStatus: 0, uncertain: body !== undefined }; }
 }
@@ -38,7 +40,8 @@ export function suggestedFileName(header: string | null): string | undefined {
 export function createOperationsRepository(area: RepositoryArea) {
   return {
     read<T>(action: string, query: Query, schema: z.ZodType<T>, signal?: AbortSignal) { return send(area, { ...query, action }, schema, undefined, signal); },
-    write<T>(action: string, body: unknown, schema: z.ZodType<T>, id?: string, zoneId?: string) { return send(area, {}, schema, { action, id, zoneId, body }); },
+    /** `idempotencyKey` (one per opened dialog) makes the BFF send an `Idempotency-Key` header: the same key again returns the first result. */
+    write<T>(action: string, body: unknown, schema: z.ZodType<T>, id?: string, zoneId?: string, idempotencyKey?: string) { return send(area, {}, schema, { action, id, zoneId, body, ...(idempotencyKey ? { idempotencyKey } : {}) }); },
     /** A write with no body whose target is named in the query (e.g. delete-photo with id and photoId); the BFF checks CSRF and maps it to the backend verb. */
     post<T>(action: string, query: Query, schema: z.ZodType<T>) { return send(area, { ...query, action }, schema, {}); },
     upload<T>(action: string, files: File[], body: unknown, schema: z.ZodType<T>, id?: string, zoneId?: string) {

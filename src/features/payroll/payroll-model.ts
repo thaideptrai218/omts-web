@@ -35,5 +35,14 @@ export function expenseMonthOptions(periodEnd: string, around = 6): readonly { v
 export const monthLabel = (value: string | null) => value ? `Tháng ${value.slice(5)}/${value.slice(0, 4)}` : "—";
 export const formatDateTime = (value: string) => new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 
+/** Clock time of an instant in Vietnam ("07:00"); empty text when there is none. */
+export const formatClock = (value?: string | null) => value ? new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value)) : "";
+
 export const kindLabel: Record<"Wage" | "Advance", string> = { Wage: "Trả lương", Advance: "Tạm ứng" };
 export const paymentStatusLabel: Record<"Recorded" | "Cancelled", string> = { Recorded: "Đã chi", Cancelled: "Đã hủy" };
+
+/** Hours as the payslip shows them: whole hours and minutes ("7h20"), so Giờ x Đơn giá matches Thành tiền (the amount is worked out from minutes). */
+export function formatHours(hours: number): string {
+  const minutes = Math.round(hours * 60);
+  return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, "0")}`;
+}

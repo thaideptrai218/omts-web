@@ -5,8 +5,8 @@ import s from "./origin-lot.module.css";
 
 type Step = { key: string; date: string; label: string; detail?: string };
 
-/** Hành trình của lô, chỉ dựng từ dữ liệu API: thả giống, thu hoạch, ngày hóa đơn. */
-function buildSteps(lot: ProvenanceLot, invoiceDate: string | null, copy: OriginCopy): Step[] {
+/** Hành trình của lô, chỉ dựng từ dữ liệu API: thả giống rồi thu hoạch. Ngày hóa đơn đã ở đầu trang nên không lặp lại thành một bước. */
+function buildSteps(lot: ProvenanceLot, copy: OriginCopy): Step[] {
   const origin = lot.origin;
   if (!origin) return [];
   const steps: Step[] = origin.seedings.map((seeding, index) => ({
@@ -16,12 +16,11 @@ function buildSteps(lot: ProvenanceLot, invoiceDate: string | null, copy: Origin
     key: "harvest", date: origin.harvestDate, label: copy.harvestStep,
     detail: origin.daysOfFarming == null ? undefined : `${origin.daysOfFarming} ${copy.days}`,
   });
-  if (invoiceDate) steps.push({ key: "sold", date: invoiceDate, label: copy.soldStep });
   return steps;
 }
 
-export function OriginLotTimeline({ lot, invoiceDate, copy }: { lot: ProvenanceLot; invoiceDate: string | null; copy: OriginCopy }) {
-  const steps = buildSteps(lot, invoiceDate, copy);
+export function OriginLotTimeline({ lot, copy }: { lot: ProvenanceLot; invoiceDate?: string | null; copy: OriginCopy }) {
+  const steps = buildSteps(lot, copy);
   if (steps.length === 0) return null;
   return (
     <section aria-label={copy.journey}>

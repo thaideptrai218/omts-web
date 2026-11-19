@@ -9,12 +9,15 @@ import { ManagementHeading } from "@/components/ui/management-page";
 import type { InterfaceIconName } from "@/components/ui/interface-icon";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { workspaceError } from "@/features/api-workspace/workspace-error";
+import { hrProblemMessage } from "@/shared/messages/hr-problem";
 import { farmingErrorText } from "@/features/cultivation-api/farming-error-text";
 
 export function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
   const farming = farmingErrorText(result);
   if (farming !== undefined) return farming;
   if (result.httpStatus === 401 && result.uncertain) return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại và đối chiếu kết quả trước khi lập lượt mới.";
+  const hr = hrProblemMessage(result.code, result.hrProblem);
+  if (hr) return hr;
   const messages: Record<string, string> = { MSG41: "Số tiền phải là bội số của 1.000 đồng.", MSG45: "Số tiền hoặc số lượng vượt mức cho phép. Hãy đối chiếu số còn nợ hoặc số còn được trả.",
     "MSG-SALE-13": "Chưa dùng được VietQR vì hợp tác xã chưa có tài khoản nhận tiền. Hãy chọn cách thanh toán khác và nhờ Chủ hợp tác xã thiết lập tài khoản.",
     "MSG-SALE-14": "Chuyển khoản chưa về. Dừng giao dịch này? Hóa đơn không được lưu, mã chỉ giữ trong nhật ký. Hãy trả lại tiền mặt đã nhận (nếu có) và giữ nguyên hàng.",

@@ -1,6 +1,7 @@
 import "server-only";
 import { parseServerBackendConfig } from "@/server/config/backend-config";
 import { readBoundedBody } from "./origin-bounded-body";
+import { originClientHeaders } from "./origin-client-headers";
 import { problemSchema, provenancePageSchema, type ProvenancePage } from "./origin-page-schema";
 import { resolvePhotoSource } from "./origin-photo-source";
 import { parseOriginLanguage, parseQrToken } from "./origin-qr-token";
@@ -19,7 +20,13 @@ function withSafePhotos(page: ProvenancePage, origin: string): ProvenancePage {
   const safe = (urls: string[]) => urls.flatMap((raw) => resolvePhotoSource(raw, origin) ?? []);
   return {
     ...page,
-    cooperative: { ...page.cooperative, logoUrl: null, coverPhotoUrl: null, certifications: page.cooperative.certifications.map((c) => ({ ...c, fileUrl: null })) },
+    // Logo và ảnh bìa là dữ liệu công khai của HTX (hồ sơ trong Thiết lập) và đi qua proxy ảnh; tệp chứng nhận thì chưa công khai nên vẫn bị loại.
+    cooperative: {
+      ...page.cooperative,
+      logoUrl: page.cooperative.logoUrl ? resolvePhotoSource(page.cooperative.logoUrl, origin) : null,
+      coverPhotoUrl: page.cooperative.coverPhotoUrl ? resolvePhotoSource(page.cooperative.coverPhotoUrl, origin) : null,
+      certifications: page.cooperative.certifications.map((c) => ({ ...c, fileUrl: null })),
+    },
     lots: page.lots.map((lot) => lot.origin
       ? { ...lot, origin: { ...lot.origin, harvestPhotoUrls: safe(lot.origin.harvestPhotoUrls), raftPhotoUrls: safe(lot.origin.raftPhotoUrls) } }
       : lot),
@@ -48,6 +55,7 @@ export async function fetchProvenancePage(
   rawLanguage?: unknown,
   environment: Readonly<Record<string, unknown>> = process.env,
   fetcher: typeof fetch = fetch,
+  requestHeaders?: Headers,
 ): Promise<OriginFetchResult> {
   const token = parseQrToken(rawToken);
   if (!token) return { status: "invalid-token" };
@@ -60,7 +68,8 @@ export async function fetchProvenancePage(
     url.searchParams.set("lang", language);
     if (url.origin !== origin) return { status: "unavailable" };
     const response = await fetcher(url, {
-      method: "GET", headers: { Accept: "application/json" }, credentials: "omit",
+      // Chuyển IP khách (kèm secret của BFF) để giới hạn lượt tính theo từng khách, không dồn mọi khách vào một bucket.
+      method: "GET", headers: { Accept: "application/json", ...originClientHeaders(requestHeaders, environment) }, credentials: "omit",
       redirect: "error", cache: "no-store", signal: AbortSignal.timeout(timeoutMs),
     });
     if (response.status === 404) return { status: "not-found", message: await readNotFoundMessage(response) };

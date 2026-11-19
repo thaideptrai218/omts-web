@@ -23,6 +23,8 @@ import { waterOverviewPlan } from "./water-overview-plan";
 import { lotTracingPlan } from "./lot-tracing-plan";
 import { payrollPlan } from "./payroll-plan";
 import { seedLotsPlan } from "./seed-lots-plan";
+import { laborCostsPlan } from "./labor-costs-plan";
+import { payrollSettingsPlan } from "./payroll-settings-plan";
 
 const id = z.guid(), empty = z.strictObject({});
 const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
@@ -33,7 +35,7 @@ const querySchema = z.strictObject({ action: z.string().default("list"), id: id.
   index: z.string().regex(/^\d{1,3}$/).optional() });
 const mutationSchema = z.strictObject({ action: z.string(), id: id.optional(), zoneId: id.optional(), body: z.unknown().default({}) });
 export type OperationPlan = { area: OperationArea; action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE";
-  permission: string; zoneId?: string; body?: unknown; multipartFields?: boolean; schema: z.ZodType; file?: "export" | "invoice" | "photo"; /** Định dạng tệp xuất; bỏ trống = Excel. */ exportFormat?: "pdf"; index?: number; expectedId?: string; noContent?: boolean };
+  permission: string; zoneId?: string; body?: unknown; multipartFields?: boolean; schema: z.ZodType; file?: "export" | "invoice" | "photo"; /** Định dạng tệp xuất; bỏ trống = Excel. */ exportFormat?: "pdf"; index?: number; expectedId?: string; noContent?: boolean; /** Sent as the `Idempotency-Key` header (payroll payments): a repeat with the same key returns the first result. */ idempotencyKey?: string };
 
 export function planOperation(areaName: string, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   const area = z.enum(operationAreas).safeParse(areaName);
@@ -55,6 +57,8 @@ export function planOperation(areaName: string, method: string, query: URLSearch
   if (area.data === "quality-claims") return qualityClaimsPlan(method, query, input);
   if (area.data === "lot-tracing") return lotTracingPlan(method, query, input);
   if (area.data === "payroll" || area.data === "payroll-payments") return payrollPlan(area.data, method, query, input);
+  if (area.data === "labor-costs") return laborCostsPlan(method, query, input);
+  if (area.data === "payroll-settings") return payrollSettingsPlan(method, query, input);
   if (area.data === "water" && query.get("action") === "zones-overview") return waterOverviewPlan(method, query);
   if (area.data === "job-types") return jobTypesPlan(method, query, input);
   if (area.data === "cultivation-cycles") return cultivationPlan(method, query, input);

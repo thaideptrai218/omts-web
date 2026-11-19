@@ -16,7 +16,7 @@ export function OriginLotGallery({ heading, kind, lotCode, photos, copy }: Props
           return (
             <li key={src} className={s.photoItem}>
               <a className={s.photoLink} href={src} target="_blank" rel="noopener noreferrer" aria-label={`${copy.openPhoto}: ${alt}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- ảnh đã ký, hết hạn sau 1 giờ, không đi qua trình tối ưu ảnh của Next */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- ảnh đã ký, hết hạn sau 10 phút, không đi qua trình tối ưu ảnh của Next */}
                 <img src={src} alt={alt} loading="lazy" decoding="async" referrerPolicy="no-referrer" width={400} height={300} />
                 <span className={s.photoHint} aria-hidden="true"><ExternalIcon /></span>
               </a>

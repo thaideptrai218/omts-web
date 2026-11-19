@@ -15,7 +15,7 @@ export function LandingPage() {
       <a className={s.skip} href="#noi-dung">Bỏ qua điều hướng</a>
       <header className={s.header}>
         <div className={`${s.wrap} ${s.bar}`}>
-          <Link href="/" aria-label="HTX Trung Nam, về đầu trang"><BrandMark tone="inverse" compact /></Link>
+          <Link href="/" aria-label="Về đầu trang"><BrandMark tone="inverse" compact /></Link>
           <nav className={s.nav} aria-label="Điều hướng trang giới thiệu">
             {navLinks.map((l) => <a key={l.href} href={l.href}>{l.label}</a>)}
           </nav>

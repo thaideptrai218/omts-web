@@ -1,7 +1,9 @@
 "use client";
 import { useCallback, useId, useState } from "react";
 import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/management-table";
+import { StatusPill } from "@/components/ui/management-page";
 import { Skeleton, useRemote } from "@/features/operations/ui";
+import { formatDateTime, statusLabel, statusTone } from "./payroll-model";
 import { PayrollDetailFooter, type DetailTab } from "./payroll-detail-footer";
 import { PayrollSheetInfoTab } from "./payroll-sheet-info-tab";
 import { PayrollSheetPaymentsTab } from "./payroll-sheet-payments-tab";
@@ -16,6 +18,8 @@ export function PayrollDetailPanel({ id, onChanged }: { id: string; onChanged(no
   const [tab, setTab] = useState<DetailTab>("info"), prefix = useId();
   const remote = useRemote(useCallback((signal: AbortSignal) => payrollRepository.detail(id, signal), [id]));
   const sheet = remote.data;
+  const header = sheet && <p className={s.sheetHead}><strong>{sheet.code}</strong><StatusPill tone={statusTone(sheet.status)}>{statusLabel[sheet.status]}</StatusPill>
+    {sheet.calculatedAt && <span className={s.muted}>Cập nhật lần cuối {formatDateTime(sheet.calculatedAt)}</span>}</p>;
   const body = remote.loading ? <Skeleton /> : remote.error || !sheet ? <ListStateMessage error={remote.error ?? "Không tải được bảng lương."} onRetry={remote.reload} retryLabel="Tải lại" /> : <>
     <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} className={s.tabBody}>
       {tab === "info" ? <PayrollSheetInfoTab sheet={sheet} /> : tab === "slips" ? <PayrollSheetSlipsTab slips={sheet.slips} /> : <PayrollSheetPaymentsTab sheetId={sheet.id} paid={sheet.paid} />}
@@ -23,6 +27,7 @@ export function PayrollDetailPanel({ id, onChanged }: { id: string; onChanged(no
     <PayrollDetailFooter sheet={sheet} tab={tab} onChanged={(notice) => { remote.reload(); onChanged(notice); }} />
   </>;
   return <section className={s.detail} aria-label="Chi tiết bảng lương">
+    {header}
     <Subtabs<DetailTab> label="Nội dung bảng lương" tabs={tabs} value={tab} onChange={setTab} idPrefix={prefix} />
     {body}
   </section>;

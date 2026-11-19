@@ -46,6 +46,9 @@ export const employeeListItemSchema = z.object({
   workingZones: z.array(workingZoneSchema),
   account: linkedAccountSchema.nullable(),
   status: employeeStatusSchema,
+  // Only in the list, and only for callers with PAYROLL View (Owner, Accountant): paid hours this month and the wage still owed on finalized sheets.
+  monthHours: z.number().nullish(),
+  outstandingWage: z.number().nullish(),
 });
 
 export const employeePageSchema = z.object({
@@ -55,7 +58,11 @@ export const employeePageSchema = z.object({
   total: z.number().int().min(0),
 });
 
+/** Another profile with the same ID number (saved anyway; the screen shows a warning). Sent only in the answer of a create or update. */
+export const duplicateIdNumberSchema = z.object({ employeeId: apiIdSchema, code: apiTextSchema, fullName: apiTextSchema, message: z.string() });
+
 export const employeeViewSchema = employeeListItemSchema.extend({
+  duplicateIdNumber: duplicateIdNumberSchema.nullish(),
   birthday: employeeDateOnlySchema.nullish(),
   gender: employeeGenderSchema.nullish(),
   // Only sent to callers who may maintain the employee; the list never carries it.
@@ -77,6 +84,7 @@ export const employeeSavedSchema = z.object({
   employee: employeeViewSchema,
   message: z.string(),
   messageCode: apiTextSchema,
+  duplicateIdNumber: duplicateIdNumberSchema.nullish(),
 });
 
 export type EmployeeListItemDto = z.infer<typeof employeeListItemSchema>;

@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import type { Employee } from "./contracts";
 import { accountLabel } from "./employee-editor-model";
 import { EmployeeAccountIssueDialog } from "./employee-account-issue-dialog";
+import { EmployeeAccountLinkDialog } from "./employee-account-link-dialog";
 
 export function EmployeeAccountTab({ employee, onSaved, onRefresh }: { employee: Employee; onSaved(employee: Employee): void; onRefresh?(): void }) {
-  const [issuing, setIssuing] = useState(false);
+  const [dialog, setDialog] = useState<"issue" | "link">();
   const account = employee.account;
+  const canGrant = employee.status === "Employed" && employee.canMaintain && !employee.hasStaffAccount;
   return <div className="space-y-4">
     {account ? <dl className="grid gap-4 sm:grid-cols-3">
       <div><dt className="text-sm text-text-muted">Tên tài khoản</dt><dd className="break-all font-semibold">@{account.username}</dd></div>
@@ -15,9 +17,16 @@ export function EmployeeAccountTab({ employee, onSaved, onRefresh }: { employee:
       <div><dt className="text-sm text-text-muted">Tình trạng tài khoản</dt><dd>{accountLabel(account.status)}</dd></div>
     </dl> : <>
       <p>Chưa có tài khoản đăng nhập.</p>
-      {employee.status === "Employed" && employee.canMaintain && !employee.hasStaffAccount && <Button className="sm:w-auto" onClick={() => setIssuing(true)}>Cấp tài khoản đăng nhập</Button>}
+      {canGrant && <>
+        <p className="text-sm text-text-muted">Liên kết với tài khoản nhân viên có sẵn chưa gắn với ai, hoặc tạo tài khoản mới cho nhân viên này.</p>
+        <div className="flex flex-wrap gap-3">
+          <Button className="w-auto" variant="secondary" onClick={() => setDialog("link")}>Liên kết tài khoản có sẵn</Button>
+          <Button className="w-auto" onClick={() => setDialog("issue")}>Cấp tài khoản đăng nhập</Button>
+        </div>
+      </>}
       {employee.status === "Left" && <p className="text-sm text-text-muted">Nhân viên đã nghỉ việc không thể được cấp tài khoản.</p>}
     </>}
-    {issuing && <EmployeeAccountIssueDialog employee={employee} onClose={() => setIssuing(false)} onSaved={onSaved} onRefresh={onRefresh} />}
+    {dialog === "issue" && <EmployeeAccountIssueDialog employee={employee} onClose={() => setDialog(undefined)} onSaved={onSaved} onRefresh={onRefresh} />}
+    {dialog === "link" && <EmployeeAccountLinkDialog employee={employee} onClose={() => setDialog(undefined)} onSaved={onSaved} />}
   </div>;
 }

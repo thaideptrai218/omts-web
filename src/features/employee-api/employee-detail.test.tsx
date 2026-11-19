@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
+vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" } }) }));
 import { employeeDetailFixture } from "@/features/employee-management/api/employee-wire.fixtures";
 import { employeeViewSchema } from "./contracts";
 import { EmployeeDirectoryTable } from "./employee-directory-table";

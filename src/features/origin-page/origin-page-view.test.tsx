@@ -29,7 +29,7 @@ describe("OriginPageView", () => {
     expect(out).toContain("28/10/2026");
     expect(out).toContain("Lô B03-20261026");
     expect(out).toContain("Đang hiệu lực");
-    expect(out).toContain("Đã thu hồi");
+    expect(out).toContain("Đã rút thông tin nguồn gốc");
     expect(out).toContain("159 ngày");
     expect(out).toContain("Giống hàu sữa");
     expect(out).toContain("Hành trình của lô");

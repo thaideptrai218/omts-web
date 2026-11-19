@@ -1,8 +1,10 @@
-﻿"use client";
+"use client";
 import { Fragment, useCallback, useRef, useState, type ReactNode } from "react";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { StatusPill } from "@/components/ui/management-page";
+import { formatVndWithSymbol } from "@/shared/format/vnd";
+import { formatHours } from "@/features/payroll/payroll-model";
 import { managementStyles, SortableHeader, type SortState } from "@/components/ui/management-screen/management-table";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import type { EmployeeListItemDto } from "@/features/employee-management/api/employee-contract.schemas";
@@ -13,24 +15,29 @@ import type { Employee } from "./contracts";
 import styles from "./employee-directory.module.css";
 
 export type EmployeeLeaveGuard = (leave: () => void) => void;
+/** Giờ công và nợ lương đến từ danh sách (`monthHours`, `outstandingWage`), chỉ có với Chủ HTX và Kế toán; không có thì cột hiện "—". */
 type Column = { key: string; label: string; weight: number; sort?: string; defaultHidden?: boolean; render(row: EmployeeListItemDto): ReactNode };
 const text = (value: string, className = "") => <span className={`${styles.truncated} ${className}`} title={value}>{value || "—"}</span>;
+/** Chữ cái đầu của tên làm ảnh đại diện (không có ảnh nhân viên). */
+const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase("vi") ?? "?";
 export const employeeColumns: readonly Column[] = [
-  { key: "code", label: "Mã nhân viên", weight: 15, sort: "code", render: row => text(row.code, "font-mono tabular-nums") },
-  { key: "name", label: "Họ và tên", weight: 22, sort: "name", render: row => text(row.fullName, styles.name) },
-  { key: "phone", label: "Số điện thoại", weight: 17, sort: "phone", render: row => text(row.phoneNumber ?? "—") },
-  { key: "type", label: "Loại nhân viên", weight: 20, sort: "type", render: row => <span className={styles.typeChip} title={employeeTypeLabel(row.employeeType)}>{employeeTypeLabel(row.employeeType)}</span> },
+  { key: "code", label: "Mã nhân viên", weight: 18, sort: "code", render: row => text(row.code, "font-mono tabular-nums") },
+  { key: "name", label: "Họ và tên", weight: 26, sort: "name", render: row => <span className={styles.nameCell}><span className={styles.avatar} aria-hidden="true">{initial(row.fullName)}</span>{text(row.fullName, styles.name)}</span> },
+  { key: "phone", label: "Số điện thoại", weight: 20, sort: "phone", render: row => text(row.phoneNumber ?? "—") },
+  { key: "type", label: "Loại nhân viên", weight: 14, sort: "type", render: row => <span className={styles.typeChip} title={employeeTypeLabel(row.employeeType)}>{employeeTypeLabel(row.employeeType)}</span> },
   { key: "jobs", label: "Loại công việc", weight: 20, defaultHidden: true, render: row => text(row.jobTypes.map(job => job.name).join(", ")) },
-  { key: "zones", label: "Vùng làm việc", weight: 20, render: row => <span className={styles.truncated} title={row.workingZones.map(zone => `${zone.code} · ${zone.name}`).join(", ")}>{row.workingZones.map(zone => zone.code).join(", ") || "—"}</span> },
+  { key: "zones", label: "Vùng làm việc", weight: 15, render: row => <span className={styles.truncated} title={row.workingZones.map(zone => `${zone.code} · ${zone.name}`).join(", ")}>{row.workingZones.map(zone => zone.code).join(", ") || "—"}</span> },
   { key: "account", label: "Tài khoản", weight: 22, defaultHidden: true, render: row => row.account ? <>{text(`@${row.account.username}`)}<small className={styles.meta}>{accountLabel(row.account.status)}</small></> : <span className={styles.meta}>Chưa có tài khoản</span> },
-  { key: "status", label: "Tình trạng", weight: 21, sort: "status", render: row => <><span className={styles.status} title={employmentLabel(row.status)}><StatusPill tone={row.status === "Employed" ? "success" : "neutral"}>{employmentLabel(row.status)}</StatusPill></span>{row.status === "Left" && row.lastWorkingDay && <small className={styles.meta} title={`Ngày làm cuối: ${dateLabel(row.lastWorkingDay)}`}>{dateLabel(row.lastWorkingDay)}</small>}</> },
+  { key: "status", label: "Tình trạng", weight: 19, sort: "status", render: row => <><span className={styles.status} title={employmentLabel(row.status)}><StatusPill tone={row.status === "Employed" ? "success" : "neutral"}>{employmentLabel(row.status)}</StatusPill></span>{row.status === "Left" && row.lastWorkingDay && <small className={styles.meta} title={`Ngày làm cuối: ${dateLabel(row.lastWorkingDay)}`}>{dateLabel(row.lastWorkingDay)}</small>}</> },
   { key: "lastDay", label: "Ngày làm cuối", weight: 17, sort: "lastWorkingDay", defaultHidden: true, render: row => text(row.lastWorkingDay ? dateLabel(row.lastWorkingDay) : "—") },
+  { key: "hours", label: "Giờ công tháng này", weight: 16, render: row => <span className="tabular-nums" title="Giờ công trả lương từ đầu tháng đến hôm nay">{typeof row.monthHours === "number" ? formatHours(row.monthHours) : "—"}</span> },
+  { key: "debt", label: "Nợ lương", weight: 18, render: row => <span className={styles.debt} title="Tổng phiếu lương đã chốt còn chưa trả">{typeof row.outstandingWage === "number" ? formatVndWithSymbol(row.outstandingWage) : "—"}</span> },
 ];
 export const defaultEmployeeColumns = employeeColumns.filter(column => !column.defaultHidden).map(column => column.key);
 
 /** Pointer row opening supplements a native chevron button; rows add no extra keyboard stop. */
 export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detailRevision = 0, visible = defaultEmployeeColumns, zones = [], jobTypes = [], lookupsReady = false, onGuardChange, initialExpandedId, sort, onSort, selection }: {
-  items: EmployeeListItemDto[]; disabled: boolean; onOpen?(id: string): void; cache: EmployeeDetailCache; onSaved(employee: Employee): void; detailRevision?: number;
+  items: EmployeeListItemDto[]; disabled: boolean; onOpen?(id: string): void; cache: EmployeeDetailCache; onSaved(employee: Employee, note?: string): void; detailRevision?: number;
   visible?: readonly string[]; zones?: ApiRecord[]; jobTypes?: { id: string; name: string }[]; lookupsReady?: boolean;
   onGuardChange?(guard: EmployeeLeaveGuard | undefined): void; initialExpandedId?: string;
   /** Server-side order; without `onSort` the headers are plain. */
@@ -51,7 +58,7 @@ export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detail
     if (guard.current) guard.current(leave); else leave();
   }
   return <table className={styles.table}>
-    <colgroup>{selection && <col style={{ width: 28 }} />}<col style={{ width: 28 }} />{columns.map(column => <col key={column.key} style={{ width: `calc(${column.weight / weight * 100}% - ${column.weight / weight * fixed}px)` }} />)}</colgroup>
+    <colgroup>{selection && <col style={{ width: 28 }} />}<col style={{ width: 28 }} />{columns.map(column => <col key={column.key} style={{ width: `${(column.weight / weight * (fixed === 56 ? 92 : 96)).toFixed(2)}%` }} />)}</colgroup>
     <thead><tr>
       {selection && <th scope="col" className={styles.checkCell}><input type="checkbox" aria-label="Chọn tất cả trên trang" checked={allSelected} onChange={event => selection.onToggleAll(event.target.checked)} /></th>}
       <th scope="col" className={styles.expandCell}><span className="sr-only">Mở dòng</span></th>
@@ -69,4 +76,5 @@ export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detail
     </Fragment>)}</tbody>
   </table>;
 }
+
 

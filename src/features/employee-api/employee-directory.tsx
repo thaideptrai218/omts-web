@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import { exportLimitMessage, useEmployeeFileAction } from "./use-employee-file-a
 import styles from "./employee-directory.module.css";
 
 /** Owner directory shares the same fixed management frame and data contracts as the other production lists. */
-export function EmployeeDirectory() {
+export function EmployeeDirectory({ readOnly = false }: { readOnly?: boolean }) {
   const repository = useMemo(() => createOperationsRepository("employees"), []);
   // Replaced (not cleared) on refresh so the cached Map is never mutated after render.
   const [cache, setCache] = useState(() => new Map<string, Employee>());
@@ -64,7 +64,9 @@ export function EmployeeDirectory() {
   const exportAll = useEmployeeFileAction(() => employeeFileRepository.exportFile({ search: term, statusId, zoneId, employeeType, jobTypeId, ...order }), exportLimitMessage);
   const exportSelected = useEmployeeFileAction(() => employeeFileRepository.exportFile(order, [...selected]), exportLimitMessage);
   function refresh() { setCache(new Map()); setDetailRevision(value => value + 1); list.reload(); jobTypes.reload(); }
-  function saved() { refresh(); setNotice("Đã cập nhật hồ sơ nhân viên."); }
+  // The backend saves a profile whose ID number another profile already holds, and says so: show that next to the confirmation.
+  const duplicateNote = (employee: Employee) => employee.duplicateIdNumber ? ` Cảnh báo: số CCCD này trùng với ${employee.duplicateIdNumber.fullName} (${employee.duplicateIdNumber.code}).` : "";
+  function saved(employee: Employee, note?: string) { refresh(); setNotice(`Đã cập nhật hồ sơ nhân viên.${note ? ` ${note}` : ""}${duplicateNote(employee)}`); }
   function retry() { refresh(); zones.reload(); }
   const hasFilters = !!search || !!zoneId || statusId !== "401" || !!employeeType || !!jobTypeId;
   const filters = <EmployeeDirectoryFilters employeeType={employeeType} setEmployeeType={value => filter(() => setEmployeeType(value))} statusId={statusId} setStatusId={value => filter(() => setStatusId(value))}
@@ -77,25 +79,27 @@ export function EmployeeDirectory() {
   return <ManagementLayout storageKey="employees" icon="users" title="Nhân viên" filters={filters} filterLabel="Bộ lọc nhân viên"
     search={<input type="search" aria-label="Tìm nhân viên" placeholder="Theo mã, tên hoặc số điện thoại" maxLength={200} value={search} onChange={event => { const value = event.target.value; filter(() => setSearch(value)); }} />}
     actions={<>
-      <Button className="w-auto" disabled={!lookupsReady} onClick={() => leave(() => { setCreating(true); setSerial(value => value + 1); })}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm nhân viên</Button>
-      <Button className="w-auto" variant="secondary" onClick={() => leave(() => setImporting(true))}><InterfaceIcon name="upload" className="mr-1 size-4" />Import file</Button>
-      <Button className="w-auto" variant="secondary" isPending={exportAll.pending} onClick={() => void exportAll.run()}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>
+      {!readOnly && <>
+        <Button className="w-auto" disabled={!lookupsReady} onClick={() => leave(() => { setCreating(true); setSerial(value => value + 1); })}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm nhân viên</Button>
+        <Button className="w-auto" variant="secondary" onClick={() => leave(() => setImporting(true))}><InterfaceIcon name="upload" className="mr-1 size-4" />Import file</Button>
+        <Button className="w-auto" variant="secondary" isPending={exportAll.pending} onClick={() => void exportAll.run()}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>
+      </>}
       <ColumnPicker columns={employeeColumns} visible={visible} onChange={keys => storeColumns(keys.join(","))} /><HelpLink />
     </>}
     footer={<EmployeeDirectoryPaging page={list.data?.page ?? page} total={list.data?.total ?? 0} loading={list.loading} pageSize={pageSize} setPage={goToPage} setPageSize={value => filter(() => setPageSize(value))} />}>
     {(notice || fileError || zones.error || jobTypes.error) && <div className={styles.feedback}>{notice && <p role="status">{notice}</p>}<ErrorNotice error={fileError || zones.error || jobTypes.error} />{(zones.error || jobTypes.error) && <button type="button" onClick={retry}>Tải lại danh mục</button>}</div>}
-    <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>
+    {!readOnly && <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>
       <Button className="w-auto" variant="secondary" aria-label="Xuất file các dòng đã chọn" isPending={exportSelected.pending} onClick={() => void exportSelected.run()}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>
-    </BulkBar>
+    </BulkBar>}
     <ManagementScroller busy={list.loading}>
       {list.error ? <ListStateMessage error={list.error} onRetry={retry} retryLabel="Tải lại" />
         : !list.data ? <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3, 4, 5].map(key => <div key={key} />)}</div>
         : !list.data.items.length ? <ListStateMessage>{hasFilters ? "Không có nhân viên phù hợp bộ lọc." : "Chưa có nhân viên."}</ListStateMessage>
         : <EmployeeDirectoryTable items={list.data.items} disabled={list.loading} cache={cache} detailRevision={detailRevision} onSaved={saved} visible={visible} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onGuardChange={registerGuard} initialExpandedId={linkedId}
-          sort={sort ?? { key: "", direction: "asc" }} onSort={next => filter(() => setSort(next))} selection={selection} />}
+          sort={sort ?? { key: "", direction: "asc" }} onSort={next => filter(() => setSort(next))} selection={readOnly ? undefined : selection} />}
     </ManagementScroller>
     {creating && <EmployeeApiEditor key={serial} record={null} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onClose={() => setCreating(false)} onAdopt={() => {}} onSaved={employee => {
-      setCreating(false); setSearch(employee.fullName); setTerm(employee.fullName); setStatusId(employee.status === "Employed" ? "401" : "402"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setPage(1); setSelected(new Set()); refresh(); setNotice("Đã lưu hồ sơ nhân viên.");
+      setCreating(false); setSearch(employee.fullName); setTerm(employee.fullName); setStatusId(employee.status === "Employed" ? "401" : "402"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setPage(1); setSelected(new Set()); refresh(); setNotice(`Đã lưu hồ sơ nhân viên.${duplicateNote(employee)}`);
     }} />}
     {importing && <EmployeeImportDialog onClose={() => setImporting(false)} onImported={count => { setNotice(`Đã nhập ${count} nhân viên.`); setPage(1); setSelected(new Set()); refresh(); }} />}
   </ManagementLayout>;

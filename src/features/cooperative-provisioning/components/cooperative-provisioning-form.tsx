@@ -117,7 +117,7 @@ export function CooperativeProvisioningForm() {
                 error={errors.cooperativeName?.message}
                 id="cooperative-name"
                 label="Tên ban đầu của hợp tác xã"
-                placeholder="Ví dụ: Hợp tác xã nuôi trồng thủy sản Trung Nam"
+                placeholder="Tên đầy đủ của hợp tác xã"
                 required
                 {...register("cooperativeName")}
               />

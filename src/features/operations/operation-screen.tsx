@@ -13,6 +13,8 @@ import { QualityClaimsScreen } from "@/features/quality-claims/quality-claims-sc
 import { SalesReturnsScreen } from "@/features/sales-returns/sales-returns-screen";
 import { PayrollScreen } from "@/features/payroll/payroll-screen";
 import { PayrollPaymentsScreen } from "@/features/payroll/payroll-payments-screen";
+import { LaborCostsScreen } from "@/features/labor-costs/labor-costs-screen";
+import { HrSetupScreen } from "@/features/hr-setup/hr-setup-screen";
 import { SalesPerformanceScreen } from "@/features/sales-reports/sales-performance-screen";
 import { CustomerReportScreen } from "@/features/sales-reports/customer-report-screen";
 import { EndOfDayReportScreen } from "@/features/sales-reports/end-of-day-report-screen";
@@ -60,6 +62,10 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "sales-returns") return <Suspense><SalesReturnsScreen /></Suspense>;
   if (area === "payroll") return <Suspense><PayrollScreen /></Suspense>;
   if (area === "payroll-payments") return <PayrollPaymentsScreen />;
+  if (area === "labor-costs") return <LaborCostsScreen />;
+  if (area === "hr-setup") return <HrSetupScreen />;
+  // The period settings are a dialog of the payroll screen; the area exists for the BFF only.
+  if (area === "payroll-settings") return <ScreenRedirect to="/operations/payroll" />;
   if (area === "sales-report") return <SalesPerformanceScreen />;
   if (area === "customer-report") return <CustomerReportScreen />;
   if (area === "end-of-day-report") return <EndOfDayReportScreen />;

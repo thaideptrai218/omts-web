@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { createOperationsRepository } from "@/features/operations/repository";
@@ -63,15 +64,17 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
     } finally { active.current = false; if (mounted.current) setPending(false); }
   }
   if (credential) return <EmployeeCredentialDialog username={credential.username} password={credential.password} expiresAt={credential.expiresAt} onClose={acknowledge} />;
-  return <Dialog open title="Cấp tài khoản đăng nhập" dismissible={!pending} onOpenChange={open => { if (!open) close(); }}>
-    <p className="mb-4">Cấp tài khoản cho {employee.fullName}. Phân quyền được thực hiện tại màn Tài khoản.</p>
-    <form ref={form} className="space-y-4" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
+  // The tab sits inside the profile <form>; a <form> nested in a <form> is invalid HTML (React reloads the page in development), so the dialog is rendered on <body>.
+  return createPortal(<Dialog open title="Cấp tài khoản đăng nhập" dismissible={!pending} onOpenChange={open => { if (!open) close(); }}>
+    <p className="mb-4">Tạo tài khoản đăng nhập mới cho {employee.fullName} bằng tên và số điện thoại trong hồ sơ. Mật khẩu tạm được hiển thị một lần sau khi tạo. Phân quyền được thực hiện tại màn Tài khoản.</p>
+    {!employee.phoneNumber && <p role="alert" className="mb-4 text-sm">Hồ sơ chưa có số điện thoại. Hãy bổ sung số điện thoại ở thẻ Thông tin rồi cấp lại tài khoản.</p>}
+    <form ref={form} className="space-y-4" noValidate onSubmit={event => { event.preventDefault(); event.stopPropagation(); void save(); }}>
       <Field label="Tên tài khoản *" name="username" required minLength={3} maxLength={50} autoComplete="off" value={username} disabled={pending || blocked} onChange={event => setUsername(event.target.value)} />
       <ErrorNotice error={error} />
       <div className="flex flex-wrap gap-3">
         <Button className="w-auto" variant="secondary" disabled={pending} onClick={close}>Đóng</Button>
-        <Button className="w-auto" type="submit" isPending={pending} disabled={blocked}>Cấp tài khoản</Button>
+        <Button className="w-auto" type="submit" isPending={pending} disabled={blocked || !employee.phoneNumber}>Cấp tài khoản</Button>
       </div>
     </form>
-  </Dialog>;
+  </Dialog>, document.body);
 }

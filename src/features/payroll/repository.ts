@@ -33,14 +33,16 @@ export const payrollRepository = {
   detail: (id: string, signal?: AbortSignal) => sheets.read("detail", { id }, c.sheetDetail, signal),
   create: (body: c.CreateSheetBody) => sheets.write("create", body, c.sheetDetail),
   reload: (id: string, mode: "All" | "WorkingDaysOnly") => sheets.write("reload", { mode }, c.sheetDetail, id),
-  finalize: (id: string, expenseMonth: string) => sheets.write("finalize", { expenseMonth }, c.sheetDetail, id),
+  /** `expected` = the total and number of payslips the Owner viewed; a changed sheet answers 409 TOTALS_CHANGED instead of finalizing. */
+  finalize: (id: string, expenseMonth: string, expected?: { total: number; slips: number }) => sheets.write("finalize", { expenseMonth, ...(expected ? { expectedTotal: expected.total, expectedSlips: expected.slips } : {}) }, c.sheetDetail, id),
   cancel: (id: string) => sheets.write("cancel", {}, c.sheetDetail, id),
-  pay: (id: string, body: c.PaySheetBody) => sheets.write("pay", body, c.voucherResult, id),
+  pay: (id: string, body: c.PaySheetBody, idempotencyKey?: string) => sheets.write("pay", body, c.voucherResult, id, undefined, idempotencyKey),
   employeeSlips: (employeeId: string, q: { status?: c.PayrollStatus; page: number; pageSize: number }, signal?: AbortSignal) =>
     orEmpty(sheets.read("employee-slips", { id: employeeId, status: q.status, page: String(q.page), pageSize: String(q.pageSize) }, c.employeeSlipPage, signal),
       { ...emptyPage, pageSize: q.pageSize, summary: { outstanding: 0, advanceBalance: 0 } }),
   slip: (slipId: string, signal?: AbortSignal) => sheets.read("slip", { id: slipId }, c.slipDetail, signal),
-  exportSheet: (id: string) => sheets.download({ id }),
+  exportSheet: (id: string, format: "pdf" | "xlsx" = "xlsx") => sheets.download({ id, format }),
+  exportSlip: (id: string, format: "pdf" | "xlsx" = "xlsx") => sheets.download({ id, kind: "slip", format }),
   exportList: (q: SheetQuery) => sheets.download(filters(q)),
 
   payments: (query: PaymentQuery, signal?: AbortSignal) =>
@@ -48,5 +50,5 @@ export const payrollRepository = {
       from: query.from || undefined, to: query.to || undefined, page: String(query.page), pageSize: String(query.pageSize) }, c.paymentPage, signal),
       { ...emptyPage, pageSize: query.pageSize }),
   payable: (search: string, includeAll: boolean, signal?: AbortSignal) => payments.read("payable", { search: search.trim() || undefined, includeAll: includeAll ? "true" : undefined }, c.payableEmployees, signal),
-  payStandalone: (body: c.StandalonePaymentBody) => payments.write("create", body, c.standalonePaymentResult),
+  payStandalone: (body: c.StandalonePaymentBody, idempotencyKey?: string) => payments.write("create", body, c.standalonePaymentResult, undefined, undefined, idempotencyKey),
 };

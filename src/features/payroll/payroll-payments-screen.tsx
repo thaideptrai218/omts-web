@@ -13,6 +13,7 @@ import { paymentListColumns as columns } from "./payroll-payments-columns";
 import { PayrollPaymentsTable } from "./payroll-payments-table";
 import { StandalonePaymentDialog } from "./payroll-standalone-payment-dialog";
 import { payrollRepository } from "./repository";
+import { usePayrollWriter } from "./use-payroll-writer";
 import s from "./payroll-screen.module.css";
 
 const defaultColumns = columns.map((column) => column.key).join(",");
@@ -22,6 +23,7 @@ export function PayrollPaymentsScreen({ helpHref }: Readonly<{ helpHref?: string
   const [search, setSearch] = useState(""), [time, setTime] = useState<TimeRangeValue>(allTime), [filters, setFilters] = useState<PaymentFilters>(noPaymentFilters);
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0), [expanded, setExpanded] = useState<string>();
   const [data, setData] = useState<PaymentPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [paying, setPaying] = useState(false), [notice, setNotice] = useState<string>();
+  const writer = usePayrollWriter();
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-payroll-payments", defaultColumns);
   const visible = useMemo(() => { const keys = storedColumns.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [storedColumns]);
   const hasFilter = !!search.trim() || !isAllTime(time) || !!filters.method || !!filters.kind || !!filters.status;
@@ -53,7 +55,7 @@ export function PayrollPaymentsScreen({ helpHref }: Readonly<{ helpHref?: string
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="phiếu chi" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm phiếu chi lương" placeholder="Theo mã phiếu chi, nhân viên, bảng lương" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      <Button key="pay" className="w-auto" type="button" onClick={() => setPaying(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Thanh toán lương</Button>
+      {writer && <Button key="pay" className="w-auto" type="button" onClick={() => setPaying(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Thanh toán lương</Button>}
       <ColumnPicker columns={columns} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
       <HelpLink helpHref={helpHref} />
     </>}>

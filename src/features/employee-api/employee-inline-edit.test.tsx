@@ -211,7 +211,7 @@ it("hides maintenance actions and protected fields when canMaintain is false", a
   for (const name of ["Thông tin", "Công việc", "Ngân hàng"]) {
     tab(name); expect(panel().queryByRole("button", { name: "Chỉnh sửa" })).toBeNull();
   }
-  expect(screen.queryByRole("button", { name: "Ngừng làm việc" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Nghỉ việc" })).toBeNull();
   expect(panel().getByRole("alert").textContent).toContain("không có quyền");
 });
 
@@ -219,9 +219,9 @@ it.each(["Employed", "Left"] as const)("opens the existing %s status confirmatio
   await setup({ ...record(), status, lastWorkingDay: status === "Left" ? "2026-10-29" : null });
   // Owner decision 11/11/2026: the state action sits in the footer of Thông tin and Công việc (like Suppliers), not Ngân hàng.
   tab("Ngân hàng");
-  expect(panel().queryByRole("button", { name: /Ngừng làm việc|Cho làm việc lại/ })).toBeNull();
-  tab("Công việc"); fireEvent.click(panel().getByRole("button", { name: status === "Employed" ? "Ngừng làm việc" : "Cho làm việc lại" }));
-  expect(screen.getByRole("dialog", { name: status === "Employed" ? "Nghỉ việc?" : "Cho làm việc lại?" })).toBeTruthy();
+  expect(panel().queryByRole("button", { name: /Nghỉ việc|Làm việc lại/ })).toBeNull();
+  tab("Công việc"); fireEvent.click(panel().getByRole("button", { name: status === "Employed" ? "Nghỉ việc" : "Làm việc lại" }));
+  expect(screen.getByRole("dialog", { name: status === "Employed" ? "Nghỉ việc?" : "Làm việc lại?" })).toBeTruthy();
   expect(repository.write).not.toHaveBeenCalled();
 });
 
@@ -237,9 +237,9 @@ it("replaces the clicked Chỉnh sửa button instead of mutating it into the su
   expect(repository.write).not.toHaveBeenCalled();
 });
 
-it("offers Ngừng làm việc in the footer of the Thông tin tab as well as the Công việc tab", async () => {
+it("offers Nghỉ việc in the footer of the Thông tin tab as well as the Công việc tab", async () => {
   await setup();
-  expect(panel().getByRole("button", { name: "Ngừng làm việc" })).toBeTruthy();
+  expect(panel().getByRole("button", { name: "Nghỉ việc" })).toBeTruthy();
   tab("Công việc");
-  expect(panel().getByRole("button", { name: "Ngừng làm việc" })).toBeTruthy();
+  expect(panel().getByRole("button", { name: "Nghỉ việc" })).toBeTruthy();
 });

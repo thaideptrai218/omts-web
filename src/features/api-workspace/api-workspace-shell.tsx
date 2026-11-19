@@ -37,7 +37,7 @@ const operationIcons: Record<OperationArea, InterfaceIconName> = {
   seeding: "product", "material-usages": "material", harvest: "work",
   "cultivation-cycles": "raft",
   "purchase-receipts": "receipt", "supplier-payments": "payment", water: "water",
-  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "end-of-day-report": "calendar", "product-report": "product", "customer-report": "users", "supplier-report": "supplier", "financial-report": "payment", "purchase-requests": "request", workforce: "attendance", "my-work": "work", "seed-lots": "product",
+  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "end-of-day-report": "calendar", "product-report": "product", "customer-report": "users", "supplier-report": "supplier", "financial-report": "payment", "purchase-requests": "request", workforce: "attendance", "my-work": "work", "seed-lots": "product", "labor-costs": "raft", "payroll-settings": "work", "hr-setup": "list",
 };
 
 const settingsDescriptions: Partial<Record<ResourceKey, string>> = {
@@ -56,7 +56,7 @@ const workspaceGroups = [
   { label: FARMING_GROUP, resources: ["zones", "rafts"], operations: ["cultivation-cycles", "water"] },
   { label: INPUT_GROUP, resources: [], operations: [] },
   { label: "Mua hàng", resources: ["suppliers"], operations: [] },
-  { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "my-work"] },
+  { label: "Nhân sự", resources: ["employees"], operations: ["hr-setup", "workforce", "job-types", "payroll", "payroll-payments", "labor-costs", "my-work"] },
   { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests", "lot-tracing"] },
   { label: "Báo cáo", resources: [], // Thứ tự theo KiotViet (Cuối ngày, Bán hàng, Hàng hóa, Khách hàng, Nhà cung cấp, Tài chính) rồi các báo cáo đặc thù; key chưa xong bị `operationAllowed` ẩn.
     operations: ["end-of-day-report", "sales-report", "product-report", "customer-report", "supplier-report", "financial-report", "price-trend-report", "after-sales-report", "harvest-yield"] },
@@ -157,9 +157,9 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
             { title: "Nhập hàng", items: purchasing ? [link(kindText.Seed.receiptsPath, kindText.Seed.receipt, "receipt"), link(kindText.Supply.receiptsPath, kindText.Supply.receipt, "receipt")] : [] },
             { title: "Trả hàng", items: purchasing ? [link(kindText.Seed.returnsPath, kindText.Seed.receiptReturn, "upload"), link(kindText.Supply.returnsPath, kindText.Supply.receiptReturn, "upload")] : [] },
           ] : group.label === "Nhân sự" ? [
-            { title: "Nhân viên", items: res(["employees"]) },
+            { title: "Nhân viên", items: [...ops(["hr-setup"]), ...res(["employees"])] },
             { title: "Phân công và chấm công", items: ops(["workforce", "my-work", "job-types"]) },
-            { title: "Tiền lương", items: ops(["payroll", "payroll-payments"]) },
+            { title: "Tiền lương", items: ops(["payroll", "payroll-payments", "labor-costs"]) },
           ] : group.label === "Kinh doanh" ? [
             { title: "Bán hàng", items: [...pick(["/sales/orders"], productLinks), ...ops(["sales-invoice-list", "sales-returns"]), ...pick(["/sales/disposals"], productLinks)] },
             { title: "Khách hàng", items: [...res(["customers"]), ...ops(["purchase-requests", "quality-claims", "claim-reports"])] },

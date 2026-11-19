@@ -28,7 +28,8 @@ describe("workforce day board in the management design", () => {
     render(<WorkforceScreen />);
     await screen.findByText("Nhân viên An");
     const closed = screen.getByText("Nhân viên An").closest("tr")!;
-    expect(within(closed).getAllByRole("button")).toHaveLength(1);
+    // The chevron and the one-click check-in; the detail footer actions stay hidden.
+    expect(within(closed).getAllByRole("button")).toHaveLength(2);
     for (const name of footerButtons) expect(screen.queryByRole("button", { name })).toBeNull();
     fireEvent.click(screen.getByText("Nhân viên An"));
     expect(screen.getByRole("region", { name: "Chi tiết phân công Nhân viên An" })).toBeTruthy();
@@ -61,14 +62,13 @@ describe("workforce day board in the management design", () => {
     expect(screen.queryByRole("button", { name: "Tạo phân công" })).toBeNull();
   });
 
-  it("confirms and sends a check-in from the opened row", async () => {
+  it("sends a check-in from the opened row in one click", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: [row("a", "Nhân viên An")] });
     mocks.write.mockResolvedValue({ status: "success", data: row("a", "Nhân viên An") });
     render(<WorkforceScreen />);
     await screen.findByText("Nhân viên An");
     fireEvent.click(screen.getByRole("button", { name: "Mở phân công Nhân viên An" }));
     fireEvent.click(screen.getByRole("button", { name: "Ghi vào làm" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect(mocks.write).toHaveBeenCalledOnce());
     expect(mocks.write.mock.calls[0][0]).toBe("check-in");
     expect(mocks.write.mock.calls[0][3]).toBe("a");
@@ -87,13 +87,15 @@ describe("workforce day board in the management design", () => {
     mocks.read.mockResolvedValue({ status: "success", data: [] });
     render(<WorkforceScreen />);
     await screen.findByText("Chưa có phân công cho ngày này.");
-    expect(mocks.read.mock.calls.at(-1)?.[1]).toEqual({ day: businessToday() });
+    // The day list is read per day (the night shift of yesterday is read too, only for today).
+    const listed = () => mocks.read.mock.calls.filter((call) => call[0] === "list").map((call) => (call[1] as { day: string }).day);
+    expect(listed()).toContain(businessToday());
     fireEvent.click(screen.getByRole("button", { name: "Ngày trước" }));
-    await waitFor(() => expect(mocks.read.mock.calls.at(-1)?.[1]).toEqual({ day: shiftDay(-1) }));
+    await waitFor(() => expect(listed()).toContain(shiftDay(-1)));
     fireEvent.click(screen.getByRole("button", { name: "Hôm nay" }));
-    await waitFor(() => expect(mocks.read.mock.calls.at(-1)?.[1]).toEqual({ day: businessToday() }));
+    await waitFor(() => expect(listed().filter((day) => day === businessToday()).length).toBeGreaterThan(1));
     fireEvent.click(screen.getByRole("button", { name: "Thao tác khác" }));
-    for (const name of ["Đổi việc trong ngày", "Thiết lập chấm công", "Duyệt nghỉ phép"]) expect(screen.getByRole("button", { name })).toBeTruthy();
+    for (const name of ["Đổi việc trong ngày", "Thiết lập chấm công", "Duyệt yêu cầu"]) expect(screen.getByRole("button", { name })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Loại công việc/ })).toBeTruthy();
   });
 
@@ -104,7 +106,7 @@ describe("workforce day board in the management design", () => {
     fireEvent.click(screen.getByLabelText("Đang làm", { selector: "input" }));
     expect(screen.queryByText("Nhân viên An")).toBeNull();
     expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
-    expect(mocks.read).toHaveBeenCalledTimes(1);
+    expect(mocks.read.mock.calls.filter((call) => call[0] === "list" && (call[1] as { day: string }).day === businessToday())).toHaveLength(1);
   });
 
   it("keeps the error state with a retry when the list API fails", async () => {

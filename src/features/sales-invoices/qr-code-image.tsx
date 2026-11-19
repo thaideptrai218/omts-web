@@ -21,14 +21,14 @@ export function qrSvgPath(matrix: readonly (readonly boolean[])[]): string {
  * Mã QR vẽ bằng SVG nội tuyến từ chuỗi VietQR (không tải ảnh từ ngoài, không thư viện). Nền trắng và vùng yên tĩnh 4 ô để máy quét ngân hàng đọc được
  * cả khi giao diện tối. Chuỗi quá dài cho bộ mã hóa thì trả null: nơi gọi hiển thị thông tin chuyển khoản bằng chữ.
  */
-export function QrCodeImage({ value, label, className }: { value: string; label: string; className?: string }) {
+export function QrCodeImage({ value, label, className, size }: { value: string; label: string; className?: string; size?: number }) {
   const drawing = useMemo(() => {
     const matrix = encodeQrMatrix(value);
     return matrix ? { size: matrix.length + QUIET_ZONE * 2, path: qrSvgPath(matrix) } : undefined;
   }, [value]);
   if (!drawing) return null;
   return (
-    <svg role="img" aria-label={label} viewBox={`0 0 ${drawing.size} ${drawing.size}`} shapeRendering="crispEdges" className={className} xmlns="http://www.w3.org/2000/svg">
+    <svg role="img" aria-label={label} width={size} height={size} viewBox={`0 0 ${drawing.size} ${drawing.size}`} shapeRendering="crispEdges" className={className} xmlns="http://www.w3.org/2000/svg">
       <rect width={drawing.size} height={drawing.size} fill="#fff" />
       <path d={drawing.path} fill="#000" />
     </svg>

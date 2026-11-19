@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { PurchaseReturnsScreen } from "@/features/purchase-documents/returns-screen";
-export const metadata: Metadata = { title: "Trả giống nhập | HTX Trung Nam" };
+export const metadata: Metadata = { title: "Trả giống nhập" };
 export const instant = false;
 export default async function Page() {
   await connection();

@@ -13,6 +13,9 @@ export const personalFields = [
   ["otherInformation", "Thông tin khác", 1000], ["notes", "Ghi chú", 1000],
 ] as const;
 type PersonalKey = typeof personalFields[number][0];
+/** What the backend still applies to an employee who has left (EmployeeService: Left profile); every other field is ignored there. */
+export const leftEditablePersonalKeys: readonly PersonalKey[] = ["phone", "address", "area", "wardCommune", "otherInformation", "notes"];
+export const LEFT_EDIT_HINT = "Nhân viên đã nghỉ việc: chỉ sửa được số điện thoại, địa chỉ, ghi chú và ngân hàng.";
 
 /** Read-only value of one personal field, in the order of `personalFields`. */
 export function personalDisplayRows(employee: Employee): [string, string | null][] {
@@ -30,7 +33,7 @@ export function personalDisplayRows(employee: Employee): [string, string | null]
 }
 
 /** The read and edit states share the same field order and grid. */
-export function EmployeeInlinePersonalFields({ values, setValues, errorProps, errors }: EmployeeEditorFieldsProps & { errors(path: string): string | undefined }) {
+export function EmployeeInlinePersonalFields({ values, setValues, errorProps, errors, only }: EmployeeEditorFieldsProps & { errors(path: string): string | undefined; only?: readonly PersonalKey[] }) {
   const set = (key: PersonalKey, value: string) => setValues(current => ({ ...current, [key]: value }));
   const control_ = (key: PersonalKey, label: string, max: number | undefined) => {
     if (key === "notes" || key === "otherInformation") return <Note label={label} maxLength={max} {...errorProps(key)} value={values[key]} onChange={event => set(key, event.target.value)} />;
@@ -43,7 +46,7 @@ export function EmployeeInlinePersonalFields({ values, setValues, errorProps, er
     return <Field label={key === "fullName" ? `${label} *` : label} required={key === "fullName"} type="text"
       maxLength={max} inputMode={key === "idNumber" ? "numeric" : undefined} pattern={key === "idNumber" ? "([0-9]{9}|[0-9]{12})" : key === "code" ? "[A-Za-z0-9-]{1,20}" : undefined} autoComplete="off" {...errorProps(key)} value={values[key]} onChange={event => set(key, key === "code" ? event.target.value.toUpperCase() : key === "idNumber" ? digitsOnly(event.target.value, 12) : event.target.value)} />;
   };
-  return <div className={styles.fields}>{personalFields.map(([key, label, max]) => <div key={key}>
+  return <div className={styles.fields}>{personalFields.filter(([key]) => !only || only.includes(key)).map(([key, label, max]) => <div key={key}>
     {control_(key, label, max)}
     {key === "code" && !errors(key) && <p className={styles.hint}>Chữ, số và dấu gạch ngang, tối đa 20 ký tự. Không trùng mã khác.</p>}
     {errors(key) && <p id={`employee-inline-error-${key}`} role="alert" className={styles.fieldError}>{errors(key)}</p>}

@@ -7,8 +7,9 @@ import type { OperationPlan } from "./operation-plan";
 
 const area = "lot-tracing" as const, id = z.guid(), code = z.string().trim().max(100);
 const readQuery = z.strictObject({
-  action: z.enum(["search", "trace", "export", "publish-check", "cycles", "records", "log-preview", "lot-photos", "seed-lots", "withdraw-preview", "withdrawal-notices"]),
-  id: id.optional(), lotCode: code.optional(), invoiceCode: code.optional(),
+  action: z.enum(["search", "trace", "export", "publish-check", "cycles", "records", "log-preview", "lot-photos", "seed-lots", "withdraw-preview", "withdrawal-notices", "seed-forward"]),
+  id: id.optional(), lotCode: code.optional(), invoiceCode: code.optional(), raftCode: code.optional(), productName: code.optional(), term: code.optional(),
+  harvestFrom: z.iso.date().optional(), harvestTo: z.iso.date().optional(),
 });
 const writeInput = z.strictObject({
   action: z.enum(["publish", "withdraw", "seeding-preview", "seeding-correct", "lot-preview"]), id, zoneId: z.undefined().optional(), body: z.unknown().default({}),
@@ -25,15 +26,18 @@ export function lotTracingPlan(method: string, query: URLSearchParams, input?: u
   if (method === "GET") {
     const parsed = readQuery.safeParse(Object.fromEntries(query));
     if (!parsed.success) return;
-    const { action, id: recordId, lotCode, invoiceCode } = parsed.data;
+    const { action, id: recordId, lotCode, invoiceCode, raftCode, productName, term, harvestFrom, harvestTo } = parsed.data;
     const base = { area, action, method: "GET" as const };
     if (action === "search") {
       const filter = new URLSearchParams();
-      if (lotCode) filter.set("lotCode", lotCode);
-      if (invoiceCode) filter.set("invoiceCode", invoiceCode);
-      return recordId || !filter.size ? undefined : { ...base, path: `/api/harvest-lots/trace-search?${filter}`, permission: "View", schema: t.searchResult };
+      for (const [key, value] of Object.entries({ lotCode, invoiceCode, raftCode, productName, harvestFrom, harvestTo })) if (value) filter.set(key, value);
+      return recordId || term !== undefined || !filter.size ? undefined : { ...base, path: `/api/harvest-lots/trace-search?${filter}`, permission: "View", schema: t.searchResult };
     }
-    if (!recordId || lotCode !== undefined || invoiceCode !== undefined) return;
+    // Truy xuất xuôi từ lô giống / nhà cung cấp (phục vụ thu hồi giống lỗi).
+    if (action === "seed-forward") {
+      return term && !recordId && !lotCode && !invoiceCode ? { ...base, path: `/api/harvest-lots/trace-by-seed-lot?${new URLSearchParams({ term })}`, permission: "View", schema: t.seedForwardTrace } : undefined;
+    }
+    if (!recordId || [lotCode, invoiceCode, raftCode, productName, term, harvestFrom, harvestTo].some((value) => value !== undefined)) return;
     const lot = `/api/harvest-lots/${recordId}`;
     switch (action) {
       case "trace": return { ...base, path: `${lot}/trace`, permission: "View", schema: t.lotTrace };

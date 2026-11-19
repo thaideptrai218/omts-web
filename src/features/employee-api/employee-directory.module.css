@@ -1,4 +1,4 @@
-﻿.railHead { display:flex; align-items:center; justify-content:space-between; font-size:13px; }
+.railHead { display:flex; align-items:center; justify-content:space-between; font-size:13px; }
 .zoneSelect { width:100%; min-width:0; height:30px; padding:0 6px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; }
 .feedback { flex:none; padding:8px 12px; border-bottom:1px solid var(--omts-color-border); font-size:13px; }
 .table { width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:13px; }
@@ -22,3 +22,6 @@
 @keyframes pulse { 50% { opacity:.5; } }
 @media (prefers-reduced-motion:reduce) { .skeleton > div { animation:none; } }
 @media (max-width:900px) { .table { min-width:650px; } }
+.nameCell { display:flex; align-items:center; gap:8px; min-width:0; }
+.avatar { flex:none; display:inline-grid; place-items:center; width:28px; height:28px; border-radius:999px; background:var(--omts-color-surface-subtle); color:var(--omts-color-text-muted); font-size:12px; font-weight:700; }
+.debt { display:block; white-space:nowrap; font-variant-numeric:tabular-nums; text-align:right; }

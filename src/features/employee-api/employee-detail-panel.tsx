@@ -8,13 +8,15 @@ import { businessToday, ErrorNotice, Skeleton, useMutation } from "@/features/op
 import { employmentChangedSchema, type Employee } from "./contracts";
 import { EmployeeDetailTabs } from "./employee-detail-tabs";
 import { employmentLabel } from "./employee-editor-model";
+import { accountNoteText, type EndEmploymentChoice } from "./employee-end-employment-dialog";
 import { EmployeeStatusActionDialog, type EmployeeStatusAction } from "./employee-status-action-dialog";
 import { useEmployeeDetail, type EmployeeDetailCache } from "./use-employee-detail";
 import type { EmployeeLeaveGuard } from "./use-employee-inline-editor";
 import styles from "./employee-detail.module.css";
 
 export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, jobTypes, lookupsReady, onGuardChange, payroll }: {
-  payroll?: boolean; id: string; cache: EmployeeDetailCache; onOpen?(id: string): void; onSaved(employee: Employee): void; revision?: number;
+  /** `note`: what happened to the linked account when employment ended; the directory adds it to its confirmation. */
+  payroll?: boolean; id: string; cache: EmployeeDetailCache; onOpen?(id: string): void; onSaved(employee: Employee, note?: string): void; revision?: number;
   zones?: ApiRecord[]; jobTypes?: { id: string; name: string }[]; lookupsReady?: boolean; onGuardChange?(guard: EmployeeLeaveGuard | undefined): void;
 }) {
   const detail = useEmployeeDetail(id, cache, revision);
@@ -24,13 +26,13 @@ export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, j
   const [reviewRequested, setReviewRequested] = useState(false);
   const employee = detail.data;
   function reload() { cache.delete(id); detail.reload(); }
-  async function confirm() {
+  async function confirm(choice?: EndEmploymentChoice) {
     if (!employee || !action || !employee.canMaintain || detail.loading || mutation.busy() || mutation.blocked) return;
     const result = await mutation.run(() => repository.write(action, {
-      rowVersion: employee.rowVersion, ...(action === "end-employment" ? { lastWorkingDay: businessToday() } : {}),
+      rowVersion: employee.rowVersion, ...(action === "end-employment" ? { lastWorkingDay: choice?.lastWorkingDay ?? businessToday(), ...(choice?.lockAccount ? { lockAccount: true } : {}) } : {}),
     }, employmentChangedSchema, id));
     setAction(undefined);
-    if (result) onSaved(result.employee);
+    if (result) onSaved(result.employee, action === "end-employment" ? accountNoteText(result) : undefined);
   }
   function saved(record: Employee) { cache.set(id, record); onSaved(record); detail.reload(); }
   return <section id={`employee-preview-${id}`} className={styles.detail} aria-label="Chi tiết nhân viên">
@@ -45,7 +47,7 @@ export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, j
         <div><h3>{employee.fullName}</h3><StatusPill tone={employee.status === "Employed" ? "success" : "neutral"}>{employmentLabel(employee.status)}</StatusPill></div>
       </header>
       <EmployeeDetailTabs employee={employee} onSaved={saved} onRefresh={reload} busy={detail.loading || mutation.pending || mutation.blocked} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={onGuardChange} payroll={payroll} onStatusAction={() => { setAction(employee.status === "Employed" ? "end-employment" : "resume"); }} />
-      {action && <EmployeeStatusActionDialog action={action} baseline={employee} pending={mutation.pending} busy={mutation.busy} onCancel={() => setAction(undefined)} onConfirm={() => void confirm()} />}
+      {action && <EmployeeStatusActionDialog action={action} baseline={employee} pending={mutation.pending} busy={mutation.busy} onCancel={() => setAction(undefined)} onConfirm={(choice) => void confirm(choice)} />}
     </>}
   </section>;
 }

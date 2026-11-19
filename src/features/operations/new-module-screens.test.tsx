@@ -35,6 +35,7 @@ describe("new API read screens", () => {
   it("renders absent attendance truthfully in the attendance view of the workforce day", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: [{ id: ids.receipt, employeeId: ids.item, employeeName: "QA nhân viên", zoneId: ids.zone, raftId: null, raftCode: null, jobTypeId: null, job: "Chăm sóc", date: "2026-10-31", checkedInAt: null, checkedOutAt: null }] });
     render(<WorkforceScreen />); await screen.findByText("QA nhân viên"); fireEvent.click(screen.getByRole("tab",{name:"Chấm công"})); expect(screen.getAllByText("Chưa ghi nhận")).toHaveLength(2);
-    expect(mocks.read).toHaveBeenCalledTimes(1);
+    // The day list, plus yesterday's list for the night shift still open.
+    expect(mocks.read.mock.calls.filter((call) => call[0] === "list")).toHaveLength(2);
   });
 });

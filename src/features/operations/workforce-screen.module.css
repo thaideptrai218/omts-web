@@ -49,3 +49,9 @@
 @media (prefers-reduced-motion:reduce) { .skeleton > div { animation:none; } }
 /* Owner leave-review dialog */
 .paging { margin-top:12px; font-size:13px; }
+.warn { color:var(--omts-color-danger, #b42318); font-weight:600; font-size:12px; }
+.checkCell { width:32px; padding-inline:6px!important; min-width:0!important; }
+.bulkResults { margin:8px 12px; padding:10px 12px; border:1px solid var(--omts-color-border); border-radius:6px; font-size:13px; background:var(--omts-color-surface); }
+.bulkResults ul { margin:6px 0 0; padding:0; list-style:none; display:grid; gap:4px; }
+.bulkFail { color:var(--omts-color-danger, #b42318); }
+.badge { display:inline-grid; place-items:center; min-width:18px; height:18px; margin-left:6px; padding:0 5px; border-radius:9px; background:var(--omts-color-danger, #b42318); color:#fff; font-size:11px; font-weight:700; }

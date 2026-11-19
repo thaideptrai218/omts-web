@@ -20,7 +20,8 @@ describe("employee fixed operation plans", () => {
     expect(planEmployeeApi("GET", new URLSearchParams("action=list"))?.path).not.toContain("statusId");
     expect(planEmployeeApi("GET", new URLSearchParams("action=list&statusId=401"))?.path).toContain("statusId=401");
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "unlink", id: employeeId, body: { rowVersion: "AAAAAAAA+/8=" } })).toBeUndefined();
-    expect(planEmployeeApi("GET", new URLSearchParams("action=linkable-accounts"))).toBeUndefined();
+    expect(planEmployeeApi("GET", new URLSearchParams("action=linkable-accounts"))?.path).toContain("unlinked=true");
+    expect(planEmployeeApi("GET", new URLSearchParams("action=linkable-accounts&target=x"))).toBeUndefined();
     expect(planEmployeeApi("GET", new URLSearchParams("action=job-types"))?.path).toBe("/api/job-types/options");
   });
   it.each([{ ...body(), account: { username: "x", subjectType: "CooperativeOwner" } }, { ...body(), account: { username: "x", grants: [] } }, { ...body(), account: { username: "  " } }, { ...body(), statusId: 402 }, { ...body(), rowVersion: "" }, { ...body(), birthday: "2999-01-01" }])("rejects creation of credentials, status bypass and invalid personal data", (input) => expect(planEmployeeApi("POST", new URLSearchParams(), { action: "create", body: input })).toBeUndefined());

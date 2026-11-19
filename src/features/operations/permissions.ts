@@ -1,5 +1,5 @@
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
-export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "end-of-day-report", "product-report", "customer-report", "supplier-report", "financial-report", "purchase-requests", "workforce", "my-work", "seed-lots"] as const;
+export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "end-of-day-report", "product-report", "customer-report", "supplier-report", "financial-report", "purchase-requests", "workforce", "my-work", "seed-lots", "labor-costs", "payroll-settings", "hr-setup"] as const;
 export type OperationArea = typeof operationAreas[number];
 /** Báo cáo kiểu KiotViet chưa có màn: ẩn khỏi menu/dashboard và bị từ chối ở mọi lớp cho tới khi màn xong (xoá khỏi danh sách khi hoàn thành). */
 const unfinishedAreas: readonly OperationArea[] = [];
@@ -36,12 +36,18 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "workforce", title: "Phân công và chấm công", functionCode: "WORK_ASSIGNMENTS" },
   { key: "my-work", title: "Công việc và nghỉ phép", functionCode: "" },
   { key: "seed-lots", title: "Lô giống", functionCode: "PURCHASE_RECEIPTS" },
+  { key: "labor-costs", title: "Chi phí nhân công", functionCode: "PAYROLL" },
+  { key: "payroll-settings", title: "Thiết lập kỳ lương", functionCode: "" },
+  { key: "hr-setup", title: "Thiết lập nhân sự", functionCode: "" },
 ];
 export function operationAllowed(area: OperationArea, identity: { subjectType: string }, permissions: readonly FunctionPermission[], action = "View", zoneId?: string) {
   if (unfinishedAreas.includes(area)) return false;
   if (area === "my-work") return identity.subjectType === "Staff";
-  // Bảng lương và Thanh toán lương: luật cứng chỉ dành cho Chủ hợp tác xã, không theo quyền chức năng đã chọn.
-  if (area === "payroll" || area === "payroll-payments") return identity.subjectType === "CooperativeOwner";
+  // Thiết lập kỳ lương và Thiết lập nhân sự: chỉ Chủ hợp tác xã (backend: RequireCooperativeOwner; Kế toán không đọc được thiết lập chấm công).
+  if (area === "payroll-settings" || area === "hr-setup") return identity.subjectType === "CooperativeOwner";
+  // Bảng lương, Thanh toán lương và Chi phí nhân công: Chủ hợp tác xã làm mọi việc; Kế toán (PAYROLL View/Export) chỉ xem và xuất, mọi thao tác ghi vẫn chỉ của Chủ.
+  if (area === "payroll" || area === "payroll-payments" || area === "labor-costs") return identity.subjectType === "CooperativeOwner"
+    || identity.subjectType === "Staff" && (action === "View" || action === "Export") && permissions.some((p) => p.functionCode === "PAYROLL" && p.action === action);
   // Báo vấn đề chất lượng chỉ dành cho thương lái: Chủ HTX không có hồ sơ khách hàng nên backend trả 403.
   if (area === "claim-reports") return identity.subjectType === "Trader";
   // Thanh toán của khách là chức năng toàn HTX (không theo vùng): Chủ HTX hoặc nhân viên có quyền CUSTOMER_PAYMENTS đúng hành động.

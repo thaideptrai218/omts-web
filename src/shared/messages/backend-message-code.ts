@@ -6,6 +6,8 @@ const categories: Readonly<Record<string, string>> = {
   "MSG-GEN-01": "MSG01", "MSG-GEN-02": "MSG03", "MSG-GEN-03": "MSG05", "MSG-GEN-04": "MSG09", "MSG-GEN-05": "MSG10", "MSG-GEN-06": "MSG11", "MSG-GEN-08": "MSG02", "MSG-GEN-09": "MSG61", "MSG-GEN-10": "MSG08",
   "MSG-ACCOUNT-02": "MSG57", "MSG-ACCOUNT-03": "MSG14", "MSG-ACCOUNT-04": "MSG67", "MSG-ACCOUNT-05": "MSG12", "MSG-ACCOUNT-06": "MSG69", "MSG-ACCOUNT-07": "MSG13", "MSG-ACCOUNT-08": "MSG68", "MSG-ACCOUNT-09": "MSG01", "MSG-ACCOUNT-10": "MSG18", "MSG-ACCOUNT-11": "MSG18", "MSG-ACCOUNT-13": "MSG04", "MSG-ACCOUNT-14": "MSG17", "MSG-ACCOUNT-15": "NO_VERIFIED_EMAIL", "MSG-ACCOUNT-16": "MSG16", "MSG-ACCOUNT-17": "MSG16", "MSG-ACCOUNT-18": "TOO_MANY_REQUESTS", "MSG-ACCOUNT-19": "MSG62", "MSG-ACCOUNT-20": "MSG15", "MSG-ACCOUNT-21": "MSG22",
   "MSG-WATER-01": "MSG04", "MSG-WATER-05": "MSG28", "MSG-PURCHASE-03": "MSG45", "MSG-PURCHASE-09": "MSG61", "MSG-LABOR-03": "MSG03",
+  // Payroll and attendance rules keep their own meaning (they are not mapped to an older code).
+  "MSG-LABOR-04": "MSG-LABOR-04", "MSG-LABOR-28": "MSG-LABOR-28", "MSG-LABOR-31": "MSG-LABOR-31", "MSG-LABOR-34": "MSG-LABOR-34", "MSG-LABOR-36": "MSG-LABOR-36",
 };
 export function semanticMessageCode(code: unknown): string | undefined {
   return typeof code === "string" ? Object.hasOwn(categories, code) ? categories[code] : code : undefined;

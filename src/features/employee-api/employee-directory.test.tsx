@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -40,7 +40,7 @@ it("closed rows expose only native chevrons, click and keyboard toggle one open 
 it("offers only real columns and remembers browser column choices across mounts", async () => {
   const view = render(<EmployeeDirectory />);
   await screen.findByText(first().fullName);
-  expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["", "Mở dòng", "Mã nhân viên", "Họ và tên", "Số điện thoại", "Loại nhân viên", "Vùng làm việc", "Tình trạng"]);
+  expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["", "Mở dòng", "Mã nhân viên", "Họ và tên", "Số điện thoại", "Loại nhân viên", "Vùng làm việc", "Tình trạng", "Giờ công tháng này", "Nợ lương"]);
   // Sortable headers are real buttons; the job-type column has no server sort.
   expect(screen.getByRole("button", { name: "Họ và tên" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Chọn trường hiển thị" }));

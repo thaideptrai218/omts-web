@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { ProductScreen } from "@/features/products/product-screen";
-export const metadata: Metadata = { title: "Sản phẩm | HTX Trung Nam" };
+export const metadata: Metadata = { title: "Sản phẩm" };
 export const instant = false;
 export default async function Page() {
   await connection();

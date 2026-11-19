@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorNotice, Skeleton } from "@/features/operations/ui";
 import { PublishDialog } from "./publish-dialog";
 import { TraceBackwardPanel } from "./trace-backward-panel";
+import { TraceChainDiagram } from "./trace-chain-diagram";
 import { TraceForwardPanel } from "./trace-forward-panel";
 import { TraceLotHeader } from "./trace-lot-header";
 import { useTraceDetail } from "./use-trace-detail";
@@ -20,6 +21,7 @@ export function TraceDetail({ lotId, onCorrect }: { lotId: string; onCorrect(raf
   return (
     <div className={s.stack}>
       {!d.check && <ErrorNotice error={d.publishing.error ?? d.exporting.error} />}
+      <TraceChainDiagram trace={trace} />
       <TraceLotHeader trace={trace} exporting={d.exporting.pending} publishing={d.publishing.pending && !d.check} onExport={() => void d.exportFile()} onPublish={() => void d.openPublish()} onCorrect={() => onCorrect(trace.raftId, trace.cycleId)} />
       <div className={s.columns}>
         <TraceBackwardPanel trace={trace} />

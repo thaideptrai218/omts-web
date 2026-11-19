@@ -19,3 +19,16 @@ Plan chi tiết: `plans/261119-0100-GH-227-kiotviet-style-reports/`. Tham chiế
 - Giao diện bằng trình duyệt ở 360px/1024px, biểu đồ, nút Tải xuống, in Cuối ngày (đang lệch phải), mở xlsx bằng Excel thật.
 - Test tích hợp backend của dashboard vỡ từ trước do luật "thu hoạch phải có kế hoạch" (MSG-HARVEST-06); chưa sửa.
 - Chưa chạy `npm run build`.
+
+## Truy xuất – sửa ngày 19/11/2026
+- Đã sửa trong mã, CHƯA biên dịch/chạy (phiên không có shell): gỡ `/api/origin/{token}`; BFF chuyển IP + secret; 404 thật qua `src/proxy.ts`; kg cân cảng ở trace nội bộ; lọc thả giống theo ngày thu hoạch; ảnh QR (bộ mã hóa tự viết `features/invoice-qr`) + nhãn in; tên HTX đọc từ `GET api/public/cooperative-brand`.
+- Việc còn lại: build API (`docker compose -p omts up -d --build api`), đổi tên HTX trong DB, chạy lint/typecheck, quét thử QR bằng điện thoại.
+- Dọn tiếp: xóa `PublicOriginService`, `IPublicOriginQuery`, `PublicOriginQuery`, `PublicOriginView` và test `PublicOriginTests.cs` (endpoint đã gỡ).
+
+## Nhân sự + truy xuất – đợt 19/11/2026 (chưa commit)
+- Plan: `plans/261119-1500-GH-227-hr-kiotviet-style/` (A, T, B, D đã làm; C chờ user chọn). Hợp đồng API: `reports/hr-backend-contracts.md`, `reports/hr-wave3-contracts.md`.
+- Backend: EndsAt + migration `20261119150000_WorkAssignmentEndsAt`, ca qua đêm, lương gross trong báo cáo Tài chính, chặn hủy phiếu chi lương, Kế toán xem lương (View/Export), preview nghỉ việc + khóa tài khoản, xuất PDF/Excel bảng lương/phiếu lương/chi phí nhân công.
+- Web: sửa chấm công, vào làm cả tổ, Staff, duyệt hàng loạt, chốt lương có lý do tiếng Việt, chi phí nhân công, thiết lập nhân sự, nghỉ việc an toàn, danh sách NV có giờ công + nợ lương, bảng lương kiểu KiotViet. Truy xuất: sơ đồ chuỗi, tra ngược từ lô giống, QR dùng bộ mã chung, tên HTX từ Cài đặt.
+- Chưa kiểm: các thao tác ghi không hoàn tác (vào/ra hàng loạt, vào làm cả tổ, lưu sửa chấm công, duyệt hàng loạt, ca qua đêm) chỉ đọc code; 2 bài test giờ công mới chưa chạy; test tích hợp backend (quyền Kế toán, tài chính, crew minutes, dashboard) có thể vỡ.
+- Sự cố: agent làm 2 phiếu thanh toán thử 1.000 đ trên dữ liệu demo rồi xóa bằng SQL (gồm audit); dãy số phiếu chi nhảy 2 số.
+- Test web hỏng sẵn: `operations/workflow.test.tsx` (đóng hộp thanh toán NCC sau khi đổi giờ trả không hỏi xác nhận).

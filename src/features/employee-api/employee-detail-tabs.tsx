@@ -11,7 +11,7 @@ import { EmployeeConflictPanel } from "./employee-conflict-panel";
 import { EmployeeEditorBankFields } from "./employee-editor-bank-fields";
 import { EmployeeEditorWorkFields } from "./employee-editor-work-fields";
 import { dateLabel, employeeTypeLabel, employmentLabel } from "./employee-editor-model";
-import { EmployeeInlinePersonalFields, personalDisplayRows } from "./employee-inline-fields";
+import { EmployeeInlinePersonalFields, leftEditablePersonalKeys, LEFT_EDIT_HINT, personalDisplayRows } from "./employee-inline-fields";
 import { ProfileComparison } from "./employee-profile-comparison";
 import { EmployeePayrollTabs } from "./employee-payroll-tabs";
 import { EmployeeTabs, isPayrollTab, type AnyTabKey } from "./employee-tabs";
@@ -30,16 +30,18 @@ export function EmployeeDetailTabs({ employee, onSaved, onRefresh, busy = false,
   const { formRef, editButton, ...editor } = useEmployeeInlineEditor({ employee, active, setActive, zones, lookupsReady, onSaved, onGuardChange });
   const { mutation, editing, baseline, values, setValues, errorProps, fieldError } = editor;
   const denied = <p role="alert">Bạn không có quyền xem thông tin cá nhân và ngân hàng của nhân viên này.</p>;
+  // A Left employee may still get a new phone, address or bank account (to be paid what is owed); everything else is closed.
+  const left = employee.status === "Left";
   const fieldsProps = { values, setValues, errorProps, baseline, availableZones: editor.availableZones, zoneOptions: editor.zoneOptions, jobTypes };
   const content: Record<Exclude<AnyTabKey, "payslips" | "debt">, ReactNode> = {
-    information: !employee.canMaintain ? denied : editing === "information" ? <EmployeeInlinePersonalFields {...fieldsProps} errors={fieldError} /> : <Details fields={personalDisplayRows(employee)} />,
-    work: <>{editing === "work" ? <div className={styles.editFields}><EmployeeEditorWorkFields {...fieldsProps} fieldError={fieldError} /></div> : <Details fields={[
+    information: !employee.canMaintain ? denied : editing === "information" ? <>{left && <p className={styles.hint}>{LEFT_EDIT_HINT}</p>}<EmployeeInlinePersonalFields {...fieldsProps} errors={fieldError} only={left ? leftEditablePersonalKeys : undefined} /></> : <Details fields={personalDisplayRows(employee)} />,
+    work: <>{left && <p className={styles.hint}>Nhân viên đã nghỉ việc nên không sửa được loại công việc và vùng làm việc. Bấm &ldquo;Làm việc lại&rdquo; nếu cần.</p>}{editing === "work" ? <div className={styles.editFields}><EmployeeEditorWorkFields {...fieldsProps} fieldError={fieldError} /></div> : <Details fields={[
       ["Loại nhân viên", employeeTypeLabel(employee.employeeType)], ["Loại công việc", employee.jobTypes.map(job => job.name).join(", ")],
       ["Vùng làm việc", employee.workingZones.map(zone => `${zone.code} · ${zone.name}`).join(", ")], ["Tình trạng làm việc", employmentLabel(employee.status)],
       ["Ngày làm cuối", employee.lastWorkingDay ? dateLabel(employee.lastWorkingDay) : null],
     ]} />}<div className={styles.history}><h4>Lịch sử loại nhân viên</h4>{employee.typeHistory.length ? <ul>{employee.typeHistory.map(period => <li key={`${period.type}-${period.effectiveFrom}`}>{employeeTypeLabel(period.type)} · Từ {dateLabel(period.effectiveFrom)}</li>)}</ul> : <p>Chưa có lịch sử loại nhân viên.</p>}</div></>,
     bank: !employee.canMaintain ? denied : editing === "bank" ? <EmployeeEditorBankFields {...fieldsProps} fieldError={fieldError} /> : employee.bankAccount ? <Details fields={[["Ngân hàng", employee.bankAccount.bankName], ["Số tài khoản", employee.bankAccount.accountNumber], ["Chủ tài khoản", employee.bankAccount.accountHolderName]]} /> : <p>Chưa có thông tin ngân hàng</p>,
-    account: <fieldset disabled={busy}><EmployeeAccountTab employee={employee} onSaved={onSaved} onRefresh={onRefresh} /></fieldset>,
+    account: !employee.canMaintain ? denied : <fieldset disabled={busy}><EmployeeAccountTab employee={employee} onSaved={onSaved} onRefresh={onRefresh} /></fieldset>,
   };
   return <>
     <EmployeeTabs idPrefix={prefix} active={active} onChange={editor.changeTab} payroll={payroll} />
@@ -55,8 +57,8 @@ export function EmployeeDetailTabs({ employee, onSaved, onRefresh, busy = false,
           {/* Distinct keys matter: without them React reuses the clicked "Chỉnh sửa" <button> as the submit "Lưu" button
               during the click, the browser then submits the form and the edit is saved and closed at once. */}
           <div>{editing ? <><Button key="cancel" variant="secondary" disabled={mutation.pending} onClick={editor.cancel}>Bỏ qua</Button><Button key="save" type="submit" disabled={busy || mutation.blocked || !lookupsReady} isPending={mutation.pending}>Lưu</Button></> : <>
-            {(active === "information" || active === "work") && onStatusAction && <Button key="status" variant="secondary" disabled={busy || mutation.pending} onClick={onStatusAction}>{employee.status === "Employed" ? "Ngừng làm việc" : "Cho làm việc lại"}</Button>}
-            <Button key="edit" ref={editButton} type="button" disabled={busy || !lookupsReady} onClick={editor.begin}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>
+            {(active === "information" || active === "work") && onStatusAction && <Button key="status" variant="secondary" disabled={busy || mutation.pending} onClick={onStatusAction}>{employee.status === "Employed" ? "Nghỉ việc" : "Làm việc lại"}</Button>}
+            {!(left && active === "work") && <Button key="edit" ref={editButton} type="button" disabled={busy || !lookupsReady} onClick={editor.begin}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
           </>}</div>
         </footer>}
       </form>}

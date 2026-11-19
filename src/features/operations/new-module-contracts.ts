@@ -23,10 +23,13 @@ export const salesProductSchema = z.object({ id: z.guid(), code: z.string(), nam
 
 export const assignmentSchema = z.object({ id: z.guid(), employeeId: z.guid(), employeeName: z.string(), zoneId: z.guid(), raftId: z.guid().nullable(), raftCode: z.string().nullable(),
   jobTypeId: z.guid().nullable(), job: z.string(), date: z.iso.date(), checkedInAt: z.iso.datetime({ offset: true }).nullable(), checkedOutAt: z.iso.datetime({ offset: true }).nullable(),
-  workedMinutes: z.number().nullish().transform((v) => v ?? null), breakMinutes: z.number().nullish().transform((v) => v ?? null) });
+  workedMinutes: z.number().nullish().transform((v) => v ?? null), breakMinutes: z.number().nullish().transform((v) => v ?? null), onLeave: z.boolean().optional() });
 export type PurchaseRequest = z.infer<typeof purchaseRequestSchema>;
 export const saveProductSchema = z.strictObject({ code: z.string().trim().min(1).max(50), name: z.string().trim().min(1).max(200), description: z.string().max(2000).nullable(), inUse: z.boolean(), rowVersion: z.string().min(1).nullable() });
-export const leaveSchema = z.object({ id: z.guid(), employeeName: z.string(), from: z.iso.date(), to: z.iso.date(), reason: z.string(), approved: z.boolean().nullable(), response: z.string().nullable(), rowVersion: z.string(), cancelledAt: z.iso.datetime({ offset: true }).nullable() });
+/** Request types of the backend (EmployeeRequestType): leave, or the time of a missed check-in / check-out to record once approved. */
+export const requestTypeSchema = z.enum(["Leave", "MissedCheckIn", "MissedCheckOut"]);
+export const leaveSchema = z.object({ id: z.guid(), employeeName: z.string(), from: z.iso.date(), to: z.iso.date(), reason: z.string(), approved: z.boolean().nullable(), response: z.string().nullable(), rowVersion: z.string(), cancelledAt: z.iso.datetime({ offset: true }).nullable(),
+  type: requestTypeSchema.catch("Leave"), requestedTime: z.string().nullish().transform((v) => v ?? null) });
 const periodSchema = z.object({ jobTypeId: z.guid(), job: z.string(), raft: z.string().nullable(), startsAt: z.iso.datetime({ offset: true }), endsAt: z.iso.datetime({ offset: true }), minutes: z.number() });
 const attendanceDaySchema = z.object({ date: z.iso.date(), checkedInAt: z.iso.datetime({ offset: true }).nullable(), checkedOutAt: z.iso.datetime({ offset: true }).nullable(), periods: z.array(periodSchema), jobs: z.array(z.object({ jobTypeId: z.guid(), job: z.string(), hours: z.number() })), complete: z.boolean() });
 export const myWorkSchema = z.object({ employeeId: z.guid().nullable(), name: z.string().nullable(), assignments: z.array(assignmentSchema), attendance: z.array(attendanceDaySchema), requests: z.array(leaveSchema) });

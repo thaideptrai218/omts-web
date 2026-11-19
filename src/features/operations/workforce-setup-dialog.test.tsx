@@ -24,10 +24,10 @@ describe("attendance settings against the backend contract", () => {
   it.each([["0", "None"], ["15", "Minutes15"], ["30", "Minutes30"], ["60", "Hour1"]])("maps the %s minute choice to %s and sends rowVersion", async (minutes, roundingUnit) => {
     render(<WorkforceSetupDialog onClose={vi.fn()} />);
     await waitFor(() => expect((screen.getByLabelText("Nghỉ từ") as HTMLInputElement).value).toBe("11:30"));
-    expect((screen.getByLabelText("Làm tròn (phút)") as HTMLSelectElement).value).toBe("15");
-    expect(screen.getByText("2026-08-01")).toBeTruthy();
+    expect((screen.getByLabelText("Làm tròn xuống (phút)") as HTMLSelectElement).value).toBe("15");
+    expect(screen.getByText("01/08/2026")).toBeTruthy();
     expect(screen.getByText("11:30")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Làm tròn (phút)"), { target: { value: minutes } });
+    fireEvent.change(screen.getByLabelText("Làm tròn xuống (phút)"), { target: { value: minutes } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await screen.findByText("Đã lưu thiết lập chấm công.");
@@ -65,7 +65,7 @@ describe("attendance settings against the backend contract", () => {
     mocks.write.mockResolvedValueOnce({ status: "error", httpStatus: 409, code: "MSG06", uncertain: false });
     render(<WorkforceSetupDialog onClose={vi.fn()} />);
     await waitFor(() => expect((screen.getByLabelText("Nghỉ từ") as HTMLInputElement).value).toBe("11:30"));
-    fireEvent.change(screen.getByLabelText("Làm tròn (phút)"), { target: { value: "60" } });
+    fireEvent.change(screen.getByLabelText("Làm tròn xuống (phút)"), { target: { value: "60" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await screen.findByRole("alert");
@@ -79,7 +79,7 @@ describe("attendance settings against the backend contract", () => {
     mocks.read.mockResolvedValue({ status: "success", data: { ...overview, rowVersion: "BBBB" } });
     fireEvent.click(screen.getByRole("button", { name: "Tải lại thiết lập" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Lưu thiết lập" }).matches(":disabled")).toBe(false));
-    expect((screen.getByLabelText("Làm tròn (phút)") as HTMLSelectElement).value).toBe("60");
+    expect((screen.getByLabelText("Làm tròn xuống (phút)") as HTMLSelectElement).value).toBe("60");
     fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await screen.findByText("Đã lưu thiết lập chấm công.");

@@ -9,6 +9,7 @@ import { PayrollDataTable, type DataColumn } from "./payroll-data-table";
 import { formatDateTime, kindLabel, methodLabel, paymentStatusLabel, rangeLabel } from "./payroll-model";
 import { StandalonePaymentDialog } from "./payroll-standalone-payment-dialog";
 import { payrollRepository } from "./repository";
+import { usePayrollWriter } from "./use-payroll-writer";
 import type { EmployeeSlipRow, PaymentRow } from "./contracts";
 import s from "./payroll-screen.module.css";
 
@@ -27,7 +28,7 @@ const paymentColumns: readonly DataColumn<PaymentRow>[] = [
 
 /** The "Nợ và tạm ứng" tab of an employee: debt and advance totals, finalized payslips, payments made, and "Thanh toán lương". */
 export function EmployeeDebtTab({ employeeId, employeeName }: { employeeId: string; employeeName: string }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [paying, setPaying] = useState(false), [notice, setNotice] = useState<string>();
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [paying, setPaying] = useState(false), [notice, setNotice] = useState<string>(), writer = usePayrollWriter();
   const slips = useRemote(useCallback((signal: AbortSignal) => payrollRepository.employeeSlips(employeeId, { status: "Finalized", page: 1, pageSize: 100 }, signal), [employeeId]));
   const payments = useRemote(useCallback((signal: AbortSignal) => payrollRepository.payments({ search: "", from: "", to: "", page, pageSize, employeeId }, signal), [employeeId, page, pageSize]));
   const owed = slips.data?.summary.outstanding;
@@ -43,7 +44,7 @@ export function EmployeeDebtTab({ employeeId, employeeName }: { employeeId: stri
     <h4 className={s.sectionTitle}>Lịch sử thanh toán và tạm ứng</h4>
     <div className={s.subTable}><PayrollDataTable caption="Thanh toán và tạm ứng của nhân viên" columns={paymentColumns} rows={payments.data.items} emptyText="Chưa có thanh toán hoặc tạm ứng." /></div>
     <ManagementPagination page={payments.data.page} pageSize={pageSize} total={payments.data.total} unit="phiếu chi" onPage={setPage} onPageSize={(size) => { setPageSize(size); setPage(1); }} />
-    <footer className={s.footer}><div /><div><Button key="pay" className="w-auto" type="button" onClick={() => setPaying(true)}><InterfaceIcon name="payment" className="size-4" />Thanh toán lương</Button></div></footer>
+    {writer && <footer className={s.footer}><div /><div><Button key="pay" className="w-auto" type="button" onClick={() => setPaying(true)}><InterfaceIcon name="payment" className="size-4" />Thanh toán lương</Button></div></footer>}
     {paying && <StandalonePaymentDialog employee={payee} onClose={() => setPaying(false)} onPaid={() => { setPaying(false); setNotice("Đã tạo phiếu chi. Phiếu chi xuất hiện trong Sổ quỹ."); slips.reload(); payments.reload(); }} />}
   </div>;
 }

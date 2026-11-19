@@ -38,6 +38,8 @@ const line = z.object({
   // PriceList | DecidedByOwner | OrderPrice (giá của dòng đơn đặt hàng): chỉ dùng để hiển thị nhãn, nên không chặn giá trị mới.
   priceSource: z.string(), amount: money, soldWholeLot: z.boolean(),
   unit: lineUnit.nullish(), quantity: money.nullish(), salesOrderLineId: id.nullish(),
+  // Ngày thu hoạch của lô (dùng cho nhãn in QR); backend cũ không trả.
+  harvestDate: z.iso.date().nullish(),
 });
 const sending = z.object({ channel: z.string(), phoneNumber: z.string().nullable(), deliveryStatusId: z.number().int(), deliveryStatus: z.string(), deliveryStatusAt: at.nullable() });
 

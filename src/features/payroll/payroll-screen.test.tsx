@@ -97,11 +97,12 @@ it("opens a row in place with the tabs Thông tin and Phiếu lương", async ()
   const totals = screen.getByTestId("payroll-sheet-totals").textContent ?? "";
   expect(totals).toContain("3.000.000"); expect(totals).toContain("1.000.000"); expect(totals).toContain("2.000.000");
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
-  for (const heading of ["Mã phiếu lương", "Tên nhân viên", "Lương chính", "Thưởng", "Giảm trừ", "Tổng thu nhập", "Lương thực nhận", "Đã trả", "Còn cần trả"]) {
+  for (const heading of ["Mã phiếu lương", "Tên nhân viên", "Giờ công", "Lương chính", "Thưởng/Phụ cấp", "Tạm ứng trừ", "Tổng thu nhập", "Thực lĩnh", "Đã trả", "Còn cần trả"]) {
     expect(screen.getAllByRole("columnheader", { name: heading }).length).toBeGreaterThan(0);
   }
   expect(screen.getByText("PL000001")).toBeTruthy();
-  expect(screen.getByText("100 giờ × 30.000")).toBeTruthy();
+  expect(screen.getAllByText("100h00").length).toBeGreaterThan(0);
+  expect(screen.getByText("× 30.000")).toBeTruthy();
 });
 
 it("offers footer actions by status: Tạm tính, Đã chốt lương, Đã hủy", async () => {
@@ -109,30 +110,30 @@ it("offers footer actions by status: Tạm tính, Đã chốt lương, Đã hủ
   render(<PayrollScreen />);
   await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
   const names = () => within(screen.getByRole("group", { name: "Thao tác bảng lương" })).getAllByRole("button").map((button) => button.textContent);
-  await waitFor(() => expect(names()).toEqual(["Tải lại dữ liệu", "Hủy bỏ", "Xuất file", "Chốt lương"]));
+  await waitFor(() => expect(names()).toEqual(["Tải lại dữ liệu", "Hủy bỏ", "Tải xuống▾", "Chốt lương"]));
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
-  expect(names()).toEqual(["Tải lại dữ liệu", "Hủy bỏ", "Xuất file", "Chốt lương"]);
+  expect(names()).toEqual(["Tải lại dữ liệu", "Hủy bỏ", "Tải xuống▾", "Chốt lương"]);
   cleanup();
 
   state.repo.detail.mockResolvedValue(ok(detail({ status: "Finalized", expenseMonth: "2026-05" })));
   render(<PayrollScreen />);
   await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
-  await waitFor(() => expect(names()).toEqual(["Xuất file"]));
+  await waitFor(() => expect(names()).toEqual(["Tải xuống▾"]));
   expect(screen.getByText("Tháng 05/2026")).toBeTruthy();
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
-  expect(names()).toEqual(["Xuất file", "Thanh toán"]);
+  expect(names()).toEqual(["Tải xuống▾", "Thanh toán"]);
   await user.click(screen.getByRole("tab", { name: "Lịch sử thanh toán" }));
-  expect(names()).toEqual(["Xuất file", "Thanh toán"]);
+  expect(names()).toEqual(["Tải xuống▾", "Thanh toán"]);
   cleanup();
 
   state.repo.detail.mockResolvedValue(ok(detail({ status: "Cancelled" })));
   render(<PayrollScreen />);
   await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
-  await waitFor(() => expect(names()).toEqual(["Xuất file"]));
+  await waitFor(() => expect(names()).toEqual(["Tải xuống▾"]));
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
-  expect(names()).toEqual(["Xuất file"]);
+  expect(names()).toEqual(["Tải xuống▾"]);
   await user.click(screen.getByRole("tab", { name: "Lịch sử thanh toán" }));
-  expect(names()).toEqual(["Xuất file"]);
+  expect(names()).toEqual(["Tải xuống▾"]);
 });
 
 it("opens a payslip from its code: income lines, payments and attendance", async () => {
@@ -146,10 +147,10 @@ it("opens a payslip from its code: income lines, payments and attendance", async
   await user.click(code);
   const panel = await screen.findByRole("region", { name: "Chi tiết phiếu lương PL000001" });
   expect(state.repo.slip).toHaveBeenCalledWith(ids.slipA, expect.anything());
-  expect(within(panel).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Thu nhập và giảm trừ", "Thanh toán", "Chấm công chi tiết"]);
+  expect(within(panel).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Thanh toán", "Chấm công chi tiết"]);
   expect(within(panel).getByText("Thu hoạch")).toBeTruthy();
   await user.click(within(panel).getByRole("tab", { name: "Chấm công chi tiết" }));
-  expect(within(panel).getByText("8")).toBeTruthy();
+  expect(within(panel).getByText("8h00")).toBeTruthy();
   await user.click(code);
   expect(screen.queryByRole("region", { name: "Chi tiết phiếu lương PL000001" })).toBeNull();
 });
@@ -206,8 +207,8 @@ it("finalizes with the expense month defaulting to the period end month, after a
   expect(dialog.textContent).toContain("bị khóa");
   expect((within(dialog).getByRole("combobox") as HTMLSelectElement).value).toBe("2026-05");
   await user.selectOptions(within(dialog).getByRole("combobox"), "2026-06");
-  await user.click(within(dialog).getByRole("button", { name: "Xác nhận" }));
-  await waitFor(() => expect(state.repo.finalize).toHaveBeenCalledWith(ids.a, "2026-06"));
+  await user.click(within(dialog).getByRole("button", { name: "Xác nhận chốt" }));
+  await waitFor(() => expect(state.repo.finalize).toHaveBeenCalledWith(ids.a, "2026-06", expect.objectContaining({ slips: expect.any(Number) })));
   expect(await screen.findByText(/Đã chốt lương\. Dữ liệu trong kỳ đã được khóa/)).toBeTruthy();
 });
 
@@ -217,7 +218,7 @@ it("keeps the dialog and shows the error when finalizing fails; Bỏ qua changes
   render(<PayrollScreen />);
   await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
   await user.click(await screen.findByRole("button", { name: "Chốt lương" }));
-  await user.click(within(screen.getByRole("dialog", { name: "Xác nhận chốt lương" })).getByRole("button", { name: "Xác nhận" }));
+  await user.click(within(screen.getByRole("dialog", { name: "Xác nhận chốt lương" })).getByRole("button", { name: "Xác nhận chốt" }));
   expect((await screen.findAllByText(/Dữ liệu đã thay đổi/)).length).toBeGreaterThan(0);
   await user.click(within(screen.getByRole("dialog", { name: "Xác nhận chốt lương" })).getByRole("button", { name: "Bỏ qua" }));
   expect(screen.queryByRole("dialog", { name: "Xác nhận chốt lương" })).toBeNull();
@@ -243,8 +244,9 @@ it("exports one sheet and the filtered list", async () => {
   await user.click(screen.getByRole("button", { name: /Xuất file/ }));
   await waitFor(() => expect(state.repo.exportList).toHaveBeenCalledWith(expect.objectContaining({ statuses: ["Creating", "Provisional", "Finalized"] })));
   await user.click(screen.getByText("Bảng lương tháng 5/2026"));
-  await user.click(await within(await screen.findByRole("group", { name: "Thao tác bảng lương" })).findByRole("button", { name: "Xuất file" }));
-  await waitFor(() => expect(state.repo.exportSheet).toHaveBeenCalledWith(ids.a));
+  await user.click(await within(await screen.findByRole("group", { name: "Thao tác bảng lương" })).findByRole("button", { name: "Tải xuống" }));
+  await user.click(screen.getByRole("menuitem", { name: "PDF" }));
+  await waitFor(() => expect(state.repo.exportSheet).toHaveBeenCalledWith(ids.a, "pdf"));
 });
 
 it("creates a monthly sheet from the pop-up: 13 calendar months, scope All by default", async () => {

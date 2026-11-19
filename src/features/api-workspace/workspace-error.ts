@@ -1,9 +1,13 @@
 import type { WorkspaceResult } from "./workspace-repository";
 import { formatMessage } from "@/shared/messages/message-catalog";
 import { isSrsMessageCode } from "@/shared/messages/backend-message-code";
+import { hrProblemMessage } from "@/shared/messages/hr-problem";
 export function workspaceError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
   if (result.httpStatus === 401) return result.uncertain ? "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại và đối chiếu dữ liệu trước khi thực hiện lượt mới." : "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.";
   if (result.httpStatus === 403) return "Bạn không có quyền thực hiện thao tác này.";
+  // Payroll and attendance failures carry the values of their message (names, dates, amounts): fill the Vietnamese template with them.
+  const specific = hrProblemMessage(result.code, result.hrProblem);
+  if (specific) return specific;
   if (isSrsMessageCode(result.code)) return formatMessage({ code: result.code });
   if (result.code === "MSG06") return "Bản ghi đã thay đổi. Hãy tải dữ liệu mới để đối chiếu; bản nháp của bạn vẫn được giữ.";
   if (result.code === "MSG03") return "Thông tin này đã tồn tại. Hãy kiểm tra bản ghi hiện có.";

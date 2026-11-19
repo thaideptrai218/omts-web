@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { DisposalsScreen } from "@/features/product-disposals/disposals-screen";
-export const metadata: Metadata = { title: "Xuất hủy hàu | HTX Trung Nam" };
+export const metadata: Metadata = { title: "Xuất hủy hàu" };
 export const instant = false;
 export default async function Page() {
   await connection();

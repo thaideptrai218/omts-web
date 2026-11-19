@@ -3,6 +3,7 @@ import { raftGeometryFields, raftLaneFields } from "@/features/rafts-api/raft-ge
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
 import { farmingZoneListItemSchema, farmingZoneViewSchema } from "@/features/farming-zones/api/farming-zone-contract.schemas";
 import { employeeListItemSchema, employeeViewSchema } from "@/features/employee-management/api/employee-contract.schemas";
+import { canReadEmployees } from "@/features/employee-api/employee-read-access";
 
 export const resourceKeys = ["zones", "suppliers", "input-items", "employees", "rafts", "accounts", "roles", "customers"] as const;
 export type ResourceKey = typeof resourceKeys[number];
@@ -112,6 +113,8 @@ export function projectResource(resource: ResourceKey, data: unknown, detail: bo
 export function resourceAllowed(resource: ResourceKey, identity: { subjectType: string }, functions: readonly { functionCode: string; action: string }[], action = "View") {
   if (identity.subjectType === "CooperativeOwner") return true;
   const definition = resources[resource];
+  // Nhân viên: Kế toán chỉ xem (không thêm/sửa/xuất); xem canReadEmployees.
+  if (resource === "employees") return action === "View" && canReadEmployees(identity, functions);
   if (definition.ownerOnly || identity.subjectType !== "Staff") return false;
   if (resource === "input-items") return action === "View" && functions.some((entry) =>
     ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYCLES"].includes(entry.functionCode) && entry.action === "View");

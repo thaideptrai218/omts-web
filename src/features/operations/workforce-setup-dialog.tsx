@@ -4,6 +4,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import * as c from "./new-module-contracts";
+import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
+import { formatVietnameseDate } from "@/shared/format/date-only";
 import { DataTable, ErrorNotice, Field, Select, Skeleton, businessToday, useRemote } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
 import { workforceRepository as repository } from "./workforce-shared";
@@ -55,7 +57,7 @@ export function WorkforceSetupDialog({ onClose }: { onClose(): void }) {
       return;
     }
     setError(undefined);
-    const question = `Lưu thiết lập từ ${values.effectiveFrom}, nghỉ ${values.breakFrom || "không có"} đến ${values.breakTo || "không có"}, làm tròn ${values.roundingMinutes} phút?`;
+    const question = `Lưu thiết lập từ ${formatVietnameseDate(values.effectiveFrom)}, nghỉ ${values.breakFrom || "không có"} đến ${values.breakTo || "không có"}, làm tròn xuống ${values.roundingMinutes} phút?`;
     const result = await editor.submit(question, () => repository.write<unknown>("settings", payload.data, c.attendanceSettingsSavedSchema));
     if (result) {
       setInitial(JSON.stringify(values));
@@ -72,10 +74,10 @@ export function WorkforceSetupDialog({ onClose }: { onClose(): void }) {
       <Button variant="secondary" disabled={settings.loading || editor.pending} onClick={settings.reload}>Tải lại thiết lập</Button>
       {settings.loading && <Skeleton />}
       {settings.data && (
-        <DataTable headings={["Hiệu lực", "Nghỉ từ", "Nghỉ đến", "Làm tròn (phút)"]} empty={!settings.data.versions.length}>
+        <DataTable headings={["Hiệu lực", "Nghỉ từ", "Nghỉ đến", "Làm tròn xuống (phút)"]} empty={!settings.data.versions.length}>
           {settings.data.versions.map((r) => (
             <tr key={r.effectiveFrom}>
-              <td>{r.effectiveFrom}</td>
+              <td>{formatVietnameseDate(r.effectiveFrom)}</td>
               <td>{displayClock(r.breakStart) || "—"}</td>
               <td>{displayClock(r.breakEnd) || "—"}</td>
               <td>{c.attendanceRoundingMinutes[r.roundingUnit]}</td>
@@ -85,10 +87,10 @@ export function WorkforceSetupDialog({ onClose }: { onClose(): void }) {
       )}
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <fieldset disabled={editor.disabled || settings.loading || !settings.data} className="space-y-4">
-          <Field label="Ngày hiệu lực *" type="date" required value={values.effectiveFrom} onChange={(e) => setValues({ ...values, effectiveFrom: e.target.value })} />
+          <DatePickerField label="Ngày hiệu lực *" required value={values.effectiveFrom} onChange={(next) => setValues({ ...values, effectiveFrom: next })} />
           <Field label="Nghỉ từ" type="time" step={1} value={values.breakFrom} onChange={(e) => setValues({ ...values, breakFrom: e.target.value })} />
           <Field label="Nghỉ đến" type="time" step={1} value={values.breakTo} onChange={(e) => setValues({ ...values, breakTo: e.target.value })} />
-          <Select label="Làm tròn (phút)" value={values.roundingMinutes} onChange={(e) => setValues({ ...values, roundingMinutes: e.target.value })}>
+          <Select label="Làm tròn xuống (phút)" value={values.roundingMinutes} onChange={(e) => setValues({ ...values, roundingMinutes: e.target.value })}>
             {[0, 15, 30, 60].map((v) => <option key={v} value={v}>{v}</option>)}
           </Select>
           <Button type="submit">Lưu thiết lập</Button>

@@ -25,17 +25,17 @@ function MoreMenu({ board }: { board: WorkforceBoard }) {
   const isOwner = context.identity.subjectType === "CooperativeOwner";
   const dialogs: [WorkforceForm, string][] = [
     ...(allowed("Edit") ? [["crew", "Đổi việc trong ngày"] as [WorkforceForm, string]] : []),
-    ...(isOwner ? [["settings", "Thiết lập chấm công"] as [WorkforceForm, string], ["leaves", "Duyệt nghỉ phép"] as [WorkforceForm, string]] : []),
+    ...(isOwner ? [["settings", "Thiết lập chấm công"] as [WorkforceForm, string], ["leaves", "Duyệt yêu cầu"] as [WorkforceForm, string]] : []),
   ];
   const jobTypes = operationAllowed("job-types", context.identity, context.permissions.functionPermissions);
   if (operationAllowed("job-types", context.identity, context.permissions.functionPermissions, "Create")) dialogs.push(["job", "Thêm loại công việc"]);
   if (!dialogs.length && !jobTypes) return null;
   return <div ref={root} className={managementStyles.picker} onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}>
     <button type="button" className={managementStyles.iconButton} aria-label="Thao tác khác" title="Thao tác khác" aria-haspopup="true" aria-expanded={open} aria-controls={panel} onClick={() => setOpen((value) => !value)}>
-      <span aria-hidden="true" className={styles.dots}>⋯</span>
+      <span aria-hidden="true" className={styles.dots}>⋯</span>{board.pendingRequests > 0 && <span className={styles.badge} aria-hidden="true">{board.pendingRequests}</span>}
     </button>
     {open && <div id={panel} className={managementStyles.pickerPanel}>
-      {dialogs.map(([key, label]) => <button key={key} type="button" className={styles.menuItem} disabled={editor.disabled} onClick={() => { setOpen(false); board.setForm(key); }}>{label}</button>)}
+      {dialogs.map(([key, label]) => <button key={key} type="button" className={styles.menuItem} disabled={editor.disabled} onClick={() => { setOpen(false); board.setForm(key); }}>{label}{key === "leaves" && board.pendingRequests > 0 && <span className={styles.badge} aria-label={`${board.pendingRequests} yêu cầu chờ duyệt`}>{board.pendingRequests}</span>}</button>)}
       {jobTypes && <Link className={styles.menuItem} href="/operations/job-types">Loại công việc &amp; đơn giá</Link>}
     </div>}
   </div>;
@@ -46,6 +46,7 @@ export function WorkforceToolbarActions({ board, visibleKeys, onColumns }: { boa
   const offered = workforceColumns.filter((column) => column.modes.includes(board.mode));
   return <>
     {board.allowed("Create") && <Button type="button" className="w-auto" disabled={board.editor.disabled} onClick={() => board.setForm("assign")}><InterfaceIcon name="add" className="mr-1 size-4" />Tạo phân công</Button>}
+    {board.allowed("AttendanceCreate") && board.mode !== "staff" && <Button type="button" className="w-auto" variant="secondary" disabled={board.editor.disabled || board.day !== board.today} title={board.day !== board.today ? "Chỉ vào làm cho ngày hôm nay" : undefined} onClick={() => board.setForm("crew-start")}>Vào làm cả tổ</Button>}
     <MoreMenu board={board} />
     <ColumnPicker columns={offered} visible={visibleKeys} onChange={onColumns} />
     <HelpLink />
