@@ -15,6 +15,11 @@ import styles from "./date-picker-field.module.css";
 
 const pad = (value: number) => String(value).padStart(2, "0");
 const nowTime = () => { const now = new Date(); return `${pad(now.getHours())}:${pad(now.getMinutes())}`; };
+/** Current business-zone (Asia/Ho_Chi_Minh) day and clock, so "Bây giờ" never lands after a `max` computed in the same zone. */
+function businessNow() {
+  const [day, clock] = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date()).split(" ");
+  return { day, clock };
+}
 const weekdays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 type Props = { id?: string; inputRef?: Ref<HTMLInputElement>; required?: boolean; readOnly?: boolean; onBlur?: ComponentProps<"input">["onBlur"]; onFocus?: ComponentProps<"input">["onFocus"]; onInvalid?: ComponentProps<"input">["onInvalid"]; label: string; value: string; min?: string; max?: string; disabled?: boolean; withTime?: boolean; allowClear?: boolean; className?: string; name?: string; invalid?: boolean; describedBy?: string; onChange(value: string): void };
@@ -82,6 +87,7 @@ export function DatePickerField({ id, inputRef, required, readOnly, onBlur, onFo
         {withTime && <div className={styles.timePicker}><span>Thời gian</span><label>Giờ<SelectBox aria-label="Giờ" className="omts-control" value={time.split(":")[0]} onChange={event => { const clock = `${event.target.value}:${time.split(":")[1]}`; setTime(clock); if (datePart) emit(datePart, clock); }}>{Array.from({ length: 24 }, (_, index) => <option key={index} value={pad(index)}>{pad(index)}</option>)}</SelectBox></label><b>:</b><label>Phút<SelectBox aria-label="Phút" className="omts-control" value={time.split(":")[1]} onChange={event => { const clock = `${time.split(":")[0]}:${event.target.value}`; setTime(clock); if (datePart) emit(datePart, clock); }}>{Array.from({ length: 60 }, (_, index) => <option key={index} value={pad(index)}>{pad(index)}</option>)}</SelectBox></label></div>}
         <footer className={styles.footer}>
           <button type="button" className={screenStyles.linkButton} disabled={!!latest && todayDay > latest || !!earliest && todayDay < earliest} onClick={() => { setMonth(todayDay); emit(toQueryDate(todayDay)); if (!withTime) close(true); }}>Hôm nay</button>
+          {withTime && <button type="button" className={screenStyles.linkButton} onClick={() => { const now = businessNow(); setMonth(fromQueryDate(now.day)); setTime(now.clock); emit(now.day, now.clock); }}>Bây giờ</button>}
           {allowClear && <button type="button" className={screenStyles.linkButton} disabled={!value} onClick={() => { input.current?.setCustomValidity(""); setDraft(undefined); onChange(""); close(true); }}>Xóa</button>}
           <button type="button" className={styles.close} onClick={() => close(true)}>Đóng</button>
         </footer>

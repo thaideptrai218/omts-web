@@ -1,5 +1,5 @@
 "use client";
-import { useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { InterfaceIcon, type InterfaceIconName } from "../interface-icon";
 import { useStoredValue } from "./use-stored-value";
 import styles from "./management-screen.module.css";
@@ -20,6 +20,19 @@ export function useFitManagementViewport(root: RefObject<HTMLElement | null>) {
   }, [root]);
 }
 
+/** True while the viewport is at most `maxWidth` px wide (the filter rail becomes a drawer there); false where matchMedia does not exist. */
+function useNarrowScreen(maxWidth = 900) {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia(`(max-width:${maxWidth}px)`), sync = () => setNarrow(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, [maxWidth]);
+  return narrow;
+}
+
 /**
  * The management screen frame: one viewport on desktop with only the list scrolling. The toolbar and the body share one
  * column template, so the search box lines up with the list and stays put when the filter rail closes.
@@ -28,7 +41,11 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
   storageKey: string; icon: InterfaceIconName; title: string; search: ReactNode; actions: ReactNode; filters: ReactNode; filterLabel?: string; footer?: ReactNode; children: ReactNode;
 }) {
   const [stored, store] = useStoredValue(`omts-filter-rail-${storageKey}`, "open");
-  const open = stored !== "closed";
+  const narrow = useNarrowScreen();
+  // On a narrow screen the rail is a drawer that starts closed and is never remembered: the list is what the user came for.
+  const [drawer, setDrawer] = useState(false);
+  const open = narrow ? drawer : stored !== "closed";
+  const setOpen = (next: boolean) => narrow ? setDrawer(next) : store(next ? "open" : "closed");
   const root = useRef<HTMLElement>(null);
   useFitManagementViewport(root);
   return <section ref={root} className={`${styles.theme} ${styles.screen}`} data-management-screen data-filters={open ? "open" : "closed"}>
@@ -37,13 +54,15 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
       <div className={styles.tools}><div className={styles.search}><InterfaceIcon name="search" />{search}</div><div className={styles.actions}>{actions}</div></div>
     </header>
     <div className={styles.body}>
+      {open && narrow && <button type="button" className={styles.drawerBackdrop} aria-label="Đóng bộ lọc" tabIndex={-1} onClick={() => setOpen(false)} />}
       {open && <aside className={styles.rail} aria-label={filterLabel}>
+        {narrow && <div className={styles.drawerHead}><strong>{filterLabel}</strong><button type="button" className={styles.drawerClose} onClick={() => setOpen(false)}>Đóng</button></div>}
         <div className={styles.railScroll}>{filters}</div>
-        <button type="button" className={`${styles.railToggle} ${styles.railClose}`} aria-label="Ẩn bộ lọc" title="Ẩn bộ lọc" onClick={() => store("closed")}><InterfaceIcon name="chevron-left" /></button>
+        {!narrow && <button type="button" className={`${styles.railToggle} ${styles.railClose}`} aria-label="Ẩn bộ lọc" title="Ẩn bộ lọc" onClick={() => setOpen(false)}><InterfaceIcon name="chevron-left" /></button>}
       </aside>}
       <div className={styles.listColumn}>
         {/* Outside the list box, which clips its content, so the button can straddle the list's left border. */}
-        {!open && <button type="button" className={`${styles.railToggle} ${styles.railOpen}`} aria-label="Hiện bộ lọc" title="Hiện bộ lọc" onClick={() => store("open")}><InterfaceIcon name="chevron-right" /></button>}
+        {!open && <button type="button" className={`${styles.railToggle} ${styles.railOpen}`} aria-label="Hiện bộ lọc" title="Hiện bộ lọc" onClick={() => setOpen(true)}>{narrow ? <><InterfaceIcon name="panel-open" /> Bộ lọc</> : <InterfaceIcon name="chevron-right" />}</button>}
         <div className={styles.list}>
           {children}
         </div>

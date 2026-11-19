@@ -41,7 +41,8 @@ describe("seeding form shows the stock and explains the on-hand refusal", () => 
     await fill();
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
-    const alert = await screen.findByRole("alert");
+    // The refusal shows at the top of the dialog and again beside the Lưu button.
+    const alert = (await screen.findAllByRole("alert")).at(-1)!;
     expect(alert.textContent).toContain("Không đủ hàng trong kho");
     expect(alert.textContent).toContain("Còn trong kho 100 mảnh");
     expect(alert.textContent).toContain("còn -1 mảnh");

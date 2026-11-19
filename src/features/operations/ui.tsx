@@ -73,20 +73,24 @@ export function Paging({ page, total, pageSize = 20, disabled, onChange }: { pag
 }
 export function useRemote<T>(loader: (signal: AbortSignal) => Promise<WorkspaceResult<T>>) {
   const [data, setData] = useState<T>(), [error, setError] = useState<string>(), [loading, setLoading] = useState(true), [version, setVersion] = useState(0);
+  // A silent refresh (after a mutation) keeps the current data and shows no loading state; a plain reload starts over.
+  const silent = useRef(false);
   useEffect(() => {
     const controller = new AbortController();
     void Promise.resolve().then(() => {
       if (controller.signal.aborted) return;
-      setLoading(true); setError(undefined); setData(undefined);
+      const quiet = silent.current; silent.current = false;
+      if (!quiet) { setLoading(true); setData(undefined); }
+      setError(undefined);
       return loader(controller.signal).then((result) => {
         if (controller.signal.aborted) return;
         setLoading(false);
-        if (result.status === "success") setData(result.data); else setError(operationError(result));
+        if (result.status === "success") setData(result.data); else { if (quiet) setData(undefined); setError(operationError(result)); }
       });
     });
     return () => controller.abort();
   }, [loader, version]);
-  return { data, error, loading, reload: () => setVersion((current) => current + 1) };
+  return { data, error, loading, reload: () => setVersion((current) => current + 1), refresh: () => { silent.current = true; setVersion((current) => current + 1); } };
 }
 export function useMutation() {
   const [pending, setPending] = useState(false), [error, setError] = useState<string>(), [blocked, setBlocked] = useState(false);

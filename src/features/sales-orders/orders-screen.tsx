@@ -23,7 +23,7 @@ import { ORDER, orderSources, type OrderPage, type OrderRow } from "./contracts"
 import { useOrderAccess } from "./order-access";
 import { OrderDetailPanel } from "./order-detail";
 import { ORDERS_PATH, OrderStatus, orderSourceOptions, orderStatusLabel, sourceLabel } from "./order-labels";
-import { daysUntilPickup, progressText, waitingText } from "./order-logic";
+import { daysUntilPickup, waitingText } from "./order-logic";
 import { errorText, orderRepository } from "./repository";
 
 type Column = { key: string; label: string; hint?: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: OrderRow): ReactNode };
@@ -45,7 +45,6 @@ const columns: readonly Column[] = [
   { key: "invoiced", label: "Đã lập HĐ", numeric: true, render: (row) => fmt(row.invoicedTotal) },
   { key: "paid", label: "Khách đã trả", numeric: true, render: (row) => fmt(row.customerPaid) },
   { key: "status", label: "Trạng thái", render: (row) => <OrderStatus statusId={row.statusId} /> },
-  { key: "progress", label: "Tiến độ", render: (row) => progressText(row.progress) },
 ];
 const defaultStatuses = [ORDER.draft, ORDER.delivering];
 const allStatuses = [ORDER.draft, ORDER.delivering, ORDER.completed, ORDER.cancelled];

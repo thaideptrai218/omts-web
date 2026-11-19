@@ -36,8 +36,7 @@ const columns: readonly Column[] = [
   { key: "place", label: "Vùng / bè", render: (row) => `${row.zoneCode} / ${row.raftCode}` },
   { key: "products", label: "Sản phẩm", render: (row) => <span title={row.products.map((product) => `${product.name} (${product.code})`).join(", ")}>{row.products.length ? row.products.map((product) => product.name).join(", ") : "—"}</span> },
   { key: "cages", label: "Lồng", numeric: true, render: (row) => fmt(row.cageCount), total: (totals) => fmt(totals.cageCount) },
-  { key: "estimated", label: "Kg ước tính", numeric: true, render: (row) => fmt(row.estimatedKg), total: (totals) => fmt(totals.estimatedKg) },
-  { key: "weighed", label: "Kg cân", numeric: true, render: (row) => fmt(row.weighedKg), total: (totals) => fmt(totals.weighedKg) },
+  { key: "weighed", label: "Kg cân", numeric: true, render: (row) => row.weighedKg == null ? <span className="text-text-muted">Chờ cân</span> : fmt(row.weighedKg), total: (totals) => fmt(totals.weighedKg) },
   { key: "sold", label: "Đã bán", numeric: true, render: (row) => fmt(row.figures.soldKg), total: (totals) => fmt(totals.soldKg) },
   { key: "remaining", label: "Còn lại", sort: "remainingKg", numeric: true, render: (row) => fmt(row.figures.remainingKg), total: (totals) => fmt(totals.remainingKg) },
   { key: "lost", label: "Hao hụt", numeric: true, render: (row) => fmt(row.figures.lostKg), total: (totals) => fmt(totals.lostKg) },
@@ -56,15 +55,15 @@ const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-su
  * the search box shows the code, every status and date is shown and the row with exactly that code opens.
  */
 export function LotsScreen(props: { helpHref?: string }) {
-  const linkedCode = useSearchParams().get("code") ?? "";
-  return <LotsList key={linkedCode} linkedCode={linkedCode} {...props} />;
+  const params = useSearchParams(), linkedCode = params.get("code") ?? "", linkedZone = params.get("zoneId") ?? "", linkedRaft = params.get("raftId") ?? "";
+  return <LotsList key={`${linkedCode}:${linkedZone}:${linkedRaft}`} linkedCode={linkedCode} linkedZone={linkedZone} linkedRaft={linkedRaft} {...props} />;
 }
 
-function LotsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
+function LotsList({ helpHref, linkedCode, linkedZone, linkedRaft }: { helpHref?: string; linkedCode: string; linkedZone: string; linkedRaft: string }) {
   const { identity, permissions } = useApiWorkspace(), exportFile = useMutation();
   const view = operationAllowed("harvest", identity, permissions.functionPermissions, "View");
   const linkPending = useRef(linkedCode);
-  const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>(emptyFilters), [time, setTime] = useState<TimeRangeValue>(allTime);
+  const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>({ ...emptyFilters, zone: linkedZone, raft: linkedZone ? linkedRaft : "" }), [time, setTime] = useState<TimeRangeValue>(allTime);
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<LotPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const [stored, store] = useStoredValue("omts-columns-harvest-lots", defaults);
@@ -139,7 +138,7 @@ function LotsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: str
     <ManagementScroller busy={loading}>
       {error ? <ListStateMessage error={error} onRetry={reload} retryLabel="Tải lại" />
         : !data ? <div role="status" aria-label="Đang tải danh sách" className={listStyles.skeleton}>{[1, 2, 3, 4, 5].map((key) => <div key={key} />)}</div>
-        : !data.items.length ? <ListStateMessage>{search || hasFilter ? "Không có lô thu hoạch phù hợp bộ lọc." : "Chưa có lô thu hoạch. Lô được ghi nhận ở màn Thu hoạch của từng bè."}</ListStateMessage>
+        : !data.items.length ? <ListStateMessage>{search || hasFilter ? "Không có lô thu hoạch phù hợp bộ lọc." : "Chưa có lô thu hoạch. Lô được tạo khi thu hoạch theo kế hoạch thu hoạch."}</ListStateMessage>
         : <table className={listStyles.table}><thead><tr>
           <th scope="col" className={listStyles.expandCell}><span className="sr-only">Mở dòng</span></th>
           {visible.map((column) => <SortableHeader key={column.key} label={column.label} sortKey={column.sort} sort={sort} onSort={changed<SortState>(setSort)} className={column.numeric ? issueStyles.num : undefined} />)}

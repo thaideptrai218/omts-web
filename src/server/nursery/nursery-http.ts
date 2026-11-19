@@ -95,7 +95,7 @@ export async function handleNurseryRequest(request: Request): Promise<Response> 
       if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
       if (request.signal.aborted || controller.signal.aborted) return json({ status: "unavailable" }, 503);
       if (bytes) return new Response(bytes as BodyInit, { headers: { ...responseHeaders, "Content-Type": contentType!, "Content-Disposition": `inline; filename="anh-uom.${contentType === "image/png" ? "png" : "jpg"}"`, "Content-Security-Policy": "sandbox; default-src 'none'" } });
-      return json({ status: "success", data: batch ? { ...nurseryBrowserPhotos(batch), ...(data.crewAssignment ? { crewAssignment: data.crewAssignment } : {}) } : data });
+      return json({ status: "success", data: batch ? { ...nurseryBrowserPhotos(batch), ...(data.crewAssignment ? { crewAssignment: data.crewAssignment } : {}), ...(data.crewRelease ? { crewRelease: data.crewRelease } : {}) } : data });
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); }
   } catch { return json({ status: "unavailable" }, 503); }
 }

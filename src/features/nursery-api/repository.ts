@@ -8,7 +8,7 @@ const reasons: Record<string, string> = {
   NURSERY_NOT_COMPLETED: "Chỉ sửa số sống sót hoặc đóng đợt khi đã ươm xong. Hãy tải lại đợt ươm.",
   NURSERY_SURVIVORS_BELOW_SEEDED: "Số sống sót (ước tính) không được nhỏ hơn tổng đã thả.",
   NURSERY_ALREADY_CLOSED: "Đợt ươm đã đóng. Hãy tải lại để đối chiếu.",
-  NURSERY_NOTHING_TO_CLOSE: "Kho ươm không còn mảnh để đóng đợt. Hãy tải lại để đối chiếu.",
+  NURSERY_NOTHING_TO_CLOSE: "Kho ươm đã hết mảnh nên đợt tự đóng khi thả hết, không cần đóng tay. Hãy tải lại để đối chiếu.",
 };
 const problemSchema = z.object({ field: z.string().optional(), fields: z.array(z.string()).optional(), hint: z.string().optional(), message: z.string().optional(), reasonCode: z.string().optional() });
 export function nurseryProblemText(value: unknown, code?: string) {

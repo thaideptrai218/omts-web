@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { Note } from "@/features/operations/ui";
+import { CrewAttendanceButton, useCrewAttendanceActions } from "./record-crew-attendance-actions";
 
 /** MSG-LABOR-37: the employees of a record who have not been checked out yet, sent back when completing the record is refused. */
 export const openAttendanceEmployees = z.array(z.object({ id: z.guid(), code: z.string().nullish(), name: z.string().max(200), checkedIn: z.boolean() })).max(100);
@@ -32,9 +33,12 @@ export function useIsCooperativeOwner() { return useApiWorkspace().identity.subj
 
 /** Why completing is blocked (employees still at work) and, for the Owner only, the reason field that lets them complete anyway. */
 export function AttendanceGatePanel({ employees, isOwner, reason, onReason }: { employees: readonly OpenAttendanceEmployee[]; isOwner: boolean; reason: string; onReason(value: string): void }) {
+  const actions = useCrewAttendanceActions();
   return <section role="alert" aria-label="Nhân viên chưa điểm danh ra về" className="my-3 space-y-2 rounded-control border border-warning p-3 text-sm">
     <p className="font-medium">Còn {employees.length} nhân viên chưa điểm danh ra về, nên chưa thể hoàn tất.</p>
-    <ul className="list-disc pl-5">{employees.map(item => <li key={item.id}>{item.name}{item.code ? ` · ${item.code}` : ""} ({item.checkedIn ? "đang làm, chưa ra về" : "chưa điểm danh vào"})</li>)}</ul>
+    <ul className="list-disc pl-5">{employees.map(item => <li key={item.id}>{item.name}{item.code ? ` · ${item.code}` : ""} ({item.checkedIn ? "đang làm, chưa ra về" : "chưa điểm danh vào"})
+      <CrewAttendanceButton employeeId={item.id} name={item.name} checkedIn={item.checkedIn} actions={actions} /></li>)}</ul>
+    {actions.error && <p role="alert" className="text-danger">{actions.error}</p>}
     {isOwner
       ? <><Note label="Lý do hoàn tất khi nhân viên chưa ra về (chủ hợp tác xã xác nhận, được lưu vào nhật ký)" value={reason} maxLength={1000} onChange={event => onReason(event.target.value)} /></>
       : <p className="text-text-muted">Hãy điểm danh ra về cho nhân viên ở màn Chấm công, hoặc nhờ chủ hợp tác xã xác nhận.</p>}

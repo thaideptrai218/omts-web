@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { historyEntry } from "@/features/history/history-contracts";
-import { crewAssignmentResult, crewMember } from "@/features/cultivation-api/record-crew-contracts";
+import { crewAssignmentResult, crewMember, crewReleaseResult } from "@/features/cultivation-api/record-crew-contracts";
 
 const text = z.string(), number = z.number().finite(), nullableNumber = number.nullish().transform(value => value ?? null);
 const photo = z.object({ id: text, url: text });
@@ -22,9 +22,9 @@ export const nurseryRowSchema = rowObject().transform(normalizeInventory);
 export const nurseryUsageSchema = z.object({ cycleId: text, cycleCode: text.nullish(), raftId: text, raftCode: text,
   seeded: number.nullish().transform(value => value ?? 0), lastSeedingOn: text.nullish() });
 export const nurseryDetailSchema = z.object({ ...nurseryRowFields, seedLot: seedLotSchema, seedLotOnHand: nullableNumber,
-  note: text.nullish(), completedOn: text.nullish(), issueId: text.nullish(), issueCode: text.nullish(), cancelReason: text.nullish(),
+  note: text.nullish(), completedOn: text.nullish(), issueId: text.nullish(), issueCode: text.nullish(), cancelReason: text.nullish(), closeReason: text.nullish(),
   recordedByName: text.nullish(), startPhotos: z.array(photo).default([]), completionPhotos: z.array(photo).default([]),
-  usage: z.array(nurseryUsageSchema).nullish().transform(value => value ?? []), crew: z.array(crewMember).optional(), crewAssignment: crewAssignmentResult,
+  usage: z.array(nurseryUsageSchema).nullish().transform(value => value ?? []), crew: z.array(crewMember).optional(), crewAssignment: crewAssignmentResult, crewRelease: crewReleaseResult,
   canEdit: z.boolean().default(false), canComplete: z.boolean().default(false), canCorrectSurvivors: z.boolean().default(false) }).transform(normalizeInventory);
 export const nurseryListSchema = z.object({ items: z.array(nurseryRowSchema), page: number, pageSize: number, total: number });
 export const nurseryLotsSchema = z.object({ lots: z.array(seedLotSchema), message: text.nullish() });
@@ -35,5 +35,11 @@ export type NurseryRow = z.infer<typeof nurseryRowSchema>;
 export type NurseryDetail = z.infer<typeof nurseryDetailSchema>;
 export type NurseryLot = z.infer<typeof seedLotSchema>;
 export const nurseryStatus = (statusId: number | undefined) => ({ 4001: "Đang ươm", 4002: "Đã ươm xong", 4003: "Đã hủy", 4004: "Đã đóng" })[statusId ?? 0] ?? "Không xác định";
+/**
+ * Status text of a batch. Since 18/11/2026 (contract H4) a batch closes by itself when seeding uses the pool up: Closed with nothing written off (closeLossPieces = 0).
+ * A manual close always writes off more than 0, so a null or positive loss keeps the plain "Đã đóng".
+ */
+export const nurseryStatusText = (batch: { statusId?: number; closeLossPieces?: number | null }) =>
+  batch.statusId === 4004 && batch.closeLossPieces === 0 ? "Đã đóng (tự động khi thả hết)" : nurseryStatus(batch.statusId);
 export const nurseryStatusTone = (statusId: number) => statusId === 4001 ? "neutral" : statusId === 4002 ? "success" : statusId === 4003 ? "danger" : "neutral";
 export const quantityText = (value: number | null | undefined, unit = "mảnh") => value == null ? "—" : `${value.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} ${unit}`;

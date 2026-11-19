@@ -8,7 +8,7 @@ import { isDateOnly } from "@/shared/format/date-only";
 import { businessToday } from "./ui";
 import type { WorkforceBoard } from "./workforce-board-state";
 import styles from "./workforce-screen.module.css";
-import { attendanceLabel, attendanceState, type Assignment } from "./workforce-shared";
+import { attendanceLabel, attendanceState, formatWorked, type Assignment } from "./workforce-shared";
 
 const figures: readonly (readonly [string, (rows: Assignment[]) => number])[] = [
   ["Phân công", (rows) => rows.length],
@@ -28,6 +28,7 @@ export function WorkforceFilterRail({ board }: { board: WorkforceBoard }) {
     </div>
     <dl className={styles.figures} aria-busy={busy}>
       {figures.map(([label, count]) => <div key={label}><dt>{label}</dt><dd>{busy ? "—" : scopedRows ? count(scopedRows) : 0}</dd></div>)}
+      <div className={styles.figureWide}><dt>Tổng giờ công trong ngày</dt><dd>{busy ? "—" : formatWorked(scopedRows?.reduce((sum, row) => sum + (row.workedMinutes ?? 0), 0) ?? 0)}</dd></div>
     </dl>
     <FilterGroup legend="Ngày làm việc">
       <DatePickerField label="Ngày làm việc" value={day} onChange={board.setDay} />

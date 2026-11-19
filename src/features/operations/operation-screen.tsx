@@ -14,6 +14,11 @@ import { SalesReturnsScreen } from "@/features/sales-returns/sales-returns-scree
 import { PayrollScreen } from "@/features/payroll/payroll-screen";
 import { PayrollPaymentsScreen } from "@/features/payroll/payroll-payments-screen";
 import { SalesPerformanceScreen } from "@/features/sales-reports/sales-performance-screen";
+import { CustomerReportScreen } from "@/features/sales-reports/customer-report-screen";
+import { EndOfDayReportScreen } from "@/features/sales-reports/end-of-day-report-screen";
+import { ProductReportScreen } from "@/features/sales-reports/product-report-screen";
+import { SupplierReportScreen } from "@/features/sales-reports/supplier-report-screen";
+import { FinancialReportScreen } from "@/features/sales-reports/financial-report-screen";
 import { PriceTrendScreen } from "@/features/sales-reports/price-trend-screen";
 import { AfterSalesIssuesScreen } from "@/features/sales-reports/after-sales-issues-screen";
 import { LotTracingScreen } from "@/features/lot-tracing/lot-tracing-screen";
@@ -56,6 +61,11 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "payroll") return <Suspense><PayrollScreen /></Suspense>;
   if (area === "payroll-payments") return <PayrollPaymentsScreen />;
   if (area === "sales-report") return <SalesPerformanceScreen />;
+  if (area === "customer-report") return <CustomerReportScreen />;
+  if (area === "end-of-day-report") return <EndOfDayReportScreen />;
+  if (area === "product-report") return <ProductReportScreen />;
+  if (area === "supplier-report") return <SupplierReportScreen />;
+  if (area === "financial-report") return <FinancialReportScreen />;
   if (area === "price-trend-report") return <PriceTrendScreen />;
   if (area === "after-sales-report") return <AfterSalesIssuesScreen />;
   if (area === "purchase-requests") return <PurchaseRequestsScreen />;

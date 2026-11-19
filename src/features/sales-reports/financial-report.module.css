@@ -1,0 +1,8 @@
+/* Bảng kết quả kinh doanh: dòng tổng (doanh thu thuần, lợi nhuận) in đậm, số âm màu đỏ, cột chỉ tiêu cố định khi cuộn ngang. */
+.sticky { position: sticky; left: 0; z-index: 1; background: var(--omts-color-surface); min-width: 14rem; font-weight: 500; }
+.total th, .total td { font-weight: 700; background: var(--omts-color-surface-subtle); }
+.total .sticky { background: var(--omts-color-surface-subtle); }
+.sub .sticky { padding-left: 1.75rem; color: var(--omts-color-text-muted); }
+.negative { color: var(--omts-color-danger); }
+.sumColumn { border-left: 1px solid var(--omts-color-border-strong); font-weight: 700; }
+.note { margin: .625rem 0 0; font-size: .8125rem; color: var(--omts-color-text-muted); }

@@ -1,6 +1,8 @@
 .table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
-.table thead th { position:sticky; top:0; z-index:4; padding:8px 12px; background:var(--omts-color-primary-soft); border-bottom:1px solid var(--omts-color-border); font-size:12px; font-weight:650; text-align:left; white-space:nowrap; }
-.table tbody td { padding:8px 12px; border-bottom:1px solid var(--omts-color-border); vertical-align:middle; white-space:nowrap; }
+.table thead th { position:sticky; top:0; z-index:4; padding:8px 12px; background:var(--omts-color-primary-soft); border-bottom:1px solid var(--omts-color-border); font-size:12px; font-weight:650; text-align:left; white-space:normal; line-height:1.3; min-width:88px; vertical-align:bottom; }
+.table thead th button { white-space:normal; text-align:left; }
+.table tbody td { padding:8px 12px; border-bottom:1px solid var(--omts-color-border); vertical-align:middle; white-space:normal; overflow-wrap:anywhere; line-height:1.35; min-width:88px; }
+.table tbody td.expandCell, .table thead th.expandCell { min-width:0; }
 .table tbody tr[data-selected] > td { background:var(--omts-color-primary-soft); }
 .expandCell { width:28px; padding-inline:4px!important; }
 .expandCell button { display:grid; place-items:center; width:26px; height:26px; color:var(--omts-color-text-muted); }
@@ -21,7 +23,9 @@
 .railHead { display:flex; align-items:center; justify-content:space-between; font-size:13px; }
 .figures { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 .figures > div { padding:6px 10px; border:1px solid var(--omts-color-border); border-radius:6px; background:var(--omts-color-surface-subtle); }
-.figures dt { font-size:11px; color:var(--omts-color-text-muted); }
+.figures dt { font-size:11px; line-height:1.3; color:var(--omts-color-text-muted); overflow-wrap:anywhere; }
+.figures > .figureWide { grid-column:1 / -1; }
+.figureWide dd { font-size:15px!important; }
 .figures dd { font-size:18px; font-weight:650; font-variant-numeric:tabular-nums; line-height:1.3; }
 .dayStep { display:flex; gap:4px; margin-top:4px; }
 .dayStep button { display:grid; place-items:center; flex:1 1 auto; min-height:28px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:12px; }

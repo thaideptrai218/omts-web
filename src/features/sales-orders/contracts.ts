@@ -20,7 +20,7 @@ export type OrderAction = "Edit" | "Finish" | "Cancel" | "AddAdvance" | "Process
 const progress = z.object({ unitId: id, unitCode: text, unitName: text, ordered: num, delivered: num });
 export const orderLine = z.object({
   id, lineNumber: count, productId: id, productCode: text, productName: text, unitId: id, unitCode: text, unitName: text, factor: num,
-  quantity: num, unitPrice: num, listPrice: num, amount: num, deliveredQuantity: num, note: opt,
+  quantity: num, unitPrice: num, listPrice: num, amount: num, deliveredQuantity: num, note: opt, sizeMinCm: z.number().nullish(), sizeMaxCm: z.number().nullish(),
 });
 export const orderAdvance = z.object({
   paymentId: id, paymentCode: text, amount: num, method: text, statusId: count, status: text, paidAt: text, bankReference: opt, collectedBy: person.nullish(),

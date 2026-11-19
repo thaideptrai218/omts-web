@@ -1,0 +1,39 @@
+/* Giao diện chung của các báo cáo có số liệu thật (bộ lọc trái, ô chỉ số, bảng, nút chuyển Biểu đồ/Bảng). */
+.form { display: grid; gap: 1rem; }
+.railHead { display: flex; align-items: center; justify-content: space-between; }
+.group { border: 0; margin: 0; padding: 0; display: grid; gap: .5rem; min-width: 0; }
+.group legend { font-size: .75rem; font-weight: 700; color: var(--omts-color-text); padding: 0; margin-bottom: .375rem; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { border: 1px solid var(--omts-color-border); border-radius: 6px; padding: 5px 9px; font-size: 12px; background: var(--omts-color-surface); color: var(--omts-color-text); cursor: pointer; }
+.pill[aria-pressed=true] { border-color: var(--omts-color-primary); background: var(--omts-color-primary-soft); color: var(--omts-color-primary); }
+.pill:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.muted { margin: 0; color: var(--omts-color-text-muted); font-size: .8125rem; }
+.error { margin: 0; color: var(--omts-color-danger); font-size: .8125rem; }
+.linkButton { border: 0; background: none; padding: 0; font: inherit; font-size: .75rem; color: var(--omts-color-primary); text-decoration: underline; cursor: pointer; }
+
+.body { display: grid; gap: 1rem; padding: 1rem; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
+.period { margin: 0; font-size: .875rem; color: var(--omts-color-text-muted); }
+.card { min-width: 0; padding: 1rem; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); box-shadow: var(--omts-shadow-card); }
+.card h2 { margin: 0 0 .625rem; font-size: .9375rem; font-weight: 700; color: var(--omts-color-text); }
+.cardHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .625rem; }
+.cardHead h2 { margin: 0; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .75rem; margin: 0; }
+.tiles > div { padding: .75rem .875rem; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); box-shadow: var(--omts-shadow-card); min-width: 0; }
+.tiles dt { font-size: .75rem; font-weight: 500; color: var(--omts-color-text-muted); }
+.tiles dd { margin: .125rem 0 0; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--omts-color-text); overflow-wrap: anywhere; }
+.tiles dd small { display: block; font-size: .6875rem; font-weight: 400; color: var(--omts-color-text-muted); }
+
+.tableFrame { overflow-x: auto; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); }
+.tableFrame:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.table th, .table td { padding: .625rem .875rem; text-align: left; border-bottom: 1px solid var(--omts-color-border); vertical-align: middle; }
+.table thead th { background: var(--omts-color-surface-subtle); font-size: .75rem; font-weight: 600; color: var(--omts-color-text-muted); white-space: nowrap; }
+.table tbody tr:last-child > * { border-bottom: 0; }
+.table tfoot th, .table tfoot td { font-weight: 700; background: var(--omts-color-surface-subtle); border-top: 1px solid var(--omts-color-border-strong); border-bottom: 0; }
+.right { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rowButton { border: 0; background: none; padding: 0; font: inherit; color: var(--omts-color-primary); text-align: left; cursor: pointer; text-decoration: underline; }
+.rowButton:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.selected > * { background: var(--omts-color-primary-soft); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

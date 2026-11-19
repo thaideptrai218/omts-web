@@ -73,7 +73,7 @@ export const completeReceiptSchema = z.strictObject({ rowVersion: text.min(1) })
 export const cancelReceiptSchema = completeReceiptSchema.extend({ reason, cancelPayments: z.boolean().nullable() });
 export const saveReturnSchema = z.strictObject({ returnDate: z.iso.date(), reason, refundAmount: amount, refundMethod: paymentMethod.nullable(), debtReductionAmount: amount,
   lines: z.array(z.strictObject({ receiptLineId: id, quantity: number.positive() })).min(1).max(200) });
-export const recordPaymentSchema = z.strictObject({ supplierId: id, receiptId: id, amount: amount.positive(), paymentDate: z.iso.date(), method: paymentMethod,
+export const recordPaymentSchema = z.strictObject({ supplierId: id, receiptId: id, amount: amount.positive(), paymentDate: z.iso.date(), paidAt: z.iso.datetime({ offset: true }).optional(), method: paymentMethod,
   referenceCode: text.max(100).nullable(), deduplicationKey: z.uuid() });
 export const allocatePaymentSchema = z.strictObject({ receiptId: id });
 const waterValues = { raftId: id, measuredAt: time, ph: number.min(0).max(14), salinity: number.min(0).max(50), temperature: number.min(0).max(45) };

@@ -7,6 +7,7 @@ import { setDisplayedAccount } from "@/features/auth/api/displayed-account";
 import { resources, resourceKeys, resourceAllowed } from "./resources";
 import { operationModules, operationAllowed } from "@/features/operations/permissions";
 import { OwnerOverview } from "./owner-overview";
+import { canSeeOverview } from "./overview-access";
 import { InboxBell } from "@/features/inbox-api/inbox-bell";
 import { SelectedZonesProvider } from "./selected-zones";
 import { ZonePicker } from "./zone-picker";
@@ -36,7 +37,7 @@ const operationIcons: Record<OperationArea, InterfaceIconName> = {
   seeding: "product", "material-usages": "material", harvest: "work",
   "cultivation-cycles": "raft",
   "purchase-receipts": "receipt", "supplier-payments": "payment", water: "water",
-  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "purchase-requests": "request", workforce: "attendance", "my-work": "work", "seed-lots": "product",
+  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "end-of-day-report": "calendar", "product-report": "product", "customer-report": "users", "supplier-report": "supplier", "financial-report": "payment", "purchase-requests": "request", workforce: "attendance", "my-work": "work", "seed-lots": "product",
 };
 
 const settingsDescriptions: Partial<Record<ResourceKey, string>> = {
@@ -57,7 +58,8 @@ const workspaceGroups = [
   { label: "Mua hàng", resources: ["suppliers"], operations: [] },
   { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "my-work"] },
   { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests", "lot-tracing"] },
-  { label: "Báo cáo", resources: [], operations: ["sales-report", "price-trend-report", "after-sales-report", "harvest-yield"] },
+  { label: "Báo cáo", resources: [], // Thứ tự theo KiotViet (Cuối ngày, Bán hàng, Hàng hóa, Khách hàng, Nhà cung cấp, Tài chính) rồi các báo cáo đặc thù; key chưa xong bị `operationAllowed` ẩn.
+    operations: ["end-of-day-report", "sales-report", "product-report", "customer-report", "supplier-report", "financial-report", "price-trend-report", "after-sales-report", "harvest-yield"] },
 ];
 
 type Context = Readonly<{ identity: BrowserIdentityDto; permissions: PermissionProjection }>;
@@ -135,7 +137,8 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
           const cycles = operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions);
           const columns = [
             { title: "Cơ sở", items: rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key])) },
-            { title: "Chu kỳ nuôi", items: [cycles && link("/farming/nursery", "Ươm giống", "product"), ...modules.map((entry) => link(modulePath(entry.key), entry.key === "water" ? "Chất lượng nước" : entry.title, operationIcons[entry.key]))].filter(Boolean) },
+            { title: "Ươm và chu kỳ nuôi", items: [cycles && link("/farming/nursery", "Ươm giống", "product"), operationAllowed("seeding", context.identity, context.permissions.functionPermissions) && link(modulePath("seeding"), "Bắt đầu chu kỳ nuôi", operationIcons.seeding)].filter(Boolean) },
+            { title: "Theo dõi", items: modules.map((entry) => link(modulePath(entry.key), entry.key === "water" ? "Chất lượng nước" : entry.title, operationIcons[entry.key])) },
             { title: "Thu hoạch", items: harvestLinks.map((item) => link(...item)) },
           ].filter((column) => column.items.length);
           return columns.length ? <NavigationGroup key={group.label} label={group.label} compact={compact} columns>{columns.map((column) => <NavigationSection key={column.title} title={column.title}>{column.items}</NavigationSection>)}</NavigationGroup> : null;
@@ -153,6 +156,10 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
             { title: "Đối tác", items: res(["suppliers"]) },
             { title: "Nhập hàng", items: purchasing ? [link(kindText.Seed.receiptsPath, kindText.Seed.receipt, "receipt"), link(kindText.Supply.receiptsPath, kindText.Supply.receipt, "receipt")] : [] },
             { title: "Trả hàng", items: purchasing ? [link(kindText.Seed.returnsPath, kindText.Seed.receiptReturn, "upload"), link(kindText.Supply.returnsPath, kindText.Supply.receiptReturn, "upload")] : [] },
+          ] : group.label === "Nhân sự" ? [
+            { title: "Nhân viên", items: res(["employees"]) },
+            { title: "Phân công và chấm công", items: ops(["workforce", "my-work", "job-types"]) },
+            { title: "Tiền lương", items: ops(["payroll", "payroll-payments"]) },
           ] : group.label === "Kinh doanh" ? [
             { title: "Bán hàng", items: [...pick(["/sales/orders"], productLinks), ...ops(["sales-invoice-list", "sales-returns"]), ...pick(["/sales/disposals"], productLinks)] },
             { title: "Khách hàng", items: [...res(["customers"]), ...ops(["purchase-requests", "quality-claims", "claim-reports"])] },
@@ -195,7 +202,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
 export function ApiWorkspaceHome() {
   const context = useApiWorkspace();
   if (context.identity.subjectType === "SystemAdministrator") return <section><ManagementHeading title="Quản trị hệ thống" description="Quản lý truy cập của các tài khoản trên hệ thống." icon="roles" /><Link href="/system/accounts" className="mt-6 flex items-center justify-between rounded-card border border-border bg-surface p-5 font-semibold hover:border-primary">Tài khoản và nhật ký quản trị<span aria-hidden="true">→</span></Link></section>;
-  if (context.identity.subjectType === "CooperativeOwner") return <OwnerOverview />;
+  if (canSeeOverview(context.identity, context.permissions.functionPermissions)) return <OwnerOverview />;
   const visible = resourceKeys.filter((key) => resourceAllowed(key, context.identity, context.permissions.functionPermissions));
   return <section><ManagementHeading title="Tổng quan hoạt động" description="Chọn công việc trong phạm vi được cấp." icon="dashboard" />
     <div className="mt-7 grid gap-6 xl:grid-cols-2"><section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Danh mục quản lý</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{visible.map((key) => <a key={key} href={`/workspace/${key}`}

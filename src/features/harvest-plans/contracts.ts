@@ -20,7 +20,7 @@ export const planLot = z.object({ id, lotCode: text, cageCount: cages, estimated
 export const planLine = z.object({
   id, lineNumber: count, raftId: id, raftCode: text, zone: zoneRef,
   /** The product the raft farms, read from the raft when the plan was saved: never typed on the plan. */
-  expectedProduct: z.object({ id, code: text, name: text }).nullish(), expectedCageCount: cages.nullish(), note: opt,
+  expectedProduct: z.object({ id, code: text, name: text, sizeMinCm: z.number().nullish(), sizeMaxCm: z.number().nullish() }).nullish(), expectedCageCount: cages.nullish(), note: opt,
   state: z.enum(["Open", "Harvested", "Skipped"]), lot: planLot.nullish(), lanes: z.array(planLane),
   /** A lot can be recorded from the line now, or lanes left out (the caller still needs HARVESTS Create). */
   canHarvest: z.boolean(),
@@ -36,7 +36,7 @@ export const planView = z.object({
 });
 export const planRow = z.object({
   id, code: text, statusId: count, status: text, zones: z.array(zoneRef), plannedAt: text, note: opt, raftCodes: z.array(text), orders: z.array(planOrder), progress: planProgress,
-  createdBy: opt, rowVersion: text,
+  createdBy: opt, rowVersion: text, expectedCageCount: cages.nullish(),
 });
 export const planPage = z.object({ items: z.array(planRow), page: count, pageSize: count, total: count });
 export const nextCode = z.object({ code: text });
@@ -49,7 +49,11 @@ export const planDraft = z.object({
 export const eligibleLaneStates = ["Free", "InAnotherPlan", "Harvested"] as const;
 export const eligibleLane = z.object({ laneId: id, laneNumber: count, state: z.enum(eligibleLaneStates), planCode: opt });
 /** A raft that can be planned for harvest: In Use, in a zone In Use, with an Open cycle and a lane that can be harvested; the product is the one it farms. */
-export const eligibleRaft = z.object({ raftId: id, raftCode: text, zone: zoneRef, product: z.object({ id, code: text, name: text }).nullish(), lanes: z.array(eligibleLane) });
+export const eligibleRaft = z.object({
+  raftId: id, raftCode: text, zone: zoneRef, product: z.object({ id, code: text, name: text, sizeMinCm: z.number().nullish(), sizeMaxCm: z.number().nullish() }).nullish(), lanes: z.array(eligibleLane),
+  /** When the cycle started, the days its seed needs to mature and the first day it can be harvested ("yyyy-MM-dd"); null when no seed gives the days. */
+  cycleStartDate: z.iso.date().nullish(), maturityDays: count.nullish(), expectedHarvestDate: z.iso.date().nullish(),
+});
 /** The API answers `{ rafts }`; the BFF hands on the list itself, which the browser reads with the same schema. */
 export const eligibleRafts = z.union([z.object({ rafts: z.array(eligibleRaft) }).transform((value) => value.rafts), z.array(eligibleRaft)]);
 

@@ -43,10 +43,12 @@ export function suggestUnitCode(itemCode: string, unitName: string) {
 
 export type UnitDraft = { key: string; id: string | null; unitId: string; factor: string; code: string; isBase: boolean; isUsed: boolean };
 export type FormValues = {
-  code: string; name: string; group: string; itemGroupId: string; productId: string; description: string; notes: string;
+  code: string; name: string; group: string; itemGroupId: string; productId: string; maturityDays: string; description: string; notes: string;
   minQuantity: string; maxQuantity: string; costPrice: string; openingQuantity: string; units: UnitDraft[];
 };
 export const MAX_PHOTOS = 5;
+/** The most days a seed may take to mature (the API refuses more). */
+export const MAX_MATURITY_DAYS = 3650;
 
 const text = (value: number | null | undefined) => value == null ? "" : String(value);
 let counter = 0;
@@ -57,7 +59,7 @@ export function initialValues(record: ItemView | null, copy: boolean): FormValue
     ? record.units.map((unit) => ({ key: newKey(), id: copy ? null : unit.id, unitId: unit.unitId, factor: unit.isBase ? "" : String(unit.factor), code: copy ? "" : unit.code, isBase: unit.isBase, isUsed: copy ? false : unit.isUsed === true }))
     : [{ key: newKey(), id: null, unitId: "", factor: "", code: "", isBase: true, isUsed: false }];
   return {
-    code: record && !copy ? record.code : "", name: record ? (copy ? `${record.name} (bản sao)` : record.name) : "", group: record?.group ?? "Material", itemGroupId: record?.itemGroupId ?? "", productId: record?.productId ?? "",
+    code: record && !copy ? record.code : "", name: record ? (copy ? `${record.name} (bản sao)` : record.name) : "", group: record?.group ?? "Material", itemGroupId: record?.itemGroupId ?? "", productId: record?.productId ?? "", maturityDays: text(record?.maturityDays),
     description: record?.description ?? "", notes: record?.notes ?? "", minQuantity: text(record?.minQuantity), maxQuantity: text(record?.maxQuantity), costPrice: text(record?.costPrice),
     openingQuantity: copy ? "" : text(record?.openingQuantity), units: units.sort((a, b) => Number(b.isBase) - Number(a.isBase)),
   };
@@ -75,6 +77,8 @@ const invalid = (value: number | null) => value !== null && !Number.isFinite(val
 export function validateForm(values: FormValues): string | undefined {
   if (!values.name.trim()) return "Nhập tên hàng.";
   if (values.group === "Seed" && !values.productId) return "Chọn loại hàu bán ra của giống.";
+  const maturity = parseNumber(values.maturityDays);
+  if (values.group === "Seed" && maturity !== null && (!Number.isInteger(maturity) || maturity < 1 || maturity > MAX_MATURITY_DAYS)) return `Thời gian trưởng thành phải là số ngày nguyên từ 1 đến ${MAX_MATURITY_DAYS}.`;
   if (values.code && !/^[A-Za-z0-9_.-]{1,30}$/.test(values.code)) return "Mã hàng chỉ gồm chữ, số, dấu chấm, gạch ngang và gạch dưới, tối đa 30 ký tự.";
   const min = parseNumber(values.minQuantity), max = parseNumber(values.maxQuantity), cost = parseNumber(values.costPrice), opening = parseNumber(values.openingQuantity);
   if ([min, max, cost, opening].some(invalid) || [min, max, cost, opening].some((value) => value !== null && value < 0)) return "Giá vốn, định mức và số còn lại ban đầu phải là số không âm.";
@@ -106,7 +110,7 @@ export function buildSaveBody(values: FormValues, record: ItemView | null): Reco
   const opening = parseNumber(values.openingQuantity);
   const openingChanged = record === null || (opening ?? 0) !== (record.openingQuantity ?? 0);
   return {
-    code: blank(values.code), name: values.name.trim(), group: values.group, itemGroupId: values.itemGroupId || null, productId: values.group === "Seed" && values.productId ? values.productId : null, description: blank(values.description), notes: blank(values.notes),
+    code: blank(values.code), name: values.name.trim(), group: values.group, itemGroupId: values.itemGroupId || null, productId: values.group === "Seed" && values.productId ? values.productId : null, maturityDays: values.group === "Seed" ? parseNumber(values.maturityDays) : null, description: blank(values.description), notes: blank(values.notes),
     minQuantity: parseNumber(values.minQuantity), maxQuantity: parseNumber(values.maxQuantity), costPrice: parseNumber(values.costPrice),
     ...(openingChanged ? { openingQuantity: opening } : {}),
     units: values.units.map((unit) => ({ id: unit.id, unitId: unit.unitId, factor: unit.isBase ? 1 : parseNumber(unit.factor), code: blank(unit.code), isBase: unit.isBase })),

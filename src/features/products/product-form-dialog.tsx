@@ -51,7 +51,7 @@ export function ProductFormDialog({ record, copy, onClose, onSaved }: { record: 
   }, [editing, codeTick]);
 
   const set = (key: "code" | "name" | "categoryId" | "description" | "note") => (event: { target: { value: string } }) => setValues((current) => ({ ...current, [key]: event.target.value }));
-  const setNumber = (key: "minKg" | "maxKg") => (event: { target: { value: string } }) => setValues((current) => ({ ...current, [key]: decimalOnly(event.target.value) }));
+  const setNumber = (key: "minKg" | "maxKg" | "sizeMinCm" | "sizeMaxCm") => (event: { target: { value: string } }) => setValues((current) => ({ ...current, [key]: decimalOnly(event.target.value) }));
   const dirty = JSON.stringify(values) !== JSON.stringify(initial) || newPhotos.length > 0 || removedPhotos.length > 0;
   const close = async () => { if (!pending && (!dirty || await confirmation.confirm("Bỏ các thay đổi chưa lưu?"))) onClose(); };
 
@@ -137,6 +137,10 @@ export function ProductFormDialog({ record, copy, onClose, onSaved }: { record: 
       </CollapsibleSection>
       <CollapsibleSection title="Đơn vị tính" description="Đơn vị gốc là kg; thêm đơn vị quy đổi (vd. 1 lồng = 25 kg) và mã của từng đơn vị." columns={1} defaultOpen={values.units.length > 0}>
         <ProductUnitFields units={values.units} catalog={unitList} productCode={values.code || nextCode} unitPrice={values.unitPrice} onPriceChange={(unitPrice) => setValues((current) => ({ ...current, unitPrice }))} onChange={(next) => setValues((current) => ({ ...current, units: next }))} onCreate={(rowKey) => setCreating({ kind: "unit", rowKey })} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Cỡ thương phẩm (cm)" description="Cỡ trung bình khi trưởng thành, chỉ để khách tham khảo." columns={2} defaultOpen={!!values.sizeMinCm || !!values.sizeMaxCm}>
+        <Field label="Cỡ thương phẩm từ (cm)" inputMode="decimal" value={values.sizeMinCm} onChange={setNumber("sizeMinCm")} />
+        <Field label="Cỡ thương phẩm đến (cm)" inputMode="decimal" value={values.sizeMaxCm} onChange={setNumber("sizeMaxCm")} />
       </CollapsibleSection>
       <CollapsibleSection title="Định mức" description="Số kg còn lại tối thiểu và tối đa để cảnh báo." columns={2} defaultOpen={!!values.minKg || !!values.maxKg}>
         <Field label="Định mức tối thiểu (kg)" inputMode="decimal" value={values.minKg} onChange={setNumber("minKg")} />

@@ -12,13 +12,14 @@ import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { viDateTime } from "@/features/purchase-documents/document-parts";
 import docStyles from "@/features/purchase-documents/purchases.module.css";
 import { productHref } from "@/features/products/product-helpers";
+import { ProductSizeChip } from "@/features/products/product-size";
 import { LotLink } from "@/features/products/lot-link";
 import { orderHref } from "@/features/sales-orders/order-labels";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { PLAN, type PlanAction, type PlanLine, type PlanView } from "./contracts";
 import type { PlanAccess } from "./plan-access";
 import { PLANS_PATH, PlanStatus } from "./plan-labels";
-import { laneChip, planTotals } from "./plan-logic";
+import { planTotals } from "./plan-logic";
 import { PlanLineActions } from "./plan-line-actions";
 import { PlanStaffingTab } from "./plan-staffing-tab";
 import styles from "./plans.module.css";
@@ -39,23 +40,6 @@ export function PlanDetailPanel({ id, access, onChanged }: { id: string; access:
     <Subtabs<Tab> label="Nội dung kế hoạch thu hoạch" tabs={tabs} value={tab} onChange={setTab} />
     {tab === "info" ? <Body key={remote.data.rowVersion} plan={remote.data} access={access} onChanged={() => { remote.reload(); onChanged(); }} /> : <PlanStaffingTab key={remote.data.rowVersion} plan={remote.data} access={access} />}
   </section>;
-}
-
-function LaneChips({ plan, line, access, onChanged, setError }: { plan: PlanView; line: PlanLine; access: PlanAccess; onChanged(): void; setError(text: string | undefined): void }) {
-  const { notify } = useToast();
-  const canUnskip = access.harvest && plan.allowedActions.includes("SkipLane") && !line.lot;
-  async function unskip(lane: number) {
-    setError(undefined);
-    const result = await planRepository.unskipLanes(plan.id, line.id, [lane]);
-    if (result.status === "success") { notify({ tone: "success", title: `Đã bỏ đánh dấu không thu luống ${lane}.` }); onChanged(); } else setError(errorText(result));
-  }
-  return <span className={styles.chips}>{line.lanes.map((lane) => {
-    const chip = laneChip(lane);
-    return <span key={lane.laneNumber} className={styles.chip} data-state={chip.state} title={chip.title}>
-      {chip.state === "Harvested" && chip.lotCode ? <>Luống {lane.laneNumber}: Đã thu · <LotLink code={chip.lotCode} /></> : chip.text}
-      {canUnskip && lane.state === "Skipped" && <button type="button" className="ml-1 text-primary underline" aria-label={`Bỏ đánh dấu không thu luống ${lane.laneNumber}`} onClick={() => void unskip(lane.laneNumber)}>Hoàn tác</button>}
-    </span>;
-  })}</span>;
 }
 
 function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess; onChanged(): void }) {
@@ -79,7 +63,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
   }
   async function finish() {
     const open = plan.lines.filter((line) => !line.lot).length;
-    if (await confirmation.confirm(`Kết thúc kế hoạch ${plan.code}?${open ? ` Còn ${open} dòng chưa có lô thu hoạch; các luống còn lại được để nguyên.` : ""}`)) await run(() => planRepository.finish(plan.id, plan.rowVersion), `Đã kết thúc ${plan.code}.`);
+    if (await confirmation.confirm(`Kết thúc kế hoạch ${plan.code}?${open ? ` Còn ${open} bè chưa có lô thu hoạch; các bè còn lại được để nguyên.` : ""}`)) await run(() => planRepository.finish(plan.id, plan.rowVersion), `Đã kết thúc ${plan.code}.`);
   }
 
   return <div className={listStyles.tabBody}>{confirmation.dialog}
@@ -95,24 +79,22 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
           <div><span>Lý do hủy:</span><span className={docStyles.danger}>{dash(plan.cancelReason)}</span></div></>
         : <div><span>Hoàn thành lúc:</span><strong>{plan.completedAt ? viDateTime(plan.completedAt) : "—"}</strong></div>}
     </div>
-    <div className={docStyles.innerScroll}><table className={docStyles.inner} aria-label="Dòng của kế hoạch thu hoạch"><thead><tr><th>Vùng</th><th>Bè</th><th>Luống</th><th>Sản phẩm</th><th className={docStyles.num}>Lồng dự kiến</th><th>Lô thu hoạch</th><th /></tr></thead>
+    <div className={docStyles.innerScroll}><table className={docStyles.inner} aria-label="Dòng của kế hoạch thu hoạch"><thead><tr><th>Vùng</th><th>Bè</th><th>Sản phẩm</th><th className={docStyles.num}>Lồng dự kiến</th><th>Lô thu hoạch</th><th /></tr></thead>
       <tbody>{plan.lines.map((line) => <tr key={line.id}>
         <td>{line.zone.code}</td>
         <td><Link className={docStyles.link} href={farmingReferenceHref("raft", { zoneId: line.zone.id, recordId: line.raftId, search: line.raftCode })}>{line.raftCode}</Link>{line.note && <span className={docStyles.sub}>{line.note}</span>}</td>
-        <td><LaneChips plan={plan} line={line} access={access} onChanged={onChanged} setError={setError} /></td>
-        <td>{line.expectedProduct ? <Link className={docStyles.link} href={productHref(line.expectedProduct.code)}>{line.expectedProduct.name} ({line.expectedProduct.code})</Link> : "—"}</td>
+        <td>{line.expectedProduct ? <><Link className={docStyles.link} href={productHref(line.expectedProduct.code)}>{line.expectedProduct.name} ({line.expectedProduct.code})</Link> <ProductSizeChip size={line.expectedProduct} /></> : "—"}</td>
         <td className={docStyles.num}>{line.expectedCageCount == null ? "—" : line.expectedCageCount.toLocaleString("vi-VN")}</td>
         <td>{line.lot ? <LotLink className={docStyles.link} code={line.lot.lotCode} /> : "—"}</td>
         <td><PlanLineActions plan={plan} line={line} access={access} onChanged={onChanged} /></td>
       </tr>)}
-      {!plan.lines.length && <tr><td colSpan={7} className={docStyles.empty}>Kế hoạch chưa có dòng nào.</td></tr>}</tbody></table></div>
+      {!plan.lines.length && <tr><td colSpan={6} className={docStyles.empty}>Kế hoạch chưa có dòng nào.</td></tr>}</tbody></table></div>
     <div className={docStyles.foot}>
       <textarea className={docStyles.noteEdit} aria-label="Ghi chú" placeholder="Ghi chú..." readOnly value={plan.note ?? ""} />
       <div className={docStyles.sums}>
-        <div><span>Số bè / luống</span><span>{totals.rafts} bè · {totals.lanes} luống</span></div>
+        <div><span>Số bè</span><span>{totals.rafts}</span></div>
         <div><span>Lồng dự kiến</span><span>{totals.cages == null ? "—" : totals.cages.toLocaleString("vi-VN")}</span></div>
-        <div><span>Đã thu dòng / luống</span><span>{plan.progress.linesDone}/{plan.progress.lines} dòng · {plan.progress.lanesHarvested}/{plan.progress.lanes} luống</span></div>
-        <div><span>Không thu luống</span><span>{plan.progress.lanesSkipped}</span></div>
+        <div><span>Đã thu</span><span>{plan.progress.linesDone}/{plan.progress.lines} bè</span></div>
       </div>
     </div>
     <ErrorNotice error={error} />

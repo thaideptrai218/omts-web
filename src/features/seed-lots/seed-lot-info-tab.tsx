@@ -5,19 +5,9 @@ import { productHref } from "@/features/products/product-helpers";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import { supplierHref } from "@/features/purchase-documents/receipt-detail";
 import styles from "@/features/purchase-documents/purchases.module.css";
-import type { SeedLotDetail, SeedLotState } from "./contracts";
+import type { SeedLotDetail } from "./contracts";
 import { SeedLotFooter } from "./seed-lot-actions";
-import { SeedLotStateBadge } from "./seed-lot-state";
-
-const stateNote: Record<SeedLotState, string> = {
-  Unused: "Lô chưa được dùng: chưa ươm, chưa treo, chưa trả.",
-  Nursing: "Lô đang trong đợt ươm.",
-  PartlySeeded: "Lô đã được treo một phần, phần còn lại chưa dùng.",
-  FullySeeded: "Lô đã treo hết: lô kết thúc.",
-  FullyReturned: "Lô đã trả hết cho nhà cung cấp: lô kết thúc.",
-  FullyLost: "Lô hao hụt hết trong ươm: lô kết thúc.",
-  UsedUp: "Lô đã dùng hết (ươm, treo, trả, xuất): lô kết thúc.",
-};
+import { SeedLotSummary } from "./seed-lot-progress";
 
 /** The figures of the lot in the order the lot lives: received, returned, in the nursery, lost in the nursery, seeded, issued otherwise, what is left. */
 export const quantityRows = (lot: SeedLotDetail) => [
@@ -28,13 +18,14 @@ export const quantityRows = (lot: SeedLotDetail) => [
 ] as const;
 
 /**
- * Tab "Thông tin", laid out like the invoice row: the lot and its state, the facts in three columns with links to the receipt, the supplier, the seed and the product,
+ * Tab "Thông tin", laid out like the invoice row: the lot and its usage chips (quantities, no derived state), the facts in three columns with links to the receipt, the supplier, the seed and the product,
  * the quantity breakdown, then the sums. The footer holds the actions that fit a lot with something left.
  */
 export function SeedLotInfoTab({ lot }: { lot: SeedLotDetail }) {
   const share = (value: number) => lot.receivedQty > 0 ? `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(value / lot.receivedQty * 100)}%` : "—";
   return <>
-    <header className={styles.head}><div><h3>{lot.seedLotCode}</h3><SeedLotStateBadge state={lot.state} /></div></header>
+    <header className={styles.head}><div><h3>{lot.seedLotCode}</h3></div></header>
+    <SeedLotSummary lot={lot} />
     <div className={styles.headFacts}>
       <div><span>Phiếu nhập:</span><Link className={styles.link} href={receiptHref(lot.receiptCode, "Seed")}>{lot.receiptCode}</Link></div>
       <div><span>Ngày nhập:</span><strong>{viDateTime(lot.receivedAt)}</strong></div>
@@ -46,7 +37,7 @@ export function SeedLotInfoTab({ lot }: { lot: SeedLotDetail }) {
     <div className={styles.innerScroll}><table className={styles.inner} aria-label="Số lượng của lô giống"><thead><tr><th>Chỉ tiêu</th><th className={styles.num}>Số lượng ({lot.unitName})</th><th className={styles.num}>Tỉ lệ so với số nhập</th></tr></thead>
       <tbody>{quantityRows(lot).map((row) => <tr key={row.key}><td>{row.label}</td><td className={styles.num}>{fmt(row.value)}</td><td className={styles.num}>{share(row.value)}</td></tr>)}</tbody></table></div>
     <div className={styles.foot}>
-      <p className={styles.noteBox}>{stateNote[lot.state]}</p>
+      <p className={styles.noteBox}>Số liệu thu hoạch và đã bán tính từ các chu kỳ nuôi của lô{lot.figuresEstimated ? "; ước tính vì chu kỳ dùng nhiều lô hoặc lô thu hoạch chưa cân" : ""}.</p>
       <div className={styles.sums}>
         <div><span>Nhập</span><span>{fmt(lot.receivedQty)} {lot.unitName}</span></div>
         <div><span>Đã treo</span><span>{fmt(lot.seededQty)} {lot.unitName}</span></div>

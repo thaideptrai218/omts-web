@@ -43,7 +43,7 @@ it("lists the lots with every column of the plan, the totals, links by code and 
   owner(); mount();
   await screen.findByText("PN000004-1");
   expect(state.list.mock.calls[0][0]).toMatchObject({ sort: "code", sortDir: "desc", page: "1", pageSize: "15" });
-  for (const heading of ["Mã lô giống", "Phiếu nhập", "Ngày nhập", "Nhà cung cấp", "Giống", "Sản phẩm", "Nhập", "Trả", "Đang ươm", "Hao hụt", "Đã treo", "Còn", "Trạng thái"]) expect(screen.getByRole("columnheader", { name: new RegExp(`^${heading}`) })).toBeTruthy();
+  for (const heading of ["Mã lô giống", "Phiếu nhập", "Ngày nhập", "Nhà cung cấp", "Giống", "Sản phẩm", "Nhập", "Còn", "Tiến độ sử dụng", "Thu hoạch \\(kg\\)", "Đã bán \\(kg\\)"]) expect(screen.getByRole("columnheader", { name: new RegExp(`^${heading}`) })).toBeTruthy();
   const totalsRow = screen.getByRole("row", { name: "Tổng hợp theo bộ lọc" });
   expect(within(totalsRow).getByText("Tổng (1 lô)")).toBeTruthy();
   expect(within(totalsRow).getByText("1.000")).toBeTruthy();
@@ -54,7 +54,11 @@ it("lists the lots with every column of the plan, the totals, links by code and 
   expect(within(line).getByRole("link", { name: "Hàu giống 3 cm" }).getAttribute("href")).toBe("/inputs/seeds?code=GG000001");
   expect(within(line).getByRole("link", { name: "Hàu sữa" }).getAttribute("href")).toBe("/sales/products?code=SP000001");
   expect(within(line).getByText("10/11/2026 08:00")).toBeTruthy();
-  expect(within(line).getByText("Đang treo dở")).toBeTruthy();
+  expect(within(line).queryByText("Đang treo dở")).toBeNull();
+  expect(screen.queryByRole("columnheader", { name: /^Trạng thái/ })).toBeNull();
+  expect(within(line).getByRole("img", { name: /^Số nhập 1\.000 mảnh: .*Đã thả 400.*Còn kho 500.*Trả NCC 100/ })).toBeTruthy();
+  expect(within(line).getByText("195,5 (ước tính)")).toBeTruthy();
+  expect(within(line).getByText("120 (ước tính)")).toBeTruthy();
   expect(within(line).queryByRole("button", { name: /^(Ươm|Treo|Trả hàng)/ })).toBeNull();
 });
 
@@ -62,10 +66,9 @@ it("sends every filter to the server, fixes nothing but what the user picks, and
   owner(); mount();
   await screen.findByText("PN000004-1");
   const last = () => state.list.mock.calls.at(-1)![0];
-  fireEvent.change(screen.getByLabelText("Trạng thái"), { target: { value: "Unused" } });
-  await waitFor(() => expect(last()).toMatchObject({ state: "Unused", page: "1" }));
+  expect(screen.queryByLabelText("Trạng thái")).toBeNull();
   fireEvent.change(screen.getByLabelText("Nhà cung cấp"), { target: { value: ids.supplier } });
-  await waitFor(() => expect(last()).toMatchObject({ supplierId: ids.supplier }));
+  await waitFor(() => expect(last()).toMatchObject({ supplierId: ids.supplier, page: "1" }));
   fireEvent.change(screen.getByLabelText("Giống"), { target: { value: ids.item } });
   await waitFor(() => expect(last()).toMatchObject({ itemId: ids.item }));
   expect(screen.getByLabelText("Giống").querySelectorAll("option")).toHaveLength(2);
@@ -73,21 +76,10 @@ it("sends every filter to the server, fixes nothing but what the user picks, and
   await waitFor(() => expect(last()).toMatchObject({ zoneId: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11" }));
   fireEvent.change(screen.getByLabelText("Tìm lô giống"), { target: { value: "PN0000" } });
   await waitFor(() => expect(last()).toMatchObject({ search: "PN0000" }));
-  expect(last()).toMatchObject({ state: "Unused", supplierId: ids.supplier, itemId: ids.item });
+  expect(last()).toMatchObject({ supplierId: ids.supplier, itemId: ids.item });
+  expect(last().state).toBeUndefined();
   fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
-  await waitFor(() => expect(last().state).toBeUndefined());
-});
-
-it("offers a select of all states and the seven states, each with its count", async () => {
-  owner(); state.list.mockResolvedValue(page(undefined, { stateCounts: { Unused: 12, Nursing: 3 } }));
-  mount();
-  await screen.findByText("PN000004-1");
-  const select = screen.getByLabelText("Trạng thái") as HTMLSelectElement;
-  expect(select.tagName).toBe("SELECT");
-  expect([...select.options].map((option) => [option.value, option.textContent])).toEqual([
-    ["", "Tất cả"], ["Unused", "Chưa dùng (12)"], ["Nursing", "Đang ươm (3)"], ["PartlySeeded", "Đang treo dở"], ["FullySeeded", "Đã treo hết"],
-    ["FullyReturned", "Đã trả hết"], ["FullyLost", "Hao hụt hết"], ["UsedUp", "Đã dùng hết"],
-  ]);
+  await waitFor(() => expect(last().supplierId).toBeUndefined());
 });
 
 it("sorts on the server by the three sortable columns", async () => {
@@ -124,10 +116,10 @@ it("shows the loading, empty, error and retry states", async () => {
 it("exports the filtered list only to an account that may export", async () => {
   owner(); state.exportList.mockResolvedValue({ status: "success", data: true }); mount();
   await screen.findByText("PN000004-1");
-  fireEvent.change(screen.getByLabelText("Trạng thái"), { target: { value: "Unused" } });
-  await waitFor(() => expect(state.list.mock.calls.at(-1)![0]).toMatchObject({ state: "Unused" }));
+  fireEvent.change(screen.getByLabelText("Nhà cung cấp"), { target: { value: ids.supplier } });
+  await waitFor(() => expect(state.list.mock.calls.at(-1)![0]).toMatchObject({ supplierId: ids.supplier }));
   fireEvent.click(screen.getByRole("button", { name: /Xuất file/ }));
-  await waitFor(() => expect(state.exportList).toHaveBeenCalledWith(expect.objectContaining({ state: "Unused" })));
+  await waitFor(() => expect(state.exportList).toHaveBeenCalledWith(expect.objectContaining({ supplierId: ids.supplier })));
   expect(state.exportList.mock.calls[0][0].page).toBeUndefined();
   cleanup();
   state.context.identity.subjectType = "Staff"; grant(["PURCHASE_RECEIPTS", "View"]);

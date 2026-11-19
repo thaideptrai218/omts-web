@@ -18,6 +18,8 @@ export const itemRow = z.object({
   productId: id.nullish(), productName: opt, product: z.object({ id, code: opt, name: text }).nullish(),
   // The seed is on a Completed receipt, a nursery batch or a seeding record: its product can no longer change. Only the detail answer carries it.
   productLocked: z.boolean().nullish(),
+  // "Thời gian trưởng thành" of a seed item: days from seeding until the oysters can be harvested.
+  maturityDays: count.nullish(),
   minQuantity: numOpt, maxQuantity: numOpt, costPrice: numOpt, lastPurchasePrice: numOpt, onHand: num, stockValue: num, isUsed: z.boolean().nullish(),
   statusId: count, status: text, createdAt: text, createdBy: opt, rowVersion: text,
 });

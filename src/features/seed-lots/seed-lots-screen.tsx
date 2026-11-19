@@ -22,9 +22,9 @@ import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import { usePurchaseLookups } from "@/features/purchase-documents/repository";
 import { supplierHref } from "@/features/purchase-documents/receipt-detail";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
-import { seedLotStates, type SeedLotListQuery, type SeedLotPage, type SeedLotRow, type SeedLotTotals } from "./contracts";
+import type { SeedLotListQuery, SeedLotPage, SeedLotRow, SeedLotTotals } from "./contracts";
 import { SeedLotDetailPanel } from "./seed-lot-detail";
-import { SeedLotStateBadge, seedLotStateLabel } from "./seed-lot-state";
+import { SeedLotProgressCell, kgText } from "./seed-lot-progress";
 import { seedLotRepository } from "./repository";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: SeedLotRow): ReactNode; total?: keyof SeedLotRow };
@@ -40,16 +40,18 @@ export const columns: readonly Column[] = [
   { key: "product", label: "Sản phẩm", render: (row) => row.product?.code ? linked(productHref(row.product.code), row.product.name) : row.product?.name ?? "—" },
   { key: "unit", label: "ĐVT", hidden: true, render: (row) => row.unitName },
   { key: "received", label: "Nhập", numeric: true, total: "receivedQty", render: (row) => figure(row, "receivedQty") },
-  { key: "returned", label: "Trả", numeric: true, total: "returnedQty", render: (row) => figure(row, "returnedQty") },
-  { key: "nursing", label: "Đang ươm", numeric: true, total: "nursingQty", render: (row) => figure(row, "nursingQty") },
-  { key: "loss", label: "Hao hụt", numeric: true, total: "nurseryLossQty", render: (row) => figure(row, "nurseryLossQty") },
-  { key: "seeded", label: "Đã treo", numeric: true, total: "seededQty", render: (row) => figure(row, "seededQty") },
+  { key: "returned", label: "Trả", hidden: true, numeric: true, total: "returnedQty", render: (row) => figure(row, "returnedQty") },
+  { key: "nursing", label: "Đang ươm", hidden: true, numeric: true, total: "nursingQty", render: (row) => figure(row, "nursingQty") },
+  { key: "loss", label: "Hao hụt", hidden: true, numeric: true, total: "nurseryLossQty", render: (row) => figure(row, "nurseryLossQty") },
+  { key: "seeded", label: "Đã treo", hidden: true, numeric: true, total: "seededQty", render: (row) => figure(row, "seededQty") },
   { key: "remaining", label: "Còn", sort: "remaining", numeric: true, total: "remainingQty", render: (row) => figure(row, "remainingQty") },
+  { key: "progress", label: "Tiến độ sử dụng", render: (row) => <SeedLotProgressCell lot={row} /> },
+  { key: "harvested", label: "Thu hoạch (kg)", numeric: true, render: (row) => kgText(row, row.harvestedKg) },
+  { key: "sold", label: "Đã bán (kg)", numeric: true, render: (row) => kgText(row, row.soldKg) },
   { key: "lastUsed", label: "Dùng gần nhất", hidden: true, render: (row) => row.lastUsedAt ? viDateTime(row.lastUsedAt) : "—" },
-  { key: "state", label: "Trạng thái", render: (row) => <SeedLotStateBadge state={row.state} /> },
 ];
 const defaults = columns.filter((column) => !column.hidden).map((column) => column.key).join(",");
-const emptyFilters = { state: "", supplier: "", item: "", zone: "" };
+const emptyFilters = { supplier: "", item: "", zone: "" };
 type Filters = typeof emptyFilters;
 const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]";
 /** The sum of a figure column, from the totals of the API; a column it does not total shows a dash. */
@@ -71,14 +73,14 @@ function SeedLotsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>(emptyFilters), [time, setTime] = useState<TimeRangeValue>(allTime);
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SeedLotPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
-  const [stored, store] = useStoredValue("omts-columns-seed-lots", defaults);
+  const [stored, store] = useStoredValue("omts-columns-seed-lots-v2", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
   const { zones } = useZoneOptions(view);
   const seedItems = useMemo(() => lookups.items.filter((item) => kindOfGroup(item.group) === "Seed"), [lookups.items]);
 
   // The filters as the list and the file take them; the file has no paging.
   const query = useMemo<SeedLotListQuery>(() => {
-    const values: SeedLotListQuery = { search: search.trim(), state: filters.state, from: time.from, to: time.to, supplierId: filters.supplier, itemId: filters.item, zoneId: filters.zone, sort: sort.key, sortDir: sort.direction };
+    const values: SeedLotListQuery = { search: search.trim(), from: time.from, to: time.to, supplierId: filters.supplier, itemId: filters.item, zoneId: filters.zone, sort: sort.key, sortDir: sort.direction };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== "")) as SeedLotListQuery;
   }, [search, filters, time, sort]);
 
@@ -109,8 +111,6 @@ function SeedLotsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
 
   const rail = <>
     <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(allTime); })()}>Đặt lại</button></div>
-    <FilterGroup legend="Trạng thái"><SelectBox aria-label="Trạng thái" className={railSelect} value={filters.state} onChange={(event) => setFilter("state")(event.target.value)}>
-      <option value="">Tất cả</option>{seedLotStates.map((state) => <option key={state} value={state}>{data?.stateCounts?.[state] === undefined ? seedLotStateLabel[state] : `${seedLotStateLabel[state]} (${fmt(data.stateCounts[state])})`}</option>)}</SelectBox></FilterGroup>
     <TimeRangeFilter legend="Ngày nhập" value={time} onChange={changed<TimeRangeValue>(setTime)} />
     <FilterGroup legend="Nhà cung cấp"><SelectBox aria-label="Nhà cung cấp" className={railSelect} value={filters.supplier} onChange={(event) => setFilter("supplier")(event.target.value)}>
       <option value="">Tất cả nhà cung cấp</option>{lookups.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</SelectBox></FilterGroup>

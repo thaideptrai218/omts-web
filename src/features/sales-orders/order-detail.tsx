@@ -12,10 +12,12 @@ import { CustomerQrDialog } from "@/features/customers/customer-qr-dialog";
 import { customerHref, invoiceHref } from "@/features/customers/customer-links";
 import { paymentStatus } from "@/features/customers/customer-payment-dialogs";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
+import { ProductSizeChip } from "@/features/products/product-size";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed } from "@/features/operations/permissions";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import { planHref, planStatusLabel } from "@/features/harvest-plans/plan-labels";
+import { useProductAvailability } from "@/features/harvest-plans/use-product-availability";
 import { productHref } from "@/features/products/product-helpers";
 import styles from "@/features/purchase-documents/purchases.module.css";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
@@ -27,7 +29,7 @@ import { progressText } from "./order-logic";
 import { errorText, orderRepository } from "./repository";
 
 type Tab = "info" | "history";
-const INVOICE_CANCELLED = 3502;
+const INVOICE_CANCELLED = 3502, PLAN_CANCELLED = 4205;
 const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "history" as const, label: "Lịch sử" }];
 const dash = (value: string | null | undefined) => value || "—";
 
@@ -52,6 +54,7 @@ function Body({ order, tab, access, onChanged }: { order: OrderView; tab: Tab; a
 
 function InfoTab({ order }: { order: OrderView }) {
   const [codeTerm, setCodeTerm] = useState(""), [nameTerm, setNameTerm] = useState("");
+  const availability = useProductAvailability(order.statusId === ORDER.draft || order.statusId === ORDER.delivering);
   const shown = order.lines.filter((line) => line.productCode.toLowerCase().includes(codeTerm.trim().toLowerCase()) && line.productName.toLowerCase().includes(nameTerm.trim().toLowerCase()));
   return <>
     <header className={styles.head}><div><h3>{order.code}</h3><OrderStatus statusId={order.statusId} /></div></header>
@@ -75,7 +78,7 @@ function InfoTab({ order }: { order: OrderView }) {
         <tr className={styles.lineSearch}><td style={{ width: 140 }}><input type="search" aria-label="Tìm mã hàng" placeholder="Tìm mã" value={codeTerm} onChange={(event) => setCodeTerm(event.target.value)} /></td><td><input type="search" aria-label="Tìm tên hàng" placeholder="Tìm tên hàng" value={nameTerm} onChange={(event) => setNameTerm(event.target.value)} /></td><td colSpan={5} /></tr>
         {shown.map((line) => <tr key={line.id}>
           <td><Link className={styles.link} href={productHref(line.productCode)}>{line.productCode}</Link></td>
-          <td>{line.productName}{line.note && <span className={styles.sub}> {line.note}</span>}</td>
+          <td>{line.productName}<ProductSizeChip size={line} />{line.note && <span className={styles.sub}> {line.note}</span>}{line.quantity > line.deliveredQuantity && availability(line.productId) && <span className={styles.sub}> · {availability(line.productId)}</span>}</td>
           <td>{line.unitName}</td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.deliveredQuantity)}</td>
           <td className={styles.num}>{fmt(line.unitPrice)}{line.unitPrice !== line.listPrice && <span className={styles.sub}> niêm yết {fmt(line.listPrice)}</span>}</td>
           <td className={styles.num}><strong>{fmt(line.amount)}</strong></td></tr>)}
@@ -101,6 +104,8 @@ function Actions({ order, access, onChanged }: { order: OrderView; access: Order
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false);
   const can = (action: OrderAction) => order.allowedActions.includes(action);
   const open = order.statusId === ORDER.draft || order.statusId === ORDER.delivering;
+  // An order has at most one active plan: with one, the plan code is shown in the order ("Kế hoạch thu hoạch") instead of the button.
+  const activePlan = order.harvestPlans.find((plan) => plan.statusId !== PLAN_CANCELLED);
   const planHarvest = planHarvestHref(order.id), processHref = processOrderHref(order.id);
   const advanced = order.advances.reduce((sum, advance) => sum + advance.amount, 0);
 
@@ -137,7 +142,7 @@ function Actions({ order, access, onChanged }: { order: OrderView; access: Order
         {can("Process") && processHref && <Button className="w-auto" disabled={pending} onClick={() => router.push(processHref)}><InterfaceIcon name="receipt" className="size-4" />Xử lý đặt hàng</Button>}
         {can("Edit") && open && access.edit && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => router.push(`${ORDERS_PATH}/${order.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Mở phiếu</Button>}
         {can("Finish") && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => void finish()}><InterfaceIcon name="check" className="size-4" />Kết thúc</Button>}
-        {can("PlanHarvest") && planHarvest && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => router.push(planHarvest)}><InterfaceIcon name="calendar" className="size-4" />Lập kế hoạch thu hoạch</Button>}
+        {can("PlanHarvest") && planHarvest && !activePlan && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => router.push(planHarvest)}><InterfaceIcon name="calendar" className="size-4" />Lập kế hoạch thu hoạch</Button>}
       </div>
     </footer></>;
 }

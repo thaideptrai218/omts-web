@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { Skeleton, displayTime, useRemote } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { HistoryOrderToggle, sortHistory, useHistoryOrder } from "@/features/history/history-order";
 import { nurseryDisplayText } from "./nursery-display-text";
 import { nurseryHistoryAction, nurseryHistoryChangeLabel, nurseryHistorySummary, nurseryHistoryValue, type NurseryHistoryEntry } from "./nursery-history-presentation";
 import { nurseryService } from "./service";
@@ -38,10 +39,11 @@ function HistoryRow({ entry: raw }: { entry: NurseryHistoryEntry }) {
 }
 
 export function NurseryHistoryTab({ id, zoneId }: { id: string; zoneId: string }) {
+  const [order, setOrder] = useHistoryOrder();
   const history = useRemote(useCallback((signal: AbortSignal) => nurseryService.history(id, zoneId, signal), [id, zoneId]));
   if (history.loading) return <Skeleton />;
   if (history.error || !history.data) return <div className="space-y-2 text-sm"><p>Chưa xem được lịch sử đợt ươm này.</p>
     <Button key="retry-nursery-history" type="button" variant="secondary" className="w-auto" onClick={history.reload}>Tải lại lịch sử</Button></div>;
   if (!history.data.entries.length) return <p className="text-xs text-text-muted">Chưa có thay đổi nào được ghi lại.</p>;
-  return <ol aria-label="Lịch sử thay đổi" className="grid gap-2">{history.data.entries.map((entry, index) => <HistoryRow key={`${entry.at}-${index}`} entry={entry} />)}</ol>;
+  return <><HistoryOrderToggle order={order} onChange={setOrder} /><ol aria-label="Lịch sử thay đổi" className="grid gap-2">{sortHistory(history.data.entries, entry => entry.at, order).map((entry, index) => <HistoryRow key={`${entry.at}-${index}`} entry={entry} />)}</ol></>;
 }

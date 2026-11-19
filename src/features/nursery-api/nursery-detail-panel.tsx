@@ -15,10 +15,11 @@ import styles from "@/features/farming-management/farming-management.module.css"
 import { operationAllowed } from "@/features/operations/permissions";
 import { ErrorNotice, Skeleton } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import { nurseryStatus, nurseryStatusTone, quantityText, type NurseryDetail } from "./contracts";
+import { nurseryStatusText, nurseryStatusTone, quantityText, type NurseryDetail } from "./contracts";
 import { NurseryEditForm, type NurseryEditGuard } from "./nursery-edit-form";
 import { NurseryHistoryTab } from "./nursery-history-tab";
 import { nurseryDisplayText } from "./nursery-display-text";
+import { crewReleaseNotice } from "@/features/cultivation-api/record-crew-contracts";
 import { RecordCrewDetail } from "@/features/cultivation-api/record-crew-detail";
 import { openCrewOf, useIsCooperativeOwner } from "@/features/cultivation-api/record-crew-attendance";
 import { NurseryPhotoGallery } from "./nursery-photo-gallery";
@@ -58,20 +59,22 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
     if (editing && !(await editGuard.current?.canLeave())) return;
     setEditing(false); action();
   }
+  const [releaseNotice, setReleaseNotice] = useState<string>();
   async function cancel() {
     if (!batch || !edit || mutation.busy() || busy) return;
     const reason = await confirmation.prompt(`Xóa đợt ươm ${batch.code}? Vùng ${batch.zoneCode} · ${batch.zoneName}: ${quantityText(batch.quantityIn)} sẽ được hoàn lại lô giống ${batch.seedLot.code} trong kho. Đợt chuyển sang "Đã hủy" và vẫn lưu trong lịch sử. Nhập lý do xóa bên dưới.`);
     if (!reason) return;
     const result = await mutation.run(() => nurseryService.save("cancel", batch.zoneId, { reason, rowVersion: batch.rowVersion }, batch.id));
-    if (result) saved(result);
+    if (result) { saved(result); setReleaseNotice(crewReleaseNotice(result.crewRelease)); }
   }
   return <section className={styles.detail} aria-label="Chi tiết đợt ươm giống">{confirmation.dialog}
+    {releaseNotice && <p role="status" className="text-sm">{releaseNotice}</p>}
     {detail.loading && !batch && <Skeleton />}
     <ErrorNotice error={nurseryDisplayText(detail.error || mutation.error)} />
     {(detail.error || mutation.blocked) && <Button key="reload-nursery-detail" type="button" variant="secondary" className="w-auto" disabled={detail.loading || mutation.pending} onClick={() => void leaveEditor(() => { detail.reload(); setReviewRequested(true); })}>Tải lại đợt ươm để đối chiếu</Button>}
     {mutation.blocked && reviewRequested && !detail.loading && !detail.error && <Button key="reviewed-nursery-detail" type="button" variant="secondary" className="w-auto" onClick={() => { mutation.reviewed(); setReviewRequested(false); }}>Đã đối chiếu, tiếp tục</Button>}
     {batch && <>
-      <header className={styles.header}><div><h3>Đợt ươm {batch.code}</h3><p className="mt-1 text-xs text-text-muted">Vùng ươm: {batch.zoneCode} · {batch.zoneName}</p></div><StatusPill tone={nurseryStatusTone(batch.statusId)}>{nurseryStatus(batch.statusId)}</StatusPill></header>
+      <header className={styles.header}><div><h3>Đợt ươm {batch.code}</h3><p className="mt-1 text-xs text-text-muted">Vùng ươm: {batch.zoneCode} · {batch.zoneName}</p></div><StatusPill tone={nurseryStatusTone(batch.statusId)}>{nurseryStatusText(batch)}</StatusPill></header>
       <Subtabs<Tab> label="Hồ sơ đợt ươm" tabs={tabs} value={tab} idPrefix={prefix} onChange={key => { if (key !== tab) void leaveEditor(() => setTab(key)); }} />
       <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={styles.body}>
         {tab === "info" && (editing && edit ? <NurseryEditForm key={batch.rowVersion} batch={batch} leaveRef={editGuard} guard={guard} onClose={() => setEditing(false)} onSaved={saved} onReload={() => { setEditing(false); detail.reload(); }} /> : <>
@@ -83,6 +86,7 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
             ["Phiếu xuất dùng", batch.issueCode ? <Link className="underline" href={issueLink(batch.issueCode)!}>{batch.issueCode}</Link> : "—"],
             ...(batch.completedOn ? [["Ngày hoàn tất", formatVietnameseDate(batch.completedOn)]] as const : []),
             ...(batch.closedOn ? [["Ngày đóng đợt ươm", formatVietnameseDate(batch.closedOn)]] as const : []),
+            ...(batch.closeReason ? [["Lý do đóng", nurseryDisplayText(batch.closeReason)]] as const : []),
             ["Ghi chú", nurseryDisplayText(batch.note)], ...(batch.cancelReason ? [["Lý do hủy", nurseryDisplayText(batch.cancelReason)]] as const : [])]} />
           <RecordCrewDetail label="Nhân viên ươm" crew={batch.crew} />
           {complete && crewOpen && <p role="status" className="my-2 text-sm text-warning">Còn {crewOpen.length} nhân viên chưa điểm danh ra về nên chưa thể hoàn tất ươm.{isOwner ? " Chủ hợp tác xã vẫn có thể hoàn tất kèm lý do." : " Hãy chấm công ra về cho nhân viên trước."}</p>}

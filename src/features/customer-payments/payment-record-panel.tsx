@@ -3,7 +3,7 @@ import { MoneyField } from "@/components/form/number-fields";
 import { SelectBox } from "@/components/ui/select-box";
 import { Button } from "@/components/ui/button";
 import { CustomerSearch } from "@/features/customer-lookup/customer-search";
-import { control, ErrorNotice, Field, money, Skeleton } from "@/features/operations/ui";
+import { businessTime, control, ErrorNotice, Field, money, Skeleton } from "@/features/operations/ui";
 import { toMoney } from "@/features/sales-invoices/invoice-draft";
 import { PaymentQuestionDialog } from "./payment-question-dialog";
 import { usePaymentRecorder } from "./use-payment-recorder";
@@ -42,7 +42,7 @@ export function PaymentRecordPanel({ onRecorded }: { onRecorded: () => void }) {
         </div>
         <h2 id="pay-title" className={s.h2}>{paying ? "Ghi nhận khách thanh toán" : "Ghi nhận trả lại tiền"}</h2>
         <div className={s.grid}>
-          <Field label="Ngày" type="date" value={f.date} disabled={r.saving} onChange={(e) => r.setForm({ date: e.target.value })} />
+          <Field label="Thời gian" type="datetime-local" max={businessTime()} required value={f.date} disabled={r.saving} onChange={(e) => r.setForm({ date: e.target.value })} />
           <div className={s.field}><MoneyField label="Số tiền" autoThousands showWords placeholder="0" value={f.amount} disabled={r.saving} onChange={(next) => r.setForm({ amount: next })} /></div>
           <label className={s.field}><span>Hình thức</span>
             <SelectBox className={control} value={f.method} disabled={r.saving} onChange={(e) => r.setForm({ method: e.target.value as "Cash" | "OtherTransfer" })}>

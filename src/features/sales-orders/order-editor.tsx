@@ -36,6 +36,7 @@ const noAdvance: Advance = { amount: 0, method: "Cash", bankReference: "", cashA
 
 const optionOf = (product: ProductRow): ItemOption => ({ id: product.id, code: product.code, name: product.name, unit: "kg", group: "Other", units: [] });
 const unitsOf = (product: ProductRow): LineUnit[] => product.units.map((unit) => ({ id: unit.unitId, name: unit.name, factor: unit.factor, salePrice: defaultPrice(unit, product.unitPrice) }));
+const detailOf = (product: ProductRow) => ({ group: product.categoryName ?? undefined, sizeMinCm: product.sizeMinCm, sizeMaxCm: product.sizeMaxCm });
 const baseUnit = (product: ProductRow) => product.units.find((unit) => unit.isBase) ?? product.units[0];
 
 type Source = { productId: string; productCode: string; productName: string; unitId: string; unitName: string; factor: number; quantity: number | null; unitPrice: number | null; listPrice: number | null; note?: string | null; delivered?: number };
@@ -45,7 +46,7 @@ function lineOf(source: Source, products: readonly ProductRow[]): EditorLine {
   const units = product ? unitsOf(product) : [];
   if (!units.some((unit) => unit.id === source.unitId)) units.push({ id: source.unitId, name: source.unitName, factor: source.factor, salePrice: source.listPrice });
   return {
-    key: crypto.randomUUID(), productId: source.productId, productCode: source.productCode, productName: source.productName, units, unitId: source.unitId,
+    key: crypto.randomUUID(), ...(product ? detailOf(product) : {}), productId: source.productId, productCode: source.productCode, productName: source.productName, units, unitId: source.unitId,
     quantity: source.quantity == null ? "" : String(source.quantity), unitPrice: source.unitPrice, listPrice: source.listPrice ?? units.find((unit) => unit.id === source.unitId)?.salePrice ?? null,
     note: source.note ?? "", delivered: source.delivered ?? 0,
   };
@@ -107,7 +108,7 @@ function Editor({ access, start, products, people }: { access: OrderAccess; star
     const product = products.find((row) => row.id === option.id), unit = product && baseUnit(product);
     if (!product || !unit) return;
     const price = defaultPrice(unit, product.unitPrice);
-    setLines((current) => [...current, { key: crypto.randomUUID(), productId: product.id, productCode: product.code, productName: product.name, units: unitsOf(product), unitId: unit.unitId, quantity: "1", unitPrice: price, listPrice: price, note: "", delivered: 0 }]);
+    setLines((current) => [...current, { key: crypto.randomUUID(), ...detailOf(product), productId: product.id, productCode: product.code, productName: product.name, units: unitsOf(product), unitId: unit.unitId, quantity: "1", unitPrice: price, listPrice: price, note: "", delivered: 0 }]);
     setError(undefined);
   }
   const ask = (confirmation: InvoiceConfirmation) =>
@@ -147,7 +148,7 @@ function Editor({ access, start, products, people }: { access: OrderAccess; star
 
   const title = order ? `Sửa đơn đặt hàng ${order.code}` : copy ? `Sao chép ${copy.code}` : "Đặt hàng";
   const sourceNote = draft ? `Tạo từ yêu cầu mua của ${draft.customer.name}; kiểm tra lại số lượng, đơn giá và hẹn lấy hàng.` : copy ? `Sao chép từ đơn ${copy.code}; kiểm tra lại số lượng và đơn giá.` : undefined;
-  return <EditorFrame title={title} backHref={ORDERS_PATH} source={sourceNote} tools={<ItemFinder placeholder="Tìm hàng hóa theo mã hoặc tên" items={finderItems} onPick={add} />}>
+  return <EditorFrame title={title} backHref={ORDERS_PATH} source={sourceNote} tools={<ItemFinder placeholder="Tìm hàng hóa theo mã hoặc tên" items={finderItems.filter((item) => !lines.some((line) => line.productId === item.id))} onPick={add} />}>
     {question && <OrderQuestionDialog question={question} />}
     {qr && <CustomerQrDialog shown={qr.shown} onClose={() => router.push(orderHref(qr.code))} />}
     {reprint && <CustomerQrDialog reprintId={reprint} onClose={() => setReprint(undefined)} />}

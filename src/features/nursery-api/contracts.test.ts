@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nurseryDetailSchema, nurseryRowSchema, nurseryStatus, nurseryStatusTone } from "./contracts";
+import { nurseryDetailSchema, nurseryRowSchema, nurseryStatus, nurseryStatusText, nurseryStatusTone } from "./contracts";
 
 const row = { id: "n", code: "NU01", zoneId: "z", zoneCode: "KV01", zoneName: "Vùng 1", quantityIn: 1000,
   startDate: "2026-11-01", daysNursing: 12, statusId: 4002, status: "Completed", rowVersion: "v1" };
@@ -25,6 +25,9 @@ describe("nursery v2 read contracts", () => {
     expect(nurseryStatus(4002)).toBe("Đã ươm xong");
     expect(nurseryStatus(4004)).toBe("Đã đóng");
     expect(nurseryStatusTone(4004)).not.toBe("danger");
+    expect(nurseryStatusText({ statusId: 4004, closeLossPieces: 0 })).toBe("Đã đóng (tự động khi thả hết)");
+    expect(nurseryStatusText({ statusId: 4004, closeLossPieces: 500 })).toBe("Đã đóng");
+    expect(nurseryStatusText({ statusId: 4002, closeLossPieces: 0 })).toBe("Đã ươm xong");
   });
   it("retains required record identity and finite quantity validation", () => {
     expect(nurseryRowSchema.safeParse({ ...row, id: undefined }).success).toBe(false);

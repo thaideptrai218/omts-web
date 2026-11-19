@@ -47,7 +47,7 @@ it("lays the plan out like the invoice row: facts, linked lines, note and sums",
   expect((screen.getByRole("textbox", { name: "Ghi chú" }) as HTMLTextAreaElement).value).toBe("ghi chú kế hoạch");
   expect((screen.getByRole("textbox", { name: "Ghi chú" }) as HTMLTextAreaElement).readOnly).toBe(true);
   const sums = screen.getByRole("textbox", { name: "Ghi chú" }).nextElementSibling as HTMLElement;
-  for (const [label, value] of [["Số bè / luống", "1 bè · 1 luống"], ["Lồng dự kiến", "2,5"], ["Đã thu dòng / luống", "1/1 dòng · 1/1 luống"], ["Không thu luống", "0"]]) {
+  for (const [label, value] of [["Số bè", "1"], ["Lồng dự kiến", "2,5"], ["Đã thu", "1/1 bè"]]) {
     expect(within(sums).getByText(label).nextElementSibling!.textContent).toBe(value);
   }
 });

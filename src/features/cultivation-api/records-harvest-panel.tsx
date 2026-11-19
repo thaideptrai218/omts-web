@@ -23,7 +23,6 @@ import { HarvestPlanSummary } from "./harvest-plan-summary";
 
 
 import * as c from "./records-contracts";
-import { HarvestForm } from "./records-harvest-form";
 import { harvestRepo, useAllowed } from "./records-shared";
 
 /** Every lane that has seed is Harvested (and at least one lane was seeded): the cycle can be closed. */
@@ -32,7 +31,6 @@ const everySeededLaneHarvested = (lanes: z.infer<typeof c.harvestLane>[]) => lan
 /** Harvest lots of a raft with search/status filters, filtered totals and an inline lot preview. */
 export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {
   const allowed = useAllowed("harvest", zoneId);
-  const [adding, setAdding] = useState(false);
 
   const remote = useRemote(
     useMemo(
@@ -80,9 +78,6 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
 
         </div>
         <div className={flowStyles.actions}>
-          {remote.data?.canRecordHarvest && allowed("Create") && (
-            <Button type="button" disabled={remote.loading} onClick={() => setAdding(true)}>Ghi nhận thu hoạch</Button>
-          )}
           <Button type="button" variant="secondary" disabled={remote.loading} onClick={remote.reload}>
             Tải lại
           </Button>
@@ -98,10 +93,7 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
               {remote.data.cycle
                 ? `Chu kỳ từ ${formatVietnameseDate(remote.data.cycle.startDate)}`
                 : "Bè chưa có chu kỳ đang nuôi"}
-              <span>
-                Ước tính kg cho lượt ghi mới:{" "}
-                <strong>{remote.data.averageKgPerCage.toLocaleString("vi-VN")} kg/lồng</strong>
-              </span>
+              <span>Thu hoạch được ghi từ kế hoạch thu hoạch của bè.</span>
             </p>
             {remote.data.cycle && <HarvestCycleProductBanner cycle={remote.data.cycle} />}
             <HarvestPlanSummary data={remote.data} />
@@ -167,20 +159,6 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
               <Paging page={currentPage} total={rows.length} pageSize={10} onChange={setPage} />
             </div>
 
-
-            {adding && (
-              <HarvestForm
-                canConfigure={allowed("Owner")}
-                zoneId={zoneId}
-                raftId={raftId}
-                data={remote.data}
-                onClose={() => setAdding(false)}
-                onSaved={() => {
-                  setAdding(false);
-                  remote.reload();
-                }}
-              />
-            )}
           </>
         )
       )}

@@ -139,15 +139,16 @@ export async function handleOperationRequest(request: Request, areaName: string)
       : plan.file ? Math.max(15_000, backend.config.timeoutMs) : backend.config.timeoutMs;
     const timeout = setTimeout(abort, budget);
     try {
+      const exportMime = plan.exportFormat === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       const upstream = await fetch(new URL(plan.path, backend.config.origin), { method: plan.method, cache: "no-store", redirect: "error", credentials: "omit", signal: controller.signal,
-        headers: { Accept: plan.file === "export" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/json",
+        headers: { Accept: plan.file === "export" ? exportMime : "application/json",
           Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(typeof payload === "string" ? { "Content-Type": "application/json" } : {}) }, body: payload });
       let data: unknown;
       const failedCopy = upstream.ok ? undefined : upstream.clone();
       let bytes: Uint8Array | undefined;
       let contentType = upstream.headers.get("content-type")?.split(";")[0];
       if (plan.file === "export" && upstream.ok) {
-        if (contentType !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") return json({ status: "invalid-response" }, 502);
+        if (contentType !== exportMime) return json({ status: "invalid-response" }, 502);
         bytes = await readBoundedBytes(upstream.body, controller.signal, 32 * 1024 * 1024, budget);
       } else if (plan.noContent && upstream.status === 204) data = { done: true };
       else {
@@ -169,7 +170,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
       }
       if (plan.file === "invoice" || plan.file === "photo") {
         const record = data as Record<string, unknown>;
-        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : area.data === "harvest" || area.data === "claim-reports" || area.data === "quality-claims" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
+        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : area.data === "harvest" || area.data === "seeding" || area.data === "claim-reports" || area.data === "quality-claims" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
         const target = localFileTarget(raw, backend.config.origin);
         if (!target) return json({ status: "not-found" }, 404);
         const file = await fetch(target, { cache: "no-store", redirect: "error", credentials: "omit", signal: controller.signal });
@@ -181,9 +182,9 @@ export async function handleOperationRequest(request: Request, areaName: string)
       if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
       if (request.signal.aborted || controller.signal.aborted) return json({ status: "unavailable" }, 503);
       if (bytes) {
-        const extension = plan.file === "export" ? "xlsx" : contentType === "application/pdf" ? "pdf" : contentType === "image/png" ? "png" : "jpg";
-        // Payroll exports keep the file name the backend chose (period in the name), limited to safe characters.
-        const backendName = area.data === "payroll" && plan.file === "export" ? /filename="?([A-Za-z0-9._-]{1,80})\.xlsx"?/.exec(upstream.headers.get("content-disposition") ?? "")?.[1] : undefined;
+        const extension = plan.file === "export" ? (plan.exportFormat ?? "xlsx") : contentType === "application/pdf" ? "pdf" : contentType === "image/png" ? "png" : "jpg";
+        // Payroll and end-of-day exports keep the file name the backend chose (period or date in the name), limited to safe characters.
+        const backendName = (area.data === "payroll" || area.data === "end-of-day-report") && plan.file === "export" ? /filename="?([A-Za-z0-9._-]{1,80})\.(?:xlsx|pdf)"?/.exec(upstream.headers.get("content-disposition") ?? "")?.[1] : undefined;
         return new Response(bytes as BodyInit, { headers: { ...responseHeaders, "Content-Type": contentType!, "Content-Disposition": `${plan.file === "photo" ? "inline" : "attachment"}; filename="${backendName ?? exportFileName(area.data, query, plan.file === "export")}.${extension}"`,
           "Content-Security-Policy": "sandbox; default-src 'none'" } });
       }

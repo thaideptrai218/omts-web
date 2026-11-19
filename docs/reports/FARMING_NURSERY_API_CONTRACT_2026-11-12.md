@@ -493,3 +493,18 @@ Các lần đọc có thêm trường (tất cả tùy chọn, thêm vào cuối
 Hiệu năng: danh sách bè/chu kỳ dùng 3 truy vấn tổng hợp cho mọi chu kỳ (không truy vấn theo từng bè). Không đổi hành vi nào khác; chữ báo lỗi HARVEST_PRODUCT_MISMATCH giữ nguyên.
 
 Hiển thị (web): "Hàu giống … · lô PN… · đợt ươm NU…" (phần đợt ươm chỉ khi có); chu kỳ cũ nhiều giống: "Giống A + Giống B · lô PN…".
+
+## Phụ lục H4 (18/11/2026): đợt ươm TỰ ĐÓNG khi thả hết kho ươm (NUR-22)
+
+Quyết định của chủ: khi các lần thả giống dùng hết kho ươm (còn lại = 0 sau khi LƯU/SỬA một bản ghi thả giống) thì đợt ươm tự chuyển 4002 "Đã ươm xong" sang 4004 "Đã đóng", không cần bấm "Đóng đợt ươm".
+
+Quy tắc (backend, cùng giao dịch với lần lưu bản ghi thả giống; `NurseryPoolAutoClose`):
+- Tự đóng: đợt 4002, sau khi lưu số thả của bản ghi mà `survivors - tổng đã thả <= 0` (và đã thả > 0) -> `statusId` 4004, `closedOn` = hôm nay, `closeLossPieces` = 0 (không ghi giảm gì), `closeReason` = "tự đóng khi thả hết", `closedByAccountId` = người lưu bản ghi. Áp dụng cho thêm mới (CYCLE-02.0), sửa (CYCLE-02.2) và sửa truy xuất (TRACE-03) bản ghi thả giống.
+- Tự mở lại: sửa giảm số lượng hoặc xóa một bản ghi làm kho ươm còn mảnh (`remaining > 0`) mà đợt đang 4004 và là đợt TỰ ĐÓNG (nhận biết: `closeLossPieces` = 0; đóng tay luôn ghi giảm > 0) -> về 4002, xóa `closedOn`, `closeLossPieces`, `closeReason`, người đóng. Đợt đóng tay (còn thừa, `closeLossPieces` > 0) giữ nguyên đóng.
+- Đợt đã tự đóng vẫn cho SỬA bản ghi thả giống trong hạn mức kho (tối đa = số sống sót trừ phần các bản ghi khác); thả thêm mảnh mới vẫn bị chặn `NURSERY_POOL_EXCEEDED` (còn 0).
+- Đóng tay `POST /api/nursery-batches/{id}/close` GIỮ NGUYÊN, chỉ cho đợt 4002 còn mảnh (`remaining > 0`); hết mảnh vẫn `NURSERY_NOTHING_TO_CLOSE`. `canClose` chỉ true khi 4002 và `remaining > 0` (đã vậy).
+- Lịch sử: tự đóng ghi sự kiện `NurseryBatch.Closed` (nhãn "Đóng đợt ươm") với lý do "tự đóng khi thả hết"; mở lại ghi `NurseryBatch.Reopened` (nhãn "Mở lại đợt ươm"), lý do "mở lại do kho ươm có mảnh trở lại".
+- Thông báo: tự đóng/mở lại KHÔNG gửi thông báo (tránh dồn thông báo mỗi lần thả cuối). Thông báo "Nursery closed" chỉ còn cho đóng tay (Quản lý vùng đóng -> báo Chủ). Lịch sử ghi vẫn đầy đủ.
+- Không có dung sai thả vượt (`Nursery:SeedingTolerancePercent`) trên nhánh này, nên "hết" = `remaining <= 0` theo `survivors - đã thả`.
+- Không đổi schema (dùng cột sẵn có). Nhận biết đợt tự đóng ở web: `statusId` 4004 và `closeLossPieces` = 0 (hoặc `closeReason` = "tự đóng khi thả hết") -> hiển thị "Đã đóng (tự động khi thả hết)".
+- Không đổi: sửa số sống sót xuống đúng bằng đã thả vẫn để đợt ở 4002 với `remaining` = 0 (không tự đóng, vì không phải do bản ghi thả giống).

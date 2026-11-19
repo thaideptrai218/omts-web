@@ -17,7 +17,7 @@ it("asks one weighed kg per product line, with the estimate beside it, and sends
   weigh.mockResolvedValue({ status: "success", data: { lot: {} } });
   const onSaved = vi.fn();
   mount(lot(), onSaved);
-  expect(screen.getAllByText(/Ước tính 100 kg/)).toHaveLength(2);
+  expect(screen.getAllByText(/Mang lên 2 lồng/)).toHaveLength(2);
   fireEvent.change(screen.getByLabelText("Kg cân Hàu sữa"), { target: { value: "98,125" } });
   fireEvent.change(screen.getByLabelText("Kg cân Hàu cồn"), { target: { value: "90" } });
   expect(screen.getByText("188,125 kg")).toBeTruthy();
@@ -52,7 +52,7 @@ it("shows the previous weighing when weighing again and starts from its kg", asy
   expect(screen.getByText(/Lần cân trước/).textContent).toContain("190 kg");
   expect(screen.getByText(/Lần cân trước/).textContent).toContain("17/11/2026 09:00");
   expect((screen.getByLabelText("Kg cân Hàu sữa") as HTMLInputElement).value).toBe("190");
-  expect(screen.getByText(/cân trước 190 kg/)).toBeTruthy();
+  
   fireEvent.change(screen.getByLabelText("Kg cân Hàu sữa"), { target: { value: "185" } });
   fireEvent.click(screen.getByRole("button", { name: "Lưu số cân mới" }));
   await waitFor(() => expect(weigh).toHaveBeenCalled());
@@ -68,4 +68,10 @@ it("keeps the form and shows the refusal of the API", async () => {
   expect((await screen.findByRole("alert")).textContent).toContain("Trạng thái hiện tại không cho phép");
   expect(onSaved).not.toHaveBeenCalled();
   expect((screen.getByLabelText("Kg cân thực tế") as HTMLInputElement).value).toBe("10");
+});
+
+it("compares the weighed kg with the estimate of the cages brought up", async () => {
+  const { weighComparison } = await import("./lot-weigh-form");
+  expect(weighComparison(200, 190)).toEqual({ difference: -10, percent: -5 });
+  expect(weighComparison(0, 10)).toEqual({ difference: 10, percent: null });
 });

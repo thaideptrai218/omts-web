@@ -23,3 +23,17 @@
 .recordFormFooter button { width:auto; }
 :global(dialog) .recordFormFooter, :global(dialog) .harvestFormFooter { position:sticky; bottom:0; z-index:5; padding-bottom:16px; background:var(--omts-color-surface); }
 :global(dialog) .harvestFormFooter { margin-top:16px; padding-top:12px; }
+
+/* Seeding record detail: figures first, then where the seed came from, then who recorded it; photos beside the figures on a wide screen. */
+.detailLayout { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:20px 28px; align-items:start; }
+.detailStats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+.detailStat { padding:10px 12px; border:1px solid var(--omts-color-border); border-radius:10px; background:var(--omts-color-surface, #fff); }
+.detailStat span { display:block; font-size:11px; color:var(--omts-color-text-muted); }
+.detailStat strong { display:block; margin-top:3px; font-size:16px; font-weight:650; overflow-wrap:anywhere; }
+.detailGroup { margin-bottom:14px; padding:10px 12px; border:1px solid var(--omts-color-border); border-radius:10px; background:var(--omts-color-surface, #fff); }
+.detailGroup h5 { margin:0 0 8px; font-size:12px; font-weight:650; color:var(--omts-color-text-muted); text-transform:uppercase; letter-spacing:.03em; }
+.detailGroup dl { display:grid; grid-template-columns:minmax(110px,max-content) minmax(0,1fr); gap:6px 16px; }
+.recordDetail .detailGroup dd { margin-top:0; }
+.recordDetail .detailNote { margin-top:0; }
+@media(max-width:900px) { .detailLayout { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:639px) { .detailStats { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .detailGroup dl { grid-template-columns:minmax(0,1fr); } }

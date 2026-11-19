@@ -8,7 +8,7 @@ import { z } from "zod";
 const id = z.guid(), num = z.number(), text = z.string();
 
 export const draftLine = z.object({
-  salesOrderLineId: id, lineNumber: z.number().int().nullish(), productId: id, productCode: text, productName: text, unitId: id, unitCode: text.nullish(), unitName: text, factor: num,
+  salesOrderLineId: id, lineNumber: z.number().int().nullish(), productId: id, productCode: text, productName: text, sizeMinCm: z.number().nullish(), sizeMaxCm: z.number().nullish(), unitId: id, unitCode: text.nullish(), unitName: text, factor: num,
   orderedQuantity: num, deliveredQuantity: num,
   /** What is still to deliver in the unit of the line: 0 for a line already delivered in full (it stays so the seller can add to it). */
   quantity: num, unitPrice: num, listPrice: num.nullish(), amount: num.nullish(),

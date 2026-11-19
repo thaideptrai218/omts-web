@@ -68,9 +68,11 @@ export function createOperationsRepository(area: RepositoryArea) {
         if (!response.ok) {
           const data = await response.json(); return { status: "error", httpStatus: response.status, code: data.code, uncertain: false };
         }
-        if (!response.headers.get("content-type")?.startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) throw new Error("Unexpected file");
+        // Báo cáo có thể xuất PDF (query.format = "pdf"); mọi màn khác chỉ nhận Excel.
+        const pdf = query.format === "pdf", contentType = response.headers.get("content-type") ?? "";
+        if (!contentType.startsWith(pdf ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) throw new Error("Unexpected file");
         const url = URL.createObjectURL(await response.blob());
-        const link = document.createElement("a"); link.href = url; link.download = suggestedFileName(response.headers.get("content-disposition")) ?? `${area}.xlsx`; link.click();
+        const link = document.createElement("a"); link.href = url; link.download = suggestedFileName(response.headers.get("content-disposition")) ?? `${area}.${pdf ? "pdf" : "xlsx"}`; link.click();
         setTimeout(() => URL.revokeObjectURL(url), 30_000);
         return { status: "success", data: true };
       } catch { return { status: "error", httpStatus: 0, uncertain: false }; }

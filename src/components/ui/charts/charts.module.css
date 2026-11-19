@@ -1,0 +1,26 @@
+/* Biểu đồ dùng chung: bám giao diện biểu đồ Sản lượng nuôi (lưới nhạt, chữ trục 10px, cột bo 2px). */
+.wrap { display: grid; gap: .5rem; min-width: 0; }
+.plot { width: 100%; min-width: 0; }
+.plot svg { overflow: visible; }
+
+.legend { display: flex; flex-wrap: wrap; gap: .25rem .875rem; margin: 0; padding: 0; list-style: none; font-size: .75rem; color: var(--omts-color-text-muted); }
+.legendButton, .legendStatic { display: inline-flex; align-items: center; gap: 5px; padding: 2px 4px; border: 0; background: none; font: inherit; color: inherit; border-radius: 4px; }
+.legendButton { cursor: pointer; }
+.legendButton:hover { background: var(--omts-color-surface-subtle); }
+.legendButton:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.legendOff { text-decoration: line-through; opacity: .55; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.swatchLine { width: 16px; height: 0; border-top: 2px solid; border-radius: 0; }
+.swatchDash { width: 16px; height: 0; border-top: 2px dashed; border-radius: 0; }
+
+.tooltip { padding: .5rem .625rem; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border-strong); border-radius: 6px; box-shadow: var(--omts-shadow-card); font-size: .75rem; color: var(--omts-color-text); max-width: 16rem; }
+.tooltip strong { display: block; margin-bottom: .25rem; }
+.tooltip ul { display: grid; gap: .125rem; margin: 0; padding: 0; list-style: none; }
+.tooltip li { display: flex; align-items: center; gap: .375rem; }
+.tooltip li span { flex: 1; color: var(--omts-color-text-muted); }
+.tooltip li b { font-variant-numeric: tabular-nums; }
+
+.skeleton { width: 100%; border-radius: var(--omts-radius-control); }
+.empty { display: grid; place-items: center; margin: 0; padding: 1rem; text-align: center; font-size: .8125rem; color: var(--omts-color-text-muted); background: var(--omts-color-surface-subtle); border-radius: var(--omts-radius-control); }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

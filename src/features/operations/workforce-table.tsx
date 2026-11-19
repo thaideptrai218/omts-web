@@ -21,6 +21,6 @@ export function WorkforceTable({ board, columns }: { board: WorkforceBoard; colu
       {columns.map((column) => <SortableHeader key={column.key} label={column.label} sortKey={column.key} sort={board.sort} onSort={board.setSort} />)}
     </tr></thead>
     <tbody>{visibleRows.map((row) => <WorkforceAssignmentRow key={row.id} row={row} columns={columns} open={board.expanded === row.id} zoneName={board.zoneName}
-      allowed={board.allowed} disabled={board.editor.disabled} onToggle={() => board.toggleRow(row.id)} onAct={(target, action) => void board.act(target, action)} />)}</tbody>
+      allowed={board.allowed} disabled={board.editor.disabled} pending={board.pendingId === row.id} onToggle={() => board.toggleRow(row.id)} onAct={(target, action) => void board.act(target, action)} />)}</tbody>
   </table>;
 }
