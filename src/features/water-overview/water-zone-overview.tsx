@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorNotice } from "@/features/operations/ui";
 import type { ZoneOverviewItem } from "./contracts";
 import { useWaterZoneOverview } from "./use-water-zone-overview";
-import { absoluteTimeText, describeValueOutside, isMeasurementStale, relativeTimeText, RECENT_MEASUREMENT_HOURS, zoneStatusLabel } from "./water-overview-logic";
+import { absoluteTimeText, describeValueOutside, isMeasurementStale, relativeTimeText, RECENT_MEASUREMENT_TEXT, zoneStatusLabel } from "./water-overview-logic";
 import s from "./water-zone-overview.module.css";
 
 function SkeletonGrid() {
@@ -71,7 +71,7 @@ export function WaterZoneOverview({ onSelectZone }: { onSelectZone(zoneId: strin
         : (
           <>
             <ul className={s.grid}>{items.map((item) => <ZoneCard key={item.zoneId} item={item} now={now} onSelect={onSelectZone} />)}</ul>
-            <p className={s.note}>“Chưa đo gần đây” nghĩa là chưa có lần đo nào trong {RECENT_MEASUREMENT_HOURS} giờ qua.</p>
+            <p className={s.note}>“Chưa đo gần đây” nghĩa là chưa có lần đo nào trong {RECENT_MEASUREMENT_TEXT} qua.</p>
           </>
         ))}
     </section>

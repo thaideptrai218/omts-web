@@ -1,17 +1,16 @@
 import type { ValueOutside, ZoneOverviewItem } from "./contracts";
 
-/**
- * Ngưỡng "đo gần đây": vùng không có lần đo nào trong khoảng này được tính là "chưa đo gần đây".
- * Chỉ là hằng số hiển thị của Web, chưa có quy tắc nghiệp vụ chốt; đổi tại đây nếu SRS quy định khác.
- */
-export const RECENT_MEASUREMENT_HOURS = 24;
+/** "Chưa đo gần đây" (PM 19/11/2026): vùng không có lần đo nào trong 1 tháng gần nhất (tính theo tháng lịch, không phải 24 giờ). */
+export const RECENT_MEASUREMENT_TEXT = "1 tháng";
 
 const MINUTE = 60_000, HOUR = 60 * MINUTE, DAY = 24 * HOUR;
 
-/** Vùng chưa có lần đo nào hoặc lần đo mới nhất đã quá ngưỡng RECENT_MEASUREMENT_HOURS. */
+/** Vùng chưa có lần đo nào hoặc lần đo mới nhất cũ hơn cùng thời điểm này của tháng trước. */
 export function isMeasurementStale(latest: string | null, now: number): boolean {
   if (!latest) return true;
-  return now - Date.parse(latest) > RECENT_MEASUREMENT_HOURS * HOUR;
+  const limit = new Date(now);
+  limit.setMonth(limit.getMonth() - 1);
+  return Date.parse(latest) < limit.getTime();
 }
 
 /** Thời gian đã qua dạng tiếng Việt, vd "5 phút trước"; thời điểm tương lai nhẹ (lệch đồng hồ) coi như "vừa xong". */
