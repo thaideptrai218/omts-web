@@ -75,11 +75,6 @@
 .sectionBody { padding: 0 .75rem .75rem; display: grid; gap: .5rem; min-width: 0; }
 .segment { display: inline-flex; gap: 4px; }
 .chartTools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .875rem; }
-.legend { display: flex; flex-wrap: wrap; gap: .25rem .875rem; margin: 0; font-size: .75rem; color: var(--omts-color-text-muted); }
-.legend span { display: inline-flex; align-items: center; gap: 5px; }
-.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-.swatchLine { width: 16px; height: 0; border-top: 2px solid var(--omts-color-text); display: inline-block; }
-.swatchTarget { width: 16px; height: 0; border-top: 2px dashed #b45309; display: inline-block; }
 .tableScroll { overflow-x: auto; max-width: 100%; }
 
 .insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .625rem; }

@@ -1,6 +1,8 @@
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
-export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "purchase-requests", "workforce", "my-work", "seed-lots"] as const;
+export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "end-of-day-report", "product-report", "customer-report", "supplier-report", "financial-report", "purchase-requests", "workforce", "my-work", "seed-lots"] as const;
 export type OperationArea = typeof operationAreas[number];
+/** Báo cáo kiểu KiotViet chưa có màn: ẩn khỏi menu/dashboard và bị từ chối ở mọi lớp cho tới khi màn xong (xoá khỏi danh sách khi hoàn thành). */
+const unfinishedAreas: readonly OperationArea[] = [];
 export const operationModules: readonly { key: OperationArea; title: string; functionCode: string }[] = [
   { key: "job-types", title: "Loại công việc và đơn giá", functionCode: "PAY_RULES" },
   { key: "seeding", title: "Thả giống", functionCode: "CULTIVATION_CYCLES" },
@@ -21,15 +23,22 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "sales-invoice-list", title: "Hóa đơn bán", functionCode: "SALES_INVOICES" },
   { key: "payroll", title: "Bảng lương", functionCode: "PAYROLL" },
   { key: "payroll-payments", title: "Thanh toán lương", functionCode: "PAYROLL" },
-  { key: "sales-report", title: "Hiệu quả bán hàng", functionCode: "SALES_REPORTS" },
+  { key: "sales-report", title: "Bán hàng", functionCode: "SALES_REPORTS" },
   { key: "price-trend-report", title: "Xu hướng giá", functionCode: "SALES_REPORTS" },
   { key: "after-sales-report", title: "Vấn đề sau bán", functionCode: "SALES_REPORTS" },
+  // Báo cáo kiểu KiotViet: Chủ HTX và Kế toán (nhân viên có quyền SALES_REPORTS tương ứng) xem được, theo quyết định phase 0 (D5).
+  { key: "end-of-day-report", title: "Cuối ngày", functionCode: "SALES_REPORTS" },
+  { key: "product-report", title: "Hàng hóa", functionCode: "SALES_REPORTS" },
+  { key: "customer-report", title: "Khách hàng", functionCode: "SALES_REPORTS" },
+  { key: "supplier-report", title: "Nhà cung cấp", functionCode: "SALES_REPORTS" },
+  { key: "financial-report", title: "Tài chính", functionCode: "SALES_REPORTS" },
   { key: "purchase-requests", title: "Yêu cầu mua hàu", functionCode: "PURCHASE_REQUESTS" },
   { key: "workforce", title: "Phân công và chấm công", functionCode: "WORK_ASSIGNMENTS" },
   { key: "my-work", title: "Công việc và nghỉ phép", functionCode: "" },
   { key: "seed-lots", title: "Lô giống", functionCode: "PURCHASE_RECEIPTS" },
 ];
 export function operationAllowed(area: OperationArea, identity: { subjectType: string }, permissions: readonly FunctionPermission[], action = "View", zoneId?: string) {
+  if (unfinishedAreas.includes(area)) return false;
   if (area === "my-work") return identity.subjectType === "Staff";
   // Bảng lương và Thanh toán lương: luật cứng chỉ dành cho Chủ hợp tác xã, không theo quyền chức năng đã chọn.
   if (area === "payroll" || area === "payroll-payments") return identity.subjectType === "CooperativeOwner";
