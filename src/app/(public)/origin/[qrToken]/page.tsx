@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
+import { headers } from "next/headers";
 import { connection } from "next/server";
 import { cache } from "react";
 import { originCopy } from "@/features/origin-page/origin-copy";
@@ -39,6 +40,9 @@ export default async function OriginPage({ params, searchParams }: PageProps<"/o
   const result = await getProvenance(qrToken, language);
   const copy = originCopy(language);
   const retryHref = `/origin/${encodeURIComponent(qrToken)}${language === "en" ? "?lang=en" : ""}`;
+  // Địa chỉ đầy đủ của trang (để vẽ mã QR khi bị chặn vì mở quá nhiều): lấy từ host của yêu cầu.
+  const head = await headers(), host = head.get("x-forwarded-host") ?? head.get("host");
+  const pageUrl = host ? `${head.get("x-forwarded-proto") ?? "https"}://${host}${retryHref}` : null;
   return (
     <div className={originFont.variable}>
       {result.status === "ok" ? (
@@ -46,7 +50,7 @@ export default async function OriginPage({ params, searchParams }: PageProps<"/o
       ) : (
         <OriginStatePanel
           problem={result.status} language={language} copy={copy} retryHref={retryHref}
-          backendMessage={result.status === "not-found" ? result.message : null}
+          backendMessage={result.status === "not-found" ? result.message : null} pageUrl={pageUrl}
         />
       )}
     </div>

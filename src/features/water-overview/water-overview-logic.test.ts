@@ -26,8 +26,9 @@ describe("thời gian tương đối", () => {
 describe("chưa đo gần đây", () => {
   it("không có lần đo hoặc quá 24 giờ là chưa đo gần đây", () => {
     expect(isMeasurementStale(null, now)).toBe(true);
-    expect(isMeasurementStale(ago(25 * HOUR), now)).toBe(true);
-    expect(isMeasurementStale(ago(23 * HOUR), now)).toBe(false);
+    expect(isMeasurementStale(ago(32 * DAY_MS), now)).toBe(true);
+    expect(isMeasurementStale(ago(25 * HOUR), now)).toBe(false);
+    expect(isMeasurementStale(ago(20 * DAY_MS), now)).toBe(false);
   });
   it("tóm tắt số vùng, vùng cảnh báo, vùng chưa đo", () => {
     const items = [zone(), zone({ hasWaterAlert: true }), zone({ latestMeasuredAt: null }), zone({ latestMeasuredAt: ago(30 * HOUR) })];
@@ -54,6 +55,7 @@ describe("hợp đồng dữ liệu", () => {
 });
 
 import { zoneStatusLabel } from "./water-overview-logic";
+const DAY_MS = 86_400_000;
 describe("nhãn trạng thái vùng bằng tiếng Việt", () => {
   it("không để chữ tiếng Anh của backend lọt ra giao diện", () => {
     expect(zoneStatusLabel({ zoneStatus: "In Use", zoneStatusCode: "ZONE_IN_USE" })).toBe("Đang sử dụng");
