@@ -61,6 +61,16 @@ const paths = {
   inbox: "M4 4h16v12h-5l-2 3h-2l-2-3H4V4Zm4 5h8m-8 3h5",
   security: "M12 2 4 6v6c0 5 3.3 8.2 8 10 4.7-1.8 8-5 8-10V6l-8-4Zm-3 10 2 2 4-4",
   work: "M4 5h16v16H4V5Zm4-2v4m8-4v4M7 12h4m-4 4h7m1-4 1 1 2-2",
+  undo: "M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11",
+  redo: "m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13",
+  print: "M6 9V3h12v6M6 18H4v-7h16v7h-2M6 14h12v7H6v-7Z",
+  "zoom-in": "m21 21-4.5-4.5M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM11 8v6M8 11h6",
+  "zoom-out": "m21 21-4.5-4.5M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM8 11h6",
+  fullscreen: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  "fullscreen-exit": "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
+  eye: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
+  "square-plus": "M4 4h16v16H4V4ZM12 8v8M8 12h8",
+  "square-minus": "M4 4h16v16H4V4ZM8 12h8",
 } as const;
 
 export type InterfaceIconName = keyof typeof paths;

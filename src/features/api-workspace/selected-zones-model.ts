@@ -39,10 +39,10 @@ export function toggleZoneSelection(zones: readonly ZoneOption[], current: Resol
   return ids.length === zones.length ? { kind: "all" } : { kind: "ids", ids };
 }
 
-/** "Tất cả khu nuôi", one name, "A và B", or "A và N khu khác". */
+/** "Tất cả vùng nuôi", one name, "A và B", or "A và N vùng khác". */
 export function zoneSelectionLabel(zones: readonly ZoneOption[], selection: ResolvedZoneSelection): string {
-  if (selection.allSelected) return "Tất cả khu nuôi";
+  if (selection.allSelected) return "Tất cả vùng nuôi";
   const names = zones.filter((zone) => selection.selectedIds.includes(zone.id)).map((zone) => zone.name);
-  if (names.length <= 1) return names[0] ?? "Tất cả khu nuôi";
-  return names.length === 2 ? `${names[0]} và ${names[1]}` : `${names[0]} và ${names.length - 1} khu khác`;
+  if (names.length <= 1) return names[0] ?? "Tất cả vùng nuôi";
+  return names.length === 2 ? `${names[0]} và ${names[1]}` : `${names[0]} và ${names.length - 1} vùng khác`;
 }

@@ -38,7 +38,7 @@ function useNarrowScreen(maxWidth = 900) {
  * column template, so the search box lines up with the list and stays put when the filter rail closes.
  */
 export function ManagementLayout({ storageKey, icon, title, search, actions, filters, filterLabel = "Bộ lọc", footer, children }: {
-  storageKey: string; icon: InterfaceIconName; title: string; search: ReactNode; actions: ReactNode; filters: ReactNode; filterLabel?: string; footer?: ReactNode; children: ReactNode;
+  storageKey: string; icon: InterfaceIconName; title: string; search?: ReactNode; actions: ReactNode; filters: ReactNode; filterLabel?: string; footer?: ReactNode; children: ReactNode;
 }) {
   const [stored, store] = useStoredValue(`omts-filter-rail-${storageKey}`, "open");
   const narrow = useNarrowScreen();
@@ -51,7 +51,8 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
   return <section ref={root} className={`${styles.theme} ${styles.screen}`} data-management-screen data-filters={open ? "open" : "closed"}>
     <header className={styles.toolbar}>
       <div className={styles.title}><InterfaceIcon name={icon} className="size-[18px] shrink-0" /><h1>{title}</h1></div>
-      <div className={styles.tools}><div className={styles.search}><InterfaceIcon name="search" />{search}</div><div className={styles.actions}>{actions}</div></div>
+      <div className={styles.tools}>{/* Không có ô tìm kiếm (màn không có gì để tìm): giữ một khoảng trống cùng cột để các nút bên phải không nhảy chỗ. */}
+      {search ? <div className={styles.search}><InterfaceIcon name="search" />{search}</div> : <div aria-hidden="true" />}<div className={styles.actions}>{actions}</div></div>
     </header>
     <div className={styles.body}>
       {open && narrow && <button type="button" className={styles.drawerBackdrop} aria-label="Đóng bộ lọc" tabIndex={-1} onClick={() => setOpen(false)} />}

@@ -9,10 +9,10 @@ afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); });
 
 describe("zone selection label", () => {
   it("names all, one, two and many zones", () => {
-    expect(zoneSelectionLabel(zones, resolveZoneSelection(zones, undefined))).toBe("Tất cả khu nuôi");
+    expect(zoneSelectionLabel(zones, resolveZoneSelection(zones, undefined))).toBe("Tất cả vùng nuôi");
     expect(zoneSelectionLabel(zones, resolveZoneSelection(zones, { kind: "ids", ids: ["z2"] }))).toBe("Minh Châu");
     expect(zoneSelectionLabel(zones, resolveZoneSelection(zones, { kind: "ids", ids: ["z2", "z1"] }))).toBe("Ngọc Vừng và Minh Châu");
-    expect(zoneSelectionLabel(zones, resolveZoneSelection(zones, { kind: "ids", ids: ["z1", "z2", "z3"] }))).toBe("Ngọc Vừng và 2 khu khác");
+    expect(zoneSelectionLabel(zones, resolveZoneSelection(zones, { kind: "ids", ids: ["z1", "z2", "z3"] }))).toBe("Ngọc Vừng và 2 vùng khác");
   });
 });
 

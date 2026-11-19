@@ -20,7 +20,7 @@ export type SelectedZones = Readonly<{
 
 const noop = () => {};
 // Outside the provider (mock runtime, isolated screens) nothing is narrowed.
-const unscoped: SelectedZones = { status: "idle", zones: [], selectedIds: [], allSelected: true, label: "Tất cả khu nuôi", selectAll: noop, toggle: noop, reload: noop };
+const unscoped: SelectedZones = { status: "idle", zones: [], selectedIds: [], allSelected: true, label: "Tất cả vùng nuôi", selectAll: noop, toggle: noop, reload: noop };
 const SelectedZonesContext = createContext<SelectedZones>(unscoped);
 
 /** The zones the signed-in account may see and the subset chosen in the header; the choice is remembered per browser. */
