@@ -89,14 +89,20 @@ export function Popover({ anchor, label, onClose, children, placement = "side" }
 
 const monthOf = (date: Date, offset = 0) => new Date(date.getFullYear(), date.getMonth() + offset, 1);
 
-function CustomCalendar({ value, onApply, onCancel }: { value: TimeRangeValue; onApply(from: string, to: string): void; onCancel(): void }) {
+/** `max` (yyyy-MM-dd): last day that can be picked; later days are shown disabled and the month list stops there (reports never cover the future). */
+function CustomCalendar({ value, max, onApply, onCancel }: { value: TimeRangeValue; max?: string; onApply(from: string, to: string): void; onCancel(): void }) {
+  const latest = max ? fromQueryDate(max) : undefined;
   const initial = value.kind === "custom" ? { from: fromQueryDate(value.from), to: fromQueryDate(value.to) } : undefined;
   const [draft, setDraft] = useState<DateRange | undefined>(initial);
   const [editing, setEditing] = useState<"from" | "to">("from");
   const [hovered, setHovered] = useState<Date>();
-  const firstMonth = monthOf(initial?.from ?? new Date());
+  // With a `max`, the right calendar can never pass the max month, so the pair ends there (left = the month before) instead of showing one month twice.
+  const lastMonth = latest ? monthOf(latest) : undefined;
+  const wantedRight = (first: Date) => (initial?.to && monthOf(initial.to) > first ? monthOf(initial.to) : monthOf(first, 1));
+  const capped = lastMonth && wantedRight(monthOf(initial?.from ?? new Date())) > lastMonth;
+  const firstMonth = capped ? monthOf(lastMonth, -1) : monthOf(initial?.from ?? new Date());
   const [leftMonth, setLeftMonth] = useState(firstMonth);
-  const [rightMonth, setRightMonth] = useState(() => (initial?.to && monthOf(initial.to) > firstMonth ? monthOf(initial.to) : monthOf(firstMonth, 1)));
+  const [rightMonth, setRightMonth] = useState(() => (capped ? lastMonth : wantedRight(firstMonth)));
   const [singleMonth] = useState(() => window.innerWidth < 640);
   const shown = (date?: Date) => (date ? toDisplayDate(toQueryDate(date)) : "dd/mm/yyyy");
   // One rule for what a click would do, so hovering a day previews exactly the outcome of clicking it.
@@ -107,8 +113,8 @@ function CustomCalendar({ value, onApply, onCancel }: { value: TimeRangeValue; o
   const preview = hovered ? afterClick(hovered).range : undefined;
   const line = preview ?? draft;
   const pick = (_: DateRange | undefined, clicked: Date) => { const next = afterClick(clicked); setDraft(next.range); setEditing(next.editing); };
-  function today() { const now = new Date(), day = new Date(now.getFullYear(), now.getMonth(), now.getDate()); setDraft({ from: day, to: day }); setEditing("from"); setLeftMonth(monthOf(day)); setRightMonth(monthOf(day, 1)); }
-  const calendar = (month: Date, onMonthChange: (next: Date) => void) => <div className={calendarStyles.calendar}><DayPicker mode="range" navLayout="around" captionLayout="dropdown" startMonth={new Date(1940, 0, 1)} endMonth={new Date(new Date().getFullYear() + 5, 11, 31)} components={{ Dropdown: CalendarDropdown }} labels={{ labelMonthDropdown: () => "Tháng", labelYearDropdown: () => "Năm", labelPrevious: () => "Tháng trước", labelNext: () => "Tháng sau" }} locale={vi} weekStartsOn={1} month={month} onMonthChange={onMonthChange} selected={draft} onSelect={pick} fixedWeeks formatters={{ formatWeekdayName: day => ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][day.getDay()], formatMonthDropdown: day => `Tháng ${day.getMonth() + 1}` }}
+  function today() { const now = new Date(), day = new Date(now.getFullYear(), now.getMonth(), now.getDate()); setDraft({ from: day, to: day }); setEditing("from"); const right = lastMonth && monthOf(day, 1) > lastMonth ? lastMonth : monthOf(day, 1); setLeftMonth(monthOf(right, -1)); setRightMonth(right); }
+  const calendar = (month: Date, onMonthChange: (next: Date) => void) => <div className={calendarStyles.calendar}><DayPicker mode="range" navLayout="around" captionLayout="dropdown" startMonth={new Date(1940, 0, 1)} endMonth={latest ?? new Date(new Date().getFullYear() + 5, 11, 31)} disabled={latest ? { after: latest } : undefined} components={{ Dropdown: CalendarDropdown }} labels={{ labelMonthDropdown: () => "Tháng", labelYearDropdown: () => "Năm", labelPrevious: () => "Tháng trước", labelNext: () => "Tháng sau" }} locale={vi} weekStartsOn={1} month={month} onMonthChange={onMonthChange} selected={draft} onSelect={pick} fixedWeeks formatters={{ formatWeekdayName: day => ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][day.getDay()], formatMonthDropdown: day => `Tháng ${day.getMonth() + 1}` }}
     onDayMouseEnter={(day) => setHovered(day)} modifiers={{ preview: preview?.from ? { from: preview.from, to: preview.to ?? preview.from } : false }} modifiersClassNames={{ preview: styles.preview }} /></div>;
   return <div className={styles.calendar}>
     <p className={styles.rangeLine} aria-live="polite">
@@ -162,4 +168,23 @@ export function TimeRangeFilter({ legend, value, onChange }: { legend: string; v
       <CustomCalendar value={value} onCancel={() => close(true)} onApply={(from, to) => { onChange({ kind: "custom", from, to }); close(true); }} />
     </Popover>}
   </FilterGroup>;
+}
+
+/**
+ * One date range box (no presets): shows "dd/mm/yyyy - dd/mm/yyyy" and opens the two-month range calendar beside it, as the "Tùy chỉnh" row of
+ * TimeRangeFilter does. For screens that put the range next to their own choices (e.g. a single day). `max` blocks days after it.
+ */
+export function DateRangeField({ label, value, max, onChange, onOpen }: { label: string; value: { from: string; to: string }; max?: string; onChange(from: string, to: string): void; onOpen?(): void }) {
+  const button = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const text = `${toDisplayDate(value.from)} - ${toDisplayDate(value.to)}`;
+  const close = (returnFocus: boolean) => { if (returnFocus) button.current?.focus(); setOpen(false); };
+  return <>
+    <button ref={button} type="button" className={styles.input} aria-haspopup="dialog" aria-expanded={open} aria-label={`${label}: ${text}`} onClick={() => { onOpen?.(); setOpen(!open); }}>
+      <span>{text}</span><InterfaceIcon name="calendar" />
+    </button>
+    {open && <Popover anchor={button} label={label} onClose={close}>
+      <CustomCalendar value={{ kind: "custom", ...value }} max={max} onCancel={() => close(true)} onApply={(from, to) => { onChange(from, to); close(true); }} />
+    </Popover>}
+  </>;
 }

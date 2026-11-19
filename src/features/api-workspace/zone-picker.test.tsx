@@ -16,15 +16,15 @@ describe("header zone picker", () => {
   it("shows all zones by default and lets the user pick a subset", async () => {
     state.list.mockResolvedValue(rows(["Ngọc Vừng", "Minh Châu", "Quan Lạn"]));
     setup();
-    const chip = await screen.findByRole("button", { name: "Khu nuôi: Tất cả khu nuôi" });
+    const chip = await screen.findByRole("button", { name: "Khu nuôi: Tất cả vùng nuôi" });
     fireEvent.click(chip);
     fireEvent.click(screen.getByRole("checkbox", { name: "Quan Lạn" }));
     expect(screen.getByRole("button", { name: "Khu nuôi: Ngọc Vừng và Minh Châu" })).toBeTruthy();
     fireEvent.click(screen.getByRole("checkbox", { name: "Minh Châu" }));
     expect(screen.getByRole("button", { name: "Khu nuôi: Ngọc Vừng" })).toBeTruthy();
     expect((screen.getByRole("checkbox", { name: "Ngọc Vừng" }) as HTMLInputElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Tất cả khu nuôi" }));
-    expect(screen.getByRole("button", { name: "Khu nuôi: Tất cả khu nuôi" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Tất cả vùng nuôi" }));
+    expect(screen.getByRole("button", { name: "Khu nuôi: Tất cả vùng nuôi" })).toBeTruthy();
   });
   it("persists the choice and drops zones that are no longer visible", async () => {
     state.list.mockResolvedValue(rows(["Ngọc Vừng", "Minh Châu", "Quan Lạn"]));
@@ -41,11 +41,11 @@ describe("header zone picker", () => {
   it("shows a loading chip, then a retry when the zones cannot be loaded", async () => {
     state.list.mockResolvedValue({ status: "error", httpStatus: 503, uncertain: false });
     setup();
-    expect(screen.getByRole("status", { name: "Đang tải khu nuôi" })).toBeTruthy();
-    const retry = await screen.findByRole("button", { name: "Không tải được danh sách khu nuôi. Thử lại" });
+    expect(screen.getByRole("status", { name: "Đang tải vùng nuôi" })).toBeTruthy();
+    const retry = await screen.findByRole("button", { name: "Không tải được danh sách vùng nuôi. Thử lại" });
     state.list.mockResolvedValue(rows(["A", "B"]));
     fireEvent.click(retry);
-    expect(await screen.findByRole("button", { name: "Khu nuôi: Tất cả khu nuôi" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Khu nuôi: Tất cả vùng nuôi" })).toBeTruthy();
   });
   it("is a static label for one zone and absent for none or when disabled", async () => {
     state.list.mockResolvedValue(rows(["Ngọc Vừng"]));

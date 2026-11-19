@@ -1,6 +1,5 @@
-/* Báo cáo Cuối ngày: ba khối thu gọn được. Phần CSS khi in nằm trong end-of-day-parts.tsx (PRINT_CSS). */
+/* Báo cáo Cuối ngày, Dạng bảng: các khối thu gọn được. Dạng Báo cáo (trang giấy) có CSS riêng trong end-of-day-paper/paper.module.css. */
 .printArea { display: grid; gap: 1rem; min-width: 0; }
-.title { margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--omts-color-text); }
 .section { min-width: 0; background: var(--omts-color-surface); border: 1px solid var(--omts-color-border); border-radius: var(--omts-radius-card); box-shadow: var(--omts-shadow-card); }
 .sectionHeading { margin: 0; font-size: .9375rem; font-weight: 700; }
 .sectionToggle { display: flex; align-items: center; gap: .5rem; width: 100%; padding: .75rem 1rem; border: 0; background: none; font: inherit; color: var(--omts-color-text); text-align: left; cursor: pointer; border-radius: var(--omts-radius-card); }
@@ -8,7 +7,9 @@
 .sectionToggle:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
 .sectionBody { display: grid; gap: 1rem; padding: 0 1rem 1rem; min-width: 0; }
 .sectionBody[hidden] { display: none; }
-.subTitle { margin: 0; font-size: .8125rem; font-weight: 700; color: var(--omts-color-text-muted); }
 .empty { margin: 0; font-size: .8125rem; color: var(--omts-color-text-muted); }
 .note { margin: 0; font-size: .8125rem; color: var(--omts-color-text-muted); }
+.rowToggle { display: inline-flex; align-items: center; justify-content: center; margin-right: .375rem; padding: 0; border: 0; background: none; color: var(--omts-color-primary); vertical-align: middle; cursor: pointer; }
+.rowToggle:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
+.detailCell { display: inline-block; padding-left: 1.25rem; }
 @media (max-width: 640px) { .sectionToggle { flex-wrap: wrap; } .sectionToggle small { margin-left: 1.5rem; flex-basis: 100%; } }

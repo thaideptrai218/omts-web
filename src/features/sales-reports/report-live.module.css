@@ -37,3 +37,11 @@
 .rowButton:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 2px; }
 .selected > * { background: var(--omts-color-primary-soft); }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Lọc thời gian của báo cáo Cuối ngày: radio + ô, và hàng giờ Từ/Đến thụt vào dưới ô ngày (mờ nhẹ khi đang chọn khoảng ngày). */
+.timeRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.timeRow > :last-child { flex: 1 1 auto; min-width: 0; }
+.clockRow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-left: 24px; }
+.clockRow[data-inactive] { opacity: .6; }
+.clockRow label > span { width: 34px; }
+.clockRow input { padding: 0 6px; }
