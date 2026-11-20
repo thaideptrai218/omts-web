@@ -76,6 +76,8 @@ const itemBody = z.strictObject({
   code, name: z.string().max(200), group: z.enum(["Seed", "Material", "Other"]), itemGroupId: id.nullable().optional(), description: text(2000), notes: text(2000),
   // "Loại hàu bán ra" of a seed item; a PUT replaces the whole item, so null clears the link (the API ignores it for other groups).
   productId: id.nullable().optional(),
+  // Thời gian trưởng thành (ngày) của giống; null với vật tư.
+  maturityDays: z.number().int().min(1).max(3650).nullable().optional(),
   minQuantity: nonNegative, maxQuantity: nonNegative, costPrice: nonNegative, openingQuantity: nonNegative, units: z.array(unitRow).min(1).max(20).optional(), unit: text(30), rowVersion: rowVersion.optional(),
 });
 const nameBody = z.strictObject({ name: z.string().trim().min(1).max(100) });

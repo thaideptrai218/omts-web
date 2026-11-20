@@ -14,7 +14,6 @@ vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title
 vi.mock("@/features/products/repository", async (original) => ({ ...(await original<typeof import("@/features/products/repository")>()), productRepository: { all: vi.fn().mockResolvedValue({ status: "success", data: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", code: "SP000001", name: "Hàu sữa", unitPrice: 60000, statusId: 101, status: "In Use", rowVersion: "v", unit: "kg", createdAt: "x", units: [] }] }) } }));
 // jsdom cannot decode images; the picker only needs the file back.
 vi.mock("@/components/form/photo-compression", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/components/form/photo-compression")>()), compressPhoto: async (file: File) => file }));
-import { attachPhoto, fillProductLine, selectLane } from "./record-form-test-helpers";
 import { HarvestLanesBoard } from "./harvest-lanes-board";
 import { HarvestPlanSummary, harvestProgressOf } from "./harvest-plan-summary";
 import { harvestEstimate } from "./harvest-estimate-hint";
@@ -101,13 +100,6 @@ describe("one finish action per lane", () => {
 });
 
 
-const fillTrip = async () => {
-  await selectLane(1);
-  await attachPhoto();
-  await fillProductLine("8");
-  fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
-};
 
 describe("conversion beside the cages of a plan harvest", () => {
   it("converts cages to kg and tấn with the product factor or the 50 kg default", async () => {

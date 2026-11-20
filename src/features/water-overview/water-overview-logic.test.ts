@@ -31,7 +31,7 @@ describe("chưa đo gần đây", () => {
     expect(isMeasurementStale(ago(20 * DAY_MS), now)).toBe(false);
   });
   it("tóm tắt số vùng, vùng cảnh báo, vùng chưa đo", () => {
-    const items = [zone(), zone({ hasWaterAlert: true }), zone({ latestMeasuredAt: null }), zone({ latestMeasuredAt: ago(30 * HOUR) })];
+    const items = [zone(), zone({ hasWaterAlert: true }), zone({ latestMeasuredAt: null }), zone({ latestMeasuredAt: ago(40 * DAY_MS) })];
     expect(summarize(items, now)).toEqual({ total: 4, alerting: 1, stale: 2 });
     expect(summarize([], now)).toEqual({ total: 0, alerting: 0, stale: 0 });
   });
