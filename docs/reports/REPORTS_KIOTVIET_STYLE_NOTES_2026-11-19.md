@@ -32,3 +32,10 @@ Plan chi tiết: `plans/261119-0100-GH-227-kiotviet-style-reports/`. Tham chiế
 - Chưa kiểm: các thao tác ghi không hoàn tác (vào/ra hàng loạt, vào làm cả tổ, lưu sửa chấm công, duyệt hàng loạt, ca qua đêm) chỉ đọc code; 2 bài test giờ công mới chưa chạy; test tích hợp backend (quyền Kế toán, tài chính, crew minutes, dashboard) có thể vỡ.
 - Sự cố: agent làm 2 phiếu thanh toán thử 1.000 đ trên dữ liệu demo rồi xóa bằng SQL (gồm audit); dãy số phiếu chi nhảy 2 số.
 - Test web hỏng sẵn: `operations/workflow.test.tsx` (đóng hộp thanh toán NCC sau khi đổi giờ trả không hỏi xác nhận).
+
+## Gop voi develop (PR #18, #19) - 19/11/2026
+- Cuoi ngay: lay ban cua develop (PR #18: bang + giay, bon moi quan tam, loc ngay/gio hoac khoang) lam goc. Giu: `end-of-day-*`, `use-end-of-day-report.ts`, `report-page.tsx` (o tim kiem chi hien khi co `search`), `report-live.module.css`, `server/operations/end-of-day-report-plan.ts`. Bo `end-of-day-sections.tsx` (ban cu cua minh, khong con ai dung).
+- Nut Tai xuong: mot component duy nhat o `components/ui/export-menu.tsx`; `sales-reports/export-menu.tsx` chi re-export (ma cua develop trung ban nay) de paper viewer cua develop khong phai doi import.
+- Giu cua minh (develop chi co ban cu hon cua cung mot cong viec): cham cong/phan cong (sua cham cong, vao lam ca to, tab Staff, duyet hang loat, canh bao, ca qua dem), luong, chi phi nhan cong, thiet lap nhan su, `Idempotency-Key`, loi HR tieng Viet. Menu/quyen hop hai ben (`labor-costs`, `payroll-settings`, `hr-setup`).
+- Sua test: `operations/workflow.test.tsx` "Thoi gian tra *" go ngay theo dang dd/MM/yyyy vi o thoi gian la bo chon ngay tieng Viet (khong con nhan chuoi ISO); logic nhap-chua-luu cua `PaymentEditor` khong doi.
+- Lint: bo 5 bien khong dung trong test/harvest-plans.
