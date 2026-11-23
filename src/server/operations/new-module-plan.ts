@@ -47,14 +47,14 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
       if (["check-in", "check-out"].includes(action) && id && zoneId) {
         const plan = write(`/api/workforce/assignments/${id}/${action}`, z.strictObject({ qrCode: z.string().max(200).nullable() }), c.assignmentSchema, "AttendanceCreate"); return plan && { ...plan, expectedId: id };
       }
-      if (action === "review-leave" && id && !zoneId) { const plan = write(`/api/workforce/leave-requests/${id}/review`, c.reviewLeaveSchema, c.leaveSchema, "Owner"); return plan && { ...plan, expectedId: id }; }
+      if (action === "review-leave" && id && !zoneId) { const plan = write(`/api/workforce/leave-requests/${id}/review`, c.reviewLeaveSchema, c.leaveSchema, "AttendanceEdit"); return plan && { ...plan, expectedId: id }; }
       if (action === "settings" && !id && !zoneId) return write("/api/attendance-settings", c.saveAttendanceSettingsSchema, c.attendanceSettingsSavedSchema, "Owner");
       // Phase B (HR): crew start, Staff attendance and the Owner correction of one day.
       if (action === "crew-start" && !id && zoneId) return write("/api/workforce/crew-start", w.crewStartSchema, z.array(c.assignmentSchema), "AttendanceCreate");
       if (["staff-check-in", "staff-check-out"].includes(action) && id && !zoneId) return write(`/api/workforce/staff/${id}/${action.slice(6)}`, z.strictObject({ qrCode: z.string().max(200).nullable() }), w.staffAttendanceSchema, "AttendanceCreate");
       if (action === "correct" && id && !zoneId) {
         const values = correctDay.safeParse(body);
-        return values.success ? { area, action, path: `/api/workforce/attendance/${id}/${values.data.day}`, method: "PUT", permission: "Owner", schema: w.attendanceCorrectedSchema, body: values.data.payload } : undefined;
+        return values.success ? { area, action, path: `/api/workforce/attendance/${id}/${values.data.day}`, method: "PUT", permission: "AttendanceEdit", schema: w.attendanceCorrectedSchema, body: values.data.payload } : undefined;
       }
     }
     return undefined;
@@ -83,10 +83,10 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
   if (area === "workforce") {
     const q = workforceQuery.safeParse(values);
     if (q.success && q.data.action === "staff" && !q.data.employeeId) return { area, action: "staff", method: "GET", path: `/api/workforce/staff-attendance${q.data.day ? `?day=${q.data.day}` : ""}`, permission: "View", schema: z.array(w.staffAttendanceSchema) };
-    if (q.success && q.data.action === "attendance") return q.data.employeeId && q.data.day ? { area, action: "attendance", method: "GET", path: `/api/workforce/attendance/${q.data.employeeId}/${q.data.day}`, permission: "Owner", schema: w.attendanceDaySchema } : undefined;
+    if (q.success && q.data.action === "attendance") return q.data.employeeId && q.data.day ? { area, action: "attendance", method: "GET", path: `/api/workforce/attendance/${q.data.employeeId}/${q.data.day}`, permission: "AttendanceEdit", schema: w.attendanceDaySchema } : undefined;
     if (!q.success || q.data.employeeId || ["list", "lookups"].includes(q.data.action) !== !!q.data.day) return undefined;
     return { area, action: q.data.action, method: "GET", path: q.data.action === "list" ? `/api/workforce/assignments?day=${q.data.day}` : q.data.action === "lookups" ? `/api/workforce/lookups?day=${q.data.day}`
-      : q.data.action === "leaves" ? "/api/workforce/leave-requests" : "/api/attendance-settings", permission: ["list", "lookups"].includes(q.data.action) ? "View" : "Owner",
+      : q.data.action === "leaves" ? "/api/workforce/leave-requests" : "/api/attendance-settings", permission: ["list", "lookups"].includes(q.data.action) ? "View" : q.data.action === "leaves" ? "AttendanceEdit" : "Owner",
       schema: q.data.action === "list" ? z.array(c.assignmentSchema) : q.data.action === "lookups" ? c.workforceLookupsSchema : q.data.action === "leaves" ? z.array(c.leaveSchema) : c.attendanceSettingsSchema };
   }
   if (area === "my-work") {

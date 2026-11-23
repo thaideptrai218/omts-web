@@ -11,7 +11,7 @@ import * as w from "./workforce-contracts";
 import { workforceRepository as repository } from "./workforce-shared";
 
 /**
- * "Sửa chấm công" (Owner only): the check-in, the check-out (up to 18 hours after the check-in, so it may be on the next day) and the start of each
+ * "Sửa chấm công" (the Owner, or Staff holding ATTENDANCE Edit in the zone; the backend checks the zone): the check-in, the check-out (up to 18 hours after the check-in, so it may be on the next day) and the start of each
  * job period of one employee on one day, with a mandatory reason. The estimated paid hours are shown before saving; the server's figure after.
  */
 export function AttendanceCorrectionDialog({ employeeId, day, onClose, onSaved }: { employeeId: string; day: string; onClose(): void; onSaved(day: w.AttendanceDay): void }) {

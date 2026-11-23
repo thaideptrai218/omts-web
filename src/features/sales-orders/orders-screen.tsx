@@ -25,6 +25,7 @@ import { OrderDetailPanel } from "./order-detail";
 import { ORDERS_PATH, OrderStatus, orderSourceOptions, orderStatusLabel, sourceLabel } from "./order-labels";
 import { daysUntilPickup, waitingText } from "./order-logic";
 import { errorText, orderRepository } from "./repository";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; hint?: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: OrderRow): ReactNode };
 const dash = (value: string | null | undefined) => value || "—";
@@ -149,9 +150,9 @@ function OrdersList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: s
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => toggleRow(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={`${column.numeric ? issueStyles.num : ""} ${row.statusId === ORDER.cancelled ? issueStyles.muted : ""}`.trim() || undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <OrderDetailPanel id={row.id} access={access} onChanged={reload} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

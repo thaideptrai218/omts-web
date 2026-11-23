@@ -66,18 +66,18 @@ export function useWorkforceBoard() {
     },
     [rows.data, carry.data, day],
   );
-  // Requests awaiting the Owner: the number on the menu entry "Duyệt yêu cầu".
-  const isOwner = context.identity.subjectType === "CooperativeOwner";
+  const allowed = (action: string, zone?: string) =>
+    operationAllowed("workforce", context.identity, context.permissions.functionPermissions, action, zone);
+  // Requests awaiting review (Owner, or Staff holding ATTENDANCE Edit; the backend limits them to the zones of the caller): the number on the menu entry "Duyệt yêu cầu".
+  const canReview = allowed("AttendanceEdit");
   const requests = useRemote(
-    useMemo(() => (signal: AbortSignal) => isOwner ? repository.read("leaves", {}, z.array(c.leaveSchema), signal) : Promise.resolve({ status: "success" as const, data: [] as z.infer<typeof c.leaveSchema>[] }), [isOwner]),
+    useMemo(() => (signal: AbortSignal) => canReview ? repository.read("leaves", {}, z.array(c.leaveSchema), signal) : Promise.resolve({ status: "success" as const, data: [] as z.infer<typeof c.leaveSchema>[] }), [canReview]),
   );
   const pendingRequests = requests.data?.filter((request) => request.approved === null && !request.cancelledAt).length ?? 0;
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [bulkResults, setBulkResults] = useState<{ action: BulkAction; items: BulkResult[] }>();
   const [correcting, setCorrecting] = useState<{ employeeId: string; day: string }>();
   const editor = useOperationEditor(() => {}, false);
-  const allowed = (action: string, zone?: string) =>
-    operationAllowed("workforce", context.identity, context.permissions.functionPermissions, action, zone);
 
   const term = search.trim().toLocaleLowerCase("vi-VN");
   // Zone + free-text filtering feeds the summary; the status filter only narrows the table.

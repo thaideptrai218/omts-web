@@ -2,6 +2,7 @@
 import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { InterfaceIcon } from "../interface-icon";
+import { BackToOverviewLink, isPermissionDenied } from "@/components/feedback/permission-denied-notice";
 import styles from "./management-screen.module.css";
 
 export type SortState = { key: string; direction: "asc" | "desc" };
@@ -107,7 +108,10 @@ export function CollapsibleSection({ title, description, defaultOpen = true, col
 }
 
 export function ListStateMessage({ error, onRetry, retryLabel = "Thử lại", children }: { error?: string; onRetry?(): void; retryLabel?: string; children?: ReactNode }) {
-  return <div className={styles.listState} role={error ? "alert" : undefined}><p>{error ?? children}</p>{error && onRetry && <button type="button" className={styles.linkButton} onClick={onRetry}>{retryLabel}</button>}</div>;
+  // A 403 is final: retrying is refused again, so the way out is the overview, not a retry.
+  const denied = isPermissionDenied(error);
+  return <div className={styles.listState} role={error ? "alert" : undefined}><p>{error ?? children}</p>
+    {denied ? <BackToOverviewLink /> : error && onRetry && <button type="button" className={styles.linkButton} onClick={onRetry}>{retryLabel}</button>}</div>;
 }
 
 export { styles as managementStyles };

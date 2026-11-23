@@ -37,6 +37,16 @@ export function earlyHarvestWarning(raft: Pick<EligibleRaft, "raftCode" | "expec
   return early > 0 ? `Bè ${raft.raftCode}: ngày thu hoạch dự kiến sớm hơn ngày hàu đủ tuổi ${viDate(raft.expectedHarvestDate)} (sớm ${early} ngày). Bạn vẫn có thể lưu.` : undefined;
 }
 
+/**
+ * The question of the pop-up when a harvest is recorded before the oysters are expected to be mature (owner decision 19/11/2026: a warning to confirm, never a block).
+ * Undefined when the raft is ready or the seed gives no days to maturity.
+ */
+export function earlyHarvestQuestion(expectedHarvestDate: string | null | undefined, today?: string): string | undefined {
+  const status = readiness(expectedHarvestDate, today);
+  if (status.state !== "waiting" || !expectedHarvestDate) return undefined;
+  return `Hàu chưa đủ ngày trưởng thành (dự kiến từ ${viDate(expectedHarvestDate)}, còn ${status.daysLeft} ngày). Bạn vẫn muốn thu hoạch?`;
+}
+
 export type Availability = { state: "now" } | { state: "soon"; date: string } | { state: "none" };
 /** Whether a product can be had now (some raft farming it is ready) or from the earliest expected date; none when no raft with a known date farms it. */
 export function productAvailability(rafts: readonly EligibleRaft[], productId: string, today?: string): Availability {

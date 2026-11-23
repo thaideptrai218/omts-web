@@ -22,6 +22,7 @@ import { usePlanAccess } from "./plan-access";
 import { PlanDetailPanel } from "./plan-detail";
 import { PLANS_PATH, PlanStatus, allPlanStatuses, planStatusLabel } from "./plan-labels";
 import { errorText, planRepository } from "./repository";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; numeric?: boolean; hidden?: boolean; render(row: PlanRow): ReactNode };
 const dash = (value: string | null | undefined) => value || "—";
@@ -124,9 +125,9 @@ function PlansList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: st
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => toggleRow(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={`${column.numeric ? issueStyles.num : ""} ${row.statusId === PLAN.cancelled ? issueStyles.muted : ""}`.trim() || undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <PlanDetailPanel id={row.id} access={access} onChanged={reload} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

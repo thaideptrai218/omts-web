@@ -1,21 +1,23 @@
 import { z } from "zod";
-import { ownerResponseSchema } from "@/features/trader-purchases/contracts";
+import { cagesSchema, ownerResponseSchema } from "@/features/trader-purchases/contracts";
 
 /** Trạng thái yêu cầu mua (StatusIds.PurchaseRequest): bộ lọc `statusId` của GET /api/purchase-requests. "Hoàn thành" chỉ là cờ `fulfilled`, không có mã riêng. */
 export const REQUEST_STATUS_FILTERS = ["3201", "3202", "3203", "3204", "3206"] as const;
 export const requestStatusFilterSchema = z.enum(REQUEST_STATUS_FILTERS);
-const customerSchema = z.object({ id: z.guid(), name: z.string(), phoneNumber: z.string().nullable(), currentDebt: z.number() });
+const customerSchema = z.object({ id: z.guid(), name: z.string(), phoneNumber: z.string().nullable(), currentDebt: z.number(), code: z.string().nullish() });
+/** Kế hoạch nhân lực Chủ HTX gửi trước khi nhận đơn (PurchaseStaffingView); chỉ đọc vài trường, mọi trường khác bị bỏ qua. */
+const staffingSchema = z.object({ cages: z.number().int(), workDate: z.iso.date(), pickupDate: z.iso.date(), requiredEmployees: z.number().int(), approvedEmployees: z.number().int(), hasEnoughStaff: z.boolean() }).loose();
 export const requestSendingSchema = z.object({ channel: z.string(), phoneNumber: z.string().nullable(), deliveryStatusId: z.number().int().nullable(), deliveryStatus: z.string().nullable(), deliveryStatusAt: z.iso.datetime({ offset: true }).nullable() });
-/** PurchaseRequestView của backend (kg, không có lồng/nhân lực). */
-export const purchaseRequestSchema = z.object({ id: z.guid(), customer: customerSchema, productId: z.guid(), productName: z.string(), requestedKg: z.number(), pickupDate: z.iso.date(), note: z.string().nullable(),
+/** PurchaseRequestView của backend: số lượng là lồng nguyên; Code/Staffing/Harvest... là trường thêm, đọc khoan dung (không làm hỏng danh sách). */
+export const purchaseRequestSchema = z.object({ id: z.guid(), customer: customerSchema, productId: z.guid(), productName: z.string(), requestedCages: z.number().int(), pickupDate: z.iso.date(), note: z.string().nullable(),
+  code: z.string().nullish(), staffing: staffingSchema.nullish().catch(undefined), harvestCompletedAt: z.iso.datetime({ offset: true }).nullish(),
   sentAt: z.iso.datetime({ offset: true }), statusId: z.number().int(), status: z.string(), fulfilled: z.boolean(), response: ownerResponseSchema.nullable(), cancelReason: z.string().nullable(),
   cancelledAt: z.iso.datetime({ offset: true }).nullable(), sendings: z.array(requestSendingSchema), rowVersion: z.string(),
   salesOrderId: z.guid().nullish(), salesOrderCode: z.string().nullish() });
 export const purchaseRequestPageSchema = z.object({ items: z.array(purchaseRequestSchema), page: z.number().int().positive(), pageSize: z.number().int().positive(), total: z.number().int().nonnegative() });
 const requestText = z.string().max(1000);
-const acceptedKg = z.number().positive().max(999_999_999_999_999).refine((v) => Math.abs(v * 1000 - Math.round(v * 1000)) < 1e-6);
-/** POST /api/purchase-requests/{id}/accept (AcceptPurchaseRequest): chỉ Chủ HTX. */
-export const acceptRequestSchema = z.strictObject({ acceptedKg, pickupDate: z.iso.date(), payLaterAgreed: z.boolean(), note: requestText.nullable(), rowVersion: z.string().min(1) });
+/** POST /api/purchase-requests/{id}/accept (AcceptPurchaseRequest): chỉ Chủ HTX; backend yêu cầu có kế hoạch nhân lực khớp số lồng và ngày. */
+export const acceptRequestSchema = z.strictObject({ acceptedCages: cagesSchema,pickupDate: z.iso.date(), payLaterAgreed: z.boolean(), note: requestText.nullable(), rowVersion: z.string().min(1) });
 /** POST /api/purchase-requests/{id}/decline (DeclinePurchaseRequest): lý do bắt buộc. */
 export const declineRequestSchema = z.strictObject({ note: requestText.refine((v) => v.trim().length > 0), rowVersion: z.string().min(1) });
 

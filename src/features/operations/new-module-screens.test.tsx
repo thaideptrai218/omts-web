@@ -25,11 +25,11 @@ describe("new API read screens", () => {
     expect(mocks.read.mock.calls.every((args) => args[0] === "list" || args[0] === "settings")).toBe(true);
     expect(mocks.read.mock.calls.some((args) => args[0] === "mine")).toBe(false);
   });
-  it("lists kg requests with customer, pickup date and response, then opens the detail read", async () => {
+  it("lists cage requests with customer, pickup date and response, then opens the detail read", async () => {
     mocks.subjectType = "CooperativeOwner";
-    mocks.read.mockImplementation(async (action) => ({ status: "success", data: action === "detail" ? backendRequest() : { items: [backendRequest({ statusId: 3202, fulfilled: true, response: { acceptedKg: 100, pickupDate: "2026-11-13", payLaterAgreed: true, note: null, respondedAt: "2026-11-09T09:00:00+07:00" } })], page: 1, pageSize: 20, total: 1 } }));
+    mocks.read.mockImplementation(async (action) => ({ status: "success", data: action === "detail" ? backendRequest() : { items: [backendRequest({ statusId: 3202, fulfilled: true, response: { acceptedCages: 10, pickupDate: "2026-11-13", payLaterAgreed: true, note: null, respondedAt: "2026-11-09T09:00:00+07:00" } })], page: 1, pageSize: 20, total: 1 } }));
     render(<PurchaseRequestsScreen />); await screen.findByText("Thương lái An");
-    expect(screen.getByText("120,5 kg")).toBeTruthy(); expect(screen.getByText("12/11/2026")).toBeTruthy(); expect(screen.getByText(/Đã hoàn thành/)).toBeTruthy(); expect(screen.getByText("100 kg · lấy ngày 13/11/2026 · cho trả sau")).toBeTruthy();
+    expect(screen.getByText("12 lồng")).toBeTruthy(); expect(screen.getByText("12/11/2026")).toBeTruthy(); expect(screen.getByText(/Đã hoàn thành/)).toBeTruthy(); expect(screen.getByText("10 lồng · lấy ngày 13/11/2026 · cho trả sau")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Mở yêu cầu" })); await waitFor(() => expect(mocks.read.mock.calls.some((args) => args[0] === "detail")).toBe(true));
   });
   it("renders absent attendance truthfully in the attendance view of the workforce day", async () => {

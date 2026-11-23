@@ -8,6 +8,7 @@ import type { PaymentRow } from "./contracts";
 import type { DataColumn } from "./payroll-data-table";
 import { PayrollPaymentDetail } from "./payroll-payment-detail";
 import s from "./payroll-screen.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 /** Voucher list with a totals row under the header and the opened voucher's detail in place under its row. */
 export function PayrollPaymentsTable({ rows, columns, total, totalNote, expandedId, onToggle }: {
@@ -30,7 +31,7 @@ export function PayrollPaymentsTable({ rows, columns, total, totalNote, expanded
             <td className={s.expandCell}><button type="button" aria-expanded={open} aria-label={`${open ? "Thu gọn" : "Mở"} phiếu chi ${row.voucherCode}`} onClick={() => onToggle(row.id)}><InterfaceIcon name={open ? "chevron-down" : "chevron-right"} /></button></td>
             {columns.map((column) => <td key={column.key} className={column.right ? s.right : undefined}>{column.render(row)}</td>)}
           </OpenableTableRow>
-          {open && <tr><td colSpan={columns.length + 1} className={s.detailCell}><div className={managementStyles.viewWidth}><PayrollPaymentDetail row={row} /></div></td></tr>}
+          {open && <DetailRow colSpan={columns.length + 1} className={s.detailCell}><div className={managementStyles.viewWidth}><PayrollPaymentDetail row={row} /></div></DetailRow>}
         </Fragment>;
       })}
     </tbody>

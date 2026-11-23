@@ -161,6 +161,6 @@ export function buildPlanBody(form: PlanForm) {
 /** What the harvest form needs of a plan line: the lanes to lock (planned ones only) and what the line expects, to start the product line from. */
 export const harvestPlanFor = (plan: Pick<PlanView, "code">, line: PlanLine) => ({
   lineId: line.id, planCode: plan.code, raftId: line.raftId, raftCode: line.raftCode, laneNumbers: plannedLaneNumbers(line),
-  expectedProductId: line.expectedProduct?.id, expectedCageCount: line.expectedCageCount ?? undefined,
+  expectedProductId: line.expectedProduct?.id, expectedCageCount: line.expectedCageCount ?? undefined, expectedHarvestDate: line.expectedHarvestDate ?? undefined,
 });
 export type HarvestPlanTarget = ReturnType<typeof harvestPlanFor>;

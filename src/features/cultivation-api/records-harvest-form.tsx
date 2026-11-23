@@ -12,6 +12,7 @@ import { cageUnitOf } from "@/features/products/product-helpers";
 import { useOperationEditor } from "@/features/operations/use-operation-editor";
 import { fmt } from "@/features/purchase-documents/document-parts";
 import type { HarvestPlanTarget } from "@/features/harvest-plans/plan-logic";
+import { earlyHarvestQuestion } from "@/features/harvest-plans/plan-maturity";
 import { farmingFieldError } from "./farming-problem";
 import { harvestWarningTexts } from "./harvest-warning-text";
 import { RecordCrewPicker } from "./record-crew-picker";
@@ -46,7 +47,7 @@ const planHarvestValues = z.strictObject({
  * to give is "Số lồng thu được"; the kg and tấn beside it are a read-only conversion (the real kg come from the port weighing). Crew and photos as in the old form. Warnings of the saved lot come back as notices.
  */
 export function HarvestForm({ zoneId, raftId, plan, onClose, onSaved }: {
-  zoneId: string; raftId: string; plan: Pick<HarvestPlanTarget, "lineId" | "planCode" | "raftCode" | "expectedProductId" | "expectedCageCount">; onClose(): void; onSaved(): void;
+  zoneId: string; raftId: string; plan: Pick<HarvestPlanTarget, "lineId" | "planCode" | "raftCode" | "expectedProductId" | "expectedCageCount"> & Partial<Pick<HarvestPlanTarget, "expectedHarvestDate">>; onClose(): void; onSaved(): void;
 }) {
   const [productId, setProductId] = useState(plan.expectedProductId ?? ""), [cages, setCages] = useState<number | null>(plan.expectedCageCount ?? null);
   const [started] = useState(cages);
@@ -75,7 +76,9 @@ export function HarvestForm({ zoneId, raftId, plan, onClose, onSaved }: {
       harvestPlanLineId: plan.lineId, ...(crew.length ? { crew } : {}) });
     if (!parsed.success) { setError(harvestInvalidFieldText(parsed.error)); return; }
     setError(undefined);
-    const saved = await editor.submit(`Ghi nhận ${fmt(cages)} lồng từ bè ${plan.raftCode}?`, () => harvestRepo.upload("harvest-record", photos, parsed.data, c.harvestSaved, raftId, zoneId));
+    // Too early for the oysters: only a question to confirm, the harvest is never refused for it.
+    const early = earlyHarvestQuestion(plan.expectedHarvestDate);
+    const saved = await editor.submit(`${early ? `${early} ` : ""}Ghi nhận ${fmt(cages)} lồng từ bè ${plan.raftCode}?`, () => harvestRepo.upload("harvest-record", photos, parsed.data, c.harvestSaved, raftId, zoneId));
     if (saved) done(saved);
   }
   return <EditorFrame size="xl" title={`Thu hoạch theo kế hoạch ${plan.planCode}`} editor={editor} error={error}>

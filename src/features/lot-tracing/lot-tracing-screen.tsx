@@ -17,6 +17,7 @@ import { TraceCorrectionView } from "./trace-correction-view";
 import { formatDay, lotStatusLabel, originLabel, originTone } from "./trace-format";
 import { SeedForwardTable } from "./seed-forward-table";
 import { useLotSearch, type SearchMode, type TraceFilters } from "./use-lot-search";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 
 type Correcting = { raftId: string; cycleId: string };
@@ -82,8 +83,8 @@ function LotTracingWorkspace({ helpHref, initialCode, initialRecordId }: { helpH
               <td className={farming.name}>{lot.lotCode}</td><td><Link href={farmingReferenceHref("raft", { zoneId: lot.zoneId, recordId: lot.raftId, search: lot.raftCode })}>{lot.raftCode}</Link></td><td><Link href={farmingReferenceHref("zone", { recordId: lot.zoneId, search: lot.zoneCode })}>{lot.zoneCode}</Link></td><td>{formatDay(lot.harvestDate)}</td><td>{lotStatusLabel(lot.statusId)}</td>
               <td><StatusPill tone={originTone(lot.originState)}>{originLabel(lot.originState)}</StatusPill></td>
             </OpenableTableRow>
-            {search.lotId === lot.id && <tr><td colSpan={7} className={farming.detailCell}><div className={`${managementStyles.viewWidth} ${farming.detailWidth}`}><section className={farming.detail} aria-label="Kết quả truy xuất lô">
-              <TraceDetail key={lot.id} lotId={lot.id} onCorrect={(raftId, cycleId) => setCorrecting({ raftId, cycleId })} /></section></div></td></tr>}
+            {search.lotId === lot.id && <DetailRow colSpan={7} className={farming.detailCell}><div className={`${managementStyles.viewWidth} ${farming.detailWidth}`}><section className={farming.detail} aria-label="Kết quả truy xuất lô">
+              <TraceDetail key={lot.id} lotId={lot.id} onCorrect={(raftId, cycleId) => setCorrecting({ raftId, cycleId })} /></section></div></DetailRow>}
           </Fragment>)}</tbody></table>}
     </ManagementScroller>
   </ManagementLayout>;

@@ -10,6 +10,7 @@ import styles from "@/features/farming-management/farming-management.module.css"
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { farmedSeedText } from "./cycle-farmed-seed";
 import { cycleStateLabel, cycleStateOf, raftStatusLabel, type CycleRow, type CycleSortKey } from "./cycle-model";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; weight: number; sort: CycleSortKey; render(row: CycleRow): ReactNode };
 export const cycleColumns: readonly Column[] = [
@@ -44,9 +45,9 @@ export function CycleTable({ zoneId, rows, visible, sort, onSort, expandedId, on
         <td className={styles.expandCell}><button type="button" aria-expanded={expandedId === row.raftId} aria-controls={`cycle-preview-${row.raftId}`} aria-label={`${expandedId === row.raftId ? "Thu gọn" : "Xem"} bè ${row.raftCode}`} onClick={() => onToggle(row.raftId)}><InterfaceIcon name={expandedId === row.raftId ? "chevron-down" : "chevron-right"} /></button></td>
         {columns.map(column => <td key={column.key} data-label={column.label}>{column.key === "raft" ? <RaftCell row={row} zoneId={zoneId} /> : column.render(row)}</td>)}
       </OpenableTableRow>
-      {expandedId === row.raftId && <tr><td colSpan={columns.length + 1} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
+      {expandedId === row.raftId && <DetailRow colSpan={columns.length + 1} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
         {renderDetail(row)}
-      </div></td></tr>}
+      </div></DetailRow>}
     </Fragment>)}</tbody>
   </table>;
 }

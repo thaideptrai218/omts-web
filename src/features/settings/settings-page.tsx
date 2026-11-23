@@ -3,34 +3,32 @@ import { useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { ScreenGuide } from "@/components/ui/screen-guide";
 import { useSettingsSections } from "@/components/layout/settings-sections-context";
 import { CashBookSettings } from "@/features/cash-book/cash-settings";
 import { CustomerSettingsPanel } from "@/features/customers/customer-settings";
 import { InputInventorySettings } from "@/features/input-items/inventory-settings";
 import { ProductSettings } from "@/features/products/product-settings";
 import { HarvestSettingsPanel } from "./harvest-settings-panel";
-import { foldVietnamese } from "@/shared/presentation/fold-text";
+import { filterSettingsGroups, pickSettingsItem, settingsItemKey, suggestSettingsItems } from "./settings-hub-filter";
 import styles from "./settings-page.module.css";
 
-/** Settings that open in place on this page; every other item still links to its own page until it is moved here. */
+/** Settings that open in place on this page; every other item links to its own page ("Mở màn"). */
 const panels: Record<string, ComponentType> = { "cash-book": CashBookSettings, "input-inventory": InputInventorySettings, products: ProductSettings, customers: CustomerSettingsPanel, harvest: HarvestSettingsPanel };
 
 /**
- * Thiết lập: the groups and their items on the left, the chosen item on the right without leaving the page. The selection
- * is kept in `?section=` so a link (e.g. from the gear menu) opens the right item.
+ * Thiết lập hub: the groups and their items on the left (a select on phones), the chosen item on the right without leaving
+ * the page. The selection lives in `?section=` (an item) or `?group=` (a group's first item) so links can deep-link into it.
  */
 export function SettingsPage() {
   const sections = useSettingsSections();
   const [query, setQuery] = useState("");
-  const router = useRouter(), chosen = useSearchParams().get("section");
-  const term = foldVietnamese(query.trim());
-  const visible = useMemo(() => sections
-    .map((section) => ({ label: section.label, items: section.items.filter((item) => !term || foldVietnamese(`${item.label} ${item.description ?? ""}`).includes(term)) }))
-    .filter((section) => section.items.length), [sections, term]);
-  const all = visible.flatMap((section) => section.items);
-  const keyOf = (item: (typeof all)[number]) => item.panel ?? item.href;
-  const active = all.find((item) => keyOf(item) === chosen) ?? all[0];
-  const hasAny = sections.some((section) => section.items.length);
+  const router = useRouter(), params = useSearchParams();
+  const visible = useMemo(() => filterSettingsGroups(sections, query), [sections, query]);
+  const active = pickSettingsItem(visible, params.get("section"), params.get("group"));
+  const suggestions = useMemo(() => suggestSettingsItems(sections), [sections]);
+  const itemCount =sections.reduce((total, section) => total + section.items.length, 0);
+  const hasAny = itemCount > 0;
 
   const select = (key: string) => router.replace(`/settings?section=${encodeURIComponent(key)}`, { scroll: false });
 
@@ -38,21 +36,41 @@ export function SettingsPage() {
   return <div className={styles.page}>
     <header className={styles.top}>
       <h1>Thiết lập</h1>
-      {hasAny && <div className={styles.search}>
+      {itemCount > 1 && <div className={styles.search}>
         <InterfaceIcon name="search" />
         <input type="search" aria-label="Tìm kiếm thiết lập" placeholder="Tìm kiếm thiết lập" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>}
     </header>
+    {hasAny && <ScreenGuide id="settings-hub" steps={[
+      { title: "Chọn một mục bên trái", text: "Mỗi mục là một nhóm thiết lập, ví dụ sổ quỹ hay sản phẩm." },
+      { title: "Sửa ngay bên phải", text: "Nội dung hiện ngay trên trang này, không phải chuyển trang." },
+      { title: "Chỉ thấy phần bạn được sửa", text: "Mục nào không hiện nghĩa là bạn chưa được cấp quyền chỉnh." },
+    ]} />}
     {!hasAny
-      ? <p className={styles.empty} role="status">Tài khoản này hiện chưa có thiết lập nào để quản lý.</p>
+      ? <div className={styles.empty} role="status">
+        <p>Bạn chưa có thiết lập nào để chỉnh. Các thiết lập do Chủ hợp tác xã hoặc người được cấp quyền quản lý.</p>
+        <p><Link href="/dashboard" className={styles.open}>Về tổng quan</Link></p>
+      </div>
       : !visible.length
-        ? <p className={styles.empty} role="status">Không tìm thấy thiết lập phù hợp với “{query.trim()}”.</p>
+        ? <div className={styles.empty} role="status">
+          <p>Không tìm thấy thiết lập phù hợp với “{query.trim()}”.</p>
+          <p className={styles.suggest}>Thử: {suggestions.map((item, index) => <span key={settingsItemKey(item)}>
+            {index > 0 && ", "}
+            <button type="button" className={styles.suggestion} onClick={() => { setQuery(""); select(settingsItemKey(item)); }}>{item.label}</button>
+          </span>)}…</p>
+        </div>
         : <div className={styles.layout}>
+          {/* Phones: one select replaces the long list so the content is not pushed below the fold. */}
+          <select className={styles.picker} aria-label="Chọn thiết lập" value={active ? settingsItemKey(active) : ""} onChange={(event) => select(event.target.value)}>
+            {visible.map((section) => <optgroup key={section.label} label={section.label}>
+              {section.items.map((item) => <option key={settingsItemKey(item)} value={settingsItemKey(item)}>{item.label}</option>)}
+            </optgroup>)}
+          </select>
           <nav className={styles.sidebar} aria-label="Nhóm thiết lập">
             {visible.map((section) => <div key={section.label} className={styles.group}>
               <h2 className={styles.groupLabel}>{section.label}</h2>
-              <ul>{section.items.map((item) => <li key={keyOf(item)}>
-                <button type="button" aria-current={active && keyOf(item) === keyOf(active) ? "true" : undefined} onClick={() => select(keyOf(item))}>
+              <ul>{section.items.map((item) => <li key={settingsItemKey(item)}>
+                <button type="button" aria-current={active && settingsItemKey(item) === settingsItemKey(active) ? "true" : undefined} onClick={() => select(settingsItemKey(item))}>
                   <InterfaceIcon name={item.icon} /><span>{item.label}</span>
                 </button>
               </li>)}</ul>
@@ -62,9 +80,13 @@ export function SettingsPage() {
             <header className={styles.cardHead}>
               <h2 id="settings-panel-title">{active.label}</h2>
               {active.description && <p>{active.description}</p>}
+              {active.editor && <p className={styles.editor}>{active.editor}</p>}
             </header>
             <div className={styles.cardBody}>
-              {Panel ? <Panel /> : <Link href={active.href} className={styles.open}>Mở {active.label.toLowerCase()}<InterfaceIcon name="chevron-right" /></Link>}
+              {Panel ? <Panel /> : <div className={styles.linkPanel}>
+                {active.hint && <p className={styles.hint}><strong>Việc thường làm:</strong> {active.hint}</p>}
+                <Link href={active.href} className={styles.open}>Mở {active.label}<InterfaceIcon name="chevron-right" /></Link>
+              </div>}
             </div>
           </section>}
         </div>}

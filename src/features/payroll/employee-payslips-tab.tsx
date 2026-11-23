@@ -8,6 +8,7 @@ import { rangeLabel, statusLabel, statusTone } from "./payroll-model";
 import { PayrollSlipDetail } from "./payroll-slip-detail";
 import { payrollRepository } from "./repository";
 import s from "./payroll-screen.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 /** Link to the payroll sheet, opened on that sheet in the Bảng lương screen. */
 export const sheetHref = (payrollId: string, code: string) => `/operations/payroll?recordId=${payrollId}&search=${encodeURIComponent(code)}`;
@@ -35,7 +36,7 @@ export function EmployeePayslipsTab({ employeeId }: { employeeId: string }) {
           <td className={s.right}><Money value={row.income} /></td><td className={s.right}><Money value={row.net} /></td><td className={s.right}><Money value={row.paid} /></td><td className={s.right}><Money value={row.outstanding} /></td>
           <td><StatusPill tone={statusTone(row.status)}>{statusLabel[row.status]}</StatusPill></td>
         </tr>
-        {open === row.id && <tr><td colSpan={8} className={s.detailCell}><PayrollSlipDetail slipId={row.id} /></td></tr>}
+        {open === row.id && <DetailRow colSpan={8} className={s.detailCell}><PayrollSlipDetail slipId={row.id} /></DetailRow>}
       </Fragment>)}</tbody>
     </table></div>
     <ManagementPagination page={data.page} pageSize={pageSize} total={data.total} unit="phiếu lương" onPage={(next) => { setOpen(undefined); setPage(next); }} onPageSize={(size) => { setOpen(undefined); setPageSize(size); setPage(1); }} />

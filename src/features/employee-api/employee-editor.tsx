@@ -17,14 +17,14 @@ import { useEmployeeEditor, type EmployeeEditorProps } from "./use-employee-edit
 /** "Thêm nhân viên" dialog: collapsible groups, one Lưu action, optional login account. */
 export function EmployeeApiEditor(props: EmployeeEditorProps) {
   const idPrefix = useId();
-  const { repository, mutation, values, setValues, issues, open, errorGroups, toggleGroup, compared, setCompared, comparisonTarget, reconciledRows, setReconciledRows, discard, setDiscard, credential, formRef, problem, fieldError, errorProps, close, save, acknowledgeCredential, openComparison } = useEmployeeEditor(props);
+  const { repository, mutation, values, setValues, issues, open, errorGroups, toggleGroup, compared, setCompared, comparisonTarget, reconciledRows, setReconciledRows, discard, setDiscard, credential, grantNotice, onZones, confirmation, formRef, problem, fieldError, errorProps, close, save, acknowledgeCredential, openComparison } = useEmployeeEditor(props);
   const shared = { values, setValues, errorProps, fieldError };
   const body: Record<EmployeeCreateGroup, React.ReactNode> = {
     basic: <EmployeeCreateBasicFields {...shared} />,
     work: <EmployeeCreateWorkFields {...shared} zones={props.zones} jobTypes={props.jobTypes} />,
     personal: <EmployeeCreatePersonalFields {...shared} />,
     bank: <EmployeeCreateBankFields {...shared} />,
-    account: <EmployeeCreateAccountFields {...shared} />,
+    account: <EmployeeCreateAccountFields {...shared} onZones={onZones} />,
   };
   const locked = mutation.pending || mutation.blocked;
   const errorText = mutation.failure?.code === "MSG-ACCOUNT-09"
@@ -33,10 +33,11 @@ export function EmployeeApiEditor(props: EmployeeEditorProps) {
 
   // The one-time password replaces the form until the user confirms the handover.
   if (credential) {
-    return <EmployeeCredentialDialog username={credential.username} password={credential.password} expiresAt={credential.expiresAt} onClose={acknowledgeCredential} />;
+    return <EmployeeCredentialDialog username={credential.username} password={credential.password} expiresAt={credential.expiresAt} onClose={acknowledgeCredential} grantNotice={grantNotice?.text} grantFailed={grantNotice?.failed} />;
   }
   return (
     <Dialog open title="Thêm nhân viên" size="lg" dismissible={!mutation.pending} onOpenChange={isOpen => { if (!isOpen) close(); }}>
+      {confirmation.dialog}
       <ErrorNotice error={errorText} />
       {issues.length > 0 && (
         <p id="employee-create-errors" role="alert" className={styles.summary}>

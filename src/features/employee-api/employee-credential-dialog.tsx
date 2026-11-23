@@ -5,8 +5,8 @@ import { Dialog } from "@/components/ui/dialog";
 import { displayTime } from "@/features/operations/ui";
 
 /** The caller owns this one-time value and destroys it on acknowledgement. */
-export function EmployeeCredentialDialog({ username, password, expiresAt, onClose }: {
-  username: string; password: string; expiresAt: string; onClose(): void;
+export function EmployeeCredentialDialog({ username, password, expiresAt, onClose, grantNotice, grantFailed }: {
+  username: string; password: string; expiresAt: string; onClose(): void; grantNotice?: string; grantFailed?: boolean;
 }) {
   const [notice, setNotice] = useState("");
   const alive = useRef(true);
@@ -30,6 +30,7 @@ export function EmployeeCredentialDialog({ username, password, expiresAt, onClos
         <Button className="w-auto" variant="secondary" onClick={() => void copy(username, "tên tài khoản")}>Sao chép tên tài khoản</Button>
         <Button className="w-auto" variant="secondary" onClick={() => void copy(password, "mật khẩu tạm")}>Sao chép mật khẩu tạm</Button>
       </div>
+      {grantNotice && <p role={grantFailed ? "alert" : "status"} className="text-sm font-semibold">{grantNotice}</p>}
       <p aria-live="polite" className="text-sm">{notice}</p>
       <Button onClick={close}>Đã bàn giao, đóng</Button>
     </div>

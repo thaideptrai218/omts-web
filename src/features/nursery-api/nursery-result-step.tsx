@@ -3,6 +3,7 @@ import { Field, businessToday } from "@/features/operations/ui";
 import { estimatedLoss, nurseryDraftNumber } from "./nursery-inventory";
 import { quantityText, type NurseryDetail } from "./contracts";
 import { NurseryPhotoField, type NurseryPhotoDraft } from "./nursery-photo-field";
+import { NurserySurvivalSlider } from "./nursery-survival-slider";
 
 export function NurseryResultStep({ batch, survivors, onSurvivorsChange, completedOn, onDateChange, photos, onPhotosChange, onPhotoBusy, mode }: {
   batch: NurseryDetail; survivors: string; onSurvivorsChange(value: string): void;
@@ -18,6 +19,7 @@ export function NurseryResultStep({ batch, survivors, onSurvivorsChange, complet
       <div className="min-w-0 space-y-1">
         <UnitField label={mode === "survivors" ? "Số sống sót mới (ước tính)" : "Số sống sót (ước tính)"} unit="mảnh" decimals={2}
           min={mode === "survivors" ? batch.seeded : 0} max={batch.quantityIn} value={survivors} onChange={onSurvivorsChange} required />
+        <NurserySurvivalSlider quantityIn={batch.quantityIn} survivors={survivors} floor={mode === "survivors" ? batch.seeded : 0} onSurvivorsChange={onSurvivorsChange} />
         <p role="status" className="text-xs text-text-muted">Hao hụt (ước tính): {valid ? `${quantityText(loss.lossPieces)} · ${loss.lossPercent.toLocaleString("vi-VN")}%` : "—"}</p>
         {mode === "survivors" && <p className="text-xs text-text-muted">Không thấp hơn {quantityText(batch.seeded)} đã thả; tối đa {quantityText(batch.quantityIn)} vào ươm.</p>}
       </div>

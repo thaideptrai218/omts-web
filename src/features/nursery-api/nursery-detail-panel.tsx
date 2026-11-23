@@ -74,23 +74,26 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
     {(detail.error || mutation.blocked) && <Button key="reload-nursery-detail" type="button" variant="secondary" className="w-auto" disabled={detail.loading || mutation.pending} onClick={() => void leaveEditor(() => { detail.reload(); setReviewRequested(true); })}>Tải lại đợt ươm để đối chiếu</Button>}
     {mutation.blocked && reviewRequested && !detail.loading && !detail.error && <Button key="reviewed-nursery-detail" type="button" variant="secondary" className="w-auto" onClick={() => { mutation.reviewed(); setReviewRequested(false); }}>Đã đối chiếu, tiếp tục</Button>}
     {batch && <>
-      <header className={styles.header}><div><h3>Đợt ươm {batch.code}</h3><p className="mt-1 text-xs text-text-muted">Vùng ươm: {batch.zoneCode} · {batch.zoneName}</p></div><StatusPill tone={nurseryStatusTone(batch.statusId)}>{nurseryStatusText(batch)}</StatusPill></header>
+      <header className={styles.header}><div><h3>Đợt ươm {batch.code}</h3><p className="mt-1 text-xs text-text-muted">Vùng ươm: {batch.zoneCode} · {batch.zoneName}</p><p className="text-xs text-text-muted">Bắt đầu {formatVietnameseDate(batch.startDate)} · đã ươm {batch.daysNursing} ngày</p></div><StatusPill tone={nurseryStatusTone(batch.statusId)}>{nurseryStatusText(batch)}</StatusPill></header>
       <Subtabs<Tab> label="Hồ sơ đợt ươm" tabs={tabs} value={tab} idPrefix={prefix} onChange={key => { if (key !== tab) void leaveEditor(() => setTab(key)); }} />
       <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={styles.body}>
         {tab === "info" && (editing && edit ? <NurseryEditForm key={batch.rowVersion} batch={batch} leaveRef={editGuard} guard={guard} onClose={() => setEditing(false)} onSaved={saved} onReload={() => { setEditing(false); detail.reload(); }} /> : <>
-          <Facts items={[["Mã đợt ươm", batch.code],
+          {complete && crewOpen && <p role="status" className="mb-3 text-sm text-warning">Còn {crewOpen.length} nhân viên chưa ra về.{isOwner ? " Bạn vẫn có thể hoàn tất kèm lý do." : " Hãy chấm công ra về trước khi hoàn tất."}</p>}
+          {/* The quantities are what the owner opens a batch for, so they come first; the code, zone and days are already in the header. Optional rows without a value are left out. */}
+          <NurseryInventoryFacts batch={batch} />
+          {/* Flat rows: label left, value right; they wrap into columns by the width the pane has. */}
+          <section aria-label="Thông tin đợt ươm" className="mt-4"><h4 className="mb-1 text-sm font-semibold">Lô giống và ghi nhận</h4>
+          <Facts flat items={[
             ["Lô giống", batch.seedLot.receiptCode ? <Link className="underline" href={farmingReferenceHref("purchaseReceipt", { code: batch.seedLot.receiptCode })}>{batch.seedLot.code}</Link> : batch.seedLot.code],
             ["Tên giống", batch.seedLot.itemName], ["Nhà cung cấp", batch.seedLot.supplierName],
-            ["Ngày bắt đầu", formatVietnameseDate(batch.startDate)], ["Số ngày ươm", `${batch.daysNursing} ngày`],
             ["Tồn kho hiện tại của lô", quantityText(batch.seedLotOnHand, batch.seedLot.unit)], ["Người ghi nhận", batch.recordedByName],
-            ["Phiếu xuất dùng", batch.issueCode ? <Link className="underline" href={issueLink(batch.issueCode)!}>{batch.issueCode}</Link> : "—"],
+            ...(batch.issueCode ? [["Phiếu xuất dùng", <Link key="issue" className="underline" href={issueLink(batch.issueCode)!}>{batch.issueCode}</Link>]] as const : []),
             ...(batch.completedOn ? [["Ngày hoàn tất", formatVietnameseDate(batch.completedOn)]] as const : []),
             ...(batch.closedOn ? [["Ngày đóng đợt ươm", formatVietnameseDate(batch.closedOn)]] as const : []),
             ...(batch.closeReason ? [["Lý do đóng", nurseryDisplayText(batch.closeReason)]] as const : []),
-            ["Ghi chú", nurseryDisplayText(batch.note)], ...(batch.cancelReason ? [["Lý do hủy", nurseryDisplayText(batch.cancelReason)]] as const : [])]} />
+            ...(batch.note ? [["Ghi chú", nurseryDisplayText(batch.note)]] as const : []), ...(batch.cancelReason ? [["Lý do hủy", nurseryDisplayText(batch.cancelReason)]] as const : [])]} />
+          </section>
           <RecordCrewDetail label="Nhân viên ươm" crew={batch.crew} />
-          {complete && crewOpen && <p role="status" className="my-2 text-sm text-warning">Còn {crewOpen.length} nhân viên chưa điểm danh ra về nên chưa thể hoàn tất ươm.{isOwner ? " Chủ hợp tác xã vẫn có thể hoàn tất kèm lý do." : " Hãy chấm công ra về cho nhân viên trước."}</p>}
-          <NurseryInventoryFacts batch={batch} />
           <NurseryUsage batch={batch} />
           <TabFooter left={edit && <Button key="cancel-nursery" type="button" variant="secondary" className="w-auto border-danger text-danger" disabled={busy} onClick={() => void cancel()}>Xóa đợt ươm</Button>}
             right={<>{edit && <Button key="edit-nursery" type="button" variant="secondary" className="w-auto" disabled={busy} onClick={() => setEditing(true)}>Chỉnh sửa</Button>}

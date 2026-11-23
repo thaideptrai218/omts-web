@@ -36,7 +36,7 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
     fields: [{ key: "code", label: "Mã vật tư", required: true }, { key: "name", label: "Tên vật tư", required: true },
       { key: "group", label: "Nhóm", type: "select", required: true, options: inputGroups },
       { key: "unit", label: "Đơn vị tính", required: true }, { key: "description", label: "Mô tả", type: "textarea" }] },
-  employees: { title: "Nhân viên thời vụ", ownerOnly: true, editable: true,
+  employees: { title: "Nhân viên", ownerOnly: true, editable: true,
     columns: [["fullName", "Họ tên"], ["phoneNumber", "Số điện thoại"], ["status", "Tình trạng"]],
     fields: [{ key: "fullName", label: "Họ và tên", required: true }, { key: "phoneNumber", label: "Số điện thoại" },
       { key: "birthday", label: "Ngày sinh", type: "date" }, { key: "address", label: "Địa chỉ" }, { key: "area", label: "Tỉnh/thành phố" },
@@ -65,8 +65,11 @@ const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, 
 const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: z.enum(["Seed", "Material", "Other"]), unit: text, ...usage });
 const raftRow = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), size: nullableText.optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
 const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), status: text.optional() }).refine((row) => row.code !== undefined || row.status !== undefined);
+// `pairs` = the Effective zone-role pairs the backend list already returns (StaffAccountPairView) and `employeeId` = the linked employee:
+// the user-management screen reads role, zone and employee from the list itself, with no per-row grant request.
+const accountPair = z.object({ id: apiIdSchema, zoneId: apiIdSchema.nullable(), zoneName: nullableText, allZones: z.boolean(), role: text, roleName: text });
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
-  subjectType: text.optional(), mustChangePassword: z.boolean().optional(), ...version });
+  subjectType: text.optional(), mustChangePassword: z.boolean().optional(), employeeId: apiIdSchema.nullish(), pairs: z.array(accountPair).optional(), ...version });
 const listSchemas = { zones: farmingZoneListItemSchema, suppliers: supplierRow, "input-items": itemRow,
   employees: employeeListItemSchema, rafts: raftRow, accounts: accountRow, roles: roleRow, customers: customerRow };
 const detailSchemas = {

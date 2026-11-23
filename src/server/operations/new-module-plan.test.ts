@@ -34,12 +34,12 @@ describe("new real modules read contracts", () => {
   });
   it("validates the trader list against the MyPurchases contract", () => {
     const plan = planOperation("purchase-requests", "GET", q("action=mine"))!;
-    const request = { id: ids.receipt, productId: ids.item, productName: "Hàu sữa", requestedKg: 500.5, pickupDate: "2026-11-12", note: null, sentAt: "2026-11-09T08:15:00+07:00", statusId: 3201, status: "Awaiting response",
+    const request = { id: ids.receipt, productId: ids.item, productName: "Hàu sữa", requestedCages: 500, pickupDate: "2026-11-12", note: null, sentAt: "2026-11-09T08:15:00+07:00", statusId: 3201, status: "Awaiting response",
       fulfilled: false, canCancel: true, response: null, cancelReason: null, cancelledAt: null, rowVersion: "AAAA" };
     expect(plan.schema.safeParse({ requests: [request], page: 1, pageSize: 20, total: 1, message: null, messageCode: null }).success).toBe(true);
     expect(plan.schema.safeParse({ requests: [], page: 1, pageSize: 20, total: 0, message: "Chưa có gì", messageCode: "MSG-GEN-11" }).success).toBe(true);
     expect(plan.schema.safeParse({ items: [], page: 1, pageSize: 20, total: 0 }).success).toBe(false);
-    expect(plan.schema.safeParse({ requests: [{ ...request, requestedKg: "500" }], page: 1, pageSize: 20, total: 1, message: null, messageCode: null }).success).toBe(false);
+    expect(plan.schema.safeParse({ requests: [{ ...request, requestedCages: "500" }], page: 1, pageSize: 20, total: 1, message: null, messageCode: null }).success).toBe(false);
   });
   it.each(["accountId=x", "action=mine&customerId=x", "action=mine&status=Draft", "action=mine&status=3202", `action=mine-detail&id=${ids.receipt}&page=2`, "action=mine-detail", "action=list&id=not-guid", "action=list&status=ACCEPTED", "action=list&status=3205", "action=list&status=3202&status=3203", "action=list&customerId=x", "action=mine&page=0", "action=mine&page=1&page=2", `action=detail&id=${ids.receipt}&page=2`, "action=detail"])("rejects unsupported request query %s", (query) => {
     expect(planOperation("purchase-requests", "GET", q(query))).toBeUndefined();
@@ -53,36 +53,37 @@ describe("new real modules read contracts", () => {
   it("rejects incomplete commands instead of treating them as valid writes", () => {
     for (const area of ["purchase-requests", "sales-products", "workforce"]) expect(planOperation(area, "POST", q(), { action: "create", body: {} })).toBeUndefined();
   });
-  it("plans trader kg requests/cancels with the backend contract and Owner responses with fixed endpoints", () => {
-    expect(planOperation("purchase-requests", "POST", q(), { action: "submit", body: { productId: ids.item, requestedKg: 12.5, pickupDate: "2026-10-31", note: null } })).toMatchObject({ method: "POST", path: "/api/me/purchase-requests", permission: "Submit", body: { requestedKg: 12.5 } });
+  it("plans trader cage requests/cancels with the backend contract and Owner responses with fixed endpoints", () => {
+    expect(planOperation("purchase-requests", "POST", q(), { action: "submit", body: { productId: ids.item, requestedCages: 12, pickupDate: "2026-10-31", note: null } })).toMatchObject({ method: "POST", path: "/api/me/purchase-requests", permission: "Submit", body: { requestedCages: 12 } });
     expect(planOperation("purchase-requests", "POST", q(), { action: "cancel", id: ids.receipt, body: { reason: null, rowVersion: "AAAA" } })).toMatchObject({ method: "POST", path: `/api/me/purchase-requests/${ids.receipt}/cancel`, permission: "CancelMine", expectedId: ids.receipt });
     expect(planOperation("purchase-requests", "POST", q(), { action: "cancel", id: ids.receipt, body: { reason: null } })).toBeUndefined();
-    const accept = { acceptedKg: 100.5, pickupDate: "2026-11-13", payLaterAgreed: true, note: null, rowVersion: "AAAA" };
+    const accept = { acceptedCages: 10, pickupDate: "2026-11-13", payLaterAgreed: true, note: null, rowVersion: "AAAA" };
     expect(planOperation("purchase-requests", "POST", q(), { action: "accept", id: ids.receipt, body: accept })).toMatchObject({ method: "POST", path: `/api/purchase-requests/${ids.receipt}/accept`, permission: "Respond", expectedId: ids.receipt, body: accept });
     expect(planOperation("purchase-requests", "POST", q(), { action: "decline", id: ids.receipt, body: { note: "QA từ chối", rowVersion: "opaque" } })).toMatchObject({ path: `/api/purchase-requests/${ids.receipt}/decline`, permission: "Respond", expectedId: ids.receipt });
     expect(operationAllowed("purchase-requests", { subjectType: "Trader" }, [], "Submit")).toBe(true);
     expect(operationAllowed("purchase-requests", { subjectType: "Staff" }, [], "Respond")).toBe(false);
   });
   it("rejects invalid Owner accept/decline bodies and ids", () => {
-    const accept = { acceptedKg: 10, pickupDate: "2026-11-13", payLaterAgreed: false, note: null, rowVersion: "AAAA" };
-    for (const patch of [{ acceptedKg: 0 }, { acceptedKg: 1.2345 }, { acceptedKg: "5" }, { pickupDate: "13/11/2026" }, { payLaterAgreed: null }, { rowVersion: "" }, { note: "x".repeat(1001) }, { acceptedCages: 3 }]) expect(planOperation("purchase-requests", "POST", q(), { action: "accept", id: ids.receipt, body: { ...accept, ...patch } })).toBeUndefined();
+    const accept = { acceptedCages: 10, pickupDate: "2026-11-13", payLaterAgreed: false, note: null, rowVersion: "AAAA" };
+    for (const patch of [{ acceptedCages: 0 }, { acceptedCages: 1.5 }, { acceptedCages: "5" }, { pickupDate: "13/11/2026" }, { payLaterAgreed: null }, { rowVersion: "" }, { note: "x".repeat(1001) }, { acceptedKg: 3 }]) expect(planOperation("purchase-requests", "POST", q(), { action: "accept", id: ids.receipt, body: { ...accept, ...patch } })).toBeUndefined();
     for (const note of [" ", "", "x".repeat(1001), null]) expect(planOperation("purchase-requests", "POST", q(), { action: "decline", id: ids.receipt, body: { note, rowVersion: "AAAA" } })).toBeUndefined();
     expect(planOperation("purchase-requests", "POST", q(), { action: "accept", body: accept })).toBeUndefined();
     expect(planOperation("purchase-requests", "POST", q(), { action: "accept", id: ids.receipt, zoneId: ids.zone, body: accept })).toBeUndefined();
   });
   it("validates the Owner list and detail against the PurchaseRequestView contract", () => {
-    const view = { id: ids.receipt, customer: { id: ids.item, name: "An", phoneNumber: null, currentDebt: 0 }, productId: ids.item, productName: "Hàu", requestedKg: 10, pickupDate: "2026-11-12", note: null, sentAt: "2026-11-09T08:00:00+07:00",
-      statusId: 3202, status: "Fulfilled", fulfilled: true, response: { acceptedKg: 8, pickupDate: "2026-11-12", payLaterAgreed: false, note: null, respondedAt: "2026-11-09T09:00:00+07:00" }, cancelReason: null, cancelledAt: null, sendings: [], rowVersion: "AAAA" };
+    const view = { id: ids.receipt, customer: { id: ids.item, name: "An", phoneNumber: null, currentDebt: 0 }, productId: ids.item, productName: "Hàu", requestedCages: 10, pickupDate: "2026-11-12", note: null, sentAt: "2026-11-09T08:00:00+07:00",
+      statusId: 3202, status: "Fulfilled", fulfilled: true, response: { acceptedCages: 8, pickupDate: "2026-11-12", payLaterAgreed: false, note: null, respondedAt: "2026-11-09T09:00:00+07:00" }, cancelReason: null, cancelledAt: null, sendings: [], rowVersion: "AAAA" };
     const list = planOperation("purchase-requests", "GET", q("action=list"))!, detail = planOperation("purchase-requests", "GET", q(`action=detail&id=${ids.receipt}`))!;
     expect(list.schema.safeParse({ items: [view], page: 1, pageSize: 20, total: 1 }).success).toBe(true);
     expect(detail.schema.safeParse(view).success).toBe(true);
-    expect(list.schema.safeParse({ items: [{ ...view, customer: undefined, customerName: "An", requestedCages: 2 }], page: 1, pageSize: 20, total: 1 }).success).toBe(false);
+    expect(list.schema.safeParse({ items: [{ ...view, customer: undefined, customerName: "An" }], page: 1, pageSize: 20, total: 1 }).success).toBe(false);
+    expect(list.schema.safeParse({ items: [{ ...view, requestedCages: undefined, requestedKg: 2 }], page: 1, pageSize: 20, total: 1 }).success).toBe(false);
   });
-  it.each([0, -1, 0.0004, 1.2345, "5"])("rejects invalid kg quantity %s", (requestedKg) => {
-    expect(planOperation("purchase-requests", "POST", q(), { action: "submit", body: { productId: ids.item, requestedKg, pickupDate: "2026-10-31", note: null } })).toBeUndefined();
+  it.each([0, -1, 0.5, 1.2345, "5", 2_147_483_648])("rejects invalid cage quantity %s", (requestedCages) => {
+    expect(planOperation("purchase-requests", "POST", q(), { action: "submit", body: { productId: ids.item, requestedCages, pickupDate: "2026-10-31", note: null } })).toBeUndefined();
   });
-  it("rejects the retired cage submit body", () => {
-    expect(planOperation("purchase-requests", "POST", q(), { action: "submit", body: { productId: ids.item, requestedCages: 2, pickupDate: "2026-10-31", note: null, clientOperationId: ids.receipt } })).toBeUndefined();
+  it("rejects the retired kg submit body", () => {
+    expect(planOperation("purchase-requests", "POST", q(), { action: "submit", body: { productId: ids.item, requestedKg: 2, pickupDate: "2026-10-31", note: null } })).toBeUndefined();
   });
   it("keeps personal work identity server-derived and bounds its date range", () => {
     expect(planOperation("my-work", "GET", q("from=2026-10-01&to=2026-10-31"))).toMatchObject({ path: "/api/me/workforce?from=2026-10-01&to=2026-10-31", permission: "Mine" });
@@ -97,6 +98,21 @@ describe("new real modules read contracts", () => {
     expect(operationAllowed("workforce", { subjectType: "Staff" }, [p], "AttendanceCreate", ids.zone)).toBe(true);
     expect(operationAllowed("workforce", { subjectType: "Staff" }, [p], "AttendanceCreate", ids.otherZone)).toBe(false);
     expect(operationAllowed("workforce", { subjectType: "Staff" }, [p], "Owner")).toBe(false);
+  });
+  it("lets ATTENDANCE Edit in the zone correct attendance and review leave, while the setup stays Owner-only", () => {
+    const edit: FunctionPermission = { functionCode: "ATTENDANCE", action: "Edit", dataScope: "AssignedZone", scope: { kind: "zones", zoneIds: [ids.zone] } };
+    const create: FunctionPermission = { ...edit, action: "Create" };
+    const manager = { subjectType: "Staff" };
+    expect(operationAllowed("workforce", manager, [edit], "AttendanceEdit")).toBe(true);
+    expect(operationAllowed("workforce", manager, [edit], "AttendanceEdit", ids.zone)).toBe(true);
+    expect(operationAllowed("workforce", manager, [edit], "AttendanceEdit", ids.otherZone)).toBe(false);
+    expect(operationAllowed("workforce", manager, [create], "AttendanceEdit")).toBe(false);
+    expect(operationAllowed("workforce", manager, [edit], "Owner")).toBe(false);
+    expect(operationAllowed("workforce", { subjectType: "CooperativeOwner" }, [], "AttendanceEdit")).toBe(true);
+    const day = "2026-11-19";
+    expect(planOperation("workforce", "GET", q("action=leaves"))).toMatchObject({ permission: "AttendanceEdit" });
+    expect(planOperation("workforce", "GET", q(`action=attendance&employeeId=${ids.receipt}&day=${day}`))).toMatchObject({ permission: "AttendanceEdit" });
+    expect(planOperation("workforce", "GET", q("action=settings"))).toMatchObject({ permission: "Owner" });
   });
   it("uses the real attendance overview and save envelope, with versioned TimeOnly input", () => {
     const version = { effectiveFrom: "2026-10-31", breakStart: "12:00:00", breakEnd: "13:00:00", roundingUnit: "Minutes15" };

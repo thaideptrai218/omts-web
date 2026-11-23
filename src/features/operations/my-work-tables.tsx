@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/ui/management-page";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { dateLabel, isPendingLeave, leaveStatusLabel, recordedTime, type MyAssignment, type MyAttendanceDay, type MyLeave } from "./my-work-shared";
 import styles from "./my-work-screen.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 export function MyAssignmentsTable({ rows }: { rows: readonly MyAssignment[] }) {
   return <table className={styles.table}>
@@ -45,7 +46,7 @@ export function MyLeaveTable({ rows, expanded, disabled, onToggle, onCancel }: {
           <td><StatusPill tone={!row.cancelledAt && row.approved === true ? "success" : "neutral"}>{leaveStatusLabel(row)}</StatusPill></td>
           <td className={styles.clip}>{row.response || "—"}</td>
         </OpenableTableRow>
-        {open && <tr><td colSpan={5} className={styles.detailCell}><div className={managementStyles.viewWidth}>
+        {open && <DetailRow colSpan={5} className={styles.detailCell}><div className={managementStyles.viewWidth}>
           <section className={styles.detail} aria-label={`Chi tiết yêu cầu nghỉ ${period}`}>
             <dl className={styles.facts}>
               <div><dt>Thời gian nghỉ</dt><dd>{period}</dd></div>
@@ -57,7 +58,7 @@ export function MyLeaveTable({ rows, expanded, disabled, onToggle, onCancel }: {
               <div><Button key="cancel-leave" type="button" className="w-auto" variant="ghost" disabled={disabled} onClick={() => onCancel(row.id)}><InterfaceIcon name="trash" className="size-4" />Hủy nghỉ phép</Button></div>
             </footer>}
           </section>
-        </div></td></tr>}
+        </div></DetailRow>}
       </Fragment>;
     })}</tbody>
   </table>;

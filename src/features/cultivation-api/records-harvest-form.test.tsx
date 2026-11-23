@@ -50,6 +50,18 @@ it("records from a plan line: no lane to pick, cages start from the plan, kg and
   await waitFor(() => expect(onSaved).toHaveBeenCalled());
 });
 
+it("harvesting before the oysters are mature only asks in the pop-up and still records on Đồng ý", async () => {
+  const user = userEvent.setup();
+  const future = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={{ ...plan, expectedHarvestDate: future }} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
+  await attachPhoto();
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  expect((await screen.findByText(/Hàu chưa đủ ngày trưởng thành/)).textContent).toContain("Bạn vẫn muốn thu hoạch?");
+  expect(screen.getAllByRole("button", { name: "Đóng hộp thoại" }).length).toBeGreaterThan(1);
+  await user.click(screen.getByRole("button", { name: "Đồng ý" }));
+  await waitFor(() => expect(state.upload).toHaveBeenCalledTimes(1));
+});
+
 it("takes half a cage and refuses an empty count without sending anything", async () => {
   const user = userEvent.setup();
   render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={{ ...plan, expectedCageCount: 2.5 }} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);

@@ -6,7 +6,8 @@ import { ToastProvider } from "@/components/ui/toast-provider";
 const { read, upload, summary, settings } = vi.hoisted(() => ({ read: vi.fn(), upload: vi.fn(), summary: vi.fn(), settings: vi.fn() }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/features/cycles-api/repository", () => ({ readCycleSummary: summary }));
-vi.mock("@/features/input-items/repository", () => ({ inputRepository: { settings } }));
+// Partial mock: the seeding form now reaches the workspace-home blocks, whose repositories use the real bffClient.
+vi.mock("@/features/input-items/repository", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/features/input-items/repository")>()), inputRepository: { settings } }));
 vi.mock("./records-shared", async (importOriginal) => {
   const original = await importOriginal<typeof import("./records-shared")>();
   return { ...original, seedRepo: { read, upload }, useAllowed: () => () => true };

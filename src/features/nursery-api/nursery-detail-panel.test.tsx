@@ -35,6 +35,15 @@ describe("nursery detail V2", () => {
     expect(screen.queryByRole("button", { name: "Xóa đợt ươm" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Hoàn tất ươm" })).toBeNull();
   });
+  it("puts quantities first, shows days in the header and leaves out optional rows without a value", async () => {
+    mount(batch);
+    expect(await screen.findByText(/Bắt đầu 01\/11\/2026 · đã ươm 13 ngày/)).toBeTruthy();
+    const regions = screen.getAllByRole("region").map(region => region.getAttribute("aria-label"));
+    expect(regions.indexOf("Kho ươm")).toBeLessThan(regions.indexOf("Thông tin đợt ươm"));
+    expect(screen.queryByText("Phiếu xuất dùng")).toBeNull();
+    expect(screen.queryByText("Ghi chú")).toBeNull();
+    expect(screen.queryByText("Mã đợt ươm")).toBeNull();
+  });
   it.each([0, 500])("keeps survivor correction and only offers closing when inventory remains: %s", async remaining => {
     mount({ ...batch, remaining });
     expect(await screen.findByRole("button", { name: /Sửa số sống sót/ })).toBeTruthy();

@@ -19,21 +19,21 @@ const awaiting = () => backendRequest({ pickupDate: businessToday() });
 const confirm = async () => fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
 
 describe("Owner purchase request review dialog", () => {
-  it("shows the customer, kg, pickup date and sendings from the backend view", () => {
+  it("shows the customer, cages, pickup date and sendings from the backend view", () => {
     render(<PurchaseRequestReviewDetails record={backendRequest({ sendings: [{ channel: "Sms", phoneNumber: "0900000001", deliveryStatusId: 1603, deliveryStatus: "Not sent", deliveryStatusAt: null }] })} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.getByText("Thương lái An")).toBeTruthy(); expect(screen.getByText("120,5 kg")).toBeTruthy(); expect(screen.getByText("Gửi chưa thành công")).toBeTruthy();
+    expect(screen.getByText("Thương lái An")).toBeTruthy(); expect(screen.getByText("12 lồng")).toBeTruthy(); expect(screen.getByText("Gửi chưa thành công")).toBeTruthy();
   });
-  it("accepts with kg, date and pay-later through /accept after confirmation", async () => {
+  it("accepts with cages, date and pay-later through /accept after confirmation", async () => {
     mocks.write.mockResolvedValue({ status: "success", data: backendRequest({ statusId: 3202 }) }); const saved = vi.fn();
     render(<PurchaseRequestReviewDetails record={awaiting()} onClose={vi.fn()} onSaved={saved} />);
-    fireEvent.change(screen.getByLabelText("Số kg chấp nhận *"), { target: { value: "100" } }); fireEvent.click(screen.getByLabelText("Cho trả sau"));
+    fireEvent.change(screen.getByLabelText("Số lượng chấp nhận *"), { target: { value: "10" } }); fireEvent.click(screen.getByLabelText("Cho trả sau"));
     fireEvent.click(screen.getByRole("button", { name: "Gửi phản hồi" })); expect(mocks.write).not.toHaveBeenCalled(); await confirm();
     await waitFor(() => expect(saved).toHaveBeenCalledOnce());
-    expect(mocks.write).toHaveBeenCalledWith("accept", { acceptedKg: 100, pickupDate: businessToday(), payLaterAgreed: true, note: null, rowVersion: "AAAA" }, expect.anything(), backendRequest().id);
+    expect(mocks.write).toHaveBeenCalledWith("accept", { acceptedCages: 10, pickupDate: businessToday(), payLaterAgreed: true, note: null, rowVersion: "AAAA" }, expect.anything(), backendRequest().id);
   });
-  it("blocks more kg than requested and a decline without reason before any write", async () => {
+  it("blocks more cages than requested and a decline without reason before any write", async () => {
     render(<PurchaseRequestReviewDetails record={awaiting()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("Số kg chấp nhận *"), { target: { value: "999" } }); fireEvent.click(screen.getByRole("button", { name: "Gửi phản hồi" }));
+    fireEvent.change(screen.getByLabelText("Số lượng chấp nhận *"), { target: { value: "999" } }); fireEvent.click(screen.getByRole("button", { name: "Gửi phản hồi" }));
     await screen.findByText(/không được vượt quá/);
     fireEvent.change(screen.getByLabelText("Phản hồi *"), { target: { value: "decline" } }); fireEvent.change(screen.getByLabelText("Lý do từ chối *"), { target: { value: "   " } }); fireEvent.click(screen.getByRole("button", { name: "Gửi phản hồi" }));
     await screen.findByText(/Nhập lý do từ chối/); expect(mocks.write).not.toHaveBeenCalled();

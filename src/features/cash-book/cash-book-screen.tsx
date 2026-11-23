@@ -31,6 +31,7 @@ import { Field } from "./cash-pickers";
 import { exportBook, fundLabel, listAccounts, listBook, listCollectors, listTypes, partyKindLabel, type BookQuery } from "./repository";
 import { VoucherDialog, VoucherInline, useCashAccess } from "./voucher-dialog";
 import styles from "./cash-book.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: BookRow): ReactNode };
 /** Supplier and customer rows link to their own list searched by the party's code. */
@@ -161,9 +162,9 @@ export function CashBookScreen({ helpHref }: { helpHref?: string }) {
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => setExpanded((value) => value === row.id ? undefined : row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <RowDetail row={row} canEdit={access.edit} canCancel={access.cancel} onOpen={() => setOpened(row.source === "CashVoucher" ? { kind: "voucher", id: row.id } : isCustomerPayment(row) ? { kind: "customerPayment", id: row.id } : { kind: "payment", id: row.id })} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}</tbody></table>}
     </ManagementScroller>
     {opened?.kind === "create" && <VoucherDialog target={{ mode: "create", direction: opened.direction, fund: opened.fund }} onClose={closeOpened} />}

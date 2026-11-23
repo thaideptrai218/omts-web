@@ -41,6 +41,9 @@ export function rowWarning(row: Assignment, today: string): string | undefined {
   return undefined;
 }
 
+/** The one wording of the two attendance buttons on every workforce screen ("Vào làm", not "Ghi vào làm"). */
+export const attendanceActionLabel = { "check-in": "Vào làm", "check-out": "Ra về" } as const;
+
 export const attendanceLabel = {
   planned: "Chưa vào làm",
   working: "Đang làm",

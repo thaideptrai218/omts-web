@@ -5,6 +5,7 @@ vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => ga
 import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
 import { handleAccountGrantsRequest, handleOwnerAccessRead } from "./account-grants-http";
 import { handleAccountGrantRevoke } from "./account-grant-revoke-http";
+import { handleAccountGrantCreate } from "./account-grant-create-http";
 const accountId = "122bb318-a72e-49aa-a8d7-a6169f889007", request = (query = `accountId=${accountId}`) => new Request(`http://localhost:3002/api/account-grants?${query}`);
 const grant = () => ({ id: crypto.randomUUID(), roleId: crypto.randomUUID(), roleName: "Kế toán", zoneId: null, zoneName: null, allZones: true, effectiveFrom: "2026-01-01", effectiveTo: null, state: "Effective", revokedAt: null, revokeReason: null });
 beforeEach(() => {
@@ -20,6 +21,26 @@ describe("revoke an existing grant", () => {
   it("forwards only a trimmed reason to a fixed path and projects the revoked row", async () => { const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...grant(), id: accountId, state: "Revoked", password: "never-return" })); const response = await handleAccountGrantRevoke(revokeRequest()); expect(response.status).toBe(200); expect(await response.text()).not.toContain("never-return"); expect(String(fetcher.mock.calls[0][0])).toBe(`http://127.0.0.1:8080/api/accounts/${accountId}/grants/${accountId}/revoke`); expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ reason: "Đổi phân công" }); });
   it("rejects a mismatched or non-revoked success response", async () => { vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ ...grant(), state: "Revoked" })).mockResolvedValueOnce(Response.json({ ...grant(), id: accountId, state: "Effective" })); expect((await handleAccountGrantRevoke(revokeRequest())).status).toBe(502); expect((await handleAccountGrantRevoke(revokeRequest())).status).toBe(502); });
   it("suppresses a committed response after the session changes", async () => { gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession()); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...grant(), id: accountId, state: "Revoked" })); const response = await handleAccountGrantRevoke(revokeRequest()); expect(response.status).toBe(401); expect(await response.text()).not.toContain("Kế toán"); });
+});
+const createRequest = (body: unknown) => new Request("http://localhost:3002/api/account-grants/create", { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+describe("add a grant (FARM-05)", () => {
+  const zoneId = crypto.randomUUID();
+  it("refuses a non-Owner before upstream and rejects unknown roles or extra fields", async () => {
+    const fetcher = vi.spyOn(globalThis, "fetch");
+    gateway.resolve.mockResolvedValueOnce(resolved({ identity: { ...resolved().session.identity, subjectType: "Staff" } })); expect((await handleAccountGrantCreate(createRequest({ accountId, zoneId, role: "ZONE_MANAGER" }))).status).toBe(403);
+    for (const body of [{ accountId, zoneId, role: "OWNER" }, { accountId, zoneId, role: "ZONE_MANAGER", extra: 1 }, { accountId, role: "ZONE_MANAGER" }]) expect((await handleAccountGrantCreate(createRequest(body))).status).toBe(400);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("posts the role code and zone id to the fixed path and returns the Effective row", async () => {
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...grant(), zoneId, zoneName: "Vùng mới", allZones: false, password: "never-return" }, { status: 201 }));
+    const response = await handleAccountGrantCreate(createRequest({ accountId, zoneId, role: "ZONE_MANAGER" }));
+    expect(response.status).toBe(200); expect(await response.text()).not.toContain("never-return");
+    expect(String(fetcher.mock.calls[0][0])).toBe(`http://127.0.0.1:8080/api/accounts/${accountId}/grants`); expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ zoneId, role: "ZONE_MANAGER" });
+  });
+  it("relays the backend refusal code", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ code: "MSG-GEN-09" }, { status: 409 }));
+    const response = await handleAccountGrantCreate(createRequest({ accountId, zoneId, role: "ZONE_MANAGER" })); expect(response.status).toBe(409);
+  });
 });
 describe("read-only role catalog and impact", () => {
   it.each(["functions", "impact"] as const)("protects %s with the same Owner boundary", async (area) => {

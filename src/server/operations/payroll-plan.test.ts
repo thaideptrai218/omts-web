@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { planOperation } from "./operation-plan";
 import * as c from "@/features/payroll/contracts";
@@ -98,7 +98,7 @@ describe("payroll areas: the Owner writes, the Accountant only reads", () => {
     expect(operationAllowed(area, { subjectType: "Staff" }, [], "View")).toBe(false);
     for (const subjectType of ["Trader", "Admin"]) expect(operationAllowed(area, { subjectType }, grants, "View")).toBe(false);
   });
-  it.each(["payroll-settings", "hr-setup"] as const)("%s is the Owner's alone", (area) => {
+  it.each(["payroll-settings"] as const)("%s is the Owner's alone", (area) => {
     expect(operationAllowed(area, { subjectType: "CooperativeOwner" }, [], "Edit")).toBe(true);
     expect(operationAllowed(area, { subjectType: "Staff" }, grants, "View")).toBe(false);
   });

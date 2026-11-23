@@ -9,6 +9,7 @@ import type { SheetPage, SheetRow } from "./contracts";
 import { PayrollDetailPanel } from "./payroll-detail-panel";
 import { periodLabel, rangeLabel, statusLabel, statusTone } from "./payroll-model";
 import s from "./payroll-screen.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Sum = keyof SheetPage["summary"];
 export type ListColumn = Readonly<{ key: string; label: string; sort?: string; sum?: Sum; nowrap?: boolean; render(row: SheetRow): ReactNode }>;
@@ -51,7 +52,7 @@ export function PayrollListTable({ page, columns, sort, expandedId, selected, on
             <td className={s.expandCell}><button type="button" aria-expanded={open} aria-label={`${open ? "Thu gọn" : "Mở"} ${row.name}`} onClick={() => onToggle(row.id)}><InterfaceIcon name={open ? "chevron-down" : "chevron-right"} /></button></td>
             {columns.map((column) => <td key={column.key} className={column.sum ? s.right : column.nowrap ? s.nowrap : undefined}>{column.render(row)}</td>)}
           </OpenableTableRow>
-          {open && <tr><td colSpan={columns.length + 2} className={s.detailCell}><div className={managementStyles.viewWidth}><PayrollDetailPanel id={row.id} onChanged={onChanged} /></div></td></tr>}
+          {open && <DetailRow colSpan={columns.length + 2} className={s.detailCell}><div className={managementStyles.viewWidth}><PayrollDetailPanel id={row.id} onChanged={onChanged} /></div></DetailRow>}
         </Fragment>;
       })}
     </tbody>

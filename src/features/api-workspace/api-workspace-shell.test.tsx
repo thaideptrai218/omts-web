@@ -26,8 +26,23 @@ describe("shared API navigation shell", () => {
     expect(nav.querySelectorAll('a[href="/farming/cycles"]')).toHaveLength(1);
     const personnel = within(nav).getByText("Nhân sự", { exact: true }).closest("details")!;
     fireEvent.click(personnel.querySelector("summary")!);
-    expect(within(personnel).getByRole("link", { name: "Nhân viên thời vụ" }).getAttribute("href")).toBe("/workspace/employees");
+    expect(within(personnel).getByRole("link", { name: "Nhân viên" }).getAttribute("href")).toBe("/workspace/employees");
     expect(within(personnel).getByRole("link", { name: "Phân công và chấm công" }).getAttribute("href")).toBe("/operations/workforce");
+  });
+  it("opens with the most used group of each staff role, by the permission codes held", () => {
+    const grant = (functionCode: string, actions: string[], scope: { kind: "all-zones" } | { kind: "zones"; zoneIds: string[] }) =>
+      actions.map((action) => ({ functionCode, action, scope, dataScope: "AssignedZone" as const }));
+    const zones = { kind: "zones" as const, zoneIds: ["z1"] }, all = { kind: "all-zones" as const }, crud = ["View", "Create", "Edit"];
+    const staff = (permissions: ReturnType<typeof grant>) => {
+      const context = { identity: { accountId: "529ec3ce-af8f-42f7-a08f-4bab36ba7e62", username: "fixture", subjectType: "Staff" }, permissions: { access: { permissions: [] }, functionPermissions: permissions } } as unknown as ComponentProps<typeof ApiWorkspaceShell>["context"];
+      const view = render(<ApiWorkspaceShell context={context}><h1>Nội dung</h1></ApiWorkspaceShell>);
+      return [...within(view.container).getByRole("navigation", { name: "Chức năng" }).querySelectorAll("summary")].map((item) => item.textContent?.trim());
+    };
+    const zoneManager = staff([...["CULTIVATION_CYCLES", "WATER_MEASUREMENTS", "HARVESTS", "WORK_ASSIGNMENTS", "ATTENDANCE", "PURCHASE_RECEIPTS"].flatMap((code) => grant(code, crud, zones)), ...grant("SUPPLIERS", ["View"], all)]);
+    expect(zoneManager[0]).toBe("Nuôi trồng");
+    cleanup();
+    const accountant = staff([...["CUSTOMER_PAYMENTS", "SUPPLIER_PAYMENTS", "CASH_BOOK", "SALES_REPORTS"].flatMap((code) => grant(code, crud, all)), ...grant("SUPPLIERS", ["View"], all)]);
+    expect(accountant[0]).toBe("Sổ quỹ");
   });
   it("does not expose owner administration to a trader", () => {
     const view = setup("Trader");

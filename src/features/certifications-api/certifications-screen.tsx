@@ -18,6 +18,7 @@ import { foldVietnamese } from "@/shared/presentation/fold-text";
 import { CertificationForm, certificationFileHref } from "./certification-form";
 import { certificationSchema, type Certification } from "./contracts";
 import { certificationRequest } from "./repository";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 export { CertificationEditor } from "./certification-form";
 
@@ -108,9 +109,9 @@ function CertificationList({ helpHref }: { helpHref?: string }) {
             <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.name}`} onClick={() => toggle(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
             {columns.map((column) => <td key={column.key}>{column.render(row)}</td>)}
           </OpenableTableRow>
-          {expanded === row.id && <tr><td colSpan={columns.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+          {expanded === row.id && <DetailRow colSpan={columns.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
             <CertificationDetail record={row} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
-          </div></td></tr>}
+          </div></DetailRow>}
         </Fragment>)}</tbody></table>}
     </ManagementScroller>
     {creating && <CertificationForm record={null} onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setExpanded(undefined); reload(); }} />}

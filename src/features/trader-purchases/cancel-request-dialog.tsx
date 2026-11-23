@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorNotice, Note, useMutation } from "@/features/operations/ui";
 import { cancelRequestSchema, MAX_TEXT_LENGTH, traderRequestSchema, type TraderRequest } from "./contracts";
-import { formatDate, formatKg } from "./presentation";
+import { formatCages } from "@/shared/format/cage-quantity";
+import { formatDate } from "./presentation";
 import { purchaseRepository } from "./purchase-repository";
 import s from "./trader-purchases.module.css";
 
@@ -26,7 +27,7 @@ export function CancelRequestDialog({ request, onClose, onCancelled, onReload }:
 
   return (
     <Dialog open title="Hủy yêu cầu mua" mobileLayout="compact" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <p>Bạn sắp hủy yêu cầu <strong>{request.productName}</strong>, {formatKg(request.requestedKg)}, lấy ngày {formatDate(request.pickupDate)}. Hợp tác xã sẽ nhận được thông báo.</p>
+      <p>Bạn sắp hủy yêu cầu <strong>{request.productName}</strong>, {formatCages(request.requestedCages)}, lấy ngày {formatDate(request.pickupDate)}. Hợp tác xã sẽ nhận được thông báo.</p>
       <ErrorNotice error={formError ?? mutation.error} />
       {mutation.blocked ? (
         <>

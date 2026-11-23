@@ -23,6 +23,7 @@ import { ReceiptDetailPanel } from "./receipt-detail";
 import { download, listReceipts, removeReceipts, usePurchaseLookups } from "./repository";
 import { RECEIPT, itemGroups, receiptStatusLabel, type Page, type ReceiptQuery, type ReceiptRow, type ReceiptTotals } from "./types";
 import styles from "./purchases.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; /** Shown on the Nhập giống screen only. */ seedOnly?: boolean; render(row: ReceiptRow): ReactNode };
 const tone = (statusId: number) => statusId === RECEIPT.completed ? "success" as const : statusId === RECEIPT.cancelled ? "danger" as const : "neutral" as const;
@@ -136,7 +137,7 @@ function ReceiptsList({ helpHref, linkedCode, kind }: { helpHref?: string; linke
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => open(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + (access.remove ? 2 : 1)} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><ReceiptDetailPanel id={row.id} access={access} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} /></div></td></tr>}
+            {expanded === row.id && <DetailRow colSpan={visible.length + (access.remove ? 2 : 1)} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><ReceiptDetailPanel id={row.id} access={access} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} /></div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

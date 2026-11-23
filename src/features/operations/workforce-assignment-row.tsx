@@ -9,7 +9,8 @@ import { businessToday, displayTime } from "./ui";
 import type { WorkforceColumn } from "./workforce-columns";
 import { QuickActionCell } from "./workforce-quick-action";
 import styles from "./workforce-screen.module.css";
-import { attendanceLabel, attendanceState, breakLabel, isCarryOver, workedLabel, type Assignment, type AssignmentAction } from "./workforce-shared";
+import { attendanceActionLabel, attendanceLabel, attendanceState, breakLabel, isCarryOver, workedLabel, type Assignment, type AssignmentAction } from "./workforce-shared";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 const recorded = (value: string | null) => (value ? displayTime(value) : "Chưa ghi nhận");
 
@@ -18,19 +19,20 @@ const recorded = (value: string | null) => (value ? displayTime(value) : "Chưa 
  * - remove: today or later, nothing checked yet, and Delete permission on the zone;
  * - check in/out: only on the current business day with AttendanceCreate permission, or the check-out of a night shift left open from yesterday;
  *   check-in also needs a job type and no prior check-in/out (a raft is optional: zone-level assignments have none); the check-out needs a check-in;
- * - correct attendance: the Owner, once the day has started (it is also the way to enter a missing check-in).
+ * - correct attendance: the Owner or Staff with ATTENDANCE Edit in the zone, once the day has started (it is also the way to enter a missing check-in).
  */
-function AssignmentDetail({ row, zoneName, allowed, disabled, pending, isOwner, onAct, onCorrect }: {
-  row: Assignment; zoneName(id: string): string; allowed(action: string, zoneId?: string): boolean; disabled: boolean; pending: boolean; isOwner: boolean;
+function AssignmentDetail({ row, zoneName, allowed, disabled, pending, onAct, onCorrect }: {
+  row: Assignment; zoneName(id: string): string; allowed(action: string, zoneId?: string): boolean; disabled: boolean; pending: boolean;
   onAct(row: Assignment, action: AssignmentAction): void; onCorrect(row: Assignment): void;
 }) {
   const canRemove = row.date >= businessToday() && !row.checkedInAt && !row.checkedOutAt && allowed("Delete", row.zoneId);
   const canAttend = (row.date === businessToday() || isCarryOver(row, businessToday())) && allowed("AttendanceCreate", row.zoneId);
-  const canCorrect = isOwner && row.date <= businessToday();
+  // The Owner, or Staff holding ATTENDANCE Edit in the zone of this row (the backend checks the zone again); the reason is mandatory in the dialog.
+  const canCorrect = allowed("AttendanceEdit", row.zoneId) && row.date <= businessToday();
   // A zone-level assignment (nursery, seeding or harvest crew) has no raft: the zone is enough, the backend checks the zone of the caller.
   const canCheckIn = canAttend && !row.checkedInAt && !row.checkedOutAt && !!row.jobTypeId;
   const canCheckOut = canAttend && !row.checkedOutAt;
-  // A check-out needs a check-in first; with none the Owner enters both times through "Sửa chấm công".
+  // A check-out needs a check-in first; with none, whoever may correct attendance enters both times through "Sửa chấm công".
   const noCheckIn = !row.checkedInAt;
   return <section id={`assignment-${row.id}`} className={styles.detail} aria-label={`Chi tiết phân công ${row.employeeName}`}>
     <div className={styles.infoHead}>
@@ -40,7 +42,7 @@ function AssignmentDetail({ row, zoneName, allowed, disabled, pending, isOwner, 
     <dl className={styles.facts}>
       <div><dt>Ngày làm việc</dt><dd>{formatVietnameseDate(row.date)}</dd></div>
       <div><dt>Vùng làm việc</dt><dd>{zoneName(row.zoneId)}</dd></div>
-      <div><dt>Bè nuôi</dt><dd>{row.raftCode || "Chưa xác định"}</dd></div>
+      <div><dt>Bè nuôi</dt><dd>{row.raftCode || "Cấp vùng"}</dd></div>
       <div><dt>Công việc được giao</dt><dd>{row.job}</dd></div>
       <div><dt>Vào làm</dt><dd>{recorded(row.checkedInAt)}</dd></div>
       <div><dt>Ra về</dt><dd>{recorded(row.checkedOutAt)}</dd></div>
@@ -53,18 +55,18 @@ function AssignmentDetail({ row, zoneName, allowed, disabled, pending, isOwner, 
         {canCorrect && <Button key="correct" type="button" className="w-auto" variant="ghost" disabled={disabled} onClick={() => onCorrect(row)}>Sửa chấm công</Button>}
       </div>
       <div>
-        {canCheckOut && <Button key="check-out" type="button" className="w-auto" variant="secondary" disabled={disabled || noCheckIn} title={noCheckIn ? "Chưa có giờ vào làm. Hãy ghi vào làm trước, hoặc Chủ HTX dùng Sửa chấm công." : undefined} aria-busy={pending || undefined} onClick={() => onAct(row, "check-out")}>{pending ? "Đang ghi…" : "Ghi ra về"}</Button>}
-        {canCheckIn && <Button key="check-in" type="button" className="w-auto" disabled={disabled} aria-busy={pending || undefined} onClick={() => onAct(row, "check-in")}>{pending ? "Đang ghi…" : "Ghi vào làm"}</Button>}
+        {canCheckOut && <Button key="check-out" type="button" className="w-auto" variant="secondary" disabled={disabled || noCheckIn} title={noCheckIn ? "Chưa có giờ vào làm. Hãy bấm Vào làm trước, hoặc dùng Sửa chấm công." : undefined} aria-busy={pending || undefined} onClick={() => onAct(row, "check-out")}>{pending ? "Đang ghi…" : attendanceActionLabel["check-out"]}</Button>}
+        {canCheckIn && <Button key="check-in" type="button" className="w-auto" disabled={disabled} aria-busy={pending || undefined} onClick={() => onAct(row, "check-in")}>{pending ? "Đang ghi…" : attendanceActionLabel["check-in"]}</Button>}
       </div>
     </footer>}
   </section>;
 }
 
 /** One assignment row: the closed row only offers the chevron; everything else happens in the opened detail. */
-export function WorkforceAssignmentRow({ row, columns, open, zoneName, allowed, disabled, pending, onToggle, onAct, selectable, selected, onSelect, isOwner, onCorrect }: {
+export function WorkforceAssignmentRow({ row, columns, open, zoneName, allowed, disabled, pending, onToggle, onAct, selectable, selected, onSelect, onCorrect }: {
   row: Assignment; columns: readonly WorkforceColumn[]; open: boolean; zoneName(id: string): string; allowed(action: string, zoneId?: string): boolean;
   disabled: boolean; pending: boolean; onToggle(): void; onAct(row: Assignment, action: AssignmentAction): void;
-  selectable: boolean; selected: boolean; onSelect(on: boolean): void; isOwner: boolean; onCorrect(row: Assignment): void;
+  selectable: boolean; selected: boolean; onSelect(on: boolean): void; onCorrect(row: Assignment): void;
 }) {
   return <Fragment>
     <OpenableTableRow data-selected={open || undefined} onOpen={onToggle}>
@@ -79,8 +81,8 @@ export function WorkforceAssignmentRow({ row, columns, open, zoneName, allowed, 
       {columns.map((column) => <td key={column.key}>{column.render(row, zoneName)}</td>)}
       {selectable && <QuickActionCell row={row} allowed={allowed} disabled={disabled} pending={pending} onAct={onAct} />}
     </OpenableTableRow>
-    {open && <tr><td colSpan={columns.length + (selectable ? 3 : 1)} className={styles.detailCell}>
-      <div className={managementStyles.viewWidth}><AssignmentDetail row={row} zoneName={zoneName} allowed={allowed} disabled={disabled} pending={pending} isOwner={isOwner} onAct={onAct} onCorrect={onCorrect} /></div>
-    </td></tr>}
+    {open && <DetailRow colSpan={columns.length + (selectable ? 3 : 1)} className={styles.detailCell}>
+      <div className={managementStyles.viewWidth}><AssignmentDetail row={row} zoneName={zoneName} allowed={allowed} disabled={disabled} pending={pending} onAct={onAct} onCorrect={onCorrect} /></div>
+    </DetailRow>}
   </Fragment>;
 }

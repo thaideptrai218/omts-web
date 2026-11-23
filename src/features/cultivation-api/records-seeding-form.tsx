@@ -26,6 +26,7 @@ import { RecordCrewPicker } from "./record-crew-picker";
 import { crewAssignmentNotice } from "./record-crew-assignment-notice";
 import { laneIsUnavailable } from "./lane-availability";
 import { seedingLaneChoices } from "./seeding-lane-choices";
+import { lotIsEmpty, lotsWithStockFirst } from "./seeding-lot-order";
 import { nurseryUsedUpMessage } from "./seeding-completion-prompt";
 import { defaultSeedingPercents, overRemainingPercentProblem, remainingPercentByLane } from "./seeding-lane-remaining-percent";
 
@@ -138,7 +139,7 @@ export function SeedingForm({ zoneId, raftId, cycleId, cycleStartDate, data, rec
         {fromNursery ? <SeedingNurseryQuantitySummary code={data.nurseryCode} name={data.seedLot?.itemName ?? record?.seedLot.itemName} remaining={remaining} /> : <div className="min-w-0 sm:col-span-2"><p className="mb-2 text-xs text-text-muted">Không qua ươm</p><Select label="Lô giống *" required value={lot} onChange={event => edited(setLot)(event.target.value)}>
           <option value="">Chọn lô giống</option>
           {record && !lots.data?.lots.some(v => v.id === record.seedLot.id) && <option value={record.seedLot.id}>{record.seedLot.code}</option>}
-          {lots.data?.lots.map(v => <option key={v.id} value={v.id}>{v.code} · {v.itemName ?? "Giống"} · {v.supplierName}{v.onHand != null ? ` · còn ${n(v.onHand)} ${v.unit}` : ` · ${v.unit}`}</option>)}
+          {lotsWithStockFirst(lots.data?.lots ?? []).map(v => <option key={v.id} value={v.id}>{v.code} · {v.itemName ?? "Giống"} · {v.supplierName}{lotIsEmpty(v) ? " · Hết" : v.onHand != null ? ` · còn ${n(v.onHand)} ${v.unit}` : ` · ${v.unit}`}</option>)}
         </Select></div>}
         <div className="min-w-0"><Field label="Ngày thả giống *" type="date" required min={dateWindow.min} max={dateWindow.max} value={date} onChange={event => edited(setDate)(event.target.value)} /></div>
         {fromNursery && <div className="min-w-0"><UnitField key="nursery-seeding-quantity" label="Số mảnh lấy hôm nay *" unit="mảnh" decimals={3} min={0.001} max={capacityNursery ?? undefined} required value={quantity} onChange={edited(setQuantity)} error={quantityError}

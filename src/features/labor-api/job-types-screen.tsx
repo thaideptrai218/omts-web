@@ -17,6 +17,7 @@ import { JobTypeDetailPanel } from "./job-types-detail";
 import { IN_USE, NO_RATE, statusLabel, type Job } from "./job-types-model";
 import { jobTypesRepository } from "./job-types-write";
 import styles from "./job-types-screen.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; render(job: Job): ReactNode };
 const columns: readonly Column[] = [
@@ -88,7 +89,7 @@ export function JobTypesScreen({ helpHref }: { helpHref?: string }) {
               <td className={styles.expandCell}><button type="button" aria-expanded={open} aria-label={`${open ? "Thu gọn" : "Mở"} ${job.name}`} onClick={toggle}><InterfaceIcon name={open ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map(column => <td key={column.key}>{column.render(job)}</td>)}
             </OpenableTableRow>
-            {open && <tr><td colSpan={visible.length + 1} className={styles.detailCell}><div className={managementStyles.viewWidth}><JobTypeDetailPanel record={job} canEdit={canEdit} onSynced={sync} onStateChanged={afterStateChange} /></div></td></tr>}
+            {open && <DetailRow colSpan={visible.length + 1} className={styles.detailCell}><div className={managementStyles.viewWidth}><JobTypeDetailPanel record={job} canEdit={canEdit} onSynced={sync} onStateChanged={afterStateChange} /></div></DetailRow>}
           </Fragment>;
         })}</tbody></table>}
     </ManagementScroller>

@@ -1,6 +1,7 @@
 "use client";
 import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { SelectBox } from "@/components/ui/select-box";
+import { BackToOverviewLink, isPermissionDenied } from "@/components/feedback/permission-denied-notice";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid, type DataGridSort } from "@/components/ui/data-grid";
@@ -53,7 +54,11 @@ export function Select({ label, children, ...props }: ComponentProps<typeof Sele
 export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: string }) {
   return <label className="block text-xs font-medium text-text-muted">{label}<textarea rows={3} {...props} className={control} /></label>;
 }
-export function ErrorNotice({ error }: { error?: string }) { return error ? <p role="alert" className="my-4 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p> : null; }
+export function ErrorNotice({ error }: { error?: string }) {
+  if (!error) return null;
+  // A refused permission cannot be fixed by retrying: say so and offer the overview.
+  return <div role="alert" className="my-4 grid gap-1 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger"><p>{error}</p>{isPermissionDenied(error) && <BackToOverviewLink />}</div>;
+}
 export function Skeleton() { return <div role="status" aria-label="Đang tải dữ liệu" className="my-5 space-y-3">{[1, 2, 3].map((id) => <div key={id} className="omts-skeleton h-14 rounded-control" />)}</div>; }
 export function Money({ value }: { value: number | null | undefined }) { return <span data-currency>{value == null ? "—" : formatVndWithSymbol(value)}</span>; }
 export const money = (value: number | null | undefined) => value == null ? "—" : formatVndWithSymbol(value);

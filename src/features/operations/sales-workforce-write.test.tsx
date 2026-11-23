@@ -43,9 +43,13 @@ describe("approved sales/workforce writes and draft safety", () => {
   });
   it("does not offer leave creation when the account has no linked employee", async () => {
     mocks.read.mockImplementation(async () => ({ status: "success", data: { employeeId: null, name: null, assignments: [], attendance: [], requests: [] } })); render(<MyWorkScreen />);
-    await screen.findByText("Chưa có hồ sơ nhân viên gắn với tài khoản này."); expect(screen.queryByRole("button", { name: "Xin nghỉ phép" })).toBeNull();
+    await screen.findByText(/Tài khoản chưa gắn hồ sơ nhân viên/); expect(screen.queryByRole("button", { name: "Xin nghỉ phép" })).toBeNull();
     // Develop không có api/me/purchase-shifts: màn không được đọc hay hiển thị lời mời ca.
     expect(mocks.read.mock.calls.every((args) => args[0] === "list")).toBe(true); expect(screen.queryByText("Lời mời ca theo yêu cầu mua")).toBeNull();
+  });
+  it("shows the unlinked-account message, not 'session expired', when my-work answers 401", async () => {
+    mocks.read.mockImplementation(async () => ({ status: "error", httpStatus: 401, uncertain: false })); render(<MyWorkScreen />);
+    await screen.findByText(/Tài khoản chưa gắn hồ sơ nhân viên/); expect(screen.queryByText(/Phiên đăng nhập đã hết hạn/)).toBeNull();
   });
   it("keeps assignment input and selected employees when lookup recovery runs", async () => {
     mocks.subjectType = "CooperativeOwner"; mocks.read.mockResolvedValue({ status: "success", data: { jobs: [{ id: ids.item, name: "QA job" }], employees: [{ id: ids.receipt, name: "QA staff", onLeave: true }] } });

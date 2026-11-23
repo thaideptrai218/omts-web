@@ -72,7 +72,7 @@ export function CrewStartDialog({ rows, today, zoneName, allowed, onClose, onSav
         </fieldset>
         <div className="mt-4 flex flex-wrap justify-end gap-3">
           <Button type="button" variant="secondary" className="w-auto" disabled={editor.pending} onClick={() => void editor.close()}>Bỏ qua</Button>
-          <Button type="submit" className="w-auto" isPending={editor.pending}>Ghi vào làm</Button>
+          <Button type="submit" className="w-auto" isPending={editor.pending}>Vào làm</Button>
         </div>
       </form>}
   </Dialog>;

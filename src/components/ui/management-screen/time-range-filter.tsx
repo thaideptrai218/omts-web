@@ -20,6 +20,19 @@ const GAP = 4, SIDE_GAP = 12, MARGIN = 8;
 export function Popover({ anchor, label, onClose, children, placement = "side" }: { anchor: RefObject<HTMLElement | null>; label: string; onClose(returnFocus: boolean): void; children: ReactNode; placement?: "side" | "below" }) {
   const panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number; arrow?: number }>({ left: 0, top: 0 });
+  // Where the panel should land in the viewport, and how many times a miss has been corrected for the current target.
+  const wanted = useRef<{ left: number; top: number }>(undefined), corrections = useRef(0);
+  // After every move, check where the panel really is. A containing block the origin measure missed (a transformed or contained ancestor
+  // in a dialog) would otherwise leave it at the screen corner; the measured miss is added to the position, a few times at most.
+  useLayoutEffect(() => {
+    const element = panel.current, goal = wanted.current;
+    if (!element || !goal) return;
+    const shown = element.getBoundingClientRect(), missX = goal.left - shown.left, missY = goal.top - shown.top;
+    if (Math.abs(missX) < 1 && Math.abs(missY) < 1) { corrections.current = 0; return; }
+    if (corrections.current >= 3) return;
+    corrections.current += 1;
+    setPosition(previous => ({ ...previous, left: previous.left + missX, top: previous.top + missY }));
+  }, [position]);
   useLayoutEffect(() => {
     const place = () => {
       const element = panel.current;
@@ -29,7 +42,11 @@ export function Popover({ anchor, label, onClose, children, placement = "side" }
       // modal dialog. Measure where the current values actually land and correct by that offset.
       const shown = element.getBoundingClientRect();
       const originX = shown.left - (parseFloat(element.style.left) || 0), originY = shown.top - (parseFloat(element.style.top) || 0);
-      const set = (left: number, top: number, arrow?: number) => setPosition(previous => previous.left === left - originX && previous.top === top - originY && previous.arrow === arrow ? previous : { left: left - originX, top: top - originY, arrow });
+      const set = (left: number, top: number, arrow?: number) => {
+        if (wanted.current?.left !== left || wanted.current?.top !== top) corrections.current = 0;
+        wanted.current = { left, top };
+        setPosition(previous => previous.left === left - originX && previous.top === top - originY && previous.arrow === arrow ? previous : { left: left - originX, top: top - originY, arrow });
+      };
       if (placement === "side" && box.right + SIDE_GAP + width <= window.innerWidth - MARGIN) {
         const centre = box.top + box.height / 2;
         const sideTop = Math.max(MARGIN, Math.min(centre - height / 2, window.innerHeight - height - MARGIN));

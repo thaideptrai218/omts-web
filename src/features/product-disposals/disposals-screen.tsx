@@ -21,6 +21,7 @@ import { disposalRepository, errorText, productRepository } from "@/features/pro
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { DisposalDetailPanel } from "./disposal-detail";
 import { DISPOSALS_PATH, DisposalStatus } from "./disposal-parts";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: DisposalRow): ReactNode };
 const dash = (value: string | null | undefined) => value || "—";
@@ -127,9 +128,9 @@ function DisposalsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => toggle(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={`${column.numeric ? issueStyles.num : ""} ${row.statusId === DISPOSAL.cancelled ? issueStyles.muted : ""}`.trim() || undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <DisposalDetailPanel id={row.id} access={access} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

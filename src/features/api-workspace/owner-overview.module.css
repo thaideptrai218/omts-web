@@ -1,7 +1,7 @@
 /* Màn Tổng quan: ô kết quả hôm nay, biểu đồ doanh thu, top 10, thông báo và hoạt động gần đây. */
 .page { display: grid; gap: 1.25rem; min-width: 0; color: var(--omts-color-text); }
 .heading { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: .5rem 1.5rem; }
-.heading h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
+.heading h1, .heading h2 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
 .heading p { margin: .25rem 0 0; font-size: .875rem; color: var(--omts-color-text-muted); }
 .scope { font-size: .8125rem; color: var(--omts-color-text-muted); }
 .note { margin: 0; font-size: .8125rem; color: var(--omts-color-text-muted); }

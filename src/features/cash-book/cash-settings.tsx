@@ -38,14 +38,14 @@ export function CashBookSettings() {
 
 function AccountsTab({ kind, rows, canManage, owner, onChanged }: { kind: "Bank" | "EWallet"; rows: CashAccount[]; canManage: boolean; owner: boolean; onChanged(): void }) {
   const [editing, setEditing] = useState<CashAccount | "new">(), [error, setError] = useState<string>(), confirmation = useActionDialog(), { notify } = useToast();
-  const bank = kind === "Bank";
+  const bank = kind === "Bank", noun = bank ? "tài khoản ngân hàng" : "ví điện tử", addLabel = bank ? "Thêm tài khoản" : "Thêm ví";
   async function remove(row: CashAccount) {
     if (!(await confirmation.confirm(`Xóa tài khoản ${row.accountNumber} - ${row.providerName}? Tài khoản đã có phiếu thu chi sẽ được chuyển sang ngừng dùng.`))) return;
     const result = await removeAccount(row.id);
     if (result.status === "success") { setError(undefined); notify({ tone: "success", title: `Đã xóa tài khoản ${row.accountNumber}.` }); onChanged(); } else setError(result.code === "MSG-CASH-01" ? "Tài khoản đang dùng để nhận VietQR, không thể xóa hoặc ngừng dùng." : errorText(result));
   }
   return <>{confirmation.dialog}
-    {canManage && <div className={styles.toolbar}><Button className="w-auto" variant="secondary" onClick={() => setEditing("new")}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm tài khoản</Button></div>}
+    {canManage && <div className={styles.toolbar}><Button className="w-auto" variant="secondary" onClick={() => setEditing("new")}><InterfaceIcon name="add" className="mr-1 size-4" />{addLabel}</Button></div>}
     <ErrorNotice error={error} />
     <div className={styles.tableWrap}><table className={styles.table}>
       <thead><tr><th>Số tài khoản</th><th>{bank ? "Ngân hàng" : "Ví điện tử"}</th><th>Chủ tài khoản</th><th>Ghi chú</th><th>Trạng thái</th>{canManage && <th className={styles.actions}>Thao tác</th>}</tr></thead>
@@ -54,11 +54,12 @@ function AccountsTab({ kind, rows, canManage, owner, onChanged }: { kind: "Bank"
         <td>{row.providerName}</td><td>{row.holderName}</td><td>{row.note || ""}</td>
         <td className={row.isActive ? undefined : styles.muted}>{row.isActive ? "Đang dùng" : "Ngừng dùng"}</td>
         {canManage && <td className={styles.actions}>
-          <button type="button" className={styles.iconButton} aria-label={`Sửa ${row.accountNumber}`} title="Sửa" onClick={() => setEditing(row)}><InterfaceIcon name="pencil" /></button>
-          {!row.isVietQr && <button type="button" className={styles.iconButton} aria-label={`Xóa ${row.accountNumber}`} title="Xóa" onClick={() => void remove(row)}><InterfaceIcon name="trash" /></button>}
+          {/* Visible words, not only an icon: the label starts the accessible name so voice control and screen readers agree. */}
+          <button type="button" className={managementStyles.linkButton} aria-label={`Sửa ${row.accountNumber}`} onClick={() => setEditing(row)}>Sửa</button>
+          {!row.isVietQr && <button type="button" className={`${managementStyles.linkButton} ml-3`} aria-label={`Xóa ${row.accountNumber}`} onClick={() => void remove(row)}>Xóa</button>}
         </td>}
       </tr>)}
-        {!rows.length && <tr><td colSpan={6} className={styles.muted}>Chưa có {bank ? "tài khoản ngân hàng" : "ví điện tử"} nào.</td></tr>}</tbody>
+        {!rows.length && <tr><td colSpan={6} className={styles.muted}>Chưa có {noun} nào.{canManage && <> <button type="button" className={managementStyles.linkButton} onClick={() => setEditing("new")}>{addLabel}</button></>}</td></tr>}</tbody>
     </table></div>
     {bank && owner && <p className={`${styles.muted} ${styles.after}`}>Tài khoản nhận VietQR khi bán hàng đổi tại <Link className={managementStyles.linkButton} href="/cooperative/receiving-bank-account">Ngân hàng nhận tiền</Link>; tài khoản đó tự có trong danh sách này.</p>}
     {editing && <AccountDialog kind={kind} account={editing === "new" ? undefined : editing} onClose={(changed) => { setEditing(undefined); if (changed) { notify({ tone: "success", title: "Đã lưu tài khoản." }); onChanged(); } }} />}
@@ -105,7 +106,7 @@ function TypesTab({ canManage }: { canManage: boolean }) {
       <table className={styles.table}><thead><tr><th>Tên loại {word}</th><th>Danh mục</th><th>Mô tả</th><th>Hạch toán KQKD</th>{canManage && <th className={styles.actions}>Thao tác</th>}</tr></thead>
         <tbody>{rows.map((type) => <tr key={type.id}>
           <td>{type.name}{type.isSystem && <span className={styles.badge}>Hệ thống</span>}</td><td>{categoryLabel[type.category]}</td><td>{type.description || ""}</td><td>{type.countsInResult ? "Có" : "Không"}</td>
-          {canManage && <td className={styles.actions}>{!type.isSystem && <button type="button" className={styles.iconButton} aria-label={`Sửa ${type.name}`} title="Sửa" onClick={() => setEditing({ direction, type })}><InterfaceIcon name="pencil" /></button>}</td>}
+          {canManage && <td className={styles.actions}>{!type.isSystem && <button type="button" className={managementStyles.linkButton} aria-label={`Sửa ${type.name}`} onClick={() => setEditing({ direction, type })}>Sửa</button>}</td>}
         </tr>)}</tbody></table>
     </section>;
   };

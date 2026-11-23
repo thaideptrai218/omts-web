@@ -20,7 +20,7 @@ const recorded = (value: string | null) => (value ? displayTime(value) : "Chưa 
 export const workforceColumns: readonly WorkforceColumn[] = [
   { key: "employee", label: "Nhân viên", modes: both, render: (row) => <strong>{row.employeeName}</strong>, compare: (a, b) => text(a.employeeName, b.employeeName) },
   { key: "zone", label: "Vùng", modes: both, render: (row, zoneName) => zoneName(row.zoneId), compare: (a, b, zoneName) => text(zoneName(a.zoneId), zoneName(b.zoneId)) },
-  { key: "raft", label: "Bè", modes: both, render: (row) => row.raftCode || "Chưa xác định", compare: (a, b) => text(a.raftCode ?? "", b.raftCode ?? "") },
+  { key: "raft", label: "Bè", modes: both, render: (row) => row.raftCode || "Cấp vùng", compare: (a, b) => text(a.raftCode ?? "", b.raftCode ?? "") },
   { key: "job", label: "Công việc", modes: both, render: (row) => row.job, compare: (a, b) => text(a.job, b.job) },
   { key: "checkedIn", label: "Vào làm", modes: ["attendance"], render: (row) => <span className="tabular-nums">{recorded(row.checkedInAt)}</span>, compare: (a, b) => text(a.checkedInAt ?? "", b.checkedInAt ?? "") },
   { key: "checkedOut", label: "Ra về", modes: ["attendance"], render: (row) => <span className="tabular-nums">{recorded(row.checkedOutAt)}</span>, compare: (a, b) => text(a.checkedOutAt ?? "", b.checkedOutAt ?? "") },

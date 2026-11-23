@@ -56,7 +56,7 @@ describe("operations BFF authorization and evidence boundary", () => {
   });
   it("requires CSRF on the newly approved sales writes before calling upstream", async () => {
     configure("Trader"); const fetcher = vi.spyOn(globalThis, "fetch");
-    const request = new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "https://evil.test", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "submit", body: { productId: ids.item, requestedKg: 2, pickupDate: "2026-10-31", note: null } }) });
+    const request = new Request("http://localhost:3002/api/operations/purchase-requests", { method: "POST", headers: { Origin: "https://evil.test", "Content-Type": "application/json", "X-OMTS-Request": "web" }, body: JSON.stringify({ action: "submit", body: { productId: ids.item, requestedCages: 2, pickupDate: "2026-10-31", note: null } }) });
     expect((await handleOperationRequest(request, "purchase-requests")).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
   });
   it("does not let a Trader respond as Owner or choose an employee for leave", async () => {
@@ -88,7 +88,7 @@ describe("operations BFF authorization and evidence boundary", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("rejects a validly shaped purchase request returned with another ID", async () => {
-    const view = { id: ids.otherZone, customer: { id: ids.item, name: "QA", phoneNumber: null, currentDebt: 0 }, productId: ids.item, productName: "Hàu QA", requestedKg: 2, pickupDate: "2026-10-31", note: null, sentAt: "2026-10-31T02:00:00+07:00",
+    const view = { id: ids.otherZone, customer: { id: ids.item, name: "QA", phoneNumber: null, currentDebt: 0 }, productId: ids.item, productName: "Hàu QA", requestedCages: 2, pickupDate: "2026-10-31", note: null, sentAt: "2026-10-31T02:00:00+07:00",
       statusId: 3201, status: "Awaiting response", fulfilled: false, response: null, cancelReason: null, cancelledAt: null, sendings: [], rowVersion: "opaque" };
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(view));
     expect((await handleOperationRequest(get(`action=detail&id=${ids.receipt}`), "purchase-requests")).status).toBe(502);

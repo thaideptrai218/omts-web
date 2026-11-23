@@ -22,6 +22,7 @@ import { SupplierDetailPanel, type SupplierAccess } from "./supplier-detail";
 import { SupplierFormDialog } from "./supplier-form-dialog";
 import { SupplierImportDialog } from "./supplier-import-dialog";
 import styles from "./suppliers.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; render(row: SupplierRow): ReactNode; gate?: "total" | "debt"; defaultHidden?: boolean };
 const shortDate = (value: string) => new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short" }).format(new Date(value));
@@ -164,7 +165,7 @@ function SupplierList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
             <td className={styles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.name}`} onClick={() => setExpanded((value) => value === row.id ? undefined : row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
             {visible.map((column) => <td key={column.key}>{column.render(row)}</td>)}
           </OpenableTableRow>
-          {expanded === row.id && <tr><td colSpan={visible.length + (canEdit ? 2 : 1)} className={styles.detailCell}><div className={managementStyles.viewWidth}><SupplierDetailPanel id={row.id} access={access} onChanged={reload} /></div></td></tr>}
+          {expanded === row.id && <DetailRow colSpan={visible.length + (canEdit ? 2 : 1)} className={styles.detailCell}><div className={managementStyles.viewWidth}><SupplierDetailPanel id={row.id} access={access} onChanged={reload} /></div></DetailRow>}
         </Fragment>)}</tbody></table>}
     </ManagementScroller>
     {creating && <SupplierFormDialog record={null} onClose={() => setCreating(false)} onSaved={(saved) => { setCreating(false); notify({ tone: "success", title: `Đã tạo nhà cung cấp ${saved.code}.` }); setExpanded(undefined); reload(); }} />}

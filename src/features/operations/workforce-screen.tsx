@@ -4,6 +4,7 @@ import { ManagementLayout } from "@/components/ui/management-screen/management-l
 import { BulkBar, ManagementPagination, ManagementScroller, Subtabs } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { Button } from "@/components/ui/button";
+import { ScreenGuide } from "@/components/ui/screen-guide";
 import { businessToday, ErrorNotice } from "./ui";
 import { AssignmentEditor } from "./workforce-assignment-editor";
 import { MAX_BULK } from "./workforce-bulk-actions";
@@ -14,6 +15,7 @@ import { useWorkforceBoard } from "./workforce-board-state";
 import { workforceColumns } from "./workforce-columns";
 import { WorkforceFilterRail } from "./workforce-filter-rail";
 import { OwnerLeavesDialog, ReviewLeave } from "./workforce-leave-dialogs";
+import { attendanceActionLabel } from "./workforce-shared";
 import styles from "./workforce-screen.module.css";
 import { JobTypeCreateDialog } from "@/features/labor-api/job-types-create-dialog";
 import { WorkforceSetupDialog } from "./workforce-setup-dialog";
@@ -39,7 +41,7 @@ export function WorkforceScreen() {
   // Columns of the other view keep their saved choice while this view edits its own.
   const saveColumns = (keys: string[]) => store([...stored.split(",").filter((key) => !offered.some((column) => column.key === key)), ...keys].join(","));
 
-  return <ManagementLayout storageKey="workforce" icon="attendance" title="Phân công và chấm công" filterLabel="Bộ lọc phân công"
+  return <ManagementLayout storageKey="workforce" icon="attendance" title="Phân công, chấm công" filterLabel="Bộ lọc phân công"
     filters={<WorkforceFilterRail board={board} />}
     footer={board.mode === "staff" ? undefined : <ManagementPagination page={board.currentPage} pageSize={board.pageSize} total={filteredRows?.length ?? 0} unit="phân công" disabled={rows.loading || editor.pending} onPage={board.setPage} onPageSize={board.setPageSize} />}
     search={<input type="search" aria-label="Tìm nhân viên, bè hoặc công việc" placeholder="Theo nhân viên, bè hoặc công việc" maxLength={200} value={board.search} onChange={(event) => board.setSearch(event.target.value)} />}
@@ -51,11 +53,16 @@ export function WorkforceScreen() {
       {board.notice && <p role="status">{board.notice}</p>}
       {editor.mutation.blocked && <p>Chưa thể gửi tiếp. Đối chiếu phân công và chấm công trước khi lập lượt mới; tải lại không tự gửi lại thao tác.</p>}
     </div>}
+    <ScreenGuide id="workforce" steps={[
+      { title: "Chọn ngày và vùng", text: "Dùng bộ lọc bên trái để xem phân công của ngày và vùng cần làm." },
+      { title: "Mở một dòng", text: "Bấm vào dòng để xem chi tiết, ghi vào làm, ra về, sửa chấm công hoặc gỡ phân công." },
+      { title: "Đổi việc và duyệt yêu cầu", text: "Dùng nút Đổi việc trong ngày và Duyệt yêu cầu ở thanh trên; thiết lập chấm công nằm trong nút ba chấm." },
+    ]} />
     <div className={styles.modeTabs}><Subtabs label="Cách xem lịch làm việc" tabs={modes} value={board.mode} onChange={board.setMode} idPrefix="workforce" /></div>
     {board.mode === "staff" ? <StaffAttendanceTab board={board} /> : <>
       <BulkBar count={board.selected.size} onClear={() => board.setSelected(new Set())}>
-        <Button type="button" className="w-auto" disabled={editor.disabled || board.selected.size > MAX_BULK} onClick={() => void board.bulk("check-in")}>Ghi vào làm</Button>
-        <Button type="button" className="w-auto" variant="secondary" disabled={editor.disabled || board.selected.size > MAX_BULK} onClick={() => void board.bulk("check-out")}>Ghi ra về</Button>
+        <Button type="button" className="w-auto" disabled={editor.disabled || board.selected.size > MAX_BULK} onClick={() => void board.bulk("check-in")}>{attendanceActionLabel["check-in"]}</Button>
+        <Button type="button" className="w-auto" variant="secondary" disabled={editor.disabled || board.selected.size > MAX_BULK} onClick={() => void board.bulk("check-out")}>{attendanceActionLabel["check-out"]}</Button>
         {board.selected.size > MAX_BULK && <span role="alert">Chọn tối đa {MAX_BULK} người mỗi lần.</span>}
       </BulkBar>
       {board.bulkResults && <div className={styles.bulkResults} role="status">

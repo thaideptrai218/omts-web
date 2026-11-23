@@ -22,6 +22,7 @@ import { IssueDetailPanel } from "./issue-detail";
 import { IssueStatus, IssueTypeDialog } from "./issue-dialogs";
 import { kindInfo, useIssueAccess, useIssueTypes, useReceivers, useZoneOptions, type IssueAccess } from "./issue-access";
 import styles from "./input-issues.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; only?: IssueKind; render(row: IssueRow): ReactNode };
 const dash = (value: string | null | undefined) => value || "—";
@@ -133,9 +134,9 @@ function IssuesList({ kind, helpHref, linkedCode }: { kind: IssueKind; helpHref?
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => toggle(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={`${column.numeric ? styles.num : ""} ${row.statusId === ISSUE.cancelled ? styles.muted : ""}`.trim() || undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <IssueDetailPanel id={row.id} access={access} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

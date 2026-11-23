@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { ListStateMessage, SortableHeader } from "@/components/ui/management-screen/management-table";
 import type { WorkforceBoard } from "./workforce-board-state";
 import type { WorkforceColumn } from "./workforce-columns";
@@ -13,7 +14,9 @@ export function WorkforceTable({ board, columns }: { board: WorkforceBoard; colu
     return <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3, 4, 5].map((key) => <div key={key} />)}</div>;
   }
   if (!filteredRows.length) {
-    return <ListStateMessage>{board.hasFilter ? "Không tìm thấy phân công phù hợp. Thử đổi vùng, trạng thái hoặc từ khóa." : "Chưa có phân công cho ngày này."}</ListStateMessage>;
+    // An empty day offers the next step: the weekly schedule is where assignments are made quickly.
+    return <ListStateMessage>{board.hasFilter ? "Không tìm thấy phân công phù hợp. Thử đổi vùng, trạng thái hoặc từ khóa."
+      : <>Chưa có phân công cho ngày này. {board.allowed("Create") && <Link href="/work/schedule" className="font-medium text-primary underline underline-offset-4">Thêm phân công</Link>}</>}</ListStateMessage>;
   }
   // Ticking rows is for those who may record attendance; the header box ticks (or clears) the rows of the page.
   const selectable = board.allowed("AttendanceCreate");
@@ -29,6 +32,6 @@ export function WorkforceTable({ board, columns }: { board: WorkforceBoard; colu
     <tbody>{visibleRows.map((row) => <WorkforceAssignmentRow key={row.id} row={row} columns={columns} open={board.expanded === row.id} zoneName={board.zoneName}
       allowed={board.allowed} disabled={board.editor.disabled} pending={board.pendingId === row.id} onToggle={() => board.toggleRow(row.id)} onAct={(target, action) => void board.act(target, action)}
       selectable={selectable} selected={board.selected.has(row.id)} onSelect={(on) => board.setSelected((current) => { const next = new Set(current); if (on) next.add(row.id); else next.delete(row.id); return next; })}
-      isOwner={board.context.identity.subjectType === "CooperativeOwner"} onCorrect={(target) => board.setCorrecting({ employeeId: target.employeeId, day: target.date })} />)}</tbody>
+      onCorrect={(target) => board.setCorrecting({ employeeId: target.employeeId, day: target.date })} />)}</tbody>
   </table>;
 }

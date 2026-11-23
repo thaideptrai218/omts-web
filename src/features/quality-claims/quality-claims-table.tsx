@@ -5,6 +5,7 @@ import type { ClaimRow } from "./claim-contracts";
 import { claimStatus, claimTone, dateTimeText, offerLabel } from "./claim-labels";
 import { StaffClaimDetail } from "./staff-claim-detail";
 import s from "./claims.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Props = { rows: readonly ClaimRow[]; expandedId?: string; canRespond: boolean; onToggle(id: string): void; onChanged(): void };
 const HEADINGS = ["Mã khiếu nại", "Khách hàng", "Hóa đơn", "Thời gian gửi", "Trạng thái", "Nội dung"] as const;
@@ -32,7 +33,7 @@ export function QualityClaimsTable({ rows, expandedId, canRespond, onToggle, onC
                   <td><span className={s.chip} data-tone={claimTone(row.statusId)}>{claimStatus(row.statusId)}</span>{row.offer && <span className={s.sub}>{offerLabel(row.offer)}</span>}</td>
                   <td><span className={s.clip}>{row.description}</span><span className={s.sub}>{row.photoCount} ảnh</span></td>
                 </OpenableTableRow>
-                {open && <tr id={panelId}><td colSpan={HEADINGS.length} className={s.detailCell}><StaffClaimDetail id={row.id} canRespond={canRespond} onChanged={onChanged} /></td></tr>}
+                {open && <DetailRow id={panelId} colSpan={HEADINGS.length} className={s.detailCell}><StaffClaimDetail id={row.id} canRespond={canRespond} onChanged={onChanged} /></DetailRow>}
               </Fragment>
             );
           })}

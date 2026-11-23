@@ -1,6 +1,7 @@
 "use client";
 import { operationAllowed } from "@/features/operations/permissions";
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { OwnerPendingApprovals } from "@/features/workspace-home/owner-pending-approvals";
 import { useApiWorkspace } from "./api-workspace-shell";
 import { OverviewNotifications } from "./overview-notifications";
 import { OverviewRecentActivity } from "./overview-recent-activity";
@@ -37,7 +38,8 @@ export function OwnerOverview() {
             customerHref={operationAllowed("customer-report", identity, grants) ? "/operations/customer-report" : undefined} />
         </div>
         <div className={styles.column}>
-          <OverviewNotifications remote={dashboard} identity={identity} permissions={grants} />
+          {isOwner && <OwnerPendingApprovals remote={dashboard} />}
+          <OverviewNotifications remote={dashboard} identity={identity} permissions={grants} withTasks={!isOwner} />
           {isOwner && <OverviewRecentActivity remote={data.activity} />}
         </div>
       </div>

@@ -17,7 +17,7 @@ import { operationAllowed } from "@/features/operations/permissions";
 import { useRemote } from "@/features/operations/ui";
 import type { ZoneRow } from "@/features/zones-api/zone-model";
 import { nurseryService } from "./service";
-import { NurseryTable, nurseryColumns } from "./nursery-table";
+import { NurseryTable, defaultNurseryColumns, nurseryColumns } from "./nursery-table";
 import { NurseryStartDialog } from "./nursery-start-dialog";
 import { NurseryCompleteDialog, type CompletionMode } from "./nursery-complete-dialog";
 import { NurseryDetailPanel } from "./nursery-detail-panel";
@@ -42,7 +42,7 @@ function NurseryDirectory({ zones, initialZone, initialLot }: { zones: readonly 
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
   const [expanded, setExpanded] = useState<string>(), [linkPlaced, setLinkPlaced] = useState(!code), [detailVersion, setDetailVersion] = useState(0);
   const [creating, setCreating] = useState(!!initialLot), [completing, setCompleting] = useState<{ batch: NurseryDetail; mode: CompletionMode }>();
-  const [stored, store] = useStoredValue("omts-columns-nursery-v2", nurseryColumns.map(column => column.key).join(",")), visible = nurseryColumns.filter(column => stored.split(",").includes(column.key)).map(column => column.key);
+  const [stored, store] = useStoredValue("omts-columns-nursery-v3", defaultNurseryColumns.join(",")), visible = nurseryColumns.filter(column => stored.split(",").includes(column.key)).map(column => column.key);
   const list = useRemote(useCallback((signal: AbortSignal) => zoneId ? nurseryService.list({ zoneId, search, status: status || "all", ...(time.from ? { from: time.from } : {}), ...(time.to ? { to: time.to } : {}), page: String(page), pageSize: String(pageSize), sortBy: sort.key, sortDir: sort.direction }, signal)
     : Promise.resolve({ status: "success" as const, data: { items: [], page: 1, pageSize, total: 0 } }), [zoneId, search, status, time.from, time.to, page, pageSize, sort.key, sort.direction]));
   const rows = list.data?.items ?? [];

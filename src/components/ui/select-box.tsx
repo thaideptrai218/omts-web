@@ -1,6 +1,7 @@
 "use client";
-import { Children, isValidElement, useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { Children, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { vietnameseValidationMessage } from "@/components/form/vietnamese-validation-messages";
 
 type Option = { value: string; label: string; disabled: boolean };
 
@@ -37,7 +38,7 @@ const setNativeValue = Object.getOwnPropertyDescriptor(typeof HTMLSelectElement 
  * or inside the modal dialog the box sits in, so scrolling lists never clip it and a dialog never hides it). Picking an item sets the native select and fires its real change
  * event, so `onChange={(event) => event.target.value}` handlers work unchanged.
  */
-export function SelectBox({ className = "", children, style, ref, onChange, searchable = false, searchLabel = "Tìm trong danh sách", leading, ...props }: ComponentProps<"select"> & {
+export function SelectBox({ className = "", children, style, ref, onChange, onInvalid, searchable = false, searchLabel = "Tìm trong danh sách", leading, ...props }: ComponentProps<"select"> & {
   /** Puts a search box on top of the list that filters the items by their text, ignoring case and diacritics. */
   searchable?: boolean; searchLabel?: string;
   /** A small icon shown before the value in the box (e.g. a map pin for an address). */
@@ -49,6 +50,11 @@ export function SelectBox({ className = "", children, style, ref, onChange, sear
   const current = props.value !== undefined ? String(props.value) : uncontrolled;
   const shown = options.find((option) => option.value === current) ?? (props.value === undefined ? options[0] : undefined);
   const [query, setQuery] = useState("");
+  // The native select is pinned to the viewport corner, so its own validation bubble would appear far from the field.
+  // A failed submit instead shows the message under the box; it stays only while the value is still the one that failed.
+  const errorId = useId();
+  const [failed, setFailed] = useState<{ value: string; text: string }>();
+  const errorText = failed && failed.value === current ? failed.text : undefined;
   const [open, setOpen] = useState(false), [box, setBox] = useState<{ left: number; top: number; width: number; up: boolean; host: HTMLElement }>();
 
   useLayoutEffect(() => {
@@ -107,13 +113,25 @@ export function SelectBox({ className = "", children, style, ref, onChange, sear
       ref={(element) => { native.current = element; if (typeof ref === "function") ref(element); else if (ref) ref.current = element; }}
       className="omts-select-native"
       tabIndex={props.tabIndex}
+      aria-invalid={errorText ? true : props["aria-invalid"]}
+      aria-describedby={[props["aria-describedby"], errorText ? errorId : ""].filter(Boolean).join(" ") || undefined}
       onChange={(event) => { setUncontrolled(event.target.value); onChange?.(event); }}
+      onInvalid={(event) => {
+        const field = event.currentTarget;
+        event.preventDefault();
+        setFailed({ value: field.value, text: vietnameseValidationMessage(field) || field.validationMessage });
+        // preventDefault also drops the browser's own focus on the first invalid control, so do it here.
+        const firstInvalid = field.form && Array.from(field.form.elements).find((element) => element instanceof HTMLElement && "validity" in element && (element as HTMLInputElement).willValidate && !(element as HTMLInputElement).validity.valid);
+        if (firstInvalid === field) { trigger.current?.scrollIntoView?.({ block: "center" }); field.focus(); }
+        onInvalid?.(event);
+      }}
     >{children}</select>
-    <button ref={trigger} type="button" tabIndex={-1} aria-hidden="true" disabled={props.disabled} className={`omts-select-trigger ${className}`} style={style} onClick={() => { setQuery(""); setOpen((value) => !value); }} data-open={open || undefined} title={props.title}>
+    <button ref={trigger} type="button" tabIndex={-1} aria-hidden="true" disabled={props.disabled} className={`omts-select-trigger ${className}`} style={errorText ? { ...style, borderColor: "var(--omts-color-danger, #dc2626)" } : style} onClick={() => { setQuery(""); setOpen((value) => !value); }} data-open={open || undefined} title={props.title}>
       {leading && <span className="omts-select-lead" aria-hidden="true">{leading}</span>}
       <span className="omts-select-value" data-placeholder={!shown?.value || undefined}>{shown?.label ?? ""}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
+    {errorText && <span id={errorId} role="alert" className="block text-xs leading-5 text-danger">{errorText}</span>}
     {open && box && createPortal(<ul ref={showInTopLayer} popover="manual" aria-hidden="true" className="omts-select-menu" data-up={box.up || undefined}
       style={{ left: box.left, width: box.width, ...(box.up ? { top: box.top - 4, translate: "0 -100%" } : { top: box.top + 4 }) }}>
       {searchable && <li className="omts-select-search">

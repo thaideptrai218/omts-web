@@ -26,6 +26,8 @@ export const planLine = z.object({
   canHarvest: z.boolean(),
   /** The line has its lot or a lane left out: the Owner can no longer change it. */
   locked: z.boolean(),
+  /** The first day the oysters of the raft are mature ("yyyy-MM-dd"), null when the seed gives no days; only a warning before an early harvest, never a block. */
+  expectedHarvestDate: z.iso.date().nullish(),
 });
 export const planOrder = z.object({ id, code: text, statusId: count, status: text, customer: z.object({ id, code: text, name: text }).nullish() });
 export const planProgress = z.object({ lines: count, linesDone: count, lanes: count, lanesHarvested: count, lanesSkipped: count });

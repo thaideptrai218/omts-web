@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: vi.fn(), write: vi.fn() }) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" } }) }));
 import { PurchaseRequestReviewDetails } from "./purchase-request-review-details";
-import { quantityWithCages, reviewResponseSummary } from "./purchase-request-review-presentation";
+import { reviewResponseSummary } from "./purchase-request-review-presentation";
 import { backendRequest } from "./__tests__/purchase-request-fixture";
 import { businessToday } from "./ui";
 
@@ -16,23 +16,22 @@ afterAll(() => { Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"
 afterEach(cleanup);
 
 describe("purchase request quantities", () => {
-  it("quantityWithCages is approximate with a ratio and plain kg without", () => {
-    expect(quantityWithCages(180, 50)).toBe("≈ 3,6 lồng · 180 kg"); expect(quantityWithCages(120.5)).toBe("120,5 kg");
+  it("accepted cages in the response summary carry an estimated kg only when the ratio is known", () => {
+    const request = backendRequest({ statusId: 3202, response: { acceptedCages: 10, pickupDate: "2026-11-13", payLaterAgreed: false, note: null, respondedAt: "2026-11-09T09:00:00+07:00" } });
+    expect(reviewResponseSummary(request, 50).headline).toBe("10 lồng · ≈ 500 kg (ước tính) · lấy ngày 13/11/2026 · không trả sau");
+    expect(reviewResponseSummary(request).headline).toBe("10 lồng · lấy ngày 13/11/2026 · không trả sau");
   });
-  it("accepted quantity in the response summary follows the same rule", () => {
-    const request = backendRequest({ statusId: 3202, response: { acceptedKg: 100, pickupDate: "2026-11-13", payLaterAgreed: false, note: null, respondedAt: "2026-11-09T09:00:00+07:00" } });
-    expect(reviewResponseSummary(request, 50).headline).toBe("≈ 2 lồng · 100 kg · lấy ngày 13/11/2026 · không trả sau");
-    expect(reviewResponseSummary(request).headline).toBe("100 kg · lấy ngày 13/11/2026 · không trả sau");
-  });
-  it("dialog row and the accept input hint are approximate cages while the input stays kg", () => {
+  it("dialog shows cages with an estimate and converts kg typed into cages live", () => {
     render(<PurchaseRequestReviewDetails record={backendRequest({ pickupDate: businessToday() })} kgPerCage={50} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.getByText("≈ 2,4 lồng · 120,5 kg")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Số kg chấp nhận *"), { target: { value: "100" } });
-    expect(screen.getByText(/≈ 2 lồng \(quy đổi gần đúng/)).toBeTruthy();
+    expect(screen.getByText("12 lồng · ≈ 600 kg (ước tính)")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Kg"));
+    fireEvent.change(screen.getByLabelText("Số lượng chấp nhận *"), { target: { value: "520" } });
+    expect(screen.getByText("= 10 lồng (≈ 500 kg, ước tính)")).toBeTruthy();
   });
-  it("shows kg only and no hint when the ratio is unreadable", () => {
+  it("shows cages only and no kg choice when the ratio is unreadable", () => {
     render(<PurchaseRequestReviewDetails record={backendRequest({ pickupDate: businessToday() })} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("Số kg chấp nhận *"), { target: { value: "100" } });
-    expect(screen.getByText("120,5 kg")).toBeTruthy(); expect(screen.queryByText(/lồng/)).toBeNull();
+    expect(screen.queryByLabelText("Kg")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Số lượng chấp nhận *"), { target: { value: "10" } });
+    expect(screen.getAllByText("12 lồng").length).toBeGreaterThan(0); expect(screen.queryByText(/ước tính/)).toBeNull();
   });
 });

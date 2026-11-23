@@ -10,9 +10,9 @@ import type { WorkforceBoard, WorkforceForm } from "./workforce-board-state";
 import { workforceColumns } from "./workforce-columns";
 import styles from "./workforce-screen.module.css";
 
-/** The less frequent actions live in a "..." menu so the toolbar stays one low row. Owner-only items stay Owner-only. */
+/** Only the rare setup items live in the "..." menu: "Thiết lập chấm công" (Owner-only), "Thêm loại công việc" and the job-type link. Daily work ("Đổi việc trong ngày", "Duyệt yêu cầu") has its own visible buttons. */
 function MoreMenu({ board }: { board: WorkforceBoard }) {
-  const { context, editor, allowed } = board;
+  const { context, editor } = board;
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const panel = useId();
@@ -23,19 +23,16 @@ function MoreMenu({ board }: { board: WorkforceBoard }) {
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
   const isOwner = context.identity.subjectType === "CooperativeOwner";
-  const dialogs: [WorkforceForm, string][] = [
-    ...(allowed("Edit") ? [["crew", "Đổi việc trong ngày"] as [WorkforceForm, string]] : []),
-    ...(isOwner ? [["settings", "Thiết lập chấm công"] as [WorkforceForm, string], ["leaves", "Duyệt yêu cầu"] as [WorkforceForm, string]] : []),
-  ];
+  const dialogs: [WorkforceForm, string][] = isOwner ? [["settings", "Thiết lập chấm công"]] : [];
   const jobTypes = operationAllowed("job-types", context.identity, context.permissions.functionPermissions);
   if (operationAllowed("job-types", context.identity, context.permissions.functionPermissions, "Create")) dialogs.push(["job", "Thêm loại công việc"]);
   if (!dialogs.length && !jobTypes) return null;
   return <div ref={root} className={managementStyles.picker} onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}>
     <button type="button" className={managementStyles.iconButton} aria-label="Thao tác khác" title="Thao tác khác" aria-haspopup="true" aria-expanded={open} aria-controls={panel} onClick={() => setOpen((value) => !value)}>
-      <span aria-hidden="true" className={styles.dots}>⋯</span>{board.pendingRequests > 0 && <span className={styles.badge} aria-hidden="true">{board.pendingRequests}</span>}
+      <span aria-hidden="true" className={styles.dots}>⋯</span>
     </button>
     {open && <div id={panel} className={managementStyles.pickerPanel}>
-      {dialogs.map(([key, label]) => <button key={key} type="button" className={styles.menuItem} disabled={editor.disabled} onClick={() => { setOpen(false); board.setForm(key); }}>{label}{key === "leaves" && board.pendingRequests > 0 && <span className={styles.badge} aria-label={`${board.pendingRequests} yêu cầu chờ duyệt`}>{board.pendingRequests}</span>}</button>)}
+      {dialogs.map(([key, label]) => <button key={key} type="button" className={styles.menuItem} disabled={editor.disabled} onClick={() => { setOpen(false); board.setForm(key); }}>{label}</button>)}
       {jobTypes && <Link className={styles.menuItem} href="/operations/job-types">Loại công việc &amp; đơn giá</Link>}
     </div>}
   </div>;
@@ -45,8 +42,11 @@ function MoreMenu({ board }: { board: WorkforceBoard }) {
 export function WorkforceToolbarActions({ board, visibleKeys, onColumns }: { board: WorkforceBoard; visibleKeys: readonly string[]; onColumns(keys: string[]): void }) {
   const offered = workforceColumns.filter((column) => column.modes.includes(board.mode));
   return <>
-    {board.allowed("Create") && <Button type="button" className="w-auto" disabled={board.editor.disabled} onClick={() => board.setForm("assign")}><InterfaceIcon name="add" className="mr-1 size-4" />Tạo phân công</Button>}
+    {/* The internal-staff tab lists people, not assignments, so creating or swapping assignments is not offered there. */}
+    {board.allowed("Create") && board.mode !== "staff" && <Button type="button" className="w-auto" disabled={board.editor.disabled} onClick={() => board.setForm("assign")}><InterfaceIcon name="add" className="mr-1 size-4" />Tạo phân công</Button>}
     {board.allowed("AttendanceCreate") && board.mode !== "staff" && <Button type="button" className="w-auto" variant="secondary" disabled={board.editor.disabled || board.day !== board.today} title={board.day !== board.today ? "Chỉ vào làm cho ngày hôm nay" : undefined} onClick={() => board.setForm("crew-start")}>Vào làm cả tổ</Button>}
+    {board.allowed("Edit") && board.mode !== "staff" && <Button type="button" className="w-auto" variant="secondary" disabled={board.editor.disabled} onClick={() => board.setForm("crew")}>Đổi việc trong ngày</Button>}
+    {board.allowed("AttendanceEdit") && <Button type="button" className="w-auto" variant="secondary" disabled={board.editor.disabled} onClick={() => board.setForm("leaves")}>Duyệt yêu cầu{board.pendingRequests > 0 && <span className={styles.badge} aria-label={`${board.pendingRequests} yêu cầu chờ duyệt`}>{board.pendingRequests}</span>}</Button>}
     <MoreMenu board={board} />
     <ColumnPicker columns={offered} visible={visibleKeys} onChange={onColumns} />
     <HelpLink />

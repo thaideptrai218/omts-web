@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EligibleRaft } from "./contracts";
 import { cageWeightText, coverage, coverageQuantityWithEquivalent, planFormProblem, type OrderNeedLine, type PlanForm } from "./plan-logic";
-import { availabilityText, earlyHarvestWarning, productAvailability, readiness, readinessText } from "./plan-maturity";
+import { availabilityText, earlyHarvestQuestion, earlyHarvestWarning, productAvailability, readiness, readinessText } from "./plan-maturity";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 const raft = (patch: Partial<EligibleRaft> = {}) => ({ raftId: id(1), raftCode: "B1", zone: { id: id(2), code: "Z1", name: "Vùng 1" }, product: { id: id(3), code: "SP1", name: "Hàu A" }, lanes: [], expectedHarvestDate: "2026-10-27", ...patch }) as EligibleRaft;
@@ -23,6 +23,11 @@ describe("maturity of a raft", () => {
     expect(earlyHarvestWarning(raft(), "2026-10-20")).toContain("sớm 7 ngày");
     expect(earlyHarvestWarning(raft(), "2026-10-27")).toBeUndefined();
     expect(earlyHarvestWarning(raft({ expectedHarvestDate: null }), "2026-10-20")).toBeUndefined();
+  });
+  it("asks in a pop-up before an early harvest and stays silent when ready or without maturity days", () => {
+    expect(earlyHarvestQuestion("2026-10-27", TODAY)).toBe("Hàu chưa đủ ngày trưởng thành (dự kiến từ 27/10/2026, còn 26 ngày). Bạn vẫn muốn thu hoạch?");
+    expect(earlyHarvestQuestion("2026-10-01", TODAY)).toBeUndefined();
+    expect(earlyHarvestQuestion(null, TODAY)).toBeUndefined();
   });
 });
 

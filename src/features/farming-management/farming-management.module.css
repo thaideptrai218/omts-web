@@ -19,13 +19,19 @@
 .header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:8px; }
 .header h3 { min-width:0; font-size:16px; font-weight:650; overflow-wrap:anywhere; }
 .body { padding-top:14px; min-width:0; }
-.fields { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px 20px; }
+.fields { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px 20px; }
 .fields > div { min-width:0; }
+/* Flat detail: label on the left, value on the right, a dashed rule between rows; wraps into columns by the width it gets. */
+.rows { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); column-gap:36px; margin:0; }
+.rows > div { display:flex; justify-content:space-between; gap:16px; min-width:0; padding:7px 0; border-bottom:1px dashed var(--omts-color-border); }
+.rows dt { flex:none; font-size:13px; color:var(--omts-color-text-muted); margin:0; }
+.rows dd { min-width:0; text-align:right; font-size:13px; font-weight:600; overflow-wrap:anywhere; }
 .fields dt { font-size:12px; color:var(--omts-color-text-muted); margin-bottom:2px; }
 .fields dd { font-size:14px; overflow-wrap:anywhere; }
 .fields input,.fields textarea,.fields select,.body select,.body :global(.omts-select-trigger) { max-width:100%; min-width:0; }
 .fieldError { margin-top:4px; font-size:12px; color:var(--omts-color-danger); }
-.footer { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid var(--omts-color-border); }
+/* Pinned to the bottom of the list while its detail is open, so the actions never need a scroll to be found. */
+.footer { position:sticky; bottom:0; z-index:3; display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; margin-top:14px; padding:10px 0; border-top:1px solid var(--omts-color-border); background:var(--omts-color-surface); }
 .footer > div { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .footer > div:last-child { margin-left:auto; }
 .footer button,.footer .footerLink { min-height:30px; height:auto; padding:5px 10px; width:auto; font-size:12px; }
