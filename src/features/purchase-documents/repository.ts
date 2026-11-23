@@ -150,7 +150,7 @@ async function loadLookups() {
   const text = (value: unknown) => typeof value === "string" ? value : "";
   return {
     suppliers: suppliers.status === "success" ? suppliers.data.filter((row) => row.statusId === 101).map((row) => ({ id: row.id, code: text(row.code), name: text(row.name), phone: text(row.phoneNumber) })) : [],
-    items: items.status === "success" ? items.data.filter((row) => row.statusId === 101).map((row): ItemOption => ({ id: row.id, code: row.code, name: row.name, unit: row.unit, group: groupOf(row.group),
+    items: items.status === "success" ? items.data.filter((row) => row.statusId === 101).map((row): ItemOption => ({ id: row.id, code: row.code, name: row.name, unit: row.unit, group: groupOf(row.group), basePrice: row.lastPurchasePrice ?? row.costPrice ?? null,
       units: row.units.map((unit) => ({ id: unit.id, name: unit.name, factor: unit.factor, code: unit.code, isBase: unit.isBase })) })) : [],
     rafts: rafts.status === "success" ? rafts.data.map((row) => ({ id: row.id, code: row.code, zoneId: row.zoneId, zoneName: row.zoneCode })) : [],
     receivers: receivers.status === "success" ? receivers.data : [],

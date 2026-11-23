@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EligibleLane, PlanLane, PlanLine } from "./contracts";
+import type { PlanLane, PlanLine } from "./contracts";
 import { blankFormLine, buildPlanBody, coverage, coverageText, formLineOf, harvestPlanFor, laneChip, lineCanHarvest, planFormProblem, planTotals, plannedCages, plannedLaneNumbers, shortageText, type OrderNeedLine, type PlanForm } from "./plan-logic";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;

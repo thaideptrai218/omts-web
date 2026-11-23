@@ -42,7 +42,7 @@ export function ReportPage({ storageKey, icon, title, filterLabel, filters, canV
   if (!canView) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn chưa có quyền xem báo cáo này. Hãy liên hệ Chủ hợp tác xã để được cấp quyền.</p>;
   return (
     <ManagementLayout storageKey={storageKey} icon={icon} title={title} filterLabel={filterLabel} filters={filters}
-      search={<input type="search" aria-label="Tìm trong bảng" placeholder={search?.placeholder ?? "Tìm kiếm"} maxLength={200} disabled={!search} value={search?.value ?? ""} onChange={(event) => search?.onChange(event.target.value)} />}
+      search={search && <input type="search" aria-label="Tìm trong bảng" placeholder={search.placeholder} maxLength={200} value={search.value} onChange={(event) => search.onChange(event.target.value)} />}
       actions={<>
         {onExportFormat && <ExportMenu onPick={onExportFormat} pending={exporting} disabled={loading || !hasData} />}
         {!onExportFormat && onExport && <Button className="w-auto" variant="secondary" isPending={exporting} disabled={loading || !hasData} onClick={onExport}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}

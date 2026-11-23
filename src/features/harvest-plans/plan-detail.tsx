@@ -16,7 +16,7 @@ import { ProductSizeChip } from "@/features/products/product-size";
 import { LotLink } from "@/features/products/lot-link";
 import { orderHref } from "@/features/sales-orders/order-labels";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
-import { PLAN, type PlanAction, type PlanLine, type PlanView } from "./contracts";
+import { PLAN, type PlanAction, type PlanView } from "./contracts";
 import type { PlanAccess } from "./plan-access";
 import { PLANS_PATH, PlanStatus } from "./plan-labels";
 import { planTotals } from "./plan-logic";

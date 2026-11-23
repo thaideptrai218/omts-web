@@ -12,7 +12,8 @@ import { newReturnHref } from "@/features/sales-returns/return-labels";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { InvoiceCancelDialog } from "./invoice-cancel-dialog";
 import { InvoiceCorrectionDialog } from "./invoice-correction-dialog";
-import { InvoiceInfoTab } from "./invoice-info-tab";
+import { InvoiceInfoTab, safeUrl } from "./invoice-info-tab";
+import { InvoiceOriginQrDialog } from "./invoice-origin-qr-dialog";
 import { InvoiceHistoryTab, InvoicePaymentsTab, InvoiceSendingTab } from "./invoice-payments-sending-tabs";
 import { invoiceDetail, type InvoiceAction, type InvoiceDetail } from "./invoice-list-contracts";
 import { allowedSet } from "./invoice-labels";
@@ -52,12 +53,14 @@ function Body({ invoice, tab, canExport, onChanged, onReload }: { invoice: Invoi
 function Actions({ invoice, tab, canExport, onChanged, onReload }: { invoice: InvoiceDetail; tab: Tab; canExport: boolean; onChanged(invoice: InvoiceDetail): void; onReload(): void }) {
   const router = useRouter(), { notify } = useToast(), actions = useInvoiceActions(invoice.id, onChanged), { identity, permissions } = useApiWorkspace();
   const mayReturn = operationAllowed("sales-returns", identity, permissions.functionPermissions, "Create");
-  const [cancelling, setCancelling] = useState(false), [cutting, setCutting] = useState(false);
+  const [cancelling, setCancelling] = useState(false), [cutting, setCutting] = useState(false), [showingQr, setShowingQr] = useState(false);
+  const originUrl = safeUrl(invoice.qrUrl);
   const allowed = allowedSet(invoice.allowedActions), completed = invoice.statusId === INVOICE.completed;
   const can = (action: InvoiceAction) => allowed.has(action), mayChange = completed && (can("Edit") || can("Correct"));
   return <><ErrorNotice error={actions.error} /><footer className={listStyles.tabFooter}>
     <div>
       {completed && can("Cancel") && <Button className="w-auto" variant="ghost" onClick={() => setCancelling(true)}><InterfaceIcon name="trash" className="size-4" />Hủy hóa đơn</Button>}
+      {originUrl && <Button className="w-auto" variant="ghost" onClick={() => setShowingQr(true)}><InterfaceIcon name="grid" className="size-4" />Mã QR nguồn gốc</Button>}
       {can("Print") && canExport && <Button className="w-auto" variant="ghost" isPending={actions.printing} disabled={actions.printing} onClick={actions.print}><InterfaceIcon name="download" className="size-4" />In</Button>}
     </div>
     <div>
@@ -66,6 +69,7 @@ function Actions({ invoice, tab, canExport, onChanged, onReload }: { invoice: In
       {mayChange && tab === "history" && <Button className="w-auto" variant="secondary" onClick={() => setCutting(true)}><InterfaceIcon name="payment" className="size-4" />Giảm giá sau khiếu nại</Button>}
       {can("CreateReturn") && completed && mayReturn && <Button className="w-auto" variant="secondary" onClick={() => router.push(newReturnHref(invoice.code))}><InterfaceIcon name="upload" className="size-4" />Tạo phiếu trả hàng bán</Button>}
     </div>
+    {showingQr && originUrl && <InvoiceOriginQrDialog code={invoice.code} url={originUrl} onClose={() => setShowingQr(false)} />}
     {cancelling && <InvoiceCancelDialog invoice={invoice} onClose={() => setCancelling(false)} onDone={(next) => { setCancelling(false); notify({ tone: "success", title: `Đã hủy hóa đơn ${next.code}.` }); onChanged(next); }} onReload={() => { setCancelling(false); onReload(); }} />}
     {cutting && <InvoiceCorrectionDialog invoice={invoice} onClose={() => setCutting(false)} onDone={(next) => { setCutting(false); notify({ tone: "success", title: `Đã ghi giảm giá sau khiếu nại cho hóa đơn ${next.code}.` }); onChanged(next); }} onReload={() => { setCutting(false); onReload(); }} />}
   </footer></>;

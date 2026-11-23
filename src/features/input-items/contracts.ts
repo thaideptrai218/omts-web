@@ -46,9 +46,11 @@ export const inputGroup = z.object({ id, name: text, sortOrder: count, itemCount
 export const settings = z.object({ costMethod: z.enum(["Fixed", "Average"]), allowNegativeQuantity: z.boolean(), rowVersion: text });
 export const issueType = z.object({ id, name: text, isSystem: z.boolean(), rowVersion: text });
 
-export const movementKinds = ["Opening", "Receipt", "PurchaseReturn", "Issue", "Disposal", "Reversal"] as const;
+export const movementKinds = ["Opening", "Receipt", "PurchaseReturn", "Issue", "Disposal", "CostAdjustment", "Reversal"] as const;
 export const movement = z.object({
   id, sequence: count.nullish(), kind: text, documentId: id.nullish(), documentCode: opt, occurredAt: text, quantity: num, balanceAfter: numOpt, unitCost: numOpt, transactionPrice: numOpt,
+  // A cost update row (no quantity) carries the cost before it; the new cost is `unitCost`.
+  previousUnitCost: numOpt.optional(),
   partyName: opt, seedLotLineId: id.nullish(), seedLotCode: opt, reversesMovementId: id.nullish(),
   // Issues posted by a farming record (11/11/2026): which record, so the movement can link back to it. All optional.
   sourceKind: z.enum(["Seeding", "MaterialUsage"]).nullish().catch(undefined), sourceRecordId: id.nullish().catch(undefined), cycleId: id.nullish().catch(undefined), raftId: id.nullish().catch(undefined), zoneId: id.nullish().catch(undefined),

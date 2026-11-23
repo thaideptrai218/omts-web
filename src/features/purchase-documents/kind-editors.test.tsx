@@ -15,7 +15,7 @@ vi.mock("./repository", async (original) => ({
     suppliers: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08", code: "NCC000001", name: "Trại giống", phone: "" }], rafts: [], receivers: [], loading: false, refresh: vi.fn(),
     items: [
       { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b04", code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b11", name: "mảnh", factor: 1, code: "GG-M", isBase: true }] },
-      { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b05", code: "VT000001", name: "Phao nhựa", unit: "cái", group: "Material", units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b12", name: "cái", factor: 1, code: "VT-C", isBase: true }] },
+      { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b05", code: "VT000001", name: "Phao nhựa", unit: "cái", group: "Material", basePrice: 1500, units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b12", name: "cái", factor: 1, code: "VT-C", isBase: true }] },
       { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b06", code: "VT000002", name: "Dây thừng", unit: "cuộn", group: "Other", units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b13", name: "cuộn", factor: 1, code: "VT-D", isBase: true }] },
     ],
   }),
@@ -65,6 +65,20 @@ it("offers Vật tư and Khác but no seed in the finder of the Nhập vật tư
   expect(screen.getByText("Dây thừng")).toBeTruthy();
   expect(screen.queryByText("Hàu giống 3 cm")).toBeNull();
   expect(screen.getByRole("heading", { name: "Nhập vật tư" })).toBeTruthy();
+});
+
+it("prefills a new line with the last purchase price of the item and keeps it editable", async () => {
+  wrap(<ReceiptEditorPage kind="Supply" />);
+  const finder = await screen.findByLabelText("Tìm vật tư theo mã hoặc tên");
+  fireEvent.focus(finder);
+  fireEvent.click(screen.getByText("Phao nhựa"));
+  fireEvent.focus(finder);
+  fireEvent.click(screen.getByText("Dây thừng"));
+  const first = screen.getByLabelText("Đơn giá dòng 1") as HTMLInputElement, second = screen.getByLabelText("Đơn giá dòng 2") as HTMLInputElement;
+  expect(first.value.replace(/\D/g, "")).toBe("1500");
+  expect(second.value).toBe("");
+  fireEvent.change(first, { target: { value: "1800" } });
+  expect((screen.getByLabelText("Đơn giá dòng 1") as HTMLInputElement).value.replace(/\D/g, "")).toBe("1800");
 });
 
 it("starts a new receipt with the item of the catalogue only when it is of the kind of the screen", async () => {

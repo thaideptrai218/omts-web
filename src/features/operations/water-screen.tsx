@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { businessTime, useMutation, useRemote } from "./ui";
 import { WaterChartSection } from "./water-chart-section";
 import { emptyWaterFilters, filterWater, noWaterHistory, raftsOf, readAllWaterHistory, sortWater, type WaterFilters, type WaterSortKey, type WaterZoneRef } from "./water-history-model";
 import { WaterHistoryTable, waterColumns } from "./water-history-table";
+import { NewMeasurement as NewMeasurementDialog } from "./water-new-measurement-dialog";
 import { waterRepository as repository } from "./water-measurement-shared";
 import { WaterPanelStrip } from "./water-panel-strip";
 import { WaterThresholdPanel } from "./water-threshold-panel";
@@ -65,6 +67,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   const [sort, setSort] = useState<SortState>({ key: "time", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
   const [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
   const [chartOpen, setChartOpen] = useState(false), [thresholdsOpen, setThresholdsOpen] = useState(false), [revision, setRevision] = useState(0);
+  const [adding, setAdding] = useState(false);
   const guard = useUnsavedGuard(), exporting = useMutation();
   useEffect(() => { if (exporting.error) notify({ tone: "danger", title: "Chưa xuất được phép đo.", description: exporting.error }); }, [exporting.error, notify]);
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-water", waterColumns.map(column => column.key).join(","));
@@ -91,7 +94,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   const canReset = hasFilter || filters.status !== emptyWaterFilters.status || time.kind !== "preset" || time.preset !== "all";
   const currentZone = offered.find(row => row.id === zoneId);
   const zone: WaterZoneRef = { id: zoneId, code: String(currentZone?.code ?? ""), name: String(currentZone?.name ?? "") };
-  const canExport = !!zoneId && operationAllowed("water", identity, functions, "Export", zoneId), canEdit = !!zoneId && operationAllowed("water", identity, functions, "Edit", zoneId);
+  const canExport = !!zoneId && operationAllowed("water", identity, functions, "Export", zoneId), canEdit = !!zoneId && operationAllowed("water", identity, functions, "Edit", zoneId), canCreate = !!zoneId && operationAllowed("water", identity, functions, "Create", zoneId);
   const changed = (message: string) => { history.reload(); setRevision(value => value + 1); notify({ tone: "success", title: message }); };
 
   const list = !zoneId ? null : history.error && !loaded ? <ListStateMessage error={history.error} onRetry={history.reload} retryLabel="Tải lại" />
@@ -107,17 +110,24 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
       onZone={id => change(() => { setChoice(id); setFilters(previous => ({ ...previous, raftId: "" })); })} onTime={next => change(() => setTime(next))} onFilter={setFilter} onReset={reset} />}
     search={<input type="search" aria-label="Tìm phép đo" placeholder="Theo bè hoặc người ghi" maxLength={200} value={filters.search} disabled={!zoneId} onChange={event => setFilter("search", event.target.value)} />}
     actions={<>
+      {canCreate && <Button key="add" className="w-auto" onClick={() => setAdding(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm phép đo</Button>}
       {canExport && <Button key="export" className="w-auto" variant="secondary" isPending={exporting.pending} onClick={() => void exporting.run(() => repository.download({ zoneId, from: time.from, to: time.to, status: filters.status || "All" }), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
       {zoneId && <ColumnPicker columns={waterColumns} visible={visible} onChange={keys => storeColumns(keys.join(","))} />}<HelpLink helpHref={helpHref} />
     </>}
     footer={zoneId ? <ManagementPagination page={current} pageSize={pageSize} total={rows.length} unit="phép đo" disabled={history.loading && !loaded} onPage={next => void guard.leave(() => { setPage(next); setExpanded(undefined); })} onPageSize={size => change(() => setPageSize(size))} /> : undefined}>
     {guard.dialog}
+    {adding && zoneId && <NewMeasurementDialog zoneId={zoneId} zoneName={zone.name} onClose={() => setAdding(false)}
+      onSaved={() => { setAdding(false); history.reload(); setRevision(value => value + 1); }} />}
     <ManagementScroller busy={history.loading}>
       {!zoneId ? overview : <>
         <WaterPanelStrip chartOpen={chartOpen} thresholdsOpen={thresholdsOpen} note={loaded?.truncated ? `Chỉ hiển thị ${loaded.items.length} phép đo mới nhất; hãy thu hẹp khoảng thời gian.` : undefined}
           onChart={() => setChartOpen(open => !open)} onThresholds={() => void guard.leave(() => { setExpanded(undefined); setThresholdsOpen(open => !open); })} />
         {chartOpen && <WaterChartSection key={`${zoneId}:${revision}`} zoneId={zoneId} from={time.from} to={time.to} />}
-        {thresholdsOpen && <section className={local.panel} aria-label="Ngưỡng cảnh báo"><WaterThresholdPanel key={zoneId} zoneId={zoneId} owner={identity.subjectType === "CooperativeOwner"} dirtyRef={guard.dirty} onSaved={message => { setRevision(value => value + 1); notify({ tone: "success", title: message }); }} /></section>}
+        {/* Ngưỡng chỉ xem ở đây; Chủ HTX sửa trong Thiết lập > Ngưỡng cảnh báo nước. */}
+        {thresholdsOpen && <section className={local.panel} aria-label="Ngưỡng cảnh báo">
+          {identity.subjectType === "CooperativeOwner" && <Link className="text-sm font-semibold text-primary underline" href="/settings?section=water-thresholds">Sửa ngưỡng trong Thiết lập</Link>}
+          <WaterThresholdPanel key={zoneId} zoneId={zoneId} owner={false} dirtyRef={guard.dirty} onSaved={() => undefined} />
+        </section>}
         {list}
       </>}
     </ManagementScroller>

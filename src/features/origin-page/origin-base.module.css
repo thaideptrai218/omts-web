@@ -78,3 +78,9 @@
 }
 @media (prefers-reduced-motion: reduce) { .page * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 @media print { .skip, .lang { display: none; } .hero { background: none; color: #000; } }
+
+/* MSG-ORIGIN-05: nút mở mã QR để quét bằng điện thoại; mã hiện ngay dưới nút. */
+.phoneQr { display: grid; justify-items: center; gap: .75rem; margin-top: .75rem; }
+.phoneQr summary { list-style: none; cursor: pointer; }
+.phoneQr summary::-webkit-details-marker { display: none; }
+.phoneQr svg { border-radius: .5rem; box-shadow: 0 1px 4px #0002; }

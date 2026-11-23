@@ -1,0 +1,61 @@
+/* Dạng Báo cáo của báo cáo Cuối ngày: khung xem xám, trang giấy A4 trắng, thanh công cụ. Màu lấy từ token của web. */
+.viewer { --paper-grey: color-mix(in srgb, var(--omts-color-border-strong) 30%, var(--omts-color-canvas)); display: flex; flex-direction: column; min-width: 0; height: max(28rem, calc(100dvh - var(--management-top, 8rem) - 3.5rem)); background: var(--paper-grey); }
+.viewer:fullscreen { height: 100dvh; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; flex: none; padding: 6px 10px; background: var(--omts-color-surface); border-bottom: 1px solid var(--omts-color-border); }
+.cluster { display: inline-flex; align-items: center; gap: 2px; }
+.cluster + .cluster { margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--omts-color-border); }
+.tool { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 30px; height: 30px; padding: 0 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--omts-color-text); font: inherit; font-size: 12px; cursor: pointer; }
+.tool svg { width: 16px; height: 16px; }
+.tool:hover:not(:disabled) { background: var(--omts-color-primary-soft); color: var(--omts-color-primary); }
+.tool[aria-pressed=true] { border-color: var(--omts-color-primary); background: var(--omts-color-primary-soft); color: var(--omts-color-primary); }
+.tool:disabled { color: var(--omts-color-text-muted); opacity: .55; }
+.tool:focus-visible, .pageInput:focus-visible, .findInput:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 1px; }
+.pageInput { width: 44px; height: 28px; padding: 0 4px; border: 1px solid var(--omts-color-border-strong); border-radius: 6px; background: var(--omts-color-surface); text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+.pageTotal { font-size: 12px; color: var(--omts-color-text-muted); padding: 0 4px; white-space: nowrap; }
+.zoomText { min-width: 38px; text-align: center; font-size: 12px; color: var(--omts-color-text-muted); font-variant-numeric: tabular-nums; }
+.findBar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: none; padding: 6px 10px; background: var(--omts-color-surface-subtle); border-bottom: 1px solid var(--omts-color-border); font-size: 12px; }
+.findInput { width: 220px; max-width: 100%; height: 28px; padding: 0 8px; border: 1px solid var(--omts-color-border-strong); border-radius: 6px; background: var(--omts-color-surface); font-size: 12px; }
+.findCount { color: var(--omts-color-text-muted); font-variant-numeric: tabular-nums; min-width: 56px; }
+.scroller { position: relative; flex: 1 1 auto; min-height: 0; overflow: auto; padding: 16px; scrollbar-width: thin; }
+.scroller:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: -2px; }
+.stack { display: flex; flex-direction: column; align-items: center; gap: 14px; width: max-content; min-width: 100%; }
+
+/* Trang giấy: kích thước mm đặt bằng style của component; lề trong padding. */
+.page { position: relative; flex: none; box-sizing: border-box; overflow: hidden; background: #fff; color: #111; box-shadow: 0 1px 4px #14283833, 0 6px 18px #14283826; }
+.content { font-size: 10px; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.footer { position: absolute; left: 0; right: 0; bottom: 5mm; text-align: center; font-size: 9px; color: #555; }
+.measure { position: absolute; left: -100000px; top: 0; visibility: hidden; pointer-events: none; }
+.measure > div { overflow: hidden; }
+
+.head { display: grid; gap: 3px; padding-bottom: 10px; text-align: center; }
+.created { text-align: left; font-size: 9px; color: #444; }
+.title { margin: 6px 0 2px; font-size: 16px; font-weight: 700; line-height: 1.25; }
+.line { margin: 0; font-size: 10px; }
+.tableTitle { margin: 0; padding: 8px 0 4px; font-size: 11px; font-weight: 700; }
+.note, .empty { margin: 0; padding-top: 6px; font-size: 9px; color: #444; font-style: italic; }
+.empty { font-style: normal; padding: 4px 0 8px; }
+
+.table.table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 10px; }
+.table th, .table td { padding: 3px 5px; text-align: left; vertical-align: top; overflow-wrap: anywhere; border-bottom: 1px solid #d6dde3; }
+.table thead th { background: color-mix(in srgb, var(--omts-color-primary) 16%, #fff); font-weight: 700; border-top: 1px solid #b9c7d1; border-bottom: 1px solid #b9c7d1; vertical-align: middle; }
+.num { text-align: right !important; white-space: nowrap; }
+.groupRow { background: var(--omts-color-warning-soft); font-weight: 700; }
+.detail td { color: #333; background: #fafbfc; }
+.total td { font-weight: 700; border-top: 1px solid #8ea2b0; border-bottom: 1px solid #8ea2b0; background: color-mix(in srgb, var(--omts-color-primary) 8%, #fff); }
+.strong { font-weight: 700; }
+.toggle { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; margin-right: 4px; padding: 0; vertical-align: -2px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.toggle svg { width: 13px; height: 13px; }
+.toggle:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: 1px; }
+.cellLink { color: var(--omts-color-primary); text-decoration: underline; white-space: nowrap; }
+.mark { background: #ffe58a; color: inherit; border-radius: 2px; }
+.mark[data-active] { background: #ff9d3d; outline: 1px solid #c45f00; }
+
+/* In: các trang nằm trong một khối riêng gắn vào body (xem paper-print.tsx), mỗi trang đúng một tờ, không bóng, không lề ngoài. */
+.printRoot { display: none; }
+.printPage { position: relative; box-sizing: border-box; overflow: hidden; background: #fff; color: #111; break-after: page; page-break-after: always; }
+.printPage:last-child { break-after: auto; page-break-after: auto; }
+@media print {
+  .printRoot { display: block; }
+  .printPage, .printPage * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+@media (max-width: 640px) { .cluster + .cluster { margin-left: 0; padding-left: 0; border-left: 0; } .scroller { padding: 8px; } }

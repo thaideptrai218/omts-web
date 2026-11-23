@@ -69,7 +69,8 @@ const needsId = new Set(["product", "movements", "movements-export", "product-lo
 const unitRow = z.strictObject({ id: id.nullable().optional(), unitId: id.nullable().optional(), unitName: text(30), factor: z.number().positive().max(1_000_000), code, salePrice: z.number().int().positive().max(1e12).nullable().optional() });
 const productBody = z.strictObject({
   code, name: z.string().max(200), unitPrice: z.number().int().positive().max(1e12), categoryId: id.nullable().optional(), description: text(2000), note: text(2000),
-  minKg: nonNegative, maxKg: nonNegative, units: z.array(unitRow).max(20).optional(), rowVersion: rowVersion.optional(),
+  minKg: nonNegative, maxKg: nonNegative, sizeMinCm: z.number().min(0).max(1000).nullable().optional(), sizeMaxCm: z.number().min(0).max(1000).nullable().optional(),
+  units: z.array(unitRow).max(20).optional(), rowVersion: rowVersion.optional(),
 });
 const nameBody = z.strictObject({ name: z.string().trim().min(1).max(100) });
 const groupCreateBody = nameBody.extend({ parentId: id.nullable().optional() });
