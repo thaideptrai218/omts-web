@@ -2,3 +2,8 @@
 # temporary-password generator, not a password or API key. Ignore only this
 # historical commit/path/rule/line; future findings remain enabled.
 79066edc8c276076f772aae5cb85f6c7c26870f4:src/features/account-management/repositories/mock-account-management-repository.ts:generic-api-key:31
+
+# Reviewed false positive: the name of a localStorage entry that remembers the employee table columns, not an API key.
+# Ignore only these commits/path/rule/line; the constant was renamed so later commits are not flagged.
+d8d993449f8608d0ffeafa966c0e4e013d046c04:src/features/employee-api/employee-directory.tsx:generic-api-key:28
+61550917ed0cc2ca085b3a68ed91f2aa64aeac42:src/features/employee-api/employee-directory.tsx:generic-api-key:29
