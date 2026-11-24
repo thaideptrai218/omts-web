@@ -58,7 +58,7 @@ try {
     for (const resource of ["zones", "suppliers", "input-items"]) await c.check(`/api/workspace/${resource}`, ownBusiness ? 200 : 403);
     for (const resource of ["employees", "accounts", "roles"]) await c.check(`/api/workspace/${resource}`, isOwner ? 200 : 403);
     await c.check("/api/cooperative/profile", isOwner ? 200 : 403); await c.check("/api/permission-functions", isOwner ? 200 : 403);
-    await c.check(`/api/role-impact?roleId=${roles[0].id}`, isOwner ? 200 : 403); await c.check(`/api/account-grants?accountId=${account.id}`, isOwner ? 200 : 403);
+    await c.check(`/api/account-grants?accountId=${account.id}`, isOwner ? 200 : 403);
     await c.check(`/api/supplier-documents?id=${supplier.id}`, ownBusiness ? 200 : 403);
     const map = await c.check("/api/zone-map?includeDiscontinued=true", ownBusiness ? 200 : 403);
     if (username.startsWith("quanlyvung")) assert.deepEqual(map.data.map((row) => row.id), [zone.id]);

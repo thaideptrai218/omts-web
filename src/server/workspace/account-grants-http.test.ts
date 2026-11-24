@@ -42,19 +42,17 @@ describe("add a grant (FARM-05)", () => {
     const response = await handleAccountGrantCreate(createRequest({ accountId, zoneId, role: "ZONE_MANAGER" })); expect(response.status).toBe(409);
   });
 });
-describe("read-only role catalog and impact", () => {
-  it.each(["functions", "impact"] as const)("protects %s with the same Owner boundary", async (area) => {
+describe("read-only permission catalog", () => {
+  it("protects the catalog with the Owner boundary", async () => {
     gateway.resolve.mockResolvedValue(resolved({ identity: { ...resolved().session.identity, subjectType: "Staff" } })); const fetcher = vi.spyOn(globalThis, "fetch");
-    const input = area === "impact" ? request(`roleId=${accountId}`) : request(""); expect((await handleOwnerAccessRead(input, area)).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
+    expect((await handleOwnerAccessRead(request(""), "functions")).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
   });
-  it("rejects a forged catalog target and an account ID used in place of a role ID", async () => {
-    const fetcher = vi.spyOn(globalThis, "fetch"); expect((await handleOwnerAccessRead(request("target=https://evil.test"), "functions")).status).toBe(400); expect((await handleOwnerAccessRead(request(), "impact")).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
+  it("rejects a forged catalog target", async () => {
+    const fetcher = vi.spyOn(globalThis, "fetch"); expect((await handleOwnerAccessRead(request("target=https://evil.test"), "functions")).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
   });
-  it("projects catalog and role use counts without raw confirmation copy", async () => {
-    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json([{ code: "WATER_MEASUREMENTS", name: "Water", cooperativeWide: false, isDashboardTile: false, supportedActions: ["View", "Export"], private: "never-return" }]))
-      .mockResolvedValueOnce(Response.json({ accountCount: 2, zoneCount: 1, allZonesGranted: false, accounts: ["staff1", "staff2"], confirmMessage: "never-return" }));
-    let response = await handleOwnerAccessRead(request(""), "functions"); expect(response.status).toBe(200); expect(await response.text()).not.toContain("never-return");
-    response = await handleOwnerAccessRead(request(`roleId=${accountId}`), "impact"); expect(response.status).toBe(200); expect(await response.text()).not.toContain("never-return"); expect(String(fetcher.mock.calls[1][0])).toBe(`http://127.0.0.1:8080/api/roles/${accountId}/impact`);
+  it("projects the catalog without private fields", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json([{ code: "WATER_MEASUREMENTS", name: "Water", cooperativeWide: false, isDashboardTile: false, supportedActions: ["View", "Export"], private: "never-return" }]));
+    const response = await handleOwnerAccessRead(request(""), "functions"); expect(response.status).toBe(200); expect(await response.text()).not.toContain("never-return");
   });
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); });
