@@ -16,12 +16,25 @@
 .sidebar button:hover { background: var(--omts-color-surface-subtle); }
 .sidebar button[aria-current="true"] { background: var(--omts-color-primary-soft); color: var(--omts-color-primary); font-weight: 600; }
 .sidebar button[aria-current="true"] svg { color: var(--omts-color-primary); }
-.sidebar button:focus-visible, .open:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: -2px; }
+.sidebar a { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 34px; padding: 6px 10px; border-radius: 6px; font-size: 13px; color: var(--omts-color-text); text-align: left; }
+.sidebar a svg { flex-shrink: 0; width: 16px; height: 16px; color: var(--omts-color-text-muted); }
+.sidebar a:hover { background: var(--omts-color-surface-subtle); }
+.sidebar a[aria-current="page"] { background: var(--omts-color-primary-soft); color: var(--omts-color-primary); font-weight: 600; }
+.sidebar a[aria-current="page"] svg { color: var(--omts-color-primary); }
+.sidebar a:focus-visible, .sidebar button:focus-visible, .open:focus-visible { outline: 2px solid var(--omts-color-focus-ring); outline-offset: -2px; }
 .card { overflow: hidden; }
 .cardHead { padding: 14px 18px 12px; border-bottom: 1px solid var(--omts-color-border); }
 .cardHead h2 { font-size: 15px; font-weight: 650; }
 .cardHead p { margin-top: 3px; font-size: 13px; color: var(--omts-color-text-muted); }
 .cardBody { padding: 4px 18px 18px; min-width: 0; }
+/* Gear destinations (own routes) inside the same frame: a small "Cài đặt" label, then the page with one heading style. */
+.crumb { margin-bottom: 12px; font-size: 13px; color: var(--omts-color-text-muted); }
+.crumb a { color: var(--omts-color-primary); font-weight: 600; }
+.crumb a:hover { text-decoration: underline; }
+.routeContent { min-width: 0; padding: 14px 18px 18px; font-size: 13px; }
+.routeContent h1 { margin-top: 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1.4; color: var(--omts-color-text); }
+.routeContent :global(.management-heading) { padding-bottom: 12px; margin-bottom: 12px; }
+.routeContent :global(.management-heading) p { margin-top: 3px; font-size: 13px; line-height: 1.5; }
 .linkPanel { padding-top: 10px; }
 .hint { font-size: 13px; color: var(--omts-color-text-muted); }
 .hint strong { color: var(--omts-color-text); font-weight: 600; }
@@ -45,5 +58,5 @@
   .picker { display: none; }
 }
 @media (max-width: 540px) {
-  .cardHead, .cardBody { padding-left: 14px; padding-right: 14px; }
+  .cardHead, .cardBody, .routeContent { padding-left: 14px; padding-right: 14px; }
 }

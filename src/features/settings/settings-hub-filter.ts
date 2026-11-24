@@ -36,3 +36,13 @@ export function pickSettingsItem(groups: readonly SettingsSection[], section: st
     ?? (group ? groups.find((entry) => entry.key === group)?.items[0] : undefined)
     ?? all[0];
 }
+
+/**
+ * The item whose own page is `pathname` (the longest href wins, sub-pages included), or undefined for any other page.
+ * In-place panels are skipped: they live on `/settings` itself.
+ */
+export function settingsItemForPath(groups: readonly SettingsSection[], pathname: string): SettingsItem | undefined {
+  return groups.flatMap((group) => group.items)
+    .filter((item) => !item.panel && (pathname === item.href || pathname.startsWith(`${item.href}/`)))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+}
