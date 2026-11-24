@@ -69,7 +69,7 @@ describe("bounded employee problem metadata", () => {
     expect(projectEmployeeProblemMetadata("employeeUpdate", 409, "MSG24", input)).toBeUndefined();
   });
 
-  it.each(["login", "profileUpdate", "employeeList", "employeeRead", "employeeLinkableAccounts", "unknown"])(
+  it.each(["login", "profileUpdate", "employeeList", "employeeRead", "unknown"])(
     "does not expand error projection to endpoint %s", (endpoint) => {
       expect(projectEmployeeProblemMetadata(endpoint, 400, "MSG01", { field: "Full name" })).toBeUndefined();
       expect(projectEmployeeProblemMetadata(endpoint, 409, "MSG03", { existingEmployeeId: employeeId })).toBeUndefined();

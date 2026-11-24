@@ -32,8 +32,6 @@ export const employeeListRequestSchema = z.strictObject({
 export const employeeDetailRequestSchema = z.strictObject({
   endpoint: z.literal("employeeRead"), employeeId: apiIdSchema,
 });
-// Compatibility for the external legacy registry: reject this removed endpoint.
-export const employeePickerRequestSchema = z.strictObject({ endpoint: z.literal("employeeLinkableAccounts").refine(() => false, "Endpoint removed") });
 export const employeeReadRequestSchema = z.discriminatedUnion("endpoint", [
   employeeListRequestSchema, employeeDetailRequestSchema,
 ]);
