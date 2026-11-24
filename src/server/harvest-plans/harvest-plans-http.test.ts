@@ -102,6 +102,39 @@ describe("harvest plans BFF", () => {
     expect(String(fetcher.mock.calls[1][0])).toContain("/unskip-lanes");
   });
 
+  it("lets the zone manager receive and hand over with HARVESTS Create, and keeps finish for HARVEST_PLANS Edit", async () => {
+    setup([["HARVESTS", "Create"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ plan: view, message: "ok", messageCode: "MSG-GEN-05" }));
+    expect((await handleHarvestPlans(post({ action: "plan-receive", id, body: {} }))).status).toBe(200);
+    expect(String(fetcher.mock.calls[0][0])).toContain(`/api/harvest-plans/${id}/receive`);
+    expect(fetcher.mock.calls[0][1]).toMatchObject({ method: "POST", body: "{}" });
+    expect((await handleHarvestPlans(post({ action: "plan-hand-over", id, body: { rowVersion: "v1" } }))).status).toBe(200);
+    expect(String(fetcher.mock.calls[1][0])).toContain(`/api/harvest-plans/${id}/hand-over`);
+    expect(fetcher.mock.calls[1][1]).toMatchObject({ body: JSON.stringify({ rowVersion: "v1" }) });
+    expect((await handleHarvestPlans(post({ action: "plan-hand-over", id, body: { extra: 1 } }))).status).toBe(400);
+    expect((await handleHarvestPlans(post({ action: "plan-finish", id, body: {} }))).status).toBe(403);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses receive and hand over without HARVESTS Create and passes a wrong-status 409 on", async () => {
+    setup([["HARVEST_PLANS", "Edit"]]);
+    expect((await handleHarvestPlans(post({ action: "plan-receive", id, body: {} }))).status).toBe(403);
+    expect((await handleHarvestPlans(post({ action: "plan-hand-over", id, body: {} }))).status).toBe(403);
+    setup([["HARVESTS", "Create"]]);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ code: "MSG-GEN-09", message: "Kế hoạch không ở trạng thái phù hợp." }, { status: 409 }));
+    const rejected = await handleHarvestPlans(post({ action: "plan-receive", id, body: {} }));
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toMatchObject({ status: "rejected", code: "MSG-GEN-09" });
+  });
+
+  it("accepts the new status ids in the list filter", async () => {
+    setup([["HARVEST_PLANS", "View"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 15, total: 0 }));
+    expect((await handleHarvestPlans(get("action=plans&statusIds=4206,4207"))).status).toBe(200);
+    expect(String(fetcher.mock.calls[0][0])).toContain("statusIds=4206&statusIds=4207");
+    expect((await handleHarvestPlans(get("action=plans&statusIds=4208"))).status).toBe(400);
+  });
+
   it("sends a save to the API as JSON, accepts the plan alone or wrapped, and refuses a body with extra or missing parts", async () => {
     setup([["HARVEST_PLANS", "Create"], ["HARVEST_PLANS", "Edit"]]);
     const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(view, { status: 201 })).mockResolvedValueOnce(Response.json({ plan: view })).mockImplementation(async () => Response.json(view));

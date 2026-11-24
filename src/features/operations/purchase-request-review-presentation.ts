@@ -16,7 +16,7 @@ export const REVIEW_STATUS_OPTIONS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /** BR-SALE-02: chỉ trả lời một lần, khi đơn còn "Chờ phản hồi". */
-export const canRespondToRequest = (request: Pick<PurchaseRequest, "statusId">) => request.statusId === REQUEST_STATUS_IDS.awaiting;
+export const canRespondToRequest = (request: Pick<PurchaseRequest, "statusId">) => request.statusId === REQUEST_STATUS_IDS.awaiting || request.statusId === REQUEST_STATUS_IDS.awaitingStaff;
 
 /** The Owner makes an order (Đặt hàng) from a request that waits for an answer, or from an older accepted one that no invoice has fulfilled. */
 export const canOrderRequest = (request: Pick<PurchaseRequest, "statusId" | "fulfilled">) =>

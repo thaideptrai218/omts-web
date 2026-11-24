@@ -7,11 +7,11 @@ import { z } from "zod";
  */
 const id = z.guid(), text = z.string(), opt = text.nullish(), count = z.number().int(), cages = z.number();
 
-export const PLAN = { draft: 4201, assigned: 4202, harvesting: 4203, completed: 4204, cancelled: 4205 } as const;
+export const PLAN = { draft: 4201, assigned: 4202, harvesting: 4203, completed: 4204, cancelled: 4205, received: 4206, handedOver: 4207 } as const;
 export const laneStates = ["Planned", "Harvested", "Skipped"] as const;
 export type PlanLaneState = (typeof laneStates)[number];
 /** What the caller may do with a plan now (`allowedActions`); the screens show exactly these buttons. */
-export type PlanAction = "Edit" | "Assign" | "Finish" | "Cancel" | "Harvest" | "SkipLane";
+export type PlanAction = "Edit" | "Assign" | "Receive" | "HandOver" | "Finish" | "Cancel" | "Harvest" | "SkipLane";
 
 const account = z.object({ id, name: text });
 export const zoneRef = z.object({ id, code: text, name: text });
@@ -69,11 +69,11 @@ export const staffingLine = z.object({
 });
 export const planStaffing = z.object({ planId: id, planCode: text, rowVersion: text, lines: z.array(staffingLine), canEdit: z.boolean() });
 
-/** A save, assign, finish or cancel answers `{ plan, message, messageCode }`; the skip actions answer the plan itself. */
+/** A save, assign, receive, hand over, finish or cancel answers `{ plan, message, messageCode }`; the skip actions answer the plan itself. */
 export const planAnswer = z.union([z.object({ plan: planView }).transform((value) => value.plan), planView]);
-/** The answer of assign, finish, cancel and the skip actions is not read: the screen reloads the plan. */
+/** The answer of assign, receive, hand over, finish, cancel and the skip actions is not read: the screen reloads the plan. */
 export const ack = z.unknown();
-/** The plans given to the caller's zones that are Assigned or Harvesting. */
+/** The plans given to the caller's zones that are Assigned, Received or Harvesting. */
 export const planList = z.union([z.object({ plans: z.array(planView) }).transform((value) => value.plans), z.array(planView)]);
 
 export type PlanView = z.infer<typeof planView>;

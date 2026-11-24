@@ -21,9 +21,14 @@ export function homeAttendance(snapshot: TodaySnapshot, day: string, allowed: At
   return { total: sum.total, waiting: sum.waiting, working: sum.working, names };
 }
 
-/** Kế hoạch thu hoạch được giao còn dòng bè để thu (chưa có lô). */
-export function plansToHarvest(plans: readonly Plan[]) {
-  return plans.filter((plan) => plan.lines.some(lineCanHarvest)).sort((a, b) => a.plannedAt.localeCompare(b.plannedAt));
+/** Kế hoạch thu hoạch quản lý vùng cần xử lý: cần nhận, còn dòng bè để thu, hoặc đã thu xong chờ bàn giao. Theo `allowedActions` của API. */
+export function plansToHandle(plans: readonly Plan[]) {
+  return plans.filter((plan) => plan.allowedActions.includes("Receive") || plan.allowedActions.includes("HandOver") || plan.lines.some(lineCanHarvest)).sort((a, b) => a.plannedAt.localeCompare(b.plannedAt));
+}
+
+/** Việc kế tiếp của quản lý vùng trên một kế hoạch: "Cần nhận", "Chờ bàn giao" hoặc "Đang thu". */
+export function planHomeStep(plan: Pick<Plan, "allowedActions">): string {
+  return plan.allowedActions.includes("Receive") ? "Cần nhận" : plan.allowedActions.includes("HandOver") ? "Chờ bàn giao" : "Đang thu";
 }
 
 /** Đợt ươm đang chạy, lâu ngày nhất lên đầu (gần xong nhất theo ngày ươm). */

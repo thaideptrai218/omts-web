@@ -13,7 +13,7 @@ import { waterRepository } from "@/features/operations/water-measurement-shared"
 import { businessToday, useRemote } from "@/features/operations/ui";
 import { viDateTime } from "@/features/purchase-documents/document-parts";
 import { HomeBlock } from "./home-block";
-import { homeAttendance, nursingBatches, outsideWaterCount, plansToHarvest } from "./home-selection";
+import { homeAttendance, nursingBatches, outsideWaterCount, planHomeStep, plansToHandle } from "./home-selection";
 import { useZoneReads } from "./use-zone-reads";
 
 const dayBefore = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
@@ -32,11 +32,11 @@ export function AttendanceBlock() {
     }} />;
 }
 
-/** Kế hoạch thu hoạch Chủ HTX đã giao cho vùng của mình, còn bè để thu. */
+/** Kế hoạch thu hoạch Chủ HTX đã giao cho vùng của mình: cần nhận, đang thu, chờ bàn giao. */
 export function AssignedPlansBlock() {
   const remote = useRemote(useCallback((signal: AbortSignal) => planRepository.assigned(signal), []));
   return <HomeBlock title="Kế hoạch thu hoạch được giao" remote={remote} moreHref="/farming/harvest-plans" empty="Chưa có kế hoạch nào được giao."
-    rows={(plans) => plansToHarvest(plans).slice(0, 4).map((plan) => ({ key: plan.id, title: plan.code, detail: `Dự kiến ${viDateTime(plan.plannedAt)} · ${plan.lines.length} bè`, href: planHref(plan.code) }))} />;
+    rows={(plans) => plansToHandle(plans).slice(0, 4).map((plan) => ({ key: plan.id, title: `${plan.code} · ${planHomeStep(plan)}`, detail: `Dự kiến ${viDateTime(plan.plannedAt)} · ${plan.lines.length} bè`, href: planHref(plan.code) }))} />;
 }
 
 /** Trang nhỏ nhất mà BFF nhận cho danh sách lô (15/30/50/100): chỉ cần `total`, không đọc dòng nào. pageSize "1" bị từ chối 400. */

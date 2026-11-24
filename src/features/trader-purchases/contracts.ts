@@ -6,7 +6,7 @@ import { z } from "zod";
  * Số lượng tính bằng lồng nguyên (backend lưu lồng; kg chỉ là ước tính ở màn hình); thương lái không nhận giá hay tên khách khác.
  */
 /** `ordered` (3206, "Hoàn thành"): the cooperative made an order (Đặt hàng) from the request. */
-export const REQUEST_STATUS_IDS = { awaiting: 3201, accepted: 3202, declined: 3203, cancelled: 3204, ordered: 3206 } as const;
+export const REQUEST_STATUS_IDS = { awaiting: 3201, accepted: 3202, declined: 3203, cancelled: 3204, awaitingStaff: 3205, ordered: 3206 } as const;
 export const MAX_TEXT_LENGTH = 1000;
 
 export const ownerResponseSchema = z.object({

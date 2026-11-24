@@ -7,7 +7,7 @@ import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
 import { salesV2Plan } from "./sales-v2-plan";
 
-const requestQuery = z.strictObject({ action: z.enum(["list", "mine", "detail", "mine-detail"]).default("list"), id: z.guid().optional(),
+const requestQuery = z.strictObject({ action: z.enum(["list", "mine", "detail", "mine-detail", "staffing", "staffing-employees"]).default("list"), id: z.guid().optional(), day: z.iso.date().optional(),
   status: c.requestStatusFilterSchema.optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).default("1"), pageSize: z.string().regex(/^[1-9]\d?$/).default("20") });
 const workforceQuery = z.strictObject({ action: z.enum(["list", "lookups", "leaves", "settings", "staff", "attendance"]).default("list"), day: z.iso.date().optional(), employeeId: z.guid().optional() });
 /** The correction of one day: the day is part of the backend path, the rest is the body. */
@@ -29,6 +29,8 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
     };
     if (area === "purchase-requests" && !zoneId) {
       if (action === "submit" && !id) return write("/api/me/purchase-requests", t.placeRequestSchema, t.requestSavedSchema, "Submit");
+      // The Owner's staffing plan: the backend assigns the chosen employees at once and the request stays "Chờ phản hồi".
+      if (id && action === "staffing") return write(`/api/purchase-requests/${id}/staffing`, c.staffingPlanSchema, c.staffingSchema, "Respond");
       if (id && ["accept", "decline", "cancel"].includes(action)) {
         // Chủ HTX trả lời bằng /accept hoặc /decline (đúng backend); thương lái hủy qua /api/me. Không có endpoint nhân lực/ca làm trong develop.
         const plan = action === "cancel" ? write(`/api/me/purchase-requests/${id}/cancel`, t.cancelRequestSchema, t.traderRequestSchema, "CancelMine")
@@ -64,6 +66,13 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
   if (area === "purchase-requests") {
     const q = requestQuery.safeParse(values);
     if (!q.success) return undefined;
+    if (q.data.action === "staffing" || q.data.action === "staffing-employees") {
+      // Both are the Owner's: the chosen employees of one request, and the employees offered for the day of its plan.
+      if (!q.data.id || query.has("status") || query.has("page") || query.has("pageSize")) return undefined;
+      if (q.data.action === "staffing") return q.data.day ? undefined : { area, action: "staffing", method: "GET", path: `/api/purchase-requests/${q.data.id}/staffing`, permission: "Respond", schema: c.staffingChosenSchema };
+      return q.data.day ? { area, action: "staffing-employees", method: "GET", path: `/api/purchase-requests/staffing-employees?day=${q.data.day}&purchaseRequestId=${q.data.id}`, permission: "Respond", schema: c.staffingEmployeesSchema } : undefined;
+    }
+    if (q.data.day) return undefined;
     const mine = q.data.action.startsWith("mine"), detail = q.data.action.endsWith("detail");
     if (detail !== !!q.data.id || detail && (query.has("status") || query.has("page") || query.has("pageSize"))) return undefined;
     const search = new URLSearchParams({ page: q.data.page, pageSize: q.data.pageSize });

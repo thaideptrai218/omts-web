@@ -12,6 +12,7 @@ import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, Note, Select, businessToday, money } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
 import { PurchaseRequestSendings, ReviewStatusPill } from "./purchase-request-review-parts";
+import { PurchaseRequestStaffingSection } from "./purchase-request-staffing-section";
 import { buildAcceptPayload, buildDeclinePayload, canOrderRequest, canRespondToRequest, reviewResponseSummary } from "./purchase-request-review-presentation";
 
 const requests = createOperationsRepository("purchase-requests");
@@ -44,11 +45,16 @@ export function PurchaseRequestReviewDetails({ record, kgPerCage, onClose, onSav
       {baseline.salesOrderCode && <div><dt className="text-sm text-text-muted">Đơn đặt hàng</dt><dd><Link className="font-medium text-primary underline" href={`/sales/orders?code=${encodeURIComponent(baseline.salesOrderCode)}`}>{baseline.salesOrderCode}</Link></dd></div>}</dl>
     <PurchaseRequestSendings sendings={baseline.sendings} />
     <ErrorNotice error={error || editor.mutation.error} />
+    {canRespond && <PurchaseRequestStaffingSection request={baseline} kgPerCage={kgPerCage} onSaved={(saved) => {
+      // The accept form starts from the plan that was just saved: its cages and its pickup day.
+      setBaseline(saved);
+      if (saved.staffing) setValues((current) => ({ ...current, quantity: { unit: "cages", text: String(saved.staffing?.cages) } as CageQuantityValue, pickupDate: saved.staffing?.pickupDate ?? current.pickupDate }));
+    }} />}
     {canRespond && <form className="mt-5" onSubmit={(e) => { e.preventDefault(); void save(); }}><fieldset disabled={editor.disabled} className="space-y-4">
       <Select label="Phản hồi *" value={values.mode} onChange={(e) => setValues({ ...values, mode: e.target.value })}><option value="accept">Chấp nhận</option><option value="decline">Từ chối</option></Select>
       {accept && <><CageQuantityField label="Số lượng chấp nhận *" required kgPerCage={kgPerCage} maxCages={baseline.requestedCages} value={values.quantity} onChange={(quantity) => setValues({ ...values, quantity })} /><Field label="Ngày lấy hàng *" type="date" required min={businessToday()} value={values.pickupDate} onChange={(e) => setValues({ ...values, pickupDate: e.target.value })} />
         <label className="flex gap-3"><input type="checkbox" checked={values.payLater} onChange={(e) => setValues({ ...values, payLater: e.target.checked })} />Cho trả sau</label></>}
-      <Note label={accept ? "Ghi chú phản hồi" : "Lý do từ chối *"} required={!accept} maxLength={1000} value={values.note} onChange={(e) => setValues({ ...values, note: e.target.value })} /><Button type="submit">Gửi phản hồi</Button></fieldset></form>}
+      <Note label={accept ? "Ghi chú phản hồi" : "Lý do từ chối *"} required={!accept} maxLength={1000} value={values.note} onChange={(e) => setValues({ ...values, note: e.target.value })} />{accept && !baseline.staffing && <p className="text-sm text-text-muted">Lập kế hoạch nhân sự ở trên trước khi chấp nhận.</p>}<Button type="submit" disabled={accept && !baseline.staffing}>{accept ? "Chấp nhận" : "Từ chối"}</Button></fieldset></form>}
     {!owner && canRespondToRequest(baseline) && <p className="mt-4 text-sm text-text-muted">Chỉ Chủ hợp tác xã được trả lời yêu cầu mua; bạn có quyền xem.</p>}
     {editor.mutation.blocked && <><p className="mt-4">Bản nháp đang được giữ. Tải dữ liệu mới để đối chiếu; không tự gửi lại.</p><Button variant="secondary" disabled={editor.pending} onClick={async () => { const found = await editor.mutation.run(() => requests.read("detail", { id: record.id }, c.purchaseRequestSchema), true); if (found) setLatest(found); }}>Tải yêu cầu mới để đối chiếu</Button></>}
     {latest && <section className="mt-4 rounded-control border border-border p-4"><h3 className="font-semibold">Yêu cầu hiện tại</h3><p>{latest.status} · {cagesWithEstimate(latest.requestedCages, kgPerCage)} · {formatDate(latest.pickupDate)}</p>{!editor.mutation.uncertain && <Button variant="secondary" onClick={() => { setBaseline(latest); editor.mutation.reviewed(); setLatest(undefined); }}>Đã đối chiếu, giữ nháp để sửa tiếp</Button>}</section>}

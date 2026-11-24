@@ -24,6 +24,7 @@ const ids = (line: StaffingLine) => line.employees.map((employee) => employee.em
 /** Why nobody can change the crew of the plan now, when that is plain from the plan itself. */
 function closedNote(plan: PlanView, staffing: PlanStaffing) {
   if (plan.statusId === PLAN.completed) return "Kế hoạch đã hoàn thành nên không đổi nhân công được.";
+  if (plan.statusId === PLAN.handedOver) return "Kế hoạch đã bàn giao nên không đổi nhân công được.";
   if (plan.statusId === PLAN.cancelled) return "Kế hoạch đã hủy nên không đổi nhân công được.";
   return staffing.lines.length && staffing.lines.every((line) => line.plannedDate < businessToday()) ? "Đã qua ngày thu hoạch nên không đổi nhân công được." : undefined;
 }

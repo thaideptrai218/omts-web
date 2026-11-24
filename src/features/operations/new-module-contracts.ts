@@ -6,7 +6,20 @@ export const REQUEST_STATUS_FILTERS = ["3201", "3202", "3203", "3204", "3206"] a
 export const requestStatusFilterSchema = z.enum(REQUEST_STATUS_FILTERS);
 const customerSchema = z.object({ id: z.guid(), name: z.string(), phoneNumber: z.string().nullable(), currentDebt: z.number(), code: z.string().nullish() });
 /** Kế hoạch nhân lực Chủ HTX gửi trước khi nhận đơn (PurchaseStaffingView); chỉ đọc vài trường, mọi trường khác bị bỏ qua. */
-const staffingSchema = z.object({ cages: z.number().int(), workDate: z.iso.date(), pickupDate: z.iso.date(), requiredEmployees: z.number().int(), approvedEmployees: z.number().int(), hasEnoughStaff: z.boolean() }).loose();
+export const staffingSchema = z.object({ cages: z.number().int(), workDate: z.iso.date(), pickupDate: z.iso.date(), requiredEmployees: z.number().int(), approvedEmployees: z.number().int(), hasEnoughStaff: z.boolean(), cagesPerEmployeePerDay: z.number().int().nullish(), note: z.string().nullish() }).loose();
+/**
+ * POST /api/purchase-requests/{id}/staffing (PlanPurchaseStaffing): the Owner's staffing plan. The backend makes the work assignments at once and leaves the request "Chờ phản hồi";
+ * the cages, days, capacity and note of a sent plan cannot change, only more employees can be added.
+ */
+export const staffingPlanSchema = z.strictObject({ cages: z.number().int().positive(), workDate: z.iso.date(), pickupDate: z.iso.date(), cagesPerEmployeePerDay: z.number().int().positive(),
+  employeeIds: z.array(z.guid()).min(1).max(100).refine((ids) => new Set(ids).size === ids.length), note: z.string().max(500).nullable(), rowVersion: z.string().min(1) })
+  .refine((plan) => plan.pickupDate >= plan.workDate);
+/** GET /api/purchase-requests/staffing-employees: the in-scope employees the plan can choose, each with the reason it cannot be chosen when it cannot. */
+export const staffingEmployeeSchema = z.object({ id: z.guid(), name: z.string(), available: z.boolean(), unavailableReason: z.string().nullish() });
+export const staffingEmployeesSchema = z.array(staffingEmployeeSchema);
+/** GET /api/purchase-requests/{id}/staffing: the employees already chosen (answered at once, nothing to accept). */
+export const staffingChosenSchema = z.array(z.object({ id: z.guid(), employeeId: z.guid(), employeeName: z.string() }).loose());
+export type StaffingEmployee = z.infer<typeof staffingEmployeeSchema>;
 export const requestSendingSchema = z.object({ channel: z.string(), phoneNumber: z.string().nullable(), deliveryStatusId: z.number().int().nullable(), deliveryStatus: z.string().nullable(), deliveryStatusAt: z.iso.datetime({ offset: true }).nullable() });
 /** PurchaseRequestView của backend: số lượng là lồng nguyên; Code/Staffing/Harvest... là trường thêm, đọc khoan dung (không làm hỏng danh sách). */
 export const purchaseRequestSchema = z.object({ id: z.guid(), customer: customerSchema, productId: z.guid(), productName: z.string(), requestedCages: z.number().int(), pickupDate: z.iso.date(), note: z.string().nullable(),
@@ -16,7 +29,7 @@ export const purchaseRequestSchema = z.object({ id: z.guid(), customer: customer
   salesOrderId: z.guid().nullish(), salesOrderCode: z.string().nullish() });
 export const purchaseRequestPageSchema = z.object({ items: z.array(purchaseRequestSchema), page: z.number().int().positive(), pageSize: z.number().int().positive(), total: z.number().int().nonnegative() });
 const requestText = z.string().max(1000);
-/** POST /api/purchase-requests/{id}/accept (AcceptPurchaseRequest): chỉ Chủ HTX; backend yêu cầu có kế hoạch nhân lực khớp số lồng và ngày. */
+/** POST /api/purchase-requests/{id}/accept (AcceptPurchaseRequest): chỉ Chủ HTX; backend chỉ cần đã có kế hoạch nhân sự (400 "Staffing plan required" nếu chưa). */
 export const acceptRequestSchema = z.strictObject({ acceptedCages: cagesSchema,pickupDate: z.iso.date(), payLaterAgreed: z.boolean(), note: requestText.nullable(), rowVersion: z.string().min(1) });
 /** POST /api/purchase-requests/{id}/decline (DeclinePurchaseRequest): lý do bắt buộc. */
 export const declineRequestSchema = z.strictObject({ note: requestText.refine((v) => v.trim().length > 0), rowVersion: z.string().min(1) });

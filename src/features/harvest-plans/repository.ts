@@ -32,11 +32,15 @@ export const planRepository = {
   orderDraft: (orderId: string, signal?: AbortSignal) => read("plan-order-draft", { id: orderId }, c.planDraft, signal),
   /** The rafts a plan can use, with the product each farms and the state of each lane; one zone, or every zone without `zoneId` (Owner). */
   eligibleRafts: (zoneId?: string, signal?: AbortSignal) => read("plan-eligible-rafts", zoneId ? { zoneId } : {}, c.eligibleRafts, signal),
-  /** The plans given out to the zone manager's zones that are still being harvested. */
+  /** The plans given out to the zone manager's zones that are still to receive or being harvested. */
   assigned: (signal?: AbortSignal) => read("plans-assigned", {}, c.planList, signal),
   create: (body: SaveBody) => json("plan-create", { body }, c.planAnswer),
   update: (id: string, body: SaveBody) => json("plan-update", { id, body }, c.planAnswer),
   assign: (id: string, rowVersion?: string) => json("plan-assign", { id, body: rowVersion ? { rowVersion } : {} }, c.ack),
+  /** The Zone Manager takes the plan given to the zone ("Nhận kế hoạch"). */
+  receive: (id: string, rowVersion?: string) => json("plan-receive", { id, body: rowVersion ? { rowVersion } : {} }, c.ack),
+  /** The Zone Manager hands the plan over to the Owner once every line is done ("Bàn giao cho chủ"). */
+  handOver: (id: string, rowVersion?: string) => json("plan-hand-over", { id, body: rowVersion ? { rowVersion } : {} }, c.ack),
   finish: (id: string, rowVersion?: string) => json("plan-finish", { id, body: rowVersion ? { rowVersion } : {} }, c.ack),
   cancel: (id: string, reason: string, rowVersion?: string) => json("plan-cancel", { id, body: { reason, ...(rowVersion ? { rowVersion } : {}) } }, c.ack),
   skipLanes: (id: string, lineId: string, laneNumbers: number[], reason: string) => json("plan-skip-lanes", { id, lineId, body: { laneNumbers, reason } }, c.ack),

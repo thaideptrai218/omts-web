@@ -38,7 +38,7 @@ const columns: readonly Column[] = [
   { key: "createdBy", label: "Người tạo", hidden: true, render: (row) => dash(row.createdBy) },
   { key: "status", label: "Trạng thái", render: (row) => <PlanStatus statusId={row.statusId} /> },
 ];
-const defaultStatuses: number[] = [PLAN.draft, PLAN.assigned, PLAN.harvesting];
+const defaultStatuses: number[] = [PLAN.draft, PLAN.assigned, PLAN.received, PLAN.harvesting, PLAN.handedOver];
 const emptyFilters = { zone: "" };
 const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]";
 const sameStatuses = (a: readonly number[], b: readonly number[]) => a.length === b.length && a.every((value) => b.includes(value));

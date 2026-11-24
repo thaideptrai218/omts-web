@@ -3,7 +3,7 @@ import type { FunctionPermission } from "@/features/access/domain/function-permi
 import type { NurseryRow } from "@/features/nursery-api/contracts";
 import { attendanceAccess, attendanceSummary, todayPeople } from "@/features/attendance-today/attendance-today-model";
 import { assignment, ids, snapshot, staff } from "@/features/attendance-today/attendance-today.fixtures";
-import { approvalItems, debtSummary, homeAttendance, nursingBatches } from "./home-selection";
+import { approvalItems, debtSummary, homeAttendance, nursingBatches, planHomeStep, plansToHandle } from "./home-selection";
 
 const day = "2026-11-20";
 const grant = (action: FunctionPermission["action"]): FunctionPermission => ({ functionCode: "ATTENDANCE", action, dataScope: "AssignedZone", scope: { kind: "zones", zoneIds: [ids.zone] } });
@@ -37,5 +37,15 @@ describe("home selection", () => {
   it("keeps known approval kinds with a count and drops the rest", () => {
     const items = approvalItems([{ kind: "PurchaseRequest", count: 2 }, { kind: "QualityClaim", count: 0 }, { kind: "Other", count: 5 }, { kind: "EmployeeRequest", count: 1 }]);
     expect(items.map((item) => [item.kind, item.href])).toEqual([["PurchaseRequest", "/operations/purchase-requests"], ["EmployeeRequest", "/operations/workforce"]]);
+  });
+});
+
+describe("plans the zone manager has to handle", () => {
+  const plan = (code: string, plannedAt: string, allowedActions: string[], canHarvest = false) => ({ code, plannedAt, allowedActions, lines: [{ canHarvest, lot: null }] }) as never;
+  it("keeps plans to receive, to harvest and to hand over, oldest first, with the step of each", () => {
+    const rows = [plan("C", "2026-11-20", ["HandOver"]), plan("A", "2026-11-18", ["Receive"]), plan("B", "2026-11-19", ["Harvest"], true), plan("D", "2026-11-17", [])];
+    const kept = plansToHandle(rows);
+    expect(kept.map((row) => (row as { code: string }).code)).toEqual(["A", "B", "C"]);
+    expect(kept.map(planHomeStep)).toEqual(["Cần nhận", "Đang thu", "Chờ bàn giao"]);
   });
 });

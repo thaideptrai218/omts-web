@@ -19,7 +19,7 @@ import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { PLAN, type PlanAction, type PlanView } from "./contracts";
 import type { PlanAccess } from "./plan-access";
 import { PLANS_PATH, PlanStatus } from "./plan-labels";
-import { planTotals } from "./plan-logic";
+import { planNextStepHint, planTotals } from "./plan-logic";
 import { PlanLineActions } from "./plan-line-actions";
 import { PlanStaffingTab } from "./plan-staffing-tab";
 import styles from "./plans.module.css";
@@ -47,6 +47,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false);
   const can = (action: PlanAction) => plan.allowedActions.includes(action);
   const totals = planTotals(plan.lines);
+  const hint = planNextStepHint(plan.statusId, access.owner ? "owner" : "zone");
 
   async function run(work: () => Promise<Result<unknown>>, done: string) {
     setPending(true); setError(undefined);
@@ -61,13 +62,19 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
   async function assign() {
     if (await confirmation.confirm(`Giao kế hoạch ${plan.code} cho quản lý ${plan.zones.length > 1 ? "các vùng" : "vùng"} ${zoneCodes(plan.zones)}? Quản lý vùng sẽ được báo và thu hoạch theo kế hoạch.`)) await run(() => planRepository.assign(plan.id, plan.rowVersion), `Đã giao ${plan.code} cho quản lý vùng.`);
   }
+  async function receive() {
+    if (await confirmation.confirm(`Nhận kế hoạch thu hoạch ${plan.code}? Sau khi nhận, bạn ghi lô thu hoạch cho từng bè.`)) await run(() => planRepository.receive(plan.id, plan.rowVersion), `Đã nhận kế hoạch ${plan.code}.`);
+  }
+  async function handOver() {
+    if (await confirmation.confirm(`Bàn giao kế hoạch ${plan.code} cho chủ? Chủ hợp tác xã sẽ được báo để kiểm tra và hoàn thành.`)) await run(() => planRepository.handOver(plan.id, plan.rowVersion), `Đã bàn giao ${plan.code} cho chủ.`);
+  }
   async function finish() {
-    const open = plan.lines.filter((line) => !line.lot).length;
-    if (await confirmation.confirm(`Kết thúc kế hoạch ${plan.code}?${open ? ` Còn ${open} bè chưa có lô thu hoạch; các bè còn lại được để nguyên.` : ""}`)) await run(() => planRepository.finish(plan.id, plan.rowVersion), `Đã kết thúc ${plan.code}.`);
+    if (await confirmation.confirm(`Hoàn thành kế hoạch ${plan.code}?`)) await run(() => planRepository.finish(plan.id, plan.rowVersion), `Đã hoàn thành ${plan.code}.`);
   }
 
   return <div className={listStyles.tabBody}>{confirmation.dialog}
     <header className={docStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} /></div></header>
+    {hint && <p className="text-sm text-text-muted" data-testid="plan-next-step">{hint}</p>}
     <div className={`${docStyles.headFacts} ${styles.planFacts}`}>
       <div><span>Thời gian dự kiến:</span><strong>{viDateTime(plan.plannedAt)}</strong></div>
       <div><span>Vùng:</span>{plan.zones.length ? <strong className="flex flex-wrap gap-x-2">{plan.zones.map((zone) => <Link key={zone.id} className={docStyles.link} href={farmingReferenceHref("zone", { recordId: zone.id, search: zone.code })}>{zone.code}</Link>)}</strong> : <strong>—</strong>}</div>
@@ -106,7 +113,9 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
       <div>
         {can("Edit") && access.edit && <Button className="w-auto" disabled={pending} onClick={() => router.push(`${PLANS_PATH}/${plan.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
         {can("Assign") && access.edit && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => void assign()}><InterfaceIcon name="check" className="size-4" />Giao QLV</Button>}
-        {can("Finish") && access.edit && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => void finish()}><InterfaceIcon name="check" className="size-4" />Kết thúc</Button>}
+        {can("Receive") && access.harvest && <Button className="w-auto" disabled={pending} onClick={() => void receive()}><InterfaceIcon name="check" className="size-4" />Nhận kế hoạch</Button>}
+        {can("HandOver") && access.harvest && <Button className="w-auto" disabled={pending} onClick={() => void handOver()}><InterfaceIcon name="check" className="size-4" />Bàn giao cho chủ</Button>}
+        {can("Finish") && access.edit && <Button className="w-auto" disabled={pending} onClick={() => void finish()}><InterfaceIcon name="check" className="size-4" />Hoàn thành</Button>}
       </div>
     </footer>
   </div>;

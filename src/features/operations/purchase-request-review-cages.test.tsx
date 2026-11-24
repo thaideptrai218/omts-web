@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: vi.fn(), write: vi.fn() }) }));
+vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: vi.fn(async () => ({ status: "success", data: [] })), write: vi.fn() }) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" } }) }));
 import { PurchaseRequestReviewDetails } from "./purchase-request-review-details";
 import { reviewResponseSummary } from "./purchase-request-review-presentation";

@@ -13,11 +13,18 @@ describe("workforce job types", () => {
   });
 });
 describe("new real modules read contracts", () => {
-  it("no longer exposes cage staffing or purchase-shift routes (no backend in develop)", () => {
-    for (const query of [`action=staffing&id=${ids.receipt}`, "action=staffing-employees&day=2026-11-05"]) expect(planOperation("purchase-requests", "GET", q(query))).toBeUndefined();
+  it("plans the cage staffing routes for the Owner and still has no purchase-shift routes", () => {
+    expect(planOperation("purchase-requests", "GET", q(`action=staffing&id=${ids.receipt}`))).toMatchObject({ method: "GET", path: `/api/purchase-requests/${ids.receipt}/staffing`, permission: "Respond" });
+    expect(planOperation("purchase-requests", "GET", q(`action=staffing-employees&id=${ids.receipt}&day=2026-11-05`))).toMatchObject({ method: "GET", path: `/api/purchase-requests/staffing-employees?day=2026-11-05&purchaseRequestId=${ids.receipt}`, permission: "Respond" });
+    // The employees need the request and the day; the chosen list takes no day; nothing else is forwarded.
+    for (const query of ["action=staffing-employees&day=2026-11-05", `action=staffing-employees&id=${ids.receipt}`, `action=staffing&id=${ids.receipt}&day=2026-11-05`, `action=staffing&id=${ids.receipt}&page=2`, "action=staffing", `action=list&day=2026-11-05`, `action=staffing-employees&id=${ids.receipt}&day=tomorrow`]) expect(planOperation("purchase-requests", "GET", q(query))).toBeUndefined();
     expect(planOperation("my-work", "GET", q("action=purchase-shifts&from=2026-11-01&to=2026-11-30"))).toBeUndefined();
     const staffing = { cages: 100, workDate: "2026-11-05", pickupDate: "2026-11-06", cagesPerEmployeePerDay: 20, employeeIds: [ids.item], note: null, rowVersion: "v1" };
-    expect(planOperation("purchase-requests", "POST", q(), { action: "plan-staffing", id: ids.receipt, body: staffing })).toBeUndefined();
+    expect(planOperation("purchase-requests", "POST", q(), { action: "staffing", id: ids.receipt, body: staffing })).toMatchObject({ method: "POST", path: `/api/purchase-requests/${ids.receipt}/staffing`, permission: "Respond", body: staffing });
+    for (const body of [{ ...staffing, employeeIds: [] }, { ...staffing, employeeIds: [ids.item, ids.item] }, { ...staffing, cages: 0 }, { ...staffing, pickupDate: "2026-11-04" }, { ...staffing, extra: 1 }, { ...staffing, rowVersion: "" }]) {
+      expect(planOperation("purchase-requests", "POST", q(), { action: "staffing", id: ids.receipt, body })).toBeUndefined();
+    }
+    expect(planOperation("purchase-requests", "POST", q(), { action: "staffing", body: staffing })).toBeUndefined();
     expect(planOperation("my-work", "POST", q(), { action: "respond-shift", id: ids.receipt, body: { approved: true, reason: null, rowVersion: "v1" } })).toBeUndefined();
     expect(planOperation("purchase-requests", "POST", q(), { action: "respond", id: ids.receipt, body: { accept: false, note: "QA", rowVersion: "v1" } })).toBeUndefined();
     expect(operationAllowed("purchase-requests", { subjectType: "Staff" }, [], "Respond")).toBe(false);
