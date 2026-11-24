@@ -24,7 +24,6 @@ import { lotTracingPlan } from "./lot-tracing-plan";
 import { payrollPlan } from "./payroll-plan";
 import { seedLotsPlan } from "./seed-lots-plan";
 import { laborCostsPlan } from "./labor-costs-plan";
-import { payrollSettingsPlan } from "./payroll-settings-plan";
 
 const id = z.guid(), empty = z.strictObject({});
 const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
@@ -58,7 +57,6 @@ export function planOperation(areaName: string, method: string, query: URLSearch
   if (area.data === "lot-tracing") return lotTracingPlan(method, query, input);
   if (area.data === "payroll" || area.data === "payroll-payments") return payrollPlan(area.data, method, query, input);
   if (area.data === "labor-costs") return laborCostsPlan(method, query, input);
-  if (area.data === "payroll-settings") return payrollSettingsPlan(method, query, input);
   if (area.data === "water" && query.get("action") === "zones-overview") return waterOverviewPlan(method, query);
   if (area.data === "job-types") return jobTypesPlan(method, query, input);
   if (area.data === "cultivation-cycles") return cultivationPlan(method, query, input);

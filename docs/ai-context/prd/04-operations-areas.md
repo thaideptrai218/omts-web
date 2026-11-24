@@ -18,7 +18,6 @@ Nguồn: `operationModules` trong `features/operations/permissions.ts`.
 | `customer-payments` | Thanh toán của khách | `CUSTOMER_PAYMENTS` (toàn HTX) | `customer-payments` |
 | `lot-tracing` | Truy xuất lô hàng | `LOT_TRACING`; Publish/Correct dùng `PROVENANCE` | `lot-tracing` |
 | `harvest-yield` | Sản lượng nuôi | `HARVEST_LOTS` | `harvest-yield` |
-| `payroll-settings` | Thiết lập kỳ lương | Chỉ Owner | `payroll-settings` |
 | `payroll` | Bảng lương | `PAYROLL` | `payroll` — **FRAME ONLY** |
 | `payroll-payments` | Thanh toán lương | `PAYROLL` | `payroll` — **FRAME ONLY** |
 | `claim-reports` | Báo vấn đề chất lượng | Chỉ Trader | `quality-claims/claim-report-screen` |

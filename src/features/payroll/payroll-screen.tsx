@@ -8,7 +8,6 @@ import { BulkBar, ColumnPicker, ListStateMessage, ManagementPagination, Manageme
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { ErrorNotice, operationError, useMutation } from "@/features/operations/ui";
 import { payrollStatuses, type PayrollStatus, type PeriodType, type SheetPage } from "./contracts";
-import { PayrollSettingsButton } from "@/features/hr-setup/payroll-settings-dialog";
 import { usePayrollWriter } from "./use-payroll-writer";
 import { PayrollCreateDialog } from "./payroll-create-dialog";
 import { PayrollFilterRail } from "./payroll-filter-rail";
@@ -61,7 +60,6 @@ export function PayrollScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
     search={<input type="search" aria-label="Tìm bảng lương" placeholder="Theo mã, tên bảng lương" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
       {writer && <Button key="create" className="w-auto" type="button" onClick={() => setCreating(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Bảng tính lương</Button>}
-      {writer && <PayrollSettingsButton />}
       <Button key="export" className="w-auto" variant="secondary" type="button" isPending={exportList.pending} onClick={() => void exportList.run(() => payrollRepository.exportList(query), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>
       <ColumnPicker columns={listColumns} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
       <HelpLink helpHref={helpHref} />
