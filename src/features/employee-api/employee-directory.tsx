@@ -26,7 +26,7 @@ import { exportLimitMessage, useEmployeeFileAction } from "./use-employee-file-a
 import styles from "./employee-directory.module.css";
 
 /** v2: the column set changed (login name column, code hidden), so an older saved choice must not override the new default. */
-export const EMPLOYEE_COLUMNS_KEY = "omts-columns-employees-v2";
+export const EMPLOYEE_COLUMNS_STORAGE = "omts-columns-employees-v2";
 /** Owner directory shares the same fixed management frame and data contracts as the other production lists. */
 export function EmployeeDirectory({ readOnly = false, access = { manage: true, payroll: true } }: { readOnly?: boolean; access?: { manage: boolean; payroll: boolean } }) {
   const repository = useMemo(() => createOperationsRepository("employees"), []);
@@ -44,7 +44,7 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const [creating, setCreating] = useState(false), [importing, setImporting] = useState(false), [serial, setSerial] = useState(0);
   const [notice, setNotice] = useState<string>();
-  const [storedColumns, storeColumns] = useStoredValue(EMPLOYEE_COLUMNS_KEY, defaultEmployeeColumns.join(","));
+  const [storedColumns, storeColumns] = useStoredValue(EMPLOYEE_COLUMNS_STORAGE, defaultEmployeeColumns.join(","));
   // Pay columns (monthly hours, wage debt) exist only for a viewer with payroll access; for others they are not even offered in the picker.
   const columns = access.payroll ? employeeColumns : employeeColumns.filter(column => !payrollColumnKeys.includes(column.key));
   // The name column is the row's identity: a saved column choice can never hide it (a stale choice once left only the code and the debt).
