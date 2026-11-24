@@ -30,7 +30,6 @@ export function LicenseEditor({ mode, record, zoneId, zones, onClose, onMode, on
     const parsed = saveLicenseSchema.safeParse({ ...values, expiryDate: values.expiryDate || null, issuingAuthority: values.issuingAuthority || null,
       holder: values.holder || null, legalScope: values.legalScope || null, zoneIds, ...(mode === "update" ? { rowVersion: baseline?.rowVersion } : {}) });
     if (!parsed.success) { setFileError(parsed.error.issues[0]?.message === "Ngày hết hạn phải sau ngày hiệu lực." ? parsed.error.issues[0].message : "Kiểm tra các trường bắt buộc, độ dài và phạm vi vùng."); return; }
-    if (mode !== "update" && !file) { setFileError("Chọn tệp PDF, JPEG hoặc PNG để lưu giấy tờ."); return; }
     setFileError(undefined);
     const saved = await mutation.run(() => repository.upload(mode, file ? [file] : [], parsed.data, licenseSchema, record?.id));
     if (saved) { notify({ tone: "success", title: `Đã lưu giấy tờ ${saved.documentNumber}.` }); onSaved(saved); }
@@ -61,7 +60,7 @@ export function LicenseEditor({ mode, record, zoneId, zones, onClose, onMode, on
         <Note label="Phạm vi pháp lý" maxLength={1000} value={values.legalScope} onChange={(event) => setValues({ ...values, legalScope: event.target.value })} />
         <Select key="license-zone" label="Vùng nuôi được giấy tờ bao phủ *" required value={zoneIds[0] ?? ""} onChange={event => setZoneIds(event.target.value ? [event.target.value] : [])}><option value="">Chọn vùng nuôi</option>{scopeOptions.map(zone => <option key={zone.id} value={zone.id}>{String(zone.code)} · {String(zone.name)}</option>)}</Select>
         </CollapsibleSection>
-        {!view && <Field label={mode === "update" ? "Đổi tệp (không chọn để giữ tệp hiện tại)" : "Tệp giấy tờ *"} type="file" accept="application/pdf,image/jpeg,image/png" required={mode !== "update"} onChange={(event) => {
+        {!view && <Field label={mode === "update" ? "Đổi tệp (không chọn để giữ tệp hiện tại)" : "Tệp giấy tờ (không bắt buộc)"} type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => {
           const selected = event.target.files?.[0]; setFile(undefined); setFileError(undefined);
           if (selected && (selected.size < 1 || selected.size > 10 * 1024 * 1024 || !["application/pdf", "image/jpeg", "image/png"].includes(selected.type))) { setFileError("Tệp phải là PDF, JPEG hoặc PNG, tối đa 10 MB."); event.target.value = ""; } else setFile(selected);
         }} />}
