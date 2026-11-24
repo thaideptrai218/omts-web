@@ -29,7 +29,7 @@ export function planNextStepHint(statusId: number, viewer: PlanViewer): string {
   switch (statusId) {
     case PLAN.draft: return owner ? "Phiếu tạm: kiểm tra các dòng rồi bấm Giao QLV." : "";
     case PLAN.assigned: return owner ? "Đã giao, chờ quản lý vùng nhận kế hoạch." : "Cần nhận: bấm Nhận kế hoạch để bắt đầu thu hoạch.";
-    case PLAN.received: return owner ? "Quản lý vùng đã nhận, chờ ghi lô thu hoạch." : "Đã nhận: ghi lô thu hoạch cho từng bè hoặc đánh dấu luống không thu.";
+    case PLAN.received: return owner ? "Quản lý vùng đã nhận, chờ ghi lô thu hoạch." : "Đã nhận: ghi lô thu hoạch cho từng bè trong kế hoạch.";
     case PLAN.harvesting: return owner ? "Quản lý vùng đang thu hoạch, chờ bàn giao." : "Đang thu: khi mọi bè đã xong, bấm Bàn giao cho chủ.";
     case PLAN.handedOver: return owner ? "Quản lý vùng đã bàn giao, kiểm tra rồi bấm Hoàn thành." : "Đã bàn giao, chờ chủ hoàn thành.";
     default: return "";

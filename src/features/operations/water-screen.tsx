@@ -123,7 +123,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
         <WaterPanelStrip chartOpen={chartOpen} thresholdsOpen={thresholdsOpen} note={loaded?.truncated ? `Chỉ hiển thị ${loaded.items.length} phép đo mới nhất; hãy thu hẹp khoảng thời gian.` : undefined}
           onChart={() => setChartOpen(open => !open)} onThresholds={() => void guard.leave(() => { setExpanded(undefined); setThresholdsOpen(open => !open); })} />
         {chartOpen && <WaterChartSection key={`${zoneId}:${revision}`} zoneId={zoneId} from={time.from} to={time.to} />}
-        {/* Ngưỡng chỉ xem ở đây; Chủ HTX sửa trong Thiết lập > Ngưỡng cảnh báo nước. */}
+        {/* Ngưỡng chỉ xem ở đây; Chủ HTX sửa trong Cài đặt > Ngưỡng cảnh báo nước. */}
         {thresholdsOpen && <section className={local.panel} aria-label="Ngưỡng cảnh báo">
           {identity.subjectType === "CooperativeOwner" && <Link className="text-sm font-semibold text-primary underline" href="/settings?section=water-thresholds">Sửa ngưỡng trong Thiết lập</Link>}
           <WaterThresholdPanel key={zoneId} zoneId={zoneId} owner={false} dirtyRef={guard.dirty} onSaved={() => undefined} />

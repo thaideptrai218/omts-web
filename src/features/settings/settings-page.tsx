@@ -36,7 +36,7 @@ export function SettingsPage() {
   const Panel = active?.panel ? panels[active.panel] : undefined;
   return <div className={styles.page}>
     <header className={styles.top}>
-      <h1>Thiết lập</h1>
+      <h1>Cài đặt</h1>
       {itemCount > 1 && <div className={styles.search}>
         <InterfaceIcon name="search" />
         <input type="search" aria-label="Tìm kiếm thiết lập" placeholder="Tìm kiếm thiết lập" value={query} onChange={(event) => setQuery(event.target.value)} />

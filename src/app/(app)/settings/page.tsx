@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { SettingsPage } from "@/features/settings/settings-page";
 
 export const metadata: Metadata = {
-  title: "Thiết lập",
+  title: "Cài đặt",
 };
 
 // Settings destinations come from the shell, which is authenticated on the client in the mock runtime.

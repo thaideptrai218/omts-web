@@ -72,6 +72,15 @@ describe("harvest values: purchase request, decimal cages, and no plan cap", () 
   });
 });
 
+describe("whole-raft harvest from a plan", () => {
+  const fields = { laneNumbers: [], finishedLaneNumbers: [], cageCount: 1, estimatedKg: null, productLines: [{ productId: cycle, cageCount: 1, kg: null }], harvestPlanLineId: order };
+  it("forwards empty lanes only with a valid plan line and the plan-harvest fields", () => {
+    expect(harvestValues.safeParse(fields).success).toBe(true);
+    expect(post("harvest", { action: "record", id: raft, zoneId: zone, body: fields })).toMatchObject({ body: fields, multipartFields: true });
+    for (const invalid of [{ ...fields, harvestPlanLineId: undefined }, { ...fields, harvestPlanLineId: "bad" }, { ...fields, productLines: [] }, { ...fields, finishedLaneNumbers: [1] }, { ...fields, cageCount: 0 }]) expect(harvestValues.safeParse(invalid).success).toBe(false);
+  });
+});
+
 describe("harvest answers keep the optional new fields and tolerate an old backend", () => {
   const lot = { id: raft, lotCode: "KV01-B01-20261111" };
   it("defaults warnings to none for an older backend", () => {

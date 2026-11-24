@@ -31,7 +31,7 @@ const sidebar = () => within(screen.getByRole("navigation", { name: "Nhóm thi�
 describe("settings page", () => {
   it("groups the permitted items on the left and shows the first one in place", () => {
     inShell(sections);
-    expect(screen.getByRole("heading", { level: 1, name: "Thiết lập" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Cài đặt" })).toBeTruthy();
     expect(sidebar().getAllByRole("heading").map((heading) => heading.textContent)).toEqual(["Quản lý", "Phân quyền", "Hợp tác xã"]);
     expect(sidebar().getByRole("button", { name: "Sổ quỹ" }).getAttribute("aria-current")).toBe("true");
     expect(screen.getByText("Nội dung sổ quỹ")).toBeTruthy();

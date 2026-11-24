@@ -34,14 +34,6 @@ export function harvestInvalidFieldText(error: z.ZodError): string {
   }
 }
 
-const cageValue = c.harvestLineValues.shape.cageCount;
-/** Body of a harvest from a plan line: no lane (the API takes every harvestable lane of the raft), no kg (cages only; the kg come from the port weighing). */
-const planHarvestValues = z.strictObject({
-  laneNumbers: z.array(z.number()).max(0), finishedLaneNumbers: z.array(z.number()).max(0), cageCount: cageValue, estimatedKg: z.null(),
-  productLines: z.array(z.strictObject({ productId: z.guid(), cageCount: cageValue, kg: z.null() })).length(1),
-  harvestPlanLineId: z.guid(), crew: z.array(z.guid()).optional(),
-});
-
 /**
  * Records the harvest of one raft FROM a line of a harvest plan (the only way a harvest is recorded, owner decision 18/11/2026): the raft is the plan line's, the whole raft is harvested (no lane to pick) and the one number
  * to give is "Số lồng thu được"; the kg and tấn beside it are a read-only conversion (the real kg come from the port weighing). Crew and photos as in the old form. Warnings of the saved lot come back as notices.
@@ -72,7 +64,7 @@ export function HarvestForm({ zoneId, raftId, plan, onClose, onSaved }: {
     setPhotoError(bad);
     if (!productId) { setError("Chọn sản phẩm thu hoạch."); return; }
     if (bad || photoBusy) return;
-    const parsed = planHarvestValues.safeParse({ laneNumbers: [], finishedLaneNumbers: [], cageCount: cages, estimatedKg: null, productLines: [{ productId, cageCount: cages, kg: null }],
+    const parsed = c.planHarvestValues.safeParse({ laneNumbers: [], finishedLaneNumbers: [], cageCount: cages, estimatedKg: null, productLines: [{ productId, cageCount: cages, kg: null }],
       harvestPlanLineId: plan.lineId, ...(crew.length ? { crew } : {}) });
     if (!parsed.success) { setError(harvestInvalidFieldText(parsed.error)); return; }
     setError(undefined);

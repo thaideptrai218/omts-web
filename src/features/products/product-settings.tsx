@@ -25,6 +25,6 @@ export function ProductSettings() {
   return <div className={managementStyles.theme}>
     <NameTab noun="nhóm sản phẩm" maxLength={100} rows={rows} loading={groups.loading} error={groups.error} reload={groups.reload} canManage={owner} countLabel="Số sản phẩm" tree
       save={(name, row, parentId) => productRepository.saveGroup(name, row?.id, row?.rowVersion, parentId)} remove={(row) => productRepository.removeGroup(row.id)} reorder={(ids) => productRepository.reorderGroups(ids)} />
-    <p className={`${cashStyles.muted} ${cashStyles.after}`}>Đơn vị tính dùng chung với Vật tư & Giống: thêm hoặc đổi tên ở Thiết lập → Vật tư & Giống → Đơn vị tính. Đơn vị gốc của sản phẩm luôn là kg.</p>
+    <p className={`${cashStyles.muted} ${cashStyles.after}`}>Đơn vị tính dùng chung với Vật tư & Giống: thêm hoặc đổi tên ở Cài đặt → Vật tư & Giống → Đơn vị tính. Đơn vị gốc của sản phẩm luôn là kg.</p>
   </div>;
 }

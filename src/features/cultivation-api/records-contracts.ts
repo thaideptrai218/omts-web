@@ -56,7 +56,12 @@ const harvestBase = z.strictObject({ lanePercents: lanePercentValues.optional(),
   productLines: z.array(harvestLineValues).min(1).max(1).optional() })
   .refine(v => new Set(v.laneNumbers).size === v.laneNumbers.length && new Set(v.finishedLaneNumbers).size === v.finishedLaneNumbers.length && v.finishedLaneNumbers.every(n => v.laneNumbers.includes(n)));
 /** A new trip may name the plan line (KHT) it is recorded from; it never names a purchase request. */
-export const harvestValues = harvestBase.safeExtend({ harvestPlanLineId: z.guid().optional() });
+/** The plan fixes the raft; its harvest takes all harvestable lanes on the backend. */
+export const planHarvestValues = z.strictObject({
+  laneNumbers: numbers.max(0), finishedLaneNumbers: numbers.max(0), cageCount: harvestLineValues.shape.cageCount, estimatedKg: z.null(),
+  productLines: z.array(harvestLineValues.extend({ kg: z.null() })).length(1), harvestPlanLineId: z.guid(), crew: crewIds.optional(),
+});
+export const harvestValues = z.union([harvestBase.safeExtend({ harvestPlanLineId: z.guid().optional() }), planHarvestValues]);
 /** Non-blocking notice saved with the lot (e.g. ESTIMATED_KG_FAR_FROM_CAGES); the web words it by code. */
 export const harvestWarning = z.object({ code: z.string().max(60), message: z.string().max(400).nullish(), details: z.record(z.string(), z.unknown()).nullish() });
 /** `orderCagesTotal` / `orderCagesHarvested` / `orderComplete` (backend 13/11/2026): where the request stands with this trip; absent on older backends. */

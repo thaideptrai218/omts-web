@@ -14,6 +14,7 @@ import { employeePageSchema, jobTypeOptionsSchema, type Employee } from "./contr
 import { searchWithAccountNames } from "./employee-account-name-search";
 import { EmployeeDirectoryFilters } from "./employee-directory-filters";
 import { EmployeeDirectoryPaging } from "./employee-directory-paging";
+import { EmployeeDetailPanel } from "./employee-detail-panel";
 import { defaultEmployeeColumns, employeeColumns, EmployeeDirectoryTable, type EmployeeLeaveGuard } from "./employee-directory-table";
 import { EmployeeApiEditor } from "./employee-editor";
 import { employeeFileRepository } from "./employee-file-repository";
@@ -109,6 +110,7 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
       {isPermissionDenied(list.error) ? <PermissionDeniedNotice message={list.error} />
         : list.error ? <ListStateMessage error={list.error} onRetry={retry} retryLabel="Tải lại" />
         : !list.data ? <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3, 4, 5].map(key => <div key={key} />)}</div>
+        : linkedId && !list.data.items.some(item => item.id === linkedId) ? <EmployeeDetailPanel key={linkedId} id={linkedId} cache={cache} onSaved={saved} revision={detailRevision} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onGuardChange={registerGuard} payroll={access.payroll} manage={access.manage} />
         : !list.data.items.length ? <ListStateMessage>{hasFilters ? "Không có nhân viên phù hợp bộ lọc." : "Chưa có nhân viên."}
           {hasFilters && <button type="button" className="ml-2 font-semibold underline" onClick={() => filter(() => { setSearch(""); setTerm(""); setStatusId("401"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); })}>Xóa bộ lọc</button>}
           {!hasFilters && !readOnly && <button type="button" className="ml-2 font-semibold underline" disabled={!lookupsReady} onClick={() => leave(() => { setCreating(true); setSerial(value => value + 1); })}>Thêm nhân viên</button>}</ListStateMessage>

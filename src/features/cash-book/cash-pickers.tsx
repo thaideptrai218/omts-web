@@ -171,7 +171,7 @@ export function AccountPicker({ accounts, value, label, disabled, onChange }: { 
         {accounts.map((account) => <li key={account.id} role="option" aria-selected={account.id === value} className={styles.option} onClick={() => { onChange(account.id); setOpen(false); }}>
           <span><strong>{account.accountNumber}</strong> - {account.providerName}<small>{account.holderName}</small></span>{account.id === value && <InterfaceIcon name="check" />}
         </li>)}
-        {!accounts.length && <li className={styles.empty}>Chưa có tài khoản. Thêm trong Thiết lập → Sổ quỹ.</li>}
+        {!accounts.length && <li className={styles.empty}>Chưa có tài khoản. Thêm trong Cài đặt → Sổ quỹ.</li>}
       </ul>
     </div>}
   </div>;

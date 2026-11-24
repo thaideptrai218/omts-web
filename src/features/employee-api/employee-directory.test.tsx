@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));
-vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
+const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), query: "" }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(repository.query) }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: async () => ({ status: "success", data: [{ id: "zone-one", code: "V01", name: "Vùng Đông", statusId: 102 }] }) }));
 vi.mock("./employee-detail-panel", () => ({ EmployeeDetailPanel: ({ id, initialTab }: { id: string; initialTab?: string }) => <section id={`employee-preview-${id}`} aria-label={`Chi tiết ${id}`} data-tab={initialTab}>Chi tiết đã mở</section> }));
@@ -14,10 +14,18 @@ import { EmployeeDirectoryTable } from "./employee-directory-table";
 const first = () => employeeViewSchema.parse(employeeDetailFixture());
 const second = () => ({ ...first(), id: "88434e3f-e984-4aae-b6a9-e77af4822288", fullName: "Trần Bình" });
 beforeEach(() => {
-  vi.clearAllMocks(); localStorage.clear();
+  vi.clearAllMocks(); localStorage.clear(); repository.query = "";
   repository.read.mockImplementation(async (action, query) => action === "job-types" ? { status: "success", data: [] } : { status: "success", data: { items: [first(), second()], page: Number(query.page), pageSize: Number(query.pageSize), total: 45 } });
 });
 afterEach(cleanup);
+it("resolves a linked employee absent from the scoped list through its detail panel without changing paging totals", async () => {
+  const linked = "aa7e5561-7bca-4572-afac-c7fda318f4a2";
+  repository.query = `recordId=${linked}`;
+  render(<EmployeeDirectory readOnly access={{ manage: false, payroll: false }} />);
+  expect(await screen.findByRole("region", { name: `Chi tiết ${linked}` })).toBeTruthy();
+  expect(screen.getByText(/45 nhân viên/)).toBeTruthy();
+  expect(screen.queryByText("Không có nhân viên phù hợp bộ lọc.")).toBeNull();
+});
 it("closed rows expose only native chevrons, click and keyboard toggle one open row without making the row a tab stop", async () => {
   const user = userEvent.setup();
   render(<EmployeeDirectoryTable items={[first(), second()]} disabled={false} cache={new Map()} onSaved={vi.fn()} />);

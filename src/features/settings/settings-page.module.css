@@ -8,6 +8,13 @@
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
 .sidebar, .card { border: 1px solid var(--omts-color-border); border-radius: 8px; background: var(--omts-color-surface); min-width: 0; }
 .sidebar { padding: 6px 8px; }
+/* The list never makes the row taller than the page beside it: it takes the height of the work card and scrolls inside (scrollbar hidden). */
+@media (min-width: 900px) {
+  .layout { align-items: stretch; }
+  .layout > .card { min-height: clamp(420px, 68dvh, 620px); }
+  .sidebar { height: 0; min-height: 100%; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
+  .sidebar::-webkit-scrollbar { display: none; }
+}
 .group + .group { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--omts-color-border); }
 .groupLabel { padding: 8px 8px 4px; font-size: 11px; font-weight: 600; color: var(--omts-color-text-muted); }
 .sidebar ul { display: flex; flex-direction: column; gap: 1px; }

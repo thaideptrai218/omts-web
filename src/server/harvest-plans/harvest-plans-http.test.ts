@@ -149,7 +149,11 @@ describe("harvest plans BFF", () => {
     expect((await handleHarvestPlans(post({ action: "plan-create", body: { ...body, lines: [] } }))).status).toBe(400);
     expect((await handleHarvestPlans(post({ action: "plan-create", body: { ...body, extra: 1 } }))).status).toBe(400);
     expect((await handleHarvestPlans(post({ action: "plan-create", body: { ...body, plannedAt: "tomorrow" } }))).status).toBe(400);
-    expect((await handleHarvestPlans(post({ action: "plan-create", body: { ...body, lines: [{ ...body.lines[0], laneNumbers: [] }] } }))).status).toBe(400);
+    const raftPlan = { ...body, lines: [{ ...body.lines[0], laneNumbers: [] }] };
+    expect((await handleHarvestPlans(post({ action: "plan-create", body: raftPlan }))).status).toBe(200);
+    expect(JSON.parse(String(fetcher.mock.calls.at(-1)![1]?.body))).toEqual(raftPlan);
+    expect((await handleHarvestPlans(post({ action: "plan-update", id, body: { ...raftPlan, rowVersion: "v1" } }))).status).toBe(200);
+    for (const laneNumbers of [[0], [1, 1], [1000]]) expect((await handleHarvestPlans(post({ action: "plan-create", body: { ...body, lines: [{ ...body.lines[0], laneNumbers }] } }))).status).toBe(400);
     expect((await handleHarvestPlans(post({ action: "plan-update", id, body }))).status).toBe(400);
     // Half a cage is a valid expectation; three decimals, zero and a negative are not.
     const withCages = (expectedCageCount: number) => post({ action: "plan-create", body: { ...body, lines: [{ ...body.lines[0], expectedCageCount }] } });

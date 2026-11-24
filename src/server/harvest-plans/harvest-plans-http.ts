@@ -61,7 +61,8 @@ const reads: Record<string, Read> = {
 /** The reads that need the id of a record. */
 const needsId = new Set(["plan", "plan-order-draft", "plan-staffing"]);
 
-const lineBody = z.strictObject({ id: id.optional(), raftId: id, laneNumbers: lanes, expectedCageCount: z.number().positive().max(100_000).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6).nullable().optional(), note: text(500) });
+// Raft plans send no lanes; [] also retains an existing plan's legacy lanes.
+const lineBody = z.strictObject({ id: id.optional(), raftId: id, laneNumbers: lanes.or(z.tuple([])), expectedCageCount: z.number().positive().max(100_000).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6).nullable().optional(), note: text(500) });
 const planBody = z.strictObject({
   code, plannedAt: instant, note: text(1000), salesOrderIds: z.array(id).max(20), lines: z.array(lineBody).min(1).max(50), rowVersion: rowVersion.optional(),
 });
