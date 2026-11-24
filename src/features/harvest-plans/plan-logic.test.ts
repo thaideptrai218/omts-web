@@ -1,41 +1,29 @@
 import { describe, expect, it } from "vitest";
-import type { PlanLane, PlanLine } from "./contracts";
+import type { PlanLine } from "./contracts";
 import { PLAN } from "./contracts";
-import { blankFormLine, buildPlanBody, coverage, coverageText, formLineOf, harvestPlanFor, laneChip, lineCanHarvest, planFormProblem, planNextStepHint, planTotals, plannedCages, plannedLaneNumbers, shortageText, type OrderNeedLine, type PlanForm } from "./plan-logic";
+import { blankFormLine, buildPlanBody, coverage, coverageText, formLineOf, harvestPlanFor, lineCanHarvest, planFormProblem, planNextStepHint, planTotals, plannedCages, shortageText, type OrderNeedLine, type PlanForm } from "./plan-logic";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
-const lane = (laneNumber: number, state: PlanLane["state"], extra: Partial<PlanLane> = {}): PlanLane => ({ laneId: id(laneNumber), laneNumber, state, ...extra });
 const done = { id: id(9), lotCode: "B1-LOT1", cageCount: 5, estimatedKg: 250, harvestedAt: "2026-11-14T08:00:00+07:00" };
-const line = (n: number, lanes: PlanLane[], extra: Partial<PlanLine> = {}): PlanLine => ({ id: id(n), lineNumber: n, raftId: id(n + 4), raftCode: `B${n}`, zone: { id: id(1), code: "Z1", name: "Vùng 1" }, state: "Open", canHarvest: true, locked: false, lanes, ...extra });
+const line = (n: number, extra: Partial<PlanLine> = {}): PlanLine => ({ id: id(n), lineNumber: n, raftId: id(n + 4), raftCode: `B${n}`, zone: { id: id(1), code: "Z1", name: "Vùng 1" }, state: "Open", canHarvest: true, locked: false, ...extra });
 
-describe("lane chips", () => {
-  it("names the state of each lane, the lot of a harvested one and the reason of a skipped one", () => {
-    expect(laneChip(lane(1, "Planned"))).toEqual({ number: 1, text: "Luống 1: Kế hoạch", state: "Planned" });
-    expect(laneChip(lane(2, "Harvested", { lotCode: "B1-LOT1" }))).toMatchObject({ text: "Luống 2: Đã thu", lotCode: "B1-LOT1", title: "Đã thu trong lô B1-LOT1" });
-    expect(laneChip(lane(3, "Skipped", { skipReason: "Hàu chưa đủ cỡ" }))).toMatchObject({ text: "Luống 3: Không thu", title: "Hàu chưa đủ cỡ" });
-    expect(laneChip(lane(4, "Skipped")).title).toBe("Không thu");
-  });
-});
-
-describe("lanes that can be planned or harvested", () => {
-  it("reads the lanes of an old plan, and lets a line (a raft) be harvested until it has a lot", () => {
-    const open = line(1, [lane(3, "Planned"), lane(1, "Planned"), lane(2, "Skipped"), lane(4, "Harvested")]);
-    expect(plannedLaneNumbers(open)).toEqual([1, 3]);
+describe("harvesting a line", () => {
+  it("lets a line (one whole raft) be harvested until it has a lot, and hands the harvest form its raft and what it expects", () => {
+    const open = line(1);
     expect(lineCanHarvest(open)).toBe(true);
     expect(lineCanHarvest({ ...open, lot: done })).toBe(false);
-    expect(lineCanHarvest(line(2, []))).toBe(true);
     expect(lineCanHarvest({ ...open, canHarvest: false })).toBe(false);
     expect(harvestPlanFor({ code: "KHT000001" }, { ...open, expectedProduct: { id: id(8), code: "SP8", name: "Hàu" }, expectedCageCount: 12 })).toEqual({
-      lineId: open.id, planCode: "KHT000001", raftId: open.raftId, raftCode: "B1", laneNumbers: [1, 3], expectedProductId: id(8), expectedCageCount: 12,
+      lineId: open.id, planCode: "KHT000001", raftId: open.raftId, raftCode: "B1", expectedProductId: id(8), expectedCageCount: 12,
     });
   });
 });
 
 describe("plan totals", () => {
   it("counts rafts, expected cages and recorded lots", () => {
-    const lines = [line(1, [lane(1, "Harvested"), lane(2, "Planned")], { expectedCageCount: 10, lot: done }), line(2, [lane(1, "Skipped")], { expectedCageCount: 5 })];
+    const lines = [line(1, { expectedCageCount: 10, lot: done }), line(2, { expectedCageCount: 5 })];
     expect(planTotals(lines)).toEqual({ rafts: 2, cages: 15, lots: 1, lines: 2 });
-    expect(planTotals([line(1, [lane(1, "Planned")])]).cages).toBeNull();
+    expect(planTotals([line(1)]).cages).toBeNull();
     expect(planTotals([]).rafts).toBe(0);
   });
 });
@@ -124,7 +112,7 @@ describe("plan form", () => {
   it("builds the body: instant at +07:00, no lanes, empty values as null and the ids of existing lines", () => {
     expect(buildPlanBody(filled())).toEqual({
       code: null, plannedAt: "2026-11-14T06:00:00+07:00", note: null, salesOrderIds: [id(7)],
-      lines: [{ raftId: id(5), laneNumbers: [], expectedCageCount: 12, note: "ghi chú" }],
+      lines: [{ raftId: id(5), expectedCageCount: 12, note: "ghi chú" }],
     });
     const existing = { ...filled(), code: " KHT9 ", rowVersion: "v3", lines: [{ ...filled().lines[0], id: id(2), cages: "" }] };
     expect(buildPlanBody(existing)).toMatchObject({ code: "KHT9", rowVersion: "v3", lines: [{ id: id(2), expectedCageCount: null }] });
@@ -132,11 +120,11 @@ describe("plan form", () => {
     expect(buildPlanBody(existing).lines[0]).not.toHaveProperty("expectedProductId");
   });
 
-  it("locks a line of a plan already given out once it has a lot or a skipped lane", () => {
-    const open = line(1, [lane(1, "Planned")]), skipped = line(2, [lane(1, "Skipped"), lane(2, "Planned")], { locked: true }), lot = line(3, [lane(1, "Harvested")], { lot: done, locked: true });
-    expect([open, skipped, lot].map((row) => formLineOf(row, true).locked)).toEqual([false, true, true]);
-    expect([open, skipped, lot].map((row) => formLineOf(row, false).locked)).toEqual([false, false, false]);
-    expect(formLineOf(skipped, true).zoneId).toBe(id(1));
+  it("locks a line of a plan already given out once it has a lot", () => {
+    const open = line(1), lot = line(3, { lot: done, locked: true });
+    expect([open, lot].map((row) => formLineOf(row, true).locked)).toEqual([false, true]);
+    expect([open, lot].map((row) => formLineOf(row, false).locked)).toEqual([false, false]);
+    expect(formLineOf(lot, true).zoneId).toBe(id(1));
   });
 });
 

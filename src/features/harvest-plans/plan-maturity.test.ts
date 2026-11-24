@@ -4,7 +4,7 @@ import { cageWeightText, coverage, coverageQuantityWithEquivalent, planFormProbl
 import { availabilityText, earlyHarvestQuestion, earlyHarvestWarning, productAvailability, readiness, readinessText } from "./plan-maturity";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
-const raft = (patch: Partial<EligibleRaft> = {}) => ({ raftId: id(1), raftCode: "B1", zone: { id: id(2), code: "Z1", name: "Vùng 1" }, product: { id: id(3), code: "SP1", name: "Hàu A" }, lanes: [], expectedHarvestDate: "2026-10-27", ...patch }) as EligibleRaft;
+const raft = (patch: Partial<EligibleRaft> = {}) => ({ raftId: id(1), raftCode: "B1", zone: { id: id(2), code: "Z1", name: "Vùng 1" }, product: { id: id(3), code: "SP1", name: "Hàu A" }, expectedHarvestDate: "2026-10-27", ...patch }) as EligibleRaft;
 const TODAY = "2026-10-01";
 
 describe("maturity of a raft", () => {

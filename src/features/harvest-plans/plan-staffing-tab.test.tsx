@@ -27,13 +27,13 @@ const FUTURE = "2099-01-01", PAST = "2020-01-01";
 const owner = { staff: true } as PlanAccess;
 const line = (n: 1 | 2, patch: object = {}) => ({
   lineId: n === 1 ? ids.line1 : ids.line2, raftId: n === 1 ? ids.raft1 : ids.raft2, raftCode: n === 1 ? "B01" : "B11", zoneId: n === 1 ? ids.zone1 : ids.zone2, zoneCode: n === 1 ? "KV01" : "KV02",
-  laneNumbers: n === 1 ? [1, 2] : [3], plannedDate: FUTURE, employees: [] as unknown[], canEdit: true, ...patch,
+  plannedDate: FUTURE, employees: [] as unknown[], canEdit: true, ...patch,
 });
 const staffing = (lines: object[], patch: object = {}) => ({ planId: ids.plan, planCode: "KHT000001", rowVersion: "v1", lines, canEdit: lines.some((row) => (row as { canEdit: boolean }).canEdit), ...patch });
 const member = (employee: string, patch: object = {}) => ({ employeeId: employee, code: `NV${employee.slice(-2)}`, name: names[employee], assignmentId: id(40 + Number(employee.slice(-2))), checkedIn: false, ...patch });
 const view = (patch: object = {}) => ({
   id: ids.plan, code: "KHT000001", statusId: 4202, status: "Assigned", zones: [{ id: ids.zone1, code: "KV01", name: "Vùng 1" }], plannedAt: `${FUTURE}T06:00:00+07:00`, note: null, createdBy: null, orders: [],
-  lines: [], progress: { lines: 0, linesDone: 0, lanes: 0, lanesHarvested: 0, lanesSkipped: 0 }, allowedActions: [], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "p1", ...patch,
+  lines: [], progress: { lines: 0, linesDone: 0 }, allowedActions: [], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "p1", ...patch,
 }) as unknown as PlanView;
 const ok = (data: unknown) => ({ status: "success", data });
 const renderTab = (plan = view(), access = owner) => render(<ToastProvider><PlanStaffingTab plan={plan} access={access} /></ToastProvider>);
@@ -41,12 +41,12 @@ const renderTab = (plan = view(), access = owner) => render(<ToastProvider><Plan
 beforeEach(() => { state.staffing.mockReset(); state.saveStaffing.mockReset(); state.picker.mockReset(); state.detail.mockReset(); });
 afterEach(cleanup);
 
-it("shows each line with its raft link, zone, lanes, day, the employees and who checked in", async () => {
+it("shows each line with its raft link, zone, day, the employees and who checked in", async () => {
   state.staffing.mockResolvedValue(ok(staffing([line(1, { employees: [member(ids.an), member(ids.binh, { checkedIn: true })] }), line(2)])));
   renderTab();
   const first = await screen.findByRole("region", { name: "Nhân công bè B01" });
   expect(within(first).getByRole("link", { name: "B01" }).getAttribute("href")).toContain(`/farming/rafts?zoneId=${ids.zone1}&recordId=${ids.raft1}`);
-  expect(within(first).getByText("Vùng KV01 · Luống 1, 2 · Ngày 01/01/2099")).toBeTruthy();
+  expect(within(first).getByText("Vùng KV01 · Ngày 01/01/2099")).toBeTruthy();
   expect(within(first).getByRole("link", { name: "An" }).getAttribute("href")).toBe(`/employees?recordId=${ids.an}`);
   expect(within(first).getAllByText("Đã điểm danh")).toHaveLength(1);
   expect(within(screen.getByRole("region", { name: "Nhân công bè B11" })).getByText("Chưa chọn nhân công cho bè này.")).toBeTruthy();

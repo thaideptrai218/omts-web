@@ -43,8 +43,6 @@ export const planRepository = {
   handOver: (id: string, rowVersion?: string) => json("plan-hand-over", { id, body: rowVersion ? { rowVersion } : {} }, c.ack),
   finish: (id: string, rowVersion?: string) => json("plan-finish", { id, body: rowVersion ? { rowVersion } : {} }, c.ack),
   cancel: (id: string, reason: string, rowVersion?: string) => json("plan-cancel", { id, body: { reason, ...(rowVersion ? { rowVersion } : {}) } }, c.ack),
-  skipLanes: (id: string, lineId: string, laneNumbers: number[], reason: string) => json("plan-skip-lanes", { id, lineId, body: { laneNumbers, reason } }, c.ack),
-  unskipLanes: (id: string, lineId: string, laneNumbers: number[]) => json("plan-unskip-lanes", { id, lineId, body: { laneNumbers } }, c.ack),
   /** The Nhân công of a plan: the employees of each line the caller sees. */
   staffing: (id: string, signal?: AbortSignal) => read("plan-staffing", { id }, c.planStaffing, signal),
   /** Sets the whole crew of one line (employees left out are taken off); answers the line. */

@@ -11,7 +11,7 @@ export function usePlanAccess() {
   const can = (fn: string, action: string) => holds(owner, staff, functions, fn, action);
   return {
     owner, view: can("HARVEST_PLANS", "View"), create: can("HARVEST_PLANS", "Create"), edit: can("HARVEST_PLANS", "Edit"), remove: can("HARVEST_PLANS", "Delete"),
-    /** Recording a lot from a plan line or marking lanes "Không thu". */
+    /** Receiving a plan, recording a lot from a plan line and handing the plan over. */
     harvest: can("HARVESTS", "Create"), viewHarvests: can("HARVESTS", "View"),
     /** Choosing the employees of a plan line (the work assignments of its crew). */
     staff: can("WORK_ASSIGNMENTS", "Create"),

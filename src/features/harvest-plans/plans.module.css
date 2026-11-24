@@ -1,16 +1,5 @@
-.chips { display:flex; flex-wrap:wrap; gap:6px; }
-.chip { display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:2px 8px; border:1px solid var(--omts-color-border-strong); border-radius:12px; background:var(--omts-color-surface); font-size:12px; white-space:nowrap; }
-.chip[data-state="Planned"] { background:#eef4ff; border-color:#9db8ec; }
-.chip[data-state="Harvested"] { background:#e9f6ef; border-color:#7fbf9c; }
-.chip[data-state="Skipped"] { background:#f3f4f6; border-color:#b8bec7; color:var(--omts-color-text-muted); text-decoration:line-through; text-decoration-color:#b8bec7; }
-.chip a { color:var(--omts-color-primary); text-decoration:underline; }
 /* The zone and raft selects of a line are the same width. */
 .selectCol { width:160px; }
-.laneBox { display:flex; flex-wrap:wrap; gap:6px; }
-.lane { display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:3px 9px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:12px; cursor:pointer; }
-.lane[data-checked="true"] { background:#eef4ff; border-color:var(--omts-color-primary); }
-.lane[data-disabled="true"] { cursor:not-allowed; opacity:.55; background:#f3f4f6; }
-.lane small { color:var(--omts-color-text-muted); font-size:11px; }
 .hint { font-size:12px; color:var(--omts-color-text-muted); }
 .orders { display:grid; gap:6px; max-height:240px; overflow:auto; }
 .order { display:grid; gap:2px; padding:6px 8px; border:1px solid var(--omts-color-border); border-radius:6px; font-size:12px; }
