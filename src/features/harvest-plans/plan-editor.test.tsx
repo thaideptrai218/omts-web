@@ -144,14 +144,14 @@ it("shows the first problem of an incomplete form, in the order of the line: zon
 });
 
 it("shows the sentence of the API when the API refuses the plan and keeps the form", async () => {
-  state.create.mockResolvedValueOnce({ status: "error", httpStatus: 409, code: "MSG-PLAN-02", problem: { message: "Luống 1 của bè B1 đã có trong KHT000002." } });
+  state.create.mockResolvedValueOnce({ status: "error", httpStatus: 409, code: "MSG-PLAN-08", problem: { message: "Đơn DH000001 đã có trong KHT000002." } });
   const user = userEvent.setup();
   render(<ToastProvider><PlanEditorPage orderIds={[ids.order]} /></ToastProvider>);
   await user.click(await screen.findByRole("button", { name: /Thêm dòng bè/ }));
   await user.selectOptions(screen.getByLabelText("Vùng dòng 1"), ids.zone);
   await user.selectOptions(screen.getByLabelText("Bè dòng 1"), ids.raft);
   await user.click(screen.getByRole("button", { name: "Lưu tạm" }));
-  expect((await screen.findByRole("alert")).textContent).toContain("Luống 1 của bè B1 đã có trong KHT000002.");
+  expect((await screen.findByRole("alert")).textContent).toContain("Đơn DH000001 đã có trong KHT000002.");
   expect(state.push).not.toHaveBeenCalled();
   expect((screen.getByLabelText("lồng dự kiến dòng 1") as HTMLInputElement).value).toBe("8");
 });
