@@ -32,8 +32,10 @@ export function HeaderMenu({ label, trigger, triggerClassName = styles.iconButto
 
 export type SettingsSection = Readonly<{
   label: string;
-  /** `panel` names a settings panel shown in place on the settings page; `href` then opens that page at it. */
-  items: readonly Readonly<{ href: string; label: string; icon: InterfaceIconName; description?: string; panel?: string }>[];
+  /** Stable id used by the `?group=` deep link of the settings hub. */
+  key?: string;
+  /** `panel` names a settings panel shown in place on the settings page; `href` then opens that page at it. `editor` captions who may change it. */
+  items: readonly Readonly<{ href: string; label: string; icon: InterfaceIconName; description?: string; panel?: string; editor?: string; /** Synonyms (with and without accents) the hub search matches besides the label. */ keywords?: readonly string[]; /** One-line "Việc thường làm" hint shown on link-only panels. */ hint?: string }>[];
 }>;
 
 export function SettingsMenu({ sections }: Readonly<{ sections: readonly SettingsSection[] }>) {

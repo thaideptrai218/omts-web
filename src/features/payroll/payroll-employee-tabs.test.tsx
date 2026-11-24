@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   repo: { employeeSlips: vi.fn(), slip: vi.fn(), payments: vi.fn(), payable: vi.fn(), payStandalone: vi.fn() },
 }));
 vi.mock("./repository", () => ({ payrollRepository: state.repo }));
+vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" } }) }));
 import { EmployeeDebtTab } from "./employee-debt-tab";
 import { EmployeePayslipsTab } from "./employee-payslips-tab";
 import { EmployeeTabs } from "@/features/employee-api/employee-tabs";
@@ -99,7 +100,7 @@ it("debt tab: Thanh toán lương opens the pop-up with this employee fixed and 
   expect(state.repo.payable).not.toHaveBeenCalled();
   await user.type(within(dialog).getByLabelText("Số tiền chi"), "400000");
   await user.click(within(dialog).getByRole("button", { name: "Tạo phiếu chi" }));
-  await waitFor(() => expect(state.repo.payStandalone).toHaveBeenCalledWith(expect.objectContaining({ employeeId: ids.empA, amount: 400_000 })));
+  await waitFor(() => expect(state.repo.payStandalone).toHaveBeenCalledWith(expect.objectContaining({ employeeId: ids.empA, amount: 400_000 }), expect.any(String)));
   expect(await screen.findByText("Đã tạo phiếu chi. Phiếu chi xuất hiện trong Sổ quỹ.")).toBeTruthy();
   await waitFor(() => expect(state.repo.employeeSlips.mock.calls.length).toBeGreaterThan(1));
 });

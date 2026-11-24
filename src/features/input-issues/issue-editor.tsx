@@ -19,6 +19,7 @@ import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import { IN_USE, ISSUE, issueStatusLabel, type IssueKind, type IssueLine, type IssueView, type ItemRow, type SeedLots } from "@/features/input-items/contracts";
 import { errorText, inputRepository, issueRepository, problemText } from "@/features/input-items/repository";
 import { itemHref, kindInfo, useIssueAccess, useIssueTypes, useReceivers, useZoneOptions, type IssueAccess } from "./issue-access";
+import { failedOnLines, outOfStockReason, stockProblems, type StockLine } from "./issue-stock-rules";
 import styles from "./input-issues.module.css";
 
 /** `unitId` is the unit the quantity is typed in; `costPerBase` and `onHand` are per base unit. */
@@ -90,6 +91,15 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
   const [reason, setReason] = useState(origin?.reason ?? ""), [notes, setNotes] = useState(origin?.notes ?? "");
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false);
   const [lots, setLots] = useState<Record<string, LotState>>({}), requested = useRef(new Set<string>());
+  // Whether stock may go negative decides if an empty item can be issued; staff may not read the setting, which then counts as "no".
+  const settings = useRemote(useCallback((signal: AbortSignal) => inputRepository.settings(signal), []));
+  const allowNegative = settings.data?.allowNegativeQuantity;
+  /** The lines in the shape the stock rules read: the chosen lot's stock for a seed line, otherwise the item's own. */
+  const stockLines = () => lines.map((line): StockLine => {
+    const lot = lots[line.item.id], loaded = lot && "data" in lot ? lot.data : undefined;
+    return { name: line.item.name, seed: line.item.group === "Seed", quantity: quantityOf(line.quantity), unitFactor: line.unitFactor, unitName: line.unitName, onHand: line.onHand,
+      ...(loaded ? { lotOnHand: line.lotId ? loaded.lots.find((row) => row.seedLotLineId === line.lotId)?.onHand ?? null : undefined, unlotted: loaded.unlottedQuantity } : {}) };
+  });
   const receivers = useReceivers(use ? zoneId : "");
   const zoneRafts = rafts.filter((raft) => raft.zoneId === zoneId);
   const finderItems = useMemo<ItemOption[]>(() => items.filter((item) => item.statusId === IN_USE).map(optionOf), [items]);
@@ -128,6 +138,9 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
     if (unlotted >= 0) { setError(`Dòng ${unlotted + 1}: đang tải lô giống. Hãy thử lại sau giây lát.`); return; }
     const lotFailed = lines.findIndex((line) => { const lot = lots[line.item.id]; return line.item.group === "Seed" && !!lot && "error" in lot; });
     if (lotFailed >= 0) { setError(`Dòng ${lotFailed + 1}: chưa tải được lô giống nên chưa lưu được. Tải lại trang rồi thử lại.`); return; }
+    // An issue already completed has its own quantities taken out of the stock on hand, so only a new or draft one is checked here.
+    const short = completed ? [] : stockProblems(stockLines(), allowNegative);
+    if (short.length) { setError(short.join(" ")); return; }
     if (finishing) {
       if (!lines.length) { setError("Thêm ít nhất một dòng hàng."); return; }
       if (use && !typeId) { setError("Chọn loại xuất."); return; }
@@ -141,7 +154,14 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
     setPending(true); setError(undefined);
     // A new document is saved and completed in one call, so a shortage leaves nothing behind. An existing draft is saved first, then completed.
     const saved = doc ? await issueRepository.save(body, doc.id) : await issueRepository.save({ ...body, complete }, undefined);
-    if (saved.status !== "success") { setPending(false); setError(problemText(saved)); return; }
+    if (saved.status !== "success") {
+      setPending(false);
+      // A 400 that only says "Hàng xuất" is not enough: name the line and what is left, as far as the form knows.
+      const named = failedOnLines([...(saved.problem?.fields ?? []), ...(saved.problem?.field ? [saved.problem.field] : [])]);
+      const detail = named ? stockProblems(stockLines(), false) : [];
+      setError(named ? `${detail.length ? detail.join(" ") : "Hàng xuất: kiểm tra số lượng (lớn hơn 0, không vượt tồn kho) và lô giống đã chọn."}` : problemText(saved));
+      return;
+    }
     let result = saved.data;
     if (doc) {
       setDoc({ id: result.id, rowVersion: result.rowVersion, statusId: result.statusId, code: result.code });
@@ -169,7 +189,7 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
     <SelectBox aria-label={label} disabled={disabled} value={value} onChange={(event) => { onChange(event.target.value); setError(undefined); }}>{children}</SelectBox>;
 
   return <EditorFrame title={title} backHref={info.path} source={copy ? `Sao chép từ phiếu ${copy.code}; kiểm tra lại số lượng và lô giống.` : completed ? "Sửa số lượng, lô giống hoặc loại xuất: số lượng còn lại được tính lại theo phiếu mới." : undefined}
-    tools={<><ItemFinder placeholder="Tìm hàng hóa theo mã hoặc tên" items={finderItems} onPick={add} />{doc && doc.statusId === ISSUE.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
+    tools={<><ItemFinder placeholder="Tìm hàng hóa theo mã hoặc tên" items={finderItems} onPick={add} unavailable={(option) => outOfStockReason(itemsById.get(option.id)?.onHand, allowNegative)} />{doc && doc.statusId === ISSUE.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
     {confirmation.dialog}
     <div className={purchaseStyles.editorBody}>
       <div className={purchaseStyles.linesPanel}>

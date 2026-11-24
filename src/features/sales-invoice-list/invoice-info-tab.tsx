@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { customerHref } from "@/features/customers/customer-links";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
+import { InvoiceQrCard } from "@/features/invoice-qr/invoice-qr-card";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import styles from "@/features/purchase-documents/purchases.module.css";
 import { orderHref } from "@/features/sales-orders/order-labels";
@@ -33,6 +35,7 @@ export function InvoiceInfoTab({ invoice }: { invoice: InvoiceDetail }) {
       <div><span>Hình thức thanh toán:</span><strong>{paymentTerm(invoice.paymentTerm)}</strong></div>
       <div><span>Người lập:</span><strong>{invoice.createdBy.name || "—"}</strong></div>
       {qr && <div><span>Truy xuất:</span><a className={styles.link} href={qr} target="_blank" rel="noopener noreferrer">Trang nguồn gốc (mã QR)</a></div>}
+      {qr && invoice.statusId !== INVOICE.cancelled && <div style={{ gridColumn: "1 / -1" }}><InvoiceQrCard url={qr} invoiceCode={invoice.code} lines={invoice.lines} /></div>}
       {invoice.statusId === INVOICE.cancelled && <div><span>Hủy lúc:</span><strong>{invoice.cancelledAt ? viDateTime(invoice.cancelledAt) : "—"}</strong></div>}
       {invoice.cancelReason && <div><span>Lý do hủy:</span><span className={styles.danger}>{invoice.cancelReason}</span></div>}
     </div>
@@ -40,7 +43,7 @@ export function InvoiceInfoTab({ invoice }: { invoice: InvoiceDetail }) {
       <tbody>
         <tr className={styles.lineSearch}><td><input type="search" aria-label="Tìm tên hàng" placeholder="Tìm tên hàng" value={nameTerm} onChange={(event) => setNameTerm(event.target.value)} /></td><td style={{ width: 180 }}><input type="search" aria-label="Tìm mã lô" placeholder="Tìm mã lô" value={lotTerm} onChange={(event) => setLotTerm(event.target.value)} /></td><td colSpan={6} /></tr>
         {shown.map((line) => <tr key={line.id}>
-          <td>{line.productName}</td><td>{line.lotCode}</td><td>{line.unit?.name ?? "kg"}</td><td className={styles.num}>{fmt(line.quantity ?? line.kg)}</td><td className={styles.num}>{fmt(line.kg)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td>
+          <td>{line.productName}</td><td>{line.lotCode ? <Link className={styles.link} href={farmingReferenceHref("lot", { code: line.lotCode })}>{line.lotCode}</Link> : "—"}</td><td>{line.unit?.name ?? "kg"}</td><td className={styles.num}>{fmt(line.quantity ?? line.kg)}</td><td className={styles.num}>{fmt(line.kg)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td>
           <td>{priceSource(line.priceSource)}</td><td className={styles.num}><strong>{fmt(line.amount)}</strong></td></tr>)}
         {!shown.length && <tr><td colSpan={8} className={styles.empty}>Không có dòng hàng phù hợp.</td></tr>}
       </tbody></table></div>

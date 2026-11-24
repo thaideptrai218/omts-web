@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { formatVietnameseDate } from "@/shared/format/date-only";
 import { loadOptions } from "./lookups";
 import { operationAllowed } from "./permissions";
 import * as c from "./new-module-contracts";
@@ -73,7 +74,7 @@ export function AssignmentEditor({
     const raftCode = values.raftId ? `bè ${String(rafts.data?.find((r) => r.id === values.raftId)?.code ?? "đã chọn")}` : "vùng (không có bè)";
     const jobName = options.data?.jobs.find((r) => r.id === values.jobTypeId)?.name ?? "công việc đã chọn";
     const moveNote = values.moveExisting ? "; chuyển phân công đã có" : "";
-    return `${verb} ${employeeIds.length} nhân viên, ngày ${values.date}, ${raftCode}, ${jobName}${moveNote}?`;
+    return `${verb} ${employeeIds.length} nhân viên, ngày ${formatVietnameseDate(values.date)}, ${raftCode}, ${jobName}${moveNote}?`;
   }
 
   async function save() {
@@ -139,7 +140,8 @@ export function AssignmentEditor({
       >
         <fieldset disabled={editor.disabled} className="space-y-4">
           <WorkforceFormSection number="01" title="Lịch và địa điểm">
-            {mode === "crew" && <p>Ngày đổi việc: {values.date}</p>}
+            {/* Changing the job always applies to today: the same date picker as everywhere (dd/mm/yyyy), fixed. */}
+            {mode === "crew" && <Field label="Ngày đổi việc (luôn là hôm nay)" type="date" readOnly value={values.date} onChange={() => undefined} />}
             {mode === "assign" && (
               <Field
                 label="Ngày phân công *"

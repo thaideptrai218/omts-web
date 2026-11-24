@@ -49,6 +49,13 @@ export const messageCatalog = {
   "MSG-PLAN-03": "Dòng kế hoạch này đã có lô thu hoạch nên không ghi thêm hoặc sửa được.",
   "MSG-PLAN-04": "Kế hoạch đã có lô thu hoạch nên không hủy được. Hãy dùng Kết thúc để đóng kế hoạch.",
   "MSG-LABOR-03": "Thông tin nhân viên bị trùng. Bản nháp được giữ; hãy đối chiếu hồ sơ hiện có.",
+  "MSG-LABOR-04": "Không thể thay đổi cho ngày {date}: bảng lương kỳ {period} đã khóa đến hết ngày {locked_until}. Hãy chọn ngày sau {locked_until}.{send_back_note}",
+  "MSG-LABOR-28": "Chưa thể chốt bảng lương: {reason_list}.",
+  "MSG-LABOR-31": "Chưa thể chốt bảng lương ({period}): còn {count} yêu cầu của nhân viên trong kỳ chờ duyệt ({request_list}). Hãy duyệt hoặc từ chối các yêu cầu này trước.",
+  "MSG-LABOR-34": "{employee_name}: số tiền trả không được lớn hơn {owed_amount} đ còn phải trả.",
+  "MSG-LABOR-36": "Hai kỳ lương kế tiếp là {period_1} và {period_2}. {automatic_note} Lưu thiết lập kỳ lương?",
+  // Not a backend code: the 409 of finalize (MSG-LABOR-28 with reasonCode TOTALS_CHANGED) when the sheet changed since it was viewed.
+  PAYROLL_TOTALS_CHANGED: "Chưa chốt bảng lương ({period}): số liệu đã thay đổi từ lần bạn xem. Trước đó {slips_before} phiếu, tổng {total_before} đ; nay {slips_now} phiếu, tổng {total_now} đ. Hãy kiểm tra rồi chốt lại.",
   MSG01: "Vui lòng kiểm tra lại thông tin đã nhập.",
   MSG02: "Bạn không có quyền thực hiện thao tác này.",
   MSG03:

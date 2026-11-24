@@ -7,14 +7,14 @@ const ids = { zoneA: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11", zoneB: "5b0e2f6e-6c
   bag: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b03", lot: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b04", type: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b05", issue: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b06", raft: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b07" };
 const state = vi.hoisted(() => ({
   context: { identity: { subjectType: "CooperativeOwner", username: "owner" }, permissions: { functionPermissions: [] as { functionCode: string; action: string }[] } },
-  push: vi.fn(), save: vi.fn(), seedLots: vi.fn(), all: vi.fn(), types: vi.fn(),
+  push: vi.fn(), save: vi.fn(), seedLots: vi.fn(), all: vi.fn(), types: vi.fn(), settings: vi.fn(),
 }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: state.push }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/features/input-items/repository", async (original) => ({
   ...(await original<typeof import("@/features/input-items/repository")>()),
   issueRepository: { save: state.save, detail: vi.fn(), complete: vi.fn(), remove: vi.fn(), receivers: vi.fn(async () => ({ status: "success", data: [] })) },
-  inputRepository: { all: state.all, seedLots: state.seedLots, issueTypes: state.types },
+  inputRepository: { all: state.all, seedLots: state.seedLots, issueTypes: state.types, settings: state.settings },
 }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: vi.fn(async () => ({ status: "success", data: [
   { id: ids.zoneA, code: "DEMO-01", name: "Vùng 1", statusId: 101 }, { id: ids.zoneB, code: "DEMO-02", name: "Vùng 2", statusId: 101 }] })) }));
@@ -34,6 +34,7 @@ beforeEach(() => {
   state.types.mockResolvedValue({ status: "success", data: [{ id: ids.type, name: "Thả giống", isSystem: true, rowVersion: "t" }] });
   state.seedLots.mockResolvedValue({ status: "success", data: { lots: [{ seedLotLineId: ids.lot, code: "PN000001-1", receivedQuantity: 100, onHand: 90 }], unlottedQuantity: 0, suggestedLotId: ids.lot, unit: "con" } });
   state.save.mockResolvedValue({ status: "success", data: issueView });
+  state.settings.mockResolvedValue({ status: "success", data: { costMethod: "Average", allowNegativeQuantity: true, rowVersion: "s" } });
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
@@ -112,4 +113,39 @@ it("does not let an account without the disposal right open the disposal editor"
   render(<ToastProvider><IssueEditorPage kind="Disposal" /></ToastProvider>);
   expect(await screen.findByText(/Chỉ Chủ hợp tác xã/)).toBeTruthy();
   expect(state.save).not.toHaveBeenCalled();
+});
+
+it("greys out an item with no stock and gives the reason, when the cooperative does not allow negative stock", async () => {
+  state.settings.mockResolvedValue({ status: "success", data: { costMethod: "Average", allowNegativeQuantity: false, rowVersion: "s" } });
+  state.all.mockResolvedValue({ status: "success", data: [{ ...seedItem, onHand: 0 }] });
+  const user = userEvent.setup();
+  render(<ToastProvider><IssueEditorPage kind="Use" /></ToastProvider>);
+  await user.type(await screen.findByLabelText("Tìm hàng hóa theo mã hoặc tên"), "Cá");
+  const option = await screen.findByRole("button", { name: /Cá giống/ }) as HTMLButtonElement;
+  await waitFor(() => expect(option.disabled).toBe(true));
+  expect(option.textContent).toContain("Hết hàng trong kho");
+});
+
+it("names the line and what is left instead of sending a quantity above the lot's stock", async () => {
+  state.settings.mockResolvedValue({ status: "success", data: { costMethod: "Average", allowNegativeQuantity: false, rowVersion: "s" } });
+  const user = userEvent.setup();
+  render(<ToastProvider><IssueEditorPage kind="Use" /></ToastProvider>);
+  await addSeedLine(user);
+  await user.selectOptions(screen.getByLabelText("Vùng"), ids.zoneA);
+  await user.selectOptions(screen.getByLabelText("Đơn vị tính dòng 1"), ids.bag);
+  await user.click(screen.getByRole("button", { name: "Lưu tạm" }));
+  expect((await screen.findByRole("alert")).textContent).toContain("Dòng 1 (Cá giống): số lượng vượt tồn kho (còn 90 bao)".replace("90 bao", "0,09 bao"));
+  expect(state.save).not.toHaveBeenCalled();
+});
+
+it("turns a bare 400 on the lines into a sentence about the lines instead of only the field name", async () => {
+  state.save.mockResolvedValue({ status: "error", httpStatus: 400, code: "MSG01", uncertain: false, problem: { fields: ["Lines"] } });
+  const user = userEvent.setup();
+  render(<ToastProvider><IssueEditorPage kind="Use" /></ToastProvider>);
+  await addSeedLine(user);
+  await user.selectOptions(screen.getByLabelText("Vùng"), ids.zoneA);
+  await user.click(screen.getByRole("button", { name: "Lưu tạm" }));
+  const text = (await screen.findByRole("alert")).textContent ?? "";
+  expect(text).toContain("Hàng xuất: kiểm tra số lượng");
+  expect(text).not.toContain("Kiểm tra: Hàng xuất.");
 });

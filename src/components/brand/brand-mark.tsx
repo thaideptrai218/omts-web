@@ -1,4 +1,6 @@
+"use client";
 import Image from "next/image";
+import { useCooperativeName } from "./cooperative-name-context";
 
 type BrandMarkProps = {
   autoReveal?: boolean;
@@ -27,6 +29,7 @@ export function BrandMark({
   tone = "default",
 }: BrandMarkProps) {
   const styles = toneStyles[tone];
+  const cooperativeName = useCooperativeName();
 
   return (
     <div className="flex items-center gap-3">
@@ -47,7 +50,7 @@ export function BrandMark({
         }
       >
         <span data-brand-name className={`block text-lg font-bold tracking-tight ${styles.name}`}>
-          HTX Trung Nam
+          {cooperativeName}
         </span>
         {!compact && (
           <span className={`block text-sm leading-5 ${styles.tagline}`}>

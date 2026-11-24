@@ -30,6 +30,7 @@ import { customerRepository, errorText, type ListQuery } from "./repository";
 import { useCustomerSettings } from "./use-customer-settings";
 import styles from "./customers.module.css";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; gate?: "debt"; defaultHidden?: boolean; render(row: CustomerRow): ReactNode };
 const dash = (value: string | null | undefined) => value || "—";
@@ -216,9 +217,9 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.name}`} onClick={() => setExpanded((value) => value === row.id ? undefined : row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={columnCount} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={columnCount} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <CustomerDetailPanel id={row.id} access={access} required={settings?.requiredFields ?? noRequiredFields} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

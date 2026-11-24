@@ -3,7 +3,7 @@ import { CooperativeProvisioningExperience } from "@/features/cooperative-provis
 import { ApiPage } from "@/features/api-workspace/api-page";
 
 export const metadata: Metadata = {
-  title: "Khởi tạo hợp tác xã | HTX Trung Nam",
+  title: "Khởi tạo hợp tác xã",
 };
 export const instant = false;
 

@@ -7,7 +7,7 @@ vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace
 import { TraderPurchasesScreen } from "./trader-purchases-screen";
 import type { TraderRequest } from "./contracts";
 
-const request = (patch: Partial<TraderRequest> = {}): TraderRequest => ({ id: "11111111-1111-4111-8111-111111111111", productId: "22222222-2222-4222-8222-222222222222", productName: "Hàu sữa", requestedKg: 500, pickupDate: "2026-11-12",
+const request = (patch: Partial<TraderRequest> = {}): TraderRequest => ({ id: "11111111-1111-4111-8111-111111111111", productId: "22222222-2222-4222-8222-222222222222", productName: "Hàu sữa", requestedCages: 10, pickupDate: "2026-11-12",
   note: null, sentAt: "2026-11-09T08:15:00+07:00", statusId: 3201, status: "Awaiting response", fulfilled: false, canCancel: true, response: null, cancelReason: null, cancelledAt: null, rowVersion: "AAAA", ...patch });
 const page = (requests: TraderRequest[]) => ({ status: "success", data: { requests, page: 1, pageSize: 20, total: requests.length, message: null, messageCode: null } });
 
@@ -21,13 +21,13 @@ afterEach(cleanup);
 
 describe("TraderPurchasesScreen", () => {
   it("reads /me/purchases via the 'mine' action and shows pills, kg and the Owner response", async () => {
-    mocks.read.mockResolvedValue(page([request({ statusId: 3202, response: { acceptedKg: 300, pickupDate: "2026-11-13", payLaterAgreed: true, note: "Đến sớm", respondedAt: "2026-11-09T09:00:00+07:00" } })]));
+    mocks.read.mockResolvedValue(page([request({ statusId: 3202, response: { acceptedCages: 6, pickupDate: "2026-11-13", payLaterAgreed: true, note: "Đến sớm", respondedAt: "2026-11-09T09:00:00+07:00" } })]));
     render(<TraderPurchasesScreen />);
     const list = await screen.findByRole("list", { name: "Danh sách đơn mua" });
     expect(mocks.read.mock.calls[0].slice(0, 2)).toEqual(["mine", { page: "1", pageSize: "20" }]);
     expect(within(list).getByText("Đã chấp nhận")).toBeTruthy();
-    expect(within(list).getByText("500 kg")).toBeTruthy();
-    expect(within(list).getByText("300 kg · lấy ngày 13/11/2026 · cho trả sau")).toBeTruthy();
+    expect(within(list).getByText("10 lồng")).toBeTruthy();
+    expect(within(list).getByText("6 lồng · lấy ngày 13/11/2026 · cho trả sau")).toBeTruthy();
   });
 
   it("filters the loaded page by status without another request", async () => {

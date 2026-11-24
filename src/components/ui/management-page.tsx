@@ -87,14 +87,22 @@ export function StatusPill({
   tone = "neutral",
 }: {
   children: ReactNode;
-  tone?: "success" | "danger" | "neutral";
+  tone?: "success" | "danger" | "neutral" | "info" | "primary" | "warning" | "indigo";
 }) {
   const color =
     tone === "success"
       ? "border-success/10 bg-success/5 text-success"
       : tone === "danger"
         ? "border-danger/10 bg-danger/5 text-danger"
-        : "border-border/60 bg-[#f5f6f5] text-text-muted";
+        : tone === "info"
+          ? "border-info/20 bg-info/10 text-info"
+          : tone === "primary"
+            ? "border-primary/20 bg-primary-soft text-primary"
+            : tone === "warning"
+              ? "border-warning/30 bg-warning-soft text-warning"
+              : tone === "indigo"
+                ? "border-[#4338ca]/20 bg-[#eef2ff] text-[#4338ca]"
+                : "border-border/60 bg-[#f5f6f5] text-text-muted";
   return (
     <span
       className={`inline-flex w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[5px] border px-1.5 py-0.5 text-[11px] font-medium leading-4 ${color}`}

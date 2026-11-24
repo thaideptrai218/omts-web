@@ -1,12 +1,14 @@
 ﻿"use client";
 import type { Raft } from "@/features/farming-api/contracts";
 import { OperatingLaneOverview } from "./operating-lane-overview";
+import { mergeLiveLanes, type LiveLane } from "./raft-live-model";
 
-export function LaneIncidentsBoard({ raft, onChanged, onDirty, onPending }: {
-  raft: Raft; onChanged(): void; onDirty?(dirty: boolean): void; onPending?(pending: boolean): void;
+/** `liveLanes` (today's progress of the open cycle) gives every column its real state and seeded/harvested %; without it the lanes show only their physical status. */
+export function LaneIncidentsBoard({ raft, liveLanes, onChanged, onDirty, onPending }: {
+  raft: Raft; liveLanes?: readonly LiveLane[]; onChanged(): void; onDirty?(dirty: boolean): void; onPending?(pending: boolean): void;
 }) {
   // A removed lane (status 2002) is no longer part of the raft: it gets no column and no incident actions.
-  return <OperatingLaneOverview lanes={raft.lanes.filter(lane => lane.statusId !== 2002)} label="Các làn của bè" onDirty={onDirty} onPending={onPending}
+  return <OperatingLaneOverview lanes={mergeLiveLanes(raft.lanes, liveLanes).filter(lane => lane.statusId !== 2002)} label="Các làn của bè" onDirty={onDirty} onPending={onPending}
     scope={{ raftId: raft.id, zoneId: raft.zone.id, onChanged }}
     raft={{ id: raft.id, code: raft.code, zoneId: raft.zone.id, statusId: raft.statusId, rowVersion: raft.rowVersion }}
     renderLaneDetails={lane => {

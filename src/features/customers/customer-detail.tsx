@@ -132,8 +132,8 @@ function RequestsTab({ id }: { id: string }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.requests(id, page, pageSize, signal), [id, page, pageSize]));
   return <div className={listStyles.tabBody}>
     {remote.loading ? <Skeleton /> : remote.error ? <ListStateMessage error={remote.error} onRetry={remote.reload} /> : remote.data && <>
-      <DataTable responsive headings={["Gửi lúc", "Sản phẩm", "Số lượng (kg)", "Ngày lấy", "Trạng thái", "Mã DH", ""]} empty={!remote.data.items.length}>{remote.data.items.map((row) => <tr key={row.id}>
-        <td data-label="Gửi lúc">{viDateTime(row.sentAt)}</td><td data-label="Sản phẩm">{row.productName}</td><td data-label="Số lượng (kg)">{fmt(row.requestedKg)}</td><td data-label="Ngày lấy">{viDate(row.pickupDate)}</td>
+      <DataTable responsive headings={["Gửi lúc", "Sản phẩm", "Số lượng (lồng)", "Ngày lấy", "Trạng thái", "Mã DH", ""]} empty={!remote.data.items.length}>{remote.data.items.map((row) => <tr key={row.id}>
+        <td data-label="Gửi lúc">{viDateTime(row.sentAt)}</td><td data-label="Sản phẩm">{row.productName}</td><td data-label="Số lượng (lồng)">{fmt(row.requestedCages)}</td><td data-label="Ngày lấy">{viDate(row.pickupDate)}</td>
         <td data-label="Trạng thái">{requestStatus[row.statusId] ?? row.status}</td>
         <td data-label="Mã DH">{row.salesOrderCode ? <Link className={styles.link} href={`/sales/orders?code=${encodeURIComponent(row.salesOrderCode)}`}>{row.salesOrderCode}</Link> : "—"}</td><td><Link className={styles.link} href={`/operations/purchase-requests/${row.id}`}>Mở</Link></td></tr>)}</DataTable>
       <ManagementPagination page={remote.data.page} pageSize={remote.data.pageSize} total={remote.data.total} unit="yêu cầu" onPage={setPage} onPageSize={(size) => { setPageSize(size); setPage(1); }} /></>}

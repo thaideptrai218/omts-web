@@ -51,7 +51,9 @@ export function MoneyInput({ value, onChange, label, disabled, invalid, classNam
   return <SharedMoneyInput label={label} invalid={invalid} className={className} disabled={disabled} value={value || null} onChange={(next) => onChange(next ?? 0)} />;
 }
 
-export function ItemFinder({ placeholder, items, onPick }: { placeholder: string; items: readonly ItemOption[]; onPick(item: ItemOption): void }) {
+export function ItemFinder({ placeholder, items, onPick, unavailable }: { placeholder: string; items: readonly ItemOption[]; onPick(item: ItemOption): void;
+  /** The reason an item cannot be picked (shown greyed under its name), or undefined when it can. */
+  unavailable?(item: ItemOption): string | undefined }) {
   const [term, setTerm] = useState(""), [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -63,8 +65,9 @@ export function ItemFinder({ placeholder, items, onPick }: { placeholder: string
   const pick = (item: ItemOption) => { onPick(item); setTerm(""); setOpen(false); };
   return <div ref={root} className={styles.finder} onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}>
     <InterfaceIcon name="search" />
-    <input type="search" aria-label={placeholder} placeholder={placeholder} value={term} onFocus={() => setOpen(true)} onChange={(event) => { setTerm(event.target.value); setOpen(true); }} onKeyDown={(event) => { if (event.key === "Enter" && matches[0]) { event.preventDefault(); pick(matches[0]); } }} />
-    {open && <div className={styles.finderList}>{matches.length ? matches.map((item) => <button key={item.id} type="button" onClick={() => pick(item)}><span>{item.name}</span><small>{item.code} · {item.unit}</small></button>) : <p className={styles.empty}>Không tìm thấy hàng đang sử dụng phù hợp.</p>}</div>}
+    <input type="search" aria-label={placeholder} placeholder={placeholder} value={term} onFocus={() => setOpen(true)} onChange={(event) => { setTerm(event.target.value); setOpen(true); }} onKeyDown={(event) => { const first = matches.find((item) => !unavailable?.(item)); if (event.key === "Enter" && first) { event.preventDefault(); pick(first); } }} />
+    {open && <div className={styles.finderList}>{matches.length ? matches.map((item) => { const why = unavailable?.(item);
+      return <button key={item.id} type="button" disabled={!!why} title={why} style={why ? { opacity: 0.55, cursor: "not-allowed" } : undefined} onClick={() => pick(item)}><span>{item.name}</span><small>{item.code} · {why ?? item.unit}</small></button>; }) : <p className={styles.empty}>Không tìm thấy hàng đang sử dụng phù hợp.</p>}</div>}
   </div>;
 }
 

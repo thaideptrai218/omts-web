@@ -22,6 +22,7 @@ import { errorText, fmt, methodLabel, usePurchaseAccess, viDate, viDateTime } fr
 import { cancelReturn, download, getReturn, listReturns, removeReturn, usePurchaseLookups } from "./repository";
 import { RETURN, goodsTotal, returnStatusLabel, type Page, type ReturnQuery, type ReturnRow } from "./types";
 import styles from "./purchases.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: ReturnRow): ReactNode };
 const tone = (statusId: number) => statusId === RETURN.recorded ? "success" as const : statusId === RETURN.cancelled ? "danger" as const : "neutral" as const;
@@ -109,7 +110,7 @@ function ReturnsList({ helpHref, linkedCode, kind }: { helpHref?: string; linked
                 <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => open(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
                 {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
               </OpenableTableRow>
-              {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><ReturnDetail kind={kind} id={row.id} owner={access.owner} canEdit={access.edit} canRemove={access.remove} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} /></div></td></tr>}
+              {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><ReturnDetail kind={kind} id={row.id} owner={access.owner} canEdit={access.edit} canRemove={access.remove} onChanged={(message) => { notify({ tone: "success", title: message }); setExpanded(undefined); reload(); }} /></div></DetailRow>}
             </Fragment>)}
           </tbody></table>}
     </ManagementScroller>

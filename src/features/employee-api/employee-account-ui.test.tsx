@@ -50,6 +50,24 @@ describe("employee account handover", () => {
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain(secret);
     expect(local).not.toHaveBeenCalled();
   });
+  it("grants the chosen role after the account exists and still shows the password when a grant fails", async () => {
+    const grantRow = { id: "33333333-3333-4333-8333-333333333333", roleId: "44444444-4444-4444-8444-444444444444", roleName: "Kế toán", zoneId: null, zoneName: null, allZones: true, effectiveFrom: "2026-11-20", effectiveTo: null, state: "Effective", revokedAt: null, revokeReason: null };
+    for (const grantResponse of [Response.json({ status: "success", data: grantRow }), Response.json({ status: "error", code: "MSG-GEN-02" }, { status: 409 })]) {
+      fetchMock.mockReset();
+      fetchMock.mockImplementation(async (url: string) => String(url).startsWith("/api/operations/employees")
+        ? Response.json({ status: "success", data: { employee: saved(), temporaryPassword: secret, temporaryPasswordExpiresAt: "2026-11-11T12:00:00+07:00" } })
+        : String(url).startsWith("/api/account-grants/create") ? grantResponse.clone() : Response.json({ status: "error" }, { status: 500 }));
+      const view = render(<Harness />); openAndFill();
+      fireEvent.click(screen.getByLabelText("Kế toán"));
+      fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản và phân quyền" }));
+      expect(await screen.findByText(secret)).toBeTruthy();
+      const grantCalls = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/account-grants/create"));
+      expect(grantCalls).toHaveLength(1);
+      expect(JSON.parse(grantCalls[0][1].body)).toEqual({ accountId: saved().account!.id, zoneId: null, role: "ACCOUNTANT" });
+      expect(await screen.findByText(grantResponse.ok ? /Đã phân quyền/ : /chưa gán được: Kế toán · Tất cả vùng/)).toBeTruthy();
+      view.unmount();
+    }
+  });
   it("sends the username only, prevents double-submit and never replays an uncertain write", async () => {
     let finish!: (value: Response) => void;
     fetchMock.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
@@ -86,6 +104,17 @@ describe("employee account handover", () => {
     expect(onSaved).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("prefills a suggested username and explains a missing phone with a way to fix it", () => {
+    const withoutPhone = { ...withoutAccount(), phoneNumber: "" };
+    render(<EmployeeAccountTab employee={withoutPhone} onSaved={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản đăng nhập" }));
+    expect((screen.getByLabelText("Tên tài khoản *") as HTMLInputElement).value).toMatch(/^[a-z0-9.]+$/);
+    expect(screen.getByRole("alert").textContent).toMatch(/chưa có số điện thoại/);
+    expect(screen.getByRole("button", { name: "Bổ sung số điện thoại" })).toBeTruthy();
+    const submit = screen.getByRole("button", { name: "Cấp tài khoản" }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+    expect(document.getElementById(submit.getAttribute("aria-describedby")!)?.textContent).toMatch(/số điện thoại/);
   });
   it("focuses an empty username before sending and has no account action for Left or inaccessible employees", () => {
     const view = render(<EmployeeAccountTab employee={withoutAccount()} onSaved={vi.fn()} />);

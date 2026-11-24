@@ -4,12 +4,14 @@ import { Dialog } from "@/components/ui/dialog";
 import { toDisplayDate } from "@/components/ui/management-screen/time-range-model";
 import { businessToday } from "@/features/operations/ui";
 import type { Employee } from "./contracts";
+import { EmployeeEndEmploymentDialog, type EndEmploymentChoice } from "./employee-end-employment-dialog";
 
 export type EmployeeStatusAction = "end-employment" | "resume";
 
 /**
- * One-step confirmation for ending or resuming employment (DESIGN_GUIDELINES 1.6: status changes are confirmed).
- * There is no date to pick: ending employment records today as the last working day, resuming takes effect today.
+ * Confirmation for the two status changes (DESIGN_GUIDELINES 1.6: status changes are confirmed).
+ * "Nghỉ việc" lets the Owner pick the last working day and shows its consequences first (EmployeeEndEmploymentDialog);
+ * "Làm việc lại" is one step that takes effect today.
  */
 export function EmployeeStatusActionDialog({
   action,
@@ -25,15 +27,16 @@ export function EmployeeStatusActionDialog({
   /** Reads whether a mutation is in flight at the moment the dialog is dismissed. */
   busy(): boolean;
   onCancel(): void;
-  onConfirm(): void;
+  /** Ending passes the chosen last working day and whether to lock the linked account; resuming passes nothing. */
+  onConfirm(choice?: EndEmploymentChoice): void;
 }) {
-  const ending = action === "end-employment";
+  if (action === "end-employment") return <EmployeeEndEmploymentDialog baseline={baseline} pending={pending} busy={busy} onCancel={onCancel} onConfirm={onConfirm} />;
   const today = toDisplayDate(businessToday());
-
   return (
     <Dialog
       open
-      title={ending ? "Nghỉ việc?" : "Cho làm việc lại?"}
+      title="Làm việc lại?"
+      mobileLayout="compact"
       dismissible={!pending}
       onOpenChange={(open) => {
         if (!open && !busy()) onCancel();
@@ -45,22 +48,14 @@ export function EmployeeStatusActionDialog({
           onConfirm();
         }}
       >
-        <p className="text-sm text-text">
-          {ending
-            ? <><strong>{baseline.fullName}</strong> nghỉ việc từ hôm nay ({today}).</>
-            : <><strong>{baseline.fullName}</strong> được cho làm việc lại từ hôm nay ({today}).</>}
-        </p>
-        <p className="mt-2 text-xs text-text-muted">
-          {ending
-            ? "Ngày làm cuối là hôm nay. Hồ sơ chuyển sang Đã nghỉ việc khi hết ngày. Có thể cho làm việc lại sau."
-            : "Hồ sơ chuyển sang Đang làm việc."}
-        </p>
+        <p className="text-sm text-text"><strong>{baseline.fullName}</strong> được cho làm việc lại từ hôm nay ({today}).</p>
+        <p className="mt-2 text-xs text-text-muted">Hồ sơ chuyển sang Đang làm việc.</p>
         <div className="mt-5 flex justify-end gap-3">
           <Button className="w-auto" variant="secondary" disabled={pending} onClick={onCancel}>
             Bỏ qua
           </Button>
           <Button className="w-auto" type="submit" isPending={pending}>
-            {ending ? "Xác nhận nghỉ việc" : "Xác nhận cho làm việc lại"}
+            Xác nhận làm việc lại
           </Button>
         </div>
       </form>

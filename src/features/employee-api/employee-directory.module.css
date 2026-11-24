@@ -11,6 +11,7 @@
 .expandCell svg { width:15px; height:15px; }
 .truncated { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .name { font-weight:600; }
+.wrap { display:block; white-space:normal; overflow-wrap:anywhere; }
 .typeChip { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; padding:2px 6px; border-radius:999px; background:var(--omts-color-surface-subtle); font-size:12px; white-space:nowrap; vertical-align:middle; }
 .meta { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; margin-top:3px; color:var(--omts-color-text-muted); }
 .status { display:block; overflow:hidden; white-space:nowrap; }
@@ -22,3 +23,20 @@
 @keyframes pulse { 50% { opacity:.5; } }
 @media (prefers-reduced-motion:reduce) { .skeleton > div { animation:none; } }
 @media (max-width:900px) { .table { min-width:650px; } }
+.nameCell { display:flex; align-items:center; gap:8px; min-width:0; }
+.avatar { flex:none; display:inline-grid; place-items:center; width:28px; height:28px; border-radius:999px; background:var(--omts-color-surface-subtle); color:var(--omts-color-text-muted); font-size:12px; font-weight:700; }
+.debt { display:block; white-space:nowrap; font-variant-numeric:tabular-nums; text-align:right; }
+/* Small pill after the name when the employee already has a login account; a locked or inactive one is greyed. */
+.accountChip { flex:0 100 auto; min-width:44px; max-width:130px; overflow:hidden; text-overflow:ellipsis; padding:1px 7px; border-radius:999px; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:11px; font-weight:600; white-space:nowrap; }
+/* With the "Tên đăng nhập" column showing, the chip beside the name is redundant; beside an open detail pane the kit hides that column, so the chip returns. */
+.table[data-username-column] .accountChip { display:none; }
+:global([data-detail-open]) .table[data-username-column] .accountChip { display:block; }
+.accountLink { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; font-size:13px; }
+.accountLink[data-locked] { color:var(--omts-color-text-muted); }
+button.accountLink { cursor:pointer; color:var(--omts-color-primary); }
+button.accountLink[data-locked] { color:var(--omts-color-text-muted); }
+button.accountLink:hover { text-decoration:underline; }
+button.accountChip { cursor:pointer; }
+button.accountChip:hover { background:var(--omts-color-primary); color:#fff; }
+.accountChip[data-locked] { background:var(--omts-color-surface-subtle); color:var(--omts-color-text-muted); }
+

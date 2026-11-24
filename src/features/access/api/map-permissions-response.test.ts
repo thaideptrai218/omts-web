@@ -71,6 +71,17 @@ describe("permission mapping identity, gates and capability bindings", () => {
     } });
   });
 
+  it.each(["HARVEST_PLANS", "INPUT_ISSUES", "PRODUCT_DISPOSALS"])("keeps the zone-scoped %s code a Staff grant holds (it used to be dropped)", (code) => {
+    const result = mapPermissionsResponse(staffPayload({
+      functions: [summary({ function: code, actions: ["View"] })],
+      grants: [grant({ permissions: [permission({ functionCode: code, canView: true })] })],
+    }), accountId);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") expect(result.projection.functionPermissions).toContainEqual({
+      functionCode: code, action: "View", scope: { kind: "zones", zoneIds: [zoneA] }, dataScope: "AssignedZone",
+    });
+  });
+
   it("does not infer Owner capabilities from a Staff role label", () => {
     const result = mapPermissionsResponse(staffPayload({ grants: [grant({ role: "Chủ hợp tác xã" })] }), accountId);
     expect(result).toMatchObject({ status: "mapped", projection: { access: { permissions: [] } } });

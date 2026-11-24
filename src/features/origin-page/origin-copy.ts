@@ -18,8 +18,9 @@ const vi = {
   lot: "Lô",
   products: "Sản phẩm trên hóa đơn",
   valid: "Đang hiệu lực",
-  withdrawn: "Đã thu hồi",
-  withdrawnOn: "Thu hồi ngày",
+  // "Rút thông tin nguồn gốc" khác với thu hồi hàng hóa: tránh làm người đọc hiểu nhầm là sản phẩm bị thu hồi.
+  withdrawn: "Đã rút thông tin nguồn gốc",
+  withdrawnOn: "Rút thông tin ngày",
   harvestDate: "Ngày thu hoạch",
   raft: "Bè",
   zone: "Vùng nuôi",
@@ -60,7 +61,7 @@ const vi = {
   loading: "Đang tải thông tin nguồn gốc",
   metaTitle: "Nguồn gốc sản phẩm",
   metaTitleLot: (lot: string) => `Nguồn gốc lô ${lot}`,
-  metaDescription: "Thông tin nguồn gốc hàu theo hóa đơn, do hợp tác xã Trung Nam công bố.",
+  metaDescription: (cooperative: string) => `Thông tin nguồn gốc hàu theo hóa đơn, do ${cooperative} công bố.`,
 };
 
 const en: typeof vi = {
@@ -80,8 +81,8 @@ const en: typeof vi = {
   lot: "Lot",
   products: "Products on the invoice",
   valid: "Valid",
-  withdrawn: "Withdrawn",
-  withdrawnOn: "Withdrawn on",
+  withdrawn: "Provenance information withdrawn",
+  withdrawnOn: "Provenance withdrawn on",
   harvestDate: "Harvest date",
   raft: "Raft",
   zone: "Farming zone",
@@ -122,7 +123,7 @@ const en: typeof vi = {
   loading: "Loading provenance information",
   metaTitle: "Product provenance",
   metaTitleLot: (lot) => `Provenance of lot ${lot}`,
-  metaDescription: "Oyster provenance by invoice, published by Trung Nam cooperative.",
+  metaDescription: (cooperative) => `Oyster provenance by invoice, published by ${cooperative}.`,
 };
 
 export type OriginCopy = typeof vi;

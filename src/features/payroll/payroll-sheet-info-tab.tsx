@@ -17,6 +17,7 @@ export function PayrollSheetInfoTab({ sheet }: { sheet: SheetDetail }) {
       {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
       <div><dt>Trạng thái</dt><dd><StatusPill tone={statusTone(sheet.status)}>{statusLabel[sheet.status]}</StatusPill></dd></div>
     </dl>
+    {sheet.status === "Provisional" && <p className={`${s.muted} mt-3`}>Số liệu tạm tính{sheet.calculatedAt ? `, cập nhật lần cuối lúc ${formatDateTime(sheet.calculatedAt)}` : ""}. Chọn Tải lại để tính lại theo chấm công mới nhất.</p>}
     <p className={`${s.summary} mt-4`} data-testid="payroll-sheet-totals">
       <span>Tổng lương<strong><Money value={sheet.total} /></strong></span>
       <span>Đã trả<strong><Money value={sheet.paid} /></strong></span>

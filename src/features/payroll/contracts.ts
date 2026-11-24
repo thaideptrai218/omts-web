@@ -33,7 +33,9 @@ export const slip = z.object({
 export const sheetDetail = z.object({
   id, code: text, name: text, periodType, from: date, to: date, scope: z.enum(["All", "Selected"]), status: payrollStatus,
   expenseMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).nullable(), note: text.nullable(), createdBy: text.nullable(), createdAt: text,
-  total: money, paid: money, outstanding: money, slips: z.array(slip),
+  total: money, paid: money, outstanding: money, slips: z.array(slip), employeeCount: z.number().int().optional(),
+  /** UTC instant of the last calculation (create, reload or finalize); the sheet screen shows it as "Cập nhật lần cuối". */
+  calculatedAt: z.string().nullish(),
 });
 
 export const voucherResult = z.object({ vouchers: z.array(z.object({ id, code: text, slipId: id, employeeName: text, amount: money })) });
@@ -51,7 +53,9 @@ export const employeeSlipPage = z.object({
 export const slipDetail = z.object({
   id, code: text, payrollId: id, payrollCode: text, employeeId: id, employeeName: text, from: date, to: date, hours: z.number(), mainPay: money, bonus: money, deduction: money, income: money, net: money, paid: money, outstanding: money, status: payrollStatus,
   lines: z.array(z.object({ jobName: text, hours: z.number(), hourlyRate: money, amount: money })), payments: z.array(slipPayment),
-  attendance: z.array(z.object({ date, jobName: text, hours: z.number() })),
+  employeeCode: text.nullish(),
+  /** One row per day and job type: rafts worked, check-in/out, hours, the rate of that day and the amount (hours × rate), so the formula can be followed. */
+  attendance: z.array(z.object({ date, jobName: text, hours: z.number(), raftCodes: text.nullish(), checkInAt: z.string().nullish(), checkOutAt: z.string().nullish(), hourlyRate: money.optional(), amount: money.optional() })),
 });
 export const standalonePaymentResult = z.object({ id });
 /** `summary.amount` (optional) = total of the `Recorded` payments of the whole filtered set; without it the screen sums the loaded page. */
@@ -63,13 +67,14 @@ export const createSheet = z.strictObject({
   periodType, from: date, to: date, scope: z.enum(["All", "Selected"]), employeeIds: z.array(id).min(1).max(500).optional(),
 }).refine((v) => v.from <= v.to, { path: ["to"] }).refine((v) => (v.scope === "Selected") === !!v.employeeIds?.length, { path: ["employeeIds"] });
 export const reloadSheet = z.strictObject({ mode: z.enum(["All", "WorkingDaysOnly"]) });
-export const finalizeSheet = z.strictObject({ expenseMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) });
+/** `expectedTotal` / `expectedSlips` = the totals the Owner viewed (detail `total`, `employeeCount`): the backend refuses with 409 TOTALS_CHANGED when the sheet now differs. */
+export const finalizeSheet = z.strictObject({ expenseMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), expectedTotal: money.optional(), expectedSlips: z.number().int().nonnegative().optional() });
 const instant = z.string().max(40).refine((v) => !Number.isNaN(Date.parse(v)));
 export const paySheet = z.strictObject({
-  paidAt: instant, method: paymentMethod, note: text.max(500),
+  paidAt: instant, method: paymentMethod, note: text.max(500), cashAccountId: id.optional(),
   lines: z.array(z.strictObject({ slipId: id, amount: z.number().int().min(1) })).min(1).max(500),
 });
-export const standalonePayment = z.strictObject({ employeeId: id, amount: z.number().int().min(1), paidAt: instant, method: paymentMethod, note: text.max(500) });
+export const standalonePayment = z.strictObject({ employeeId: id, amount: z.number().int().min(1), paidAt: instant, method: paymentMethod, note: text.max(500), cashAccountId: id.optional() });
 
 export type SheetRow = z.infer<typeof sheetRow>;
 export type SheetPage = z.infer<typeof sheetPage>;

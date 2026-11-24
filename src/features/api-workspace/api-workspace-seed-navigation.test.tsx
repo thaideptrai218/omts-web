@@ -31,7 +31,8 @@ it("splits the catalogue and the purchase documents into Giống and Vật tư e
     ["Nhập giống", "/operations/seed-receipts"], ["Nhập vật tư", "/operations/supply-receipts"], ["Trả giống nhập", "/operations/seed-returns"], ["Trả vật tư nhập", "/operations/supply-returns"],
   ]));
   expect(buying.querySelector('a[href="/operations/purchase-receipts"]')).toBeNull();
-  expect(nav.querySelector('a[href="/operations/supplier-payments"]')).toBeNull();
+  // 20/11: the Accountant found no way to reach supplier payments except the dashboard link, so it is a Mua hàng entry ("Thanh toán").
+  expect(buying.querySelector('a[href="/operations/supplier-payments"]')).not.toBeNull();
 });
 
 it("groups Nuôi trồng into four titled columns and moves the report and tracing links out", () => {

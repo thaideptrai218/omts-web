@@ -16,11 +16,27 @@ export type OriginPhotoQuery = z.infer<typeof photoQuerySchema>;
 export const PHOTO_PROXY_PATH = "/origin/photo";
 const LOCAL_DOWNLOAD_PREFIX = "/api/files/local/";
 
+// Logo và ảnh bìa của HTX (hồ sơ trong Thiết lập): backend trả đường dẫn công khai không ký /api/public/cooperative/{logos|cover-photos}/{năm}/{tháng}/{tệp}.
+// Cũng đi qua proxy để trình duyệt không biết origin backend; chỉ hai thư mục đó, tên tệp đúng mẫu.
+const COOPERATIVE_FILE_PREFIX = "/api/public/cooperative/";
+const cooperativeFileQuerySchema = z.strictObject({
+  c: z.enum(["logos", "cover-photos"]),
+  f: z.string().regex(/^\d{4}\/\d{2}\/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/u),
+});
+
 function proxyHref(query: OriginPhotoQuery): string {
   return `${PHOTO_PROXY_PATH}?${new URLSearchParams({ k: query.k, e: query.e, s: query.s }).toString()}`;
 }
 
+function fromCooperativeFilePath(pathname: string): string | null {
+  if (!pathname.startsWith(COOPERATIVE_FILE_PREFIX)) return null;
+  const [folder, ...rest] = pathname.slice(COOPERATIVE_FILE_PREFIX.length).split("/");
+  const parsed = cooperativeFileQuerySchema.safeParse({ c: folder, f: rest.join("/") });
+  return parsed.success && !parsed.data.f.includes("..") ? `${PHOTO_PROXY_PATH}?${new URLSearchParams(parsed.data).toString()}` : null;
+}
+
 function fromLocalPath(pathname: string, search: string): string | null {
+  if (pathname.startsWith(COOPERATIVE_FILE_PREFIX)) return search ? null : fromCooperativeFilePath(pathname);
   if (!pathname.startsWith(LOCAL_DOWNLOAD_PREFIX)) return null;
   let key: string;
   try { key = decodeURIComponent(pathname.slice(LOCAL_DOWNLOAD_PREFIX.length)); } catch { return null; }
@@ -46,6 +62,12 @@ export function resolvePhotoSource(raw: string, backendOrigin: string): string |
 
 /** Dựng lại URL backend từ tham số proxy đã kiểm tra; luôn cùng origin backend đã cấu hình. */
 export function backendPhotoUrl(searchParams: URLSearchParams, backendOrigin: string): URL | null {
+  if (searchParams.has("c")) {
+    const file = cooperativeFileQuerySchema.safeParse({ c: searchParams.get("c") ?? "", f: searchParams.get("f") ?? "" });
+    if (!file.success || [...searchParams.keys()].some((name) => name !== "c" && name !== "f") || file.data.f.includes("..")) return null;
+    const target = new URL(`${COOPERATIVE_FILE_PREFIX}${file.data.c}/${file.data.f}`, backendOrigin);
+    return target.origin === backendOrigin && target.pathname.startsWith(COOPERATIVE_FILE_PREFIX) ? target : null;
+  }
   if ([...searchParams.keys()].some((name) => !["k", "e", "s"].includes(name))) return null;
   const parsed = photoQuerySchema.safeParse({ k: searchParams.get("k") ?? "", e: searchParams.get("e") ?? "", s: searchParams.get("s") ?? "" });
   if (!parsed.success) return null;

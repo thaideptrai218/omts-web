@@ -1,5 +1,6 @@
 import "server-only";
 import { employeeFileMime } from "@/features/employee-api/employee-file-contract";
+import { canReadEmployees } from "@/features/employee-api/employee-read-access";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -39,7 +40,9 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
     if (initial.status !== "resolved") return json({ status: "session-expired" }, initial.status === "unavailable" ? 503 : 401);
     const context = await gateway.application(request.headers.get("cookie"));
     if (context.status !== "ready") return json({ status: "unavailable" }, 503);
-    if (context.context.identity.subjectType !== "CooperativeOwner") return json({ status: "forbidden", code: "MSG02" }, 403);
+    // Chủ hợp tác xã làm mọi việc; Kế toán chỉ đọc danh sách, hồ sơ và loại công việc (backend vẫn ẩn dữ liệu cá nhân của họ).
+    const readOnlyViewer = ["list", "detail", "job-types"].includes(plan.action) && canReadEmployees(context.context.identity, context.context.permissions.functionPermissions);
+    if (context.context.identity.subjectType !== "CooperativeOwner" && !readOnlyViewer) return json({ status: "forbidden", code: "MSG02" }, 403);
     const controller = new AbortController(), abort = () => controller.abort();
     request.signal.addEventListener("abort", abort, { once: true });
     // Files take longer than a JSON call: a workbook is built or parsed row by row.
@@ -70,10 +73,12 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
       const parsed = plan.schema.safeParse(result.data);
       if (!parsed.success) return json({ status: "invalid-response" }, 502);
       const data = parsed.data as Record<string, unknown>, employee = (data.employee ?? data) as Record<string, unknown>;
-      if (plan.id && employee.id !== plan.id) return json({ status: "invalid-response" }, 502);
+      if (plan.id && plan.action !== "end-preview" && employee.id !== plan.id) return json({ status: "invalid-response" }, 502);
       if ("employee" in data) { delete data.message; delete data.messageCode; }
       // Receipts (issue-account, create with account) keep the credential fields; everything else returns the bare employee.
-      return json({ status: "success", data: "employee" in data && !plan.receipt && !["end-employment", "resume", "issue-account"].includes(plan.action) ? employee : data });
+      // A create or update answers with the bare employee; the duplicate ID number warning travels inside it so the screen can show it.
+      const bare = data.duplicateIdNumber ? { ...employee, duplicateIdNumber: data.duplicateIdNumber } : employee;
+      return json({ status: "success", data: "employee" in data && !plan.receipt && !["end-employment", "resume", "issue-account"].includes(plan.action) ? bare : data });
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); }
   } catch { return json({ status: "unavailable" }, 503); }
 }

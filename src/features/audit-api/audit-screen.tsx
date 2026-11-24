@@ -16,6 +16,7 @@ import { AuditChangeSummary } from "./change-summary";
 import type { AuditPage } from "./contracts";
 import { actionOptionLabel, auditAction, auditTime, longestAuditFrom, recordNames } from "./presentation";
 import { auditRepository } from "./repository";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Row = AuditPage["page"]["items"][number];
 type Column = { key: string; label: string; render(row: Row): ReactNode };
@@ -132,7 +133,7 @@ function AuditList({ helpHref }: { helpHref?: string }) {
             <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} thao tác ${auditTime(row.occurredAt)}`} onClick={() => toggle(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
             {visible.map((column) => <td key={column.key}>{column.render(row)}</td>)}
           </OpenableTableRow>
-          {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><AuditDetailPanel id={row.id} /></div></td></tr>}
+          {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><AuditDetailPanel id={row.id} /></div></DetailRow>}
         </Fragment>)}</tbody></table>}
     </ManagementScroller>
   </ManagementLayout>;

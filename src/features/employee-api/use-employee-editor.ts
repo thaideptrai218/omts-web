@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import type { EmployeeListItemDto } from "@/features/employee-management/api/employee-contract.schemas";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { useMutation } from "@/features/operations/ui";
+import { useActionDialog } from "@/components/ui/use-action-dialog";
+import { accountantWarningFor, applyGrantSelection, grantOutcomeNotice, hasAnyRole } from "./employee-account-grants";
 import { employeeViewSchema, type Employee } from "./contracts";
 import { employeeCreateReceiptSchema } from "./employee-create-contract";
 import { blankCreateValues, groupsWithIssues, parseEmployeeCreate, type EmployeeCreateIssue } from "./employee-create-model";
@@ -38,6 +40,9 @@ export function useEmployeeEditor({ zones, lookupsReady, onClose, onSaved }: Emp
   // One-time password: component state only, cleared on acknowledgement, never logged or cached.
   const [credential, setCredential] = useState<Credential>();
   const savedEmployee = useRef<Employee | undefined>(undefined);
+  const [grantNotice, setGrantNotice] = useState<{ text?: string; failed: boolean }>();
+  const zoneNames = useRef(new Map<string, string>());
+  const confirmation = useActionDialog();
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => () => { savedEmployee.current = undefined; }, []);
 
@@ -100,9 +105,16 @@ export function useEmployeeEditor({ zones, lookupsReady, onClose, onSaved }: Emp
     setIssues([]); setComparisonTarget(undefined); setCompared(undefined); setDiscard(false);
     const account = parsed.body.account;
     if (account) {
+      // D9: a second Accountant only warns; the Owner's OK continues.
+      const warning = values.grants.accountant ? await accountantWarningFor(values.grants) : undefined;
+      if (warning && !(await confirmation.confirm(warning))) return;
       const receipt = await mutation.run(() => repository.write("create", parsed.body, employeeCreateReceiptSchema));
       if (!receipt) return;
       savedEmployee.current = receipt.employee;
+      // The create endpoint takes a username only; grants follow through the grant-create path and never hide the password.
+      const accountId = receipt.employee.account?.id;
+      const outcome = accountId && hasAnyRole(values.grants) ? await applyGrantSelection(accountId, values.grants, zoneNames.current) : undefined;
+      setGrantNotice({ text: grantOutcomeNotice(outcome), failed: !!outcome?.failed.length });
       setCredential({ username: receipt.employee.account?.username ?? account.username, password: receipt.temporaryPassword, expiresAt: receipt.temporaryPasswordExpiresAt });
       return;
     }
@@ -112,7 +124,7 @@ export function useEmployeeEditor({ zones, lookupsReady, onClose, onSaved }: Emp
 
   /** The one-time credential is destroyed here; the list is told about the new employee afterwards. */
   function acknowledgeCredential() {
-    setCredential(undefined);
+    setCredential(undefined); setGrantNotice(undefined);
     const saved = savedEmployee.current;
     savedEmployee.current = undefined;
     if (saved) onSaved(saved);
@@ -127,5 +139,5 @@ export function useEmployeeEditor({ zones, lookupsReady, onClose, onSaved }: Emp
     if (next) setCompared(next);
   }
 
-  return { repository, mutation, values, setValues, issues: allIssues, open, errorGroups, toggleGroup, compared, setCompared, comparisonTarget, reconciledRows, setReconciledRows, discard, setDiscard, credential, formRef, dirty, problem, fieldError, errorProps, close, save, acknowledgeCredential, openComparison };
+  return { repository, mutation, values, setValues, issues: allIssues, open, errorGroups, toggleGroup, compared, setCompared, comparisonTarget, reconciledRows, setReconciledRows, discard, setDiscard, credential, grantNotice, onZones: useCallback((names: Map<string, string>) => { zoneNames.current = names; }, []), confirmation, formRef, dirty, problem, fieldError, errorProps, close, save, acknowledgeCredential, openComparison };
 }

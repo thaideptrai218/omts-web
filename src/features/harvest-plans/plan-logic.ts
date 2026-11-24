@@ -18,6 +18,24 @@ export const plannedLaneNumbers = (line: Pick<PlanLine, "lanes">) => line.lanes.
 /** A line (a raft) can be harvested now when the API allows it and it has no lot yet; lanes are no longer planned. */
 export const lineCanHarvest = (line: Pick<PlanLine, "lot" | "canHarvest">) => line.canHarvest && !line.lot;
 
+/** Who reads the plan: the Owner (makes, gives out and completes it) or the person that works it in the zone (receives, harvests and hands over). */
+export type PlanViewer = "owner" | "zone";
+/**
+ * One line telling the viewer what comes next on a plan of this status; empty for a plan that is over. The buttons themselves come from `allowedActions`,
+ * so this only explains the stage.
+ */
+export function planNextStepHint(statusId: number, viewer: PlanViewer): string {
+  const owner = viewer === "owner";
+  switch (statusId) {
+    case PLAN.draft: return owner ? "Phiếu tạm: kiểm tra các dòng rồi bấm Giao QLV." : "";
+    case PLAN.assigned: return owner ? "Đã giao, chờ quản lý vùng nhận kế hoạch." : "Cần nhận: bấm Nhận kế hoạch để bắt đầu thu hoạch.";
+    case PLAN.received: return owner ? "Quản lý vùng đã nhận, chờ ghi lô thu hoạch." : "Đã nhận: ghi lô thu hoạch cho từng bè trong kế hoạch.";
+    case PLAN.harvesting: return owner ? "Quản lý vùng đang thu hoạch, chờ bàn giao." : "Đang thu: khi mọi bè đã xong, bấm Bàn giao cho chủ.";
+    case PLAN.handedOver: return owner ? "Quản lý vùng đã bàn giao, kiểm tra rồi bấm Hoàn thành." : "Đã bàn giao, chờ chủ hoàn thành.";
+    default: return "";
+  }
+}
+
 /** The totals of a plan by raft line: rafts, expected cages, lines with a lot. */
 export function planTotals(lines: readonly PlanLine[]) {
   const cages = lines.some((line) => line.expectedCageCount != null) ? lines.reduce((sum, line) => sum + (line.expectedCageCount ?? 0), 0) : null;
@@ -161,6 +179,6 @@ export function buildPlanBody(form: PlanForm) {
 /** What the harvest form needs of a plan line: the lanes to lock (planned ones only) and what the line expects, to start the product line from. */
 export const harvestPlanFor = (plan: Pick<PlanView, "code">, line: PlanLine) => ({
   lineId: line.id, planCode: plan.code, raftId: line.raftId, raftCode: line.raftCode, laneNumbers: plannedLaneNumbers(line),
-  expectedProductId: line.expectedProduct?.id, expectedCageCount: line.expectedCageCount ?? undefined,
+  expectedProductId: line.expectedProduct?.id, expectedCageCount: line.expectedCageCount ?? undefined, expectedHarvestDate: line.expectedHarvestDate ?? undefined,
 });
 export type HarvestPlanTarget = ReturnType<typeof harvestPlanFor>;

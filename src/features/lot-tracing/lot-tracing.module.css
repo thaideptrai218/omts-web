@@ -65,6 +65,19 @@
 .linkBtn { color: var(--omts-color-danger); font-weight: 600; min-height: 2.5rem; padding-inline: .5rem; text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .resultItem, .seg button { transition: none; } }
 
+/* Sơ đồ chuỗi truy xuất: mỗi mắt xích một nút, màu và chữ cùng báo trạng thái (không chỉ dựa vào màu) */
+.chain { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); }
+.chainLink { width: 100%; height: 100%; text-align: left; display: grid; gap: .125rem; padding: .625rem .75rem; min-height: 4.25rem; border: 1px solid var(--omts-color-border); border-left-width: 4px; border-radius: var(--omts-radius-control); background: var(--omts-color-surface); cursor: pointer; }
+.chainLink:hover { background: var(--omts-color-surface-subtle); }
+.chainLink strong { font-size: .8125rem; }
+.chainLink span { font-size: .75rem; color: var(--omts-color-text-muted); overflow-wrap: anywhere; }
+.chainLink [data-state] { font-weight: 600; }
+.chainOk { border-left-color: var(--omts-color-success); }
+.chainWarn { border-left-color: var(--omts-color-warning); background: var(--omts-color-warning-soft); }
+.chainBad { border-left-color: var(--omts-color-danger); background: var(--omts-color-danger-soft); }
+.alertClaim { margin: .75rem 0; padding: .75rem 1rem; border-radius: var(--omts-radius-control); background: var(--omts-color-danger-soft); color: var(--omts-color-text); border: 1px solid var(--omts-color-danger); font-size: .875rem; }
+.facts a, .table a { overflow-wrap: anywhere; }
+
 /* Khu thao tác không hoàn tác (thu hồi nguồn gốc), tách khỏi các nút thường */
 .dangerZone { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; padding: 1rem 1.25rem; border: 1px solid var(--omts-color-danger); border-radius: var(--omts-radius-card); background: var(--omts-color-surface); }
 .dangerZone h2 { font-size: 1rem; font-weight: 700; margin: 0; color: var(--omts-color-danger); }

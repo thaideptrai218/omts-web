@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { readAccessTokenClaims } from "@/server/auth/access-token-claims";
 import { sessionCookieNames, type SessionCookieNames } from "@/server/auth/session-cookie-names";
+import { originNotFoundResponse, probeOriginToken, readCooperativeNameForNotFound } from "@/server/public/origin-token-probe";
 import {
   AUTH_REJECTION_BEFORE_EXECUTION, AUTH_REJECTION_HEADER, AUTH_REJECTION_RELOAD_REQUIRED, DISPLAYED_ACCOUNT_HEADER,
 } from "@/shared/http/session-headers";
@@ -62,7 +63,16 @@ function guardPage(request: NextRequest, names: SessionCookieNames, secure: bool
   return NextResponse.redirect(target);
 }
 
-export function proxy(request: NextRequest): NextResponse {
+// Trang nguồn gốc công khai: mã QR sai hoặc không có hóa đơn trả HTTP 404 thật (trang đã stream thì không đổi được mã).
+async function guardOrigin(request: NextRequest): Promise<NextResponse | Response> {
+  const segments = request.nextUrl.pathname.split("/").filter(Boolean);
+  if (segments.length !== 2) return NextResponse.next();
+  if (await probeOriginToken(segments[1], request.headers) === "pass") return NextResponse.next();
+  return originNotFoundResponse(await readCooperativeNameForNotFound());
+}
+
+export async function proxy(request: NextRequest): Promise<NextResponse | Response> {
+  if (request.nextUrl.pathname.startsWith("/origin/")) return guardOrigin(request);
   // Mock review mode has no sessions; a misconfigured profile is reported by the route handlers.
   const profile = process.env.OMTS_WEB_COOKIE_PROFILE;
   if (process.env.OMTS_DATA_SOURCE !== "api" || (profile !== "https" && profile !== "http-loopback-dev")) return NextResponse.next();
@@ -77,6 +87,7 @@ export function proxy(request: NextRequest): NextResponse {
 export const config = {
   matcher: [
     "/api/:path*",
+    "/origin/:token",
     {
       source: "/(dashboard|access|account|audit|cooperative|employees|farming|notifications|operations|settings|system|trader-requests|workspace|onboarding)/:path*",
       missing: [

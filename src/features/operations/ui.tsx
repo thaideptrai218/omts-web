@@ -1,6 +1,7 @@
 "use client";
 import { formatVndWithSymbol } from "@/shared/format/vnd";
 import { SelectBox } from "@/components/ui/select-box";
+import { BackToOverviewLink, isPermissionDenied } from "@/components/feedback/permission-denied-notice";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid, type DataGridSort } from "@/components/ui/data-grid";
@@ -9,12 +10,15 @@ import { ManagementHeading } from "@/components/ui/management-page";
 import type { InterfaceIconName } from "@/components/ui/interface-icon";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { workspaceError } from "@/features/api-workspace/workspace-error";
+import { hrProblemMessage } from "@/shared/messages/hr-problem";
 import { farmingErrorText } from "@/features/cultivation-api/farming-error-text";
 
 export function operationError(result: Exclude<WorkspaceResult<unknown>, { status: "success" }>) {
   const farming = farmingErrorText(result);
   if (farming !== undefined) return farming;
   if (result.httpStatus === 401 && result.uncertain) return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại và đối chiếu kết quả trước khi lập lượt mới.";
+  const hr = hrProblemMessage(result.code, result.hrProblem);
+  if (hr) return hr;
   const messages: Record<string, string> = { MSG41: "Số tiền phải là bội số của 1.000 đồng.", MSG45: "Số tiền hoặc số lượng vượt mức cho phép. Hãy đối chiếu số còn nợ hoặc số còn được trả.",
     "MSG-SALE-13": "Chưa dùng được VietQR vì hợp tác xã chưa có tài khoản nhận tiền. Hãy chọn cách thanh toán khác và nhờ Chủ hợp tác xã thiết lập tài khoản.",
     "MSG-SALE-14": "Chuyển khoản chưa về. Dừng giao dịch này? Hóa đơn không được lưu, mã chỉ giữ trong nhật ký. Hãy trả lại tiền mặt đã nhận (nếu có) và giữ nguyên hàng.",
@@ -50,7 +54,11 @@ export function Select({ label, children, ...props }: ComponentProps<typeof Sele
 export function Note({ label, ...props }: ComponentProps<"textarea"> & { label: string }) {
   return <label className="block text-xs font-medium text-text-muted">{label}<textarea rows={3} {...props} className={control} /></label>;
 }
-export function ErrorNotice({ error }: { error?: string }) { return error ? <p role="alert" className="my-4 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p> : null; }
+export function ErrorNotice({ error }: { error?: string }) {
+  if (!error) return null;
+  // A refused permission cannot be fixed by retrying: say so and offer the overview.
+  return <div role="alert" className="my-4 grid gap-1 rounded-control border border-danger/30 bg-danger/5 p-3 text-sm text-danger"><p>{error}</p>{isPermissionDenied(error) && <BackToOverviewLink />}</div>;
+}
 export function Skeleton() { return <div role="status" aria-label="Đang tải dữ liệu" className="my-5 space-y-3">{[1, 2, 3].map((id) => <div key={id} className="omts-skeleton h-14 rounded-control" />)}</div>; }
 export function Money({ value }: { value: number | null | undefined }) { return <span data-currency>{value == null ? "—" : formatVndWithSymbol(value)}</span>; }
 export const money = (value: number | null | undefined) => value == null ? "—" : formatVndWithSymbol(value);

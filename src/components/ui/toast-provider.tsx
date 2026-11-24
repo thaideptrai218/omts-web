@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/pausable-timer";
 
 import Link from "next/link";
+import { VietnameseValidationMessages } from "@/components/form/vietnamese-validation-messages";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import styles from "./toast-provider.module.css";
 
@@ -114,6 +115,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   return (
     <ToastContext.Provider value={value}>
+      <VietnameseValidationMessages />
       {children}
       <div aria-label="Thông báo hệ thống" className={styles.region}>
         {messages.map((message) => (

@@ -64,7 +64,7 @@ function PaymentForm_({ data, customerId, mode, onClose, onSaved }: { data: Paym
   async function submit(asQr: boolean, confirmAboveDebt = false, confirmDuplicateBankReference = false): Promise<void> {
     if (money <= 0) { setError(discountMode ? "Nhập số tiền chiết khấu lớn hơn 0." : "Nhập số tiền lớn hơn 0."); return; }
     if (!asQr && !discountMode && method === "OtherTransfer" && !bankReference.trim()) { setError("Nhập mã giao dịch ngân hàng."); return; }
-    if ((asQr || method === "OtherTransfer") && !discountMode && !cashAccountId) { setError("Chọn tài khoản nhận tiền. Nếu chưa có, thêm tài khoản ngân hàng trong Thiết lập → Sổ quỹ."); return; }
+    if ((asQr || method === "OtherTransfer") && !discountMode && !cashAccountId) { setError("Chọn tài khoản nhận tiền. Nếu chưa có, thêm tài khoản ngân hàng trong Cài đặt → Sổ quỹ."); return; }
     if (allocated > paying) { setError("Tổng tiền phân bổ vượt số tiền thu."); return; }
     const over = allocate ? allocation.over() : undefined;
     if (over) { setError(`Hóa đơn ${over.code} chỉ còn cần thu ${fmt(over.unpaid)} đ.`); return; }

@@ -26,6 +26,7 @@ import { closeReasons, lotStatusIds, type LotListQuery, type LotPage, type LotRo
 import { LotDetailPanel } from "./lot-detail";
 import { LotStatus, closeReasonLabel, lotStatusLabel } from "./lot-labels";
 import { lotRepository } from "./repository";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: LotRow): ReactNode; total?(totals: LotTotals): ReactNode };
 const dash = (value: string | null | undefined) => value || "—";
@@ -149,9 +150,9 @@ function LotsList({ helpHref, linkedCode, linkedZone, linkedRaft }: { helpHref?:
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.lotCode}`} onClick={() => toggle(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={column.numeric ? issueStyles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <LotDetailPanel id={row.id} zoneId={row.zoneId} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

@@ -28,6 +28,7 @@ import Link from "next/link";
 import { ItemImportDialog } from "./item-import-dialog";
 import { errorText, inputRepository, type ListQuery } from "./repository";
 import styles from "./input-items.module.css";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; defaultHidden?: boolean; render(row: ItemRow, unitId: string | undefined, setUnit: (unitId: string) => void): ReactNode };
 const dash = (value: string | null | undefined) => value || "—";
@@ -193,9 +194,9 @@ function ItemList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCod
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.name}`} onClick={() => setExpanded((value) => value === row.id ? undefined : row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row, units[row.id], (unitId) => setUnits((current) => ({ ...current, [row.id]: unitId })))}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={columnCount} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={columnCount} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <ItemDetailPanel id={row.id} unit={row.units.find((unit) => unit.id === units[row.id])} access={access} onEdit={(record, copy) => setEditor({ record, copy })} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

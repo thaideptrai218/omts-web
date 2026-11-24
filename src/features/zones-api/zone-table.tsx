@@ -12,6 +12,7 @@ import type { UnsavedGuard } from "@/features/farming-management/use-unsaved-gua
 import styles from "@/features/farming-management/farming-management.module.css";
 import { ZoneDetailPanel, type ZoneAccess } from "./zone-detail-panel";
 import { IN_USE, licenseOf, zoneStatusLabel, type ZoneRow, type ZoneSortKey } from "./zone-model";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 /** `water` is the zone-id lookup of the water overview, present only while its column is shown and loaded. */
 type Column = { key: ZoneSortKey; label: string; weight: number; render(row: ZoneRow, water?: ReadonlyMap<string, ZoneOverviewItem>, licenses?: ReadonlyMap<string, string>): ReactNode; licenseOnly?: boolean; waterOnly?: boolean; numeric?: boolean };
@@ -46,9 +47,9 @@ export function ZoneTable({ rows, visible, sort, onSort, expandedId, onToggle, c
         <td className={styles.expandCell}><button type="button" aria-expanded={expandedId === row.id} aria-controls={`zone-preview-${row.id}`} aria-label={`${expandedId === row.id ? "Thu gọn" : "Mở"} ${row.name}`} onClick={() => onToggle(row.id)}><InterfaceIcon name={expandedId === row.id ? "chevron-down" : "chevron-right"} /></button></td>
         {columns.map(column => <td key={column.key} data-label={column.label} className={column.numeric ? styles.number : undefined}>{column.render(row, water, licenses)}</td>)}
       </OpenableTableRow>
-      {expandedId === row.id && <tr><td colSpan={columns.length + 1} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
+      {expandedId === row.id && <DetailRow colSpan={columns.length + 1} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
         <ZoneDetailPanel id={row.id} access={accessFor(row.id)} guard={guard} zones={zones} onChanged={onChanged} />
-      </div></td></tr>}
+      </div></DetailRow>}
     </Fragment>)}</tbody>
   </table>;
 }

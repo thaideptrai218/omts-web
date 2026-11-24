@@ -7,7 +7,7 @@ import { ListStateMessage, ManagementPagination, ManagementScroller, Subtabs, ma
 import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
 import { presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { LeaveEditor } from "./my-work-leave-editor";
-import { MAX_PERIOD_DAYS, dateLabel, isValidPeriod, myWorkRepository as repository, type MyWorkTab } from "./my-work-shared";
+import { MAX_PERIOD_DAYS, dateLabel, isValidPeriod, myWorkRepository as repository, readAsUnlinked, type MyWorkTab } from "./my-work-shared";
 import styles from "./my-work-screen.module.css";
 import { MyAssignmentsTable, MyAttendanceTable, MyLeaveTable } from "./my-work-tables";
 import * as c from "./new-module-contracts";
@@ -32,7 +32,7 @@ export function MyWorkScreen() {
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState<string>();
   const valid = isValidPeriod(period);
-  const work = useRemote(useMemo(() => (signal: AbortSignal) => valid ? repository.read("list", period, c.myWorkSchema, signal) : Promise.resolve({ status: "error" as const, httpStatus: 400, uncertain: false }), [valid, period]));
+  const work = useRemote(useMemo(() => (signal: AbortSignal) => valid ? repository.read("list", period, c.myWorkSchema, signal).then(readAsUnlinked) : Promise.resolve({ status: "error" as const, httpStatus: 400, uncertain: false }), [valid, period]));
   const editor = useOperationEditor(() => {}, false);
 
   /** Wraps a setter so the list restarts from page 1 with no open row. */
@@ -54,7 +54,7 @@ export function MyWorkScreen() {
     if (!valid) return <ListStateMessage error={`Chọn một khoảng thời gian cụ thể, tối đa ${MAX_PERIOD_DAYS + 1} ngày (không dùng Toàn thời gian).`} />;
     if (work.error) return <ListStateMessage error={work.error} onRetry={work.reload} retryLabel="Tải lại công việc cá nhân" />;
     if (work.loading || !data) return <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3, 4, 5].map((key) => <div key={key} />)}</div>;
-    if (!linked) return <ListStateMessage>Chưa có hồ sơ nhân viên gắn với tài khoản này.</ListStateMessage>;
+    if (!linked) return <ListStateMessage>Tài khoản chưa gắn hồ sơ nhân viên. Hãy nhờ Chủ HTX gắn tài khoản này với một hồ sơ nhân viên để xem phân công, ngày công và xin nghỉ phép.</ListStateMessage>;
     if (!total) return <ListStateMessage>{term ? "Không có mục phù hợp từ khóa." : tab === "leave" ? "Bạn chưa có yêu cầu nghỉ phép." : "Không có dữ liệu trong khoảng thời gian đã chọn."}</ListStateMessage>;
     if (tab === "assignments") return <MyAssignmentsTable rows={slice(assignments)} />;
     if (tab === "attendance") return <MyAttendanceTable rows={slice(attendance)} />;

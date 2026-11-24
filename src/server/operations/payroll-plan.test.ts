@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { planOperation } from "./operation-plan";
 import * as c from "@/features/payroll/contracts";
@@ -86,14 +86,21 @@ describe("payroll payments", () => {
   });
 });
 
-describe("payroll areas are Owner-only (hard rule)", () => {
-  const grants = [{ functionCode: "PAYROLL", action: "View", dataScope: "AssignedZone", scope: { kind: "all-zones", zoneIds: [] } }] as never;
-  it.each(["payroll", "payroll-payments"] as const)("%s admits only the Cooperative Owner, whatever function grants a Staff account has", (area) => {
+describe("payroll areas: the Owner writes, the Accountant only reads", () => {
+  const grant = (action: string) => ({ functionCode: "PAYROLL", action, dataScope: "AssignedZone", scope: { kind: "all-zones", zoneIds: [] } });
+  const grants = [grant("View"), grant("Export")] as never;
+  it.each(["payroll", "payroll-payments", "labor-costs"] as const)("%s: Owner does everything, a Staff with PAYROLL View/Export only views and exports", (area) => {
     expect(operationAllowed(area, { subjectType: "CooperativeOwner" }, [], "Delete")).toBe(true);
-    for (const subjectType of ["Staff", "Trader", "Admin"]) {
-      expect(operationAllowed(area, { subjectType }, grants, "View")).toBe(false);
-      expect(operationAllowed(area, { subjectType }, grants, "Export")).toBe(false);
-    }
+    expect(operationAllowed(area, { subjectType: "Staff" }, grants, "View")).toBe(true);
+    expect(operationAllowed(area, { subjectType: "Staff" }, grants, "Export")).toBe(true);
+    for (const action of ["Create", "Edit", "Delete"]) expect(operationAllowed(area, { subjectType: "Staff" }, grants, action)).toBe(false);
+    // Without the grant (a Zone Manager) or for other subjects there is no access at all.
+    expect(operationAllowed(area, { subjectType: "Staff" }, [], "View")).toBe(false);
+    for (const subjectType of ["Trader", "Admin"]) expect(operationAllowed(area, { subjectType }, grants, "View")).toBe(false);
+  });
+  it.each(["payroll-settings"] as const)("%s is the Owner's alone", (area) => {
+    expect(operationAllowed(area, { subjectType: "CooperativeOwner" }, [], "Edit")).toBe(true);
+    expect(operationAllowed(area, { subjectType: "Staff" }, grants, "View")).toBe(false);
   });
   it("lists only employees owed pay unless includeAll=true is sent", () => {
     expect(planOperation("payroll-payments", "GET", q("action=payable&search=an&includeAll=true"))?.path).toBe("/api/payrolls/payable-employees?search=an&includeAll=true");

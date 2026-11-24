@@ -13,20 +13,29 @@ export function OriginPageView({ page, langHrefs }: Props) {
   const copy = originCopy(page.language);
   const phone = telHref(page.cooperative.phoneNumber);
   const invoiceDate = page.invoice?.date ?? null;
+  // Sản phẩm của các lô đang hiệu lực (không lộ số lượng): tên sản phẩm và tên HTX là tiêu đề; mã và ngày hóa đơn là dòng phụ.
+  const products = [...new Set(page.lots.filter((lot) => lot.originState === "Published").flatMap((lot) => lot.products))];
+  const cooperativeName = page.cooperative.fullName;
   const hero = (
     <section className={s.hero} aria-labelledby="origin-title">
       <div className={s.wrap}>
         <p className={s.eyebrow}>{copy.eyebrow}</p>
         <h1 id="origin-title" className={s.title}>
-          {page.invoice ? `${copy.invoice} ${page.invoice.code}` : page.cooperative.shortName ?? page.cooperative.fullName}
-          {page.invoice ? <span className={s.titleDate}> · {copy.invoiceDate} <time dateTime={page.invoice.date}>{formatOriginDate(page.invoice.date)}</time></span> : null}
+          {products.length > 0 ? <>{products.join(", ")}<span className={s.titleCoop}> · {cooperativeName}</span></> : cooperativeName}
         </h1>
+        {page.invoice ? <p className={s.invoiceLine}>{`${copy.invoice} ${page.invoice.code} · ${copy.invoiceDate}`} <time dateTime={page.invoice.date}>{formatOriginDate(page.invoice.date)}</time></p> : null}
         <p className={s.lead}>{copy.lead}</p>
+        {page.cooperative.coverPhotoUrl ? (
+          <div className={s.cover}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- ảnh bìa HTX qua proxy ảnh của trang công khai, không đi qua trình tối ưu ảnh của Next */}
+            <img src={page.cooperative.coverPhotoUrl} alt="" decoding="async" referrerPolicy="no-referrer" />
+          </div>
+        ) : null}
       </div>
     </section>
   );
   return (
-    <OriginPageShell language={page.language} copy={copy} langHrefs={langHrefs} hero={hero}>
+    <OriginPageShell language={page.language} copy={copy} langHrefs={langHrefs} hero={hero} brand={{ name: cooperativeName, logoUrl: page.cooperative.logoUrl ?? null }}>
       <OriginCooperativeBlock cooperative={page.cooperative} copy={copy} />
       {page.status === "Ok" ? (
         <section aria-labelledby="origin-lots">

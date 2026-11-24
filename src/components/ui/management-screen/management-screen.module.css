@@ -1,4 +1,4 @@
-.theme { --omts-color-primary:var(--omts-brand, #315a96); --omts-color-primary-hover:var(--omts-brand-hover, #294d82); --omts-color-primary-soft:var(--omts-brand-soft, #edf3fc); --omts-color-accent:var(--omts-brand, #315a96); --omts-color-info:var(--omts-brand, #315a96); --omts-color-focus-ring:var(--omts-brand, #315a96); --omts-color-surface-subtle:#f3f6fb; --omts-color-text:#182f47; --omts-color-text-muted:#5b6f86; --omts-color-border:#dce3ed; --omts-color-border-strong:#8496ad; }
+﻿.theme { --omts-color-primary:var(--omts-brand, #315a96); --omts-color-primary-hover:var(--omts-brand-hover, #294d82); --omts-color-primary-soft:var(--omts-brand-soft, #edf3fc); --omts-color-accent:var(--omts-brand, #315a96); --omts-color-info:var(--omts-brand, #315a96); --omts-color-focus-ring:var(--omts-brand, #315a96); --omts-color-surface-subtle:#f3f6fb; --omts-color-text:#182f47; --omts-color-text-muted:#5b6f86; --omts-color-border:#dce3ed; --omts-color-border-strong:#8496ad; }
 .screen { --rail: 248px; --gap: 16px; display:flex; flex-direction:column; gap:8px; min-width:0; height:calc(100dvh - var(--management-top, 180px)); min-height:420px; }
 .toolbar { display:grid; grid-template-columns:var(--rail) minmax(0,1fr); gap:var(--gap); align-items:center; flex:none; }
 .title { display:flex; align-items:center; gap:10px; min-width:0; color:var(--omts-color-text); }
@@ -15,8 +15,27 @@
 .iconButton:disabled { opacity:.45; cursor:not-allowed; }
 .body { display:grid; grid-template-columns:var(--rail) minmax(0,1fr); gap:var(--gap); flex:1 1 auto; min-height:0; }
 .screen[data-filters="closed"] .body { grid-template-columns:minmax(0,1fr); }
+/* A row is open: its detail fills a pane beside the list; the list keeps only its key columns and the filter rail steps aside. */
+.detailPane { display:none; position:relative; min-width:0; min-height:0; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); }
+.detailPaneBody { height:100%; overflow-y:auto; padding:14px 54px 0 22px; scrollbar-width:none; }
+.detailPaneBody::-webkit-scrollbar { display:none; }
+.detailClose { position:absolute; top:10px; right:12px; z-index:4; display:grid; place-items:center; width:30px; height:30px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); color:var(--omts-color-text-muted); }
+.detailClose:hover { border-color:var(--omts-color-primary); color:var(--omts-color-primary); }
+.detailClose svg { width:16px; height:16px; }
+.screen[data-detail-open] .detailPane { display:block; }
+@media (min-width:901px) {
+  .screen[data-detail-open] .body { grid-template-columns:minmax(300px,36%) minmax(0,1fr); }
+  .screen[data-detail-open] .rail { display:none; }
+  /* Kept: the first three cells (checkbox, chevron, identity column) and the last one. The matching <col> goes too, otherwise its width share stays reserved and the kept columns do not fill the pane. A screen must therefore put its identity column first. */
+  .screen[data-detail-open] .scroller :is(th,td,col):nth-child(n+4):not(:last-child) { display:none; }
+  .screen[data-detail-open] .scroller table { min-width:0 !important; }
+}
+@media (max-width:900px) {
+  .detailPane { position:fixed; inset:0; z-index:45; border:0; border-radius:0; }
+  .detailPaneBody { padding:54px 14px 0; }
+}
 .rail { position:relative; min-height:0; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); }
-.railScroll { position:relative; height:100%; overflow-y:auto; padding:14px; display:grid; gap:16px; align-content:start; }
+.railScroll { position:relative; height:100%; overflow-y:auto; scrollbar-width:none; padding:14px; display:grid; gap:16px; align-content:start; }
 /* Show/hide filter toggle: one look in both states, always visible, centred with `top` (not a transform, which the
    global pressed-button style replaced and made the button jump on click). */
 .railToggle { position:absolute; top:calc(50% - 22px); z-index:6; display:grid; place-items:center; width:20px; height:44px; padding:0; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); color:var(--omts-color-text-muted); box-shadow:0 1px 3px rgb(20 43 56 / .08); transition:color .12s, border-color .12s; }
@@ -34,15 +53,15 @@
 .sortButton[data-active] { color:var(--omts-color-primary); }
 .sortButton[data-active] svg { opacity:1; }
 .picker { position:relative; }
-.pickerPanel { position:absolute; right:0; top:calc(100% + 6px); z-index:20; display:grid; gap:2px; width:220px; max-height:320px; overflow-y:auto; padding:8px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); box-shadow:0 12px 32px #142b3826; }
+.pickerPanel { position:absolute; right:0; top:calc(100% + 6px); z-index:20; display:grid; gap:2px; width:220px; max-height:320px; overflow-y:auto; scrollbar-width:none; padding:8px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); box-shadow:0 12px 32px #142b3826; }
 .pickerPanel label { display:flex; align-items:center; gap:8px; min-height:30px; font-size:13px; }
 .bulkBar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:none; padding:8px 12px; border-bottom:1px solid var(--omts-color-border); background:var(--omts-color-surface-subtle); font-size:13px; }
 .bulkBar button:not(.linkButton) { min-height:28px; height:28px; padding-block:0; }
 .linkButton { color:var(--omts-color-primary); font-size:13px; font-weight:600; min-height:32px; }
 .linkButton:hover { text-decoration:underline; }
-.scroller { position:relative; flex:1 1 auto; min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--omts-color-border-strong) transparent; }
-.scroller::-webkit-scrollbar { display:block; width:10px; height:10px; }
-.scroller::-webkit-scrollbar-thumb { background:var(--omts-color-border-strong); border-radius:6px; }
+/* Scrollbars are hidden for a clean look; wheel, touch and keyboard scrolling still work. */
+.scroller { position:relative; flex:1 1 auto; min-height:0; overflow:auto; scrollbar-width:none; }
+.scroller::-webkit-scrollbar, .railScroll::-webkit-scrollbar, .pickerPanel::-webkit-scrollbar, .subtabs::-webkit-scrollbar { display:none; }
 .viewWidth { position:sticky; left:0; width:var(--view-width, 100%); }
 .pagination { flex:none; display:flex; align-items:center; gap:4px; flex-wrap:wrap; padding:2px 12px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); font-size:12px; }
 .pagination label { display:inline-flex; align-items:center; gap:8px; margin-right:6px; }
@@ -53,7 +72,7 @@
 .pageButton svg { width:14px; height:14px; }
 .pageButton:hover:not(:disabled) { background:var(--omts-color-surface-subtle); }
 .pageButton:disabled { opacity:.35; cursor:not-allowed; }
-.subtabs { display:flex; gap:20px; overflow-x:auto; border-bottom:1px solid var(--omts-color-border); }
+.subtabs { display:flex; gap:20px; overflow-x:auto; scrollbar-width:none; border-bottom:1px solid var(--omts-color-border); }
 .subtabs button { min-height:42px; padding:8px 0; font-size:13px; white-space:nowrap; color:var(--omts-color-text-muted); border-bottom:2px solid transparent; }
 .subtabs button[aria-selected="true"] { color:var(--omts-color-primary); border-bottom-color:var(--omts-color-primary); font-weight:650; }
 /* Form section: a bordered card that folds (title + optional description + chevron), stacked with a gap. */
@@ -105,3 +124,4 @@
 .rangeField span { flex:none; display:grid; place-items:center; width:40px; border-right:1px solid var(--omts-color-border); background:var(--omts-color-primary-soft); font-size:12px; font-weight:600; color:var(--omts-color-primary); }
 .rangeField input { flex:1 1 auto; min-width:0; padding:0 8px; border:0; background:none; text-align:left; font-variant-numeric:tabular-nums; }
 .rangeField input:focus-visible { outline:none; }
+

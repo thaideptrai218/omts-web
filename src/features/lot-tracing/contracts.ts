@@ -35,7 +35,19 @@ export const lotTrace = z.object({
   publishedAt: at.nullable(), withdrawnAt: at.nullable(), corrections: z.array(correctionMark), raftId: id, raftCode: z.string(), zoneId: id, zoneCode: z.string(), zoneName: z.string(),
   cycleId: id, cycleStartDate: day, cycleCloseDate: day.nullable(), cycleStatus: z.string(), lanes: z.array(traceLane), missing: z.array(originGap),
   invoices: z.array(traceInvoice), invoicedKg: kg, canPublish: z.boolean(), canCorrect: z.boolean(), canExport: z.boolean(),
+  // Cân tại cảng: kg thật khi lô đã được cân; chưa cân thì chỉ có kg ước tính.
+  weighedKg: kg.nullish(), weighedAt: at.nullish(),
+  // Kế hoạch thu hoạch và đơn đặt hàng của lô; khiếu nại còn mở trên hóa đơn của lô (chỉ hiển thị).
+  harvestPlan: z.object({ code: z.string(), plannedDate: day, status: z.string(), orders: z.array(z.object({ id, code: z.string() })) }).nullish(),
+  openClaims: z.array(z.object({ code: z.string(), invoiceCode: z.string(), sentAt: at })).nullish(),
 });
+
+/** Truy xuất xuôi từ lô giống / nhà cung cấp: lô thu hoạch, hóa đơn, khách. Tên và SĐT khách là null khi người xem không có quyền xem hóa đơn của vùng hóa đơn. */
+const seedForwardInvoice = z.object({ invoiceId: id, invoiceCode: z.string(), invoiceDate: day, zoneCode: z.string(), customerName: z.string().nullable(), customerPhone: z.string().nullable(), walkIn: z.boolean(), kg });
+export const seedForwardTrace = z.object({
+  lots: z.array(z.object({ lot: searchItem, invoices: z.array(seedForwardInvoice) })), message: z.string().nullable(), messageCode: z.string().nullable(),
+});
+export type SeedForwardTrace = z.infer<typeof seedForwardTrace>;
 
 export const publishBlock = z.enum(["NoRight", "AlreadyPublished", "NotOnSalesInvoice", "OwnerOnly"]);
 export const publishCheck = z.object({

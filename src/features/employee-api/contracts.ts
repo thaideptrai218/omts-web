@@ -17,8 +17,19 @@ export const updateProfileInputSchema = employeeUpdateRequestSchema
   .refine(validProfileDate, { path: ["birthday"] })
   .refine(validStartDate, { path: ["startDate"] })
   .refine(value => !value.employeeTypeFrom || !!value.employeeType, { path: ["employeeTypeFrom"] });
-export const endEmploymentSchema = z.strictObject({ lastWorkingDay: employeeDateOnlySchema, rowVersion: employeeRowVersionSchema }).refine(value => value.lastWorkingDay <= employeeBusinessDate(new Date()), { path: ["lastWorkingDay"] });
+export const endEmploymentSchema = z.strictObject({ lastWorkingDay: employeeDateOnlySchema, rowVersion: employeeRowVersionSchema, lockAccount: z.boolean().optional() }).refine(value => value.lastWorkingDay <= employeeBusinessDate(new Date()), { path: ["lastWorkingDay"] });
 export const employeeVersionSchema = z.strictObject({ rowVersion: employeeRowVersionSchema });
 export const resumeEmployeeSchema = employeeVersionSchema.extend({ phoneNumber: z.string().refine(value => !value.trim() || normalizeEmployeePhone(value) !== null).nullish() });
-export const employmentChangedSchema = z.object({ employee: employeeViewSchema });
+/** What ending employment on a day changes (`GET /api/employees/{id}/end-employment/preview`, and `summary` of the end answer). */
+export const endingConsequencesSchema = z.object({
+  lastWorkingDay: employeeDateOnlySchema,
+  futureAssignments: z.array(z.object({ date: employeeDateOnlySchema, place: z.string().nullish(), jobName: z.string().nullish() })),
+  checkedInNotOut: z.array(employeeDateOnlySchema),
+  advanceBalance: z.number(), unpaidPayslips: z.number().int(), unpaidAmount: z.number(),
+  account: z.object({ id: z.guid(), username: z.string(), displayName: z.string(), status: z.string() }).nullable(),
+  accountCanBeLocked: z.boolean(),
+});
+export type EndingConsequences = z.infer<typeof endingConsequencesSchema>;
+/** `accountNote`: null, "OwnerOnly", "NoActiveAccount" or the message code of the refusal; `accountLocked` says whether the lock happened. */
+export const employmentChangedSchema = z.object({ employee: employeeViewSchema, accountLocked: z.boolean().optional(), accountNote: z.string().nullish(), summary: endingConsequencesSchema.optional() });
 export type EmploymentChange = z.infer<typeof employmentChangedSchema>;

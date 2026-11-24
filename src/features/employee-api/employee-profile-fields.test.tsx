@@ -35,10 +35,17 @@ describe("employee detail: Thông tin tab shows and edits the new profile fields
     }
     expect(panel.queryByText("Email")).toBeNull();
   });
-  it("shows CCCD as not updated when the backend sent none", async () => {
+  it("gathers empty optional fields in one quiet line instead of rows of 'Chưa cập nhật'", async () => {
     const panel = await open(record({ idNumber: null, gender: null, startDate: null }));
-    expect(panel.getByText("CCCD").closest("div")!.textContent).toContain("Chưa cập nhật");
-    expect(panel.getByText("Giới tính").closest("div")!.textContent).toContain("Chưa cập nhật");
+    expect(panel.getByText(/^Chưa cập nhật: .*Giới tính.*Ngày bắt đầu làm việc.*CCCD/)).toBeTruthy();
+    expect(panel.queryByText("CCCD", { selector: "dt" })).toBeNull();
+    expect(panel.getByText("Mã nhân viên", { selector: "dt" })).toBeTruthy();
+  });
+  it("keeps the phone visible as a muted dash, with a hint only when it blocks issuing an account", async () => {
+    const panel = await open(record({ phoneNumber: "", account: null }));
+    expect(panel.getByText("Số điện thoại", { selector: "dt" }).closest("div")!.textContent).toContain("—");
+    expect(panel.getByText("Chưa có số điện thoại để cấp tài khoản")).toBeTruthy();
+    expect(panel.queryByText(/^Chưa cập nhật:.*Số điện thoại/)).toBeNull();
   });
   it("edits code (upper-cased), gender, start date and CCCD and sends them with the row version", async () => {
     await open(record({ idNumber: null, gender: null, startDate: null })); edit();

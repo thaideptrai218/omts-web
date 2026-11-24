@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { nurseryRowSchema } from "./contracts";
-import { NurseryTable, nurseryColumns } from "./nursery-table";
+import { NurseryTable, defaultNurseryColumns, nurseryColumns } from "./nursery-table";
 
 afterEach(cleanup);
 function mount(statusId: number, remaining: number) {
@@ -12,6 +12,14 @@ function mount(statusId: number, remaining: number) {
     onSort={vi.fn()} onToggle={vi.fn()} detail={() => null} />);
 }
 describe("nursery inventory list", () => {
+  it("does not repeat the filtered zone on every row by default, and shows the seed name under the lot code", () => {
+    expect(defaultNurseryColumns).not.toContain("zone");
+    const row = nurseryRowSchema.parse({ id: "n", code: "NU01", zoneId: "z", zoneCode: "KV01", zoneName: "Vùng 1", quantityIn: 1000, seedLotCode: "PN1-1", itemName: "Giống hàu",
+      startDate: "2026-11-01", daysNursing: 12, statusId: 4001, rowVersion: "v1" });
+    render(<NurseryTable rows={[row]} visible={defaultNurseryColumns} sort={{ key: "code", direction: "asc" }} onSort={vi.fn()} onToggle={vi.fn()} detail={() => null} />);
+    expect(screen.queryByText("KV01 · Vùng 1")).toBeNull();
+    expect(screen.getByText("Giống hàu")).toBeTruthy();
+  });
   it("shows seeded and remaining quantities with their column headings", () => {
     mount(4002, 600);
     expect(screen.getByRole("columnheader", { name: "Đã thả" })).toBeTruthy();

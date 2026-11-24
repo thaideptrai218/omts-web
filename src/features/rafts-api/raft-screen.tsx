@@ -23,6 +23,7 @@ import { RaftCreateDialog } from "./raft-create-dialog";
 import type { RaftAccess } from "./raft-detail-panel";
 import { emptyRaftFilters, filterRafts, readZoneRafts, sortRafts, type RaftFilters, type RaftSortKey } from "./raft-model";
 import { RaftTable, raftColumns } from "./raft-table";
+import { useRaftListLive } from "./use-raft-list-live";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const zoneLabelOf = (zone?: ZoneRow) => zone ? `${zone.code} · ${zone.name}` : "";
@@ -55,13 +56,14 @@ function RaftWorkspace({ zones, zoneId, onZone, helpHref }: { zones: readonly Zo
   const functions = permissions.functionPermissions, owner = identity.subjectType === "CooperativeOwner";
   const canCreate = !!zoneId && resourceAllowed("rafts", identity, functions, "Create");
   const access: RaftAccess = { edit: resourceAllowed("rafts", identity, functions, "Edit"), photoEdit: owner,
-    cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), costs: operationAllowed("purchase-receipts", identity, functions, "View", zoneId) };
+    cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), costs: operationAllowed("purchase-receipts", identity, functions, "View", zoneId),
+    logs: operationAllowed("cultivation-cycles", identity, functions, "LogsView", zoneId), water: operationAllowed("water", identity, functions, "View", zoneId) };
   const params = useSearchParams(), recordId = params.get("recordId") ?? "", linkedId = UUID.test(recordId) ? recordId : undefined;
   const [filters, setFilters] = useState<RaftFilters>({ ...emptyRaftFilters, search: params.get("search") ?? "" }), [sort, setSort] = useState<SortState>({ key: "code", direction: "asc" });
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
   const [creating, setCreating] = useState(params.get("create") === "1" && canCreate);
   const guard = useUnsavedGuard(), { notify } = useToast();
-  const [storedColumns, storeColumns] = useStoredValue("omts-columns-rafts", raftColumns.map(column => column.key).join(","));
+  const [storedColumns, storeColumns] = useStoredValue("omts-columns-rafts-v2", raftColumns.filter(column => column.key !== "latitude" && column.key !== "longitude").map(column => column.key).join(","));
   const visible = raftColumns.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);
   const list = useStickyRemote(useCallback((signal: AbortSignal) => zoneId ? readZoneRafts(zoneId, signal) : Promise.resolve({ status: "success" as const, data: [] }), [zoneId]));
   const rows = useMemo(() => sortRafts(filterRafts(list.data ?? [], filters), sort.key as RaftSortKey, sort.direction), [list.data, filters, sort]);
@@ -73,6 +75,7 @@ function RaftWorkspace({ zones, zoneId, onZone, helpHref }: { zones: readonly Zo
   }, [linkedId, list.data]);
 
   const current = Math.min(page, Math.max(1, Math.ceil(rows.length / pageSize))), shown = rows.slice((current - 1) * pageSize, current * pageSize);
+  const live = useRaftListLive(shown.map(row => row.id), access.cycles && visible.some(key => key === "live" || key === "cycle"), list.data);
   const change = (apply: () => void) => void guard.leave(() => { apply(); setPage(1); setExpanded(undefined); });
   const setFilter = <K extends keyof RaftFilters>(key: K, value: RaftFilters[K]) => change(() => setFilters(previous => ({ ...previous, [key]: value })));
   const hasFilter = !!(filters.search || filters.statusId);
@@ -96,7 +99,7 @@ function RaftWorkspace({ zones, zoneId, onZone, helpHref }: { zones: readonly Zo
         : list.error && !list.data ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại" />
         : !list.data ? <ListSkeleton />
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có bè phù hợp bộ lọc." : "Vùng này chưa có bè nuôi."}</ListStateMessage>
-        : <RaftTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} zoneId={zoneId} zoneLabel={zoneLabel} access={access} guard={guard}
+        : <RaftTable rows={shown} live={live} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} zoneId={zoneId} zoneLabel={zoneLabel} access={access} guard={guard}
           onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))} onChanged={() => { list.reload(); notify({ tone: "success", title: "Đã cập nhật bè nuôi." }); }} />}
     </ManagementScroller>
     {creating && <RaftCreateDialog zoneId={zoneId} zoneLabel={zoneLabel} onClose={() => setCreating(false)} onCreated={() => { setCreating(false); notify({ tone: "success", title: "Đã thêm bè nuôi." }); list.reload(); }} />}

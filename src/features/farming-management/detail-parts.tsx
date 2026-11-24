@@ -4,8 +4,8 @@ import { managementStyles } from "@/components/ui/management-screen/management-t
 import styles from "./farming-management.module.css";
 
 /** Label/value pairs of a read-only tab; empty values show a dash so the grid keeps its shape. */
-export function Facts({ items }: { items: readonly (readonly [string, ReactNode])[] }) {
-  return <dl className={styles.fields}>{items.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value === null || value === undefined || value === "" ? "—" : value}</dd></div>)}</dl>;
+export function Facts({ items, flat }: { items: readonly (readonly [string, ReactNode])[]; flat?: boolean }) {
+  return <dl className={flat ? styles.rows : styles.fields}>{items.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value === null || value === undefined || value === "" ? "—" : value}</dd></div>)}</dl>;
 }
 
 /** Tab footer: secondary actions on the left, primary and status actions on the right (DESIGN_GUIDELINES 1.6). */

@@ -1,6 +1,7 @@
 import { REQUEST_STATUS_IDS } from "@/features/trader-purchases/contracts";
-import { formatDate, formatKg, parseKgInput } from "@/features/trader-purchases/presentation";
-import { approxCagesLabel } from "@/shared/format/cage-quantity";
+import { formatDate } from "@/features/trader-purchases/presentation";
+import { isUsableKgPerCage } from "@/shared/format/cage-quantity";
+import { cagesWithEstimate, resolveQuantityInput, type CageQuantityValue } from "@/shared/format/cage-request-quantity";
 import { acceptRequestSchema, declineRequestSchema, requestSendingSchema, type PurchaseRequest } from "./new-module-contracts";
 import type { z } from "zod";
 
@@ -15,7 +16,7 @@ export const REVIEW_STATUS_OPTIONS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /** BR-SALE-02: chỉ trả lời một lần, khi đơn còn "Chờ phản hồi". */
-export const canRespondToRequest = (request: Pick<PurchaseRequest, "statusId">) => request.statusId === REQUEST_STATUS_IDS.awaiting;
+export const canRespondToRequest = (request: Pick<PurchaseRequest, "statusId">) => request.statusId === REQUEST_STATUS_IDS.awaiting || request.statusId === REQUEST_STATUS_IDS.awaitingStaff;
 
 /** The Owner makes an order (Đặt hàng) from a request that waits for an answer, or from an older accepted one that no invoice has fulfilled. */
 export const canOrderRequest = (request: Pick<PurchaseRequest, "statusId" | "fulfilled">) =>
@@ -34,38 +35,31 @@ export function sendingSummary(sending: ReviewSending): { channel: string; statu
   };
 }
 
-/**
- * Số lượng theo kg (API chỉ trả kg) kèm quy đổi gần đúng ra lồng khi biết kg/lồng trung bình của HTX:
- * "≈ 3,6 lồng · 180 kg"; không có tỷ lệ thì chỉ "180 kg".
- */
-export function quantityWithCages(kg: number, kgPerCage?: number): string {
-  const approx = approxCagesLabel(kg, kgPerCage);
-  return approx ? `${approx} · ${formatKg(kg)}` : formatKg(kg);
-}
-
-/** Tóm tắt phản hồi của Chủ HTX cho một dòng danh sách (kg chấp nhận, ngày lấy, trả sau hoặc lý do từ chối/hủy). */
+/** Tóm tắt phản hồi của Chủ HTX cho một dòng danh sách (lồng chấp nhận, ngày lấy, trả sau hoặc lý do từ chối/hủy). */
 export function reviewResponseSummary(request: PurchaseRequest, kgPerCage?: number): { headline: string; note: string | null } {
   const response = request.response;
   if (request.statusId === REQUEST_STATUS_IDS.ordered) return { headline: request.salesOrderCode ? `Đã đặt hàng ${request.salesOrderCode}` : "Đã đặt hàng", note: response?.note ?? null };
   if (request.statusId === REQUEST_STATUS_IDS.cancelled) return { headline: "Thương lái đã hủy", note: request.cancelReason };
   if (!response) return { headline: "Chưa có phản hồi", note: null };
-  if (response.acceptedKg === null) return { headline: "Đã từ chối", note: response.note };
-  const parts = [quantityWithCages(response.acceptedKg, kgPerCage)];
+  if (response.acceptedCages === null) return { headline: "Đã từ chối", note: response.note };
+  const parts = [cagesWithEstimate(response.acceptedCages, kgPerCage)];
   if (response.pickupDate) parts.push(`lấy ngày ${formatDate(response.pickupDate)}`);
   parts.push(response.payLaterAgreed ? "cho trả sau" : "không trả sau");
   return { headline: parts.join(" · "), note: response.note };
 }
 
-export type AcceptForm = { kg: string; pickupDate: string; payLater: boolean; note: string };
+/** `quantity`: số nhập theo lồng hoặc kg; kg được làm tròn thành lồng nguyên bằng kg/lồng trung bình của HTX. */
+export type AcceptForm = { quantity: CageQuantityValue; pickupDate: string; payLater: boolean; note: string };
 const trimmed = (text: string) => text.trim() || null;
 
-/** Kiểm tra form chấp nhận (SALE-03.0): kg > 0, tối đa 3 số lẻ, không vượt kg yêu cầu; ngày lấy không trước hôm nay. */
-export function buildAcceptPayload(form: AcceptForm, request: Pick<PurchaseRequest, "requestedKg" | "rowVersion">, today: string): ReviewResult<z.infer<typeof acceptRequestSchema>> {
-  const kg = parseKgInput(form.kg);
-  if (kg === undefined) return { ok: false, error: "Nhập số kg chấp nhận lớn hơn 0, tối đa 3 chữ số thập phân." };
-  if (kg > request.requestedKg) return { ok: false, error: `Số kg chấp nhận không được vượt quá ${formatKg(request.requestedKg)} thương lái đã yêu cầu.` };
+/** Kiểm tra form chấp nhận (SALE-03.0): số lồng nguyên > 0, không vượt số lồng yêu cầu; ngày lấy không trước hôm nay. */
+export function buildAcceptPayload(form: AcceptForm, request: Pick<PurchaseRequest, "requestedCages" | "rowVersion">, today: string, kgPerCage?: number): ReviewResult<z.infer<typeof acceptRequestSchema>> {
+  const unit = isUsableKgPerCage(kgPerCage) ? form.quantity.unit : "cages";
+  const { cages, error } = resolveQuantityInput(unit, form.quantity.text, kgPerCage);
+  if (cages === undefined) return { ok: false, error: error ?? "Nhập số lồng chấp nhận lớn hơn 0." };
+  if (cages > request.requestedCages) return { ok: false, error: `Số lồng chấp nhận (${cages}) không được vượt quá ${request.requestedCages} lồng thương lái đã yêu cầu.` };
   if (!form.pickupDate || form.pickupDate < today) return { ok: false, error: "Ngày lấy hàng phải từ hôm nay trở đi." };
-  const parsed = acceptRequestSchema.safeParse({ acceptedKg: kg, pickupDate: form.pickupDate, payLaterAgreed: form.payLater, note: trimmed(form.note), rowVersion: request.rowVersion });
+  const parsed = acceptRequestSchema.safeParse({ acceptedCages: cages, pickupDate: form.pickupDate, payLaterAgreed: form.payLater, note: trimmed(form.note), rowVersion: request.rowVersion });
   return parsed.success ? { ok: true, value: parsed.data } : { ok: false, error: "Ghi chú tối đa 1000 ký tự." };
 }
 

@@ -6,12 +6,12 @@ import userEvent from "@testing-library/user-event";
 const ids = { zone: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11", raft: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a12", raft2: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a13", plan: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b06", line: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b07", line2: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08" };
 const state = vi.hoisted(() => ({
   context: { identity: { subjectType: "Staff", username: "qlv" }, permissions: { functionPermissions: [] as { functionCode: string; action: string }[] } },
-  assigned: vi.fn(), skip: vi.fn(),
+  assigned: vi.fn(), skip: vi.fn(), receive: vi.fn(),
 }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/features/cultivation-api/records-harvest-form", () => ({ HarvestForm: (props: { plan: { lineId: string; laneNumbers: number[] } }) => <div role="dialog" aria-label="Form thu hoạch">{props.plan.lineId}:{props.plan.laneNumbers.join(",")}</div> }));
-vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), planRepository: { assigned: state.assigned, skipLanes: state.skip } }));
+vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), planRepository: { assigned: state.assigned, skipLanes: state.skip, receive: state.receive } }));
 import { AssignedPlansBanner } from "./assigned-plans-banner";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
@@ -58,4 +58,17 @@ it("shows nothing without the right to record a harvest, for another zone, or wh
   render(<ToastProvider><AssignedPlansBanner zoneId={ids.zone} raftId={ids.raft} onChanged={() => {}} /></ToastProvider>);
   await waitFor(() => expect(state.assigned).toHaveBeenCalled());
   expect(screen.queryByRole("button", { name: "Thu hoạch" })).toBeNull();
+});
+
+it("offers Nhận kế hoạch for an Assigned plan of this raft and reloads after receiving", async () => {
+  const user = userEvent.setup();
+  const assigned = { ...plan, allowedActions: ["Receive"], lines: plan.lines.map((line) => ({ ...line, canHarvest: false })) };
+  state.assigned.mockResolvedValueOnce({ status: "success", data: [assigned] }).mockResolvedValue({ status: "success", data: [{ ...plan, statusId: 4206, status: "Received" }] });
+  state.receive.mockResolvedValue({ status: "success", data: { done: true } });
+  render(<ToastProvider><AssignedPlansBanner zoneId={ids.zone} raftId={ids.raft} onChanged={() => {}} /></ToastProvider>);
+  const banner = await screen.findByRole("region", { name: "Kế hoạch được giao" });
+  expect(within(banner).queryByRole("button", { name: "Thu hoạch" })).toBeNull();
+  await user.click(within(banner).getByRole("button", { name: "Nhận kế hoạch" }));
+  await waitFor(() => expect(state.receive).toHaveBeenCalledWith(ids.plan, "v1"));
+  expect(await within(await screen.findByRole("region", { name: "Kế hoạch được giao" })).findByRole("button", { name: "Thu hoạch" })).toBeTruthy();
 });

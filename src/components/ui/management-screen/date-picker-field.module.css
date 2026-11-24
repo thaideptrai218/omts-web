@@ -31,7 +31,9 @@
 .calendar :global(.rdp-button_previous), .calendar :global(.rdp-button_next) { width:26px; height:34px; border-radius:6px; }
 .calendar :global(.rdp-button_previous):hover, .calendar :global(.rdp-button_next):hover { background:var(--omts-color-primary-soft); }
 .calendar :global(.rdp-chevron) { width:15px; height:15px; }
-.calendar :global(.rdp-weekday) { height:30px; padding:0; color:var(--omts-color-text-muted); font-size:11px; font-weight:600; }
+/* The header row decides the column widths of the fixed table, so each weekday takes exactly one seventh and centres over its day (T4/T5 drifted without it). */
+.calendar :global(.rdp-weekday) { width:calc(100% / 7); height:30px; min-width:0; box-sizing:border-box; padding:0; overflow:hidden; text-align:center; color:var(--omts-color-text-muted); font-size:11px; font-weight:600; }
+.calendar :global(.rdp-day) { width:calc(100% / 7); box-sizing:border-box; }
 .calendar :global(.rdp-day) { height:36px; padding:0; font-size:12px; text-align:center; }
 .calendar :global(.rdp-day_button) { margin:auto; border:1px solid transparent; border-radius:7px; font:inherit; color:var(--omts-color-text); }
 .calendar :global(.rdp-day_button):hover:not(:disabled) { background:var(--omts-color-primary-soft); color:var(--omts-color-primary); }

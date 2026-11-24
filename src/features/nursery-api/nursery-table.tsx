@@ -8,21 +8,24 @@ import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { nurseryStatusText, nurseryStatusTone, quantityText, type NurseryRow } from "./contracts";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
-type Column = { key: string; label: string; sort?: string; render(row: NurseryRow): ReactNode };
+type Column = { key: string; label: string; sort?: string; defaultHidden?: boolean; render(row: NurseryRow): ReactNode };
 export const nurseryColumns: readonly Column[] = [
   { key: "code", label: "Mã đợt ươm", sort: "code", render: row => <strong className={styles.name}>{row.code}</strong> },
-  { key: "zone", label: "Vùng ươm", render: row => `${row.zoneCode} · ${row.zoneName}` },
-  { key: "lot", label: "Lô giống", render: row => <Link className="text-primary underline" href={`/farming/nursery?${new URLSearchParams({ code: row.code, zoneId: row.zoneId })}`}>{row.seedLotCode ?? "Xem lô giống"}</Link> },
+  // The list is already filtered to one zone, so the zone is optional here instead of repeating on every row.
+  { key: "zone", label: "Vùng ươm", defaultHidden: true, render: row => `${row.zoneCode} · ${row.zoneName}` },
+  { key: "lot", label: "Lô giống", render: row => <><Link className="whitespace-nowrap text-primary underline" href={`/farming/nursery?${new URLSearchParams({ code: row.code, zoneId: row.zoneId })}`}>{row.seedLotCode ?? "Xem lô giống"}</Link>{row.itemName && <small className="block truncate text-xs text-text-muted" title={row.itemName}>{row.itemName}</small>}</> },
   { key: "quantityIn", label: "Số mảnh vào ươm", sort: "quantityIn", render: row => quantityText(row.quantityIn) },
   { key: "survivors", label: "Sống sót (ước tính)", render: row => quantityText(row.survivors) },
   { key: "seeded", label: "Đã thả", render: row => row.statusId === 4001 || row.statusId === 4003 ? "—" : quantityText(row.seeded) },
   { key: "remaining", label: "Còn lại", render: row => row.statusId === 4002 && row.remaining === 0 ? "Đã thả hết" : row.statusId === 4001 || row.statusId === 4003 ? "—" : quantityText(row.remaining) },
-  { key: "lossPieces", label: "Hao hụt (ước tính)", render: row => quantityText(row.lossPieces) },
+  { key: "lossPieces", label: "Hao hụt (ước tính)", defaultHidden: true, render: row => quantityText(row.lossPieces) },
   { key: "startDate", label: "Ngày bắt đầu", sort: "startDate", render: row => formatVietnameseDate(row.startDate) },
   { key: "days", label: "Số ngày ươm", render: row => `${row.daysNursing} ngày` },
   { key: "status", label: "Trạng thái", sort: "status", render: row => <StatusPill tone={nurseryStatusTone(row.statusId)}>{nurseryStatusText(row)}</StatusPill> },
 ];
+export const defaultNurseryColumns = nurseryColumns.filter(column => !column.defaultHidden).map(column => column.key);
 export function NurseryTable({ rows, visible, sort, onSort, expanded, onToggle, detail }: {
   rows: readonly NurseryRow[]; visible: readonly string[]; sort: SortState; onSort(sort: SortState): void; expanded?: string; onToggle(id: string): void; detail(row: NurseryRow): ReactNode;
 }) {
@@ -31,6 +34,6 @@ export function NurseryTable({ rows, visible, sort, onSort, expanded, onToggle, 
     <tbody>{rows.map(row => <Fragment key={row.id}><OpenableTableRow data-selected={expanded === row.id || undefined} onOpen={() => onToggle(row.id)}>
       <td className={styles.expandCell}><button key={`toggle-${row.id}`} type="button" aria-expanded={expanded === row.id} aria-controls={`nursery-detail-${row.id}`} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => onToggle(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
       {columns.map(column => <td key={column.key}>{column.render(row)}</td>)}
-    </OpenableTableRow>{expanded === row.id && <tr><td colSpan={columns.length + 1} className={styles.detailCell}><div id={`nursery-detail-${row.id}`} className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>{detail(row)}</div></td></tr>}</Fragment>)}</tbody>
+    </OpenableTableRow>{expanded === row.id && <DetailRow colSpan={columns.length + 1} className={styles.detailCell}><div id={`nursery-detail-${row.id}`} className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>{detail(row)}</div></DetailRow>}</Fragment>)}</tbody>
   </table>;
 }

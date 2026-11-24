@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CooperativeName } from "@/components/brand/cooperative-name-context";
 import { flowSteps } from "./landing-content";
 import { ArrowRight } from "./landing-icons";
 import { HeroPointerLight } from "./landing-hero-pointer-light";
@@ -21,13 +22,13 @@ export function LandingHero() {
       <HeroPointerLight />
       <div className={s.shade} aria-hidden="true" />
       <div className={`${b.wrap} ${s.body}`}>
-        <p className={s.eyebrow}>HTX nuôi hàu Trung Nam · Vân Đồn, Quảng Ninh</p>
+        <p className={s.eyebrow}><CooperativeName /> · Vân Đồn, Quảng Ninh</p>
         <h1 id="hero-title" className={s.h1}>
           <span>Từ bè đến bàn ăn,</span>
           <span>minh bạch từng lô<span className={s.fire} aria-hidden="true">.</span></span>
         </h1>
         <div className={s.row}>
-          <p className={s.lead}>OMTS giúp hợp tác xã Trung Nam quản lý nuôi trồng, thu hoạch, bán hàng và công nợ trên một hệ thống, đồng thời cho người mua quét mã QR để biết con hàu đến từ đâu.</p>
+          <p className={s.lead}>OMTS giúp <CooperativeName /> quản lý nuôi trồng, thu hoạch, bán hàng và công nợ trên một hệ thống, đồng thời cho người mua quét mã QR để biết con hàu đến từ đâu.</p>
           <div className={s.cta}>
             <Link className={`${b.btn} ${b.btnFire} ${b.btnLg}`} href="/login">Vào hệ thống <ArrowRight /></Link>
             <a className={`${b.btn} ${b.btnLine} ${b.btnLg}`} href="#quy-trinh">Xem quy trình</a>

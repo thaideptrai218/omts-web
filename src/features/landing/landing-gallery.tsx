@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { CooperativeName } from "@/components/brand/cooperative-name-context";
 import { landingPhotos } from "./landing-content";
 import b from "./landing.module.css";
 import s from "./landing-gallery.module.css";
@@ -14,7 +15,7 @@ export function LandingGallery() {
       <div className={b.wrap}>
         <div className={`${s.head} ${b.reveal}`}>
           <span className={b.kicker}>Tại vùng nuôi</span>
-          <h2 id="gallery-title" className={b.h2}>Hình ảnh thực tế từ HTX Trung Nam</h2>
+          <h2 id="gallery-title" className={b.h2}>Hình ảnh thực tế từ <CooperativeName /></h2>
         </div>
         <div className={s.grid}>
           {landingPhotos.map((p, i) => (

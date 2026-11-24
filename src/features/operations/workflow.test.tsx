@@ -73,6 +73,7 @@ describe("tester workflow safeguards", () => {
     expect(repository.write).not.toHaveBeenCalled(); expect(repository.upload).not.toHaveBeenCalled();
   });
   it.each([
+    // The unified date picker is a dd/mm/yyyy text input (the time has its own control), not a native datetime-local.
     ["Thời gian trả *", "01/01/2026"],
     ["Hình thức *", "BankTransfer"],
     ["Nhà cung cấp *", ids.supplier],
@@ -85,7 +86,7 @@ describe("tester workflow safeguards", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Quay lại" }));
-    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toBe(value);
+    expect((screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement).value).toContain(value);
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());

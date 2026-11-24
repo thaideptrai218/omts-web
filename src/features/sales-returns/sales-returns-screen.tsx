@@ -26,6 +26,7 @@ import { RETURN, type ReturnListQuery, type ReturnPage, type ReturnRow, type Ret
 import { ReturnDetailPanel } from "./return-detail";
 import { ReturnStatus, returnStatusLabel } from "./return-labels";
 import { returnRepository } from "./repository";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; sort?: string; numeric?: boolean; hidden?: boolean; render(row: ReturnRow): ReactNode; total?(totals: ReturnTotals): ReactNode };
 const stop = (event: { stopPropagation(): void }) => event.stopPropagation();
@@ -130,9 +131,9 @@ function ReturnsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => open(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
+            {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <ReturnDetailPanel id={row.id} canCancel={canCancel} onChanged={reload} />
-            </div></td></tr>}
+            </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

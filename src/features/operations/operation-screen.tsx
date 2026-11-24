@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
@@ -11,8 +11,10 @@ import { SalesInvoiceListScreen } from "@/features/sales-invoice-list/invoice-li
 import { ClaimReportScreen } from "@/features/quality-claims/claim-report-screen";
 import { QualityClaimsScreen } from "@/features/quality-claims/quality-claims-screen";
 import { SalesReturnsScreen } from "@/features/sales-returns/sales-returns-screen";
+import { PayrollSettingsPage } from "@/features/hr-setup/payroll-settings-page";
 import { PayrollScreen } from "@/features/payroll/payroll-screen";
 import { PayrollPaymentsScreen } from "@/features/payroll/payroll-payments-screen";
+import { LaborCostsScreen } from "@/features/labor-costs/labor-costs-screen";
 import { SalesPerformanceScreen } from "@/features/sales-reports/sales-performance-screen";
 import { CustomerReportScreen } from "@/features/sales-reports/customer-report-screen";
 import { EndOfDayReportScreen } from "@/features/sales-reports/end-of-day-report-screen";
@@ -60,6 +62,9 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "sales-returns") return <Suspense><SalesReturnsScreen /></Suspense>;
   if (area === "payroll") return <Suspense><PayrollScreen /></Suspense>;
   if (area === "payroll-payments") return <PayrollPaymentsScreen />;
+  if (area === "labor-costs") return <LaborCostsScreen />;
+  // The period settings stay a dialog (also opened from the payroll screen); this page is the gear destination that hosts it.
+  if (area === "payroll-settings") return <PayrollSettingsPage />;
   if (area === "sales-report") return <SalesPerformanceScreen />;
   if (area === "customer-report") return <CustomerReportScreen />;
   if (area === "end-of-day-report") return <EndOfDayReportScreen />;

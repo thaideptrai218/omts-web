@@ -22,8 +22,9 @@ export function knownRoleNameLabel(name: string): string {
 
 export function workspaceRoleLabel(subjectType: string, permissions: PermissionProjection["functionPermissions"]): string {
   if (subjectType !== "Staff") return subjectLabel(subjectType);
-  const managerCodes = new Set(["WORK_ASSIGNMENTS", "WATER_MEASUREMENTS", "PURCHASE_RECEIPTS", "PURCHASE_REQUESTS"]);
-  const accountantCodes = new Set(["SUPPLIER_PAYMENTS", "CUSTOMER_DEBTS", "PAYROLLS"]);
+  // Codes only one fixed role holds (FixedRoles.cs): the Accountant also views purchase receipts, so those cannot mark a manager.
+  const managerCodes = new Set(["WORK_ASSIGNMENTS", "WATER_MEASUREMENTS", "CULTIVATION_CYCLES"]);
+  const accountantCodes = new Set(["SUPPLIER_PAYMENTS", "CUSTOMER_DEBTS", "PAYROLL"]);
   const has = (codes: ReadonlySet<string>) => permissions.some((item) => codes.has(item.functionCode));
   const roles = [has(managerCodes) ? "Quản lý vùng" : "", has(accountantCodes) ? "Kế toán" : ""].filter(Boolean);
   return roles.join(" · ") || subjectLabel(subjectType);

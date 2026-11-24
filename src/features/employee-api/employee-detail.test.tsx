@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
+vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" } }) }));
 import { employeeDetailFixture } from "@/features/employee-management/api/employee-wire.fixtures";
 import { employeeViewSchema } from "./contracts";
 import { EmployeeDirectoryTable } from "./employee-directory-table";
@@ -22,8 +23,9 @@ it("keeps closed rows free of action buttons and opens only one row by pointer",
   render(<EmployeeDirectoryTable items={[first, second]} disabled={false} onSaved={vi.fn()} cache={new Map()} />);
   const rows = screen.getAllByRole("row").slice(1);
   for (const row of rows) {
-    expect(within(row).getAllByRole("button")).toHaveLength(1);
-    expect(within(row).getByRole("button").hasAttribute("aria-expanded")).toBe(true);
+    // The native chevron plus the login-name chip that opens the account tab.
+  expect(within(row).getAllByRole("button").map(button => button.getAttribute("aria-label")?.replace(/ .*/, ""))).toEqual(["Mở", "Mở", "Mở"]);
+    expect(within(row).getAllByRole("button")[0].hasAttribute("aria-expanded")).toBe(true);
     expect(row.hasAttribute("tabindex")).toBe(false);
   }
   fireEvent.click(within(rows[0]).getByText(first.fullName));
@@ -81,10 +83,17 @@ it("shows initial loading and retries a failed detail read", async () => {
   repository.read.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   fireEvent.click(toggle);
   await screen.findByRole("status", { name: "Đang tải dữ liệu" });
-  finish({ status: "error", httpStatus: 403, uncertain: false });
+  finish({ status: "error", httpStatus: 500, uncertain: false });
   fireEvent.click(await screen.findByRole("button", { name: "Thử lại tải hồ sơ" }));
   await screen.findByRole("tab", { name: "Thông tin" });
   await waitFor(() => expect(repository.read).toHaveBeenCalledTimes(2));
+});
+it("does not offer a retry when the detail read is permission-denied (403)", async () => {
+  const toggle = setup();
+  repository.read.mockResolvedValueOnce({ status: "error", httpStatus: 403, uncertain: false });
+  fireEvent.click(toggle);
+  expect((await screen.findByRole("alert")).textContent).toContain("Bạn không có quyền");
+  expect(screen.queryByRole("button", { name: "Thử lại tải hồ sơ" })).toBeNull();
 });
 it("refreshes the open account tab after a save without caching credentials or resetting the tab", async () => {
   const record = fixture(), cache = new Map();
@@ -96,7 +105,8 @@ it("refreshes the open account tab after a save without caching credentials or r
   cache.clear();
   repository.read.mockResolvedValue({ status: "success", data: { ...record, account: { ...record.account!, username: "updated.staff" } } });
   view.rerender(<EmployeeDirectoryTable {...props} detailRevision={1} />);
-  await screen.findByText("@updated.staff");
+  // The username shows in the account details and in the copy/reset card.
+  expect((await screen.findAllByText("@updated.staff")).length).toBeGreaterThanOrEqual(1);
   expect(screen.getByRole("tab", { name: "Tài khoản đăng nhập" }).getAttribute("aria-selected")).toBe("true");
   expect(repository.read).toHaveBeenCalledTimes(2);
   expect(cache.get(record.id)).not.toHaveProperty("temporaryPassword");

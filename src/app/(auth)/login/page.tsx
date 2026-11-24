@@ -7,7 +7,7 @@ import { ApiLoginEntry } from "@/features/auth/components/api-login-entry";
 import { connection } from "next/server";
 
 export const metadata: Metadata = {
-  title: "Đăng nhập | HTX Trung Nam",
+  title: "Đăng nhập",
 };
 
 async function LoginContent() {

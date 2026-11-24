@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { resourceKeys } from "@/features/api-workspace/resources";
 import type { ResourceKey } from "@/features/api-workspace/resources";
 import { ApiResourceScreen } from "@/features/api-workspace/api-resource-screen";
+import { UserManagementScreen } from "@/features/user-management/user-management-screen";
 import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 import { connection } from "next/server";
 
@@ -13,5 +14,7 @@ export default async function WorkspaceResourcePage({ params }: { params: Promis
   if (getSessionGateway().mode !== "api" || !resourceKeys.includes(resource as ResourceKey)) notFound();
   // The input catalogue has its own screen under Vật tư & Giống.
   if (resource === "input-items") redirect("/inputs/items");
+  // Accounts and roles are one "Quản lý người dùng" screen with two tabs (phase 3 of the role-screens plan).
+  if (resource === "accounts" || resource === "roles") return <UserManagementScreen key={resource} initialTab={resource} />;
   return <ApiResourceScreen key={resource} resource={resource as ResourceKey} />;
 }

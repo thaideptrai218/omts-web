@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import type { SortState } from "@/components/ui/management-screen/management-table";
-import { displayTime } from "./ui";
+import { businessToday, displayTime } from "./ui";
 import styles from "./workforce-screen.module.css";
-import { attendanceLabel, attendanceState, workedLabel, type Assignment, type WorkforceTab } from "./workforce-shared";
+import { attendanceLabel, attendanceState, rowWarning, workedLabel, type Assignment, type WorkforceTab } from "./workforce-shared";
 
 export type WorkforceColumn = {
   key: string;
@@ -20,11 +20,12 @@ const recorded = (value: string | null) => (value ? displayTime(value) : "Chưa 
 export const workforceColumns: readonly WorkforceColumn[] = [
   { key: "employee", label: "Nhân viên", modes: both, render: (row) => <strong>{row.employeeName}</strong>, compare: (a, b) => text(a.employeeName, b.employeeName) },
   { key: "zone", label: "Vùng", modes: both, render: (row, zoneName) => zoneName(row.zoneId), compare: (a, b, zoneName) => text(zoneName(a.zoneId), zoneName(b.zoneId)) },
-  { key: "raft", label: "Bè", modes: both, render: (row) => row.raftCode || "Chưa xác định", compare: (a, b) => text(a.raftCode ?? "", b.raftCode ?? "") },
+  { key: "raft", label: "Bè", modes: both, render: (row) => row.raftCode || "Cấp vùng", compare: (a, b) => text(a.raftCode ?? "", b.raftCode ?? "") },
   { key: "job", label: "Công việc", modes: both, render: (row) => row.job, compare: (a, b) => text(a.job, b.job) },
   { key: "checkedIn", label: "Vào làm", modes: ["attendance"], render: (row) => <span className="tabular-nums">{recorded(row.checkedInAt)}</span>, compare: (a, b) => text(a.checkedInAt ?? "", b.checkedInAt ?? "") },
   { key: "checkedOut", label: "Ra về", modes: ["attendance"], render: (row) => <span className="tabular-nums">{recorded(row.checkedOutAt)}</span>, compare: (a, b) => text(a.checkedOutAt ?? "", b.checkedOutAt ?? "") },
   { key: "worked", label: "Giờ công", modes: ["attendance"], render: (row) => <span className="tabular-nums">{workedLabel(row)}</span>, compare: (a, b) => (a.workedMinutes ?? -1) - (b.workedMinutes ?? -1) },
+  { key: "warning", label: "Cảnh báo", modes: ["attendance"], render: (row) => { const warning = rowWarning(row, businessToday()); return warning ? <span className={styles.warn}>{warning}</span> : "—"; }, compare: (a, b) => text(rowWarning(a, businessToday()) ?? "", rowWarning(b, businessToday()) ?? "") },
   { key: "status", label: "Trạng thái", modes: both, render: (row) => <span className={styles.status} data-state={attendanceState(row)}>{attendanceLabel[attendanceState(row)]}</span>, compare: (a, b) => text(attendanceState(a), attendanceState(b)) },
 ];
 

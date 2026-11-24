@@ -6,7 +6,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { ErrorNotice, Money, useMutation } from "@/features/operations/ui";
 import type { SheetDetail } from "./contracts";
 import { rangeLabel } from "./payroll-model";
-import { PaymentHeaderFields, newPaymentHeader, paidAtInstant } from "./payroll-payment-fields";
+import { PaymentHeaderFields, accountField, newPaymentHeader, paidAtInstant } from "./payroll-payment-fields";
 import { payrollRepository } from "./repository";
 import s from "./payroll-screen.module.css";
 
@@ -17,17 +17,25 @@ export function PayrollPayDialog({ sheet, onClose, onPaid }: { sheet: SheetDetai
   const [amounts, setAmounts] = useState<Readonly<Record<string, string>>>(() => Object.fromEntries(sheet.slips.map((slip) => [slip.id, String(slip.outstanding)])));
   const [submitted, setSubmitted] = useState(false);
   const pay = useMutation();
+  // One key per opened dialog: a double click or a retry after a lost answer returns the first payment instead of paying twice.
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const value = (id: string) => Number(amounts[id] || 0);
   const invalid = (id: string, outstanding: number) => checked.has(id) && (value(id) < 1 || value(id) > outstanding);
   const total = sheet.slips.reduce((sum, slip) => sum + (checked.has(slip.id) ? value(slip.id) : 0), 0);
   const anyInvalid = sheet.slips.some((slip) => invalid(slip.id, slip.outstanding));
+
+  /** Ticks every payslip that is still owed and fills each amount with all of it. */
+  function payAll() {
+    setChecked(new Set(sheet.slips.filter((slip) => slip.outstanding > 0).map((slip) => slip.id)));
+    setAmounts(Object.fromEntries(sheet.slips.map((slip) => [slip.id, String(slip.outstanding)])));
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSubmitted(true);
     if (!checked.size || anyInvalid) return;
     const lines = sheet.slips.filter((slip) => checked.has(slip.id)).map((slip) => ({ slipId: slip.id, amount: value(slip.id) }));
-    const result = await pay.run(() => payrollRepository.pay(sheet.id, { paidAt: paidAtInstant(header.paidAt), method: header.method, note: header.note.trim(), lines }));
+    const result = await pay.run(() => payrollRepository.pay(sheet.id, { paidAt: paidAtInstant(header.paidAt), method: header.method, note: header.note.trim(), ...accountField(header), lines }, idempotencyKey));
     if (result) onPaid(result.vouchers.length);
   }
   return <Dialog open size="lg" title="Thanh toán lương" dismissible={!pay.pending} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -54,7 +62,8 @@ export function PayrollPayDialog({ sheet, onClose, onPaid }: { sheet: SheetDetai
             </tr>;
           })}</tbody>
         </table></div>
-        <p className={s.payTotal}>Tổng tiền trả: <strong><Money value={total} /></strong></p>
+        <p className={s.payTotal}>Tổng tiền trả: <strong><Money value={total} /></strong>
+          <Button className="ml-3 w-auto" variant="secondary" type="button" onClick={payAll} disabled={sheet.slips.every((slip) => slip.outstanding <= 0)}>Trả toàn bộ</Button></p>
       </fieldset>
       <div className={s.dialogActions}>
         <Button key="skip" className="w-auto" variant="secondary" type="button" disabled={pay.pending} onClick={onClose}>Bỏ qua</Button>

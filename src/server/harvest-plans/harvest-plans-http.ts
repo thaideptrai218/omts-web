@@ -10,7 +10,7 @@ import { sameEmployeeSession } from "../employees/employee-session";
 
 /**
  * The browser's door to Kế hoạch thu hoạch (api/harvest-plans): the list, one plan by id or by code, the plans given out to the caller's zones, the next
- * code, the form of a plan made from an order, the Nhân công of a plan (read, and set the crew of one line), and the writes (save, assign, finish, cancel, skip and unskip lanes). Each action names the backend call, who
+ * code, the form of a plan made from an order, the Nhân công of a plan (read, and set the crew of one line), and the writes (save, assign, receive, hand over, finish, cancel, skip and unskip lanes). Each action names the backend call, who
  * may make it and the shape the answer must have; query values are forwarded only for the names an action lists. The harvest of a lane plan itself goes
  * through the existing harvest door (api/operations/harvest) with the line id.
  */
@@ -32,7 +32,7 @@ const listFilters = ["search", "zoneId", "from", "to", "salesOrderId"] as const;
 const paging = ["page", "pageSize"] as const;
 const guidFilters = ["zoneId", "salesOrderId"];
 const dateFilters = ["from", "to"];
-const statusIds = new Set(["4201", "4202", "4203", "4204", "4205"]);
+const statusIds = new Set(["4201", "4202", "4203", "4204", "4205", "4206", "4207"]);
 const codePattern = /^[A-Za-z0-9._-]{1,30}$/;
 
 type Query = Record<string, string>;
@@ -61,7 +61,8 @@ const reads: Record<string, Read> = {
 /** The reads that need the id of a record. */
 const needsId = new Set(["plan", "plan-order-draft", "plan-staffing"]);
 
-const lineBody = z.strictObject({ id: id.optional(), raftId: id, laneNumbers: lanes, expectedCageCount: z.number().positive().max(100_000).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6).nullable().optional(), note: text(500) });
+// Raft plans send no lanes; [] also retains an existing plan's legacy lanes.
+const lineBody = z.strictObject({ id: id.optional(), raftId: id, laneNumbers: lanes.or(z.tuple([])), expectedCageCount: z.number().positive().max(100_000).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6).nullable().optional(), note: text(500) });
 const planBody = z.strictObject({
   code, plannedAt: instant, note: text(1000), salesOrderIds: z.array(id).max(20), lines: z.array(lineBody).min(1).max(50), rowVersion: rowVersion.optional(),
 });
@@ -71,6 +72,8 @@ const write = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("plan-create"), body: planBody.omit({ rowVersion: true }) }),
   z.strictObject({ action: z.literal("plan-update"), id, body: planBody.required({ rowVersion: true }) }),
   z.strictObject({ action: z.literal("plan-assign"), id, body: versioned }),
+  z.strictObject({ action: z.literal("plan-receive"), id, body: versioned }),
+  z.strictObject({ action: z.literal("plan-hand-over"), id, body: versioned }),
   z.strictObject({ action: z.literal("plan-finish"), id, body: versioned }),
   z.strictObject({ action: z.literal("plan-cancel"), id, body: z.strictObject({ reason: cancelReason, rowVersion: rowVersion.optional() }) }),
   z.strictObject({ action: z.literal("plan-skip-lanes"), id, lineId: id, body: z.strictObject({ laneNumbers: lanes, reason }) }),
@@ -83,6 +86,8 @@ function planWrite(p: z.infer<typeof write>): Plan {
     case "plan-create": return { path: P, method: "POST", access: plans("Create"), schema: c.planAnswer, body: p.body };
     case "plan-update": return { path: `${P}/${p.id}`, method: "PUT", access: plans("Edit"), schema: c.planAnswer, body: p.body };
     case "plan-assign": return { path: `${P}/${p.id}/assign`, method: "POST", access: plans("Edit"), schema: c.ack, body: p.body };
+    case "plan-receive": return { path: `${P}/${p.id}/receive`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
+    case "plan-hand-over": return { path: `${P}/${p.id}/hand-over`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
     case "plan-finish": return { path: `${P}/${p.id}/finish`, method: "POST", access: plans("Edit"), schema: c.ack, body: p.body };
     case "plan-cancel": return { path: `${P}/${p.id}/cancel`, method: "POST", access: plans("Delete"), schema: c.ack, body: p.body };
     case "plan-skip-lanes": return { path: `${P}/${p.id}/lines/${p.lineId}/skip-lanes`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };

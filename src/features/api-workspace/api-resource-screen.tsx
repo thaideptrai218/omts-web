@@ -3,6 +3,7 @@ import { SelectBox } from "@/components/ui/select-box";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { BackToOverviewLink, PermissionDeniedNotice, isPermissionDenied } from "@/components/feedback/permission-denied-notice";
 import { StaffRoleSummary } from "@/features/personal-api/staff-role-summary";
 import { FilterChecks } from "@/components/ui/filter-checks";
 import { readSelectionPages } from "@/features/operations/selection-pages";
@@ -221,12 +222,7 @@ function GenericResourceWorkspace({ resource }: { resource: ResourceKey }) {
     } else setError(workspaceError(result));
   }
 
-  if (!canView)
-    return (
-      <p role="alert" className="rounded-card border border-border bg-surface p-6">
-        Bạn không có quyền xem chức năng này.
-      </p>
-    );
+  if (!canView) return <PermissionDeniedNotice />;
 
   const statuses = statusOptions(resource);
   const presentation = directoryPresentation[resource as keyof typeof directoryPresentation];
@@ -310,14 +306,20 @@ function GenericResourceWorkspace({ resource }: { resource: ResourceKey }) {
       {zoneError && (
         <div role="alert" className="mt-4 rounded-control border border-danger p-4">
           <p>{zoneError}</p>
-          <Button
-            className="mt-3 w-auto"
-            variant="secondary"
-            disabled={zoneLoading}
-            onClick={() => setZoneRefresh((value) => value + 1)}
-          >
-            Tải lại danh mục vùng
-          </Button>
+          {isPermissionDenied(zoneError) ? (
+            <div className="mt-3">
+              <BackToOverviewLink />
+            </div>
+          ) : (
+            <Button
+              className="mt-3 w-auto"
+              variant="secondary"
+              disabled={zoneLoading}
+              onClick={() => setZoneRefresh((value) => value + 1)}
+            >
+              Tải lại danh mục vùng
+            </Button>
+          )}
         </div>
       )}
       {zoneLoading && (
@@ -337,9 +339,15 @@ function GenericResourceWorkspace({ resource }: { resource: ResourceKey }) {
       {error && (
         <div role="alert" className="mt-4 rounded-control border border-danger p-4">
           <p>{error}</p>
-          <Button className="mt-3 w-auto" variant="secondary" onClick={() => setRefresh((value) => value + 1)}>
-            Tải lại
-          </Button>
+          {isPermissionDenied(error) ? (
+            <div className="mt-3">
+              <BackToOverviewLink />
+            </div>
+          ) : (
+            <Button className="mt-3 w-auto" variant="secondary" onClick={() => setRefresh((value) => value + 1)}>
+              Tải lại
+            </Button>
+          )}
         </div>
       )}
       {definition.zoneRequired && !zoneId ? (

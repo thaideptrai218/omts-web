@@ -1,19 +1,20 @@
 import { employeeApiEditorSchema, buildEmployeeSaveBody, localFieldLabels, valuesOf, type EmployeeFormValues } from "./employee-editor-model";
 import { employeeFieldGroup, type EmployeeCreateGroup } from "./employee-editor-validation";
 import { issueEmployeeAccountRequestSchema } from "./employee-account-contract";
+import { emptyGrantSelection, selectionError, type GrantSelection } from "@/features/user-management/user-grant-selection";
 
 /** Values of the create dialog: the profile fields plus the optional login account. */
-export type EmployeeCreateValues = EmployeeFormValues & { createAccount: boolean; username: string };
+export type EmployeeCreateValues = EmployeeFormValues & { createAccount: boolean; username: string; grants: GrantSelection };
 export type EmployeeCreateIssue = { path: string; message: string };
 
-export const blankCreateValues = (): EmployeeCreateValues => ({ ...valuesOf(null), createAccount: false, username: "" });
+export const blankCreateValues = (): EmployeeCreateValues => ({ ...valuesOf(null), createAccount: false, username: "", grants: emptyGrantSelection });
 export const createFieldLabels: Record<string, string> = { ...localFieldLabels, username: "Tên đăng nhập" };
 
 /** Visual order of the fields, used to find the first invalid one. */
 const fieldOrder = [
   "code", "fullName", "phone", "birthday", "gender", "employeeType", "startDate", "workingZoneIds", "jobTypeIds", "idNumber", "address", "area", "wardCommune",
   "otherInformation", "notes", "bankAccount", "bankAccount.bankName", "bankAccount.accountNumber",
-  "bankAccount.accountHolderName", "username",
+  "bankAccount.accountHolderName", "username", "grants",
 ];
 const rank = (path: string) => { const index = fieldOrder.indexOf(path); return index < 0 ? fieldOrder.length : index; };
 
@@ -40,9 +41,12 @@ export function parseEmployeeCreate(values: EmployeeCreateValues, inactiveZoneId
     }
     // The backend copies the employee's phone number to the account (BR-LABOR-01).
     if (!values.phone.trim()) add("phone", "Nhập số điện thoại để tạo tài khoản đăng nhập.");
+    const missingZone = selectionError(values.grants);
+    if (missingZone) add("grants", missingZone);
   }
   issues.sort((a, b) => rank(a.path) - rank(b.path));
   if (issues.length || !checked.success) return { ok: false as const, issues };
+  // `grants` never enters the request body: the create endpoint accepts a username only, so roles are sent after the account exists.
   const { createAccount, username } = values;
   return {
     ok: true as const,

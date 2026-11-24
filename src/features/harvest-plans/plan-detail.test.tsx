@@ -70,3 +70,34 @@ it("shows when and why a cancelled plan was cancelled instead of the completion 
   expect(screen.getByText("Mưa bão")).toBeTruthy();
   expect(screen.queryByText("Hoàn thành lúc:")).toBeNull();
 });
+
+const zoneAccess = { owner: false, create: false, edit: false, remove: false, harvest: true, staff: true } as PlanAccess;
+const ownerAccess = { ...owner, owner: true } as PlanAccess;
+const buttons = () => [...document.querySelectorAll("footer button")].map((button) => button.textContent);
+
+it("shows Nhận kế hoạch to the zone manager of an Assigned plan, with the status and the hint", async () => {
+  await open(view({ allowedActions: ["Receive"] }), zoneAccess);
+  expect(buttons()).toEqual(["Nhận kế hoạch"]);
+  expect(screen.getByText("Đã giao QLV")).toBeTruthy();
+  expect(screen.getByTestId("plan-next-step").textContent).toContain("Cần nhận");
+});
+
+it("shows Bàn giao cho chủ only when the API allows HandOver", async () => {
+  await open(view({ statusId: 4203, status: "Harvesting", allowedActions: ["Harvest", "HandOver"] }), zoneAccess);
+  expect(buttons()).toEqual(["Bàn giao cho chủ"]);
+  cleanup();
+  await open(view({ statusId: 4203, status: "Harvesting", allowedActions: ["Harvest"] }), zoneAccess);
+  expect(buttons()).toEqual([]);
+});
+
+it("shows Hoàn thành to the Owner of a HandedOver plan with the check-then-complete hint, and the Received and HandedOver labels", async () => {
+  await open(view({ statusId: 4207, status: "HandedOver", allowedActions: ["Finish", "Edit"] }), ownerAccess);
+  expect(buttons()).toEqual(expect.arrayContaining(["Hoàn thành"]));
+  expect(buttons()).not.toContain("Kết thúc");
+  expect(screen.getByText("Đã bàn giao")).toBeTruthy();
+  expect(screen.getByTestId("plan-next-step").textContent).toBe("Quản lý vùng đã bàn giao, kiểm tra rồi bấm Hoàn thành.");
+  cleanup();
+  await open(view({ statusId: 4206, status: "Received", allowedActions: [] }), ownerAccess);
+  expect(screen.getByText("Đã nhận")).toBeTruthy();
+  expect(buttons()).not.toContain("Hoàn thành");
+});

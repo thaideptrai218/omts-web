@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorNotice, money, operationError, useMutation } from "@/features/operations/ui";
 import type { PayableEmployee } from "./contracts";
-import { PaymentHeaderFields, newPaymentHeader, paidAtInstant } from "./payroll-payment-fields";
+import { PaymentHeaderFields, accountField, newPaymentHeader, paidAtInstant } from "./payroll-payment-fields";
 import { payrollRepository } from "./repository";
 import s from "./payroll-screen.module.css";
 
@@ -17,6 +17,8 @@ export function StandalonePaymentDialog({ employee, onClose, onPaid }: { employe
   const [search, setSearch] = useState(""), [includeAll, setIncludeAll] = useState(false), [chosen, setChosen] = useState<PayableEmployee | undefined>(employee);
   const [amount, setAmount] = useState(""), [header, setHeader] = useState(newPaymentHeader), [submitted, setSubmitted] = useState(false);
   const pay = useMutation();
+  // One key per opened dialog (see PayrollPayDialog): a repeat never creates a second voucher.
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   // Server search, debounced. By default only employees who still have outstanding pay; the advance option lists every active employee.
   useEffect(() => {
     if (employee) return;
@@ -37,12 +39,13 @@ export function StandalonePaymentDialog({ employee, onClose, onPaid }: { employe
     event.preventDefault();
     setSubmitted(true);
     if (!chosen || value < 1) return;
-    const result = await pay.run(() => payrollRepository.payStandalone({ employeeId: chosen.employeeId, amount: value, paidAt: paidAtInstant(header.paidAt), method: header.method, note: header.note.trim() }));
+    const result = await pay.run(() => payrollRepository.payStandalone({ employeeId: chosen.employeeId, amount: value, paidAt: paidAtInstant(header.paidAt), method: header.method, note: header.note.trim(), ...accountField(header) }, idempotencyKey));
     if (result) onPaid();
   }
   return <Dialog open size="md" title="Thanh toán lương" dismissible={!pay.pending} onOpenChange={(open) => { if (!open) onClose(); }}>
     <form onSubmit={(event) => void submit(event)} noValidate>
       <ErrorNotice error={loadError ?? pay.error} />
+      <p className={`${s.muted} mb-3`}>Thanh toán này trả cho phiếu lương đã chốt của kỳ trước (còn nợ), không nằm trong bảng lương mới.</p>
       {loadError && <button type="button" className="mb-3 text-sm underline" onClick={() => { setResults(undefined); setAttempt((count) => count + 1); }}>Tải lại danh sách nhân viên</button>}
       <fieldset disabled={pay.pending} className={`min-w-0 ${s.formGrid}`}>
         {employee ? <><span className={s.label}>Nhân viên</span><strong>{employee.name}</strong></> : <><label htmlFor="payroll-employee-search">Nhân viên</label><div className="grid gap-2">

@@ -1,14 +1,17 @@
 import "server-only";
 import { z } from "zod";
 import * as c from "@/features/operations/new-module-contracts";
+import * as w from "@/features/operations/workforce-contracts";
 import * as t from "@/features/trader-purchases/contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
 import { salesV2Plan } from "./sales-v2-plan";
 
-const requestQuery = z.strictObject({ action: z.enum(["list", "mine", "detail", "mine-detail"]).default("list"), id: z.guid().optional(),
+const requestQuery = z.strictObject({ action: z.enum(["list", "mine", "detail", "mine-detail", "staffing", "staffing-employees"]).default("list"), id: z.guid().optional(), day: z.iso.date().optional(),
   status: c.requestStatusFilterSchema.optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).default("1"), pageSize: z.string().regex(/^[1-9]\d?$/).default("20") });
-const workforceQuery = z.strictObject({ action: z.enum(["list", "lookups", "leaves", "settings"]).default("list"), day: z.iso.date().optional() });
+const workforceQuery = z.strictObject({ action: z.enum(["list", "lookups", "leaves", "settings", "staff", "attendance"]).default("list"), day: z.iso.date().optional(), employeeId: z.guid().optional() });
+/** The correction of one day: the day is part of the backend path, the rest is the body. */
+const correctDay = z.strictObject({ day: z.iso.date(), payload: w.correctAttendanceSchema });
 const mineQuery = z.strictObject({ action: z.literal("list").default("list"), from: z.iso.date(), to: z.iso.date() }).refine((v) => v.to >= v.from && Date.parse(v.to) - Date.parse(v.from) <= 62 * 86_400_000);
 const mutation = z.strictObject({ action: z.string(), id: z.guid().optional(), zoneId: z.guid().optional(), body: z.unknown().default({}) });
 const done = z.object({ done: z.literal(true) }), empty = z.strictObject({});
@@ -26,6 +29,8 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
     };
     if (area === "purchase-requests" && !zoneId) {
       if (action === "submit" && !id) return write("/api/me/purchase-requests", t.placeRequestSchema, t.requestSavedSchema, "Submit");
+      // The Owner's staffing plan: the backend assigns the chosen employees at once and the request stays "Chờ phản hồi".
+      if (id && action === "staffing") return write(`/api/purchase-requests/${id}/staffing`, c.staffingPlanSchema, c.staffingSchema, "Respond");
       if (id && ["accept", "decline", "cancel"].includes(action)) {
         // Chủ HTX trả lời bằng /accept hoặc /decline (đúng backend); thương lái hủy qua /api/me. Không có endpoint nhân lực/ca làm trong develop.
         const plan = action === "cancel" ? write(`/api/me/purchase-requests/${id}/cancel`, t.cancelRequestSchema, t.traderRequestSchema, "CancelMine")
@@ -44,8 +49,15 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
       if (["check-in", "check-out"].includes(action) && id && zoneId) {
         const plan = write(`/api/workforce/assignments/${id}/${action}`, z.strictObject({ qrCode: z.string().max(200).nullable() }), c.assignmentSchema, "AttendanceCreate"); return plan && { ...plan, expectedId: id };
       }
-      if (action === "review-leave" && id && !zoneId) { const plan = write(`/api/workforce/leave-requests/${id}/review`, c.reviewLeaveSchema, c.leaveSchema, "Owner"); return plan && { ...plan, expectedId: id }; }
+      if (action === "review-leave" && id && !zoneId) { const plan = write(`/api/workforce/leave-requests/${id}/review`, c.reviewLeaveSchema, c.leaveSchema, "AttendanceEdit"); return plan && { ...plan, expectedId: id }; }
       if (action === "settings" && !id && !zoneId) return write("/api/attendance-settings", c.saveAttendanceSettingsSchema, c.attendanceSettingsSavedSchema, "Owner");
+      // Phase B (HR): crew start, Staff attendance and the Owner correction of one day.
+      if (action === "crew-start" && !id && zoneId) return write("/api/workforce/crew-start", w.crewStartSchema, z.array(c.assignmentSchema), "AttendanceCreate");
+      if (["staff-check-in", "staff-check-out"].includes(action) && id && !zoneId) return write(`/api/workforce/staff/${id}/${action.slice(6)}`, z.strictObject({ qrCode: z.string().max(200).nullable() }), w.staffAttendanceSchema, "AttendanceCreate");
+      if (action === "correct" && id && !zoneId) {
+        const values = correctDay.safeParse(body);
+        return values.success ? { area, action, path: `/api/workforce/attendance/${id}/${values.data.day}`, method: "PUT", permission: "AttendanceEdit", schema: w.attendanceCorrectedSchema, body: values.data.payload } : undefined;
+      }
     }
     return undefined;
   }
@@ -54,6 +66,13 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
   if (area === "purchase-requests") {
     const q = requestQuery.safeParse(values);
     if (!q.success) return undefined;
+    if (q.data.action === "staffing" || q.data.action === "staffing-employees") {
+      // Both are the Owner's: the chosen employees of one request, and the employees offered for the day of its plan.
+      if (!q.data.id || query.has("status") || query.has("page") || query.has("pageSize")) return undefined;
+      if (q.data.action === "staffing") return q.data.day ? undefined : { area, action: "staffing", method: "GET", path: `/api/purchase-requests/${q.data.id}/staffing`, permission: "Respond", schema: c.staffingChosenSchema };
+      return q.data.day ? { area, action: "staffing-employees", method: "GET", path: `/api/purchase-requests/staffing-employees?day=${q.data.day}&purchaseRequestId=${q.data.id}`, permission: "Respond", schema: c.staffingEmployeesSchema } : undefined;
+    }
+    if (q.data.day) return undefined;
     const mine = q.data.action.startsWith("mine"), detail = q.data.action.endsWith("detail");
     if (detail !== !!q.data.id || detail && (query.has("status") || query.has("page") || query.has("pageSize"))) return undefined;
     const search = new URLSearchParams({ page: q.data.page, pageSize: q.data.pageSize });
@@ -72,9 +91,11 @@ export function planNewModule(area: OperationArea, method: string, query: URLSea
   }
   if (area === "workforce") {
     const q = workforceQuery.safeParse(values);
-    if (!q.success || ["list", "lookups"].includes(q.data.action) !== !!q.data.day) return undefined;
+    if (q.success && q.data.action === "staff" && !q.data.employeeId) return { area, action: "staff", method: "GET", path: `/api/workforce/staff-attendance${q.data.day ? `?day=${q.data.day}` : ""}`, permission: "View", schema: z.array(w.staffAttendanceSchema) };
+    if (q.success && q.data.action === "attendance") return q.data.employeeId && q.data.day ? { area, action: "attendance", method: "GET", path: `/api/workforce/attendance/${q.data.employeeId}/${q.data.day}`, permission: "AttendanceEdit", schema: w.attendanceDaySchema } : undefined;
+    if (!q.success || q.data.employeeId || ["list", "lookups"].includes(q.data.action) !== !!q.data.day) return undefined;
     return { area, action: q.data.action, method: "GET", path: q.data.action === "list" ? `/api/workforce/assignments?day=${q.data.day}` : q.data.action === "lookups" ? `/api/workforce/lookups?day=${q.data.day}`
-      : q.data.action === "leaves" ? "/api/workforce/leave-requests" : "/api/attendance-settings", permission: ["list", "lookups"].includes(q.data.action) ? "View" : "Owner",
+      : q.data.action === "leaves" ? "/api/workforce/leave-requests" : "/api/attendance-settings", permission: ["list", "lookups"].includes(q.data.action) ? "View" : q.data.action === "leaves" ? "AttendanceEdit" : "Owner",
       schema: q.data.action === "list" ? z.array(c.assignmentSchema) : q.data.action === "lookups" ? c.workforceLookupsSchema : q.data.action === "leaves" ? z.array(c.leaveSchema) : c.attendanceSettingsSchema };
   }
   if (area === "my-work") {

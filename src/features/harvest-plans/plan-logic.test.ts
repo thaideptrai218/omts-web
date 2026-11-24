@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PlanLane, PlanLine } from "./contracts";
-import { blankFormLine, buildPlanBody, coverage, coverageText, formLineOf, harvestPlanFor, laneChip, lineCanHarvest, planFormProblem, planTotals, plannedCages, plannedLaneNumbers, shortageText, type OrderNeedLine, type PlanForm } from "./plan-logic";
+import { PLAN } from "./contracts";
+import { blankFormLine, buildPlanBody, coverage, coverageText, formLineOf, harvestPlanFor, laneChip, lineCanHarvest, planFormProblem, planNextStepHint, planTotals, plannedCages, plannedLaneNumbers, shortageText, type OrderNeedLine, type PlanForm } from "./plan-logic";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 const lane = (laneNumber: number, state: PlanLane["state"], extra: Partial<PlanLane> = {}): PlanLane => ({ laneId: id(laneNumber), laneNumber, state, ...extra });
@@ -136,5 +137,19 @@ describe("plan form", () => {
     expect([open, skipped, lot].map((row) => formLineOf(row, true).locked)).toEqual([false, true, true]);
     expect([open, skipped, lot].map((row) => formLineOf(row, false).locked)).toEqual([false, false, false]);
     expect(formLineOf(skipped, true).zoneId).toBe(id(1));
+  });
+});
+
+describe("next step hint per status", () => {
+  it("tells the Owner and the zone worker what comes next, and nothing once the plan is over", () => {
+    expect(planNextStepHint(PLAN.handedOver, "owner")).toBe("Quản lý vùng đã bàn giao, kiểm tra rồi bấm Hoàn thành.");
+    expect(planNextStepHint(PLAN.assigned, "zone")).toContain("Cần nhận");
+    expect(planNextStepHint(PLAN.assigned, "owner")).toContain("chờ quản lý vùng nhận");
+    expect(planNextStepHint(PLAN.received, "zone")).toContain("ghi lô thu hoạch");
+    expect(planNextStepHint(PLAN.harvesting, "zone")).toContain("Bàn giao cho chủ");
+    expect(planNextStepHint(PLAN.handedOver, "zone")).toContain("chờ chủ hoàn thành");
+    expect(planNextStepHint(PLAN.draft, "zone")).toBe("");
+    expect(planNextStepHint(PLAN.completed, "owner")).toBe("");
+    expect(planNextStepHint(PLAN.cancelled, "zone")).toBe("");
   });
 });

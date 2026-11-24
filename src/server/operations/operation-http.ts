@@ -15,12 +15,14 @@ import { claimUpload, claimUploadActions } from "./claim-upload-plan";
 import { handleFarmingRequest } from "../farming/farming-http";
 import { handleEmployeeApi } from "../employees/employee-api-http";
 import { readFarmingProblem } from "../backend/farming-problem-copy";
+import { readHrProblem } from "../backend/hr-problem-copy";
 import { farmingRecordUpload, farmingRecordUploadActions, farmingRecordPayload, appendFarmingFields } from "./farming-record-upload";
 export { localFileTarget } from "./evidence-target";
 
 const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: responseHeaders });
 const farmingAreas = new Set<string>(["harvest", "seeding", "material-usages", "cultivation-cycles"]);
+const hrAreas = new Set<string>(["payroll", "payroll-payments", "workforce"]);
 const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", ...farmingRecordUploadActions, ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
 
 function browserFiles(value: unknown): unknown {
@@ -142,9 +144,11 @@ export async function handleOperationRequest(request: Request, areaName: string)
       const exportMime = plan.exportFormat === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       const upstream = await fetch(new URL(plan.path, backend.config.origin), { method: plan.method, cache: "no-store", redirect: "error", credentials: "omit", signal: controller.signal,
         headers: { Accept: plan.file === "export" ? exportMime : "application/json",
-          Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(typeof payload === "string" ? { "Content-Type": "application/json" } : {}) }, body: payload });
+          Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(typeof payload === "string" ? { "Content-Type": "application/json" } : {}),
+          ...(plan.idempotencyKey ? { "Idempotency-Key": plan.idempotencyKey } : {}) }, body: payload });
       let data: unknown;
       const failedCopy = upstream.ok ? undefined : upstream.clone();
+      const hrCopy = upstream.ok || !hrAreas.has(area.data) ? undefined : upstream.clone();
       let bytes: Uint8Array | undefined;
       let contentType = upstream.headers.get("content-type")?.split(";")[0];
       if (plan.file === "export" && upstream.ok) {
@@ -156,7 +160,9 @@ export async function handleOperationRequest(request: Request, areaName: string)
         if (result.status === "http-error") {
           // Nuôi trồng questions and stock checks (MSG-GEN-04, MSG-CYCLE-01/07, MSG-INPUT-01) travel as an allow-listed problem.
           const problem = farmingAreas.has(area.data) ? await readFarmingProblem(failedCopy) : undefined;
-          return json({ status: "rejected", code: result.code, ...(problem ? { problem } : {}), ...(result.invoiceConfirmation ? { invoiceConfirmation: result.invoiceConfirmation } : {}) }, result.httpStatus);
+          // Payroll and attendance rules answer with the names, dates and amounts of their message (hr-backend-contracts.md).
+          const hrProblem = await readHrProblem(hrCopy);
+          return json({ status: "rejected", code: result.code, ...(problem ? { problem } : {}), ...(hrProblem ? { hrProblem } : {}), ...(result.invoiceConfirmation ? { invoiceConfirmation: result.invoiceConfirmation } : {}) }, result.httpStatus);
         }
         if (result.status !== "success" || ![200, 201, 202].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
         const parsed = plan.schema.safeParse(result.data);

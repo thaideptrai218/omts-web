@@ -12,6 +12,7 @@ import { displayTime, statusLabel } from "./ui";
 import { isOutside, type WaterRow, type WaterSortKey, type WaterZoneRef } from "./water-history-model";
 import { WaterMeasurementPanel } from "./water-measurement-panel";
 import { formatMeasuredValue } from "./water-measurement-shared";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; weight: number; sort?: WaterSortKey; numeric?: boolean; render(row: WaterRow, zone: WaterZoneRef): ReactNode };
 
@@ -43,9 +44,9 @@ export function WaterHistoryTable({ rows, visible, sort, onSort, expandedId, onT
         <td className={styles.expandCell}><button type="button" aria-expanded={expandedId === row.id} aria-controls={`water-preview-${row.id}`} aria-label={`${expandedId === row.id ? "Thu gọn" : "Mở"} phép đo ${displayTime(row.measuredAt)}`} onClick={() => onToggle(row.id)}><InterfaceIcon name={expandedId === row.id ? "chevron-down" : "chevron-right"} /></button></td>
         {columns.map(column => <td key={column.key} data-label={column.label} className={column.numeric ? styles.number : undefined}>{column.render(row, zone)}</td>)}
       </OpenableTableRow>
-      {expandedId === row.id && <tr><td colSpan={columns.length + 1} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
+      {expandedId === row.id && <DetailRow colSpan={columns.length + 1} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
         <WaterMeasurementPanel id={row.id} zone={zone} canEdit={canEdit} guard={guard} onChanged={onChanged} />
-      </div></td></tr>}
+      </div></DetailRow>}
     </Fragment>)}</tbody>
   </table>;
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { InterfaceIcon, type InterfaceIconName } from "../interface-icon";
+import { closeOpenRow, DetailPaneTarget } from "./detail-pane";
 import { useStoredValue } from "./use-stored-value";
 import styles from "./management-screen.module.css";
 
@@ -47,6 +48,8 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
   const open = narrow ? drawer : stored !== "closed";
   const setOpen = (next: boolean) => narrow ? setDrawer(next) : store(next ? "open" : "closed");
   const root = useRef<HTMLElement>(null);
+  // The right-hand pane an open row's detail renders into (see DetailRow); hidden by CSS while no row is open.
+  const [pane, setPane] = useState<HTMLElement | null>(null);
   useFitManagementViewport(root);
   return <section ref={root} className={`${styles.theme} ${styles.screen}`} data-management-screen data-filters={open ? "open" : "closed"}>
     <header className={styles.toolbar}>
@@ -65,10 +68,17 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
         {/* Outside the list box, which clips its content, so the button can straddle the list's left border. */}
         {!open && <button type="button" className={`${styles.railToggle} ${styles.railOpen}`} aria-label="Hiện bộ lọc" title="Hiện bộ lọc" onClick={() => setOpen(true)}>{narrow ? <><InterfaceIcon name="panel-open" /> Bộ lọc</> : <InterfaceIcon name="chevron-right" />}</button>}
         <div className={styles.list}>
-          {children}
+          <DetailPaneTarget.Provider value={pane}>{children}</DetailPaneTarget.Provider>
         </div>
         {footer}
       </div>
+      <aside className={styles.detailPane} aria-label="Chi tiết" onKeyDown={event => {
+        // Esc closes the detail, but only a key pressed inside it (a dialog opened from it handles its own Esc).
+        if (event.key === "Escape" && !event.defaultPrevented && event.target instanceof Node && event.currentTarget.contains(event.target)) closeOpenRow(event.currentTarget);
+      }}>
+        <button type="button" className={styles.detailClose} aria-label="Đóng chi tiết" title="Đóng chi tiết (Esc)" onClick={event => closeOpenRow(event.currentTarget.parentElement!)}><InterfaceIcon name="close" /></button>
+        <div className={styles.detailPaneBody} ref={setPane} />
+      </aside>
     </div>
   </section>;
 }
@@ -77,11 +87,9 @@ export function ToolbarIconButton({ icon, label, disabled, onClick }: { icon: In
   return <button type="button" className={styles.iconButton} aria-label={label} title={label} disabled={disabled} onClick={onClick}><InterfaceIcon name={icon} /></button>;
 }
 
-/** Help opens the guide when one exists; without a link it stays visible and disabled. */
+/** Help opens the guide when one exists; without a guide nothing is rendered rather than a dead, disabled button. */
 export function HelpLink({ helpHref }: { helpHref?: string }) {
-  return helpHref
-    ? <a className={styles.iconButton} href={helpHref} aria-label="Hướng dẫn" title="Hướng dẫn"><InterfaceIcon name="help" /></a>
-    : <ToolbarIconButton icon="help" label="Hướng dẫn (chưa có)" disabled />;
+  return helpHref ? <a className={styles.iconButton} href={helpHref} aria-label="Hướng dẫn" title="Hướng dẫn"><InterfaceIcon name="help" /></a> : null;
 }
 
 export function FilterGroup({ legend, children }: { legend: string; children: ReactNode }) {

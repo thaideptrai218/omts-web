@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { SelectBox } from "./select-box";
 
@@ -42,4 +43,20 @@ it("says so when the search finds nothing", async () => {
   await user.click(container.querySelector<HTMLElement>(".omts-select-trigger")!);
   await user.type(within(document.querySelector<HTMLElement>(".omts-select-menu")!).getByRole("searchbox", { hidden: true }), "zzz");
   expect(screen.getByText("Không tìm thấy “zzz”.")).toBeTruthy();
+});
+
+it("shows the missing-choice message under the box instead of a browser bubble, and drops it once a value is chosen", () => {
+  function Form() {
+    const [value, setValue] = useState("");
+    return <form><SelectBox aria-label="Loại xuất" required value={value} onChange={(event) => setValue(event.target.value)}><option value="">Chọn loại</option><option value="a">A</option></SelectBox></form>;
+  }
+  const { container } = render(<Form />);
+  const select = container.querySelector("select")!;
+  let notCancelled = true;
+  act(() => { notCancelled = select.dispatchEvent(new Event("invalid", { cancelable: true })); });
+  expect(notCancelled).toBe(false);
+  expect(screen.getByRole("alert").textContent).toBe("Vui lòng chọn loại xuất.");
+  expect(select.getAttribute("aria-invalid")).toBe("true");
+  fireEvent.change(select, { target: { value: "a" } });
+  expect(screen.queryByRole("alert")).toBeNull();
 });

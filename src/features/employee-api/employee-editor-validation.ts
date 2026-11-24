@@ -17,7 +17,7 @@ export function employeeFieldGroup(path: string): EmployeeCreateGroup {
   if (path.startsWith("bankAccount")) return "bank";
   if (["workingZoneIds", "jobTypeIds", "startDate"].includes(path)) return "work";
   if (["idNumber", "address", "area", "wardCommune", "otherInformation", "notes"].includes(path)) return "personal";
-  if (["createAccount", "username", "accountId"].includes(path)) return "account";
+  if (["createAccount", "username", "accountId", "grants"].includes(path)) return "account";
   return "basic";
 }
 

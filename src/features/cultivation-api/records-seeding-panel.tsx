@@ -20,6 +20,7 @@ import { defaultSeedingSort, seedingRunningTotals, sortSeedingRecords } from "./
 import { SeedingRecordDetails } from "./seeding-record-details";
 import { SeedingSummaryStrip } from "./seeding-summary-strip";
 import { seedRepo, useAllowed } from "./records-shared";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 const n = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
 // Sort key of each heading (same order as the headings below): date, pieces/lot, lane, recorder, running total.
@@ -90,10 +91,10 @@ export function SeedingPanel({ zoneId, raftId, cycleId, cycleStartDate }: { zone
                 <td data-label="Người ghi nhận">{v.recordedByName ?? "—"}</td>
               </>}
             </OpenableTableRow>
-            {expanded === v.id && <tr><td colSpan={5} className={flowStyles.recordDetailCell}>
+            {expanded === v.id && <DetailRow colSpan={5} className={flowStyles.recordDetailCell}>
               {selected?.id === v.id && !completed ? form(v)
                 : <SeedingRecordDetails record={v} zoneId={zoneId} nurseryCode={data.nurseryBatchId ? data.nurseryCode ?? null : undefined} completed={completed} canAct={allowed("Edit") || allowed("Delete")} canEdit={allowed("Edit")} onEdit={() => setSelected(v)} onClose={() => setExpanded(undefined)} />}
-            </td></tr>}
+            </DetailRow>}
           </Fragment>)}
         </DataTable>
         <div className={flowStyles.tablePaging}><Paging page={currentPage} total={data.records.length} pageSize={10} onChange={setPage} /></div>

@@ -24,6 +24,7 @@ import { emptyFilters, timeProblem, toQuery, type Filters } from "./invoice-list
 import { RailFinder, searchCustomers, searchLots } from "./invoice-rail-finder";
 import { DeliveryStatus, INVOICE, InvoiceStatus, PaidStatus } from "./invoice-status";
 import { invoiceRepository, useInvoiceAccess } from "./use-invoice-list";
+import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
 type Column = { key: string; label: string; numeric?: boolean; hidden?: boolean; render(row: ListRow): ReactNode };
 const stop = (event: { stopPropagation(): void }) => event.stopPropagation();
@@ -130,7 +131,7 @@ function InvoiceList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => open(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
               {visible.map((column) => <td key={column.key} className={column.numeric ? styles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
-            {expanded === row.id && <tr><td colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><InvoiceDetailPanel id={row.id} canExport={access.exportFile} onChanged={reload} /></div></td></tr>}
+            {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}><InvoiceDetailPanel id={row.id} canExport={access.exportFile} onChanged={reload} /></div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
     </ManagementScroller>

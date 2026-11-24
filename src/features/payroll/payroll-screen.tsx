@@ -8,6 +8,8 @@ import { BulkBar, ColumnPicker, ListStateMessage, ManagementPagination, Manageme
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { ErrorNotice, operationError, useMutation } from "@/features/operations/ui";
 import { payrollStatuses, type PayrollStatus, type PeriodType, type SheetPage } from "./contracts";
+import { PayrollSettingsButton } from "@/features/hr-setup/payroll-settings-dialog";
+import { usePayrollWriter } from "./use-payroll-writer";
 import { PayrollCreateDialog } from "./payroll-create-dialog";
 import { PayrollFilterRail } from "./payroll-filter-rail";
 import { PayrollListTable, listColumns } from "./payroll-list-table";
@@ -26,7 +28,7 @@ export function PayrollScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SheetPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string | undefined>(linkedId), [selected, setSelected] = useState<ReadonlySet<string>>(new Set()), [creating, setCreating] = useState(false), [notice, setNotice] = useState<string>();
-  const exportList = useMutation();
+  const exportList = useMutation(), writer = usePayrollWriter();
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-payroll-sheets", defaultColumns);
   const visible = useMemo(() => { const keys = storedColumns.split(","), shown = listColumns.filter((column) => keys.includes(column.key)); return shown.length ? shown : listColumns; }, [storedColumns]);
   const query = useMemo<SheetQuery>(() => ({ search, periodType, statuses, sortBy: sort.key, sortDir: sort.direction, page, pageSize }), [search, periodType, statuses, sort, page, pageSize]);
@@ -58,7 +60,8 @@ export function PayrollScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
     footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="bảng lương" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); setSelected(new Set()); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm bảng lương" placeholder="Theo mã, tên bảng lương" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
-      <Button key="create" className="w-auto" type="button" onClick={() => setCreating(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Bảng tính lương</Button>
+      {writer && <Button key="create" className="w-auto" type="button" onClick={() => setCreating(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Bảng tính lương</Button>}
+      {writer && <PayrollSettingsButton />}
       <Button key="export" className="w-auto" variant="secondary" type="button" isPending={exportList.pending} onClick={() => void exportList.run(() => payrollRepository.exportList(query), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>
       <ColumnPicker columns={listColumns} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
       <HelpLink helpHref={helpHref} />
@@ -75,7 +78,7 @@ export function PayrollScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
           onSelectAll={(on) => setSelected(on ? new Set(pageIds) : new Set())}
           onChanged={(message) => { if (message) setNotice(message); reload(); }} />}
     </ManagementScroller>
-    {creating && <PayrollCreateDialog onClose={() => setCreating(false)} onCreated={(sheet) => {
+    {creating && <PayrollCreateDialog onClose={() => setCreating(false)} onOpenExisting={(id) => { setCreating(false); setStatuses(payrollStatuses); setSearch(""); setExpanded(id); reload(); }} onCreated={(sheet) => {
       setCreating(false); setNotice(`Đã tạo ${sheet.name}.`); setSort({ key: "code", direction: "desc" }); setPage(1); setExpanded(sheet.id); reload();
       // Creation is synchronous on the backend; a sheet still "Đang tạo" is refreshed once more.
       if (sheet.status === "Creating") setTimeout(reload, 2000);

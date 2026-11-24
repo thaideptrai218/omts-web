@@ -3,6 +3,7 @@ import { raftGeometryFields, raftLaneFields } from "@/features/rafts-api/raft-ge
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
 import { farmingZoneListItemSchema, farmingZoneViewSchema } from "@/features/farming-zones/api/farming-zone-contract.schemas";
 import { employeeListItemSchema, employeeViewSchema } from "@/features/employee-management/api/employee-contract.schemas";
+import { canReadEmployees } from "@/features/employee-api/employee-read-access";
 
 export const resourceKeys = ["zones", "suppliers", "input-items", "employees", "rafts", "accounts", "roles", "customers"] as const;
 export type ResourceKey = typeof resourceKeys[number];
@@ -35,7 +36,7 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
     fields: [{ key: "code", label: "Mã vật tư", required: true }, { key: "name", label: "Tên vật tư", required: true },
       { key: "group", label: "Nhóm", type: "select", required: true, options: inputGroups },
       { key: "unit", label: "Đơn vị tính", required: true }, { key: "description", label: "Mô tả", type: "textarea" }] },
-  employees: { title: "Nhân viên thời vụ", ownerOnly: true, editable: true,
+  employees: { title: "Nhân viên", ownerOnly: true, editable: true,
     columns: [["fullName", "Họ tên"], ["phoneNumber", "Số điện thoại"], ["status", "Tình trạng"]],
     fields: [{ key: "fullName", label: "Họ và tên", required: true }, { key: "phoneNumber", label: "Số điện thoại" },
       { key: "birthday", label: "Ngày sinh", type: "date" }, { key: "address", label: "Địa chỉ" }, { key: "area", label: "Tỉnh/thành phố" },
@@ -64,8 +65,11 @@ const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, 
 const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: z.enum(["Seed", "Material", "Other"]), unit: text, ...usage });
 const raftRow = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), size: nullableText.optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
 const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), status: text.optional() }).refine((row) => row.code !== undefined || row.status !== undefined);
+// `pairs` = the Effective zone-role pairs the backend list already returns (StaffAccountPairView) and `employeeId` = the linked employee:
+// the user-management screen reads role, zone and employee from the list itself, with no per-row grant request.
+const accountPair = z.object({ id: apiIdSchema, zoneId: apiIdSchema.nullable(), zoneName: nullableText, allZones: z.boolean(), role: text, roleName: text });
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
-  subjectType: text.optional(), mustChangePassword: z.boolean().optional(), ...version });
+  subjectType: text.optional(), mustChangePassword: z.boolean().optional(), employeeId: apiIdSchema.nullish(), pairs: z.array(accountPair).optional(), ...version });
 const listSchemas = { zones: farmingZoneListItemSchema, suppliers: supplierRow, "input-items": itemRow,
   employees: employeeListItemSchema, rafts: raftRow, accounts: accountRow, roles: roleRow, customers: customerRow };
 const detailSchemas = {
@@ -112,6 +116,8 @@ export function projectResource(resource: ResourceKey, data: unknown, detail: bo
 export function resourceAllowed(resource: ResourceKey, identity: { subjectType: string }, functions: readonly { functionCode: string; action: string }[], action = "View") {
   if (identity.subjectType === "CooperativeOwner") return true;
   const definition = resources[resource];
+  // Nhân viên: Kế toán chỉ xem (không thêm/sửa/xuất); xem canReadEmployees.
+  if (resource === "employees") return action === "View" && canReadEmployees(identity, functions);
   if (definition.ownerOnly || identity.subjectType !== "Staff") return false;
   if (resource === "input-items") return action === "View" && functions.some((entry) =>
     ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYCLES"].includes(entry.functionCode) && entry.action === "View");
