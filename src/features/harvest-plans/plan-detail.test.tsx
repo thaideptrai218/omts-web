@@ -16,13 +16,12 @@ import type { PlanAccess } from "./plan-access";
 import { PlanDetailPanel } from "./plan-detail";
 
 const owner = { create: true, edit: true, remove: true, harvest: true, staff: true } as PlanAccess;
-const lane = (laneNumber: number, state: string, lotCode: string | null = null) => ({ laneId: id(60 + laneNumber), laneNumber, state, lotCode });
 const view = (patch: object = {}) => ({
   id: id(1), code: "KHT000005", statusId: 4202, status: "Assigned", zones: [{ id: id(6), code: "DEMO-01", name: "Vùng demo" }], plannedAt: "2026-11-18T06:00:00+07:00", note: "ghi chú kế hoạch",
   createdBy: { id: id(8), name: "Nguyễn Văn Hải" }, assignedAt: "2026-11-18T01:17:00+07:00", completedAt: null, cancelledAt: null, cancelReason: null,
   orders: [{ id: id(9), code: "DH000005" }],
-  lines: [{ id: id(2), lineNumber: 1, raftId: id(4), raftCode: "B1-01", zone: { id: id(6), code: "DEMO-01", name: "Vùng demo" }, note: null, lanes: [lane(3, "Harvested", "DEMO-01-B1-01-20261118")], expectedProduct: { id: id(10), code: "SP000001", name: "Hàu sữa" }, expectedCageCount: 2.5, state: "Harvested", canHarvest: false, lot: { id: id(11), lotCode: "DEMO-01-B1-01-20261118" } }],
-  progress: { lines: 1, linesDone: 1, lanes: 1, lanesHarvested: 1, lanesSkipped: 0 }, allowedActions: ["Edit", "Assign", "Cancel"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "p1", ...patch,
+  lines: [{ id: id(2), lineNumber: 1, raftId: id(4), raftCode: "B1-01", zone: { id: id(6), code: "DEMO-01", name: "Vùng demo" }, note: null, expectedProduct: { id: id(10), code: "SP000001", name: "Hàu sữa" }, expectedCageCount: 2.5, state: "Harvested", canHarvest: false, lot: { id: id(11), lotCode: "DEMO-01-B1-01-20261118" } }],
+  progress: { lines: 1, linesDone: 1 }, allowedActions: ["Edit", "Assign", "Cancel"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "p1", ...patch,
 }) as unknown as PlanView;
 const open = async (plan: PlanView, access = owner) => {
   state.detail.mockResolvedValue({ status: "success", data: plan });

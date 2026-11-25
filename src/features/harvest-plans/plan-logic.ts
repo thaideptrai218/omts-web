@@ -1,21 +1,10 @@
 import { toInstant } from "@/features/sales-orders/order-logic";
 import { foldVietnamese } from "@/shared/presentation/fold-text";
-import type { PlanLane, PlanLine, PlanView } from "./contracts";
+import type { PlanLine, PlanView } from "./contracts";
 import { PLAN } from "./contracts";
 
-/** Pure rules of the harvest plan: the lane chips, the totals of a plan, the form lines and the body sent to the API. */
-export const laneStateLabel: Record<PlanLane["state"], string> = { Planned: "Kế hoạch", Harvested: "Đã thu", Skipped: "Không thu" };
-
-export type LaneChip = { number: number; text: string; state: PlanLane["state"]; lotCode?: string; title?: string };
-/** One chip of a line: "Luống 3" with its state; a harvested lane names its lot, a skipped lane carries the reason as a tooltip. */
-export function laneChip(lane: PlanLane): LaneChip {
-  const title = lane.state === "Skipped" ? lane.skipReason || "Không thu" : lane.state === "Harvested" ? lane.lotCode ? `Đã thu trong lô ${lane.lotCode}` : "Đã thu" : undefined;
-  return { number: lane.laneNumber, text: `Luống ${lane.laneNumber}: ${laneStateLabel[lane.state]}`, state: lane.state, ...(lane.lotCode ? { lotCode: lane.lotCode } : {}), ...(title ? { title } : {}) };
-}
-
-/** The lanes of a line still to harvest: planned, not skipped, not in a lot. */
-export const plannedLaneNumbers = (line: Pick<PlanLine, "lanes">) => line.lanes.filter((lane) => lane.state === "Planned").map((lane) => lane.laneNumber).sort((a, b) => a - b);
-/** A line (a raft) can be harvested now when the API allows it and it has no lot yet; lanes are no longer planned. */
+/** Pure rules of the harvest plan: the totals of a plan, the form lines and the body sent to the API. */
+/** A line (one whole raft) can be harvested now when the API allows it and it has no lot yet; a plan holds no lanes. */
 export const lineCanHarvest = (line: Pick<PlanLine, "lot" | "canHarvest">) => line.canHarvest && !line.lot;
 
 /** Who reads the plan: the Owner (makes, gives out and completes it) or the person that works it in the zone (receives, harvests and hands over). */
@@ -43,8 +32,8 @@ export function planTotals(lines: readonly PlanLine[]) {
 }
 
 /**
- * One line of the form: a zone and one raft of it (no lanes are planned) with its expected cages. The zone only narrows the choice of raft (the API takes the zone from the raft); the
- * product is the one the raft farms and is never typed. A line with a lot or a skipped lane cannot be changed once the plan is given out.
+ * One line of the form: a zone and one whole raft of it with its expected cages. The zone only narrows the choice of raft (the API takes the zone from the raft); the
+ * product is the one the raft farms and is never typed. A line with a lot cannot be changed once the plan is given out.
  */
 export type FormLine = { key: string; id?: string; zoneId: string; raftId: string; cages: string; note: string; locked: boolean };
 export type PlanForm = { code: string; plannedAt: string; note: string; orderIds: string[]; lines: FormLine[]; rowVersion?: string };
@@ -164,21 +153,21 @@ export function planFormProblem(form: PlanForm): string | undefined {
   return undefined;
 }
 
-/** The JSON body of a save. Lines of an existing plan carry their id so the API keeps the lot and the lanes an older plan has (an empty `laneNumbers` leaves them as they are). */
+/** The JSON body of a save. Lines of an existing plan carry their id so the API keeps the lot of the line. */
 export function buildPlanBody(form: PlanForm) {
   return {
     code: form.code.trim() || null, plannedAt: toInstant(form.plannedAt), note: form.note.trim() || null, salesOrderIds: form.orderIds,
     lines: form.lines.map((line) => ({
-      ...(line.id ? { id: line.id } : {}), raftId: line.raftId, laneNumbers: [],
+      ...(line.id ? { id: line.id } : {}), raftId: line.raftId,
       expectedCageCount: cageCount(line.cages), note: line.note.trim() || null,
     })),
     ...(form.rowVersion ? { rowVersion: form.rowVersion } : {}),
   };
 }
 
-/** What the harvest form needs of a plan line: the lanes to lock (planned ones only) and what the line expects, to start the product line from. */
+/** What the harvest form needs of a plan line: its raft and what the line expects, to start the product line from. */
 export const harvestPlanFor = (plan: Pick<PlanView, "code">, line: PlanLine) => ({
-  lineId: line.id, planCode: plan.code, raftId: line.raftId, raftCode: line.raftCode, laneNumbers: plannedLaneNumbers(line),
+  lineId: line.id, planCode: plan.code, raftId: line.raftId, raftCode: line.raftCode,
   expectedProductId: line.expectedProduct?.id, expectedCageCount: line.expectedCageCount ?? undefined, expectedHarvestDate: line.expectedHarvestDate ?? undefined,
 });
 export type HarvestPlanTarget = ReturnType<typeof harvestPlanFor>;

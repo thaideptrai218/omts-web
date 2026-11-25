@@ -10,20 +10,19 @@ import { sameEmployeeSession } from "../employees/employee-session";
 
 /**
  * The browser's door to Kế hoạch thu hoạch (api/harvest-plans): the list, one plan by id or by code, the plans given out to the caller's zones, the next
- * code, the form of a plan made from an order, the Nhân công of a plan (read, and set the crew of one line), and the writes (save, assign, receive, hand over, finish, cancel, skip and unskip lanes). Each action names the backend call, who
+ * code, the form of a plan made from an order, the Nhân công of a plan (read, and set the crew of one line), and the writes (save, assign, receive, hand over, finish, cancel). Each action names the backend call, who
  * may make it and the shape the answer must have; query values are forwarded only for the names an action lists. The harvest of a lane plan itself goes
  * through the existing harvest door (api/operations/harvest) with the line id.
  */
-const id = z.guid(), reason = z.string().trim().min(1).max(500), cancelReason = z.string().trim().min(1).max(1000), rowVersion = z.string().min(1).max(200);
+const id = z.guid(), cancelReason = z.string().trim().min(1).max(1000), rowVersion = z.string().min(1).max(200);
 const code = z.string().regex(/^[A-Za-z0-9._-]{1,30}$/).nullable().optional();
 const text = (max: number) => z.string().max(max).nullable().optional();
 const instant = z.iso.datetime({ offset: true });
-const lanes = z.array(z.number().int().min(1).max(999)).min(1).max(200).refine((values) => new Set(values).size === values.length);
 
 /** Who may make a call: the Owner always; a staff account when it holds any of the listed function permissions. */
 type Access = { any: readonly (readonly [string, string])[] };
 const plans = (action: string): Access => ({ any: [["HARVEST_PLANS", action]] });
-/** Recording a lot from a plan line or marking lanes "Không thu" is the zone manager's work and needs the right to record a harvest. */
+/** Receiving a plan, recording a lot from a plan line and handing the plan over are the zone manager's work and need the right to record a harvest. */
 const harvests = (action: string): Access => ({ any: [["HARVESTS", action]] });
 /** Choosing the crew of a plan line gives its employees work assignments, so it needs the right to create them (the API checks the zone and the status of the plan). */
 const assignments = (action: string): Access => ({ any: [["WORK_ASSIGNMENTS", action]] });
@@ -61,8 +60,8 @@ const reads: Record<string, Read> = {
 /** The reads that need the id of a record. */
 const needsId = new Set(["plan", "plan-order-draft", "plan-staffing"]);
 
-// Raft plans send no lanes; [] also retains an existing plan's legacy lanes.
-const lineBody = z.strictObject({ id: id.optional(), raftId: id, laneNumbers: lanes.or(z.tuple([])), expectedCageCount: z.number().positive().max(100_000).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6).nullable().optional(), note: text(500) });
+// A plan line is one whole raft: a plan holds no lanes.
+const lineBody = z.strictObject({ id: id.optional(), raftId: id, expectedCageCount: z.number().positive().max(100_000).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6).nullable().optional(), note: text(500) });
 const planBody = z.strictObject({
   code, plannedAt: instant, note: text(1000), salesOrderIds: z.array(id).max(20), lines: z.array(lineBody).min(1).max(50), rowVersion: rowVersion.optional(),
 });
@@ -76,8 +75,6 @@ const write = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("plan-hand-over"), id, body: versioned }),
   z.strictObject({ action: z.literal("plan-finish"), id, body: versioned }),
   z.strictObject({ action: z.literal("plan-cancel"), id, body: z.strictObject({ reason: cancelReason, rowVersion: rowVersion.optional() }) }),
-  z.strictObject({ action: z.literal("plan-skip-lanes"), id, lineId: id, body: z.strictObject({ laneNumbers: lanes, reason }) }),
-  z.strictObject({ action: z.literal("plan-unskip-lanes"), id, lineId: id, body: z.strictObject({ laneNumbers: lanes }) }),
   z.strictObject({ action: z.literal("plan-line-staffing"), id, lineId: id, body: z.strictObject({ employeeIds: crew, moveExisting: z.boolean().optional(), rowVersion: rowVersion.optional() }) }),
 ]);
 
@@ -90,9 +87,7 @@ function planWrite(p: z.infer<typeof write>): Plan {
     case "plan-hand-over": return { path: `${P}/${p.id}/hand-over`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
     case "plan-finish": return { path: `${P}/${p.id}/finish`, method: "POST", access: plans("Edit"), schema: c.ack, body: p.body };
     case "plan-cancel": return { path: `${P}/${p.id}/cancel`, method: "POST", access: plans("Delete"), schema: c.ack, body: p.body };
-    case "plan-skip-lanes": return { path: `${P}/${p.id}/lines/${p.lineId}/skip-lanes`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
     case "plan-line-staffing": return { path: `${P}/${p.id}/lines/${p.lineId}/staffing`, method: "PUT", access: assignments("Create"), schema: c.staffingLine, body: p.body };
-    case "plan-unskip-lanes": return { path: `${P}/${p.id}/lines/${p.lineId}/unskip-lanes`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
   }
 }
 

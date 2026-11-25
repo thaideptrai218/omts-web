@@ -33,8 +33,8 @@ type Start = { plan?: PlanView; copy?: PlanView; drafts: PlanDraft[] };
 /**
  * Create a harvest plan, or change one that is not finished (Owner). `orderIds` starts a new plan for those orders: they are linked and the pickup time of the
  * first one is the planned time. A plan needs at least one order. A line is a zone, a raft of it (only rafts that can be harvested are offered, each with the product it farms and
- * when it is expected to be ready; with orders linked, the rafts farming a product the orders still need come first and the others are marked, not hidden) and its lanes. The side column sets what the orders still need of each product against the
- * cages the lines expect; a plan that is already given out only lets the lines without a lot change. Lanes are not planned.
+ * when it is expected to be ready; with orders linked, the rafts farming a product the orders still need come first and the others are marked, not hidden) (a line is one whole raft). The side column sets what the orders still need of each product against the
+ * cages the lines expect; a plan that is already given out only lets the lines without a lot change. A plan holds no lanes.
  */
 export function PlanEditorPage({ id, copyFrom, orderIds = [] }: { id?: string; copyFrom?: string; orderIds?: readonly string[] }) {
   const access = usePlanAccess(), orderKey = orderIds.join(",");
@@ -79,7 +79,7 @@ function Editor({ access, start, eligible }: { access: PlanAccess; start: Start;
   /** The rafts that can be chosen, with the rafts of the lines already on the plan (they may have stopped being eligible, e.g. their lot is recorded). */
   const catalog = useMemo(() => {
     const byId = new Map(eligible.map((raft) => [raft.raftId, raft]));
-    for (const line of plan?.lines ?? []) if (!byId.has(line.raftId)) byId.set(line.raftId, { raftId: line.raftId, raftCode: line.raftCode, zone: line.zone, product: line.expectedProduct ?? null, lanes: line.lanes.map((lane) => ({ laneId: lane.laneId, laneNumber: lane.laneNumber, state: "InAnotherPlan" as const, planCode: plan?.code })) });
+    for (const line of plan?.lines ?? []) if (!byId.has(line.raftId)) byId.set(line.raftId, { raftId: line.raftId, raftCode: line.raftCode, zone: line.zone, product: line.expectedProduct ?? null });
     return [...byId.values()];
   }, [eligible, plan]);
   const raftOf = (raftId: string) => catalog.find((raft) => raft.raftId === raftId);

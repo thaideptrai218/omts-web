@@ -30,7 +30,7 @@ const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "staffing" a
 const dash = (value: string | null | undefined) => value || "—";
 const zoneCodes = (zones: readonly { code: string }[]) => zones.map((zone) => zone.code).join(", ") || "—";
 
-/** The row opened under the list: the plan with its lines and lanes, and the buttons the API allows now, and under "Nhân công" the employees chosen for each line. */
+/** The row opened under the list: the plan with its lines (one raft each), and the buttons the API allows now, and under "Nhân công" the employees chosen for each line. */
 export function PlanDetailPanel({ id, access, onChanged }: { id: string; access: PlanAccess; onChanged(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => planRepository.detail(id, signal), [id]));
   const [tab, setTab] = useState<Tab>("info");

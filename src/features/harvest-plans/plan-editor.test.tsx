@@ -27,19 +27,18 @@ const draft = {
   salesOrder: { id: ids.order, code: "DH000001", statusId: 4401, status: "Draft", customer: null }, plannedAt: "2026-11-14T06:00:00+07:00",
   products: [{ productId: ids.product, productCode: "SP000001", productName: "Hàu sữa", unitId: ids.person, unitCode: "K", unitName: "kg", quantity: 120, expectedCageCount: 8 }],
 };
-const eligLane = (laneNumber: number, stateName: string, planCode: string | null = null) => ({ laneId: `0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0c0${laneNumber}`, laneNumber, state: stateName, planCode });
 const eligible = [
-  { raftId: ids.raft, raftCode: "B1", zone, product: { id: ids.product, code: "SP000001", name: "Hàu sữa" }, lanes: [eligLane(1, "Free"), eligLane(2, "Free"), eligLane(3, "Harvested"), eligLane(4, "InAnotherPlan", "KHT000002")] },
-  { raftId: ids.raft2, raftCode: "B2", zone: zone2, product: null, lanes: [eligLane(1, "Free")] },
+  { raftId: ids.raft, raftCode: "B1", zone, product: { id: ids.product, code: "SP000001", name: "Hàu sữa" } },
+  { raftId: ids.raft2, raftCode: "B2", zone: zone2, product: null },
 ];
-// Rafts that the orders linked to a plan must not offer: another product, a product asked by no order, and no free lane left.
+// Rafts that the orders linked to a plan must not offer: another product, and a product asked by no order.
 const others = [
-  { raftId: ids.raft3, raftCode: "B3", zone, product: { id: ids.fish, code: "SP000002", name: "Cá bớp" }, lanes: [eligLane(1, "Free")] },
-  { raftId: ids.raft4, raftCode: "B4", zone: zone3, product: { id: ids.product, code: "SP000001", name: "Hàu sữa" }, lanes: [eligLane(1, "Harvested"), eligLane(2, "InAnotherPlan", "KHT000002")] },
+  { raftId: ids.raft3, raftCode: "B3", zone, product: { id: ids.fish, code: "SP000002", name: "Cá bớp" } },
+  { raftId: ids.raft4, raftCode: "B4", zone: zone3, product: { id: ids.product, code: "SP000001", name: "Hàu sữa" } },
 ];
 const saved = (patch: object = {}) => ({
   id: ids.plan, code: "KHT000001", statusId: 4201, status: "Draft", zones: [zone], plannedAt: "2026-11-14T06:00:00+07:00", note: null, createdBy: null, orders: [{ id: ids.order, code: "DH000001", statusId: 4401, status: "Draft", customer: { id: ids.person, code: "KH1", name: "An" } }],
-  lines: [], progress: { lines: 0, linesDone: 0, lanes: 0, lanesHarvested: 0, lanesSkipped: 0 }, allowedActions: ["Edit", "Assign"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "v1", ...patch,
+  lines: [], progress: { lines: 0, linesDone: 0 }, allowedActions: ["Edit", "Assign"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "v1", ...patch,
 });
 const orderRow = (id: string, code: string, customerName: string) => ({ id, code, statusId: 4401, status: "Draft", orderedAt: "2026-11-12T08:00:00+07:00", pickupAt: null, customerName, walkInCustomer: false, source: "Phone", total: 1, invoicedTotal: 0, customerPaid: 0, invoiceCodes: [], progress: [], rowVersion: "v" });
 
@@ -85,7 +84,7 @@ it("starts from an order with the order linked, lets the Owner choose zone and r
   await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));
   expect(state.create.mock.calls[0][0]).toEqual({
     code: null, plannedAt: "2026-11-14T06:00:00+07:00", note: null, salesOrderIds: [ids.order],
-    lines: [{ raftId: ids.raft, laneNumbers: [], expectedCageCount: 8, note: null }],
+    lines: [{ raftId: ids.raft, expectedCageCount: 8, note: null }],
   });
   await waitFor(() => expect(state.assign).toHaveBeenCalledWith(ids.plan, "v1"));
   await waitFor(() => expect(state.push).toHaveBeenCalledWith("/farming/harvest-plans?code=KHT000001"));
@@ -100,7 +99,7 @@ it("takes rafts of several zones in one plan and several orders from the search 
   await user.click(screen.getByRole("button", { name: /Thêm dòng bè/ }));
   await user.selectOptions(screen.getByLabelText("Vùng dòng 2"), ids.zone2);
   expect([...(screen.getByLabelText("Bè dòng 2") as HTMLSelectElement).options].map((option) => option.text)).toEqual(["Chọn bè", "B2"]);
-  // With no order linked every eligible raft is offered, whatever it farms and whatever lanes are free.
+  // With no order linked every eligible raft is offered, whatever it farms.
   expect([...(screen.getByLabelText("Vùng dòng 2") as HTMLSelectElement).options].map((option) => option.text)).toEqual(["Chọn vùng", "DEMO-01", "DEMO-02", "DEMO-03"]);
   expect([...(screen.getByLabelText("Bè dòng 1") as HTMLSelectElement).options].map((option) => option.text)).toEqual(["Chọn bè", "B1 · Hàu sữa", "B3 · Cá bớp"]);
   await user.selectOptions(screen.getByLabelText("Bè dòng 2"), ids.raft2);
@@ -115,7 +114,7 @@ it("takes rafts of several zones in one plan and several orders from the search 
   expect(await screen.findByText(/^KHT còn thiếu 200 kg Hàu sữa so với đơn đặt hàng/)).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Đồng ý" }));
   await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));
-  expect(state.create.mock.calls[0][0]).toMatchObject({ salesOrderIds: [ids.order, ids.order2], lines: [{ raftId: ids.raft, laneNumbers: [] }, { raftId: ids.raft2, laneNumbers: [] }] });
+  expect(state.create.mock.calls[0][0]).toMatchObject({ salesOrderIds: [ids.order, ids.order2], lines: [{ raftId: ids.raft }, { raftId: ids.raft2 }] });
   expect(state.create.mock.calls[0][0]).not.toHaveProperty("zoneId");
   expect(state.assign).not.toHaveBeenCalled();
 });
@@ -145,23 +144,23 @@ it("shows the first problem of an incomplete form, in the order of the line: zon
 });
 
 it("shows the sentence of the API when the API refuses the plan and keeps the form", async () => {
-  state.create.mockResolvedValueOnce({ status: "error", httpStatus: 409, code: "MSG-PLAN-02", problem: { message: "Luống 1 của bè B1 đã có trong KHT000002." } });
+  state.create.mockResolvedValueOnce({ status: "error", httpStatus: 409, code: "MSG-PLAN-08", problem: { message: "Đơn DH000001 đã có trong KHT000002." } });
   const user = userEvent.setup();
   render(<ToastProvider><PlanEditorPage orderIds={[ids.order]} /></ToastProvider>);
   await user.click(await screen.findByRole("button", { name: /Thêm dòng bè/ }));
   await user.selectOptions(screen.getByLabelText("Vùng dòng 1"), ids.zone);
   await user.selectOptions(screen.getByLabelText("Bè dòng 1"), ids.raft);
   await user.click(screen.getByRole("button", { name: "Lưu tạm" }));
-  expect((await screen.findByRole("alert")).textContent).toContain("Luống 1 của bè B1 đã có trong KHT000002.");
+  expect((await screen.findByRole("alert")).textContent).toContain("Đơn DH000001 đã có trong KHT000002.");
   expect(state.push).not.toHaveBeenCalled();
   expect((screen.getByLabelText("lồng dự kiến dòng 1") as HTMLInputElement).value).toBe("8");
 });
 
-it("lets a plan already given out change only the lines without a lot or a skipped lane", async () => {
-  const line = (id: string, raftId: string, raftCode: string, lineZone: object, lanes: object[], extra: object = {}) => ({ id, lineNumber: 1, raftId, raftCode, zone: lineZone, expectedProduct: { id: ids.product, code: "SP000001", name: "Hàu sữa" }, expectedCageCount: 8, state: "Open", lot: null, canHarvest: true, locked: false, lanes, ...extra });
+it("lets a plan already given out change only the lines without a lot", async () => {
+  const line = (id: string, raftId: string, raftCode: string, lineZone: object, extra: object = {}) => ({ id, lineNumber: 1, raftId, raftCode, zone: lineZone, expectedProduct: { id: ids.product, code: "SP000001", name: "Hàu sữa" }, expectedCageCount: 8, state: "Open", lot: null, canHarvest: true, locked: false, ...extra });
   state.detail.mockResolvedValue({ status: "success", data: saved({ statusId: 4202, status: "Assigned", allowedActions: ["Edit"], zones: [zone, zone2], lines: [
-    line(ids.line, ids.raft, "B1", zone, [{ laneId: ids.person, laneNumber: 1, state: "Planned" }]),
-    line(ids.line2, ids.raft2, "B2", zone2, [{ laneId: ids.person, laneNumber: 1, state: "Harvested", lotCode: "B2-LOT1" }], { state: "Harvested", locked: true, lot: { id: ids.person, lotCode: "B2-LOT1", cageCount: 8, estimatedKg: 400, harvestedAt: "2026-11-14T08:00:00+07:00" } }),
+    line(ids.line, ids.raft, "B1", zone),
+    line(ids.line2, ids.raft2, "B2", zone2, { state: "Harvested", locked: true, lot: { id: ids.person, lotCode: "B2-LOT1", cageCount: 8, estimatedKg: 400, harvestedAt: "2026-11-14T08:00:00+07:00" } }),
   ] }) });
   state.update.mockResolvedValue({ status: "success", data: saved({ statusId: 4202 }) });
   const user = userEvent.setup();
@@ -177,7 +176,7 @@ it("lets a plan already given out change only the lines without a lot or a skipp
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(state.update).toHaveBeenCalledTimes(1));
   expect(state.update.mock.calls[0][0]).toBe(ids.plan);
-  expect(state.update.mock.calls[0][1]).toMatchObject({ rowVersion: "v1", lines: [{ id: ids.line, raftId: ids.raft, laneNumbers: [] }, { id: ids.line2, raftId: ids.raft2, laneNumbers: [] }] });
+  expect(state.update.mock.calls[0][1]).toMatchObject({ rowVersion: "v1", lines: [{ id: ids.line, raftId: ids.raft }, { id: ids.line2, raftId: ids.raft2 }] });
   expect(state.assign).not.toHaveBeenCalled();
 });
 
@@ -205,7 +204,7 @@ it("sets the cages of the rafts against what the orders still need and asks befo
   expect(await screen.findByText("KHT còn thiếu 50 kg Hàu sữa so với đơn đặt hàng. Vẫn lưu và giao QLV?")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Đồng ý" }));
   await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));
-  expect(state.create.mock.calls[0][0].lines).toEqual([{ raftId: ids.raft, laneNumbers: [], expectedCageCount: 4, note: null }]);
+  expect(state.create.mock.calls[0][0].lines).toEqual([{ raftId: ids.raft, expectedCageCount: 4, note: null }]);
   await waitFor(() => expect(state.assign).toHaveBeenCalledTimes(1));
 });
 
@@ -260,7 +259,7 @@ it("refuses an account without the right to create plans", async () => {
 });
 
 it("lists an order that already has an active plan with the code of the plan and does not let it be chosen again", async () => {
-  const planRow = (id: string, code: string, statusId: number, orderId: string) => ({ id, code, statusId, status: "", zones: [], plannedAt: "2026-11-14T06:00:00+07:00", note: null, raftCodes: [], orders: [{ id: orderId, code: "DH000002", statusId: 4401, status: "Draft" }], progress: { lines: 0, linesDone: 0, lanes: 0, lanesHarvested: 0, lanesSkipped: 0 }, createdBy: null, rowVersion: "v" });
+  const planRow = (id: string, code: string, statusId: number, orderId: string) => ({ id, code, statusId, status: "", zones: [], plannedAt: "2026-11-14T06:00:00+07:00", note: null, raftCodes: [], orders: [{ id: orderId, code: "DH000002", statusId: 4401, status: "Draft" }], progress: { lines: 0, linesDone: 0 }, createdBy: null, rowVersion: "v" });
   state.plans.mockResolvedValue({ status: "success", data: { items: [planRow(ids.line, "KHT000009", 4202, ids.order2), planRow(ids.line2, "KHT000008", 4205, ids.order)], page: 1, pageSize: 100, total: 2 } });
   const user = userEvent.setup();
   render(<ToastProvider><PlanEditorPage orderIds={[ids.order]} /></ToastProvider>);

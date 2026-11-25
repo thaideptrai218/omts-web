@@ -44,8 +44,6 @@ export const messageCatalog = {
   "MSG-ORDER-04": "Yêu cầu mua đã được đặt hàng và thương lái đã được báo.",
   "MSG-ORDER-05": "Chỉ lập được hóa đơn từ đơn đặt hàng đang ở trạng thái Phiếu tạm hoặc Đang giao. Hãy tải lại đơn để xem trạng thái hiện tại.",
   "MSG-ORDER-06": "Khách hàng và vùng của hóa đơn phải là của đơn đặt hàng.",
-  "MSG-PLAN-01": "Luống không thuộc kế hoạch thu hoạch của dòng này. Hãy thu hoạch đúng các luống của kế hoạch.",
-  "MSG-PLAN-02": "Luống đã nằm trong một kế hoạch thu hoạch khác chưa kết thúc. Hãy bỏ luống đó khỏi một trong hai kế hoạch.",
   "MSG-PLAN-03": "Dòng kế hoạch này đã có lô thu hoạch nên không ghi thêm hoặc sửa được.",
   "MSG-PLAN-04": "Kế hoạch đã có lô thu hoạch nên không hủy được. Hãy dùng Kết thúc để đóng kế hoạch.",
   "MSG-LABOR-03": "Thông tin nhân viên bị trùng. Bản nháp được giữ; hãy đối chiếu hồ sơ hiện có.",
