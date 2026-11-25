@@ -1,11 +1,24 @@
 "use client";
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { useSettingsSections } from "@/components/layout/settings-sections-context";
 import { settingsItemForPath, settingsItemKey } from "./settings-hub-filter";
 import styles from "./settings-page.module.css";
+
+const COLLAPSED_KEY = "omts.settings-sidebar.collapsed";
+const CHANGED = "omts-settings-sidebar-changed";
+/** The choice is kept in this browser; storage that throws (private window) simply leaves the sidebar open. */
+function isCollapsed() { try { return window.localStorage.getItem(COLLAPSED_KEY) === "1"; } catch { return false; } }
+function setCollapsed(value: boolean) {
+  try { window.localStorage.setItem(COLLAPSED_KEY, value ? "1" : "0"); } catch { /* not remembered */ }
+  window.dispatchEvent(new Event(CHANGED));
+}
+function subscribe(onChange: () => void) {
+  window.addEventListener(CHANGED, onChange); window.addEventListener("storage", onChange);
+  return () => { window.removeEventListener(CHANGED, onChange); window.removeEventListener("storage", onChange); };
+}
 
 /**
  * Every page the gear menu can open (e.g. Hồ sơ hợp tác xã, Quản lý người dùng) is shown inside the same sidebar as the
@@ -20,9 +33,10 @@ export function SettingsRouteFrame({ children }: Readonly<{ children: ReactNode 
 
 function Frame({ activeKey, children }: Readonly<{ activeKey: string; children: ReactNode }>) {
   const sections = useSettingsSections(), router = useRouter();
+  const collapsed = useSyncExternalStore(subscribe, isCollapsed, () => false);
   return <div className={styles.page}>
     <p className={styles.crumb}><Link href="/settings">Cài đặt</Link></p>
-    <div className={styles.layout}>
+    <div className={collapsed ? `${styles.layout} ${styles.layoutCollapsed}` : styles.layout}>
       {/* Phones and tablets: one select replaces the list, like the hub. */}
       <select className={styles.picker} aria-label="Chọn thiết lập" value={activeKey} onChange={(event) => {
         const target = sections.flatMap((section) => section.items).find((item) => settingsItemKey(item) === event.target.value);
@@ -33,10 +47,13 @@ function Frame({ activeKey, children }: Readonly<{ activeKey: string; children: 
         </optgroup>)}
       </select>
       <nav className={styles.sidebar} aria-label="Nhóm thiết lập">
+        <button type="button" className={styles.collapse} aria-pressed={collapsed} aria-label={collapsed ? "Mở rộng danh sách cài đặt" : "Thu gọn danh sách cài đặt"} title={collapsed ? "Mở rộng" : "Thu gọn"} onClick={() => setCollapsed(!collapsed)}>
+          <InterfaceIcon name="menu" /><span>{collapsed ? "Mở rộng" : "Thu gọn"}</span>
+        </button>
         {sections.map((section) => <div key={section.label} className={styles.group}>
           <h2 className={styles.groupLabel}>{section.label}</h2>
           <ul>{section.items.map((item) => <li key={settingsItemKey(item)}>
-            <Link href={item.href} aria-current={settingsItemKey(item) === activeKey ? "page" : undefined}><InterfaceIcon name={item.icon} /><span>{item.label}</span></Link>
+            <Link href={item.href} title={item.label} aria-current={settingsItemKey(item) === activeKey ? "page" : undefined}><InterfaceIcon name={item.icon} /><span>{item.label}</span></Link>
           </li>)}</ul>
         </div>)}
       </nav>
