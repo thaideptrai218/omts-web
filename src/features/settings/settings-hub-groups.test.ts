@@ -53,7 +53,7 @@ describe("settings hub search and selection", () => {
     expect(find("phan quyen")).toEqual(expect.arrayContaining(["Quản lý người dùng", "Vai trò và quyền"]));
     expect(find("nhân viên đăng nhập")).toContain("Quản lý người dùng");
     expect(find("zone")).toContain("Quản lý người dùng");
-    expect(find("chấm công")).toContain("Chấm công");
+    expect(find("đơn giá")).toContain("Loại công việc và đơn giá");
     expect(find("thu chi")).toEqual(["Sổ quỹ"]);
     expect(find("ví")).toContain("Sổ quỹ");
   });
@@ -69,7 +69,7 @@ describe("settings hub search and selection", () => {
   });
   it("prefers ?section=, then the ?group= first item, then the first item", () => {
     expect(settingsItemKey(pickSettingsItem(groups, "harvest", "hr")!)).toBe("harvest");
-    expect(pickSettingsItem(groups, null, "hr")?.label).toBe("Chấm công");
+    expect(pickSettingsItem(groups, null, "hr")?.label).toBe("Loại công việc và đơn giá");
     expect(pickSettingsItem(groups, "missing", "missing")?.label).toBe("Hồ sơ hợp tác xã");
     expect(pickSettingsItem([], null, null)).toBeUndefined();
   });

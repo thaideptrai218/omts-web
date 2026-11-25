@@ -51,8 +51,6 @@ export function buildSettingsGroups(gate: SettingsGate): SettingsSection[] {
       [resource("roles"), { href: "/workspace/roles", label: "Vai trò và quyền", icon: "roles", editor: VIEW_ONLY, description: "Đối chiếu vai trò và quyền hiện hành của hệ thống.", hint: "Xem mỗi vai trò làm được gì trước khi phân quyền.", keywords: ["phân quyền", "quyền hạn", "chức năng", "kế toán", "quản lý vùng", "zone manager", "phan quyen", "quyen han", "ke toan", "quan ly vung"] }],
     ]) },
     { key: "farming", label: "Nuôi trồng", items: keep([
-      [isOwner && resource("zones"), { href: "/workspace/zones", label: "Vùng nuôi", icon: "zone", editor: OWNER, description: "Danh sách vùng nuôi của hợp tác xã.", hint: "Thêm vùng mới hoặc cập nhật vùng đang nuôi.", keywords: ["vùng", "khu vực", "zone", "ao", "vung", "khu vuc"] }],
-      [isOwner && resource("rafts"), { href: "/workspace/rafts", label: "Bè nuôi", icon: "raft", editor: OWNER, description: "Danh sách bè và lồng trong từng vùng.", hint: "Thêm bè, lồng hoặc đổi vùng của bè.", keywords: ["bè", "lồng", "raft", "be", "long"] }],
       [isOwner, { href: panelHref("harvest"), panel: "harvest", label: "Thiết lập thu hoạch", icon: "work", editor: OWNER, description: "Khối lượng trung bình mỗi lồng và số ngày tự động đóng lô.", keywords: ["thu hoạch", "đóng lô", "khối lượng", "sản lượng", "thu hoach", "dong lo", "khoi luong"] }],
       [isOwner && operation("water"), { href: panelHref("water-thresholds"), panel: "water-thresholds", label: "Ngưỡng nước", icon: "water", editor: OWNER, description: "Ngưỡng pH, độ mặn và nhiệt độ để cảnh báo theo từng vùng.", hint: "Đặt ngưỡng pH, độ mặn, nhiệt độ cho từng vùng.", keywords: ["ph", "độ mặn", "nhiệt độ", "chất lượng nước", "cảnh báo", "do man", "nhiet do", "chat luong nuoc", "canh bao"] }],
     ]) },
@@ -60,7 +58,6 @@ export function buildSettingsGroups(gate: SettingsGate): SettingsSection[] {
       [isOwner && INPUT_READERS.some((fn) => holds(fn, "View")), { href: panelHref("input-inventory"), panel: "input-inventory", label: "Vật tư & Giống", icon: "material", editor: OWNER, description: "Đơn vị tính, nhóm hàng, loại xuất, cách tính giá vốn và cho phép xuất khi hết.", keywords: ["vật tư", "giống", "đơn vị tính", "nhóm hàng", "giá vốn", "tồn kho", "vat tu", "don vi tinh", "nhom hang", "gia von", "ton kho", "xuất kho"] }],
     ]) },
     { key: "hr", label: "Nhân sự", items: keep([
-      [operation("workforce"), { href: "/operations/workforce", label: "Chấm công", icon: "attendance", editor: GRANTED, description: "Phân công và chấm công theo ngày, theo vùng.", hint: "Phân công việc, duyệt yêu cầu và sửa chấm công trong ngày.", keywords: ["phân công", "điểm danh", "ca làm", "đi làm", "nghỉ phép", "diem danh", "ca lam", "phan cong", "nghi phep", "nhân viên"] }],
       [operation("job-types"), { href: "/operations/job-types", label: "Loại công việc và đơn giá", icon: "work", editor: PRICE_EDITORS, description: "Đơn giá theo giờ và lịch sử ngày hiệu lực của từng loại công việc.", hint: "Thêm loại công việc hoặc đổi đơn giá theo giờ.", keywords: ["đơn giá", "giá công", "lương giờ", "công việc", "don gia", "gia cong", "luong gio", "cong viec"] }],
     ]) },
     { key: "sales", label: "Bán hàng", items: keep([
