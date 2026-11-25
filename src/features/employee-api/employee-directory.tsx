@@ -89,7 +89,16 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   const jobTypes = useRemote(useCallback((signal: AbortSignal) => repository.read("job-types", {}, jobTypeOptionsSchema, signal), [repository]));
   const lookupsReady = !!zones.data && !!jobTypes.data && !zones.loading && !jobTypes.loading;
   // Export of the current filters and sort (no paging) or of the ticked rows only (ids replace the filters).
-  const exportAll = useEmployeeFileAction(() => employeeFileRepository.exportFile({ search: term, statusId, zoneId, employeeType, jobTypeId, ...order }), exportLimitMessage);
+  // The server knows nothing of the account filters, so with them on the rows are read here and exported by id: the file holds what the list shows.
+  const exportAll = useEmployeeFileAction(async () => {
+    if (!filtersNeedAccounts(accountFilters)) return employeeFileRepository.exportFile({ search: term, statusId, zoneId, employeeType, jobTypeId, ...order });
+    const read = (query: Record<string, string | undefined>, signal: AbortSignal) => repository.read("list", query, employeePageSchema, signal);
+    const signal = AbortSignal.timeout(60_000), base = { zoneId, employeeType, jobTypeId, sortBy: sort?.key, sortDir: sort?.direction };
+    const matched = await readWithLoadedAccounts(index => readSelectionPages(read, { ...base, search: "", page: String(index), pageSize: "100" }, { statusId }, signal), accountFilters, term, 1, 5000, signal);
+    if (matched.status !== "success") return matched;
+    if (!matched.data.items.length) return { status: "error" as const, httpStatus: 400, uncertain: false };
+    return employeeFileRepository.exportFile(order, matched.data.items.map(row => row.id));
+  }, exportLimitMessage);
   const exportSelected = useEmployeeFileAction(() => employeeFileRepository.exportFile(order, [...selected]), exportLimitMessage);
   function refresh() { setCache(new Map()); setDetailRevision(value => value + 1); list.reload(); jobTypes.reload(); }
   // The backend saves a profile whose ID number another profile already holds, and says so: show that next to the confirmation.
