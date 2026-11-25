@@ -12,9 +12,9 @@ vi.mock("next/navigation", () => ({
 }));
 afterEach(() => { cleanup(); nav.path = "/"; nav.pushed = ""; });
 
-const owner: SettingsGate = { isOwner: true, holds: () => true, operation: () => true, resource: () => true, canReadProducts: true };
+const owner: SettingsGate = { isOwner: true, holds: () => true, operation: () => true, canReadProducts: true };
 /** Accountant-like viewer: only the cash book settings; every other gear item is hidden. */
-const accountant: SettingsGate = { isOwner: false, holds: (fn, action) => fn === "CASH_BOOK_SETTINGS" && action === "Edit", operation: () => false, resource: () => false, canReadProducts: false };
+const accountant: SettingsGate = { isOwner: false, holds: (fn, action) => fn === "CASH_BOOK_SETTINGS" && action === "Edit", operation: () => false, canReadProducts: false };
 const show = (gate: SettingsGate) => render(<AppShell settingsSections={buildSettingsGroups(gate)} onLogout={vi.fn()}><h1>Trang đích</h1></AppShell>);
 const sidebar = () => within(screen.getByRole("navigation", { name: "Nhóm thiết lập" }));
 
@@ -31,9 +31,9 @@ describe("settings sidebar on gear destinations", () => {
   });
 
   it("keeps a sub-page of a destination under the same selected tab", () => {
-    nav.path = "/workspace/accounts/abc";
+    nav.path = "/cooperative/profile/abc";
     show(owner);
-    expect(sidebar().getByRole("link", { name: "Quản lý người dùng" }).getAttribute("aria-current")).toBe("page");
+    expect(sidebar().getByRole("link", { name: "Hồ sơ hợp tác xã" }).getAttribute("aria-current")).toBe("page");
   });
 
   it("leaves pages that are not gear destinations without the sidebar", () => {
@@ -44,14 +44,14 @@ describe("settings sidebar on gear destinations", () => {
   });
 
   it("lists only permitted items, and a destination the viewer may not use gets no sidebar", () => {
-    nav.path = "/workspace/accounts";
+    nav.path = "/cooperative/profile";
     show(accountant);
     expect(screen.queryByRole("navigation", { name: "Nhóm thiết lập" })).toBeNull();
     cleanup();
     nav.path = "/";
     show(accountant);
     fireEvent.click(screen.getByRole("button", { name: "Cài đặt" }));
-    expect(screen.queryByRole("link", { name: "Quản lý người dùng" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Hồ sơ hợp tác xã" })).toBeNull();
   });
 
   it("offers the same items in a select for narrow screens and navigates on change", () => {
@@ -59,7 +59,7 @@ describe("settings sidebar on gear destinations", () => {
     show(owner);
     const picker = screen.getByRole("combobox", { name: "Chọn thiết lập" }) as HTMLSelectElement;
     expect(picker.value).toBe("/cooperative/profile");
-    fireEvent.change(picker, { target: { value: "/workspace/roles" } });
-    expect(nav.pushed).toBe("/workspace/roles");
+    fireEvent.change(picker, { target: { value: "/audit" } });
+    expect(nav.pushed).toBe("/audit");
   });
 });

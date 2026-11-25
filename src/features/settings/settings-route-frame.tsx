@@ -22,7 +22,7 @@ function subscribe(onChange: () => void) {
 }
 
 /**
- * Every page the gear menu can open (e.g. Hồ sơ hợp tác xã, Quản lý người dùng) is shown inside the same sidebar as the
+ * Every page the gear menu can open (e.g. Hồ sơ hợp tác xã, Nhật ký thao tác) is shown inside the same sidebar as the
  * Thiết lập hub, with its own entry selected. The sidebar lists exactly the permitted gear items, so nothing the viewer
  * may not use appears. Any other page (and `/settings` itself, which draws its own layout) is returned untouched.
  */

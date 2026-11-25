@@ -115,7 +115,6 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
   const settingsSections: SettingsSection[] = buildSettingsGroups({
     isOwner, holds,
     operation: (area) => operationAllowed(area as OperationArea, context.identity, context.permissions.functionPermissions),
-    resource: (key) => visible.includes(key as ResourceKey),
     canReadProducts: canReadProducts(context.identity, context.permissions.functionPermissions),
   });
   const navigation = ({ compact, onNavigate }: { compact: boolean; onNavigate?: () => void }) => {

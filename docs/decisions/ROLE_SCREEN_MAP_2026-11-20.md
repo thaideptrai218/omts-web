@@ -73,10 +73,12 @@ Tờ đối chiếu "ai làm màn nào" cho Chủ HTX, Quản lý vùng (QLV) v�
 | Màn | Chủ HTX | QLV | KT |
 |---|---|---|---|
 | Hồ sơ HTX, ngân hàng nhận tiền, chứng nhận, nhật ký thao tác | Làm | — | — |
-| Tài khoản nội bộ, vai trò và phân quyền vùng, đặt lại mật khẩu | Làm | — | — |
+| Tài khoản nội bộ, vai trò và vùng phụ trách, đặt lại mật khẩu, khóa hoặc mở khóa (làm ở màn Nhân viên, tab Tài khoản đăng nhập) | Làm | — | — |
 | Hồ sơ cá nhân | Làm | Làm | Làm |
 
 Mỗi HTX có một Kế toán, xem mọi vùng; thêm người thứ hai chỉ cảnh báo, vẫn lưu được (D9).
+
+**Cập nhật 25/11/2026 (Chủ HTX quyết định).** "Quản lý người dùng" và "Vai trò và quyền" không còn trong Cài đặt. Chủ cấp tài khoản, chọn vai trò (Quản lý vùng, Kế toán), chọn vùng phụ trách, đặt lại mật khẩu, khóa hoặc mở khóa ngay ở màn Nhân viên (tab Tài khoản đăng nhập); nút "Xem quyền của vai trò" ở cùng tab. Bộ lọc của danh sách nhân viên có thêm: tài khoản (đã có, chưa có, chưa gắn nhân viên), vai trò, vùng phụ trách. Tài khoản chưa gắn nhân viên nào (backend cho phép) nằm ở bộ lọc "Tài khoản chưa gắn nhân viên" với cùng thao tác. Địa chỉ cũ `/workspace/accounts` và `/workspace/roles` chuyển sang màn Nhân viên; `?accountId=` mở đúng nhân viên giữ tài khoản đó.
 
 ## Bàn giao kế hoạch thu hoạch và phân công nhân sự ngay (quyết định 24/11/2026)
 

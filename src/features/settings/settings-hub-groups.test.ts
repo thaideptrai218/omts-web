@@ -2,22 +2,29 @@
 import { buildSettingsGroups, type SettingsGate } from "./settings-hub-groups";
 import { filterSettingsGroups, normaliseSettingsQuery, pickSettingsItem, settingsItemKey, suggestSettingsItems } from "./settings-hub-filter";
 
-const none: SettingsGate = { isOwner: false, holds: () => false, operation: () => false, resource: () => false, canReadProducts: false };
+const none: SettingsGate = { isOwner: false, holds: () => false, operation: () => false, canReadProducts: false };
 /** An Owner passes every gate, like the real workspace checks do. */
-const owner: SettingsGate = { isOwner: true, holds: () => true, operation: () => true, resource: () => true, canReadProducts: true };
+const owner: SettingsGate = { isOwner: true, holds: () => true, operation: () => true, canReadProducts: true };
 const labels = (gate: SettingsGate) => buildSettingsGroups(gate).flatMap((group) => group.items.map((item) => item.label));
 
 describe("settings hub groups", () => {
   it("shows the Owner every group in KiotViet order, each item with an editor caption", () => {
     const groups = buildSettingsGroups(owner);
-    expect(groups.map((group) => group.key)).toEqual(["cooperative", "users", "farming", "inputs", "hr", "sales", "finance", "system"]);
+    expect(groups.map((group) => group.key)).toEqual(["cooperative", "farming", "inputs", "hr", "sales", "finance", "system"]);
     expect(groups.flatMap((group) => group.items).every((item) => !!item.editor)).toBe(true);
-    expect(groups.find((group) => group.key === "users")?.items[0].href).toBe("/workspace/accounts");
+  });
+
+  it("does not list user management or roles: logins and roles are set from the employee screen", () => {
+    const all = labels(owner);
+    expect(all).not.toContain("Quản lý người dùng");
+    expect(all).not.toContain("Vai trò và quyền");
+    expect(buildSettingsGroups(owner).flatMap((group) => group.items).some((item) => item.href.startsWith("/workspace/accounts") || item.href.startsWith("/workspace/roles"))).toBe(false);
+    expect(buildSettingsGroups(owner).some((group) => group.label === "Người dùng")).toBe(false);
   });
 
   it("hides every Owner-only setting from a zone manager: reading farming data does not make a setting editable", () => {
     const held = ["CULTIVATION_CYCLES", "INPUT_ISSUES", "CUSTOMERS"];
-    const manager: SettingsGate = { ...none, holds: (fn, action) => held.includes(fn) && action === "View", operation: (area) => area === "water", resource: (key) => key === "zones" || key === "rafts", canReadProducts: true };
+    const manager: SettingsGate = { ...none, holds: (fn, action) => held.includes(fn) && action === "View", operation: (area) => area === "water", canReadProducts: true };
     expect(labels(manager)).toEqual([]);
   });
 
@@ -49,10 +56,8 @@ describe("settings hub search and selection", () => {
   });
   it("finds items by meaning: synonyms with and without accents", () => {
     const find = (query: string) => filterSettingsGroups(groups, query).flatMap((group) => group.items.map((item) => item.label));
-    expect(find("mật khẩu")).toContain("Quản lý người dùng");
-    expect(find("phan quyen")).toEqual(expect.arrayContaining(["Quản lý người dùng", "Vai trò và quyền"]));
-    expect(find("nhân viên đăng nhập")).toContain("Quản lý người dùng");
-    expect(find("zone")).toContain("Quản lý người dùng");
+    expect(find("phan quyen")).toEqual([]);
+    expect(find("tài khoản")).not.toContain("Quản lý người dùng");
     expect(find("đơn giá")).toContain("Loại công việc và đơn giá");
     expect(find("thu chi")).toEqual(["Sổ quỹ"]);
     expect(find("ví")).toContain("Sổ quỹ");
