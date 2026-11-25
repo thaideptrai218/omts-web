@@ -38,7 +38,6 @@ Tên trạng thái "do backend trả" nghĩa là web không có enum riêng.
 | **Attendance** | `date, periods[], jobs[hours], complete`; cài `breakFrom/To`, `roundingMinutes ∈ {0,15,30,60}`, `effectiveFrom` | — | như trên |
 | **LeaveRequest** | `from, to, reason, approved (null/true/false), response, cancelledAt` | Staff xin/hủy; Owner duyệt (từ chối cần lý do) | như trên |
 | **PayrollSheet** (frame) | `period, from-to, total` | `draft, pending, returned, final` | `payroll-screen.tsx` |
-| **PayrollSettings** | `startDay 1–28, automaticPayroll` | preview 2 kỳ trước khi lưu | `payroll-settings/contracts.ts` |
 | **CooperativeCertification** | `name, number, issuer, expiryDate, fileUrl` | `Valid/ExpiringSoon/Expired` | `certifications-api` |
 | **ReceivingBankAccount** | `bankBin, bankName, accountNumber, accountHolderName, acceptedAt` | cần `confirmAccount`; thiếu tài khoản thì VietQR báo MSG-SALE-13 | `bank-api` |
 | **Notification** | `notificationId, recordType` | read/unread; mở bản ghi liên quan, recheck quyền backend | `inbox-api` |
