@@ -25,6 +25,7 @@ Người duyệt: chủ dự án (Duy Thái) trừ khi ghi khác. Quyết địn
 | 27/10/2026 | WEB-ROLE-01 | Ba vai cố định; Owner chỉ sửa quyền và ngừng/kích hoạt; không Add/Copy/đổi tên; Staff mới không có quyền nghiệp vụ | `WEB_FIXED_ROLES_DECISION_2026-10-27.md` |
 | 02/11/2026 | D1 | Backend hai vai (ZONE_MANAGER, ACCOUNTANT); ma trận chỉ đọc; grant chỉ Effective/Revoked, không ngày hiệu lực; `LEGACY-*` chỉ xem | `WEB_BACKEND_21_23_ALIGNMENT_PROPOSAL_2026-10-31.md` |
 | 02/11/2026 | D2 | Catalog thông báo theo loại; Web và Mobile đều sửa được Push tùy chọn; loại bắt buộc khóa bật (thay "Push chỉ đọc trên Web") | như trên |
+| 25/11/2026 | **Thay D2**: SRS 6.2 không còn thông báo đẩy | Web bỏ màn tùy chọn thông báo (Push); danh sách thông báo trong ứng dụng và SMS cho loại bắt buộc giữ nguyên; trader/nhân viên nhận Zalo ZNS hoặc SMS | SRS 6.2 (24/11/2026) |
 | 02/11/2026 | D3 | Danh mục mua hàng nhóm Seed/Material/Other, `next-code`, `/resume`, địa chỉ/email NCC | như trên |
 | 03/11/2026 | Luồng kế toán | Một Owner và một Kế toán mỗi HTX; Kế toán toàn HTX; Manager gửi thẳng Kế toán; Owner chỉ nhận thông báo | `WEB_ACCOUNTING_REQUEST_FLOW_2026-11-03.md` |
 | 29/10/2026 | WEB-NOTIFY-02 | Catalog theo loại tài khoản; InApp khóa; Orders cho Staff | OPEN_QUESTIONS |

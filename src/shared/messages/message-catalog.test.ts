@@ -47,18 +47,6 @@ const profileMessages = [
   ],
 ] as const satisfies readonly (readonly [MessageCode, string])[];
 
-const notificationPreferenceMessages = [
-  [
-    "MSG21",
-    "Kênh Email chưa được cấu hình hoặc chưa đủ điều kiện nên chưa thể bật.",
-  ],
-  [
-    "MSG22",
-    "Thiết bị đã từ chối nhận thông báo đẩy. Các kênh hợp lệ khác vẫn được lưu.",
-  ],
-  ["MSG23", "Loại thông báo này là bắt buộc và không thể tắt."],
-] as const satisfies readonly (readonly [MessageCode, string])[];
-
 const cooperativeProvisioningMessages = [
   [
     "MSG03",
@@ -131,14 +119,6 @@ describe("profile message catalog", () => {
         params: { time: "10:30", user_name: "Nguyễn An" },
       }),
     ).toContain("Nguyễn An cập nhật lúc 10:30");
-  });
-});
-
-describe("notification preference message catalog", () => {
-  it.each(notificationPreferenceMessages)("formats %s", (code, expectedMessage) => {
-    const params = code === "MSG21" ? { channel_name: "Email" } : undefined;
-
-    expect(formatMessage({ code, params })).toBe(expectedMessage);
   });
 });
 

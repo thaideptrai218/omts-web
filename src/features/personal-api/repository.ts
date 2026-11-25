@@ -1,8 +1,7 @@
 import { bffFetch } from "@/features/auth/api/bff-fetch";
-import { pushCatalogSchema, pushSavedSchema } from "./push-contract";
 import { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
-import { notificationCatalogSchema, notificationSavedSchema, profileViewSchema, type NotificationChange } from "./contracts";
+import { profileViewSchema } from "./contracts";
 async function send<T>(path: string, schema: z.ZodType<T>, body?: unknown, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
   const writing = body !== undefined;
   try {
@@ -15,8 +14,5 @@ async function send<T>(path: string, schema: z.ZodType<T>, body?: unknown, signa
 }
 export function createPersonalRepository() {
   return { profile: (signal?: AbortSignal) => send("/api/account/profile", profileViewSchema, undefined, signal),
-    saveProfile: (displayName: string, rowVersion: string) => send("/api/account/profile", profileViewSchema, { displayName, rowVersion }),
-    notifications: (signal?: AbortSignal) => send("/api/account/notification-preferences", z.union([notificationCatalogSchema, pushCatalogSchema]), undefined, signal),
-    savePush: (items: { type: string; push: boolean }[]) => send("/api/account/notification-preferences", pushSavedSchema, { items }),
-    saveNotifications: (items: NotificationChange[]) => send("/api/account/notification-preferences", notificationSavedSchema, { items }) };
+    saveProfile: (displayName: string, rowVersion: string) => send("/api/account/profile", profileViewSchema, { displayName, rowVersion }) };
 }

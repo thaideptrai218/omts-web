@@ -45,7 +45,6 @@
 | Route | Method | Backend | Ủy quyền |
 | --- | --- | --- | --- |
 | `/api/account/profile` | GET, PUT | `/api/me/profile` | mọi người dùng đã đăng nhập, phase `application`; PUT JSON ≤16 KiB |
-| `/api/account/notification-preferences` | GET, PUT | `/api/me/notification-preferences` | BFF đọc lại catalog theo loại tài khoản trước khi PUT (khóa InApp bắt buộc và Push chỉ đọc) |
 | `/api/cooperative/profile` | GET, PUT | `/api/cooperative/profile` | Owner |
 | `/api/cooperative/profile/logo`, `/cover-photo` | GET, POST multipart, DELETE | `/api/cooperative/profile[/logo\|/cover-photo]` | Owner; một tệp `file`; logo ≤2 MiB, cover ≤5 MiB; allowlist loại tệp; URL logo phải khớp regex an toàn; GET `version` phải bằng `rowVersion`; BFF viết lại `logoUrl` thành URL BFF |
 | `/api/cooperative/certifications` | GET, POST | `/api/cooperative/certifications[/{id}]` (tạo, PUT cập nhật, DELETE `?rowVersion=`) | Owner |

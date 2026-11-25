@@ -5,34 +5,28 @@ import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { createPersonalRepository } from "./repository";
-import { NotificationApiDialog } from "./notification-dialog";
 import { PersonalApiEditor } from "./profile-editor";
 import { DevicesPanel } from "@/features/device-sessions-api/devices-panel";
 
 // The editor lives in its own module; keep exporting it from here for existing importers.
 export { PersonalApiEditor };
 
-type AccountTab = "profile" | "security" | "devices" | "notifications";
+type AccountTab = "profile" | "security" | "devices";
 
 const tabClass =
   "border-b-2 border-transparent py-3 font-medium text-text-muted aria-[current=page]:border-primary aria-[current=page]:text-primary";
 
 /**
- * "Tài khoản của tôi" with profile, password and notification tabs. The security and notification
+ * "Tài khoản của tôi" with profile, password and device tabs. The security and device
  * panels mount on first visit and then stay mounted (hidden) so their drafts survive tab switches.
  */
 export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: AccountTab } = {}) {
   const load = useCallback((signal: AbortSignal) => createPersonalRepository().profile(signal), []);
   const remote = useRemote(load);
   const [tab, setTab] = useState<AccountTab>(initialTab);
-  const [preferencesVisited, setPreferencesVisited] = useState(initialTab === "notifications");
   const [securityVisited, setSecurityVisited] = useState(initialTab === "security");
   const [devicesVisited, setDevicesVisited] = useState(initialTab === "devices");
 
-  function showPreferences() {
-    setPreferencesVisited(true);
-    setTab("notifications");
-  }
   function showSecurity() {
     setSecurityVisited(true);
     setTab("security");
@@ -74,14 +68,6 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
         >
           Thiết bị đăng nhập
         </button>
-        <button
-          type="button"
-          aria-current={tab === "notifications" ? "page" : undefined}
-          onClick={showPreferences}
-          className={tabClass}
-        >
-          Thông báo
-        </button>
       </nav>
       <div hidden={tab !== "profile"}>
         {remote.loading && <Skeleton />}
@@ -92,11 +78,7 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
           </Button>
         )}
         {remote.data && (
-          <PersonalApiEditor
-            initial={remote.data}
-            onShowNotifications={showPreferences}
-            onShowSecurity={showSecurity}
-          />
+          <PersonalApiEditor initial={remote.data} onShowSecurity={showSecurity} />
         )}
       </div>
       {securityVisited && (
@@ -107,11 +89,6 @@ export function PersonalApiScreen({ initialTab = "profile" }: { initialTab?: Acc
       {devicesVisited && (
         <div hidden={tab !== "devices"} className="mx-auto w-full max-w-2xl">
           <DevicesPanel />
-        </div>
-      )}
-      {preferencesVisited && (
-        <div hidden={tab !== "notifications"}>
-          <NotificationApiDialog inline onClose={() => setTab("profile")} />
         </div>
       )}
     </section>
