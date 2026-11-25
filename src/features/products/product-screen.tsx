@@ -70,7 +70,7 @@ function ProductList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
   const linkPending = useRef(linkedCode);
   // A linked code is looked for among every status, so that a discontinued product opens too.
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState({ ...emptyFilters, status: linkedCode ? "All" : "InUse" });
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<ProductPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [units, setUnits] = useState<Record<string, string>>({});
   const [editor, setEditor] = useState<{ record: ProductView | null; copy: boolean }>(), [importing, setImporting] = useState(false), { notify } = useToast(), exportFile = useMutation();

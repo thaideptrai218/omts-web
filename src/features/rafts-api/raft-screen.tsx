@@ -60,7 +60,7 @@ function RaftWorkspace({ zones, zoneId, onZone, helpHref }: { zones: readonly Zo
     logs: operationAllowed("cultivation-cycles", identity, functions, "LogsView", zoneId), water: operationAllowed("water", identity, functions, "View", zoneId) };
   const params = useSearchParams(), recordId = params.get("recordId") ?? "", linkedId = UUID.test(recordId) ? recordId : undefined;
   const [filters, setFilters] = useState<RaftFilters>({ ...emptyRaftFilters, search: params.get("search") ?? "" }), [sort, setSort] = useState<SortState>({ key: "code", direction: "asc" });
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
   const [creating, setCreating] = useState(params.get("create") === "1" && canCreate);
   const guard = useUnsavedGuard(), { notify } = useToast();
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-rafts-v2", raftColumns.filter(column => column.key !== "latitude" && column.key !== "longitude").map(column => column.key).join(","));

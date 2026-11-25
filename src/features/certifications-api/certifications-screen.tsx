@@ -53,7 +53,7 @@ export function CertificationsScreen({ helpHref }: { helpHref?: string }) {
 
 function CertificationList({ helpHref }: { helpHref?: string }) {
   const [search, setSearch] = useState(""), [validity, setValidity] = useState(""), [sort, setSort] = useState<SortState>({ key: "expiryDate", direction: "desc" });
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [rows, setRows] = useState<readonly Certification[]>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [creating, setCreating] = useState(false);
 

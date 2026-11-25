@@ -65,7 +65,7 @@ function LotsList({ helpHref, linkedCode, linkedZone, linkedRaft }: { helpHref?:
   const view = operationAllowed("harvest", identity, permissions.functionPermissions, "View");
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>({ ...emptyFilters, zone: linkedZone, raft: linkedZone ? linkedRaft : "" }), [time, setTime] = useState<TimeRangeValue>(allTime);
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<LotPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const [stored, store] = useStoredValue("omts-columns-harvest-lots", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);

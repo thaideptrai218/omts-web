@@ -57,7 +57,7 @@ function PlansList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: st
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [statuses, setStatuses] = useState<number[]>(linkedCode ? [] : defaultStatuses);
   const [time, setTime] = useState<TimeRangeValue>(allTime);
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<PlanPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const defaults = useMemo(() => columns.filter((column) => !column.hidden).map((column) => column.key).join(","), []);
   const [stored, store] = useStoredValue("omts-columns-harvest-plans", defaults);

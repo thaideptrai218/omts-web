@@ -39,7 +39,7 @@ function ZoneDirectory({ helpHref }: { helpHref?: string }) {
   const params = useSearchParams(), recordId = params.get("recordId") ?? "", linkedId = UUID.test(recordId) ? recordId : undefined;
   const [filters, setFilters] = useState<ZoneFilters>({ ...emptyZoneFilters, search: params.get("search") ?? "" });
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "asc" });
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
   const [creating, setCreating] = useState(false), [mapOpen, setMapOpen] = useState(false);
   const guard = useUnsavedGuard(), { notify } = useToast();
   const canWater = operationAllowed("water", identity, functions, "View");

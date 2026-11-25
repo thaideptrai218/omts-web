@@ -60,7 +60,7 @@ export function BulkBar({ count, onClear, children }: { count: number; onClear()
   return <div className={styles.bulkBar} role="region" aria-label="Thao tác hàng loạt"><strong>Đã chọn {count}</strong>{children}<button type="button" className={styles.linkButton} onClick={onClear}>Bỏ chọn</button></div>;
 }
 
-export function ManagementPagination({ page, pageSize, total, pageSizes = [15, 30, 50], unit, disabled, onPage, onPageSize }: {
+export function ManagementPagination({ page, pageSize, total, pageSizes = [10, 30, 50], unit, disabled, onPage, onPageSize }: {
   page: number; pageSize: number; total: number; pageSizes?: readonly number[]; unit: string; disabled?: boolean; onPage(page: number): void; onPageSize(size: number): void;
 }) {
   const last = Math.max(1, Math.ceil(total / pageSize));

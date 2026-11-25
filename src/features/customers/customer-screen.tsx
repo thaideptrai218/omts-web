@@ -85,7 +85,7 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState({ ...emptyFilters, status: linkedCode ? "All" : "InUse" });
   const [birthday, setBirthday] = useState<TimeRangeValue>(allTime), [lastTransaction, setLastTransaction] = useState<TimeRangeValue>(allTime), [salesTime, setSalesTime] = useState<TimeRangeValue>(allTime), [created, setCreated] = useState<TimeRangeValue>(allTime);
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" });
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<CustomerPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [creating, setCreating] = useState(false), [importing, setImporting] = useState(false), { notify } = useToast(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();

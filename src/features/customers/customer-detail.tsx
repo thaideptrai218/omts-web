@@ -109,7 +109,7 @@ function InfoTab({ id, access, required, onChanged, onRemoved }: { id: string; a
 function fiveYears() { const to = new Date(), from = new Date(to); from.setFullYear(to.getFullYear() - 5); return { from: toQueryDate(from), to: toQueryDate(to) }; }
 
 function SalesTab({ id, withCuts }: { id: string; withCuts: boolean }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), period = useMemo(() => fiveYears(), []);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), period = useMemo(() => fiveYears(), []);
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.invoices({ customerId: id, ...period, page, pageSize }, signal), [id, period, page, pageSize]));
   const cuts = useRemote(useCallback((signal: AbortSignal) => withCuts ? customerRepository.debt(id, { kinds: ["PriceCut"], page: 1, pageSize: 50 }, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [id, withCuts]));
   const items = remote.data?.page.items ?? [];
@@ -128,7 +128,7 @@ function SalesTab({ id, withCuts }: { id: string; withCuts: boolean }) {
 }
 
 function RequestsTab({ id }: { id: string }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.requests(id, page, pageSize, signal), [id, page, pageSize]));
   return <div className={listStyles.tabBody}>
     {remote.loading ? <Skeleton /> : remote.error ? <ListStateMessage error={remote.error} onRetry={remote.reload} /> : remote.data && <>
@@ -144,7 +144,7 @@ type Dialog = { kind: "pay" | "discount" | "adjust" | "qr" } | { kind: "payment"
 const filterKinds = ["Invoice", "PriceCut", "Payment", "Discount", "PaidBack", "Adjustment"] as const;
 
 function DebtTab({ id, access, onChanged }: { id: string; access: CustomerAccess; onChanged(): void }) {
-  const [kind, setKind] = useState(""), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [dialog, setDialog] = useState<Dialog>();
+  const [kind, setKind] = useState(""), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [dialog, setDialog] = useState<Dialog>();
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.debt(id, { kinds: kind ? [kind] : [], page, pageSize }, signal), [id, kind, page, pageSize]));
   const exportFile = useMutation(), confirmation = useActionDialog(), { notify } = useToast(), [error, setError] = useState<string>(), [busyId, setBusyId] = useState<string>();
   const done = () => { setDialog(undefined); remote.reload(); onChanged(); };

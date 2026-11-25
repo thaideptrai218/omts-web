@@ -21,7 +21,7 @@ export const paymentColumns: readonly DataColumn<PaymentRow>[] = [
 
 /** Tab "Lịch sử thanh toán" of an open sheet (KiotViet): the payment vouchers made for this sheet, newest first, with their total. */
 export function PayrollSheetPaymentsTab({ sheetId, paid }: { sheetId: string; paid: number }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const remote = useRemote(useCallback((signal: AbortSignal) => payrollRepository.payments({ search: "", from: "", to: "", page, pageSize, payrollId: sheetId }, signal), [sheetId, page, pageSize]));
   const data = remote.data;
   if (remote.loading) return <Skeleton />;

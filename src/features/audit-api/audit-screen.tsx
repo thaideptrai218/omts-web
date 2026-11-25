@@ -62,7 +62,7 @@ export function AuditScreen({ helpHref }: { helpHref?: string }) {
 
 function AuditList({ helpHref }: { helpHref?: string }) {
   const [search, setSearch] = useState(""), [filters, setFilters] = useState(emptyFilters), [time, setTime] = useState<TimeRangeValue>(defaultTime);
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<AuditPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const [stored, store] = useStoredValue("omts-columns-audit", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);

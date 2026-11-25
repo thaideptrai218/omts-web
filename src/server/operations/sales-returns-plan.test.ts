@@ -18,7 +18,7 @@ describe("sales return reads", () => {
     const plan = get(`action=list&from=2026-11-01&to=2026-11-17&customerId=${id(5)}&zoneId=${id(6)}&statusId=4102&search=%20TL0%20&sort=value&sortDir=asc`);
     expect(plan).toMatchObject({ area: "sales-returns", method: "GET", permission: "View", zoneId: id(6) });
     expect(url(plan).pathname).toBe("/api/sales-returns");
-    expect(Object.fromEntries(url(plan).searchParams)).toEqual({ from: "2026-11-01", to: "2026-11-17", customerId: id(5), zoneId: id(6), statusId: "4102", search: "TL0", sort: "value", sortDir: "asc", page: "1", pageSize: "15" });
+    expect(Object.fromEntries(url(plan).searchParams)).toEqual({ from: "2026-11-01", to: "2026-11-17", customerId: id(5), zoneId: id(6), statusId: "4102", search: "TL0", sort: "value", sortDir: "asc", page: "1", pageSize: "10" });
   });
   it("lists the whole cooperative without a zone", () => {
     const plan = get("action=list&page=3&pageSize=50");
@@ -104,6 +104,6 @@ describe("sales return writes", () => {
     expect(salesReturnsPlan("PUT", new URLSearchParams(), { action: "cancel", id: id(1), body: {} })).toBeUndefined();
   });
   it("is the plan the operation door uses for the sales-returns area", () => {
-    expect(planOperation("sales-returns", "GET", new URLSearchParams("action=list"))).toMatchObject({ area: "sales-returns", path: "/api/sales-returns?page=1&pageSize=15" });
+    expect(planOperation("sales-returns", "GET", new URLSearchParams("action=list"))).toMatchObject({ area: "sales-returns", path: "/api/sales-returns?page=1&pageSize=10" });
   });
 });

@@ -44,7 +44,7 @@ it("payslips tab: columns, a link to the sheet, and the slip detail opened under
   render(<EmployeePayslipsTab employeeId={ids.empA} />);
   const table = await screen.findByRole("table", { name: "Phiếu lương của nhân viên" });
   for (const heading of ["Mã phiếu lương", "Bảng lương", "Kỳ làm việc", "Tổng thu nhập", "Lương thực nhận", "Đã trả", "Còn cần trả", "Trạng thái"]) expect(within(table).getByRole("columnheader", { name: heading })).toBeTruthy();
-  expect(state.repo.employeeSlips).toHaveBeenCalledWith(ids.empA, { page: 1, pageSize: 15 }, expect.anything());
+  expect(state.repo.employeeSlips).toHaveBeenCalledWith(ids.empA, { page: 1, pageSize: 10 }, expect.anything());
   const link = within(table).getByRole("link", { name: /BL000001/ });
   expect(link.getAttribute("href")).toBe(`/operations/payroll?recordId=${ids.a}&search=BL000001`);
   expect(within(table).getByText("Đã chốt lương")).toBeTruthy();

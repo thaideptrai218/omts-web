@@ -65,7 +65,7 @@ function ReceiptsList({ helpHref, linkedCode, kind }: { helpHref?: string; linke
   const access = usePurchaseAccess(), router = useRouter(), confirmation = useActionDialog(), lookups = usePurchaseLookups(), exportFile = useMutation();
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [time, setTime] = useState<TimeRangeValue>(() => linkedCode ? allTime : presetValue("thisMonth"));
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<Page<ReceiptRow> & { totals: ReceiptTotals }>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set()), { notify } = useToast();
   const [stored, store] = useStoredValue(`omts-columns-purchase-receipts-${kind}`, defaults);

@@ -64,7 +64,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
     const date = businessTime(linked.data.measuredAt).slice(0, 10);
     setDatedLink(true); setTime({ kind: "custom", from: date, to: date });
   }
-  const [sort, setSort] = useState<SortState>({ key: "time", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [sort, setSort] = useState<SortState>({ key: "time", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
   const [chartOpen, setChartOpen] = useState(false), [thresholdsOpen, setThresholdsOpen] = useState(false), [revision, setRevision] = useState(0);
   const [adding, setAdding] = useState(false);

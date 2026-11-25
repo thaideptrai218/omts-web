@@ -39,7 +39,7 @@ export function useWorkforceBoard() {
   const [mode, setMode] = useState<WorkforceTab>("assignments");
   const [sort, setSort] = useState<SortState>({ key: "", direction: "asc" });
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(10);
   const [expanded, setExpanded] = useState<string>();
   // The row whose check-in/out/removal is being sent: only its buttons show progress, the list stays as it is.
   const [pendingId, setPendingId] = useState<string>();

@@ -28,7 +28,7 @@ const paymentColumns: readonly DataColumn<PaymentRow>[] = [
 
 /** The "Nợ và tạm ứng" tab of an employee: debt and advance totals, finalized payslips, payments made, and "Thanh toán lương". */
 export function EmployeeDebtTab({ employeeId, employeeName }: { employeeId: string; employeeName: string }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [paying, setPaying] = useState(false), [notice, setNotice] = useState<string>(), writer = usePayrollWriter();
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [paying, setPaying] = useState(false), [notice, setNotice] = useState<string>(), writer = usePayrollWriter();
   const slips = useRemote(useCallback((signal: AbortSignal) => payrollRepository.employeeSlips(employeeId, { status: "Finalized", page: 1, pageSize: 100 }, signal), [employeeId]));
   const payments = useRemote(useCallback((signal: AbortSignal) => payrollRepository.payments({ search: "", from: "", to: "", page, pageSize, employeeId }, signal), [employeeId, page, pageSize]));
   const owed = slips.data?.summary.outstanding;

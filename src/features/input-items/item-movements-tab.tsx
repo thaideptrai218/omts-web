@@ -18,7 +18,7 @@ import styles from "./input-items.module.css";
 
 /** Nhập – xuất: every movement of the item, newest first, with the balance after it; corrections are hidden together with the rows they undo. */
 export function ItemMovementsTab({ itemId, group, canExport, note }: { itemId: string; /** The group of the item: its receipts and returns are on the screens of its kind. */ group?: string; canExport: boolean; note?: ReactNode }) {
-  const [kind, setKind] = useState(""), [reversals, setReversals] = useState(false), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [kind, setKind] = useState(""), [reversals, setReversals] = useState(false), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const exportFile = useMutation();
   const remote = useRemote(useCallback((signal: AbortSignal) => inputRepository.movements(itemId,
     { kind: kind || undefined, includeReversals: reversals ? "true" : undefined, page: String(page), pageSize: String(pageSize) }, signal), [itemId, kind, reversals, page, pageSize]));

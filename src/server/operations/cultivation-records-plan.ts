@@ -15,7 +15,7 @@ const lotFilters = {
   statusId: z.enum(["2901", "2902", "2903", "2904"]).optional(), weighed: z.enum(["true", "false"]).optional(), closeReason: z.enum(lots.closeReasons).optional(),
   hasPlan: z.enum(["true", "false"]).optional(), search: z.string().trim().min(1).max(100).optional(), sort: z.enum(["code", "harvestedAt", "remainingKg"]).optional(), desc: z.enum(["true", "false"]).optional(),
 };
-const lotList = z.strictObject({ action: z.literal("lots"), ...lotFilters, page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["15", "30", "50", "100"]).optional() });
+const lotList = z.strictObject({ action: z.literal("lots"), ...lotFilters, page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "15", "30", "50", "100"]).optional() });
 const lotExport = z.strictObject({ action: z.literal("export"), ...lotFilters });
 /** Weigh (Cân thực tế), reopen with a reason and close by hand: each answers the lot as it is now. */
 const lotActions = new Set(["weigh", "reopen", "close"]);
