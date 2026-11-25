@@ -66,7 +66,7 @@ const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: z.enu
 const raftRow = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), size: nullableText.optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
 const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), status: text.optional() }).refine((row) => row.code !== undefined || row.status !== undefined);
 // `pairs` = the Effective zone-role pairs the backend list already returns (StaffAccountPairView) and `employeeId` = the linked employee:
-// the user-management screen reads role, zone and employee from the list itself, with no per-row grant request.
+// the Nhân viên screen reads role, zone and employee from the list itself, with no per-row grant request.
 const accountPair = z.object({ id: apiIdSchema, zoneId: apiIdSchema.nullable(), zoneName: nullableText, allZones: z.boolean(), role: text, roleName: text });
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
   subjectType: text.optional(), mustChangePassword: z.boolean().optional(), employeeId: apiIdSchema.nullish(), pairs: z.array(accountPair).optional(), ...version });

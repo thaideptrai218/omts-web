@@ -8,8 +8,8 @@ import { getSessionGateway } from "@/server/auth/session-gateway.instance";
 export const instant = false;
 
 /**
- * One URL family: with the real API this address forwards to /workspace/accounts (the "Quản lý người dùng" screen), keeping
- * `?accountId=` so links from notifications and the employee unlink follow-up still open that user. The mock data source keeps its demo screen.
+ * One URL family: with the real API this address forwards to /workspace/accounts, which opens the Nhân viên screen (the employee who holds the login), keeping
+ * `?accountId=` so links from notifications and the employee unlink follow-up still find that login. The mock data source keeps its demo screen.
  */
 export default async function AccountManagementPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await connection();

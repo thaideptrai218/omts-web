@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { accountantUniquenessWarning } from "./accountant-uniqueness-warning";
-import { countRoleHolders, copyUserGrants, filterUserAccounts, missingWorkingZones, roleSummary, sortUserAccounts, toUserAccount, zoneSummary, type UserAccount, type UserPair } from "./user-account-model";
+import { countRoleHolders, copyUserGrants, filterUserAccounts, missingWorkingZones, toUserAccount, type UserAccount, type UserPair } from "./user-account-model";
 import { grantsToSelection, selectionError, selectionToGrants } from "./user-grant-selection";
 
 const zoneA = "11111111-1111-4111-8111-111111111111", zoneB = "22222222-2222-4222-8222-222222222222";
@@ -13,7 +13,7 @@ describe("accountant uniqueness warning (decision D9)", () => {
   it("warns, never blocks, when a second Accountant is about to be granted", () => {
     const warning = accountantUniquenessWarning([existing, account("new", "Mới", [])], ["ACCOUNTANT"]);
     expect(warning).toContain("Kế toán Lan");
-    expect(warning).toContain("vẫn có thể tiếp tục");
+    expect(warning).toContain("thêm người thứ hai");
   });
   it("is silent for other roles, for the first Accountant, and for the account that already is the Accountant", () => {
     expect(accountantUniquenessWarning([existing], ["ZONE_MANAGER"])).toBeUndefined();
@@ -47,19 +47,11 @@ describe("grant selection", () => {
 describe("role holder count and list helpers", () => {
   const accounts = [account("a", "An", [pair("ZONE_MANAGER", zoneA), pair("ZONE_MANAGER", zoneB)]), account("b", "Bình", [pair("ACCOUNTANT", null)]), account("c", "Chi", [], { status: "Locked" })];
   it("counts an account once per role even with several zones", () => expect(countRoleHolders(accounts)).toEqual({ ZONE_MANAGER: 1, ACCOUNTANT: 1 }));
-  it("summarises role and zone from the pairs", () => {
-    expect(roleSummary(accounts[0])).toBe("Quản lý vùng");
-    expect(zoneSummary(accounts[0])).toBe("Vùng A, Vùng B");
-    expect(zoneSummary(accounts[1])).toBe("Tất cả vùng");
-  });
   it("filters by role, zone (all-zone pairs match any zone), status and search over name and linked employee", () => {
     expect(filterUserAccounts(accounts, { search: "", role: "ZONE_MANAGER", zoneId: "", status: "" }).map((a) => a.id)).toEqual(["a"]);
     expect(filterUserAccounts(accounts, { search: "", role: "", zoneId: zoneB, status: "" }).map((a) => a.id)).toEqual(["a", "b"]);
     expect(filterUserAccounts(accounts, { search: "", role: "NONE", zoneId: "", status: "Locked" }).map((a) => a.id)).toEqual(["c"]);
     expect(filterUserAccounts([...accounts, account("d", "Dũng", [], { employeeId: "e1" })], { search: "nv0001", role: "", zoneId: "", status: "" }, new Map([["e1", "NV0001 · Dũng"]])).map((a) => a.id)).toEqual(["d"]);
-  });
-  it("sorts the whole list in Vietnamese order", () => {
-    expect(sortUserAccounts(accounts, { key: "name", direction: "desc" }).map((a) => a.id)).toEqual(["c", "b", "a"]);
   });
 });
 

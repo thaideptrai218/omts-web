@@ -15,10 +15,12 @@ import type { Employee } from "./contracts";
 import styles from "./employee-directory.module.css";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 import { fitColumns, usernameColumnWidth } from "./employee-column-fit";
+import { UserGrantChips } from "@/features/account-access/user-grant-chips";
+import type { UserAccount } from "@/features/account-access/user-account-model";
 
 export type EmployeeLeaveGuard = (leave: () => void) => void;
 /** Giờ công và nợ lương đến từ danh sách (`monthHours`, `outstandingWage`), chỉ có với Chủ HTX và Kế toán; không có thì cột hiện "—". */
-type Column = { key: string; label: string; width: number; sort?: string; defaultHidden?: boolean; render(row: EmployeeListItemDto, chip?: ReactNode, link?: ReactNode): ReactNode };
+type Column = { key: string; label: string; width: number; sort?: string; defaultHidden?: boolean; render(row: EmployeeListItemDto, chip?: ReactNode, link?: ReactNode, grants?: ReactNode): ReactNode };
 /**
  * The login name. As a chip beside the employee's name (default) or as plain text in the "Tên đăng nhập" column (`plain`).
  * For the Owner (`openAccount` given) it is a button that opens the row on the "Tài khoản đăng nhập" tab; a locked or
@@ -33,6 +35,12 @@ function AccountChip({ row, openAccount, plain = false }: { row: EmployeeListIte
     ? <button type="button" {...shared} aria-label={`Mở tài khoản đăng nhập ${label} của ${row.fullName}`} onClick={event => { event.stopPropagation(); openAccount(row.id); }}>{label}</button>
     : <span {...shared}>{label}</span>;
 }
+/** Role and zones of the row's login, with a "Đã khóa" mark when the login is locked; nothing for an employee without a login. */
+function grantsCell(row: EmployeeListItemDto, accounts: ReadonlyMap<string, UserAccount> | undefined): ReactNode {
+  const account = row.account ? accounts?.get(row.account.id) : undefined;
+  if (!account) return undefined;
+  return <span className={styles.grantsCell}>{account.status !== "Active" && <StatusPill tone="danger">Đã khóa</StatusPill>}<UserGrantChips pairs={account.pairs} limit={2} /></span>;
+}
 const text = (value: string, className = "") => <span className={`${styles.truncated} ${className}`} title={value}>{value || "—"}</span>;
 /** Chữ cái đầu của tên làm ảnh đại diện (không có ảnh nhân viên). */
 const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase("vi") ?? "?";
@@ -41,6 +49,8 @@ export const employeeColumns: readonly Column[] = [
   { key: "name", label: "Họ và tên", width: 190, sort: "name", render: (row, chip) => <span className={styles.nameCell}><span className={styles.avatar} aria-hidden="true">{initial(row.fullName)}</span>{text(row.fullName, styles.name)}{chip}</span> },
   // The backend cannot sort by login name, so this header is plain. The code stays available in the column picker.
   { key: "username", label: "Tên đăng nhập", width: 160, render: (row, _chip, link) => link ?? <span className={styles.meta}>—</span> },
+  // Role and zones come from the account list (Owner only), not from the employee list, so the cell is empty without them.
+  { key: "role", label: "Vai trò và vùng", width: 220, render: (_row, _chip, _link, grants) => grants ?? <span className={styles.meta}>—</span> },
   { key: "code", label: "Mã nhân viên", width: 116, sort: "code", defaultHidden: true, render: row => text(row.code, "font-mono tabular-nums") },
   { key: "phone", label: "Số điện thoại", width: 122, sort: "phone", render: row => text(row.phoneNumber ?? "—") },
   { key: "type", label: "Loại nhân viên", width: 132, sort: "type", render: row => <span className={styles.typeChip} title={employeeTypeLabel(row.employeeType)}>{employeeTypeLabel(row.employeeType)}</span> },
@@ -54,7 +64,11 @@ export const employeeColumns: readonly Column[] = [
 export const defaultEmployeeColumns = employeeColumns.filter(column => !column.defaultHidden).map(column => column.key);
 
 /** Pointer row opening supplements a native chevron button; rows add no extra keyboard stop. */
-export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detailRevision = 0, visible = defaultEmployeeColumns, zones = [], jobTypes = [], lookupsReady = false, onGuardChange, initialExpandedId, sort, onSort, selection, access = { manage: true, payroll: true } }: {
+export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detailRevision = 0, visible = defaultEmployeeColumns, zones = [], jobTypes = [], lookupsReady = false, onGuardChange, initialExpandedId, sort, onSort, selection, access = { manage: true, payroll: true }, accounts, onAccountChanged, initialExpandedTab }: {
+  /** Tab the initially expanded row opens on. */
+  initialExpandedTab?: "account";
+  /** Accounts by id (Owner only): fills the role and zones column and tells a locked login. */
+  accounts?: ReadonlyMap<string, UserAccount>; onAccountChanged?(): void;
   /** What the viewer may open in a profile; the default is the Owner's. */
   access?: { manage: boolean; payroll: boolean };
   items: EmployeeListItemDto[]; disabled: boolean; onOpen?(id: string): void; cache: EmployeeDetailCache; onSaved(employee: Employee, note?: string): void; detailRevision?: number;
@@ -67,7 +81,7 @@ export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detail
 }) {
   const [expandedId, setExpandedId] = useState<string | undefined>(initialExpandedId);
   // Set by the account chip: that row opens on the account tab; `n` remounts the panel when the row was already open on another tab.
-  const [accountTab, setAccountTab] = useState<{ id: string; n: number }>();
+  const [accountTab, setAccountTab] = useState<{ id: string; n: number } | undefined>(() => initialExpandedTab && initialExpandedId ? { id: initialExpandedId, n: 1 } : undefined);
   const guard = useRef<EmployeeLeaveGuard | undefined>(undefined);
   const registerGuard = useCallback((next: EmployeeLeaveGuard | undefined) => { guard.current = next; onGuardChange?.(next); }, [onGuardChange]);
   // Fixed columns (chevron, checkbox) are taken off the width the others may use.
@@ -108,10 +122,10 @@ export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detail
       <OpenableTableRow disabled={disabled} data-selected={expandedId === row.id || undefined} onOpen={() => toggle(row.id)}>
         {selection && <td className={styles.checkCell}><input type="checkbox" aria-label={`Chọn ${row.fullName}`} checked={selection.selected.has(row.id)} onChange={event => selection.onToggle(row.id, event.target.checked)} /></td>}
         <td className={styles.expandCell}><button type="button" disabled={disabled} aria-expanded={expandedId === row.id} aria-controls={`employee-preview-${row.id}`} aria-label={`${expandedId === row.id ? "Thu gọn" : "Mở"} ${row.fullName}`} onClick={() => toggle(row.id)}><InterfaceIcon name={expandedId === row.id ? "chevron-down" : "chevron-right"} /></button></td>
-        {columns.map(column => <td key={column.key} data-label={column.label}>{column.render(row, row.account ? <AccountChip row={row} openAccount={access.manage && !disabled ? openAccount : undefined} /> : undefined, row.account ? <AccountChip plain row={row} openAccount={access.manage && !disabled ? openAccount : undefined} /> : undefined)}</td>)}
+        {columns.map(column => <td key={column.key} data-label={column.label}>{column.render(row, row.account ? <AccountChip row={row} openAccount={access.manage && !disabled ? openAccount : undefined} /> : undefined, row.account ? <AccountChip plain row={row} openAccount={access.manage && !disabled ? openAccount : undefined} /> : undefined, grantsCell(row, accounts))}</td>)}
       </OpenableTableRow>
       {expandedId === row.id && <DetailRow colSpan={span} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
-        <EmployeeDetailPanel key={accountTab?.id === row.id ? accountTab.n : 0} initialTab={accountTab?.id === row.id ? "account" : undefined} id={row.id} cache={cache} onSaved={onSaved} revision={detailRevision} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={registerGuard} payroll={access.payroll} manage={access.manage} />
+        <EmployeeDetailPanel key={accountTab?.id === row.id ? accountTab.n : 0} initialTab={accountTab?.id === row.id ? "account" : undefined} id={row.id} cache={cache} onSaved={onSaved} revision={detailRevision} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={registerGuard} payroll={access.payroll} manage={access.manage} onAccountChanged={onAccountChanged} />
       </div></DetailRow>}
     </Fragment>)}</tbody>
   </table>;

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
-import { emptyGrantSelection, type GrantSelection } from "@/features/user-management/user-grant-selection";
+import { emptyGrantSelection, type GrantSelection } from "@/features/account-access/user-grant-selection";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { EmployeeAccountGrantChoice } from "./employee-account-grant-choice";
 import { accountantWarningFor, applyGrantSelection, grantOutcomeNotice, hasAnyRole, selectionError } from "./employee-account-grants";
@@ -80,20 +80,20 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
         setBlocked(result.uncertain || ["MSG06", "MSG-GEN-06", "MSG-GEN-09", "MSG24"].includes(result.code ?? ""));
       }
     } catch {
-      if (mounted.current) { setBlocked(true); setError("Chưa xác định được kết quả cấp tài khoản. Đóng hộp thoại và tải lại hồ sơ để đối chiếu."); }
+      if (mounted.current) { setBlocked(true); setError("Chưa biết tài khoản đã được cấp chưa. Hãy đóng hộp này và tải lại hồ sơ để kiểm tra."); }
     } finally { active.current = false; if (mounted.current) setPending(false); }
   }
-  const disabledReason = blocked ? "Không cấp lại ngay được: hãy đóng hộp thoại và tải lại hồ sơ để đối chiếu." : !employee.phoneNumber ? "Chưa cấp được vì hồ sơ chưa có số điện thoại." : undefined;
+  const disabledReason = blocked ? "Chưa cấp lại được. Hãy đóng hộp này và tải lại hồ sơ để kiểm tra." : !employee.phoneNumber ? "Chưa cấp được vì hồ sơ chưa có số điện thoại." : undefined;
   if (credential) return <EmployeeCredentialDialog username={credential.username} password={credential.password} expiresAt={credential.expiresAt} onClose={acknowledge} grantNotice={grantNotice?.text} grantFailed={grantNotice?.failed} />;
   // The tab sits inside the profile <form>; a <form> nested in a <form> is invalid HTML (React reloads the page in development), so the dialog is rendered on <body>.
   return createPortal(<Dialog open title="Cấp tài khoản đăng nhập" dismissible={!pending} onOpenChange={open => { if (!open) close(); }}>
-    <p className="mb-4 text-sm text-text-muted">Cấp tài khoản cho {employee.fullName}. Mật khẩu tạm chỉ hiện một lần sau khi cấp.</p>
+    <p className="mb-4 text-sm text-text-muted">Cấp tài khoản cho {employee.fullName}. Mật khẩu tạm chỉ hiện một lần sau khi cấp, nhớ ghi lại.</p>
     {confirmation.dialog}
     <form ref={form} className="space-y-4" noValidate onSubmit={event => { event.preventDefault(); event.stopPropagation(); void save(); }}>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <Field label="Tên tài khoản *" name="username" required minLength={3} maxLength={50} autoComplete="off" value={username} disabled={pending || blocked} onChange={event => setUsername(event.target.value)} />
-          <p className="mt-1 text-xs text-text-muted">Gợi ý từ tên nhân viên, có thể sửa.</p>
+          <Field label="Tên đăng nhập *" name="username" required minLength={3} maxLength={50} autoComplete="off" value={username} disabled={pending || blocked} onChange={event => setUsername(event.target.value)} />
+          <p className="mt-1 text-xs text-text-muted">Gợi ý theo tên nhân viên, bạn có thể sửa.</p>
         </div>
         <div>
           <p className="text-xs font-medium text-text-muted">Số điện thoại (từ hồ sơ)</p>

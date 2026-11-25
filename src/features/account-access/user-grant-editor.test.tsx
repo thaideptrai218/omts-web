@@ -24,35 +24,35 @@ const chip = (name: RegExp) => screen.findByRole("button", { name });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("grant editor", () => {
-  it("shows the held zone as an active chip marked Đang giao, every other zone selectable, and nothing to save yet", async () => {
+  it("shows the held zone as an active chip marked Đang phụ trách, every other zone selectable, and nothing to save yet", async () => {
     setup();
     const held = await chip(/Vùng nuôi Ngọc Vừng/);
-    expect(held.getAttribute("aria-pressed")).toBe("true"); expect(held.textContent).toMatch(/✓.*Đang giao/); expect((held as HTMLButtonElement).disabled).toBe(false);
+    expect(held.getAttribute("aria-pressed")).toBe("true"); expect(held.textContent).toMatch(/✓.*Đang phụ trách/); expect((held as HTMLButtonElement).disabled).toBe(false);
     for (const name of [/Thái Đẹp Trai Pro Max/, /Thái Đẹp Trai Pro Max/]) expect(((await chip(name)) as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByRole("radio", { name: "Một số vùng" }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByRole("button", { name: "Lưu thay đổi" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(document.body.textContent).toMatch(/Chưa có thay đổi nào/);
+    expect(document.body.textContent).toMatch(/Chưa có thay đổi/);
   });
-  it("marks a new zone Sẽ thêm and sends only that zone, never the pair already held", async () => {
+  it("marks a new zone Thêm and sends only that zone, never the pair already held", async () => {
     create.mockResolvedValue({ status: "success", data: row("2", thai, "Thái Đẹp Trai Pro Max") });
     setup();
     const added = await chip(/Thái Đẹp Trai Pro Max/); fireEvent.click(added);
-    expect(added.textContent).toMatch(/\+.*Sẽ thêm/);
-    expect(screen.getByText("+ Sẽ thêm:").parentElement?.textContent).toMatch(/Thái Đẹp Trai Pro Max/);
+    expect(added.textContent).toMatch(/\+.*Thêm/);
+    expect(screen.getByText("Khi lưu: thêm vùng Thái Đẹp Trai Pro Max.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
     await screen.findByText("Đã thêm: Thái Đẹp Trai Pro Max.");
     expect(create).toHaveBeenCalledTimes(1); expect(create).toHaveBeenCalledWith("acc", thai, "ZONE_MANAGER"); expect(revoke).not.toHaveBeenCalled();
   });
-  it("lets a current grant be clicked off (Sẽ bỏ), asks one reason only then, and revokes with it", async () => {
+  it("lets a current grant be clicked off (Bỏ), asks one reason only then, and revokes with it", async () => {
     revoke.mockResolvedValue({ status: "success", data: { ...row("1", ngoc, "Vùng nuôi Ngọc Vừng", "Revoked"), revokedAt: "2026-11-23T10:00:00+07:00", revokeReason: "Đổi vùng" } });
     setup();
-    expect(screen.queryByLabelText("Lý do bỏ quyền *")).toBeNull();
+    expect(screen.queryByLabelText("Lý do bỏ *")).toBeNull();
     const held = await chip(/Vùng nuôi Ngọc Vừng/); fireEvent.click(held);
-    expect(held.textContent).toMatch(/−.*Sẽ bỏ/);
-    expect(screen.getByText("− Sẽ bỏ:").parentElement?.textContent).toMatch(/Vùng nuôi Ngọc Vừng/);
+    expect(held.textContent).toMatch(/−.*Bỏ/);
+    expect(screen.getByText("Khi lưu: bỏ vùng Vùng nuôi Ngọc Vừng.")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Lưu thay đổi" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(document.body.textContent).toMatch(/Nhập lý do bỏ quyền/);
-    fireEvent.change(screen.getByLabelText("Lý do bỏ quyền *"), { target: { value: " Đổi vùng " } });
+    expect(document.body.textContent).toMatch(/Hãy nhập lý do bỏ/);
+    fireEvent.change(screen.getByLabelText("Lý do bỏ *"), { target: { value: " Đổi vùng " } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
     await screen.findByText("Đã bỏ: Vùng nuôi Ngọc Vừng.");
     expect(revoke).toHaveBeenCalledWith("acc", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", "Đổi vùng");
@@ -64,14 +64,13 @@ describe("grant editor", () => {
     await chip(/Vùng nuôi Ngọc Vừng/);
     fireEvent.click(screen.getByRole("radio", { name: "Tất cả vùng" }));
     expect(screen.queryByRole("button", { name: /Vùng nuôi Ngọc Vừng/ })).toBeNull();
-    expect(screen.getByText(/Quản lý vùng làm việc ở mọi vùng, kể cả vùng tạo sau\./)).toBeTruthy();
-    expect(screen.getByText("+ Sẽ thêm:").parentElement?.textContent).toMatch(/Tất cả vùng/);
-    expect(screen.getByText("− Sẽ bỏ:").parentElement?.textContent).toMatch(/Vùng nuôi Ngọc Vừng \(đã nằm trong Tất cả vùng\)/);
+    expect(screen.getByText(/Gồm cả vùng tạo sau này\./)).toBeTruthy();
+    expect(screen.getByText("Khi lưu: thêm tất cả vùng. Bỏ vùng Vùng nuôi Ngọc Vừng (đã có trong tất cả vùng).")).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "Một số vùng" }));
-    expect(screen.queryByLabelText("Lý do bỏ quyền *")).toBeNull();
+    expect(screen.queryByLabelText("Lý do bỏ *")).toBeNull();
     expect((await chip(/Vùng nuôi Ngọc Vừng/)).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(screen.getByRole("radio", { name: "Tất cả vùng" }));
-    fireEvent.change(screen.getByLabelText("Lý do bỏ quyền *"), { target: { value: "Gộp" } });
+    fireEvent.change(screen.getByLabelText("Lý do bỏ *"), { target: { value: "Gộp" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
     await waitFor(() => expect(revoke).toHaveBeenCalledTimes(1));
     expect(create).toHaveBeenCalledWith("acc", null, "ZONE_MANAGER");
@@ -79,7 +78,7 @@ describe("grant editor", () => {
   });
   it("shows Tất cả vùng as the current state when it is already held", async () => {
     setup([row("4", null, null)]);
-    await screen.findByText(/✓ Đang giao: Tất cả vùng\./);
+    await screen.findByText(/✓ Đang phụ trách tất cả vùng\./);
     expect((screen.getByRole("radio", { name: "Tất cả vùng" }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByRole("button", { name: "Lưu thay đổi" }) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -87,12 +86,12 @@ describe("grant editor", () => {
     const warn = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
     create.mockResolvedValue({ status: "success", data: row("5", null, null, "Effective", "ACCOUNTANT") });
     setup(undefined, warn);
-    await screen.findByText("Chưa giữ vai trò Kế toán");
-    fireEvent.click(screen.getByRole("button", { name: "Giao vai trò Kế toán" }));
+    await screen.findByText("Chưa là Kế toán");
+    fireEvent.click(screen.getByRole("button", { name: "Cho làm Kế toán" }));
     await waitFor(() => expect(warn).toHaveBeenCalledWith("ACCOUNTANT"));
-    expect(screen.getByText("Chưa giữ vai trò Kế toán")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Giao vai trò Kế toán" }));
-    await screen.findByText("+ Sẽ giao vai trò Kế toán");
+    expect(screen.getByText("Chưa là Kế toán")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cho làm Kế toán" }));
+    await screen.findByText("+ Thêm: Kế toán của cả hợp tác xã");
     fireEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
     await waitFor(() => expect(create).toHaveBeenCalledWith("acc", null, "ACCOUNTANT"));
   });
@@ -101,13 +100,13 @@ describe("grant editor", () => {
     setup();
     fireEvent.click(await chip(/Thái Đẹp Trai Pro Max/));
     fireEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
-    await screen.findByText(/Chưa thêm Thái Đẹp Trai Pro Max: Tài khoản này đã có quyền ở vùng đó\./);
+    await screen.findByText(/Chưa thêm Thái Đẹp Trai Pro Max: Tài khoản này đã phụ trách vùng đó rồi\./);
     expect(document.body.textContent).not.toMatch(/Bản ghi đã tồn tại/);
     expect((await chip(/Thái Đẹp Trai Pro Max/)).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "Hoàn tác" }));
     expect((await chip(/Thái Đẹp Trai Pro Max/)).getAttribute("aria-pressed")).toBe("false");
   });
   it("maps a duplicate to plain Vietnamese", () => {
-    expect(grantFailureMessage({ status: "error", httpStatus: 409, code: "MSG03", uncertain: false })).toBe("Tài khoản này đã có quyền ở vùng đó.");
+    expect(grantFailureMessage({ status: "error", httpStatus: 409, code: "MSG03", uncertain: false })).toBe("Tài khoản này đã phụ trách vùng đó rồi.");
   });
 });

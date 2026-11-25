@@ -18,7 +18,7 @@ function Harness() {
 }
 function openAndFill() {
   fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản đăng nhập" }));
-  fireEvent.change(screen.getByLabelText("Tên tài khoản *"), { target: { value: "fixture.an" } });
+  fireEvent.change(screen.getByLabelText("Tên đăng nhập *"), { target: { value: "fixture.an" } });
 }
 beforeEach(() => { fetchMock.mockReset(); vi.stubGlobal("fetch", fetchMock); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -32,7 +32,7 @@ describe("employee account handover", () => {
     render(<Harness />); openAndFill();
     fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
     expect(await screen.findByText(secret)).toBeTruthy();
-    expect(screen.getByText(/sẽ không được hiển thị lại/)).toBeTruthy();
+    expect(screen.getByText(/không xem được nữa/)).toBeTruthy();
     expect(screen.getByText("Hết hạn")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Sao chép mật khẩu tạm" }));
     await waitFor(() => expect(clipboard).toHaveBeenCalledWith(secret));
@@ -64,7 +64,7 @@ describe("employee account handover", () => {
       const grantCalls = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/account-grants/create"));
       expect(grantCalls).toHaveLength(1);
       expect(JSON.parse(grantCalls[0][1].body)).toEqual({ accountId: saved().account!.id, zoneId: null, role: "ACCOUNTANT" });
-      expect(await screen.findByText(grantResponse.ok ? /Đã phân quyền/ : /chưa gán được: Kế toán · Tất cả vùng/)).toBeTruthy();
+      expect(await screen.findByText(grantResponse.ok ? /Đã chọn vai trò và vùng/ : /chưa thêm được: Kế toán · Tất cả vùng/)).toBeTruthy();
       view.unmount();
     }
   });
@@ -77,7 +77,7 @@ describe("employee account handover", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).body).toEqual({ username: "fixture.an" });
     finish(Response.json({ status: "unavailable" }, { status: 503 }));
-    await screen.findByText(/Chưa xác định được kết quả/);
+    await screen.findByText(/Chưa biết tài khoản đã được cấp chưa/);
     fireEvent.submit(submit);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect((screen.getByRole("button", { name: "Cấp tài khoản" }) as HTMLButtonElement).disabled).toBe(true);
@@ -86,8 +86,8 @@ describe("employee account handover", () => {
     fetchMock.mockResolvedValue(Response.json({ status: "error", code: "MSG-ACCOUNT-09", message: secret }, { status: 409 }));
     render(<Harness />); openAndFill();
     fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
-    await screen.findByText(/đã được sử dụng/);
-    expect((screen.getByLabelText("Tên tài khoản *") as HTMLInputElement).value).toBe("fixture.an");
+    await screen.findByText(/đã có người dùng/);
+    expect((screen.getByLabelText("Tên đăng nhập *") as HTMLInputElement).value).toBe("fixture.an");
     expect(document.body.textContent).not.toContain(secret);
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -98,7 +98,7 @@ describe("employee account handover", () => {
     render(<EmployeeAccountTab employee={withoutAccount()} onSaved={onSaved} onRefresh={refresh} />);
     openAndFill();
     fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
-    await screen.findByText(/Chưa xác định được kết quả/);
+    await screen.findByText(/Chưa biết tài khoản đã được cấp chưa/);
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(onSaved).not.toHaveBeenCalled();
@@ -109,7 +109,7 @@ describe("employee account handover", () => {
     const withoutPhone = { ...withoutAccount(), phoneNumber: "" };
     render(<EmployeeAccountTab employee={withoutPhone} onSaved={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản đăng nhập" }));
-    expect((screen.getByLabelText("Tên tài khoản *") as HTMLInputElement).value).toMatch(/^[a-z0-9.]+$/);
+    expect((screen.getByLabelText("Tên đăng nhập *") as HTMLInputElement).value).toMatch(/^[a-z0-9.]+$/);
     expect(screen.getByRole("alert").textContent).toMatch(/chưa có số điện thoại/);
     expect(screen.getByRole("button", { name: "Bổ sung số điện thoại" })).toBeTruthy();
     const submit = screen.getByRole("button", { name: "Cấp tài khoản" }) as HTMLButtonElement;
@@ -119,9 +119,9 @@ describe("employee account handover", () => {
   it("focuses an empty username before sending and has no account action for Left or inaccessible employees", () => {
     const view = render(<EmployeeAccountTab employee={withoutAccount()} onSaved={vi.fn()} />);
     openAndFill();
-    fireEvent.change(screen.getByLabelText("Tên tài khoản *"), { target: { value: "   " } });
+    fireEvent.change(screen.getByLabelText("Tên đăng nhập *"), { target: { value: "   " } });
     fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
-    expect(document.activeElement).toBe(screen.getByLabelText("Tên tài khoản *"));
+    expect(document.activeElement).toBe(screen.getByLabelText("Tên đăng nhập *"));
     expect(fetchMock).not.toHaveBeenCalled();
     view.unmount();
     const left = render(<EmployeeAccountTab employee={{ ...withoutAccount(), status: "Left" }} onSaved={vi.fn()} />);
@@ -131,8 +131,8 @@ describe("employee account handover", () => {
     expect(screen.queryByRole("button", { name: "Cấp tài khoản đăng nhập" })).toBeNull();
   });
   it.each([
-    ["MSG-GEN-01", 400, /Kiểm tra tên tài khoản và số điện thoại/],
-    ["MSG-GEN-09", 409, /đã có tài khoản hoặc đã nghỉ việc/],
+    ["MSG-GEN-01", 400, /kiểm tra tên đăng nhập và số điện thoại/],
+    ["MSG-GEN-09", 409, /đã có tài khoản hoặc nhân viên đã nghỉ việc/],
     ["MSG06", 409, /Hồ sơ đã thay đổi/],
     [undefined, 403, /Chỉ Chủ hợp tác xã/],
     ["MSG-GEN-08", 400, /Chỉ Chủ hợp tác xã/],

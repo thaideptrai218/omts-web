@@ -11,8 +11,8 @@ type Revoke = (accountId: string, grantId: string, reason: string) => Promise<Wo
 
 /** Plain Vietnamese for a failed grant call: a duplicate pair reads "đã có quyền ở vùng đó", never the generic "Bản ghi đã tồn tại". */
 export function grantFailureMessage(result: Failure): string {
-  if (result.httpStatus === 409 && ["MSG03", "MSG-GEN-02"].includes(result.code ?? "")) return "Tài khoản này đã có quyền ở vùng đó.";
-  if (result.uncertain) return "Chưa xác định được kết quả. Hãy tải lại phân quyền để đối chiếu.";
+  if (result.httpStatus === 409 && ["MSG03", "MSG-GEN-02"].includes(result.code ?? "")) return "Tài khoản này đã phụ trách vùng đó rồi.";
+  if (result.uncertain) return "Chưa biết đã lưu được chưa. Hãy tải lại trang để kiểm tra.";
   return operationError(result);
 }
 

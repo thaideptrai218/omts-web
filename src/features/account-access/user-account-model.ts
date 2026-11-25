@@ -28,20 +28,11 @@ export const roleLabel = (code: string, fallback?: string) => roleDisplayName(co
 export const accountStatusLabel = (status: string) => status === "Active" ? "Đang hoạt động" : "Đã khóa";
 export const pairZoneLabel = (pair: UserPair) => pair.allZones ? "Tất cả vùng" : pair.zoneName || "Vùng chưa có tên";
 
-/** "Quản lý vùng · Vùng A, Vùng B" per role, for the list cells. Empty when the account has no Effective pair. */
-export function roleSummary(account: UserAccount): string {
-  return [...new Set(account.pairs.map((pair) => roleLabel(pair.role, pair.roleName)))].join(", ");
-}
-export function zoneSummary(account: UserAccount): string {
-  if (account.pairs.some((pair) => pair.allZones)) return "Tất cả vùng";
-  return [...new Set(account.pairs.map(pairZoneLabel))].join(", ");
-}
-
 export type UserFilters = { search: string; role: string; zoneId: string; status: string };
 export const emptyUserFilters: UserFilters = { search: "", role: "", zoneId: "", status: "" };
 const fold = (value: string) => value.toLocaleLowerCase("vi");
 
-/** Client-side filter over every loaded account. A role/zone filter matches an Effective pair; "all zones" pairs match any zone. */
+/** Client-side filter over loaded accounts. A role/zone filter matches an Effective pair; "all zones" pairs match any zone. */
 export function filterUserAccounts(accounts: readonly UserAccount[], filters: UserFilters, employeeNames: ReadonlyMap<string, string> = new Map()): UserAccount[] {
   const term = fold(filters.search.trim());
   return accounts.filter((account) => {
@@ -52,23 +43,6 @@ export function filterUserAccounts(accounts: readonly UserAccount[], filters: Us
     const employee = account.employeeId ? employeeNames.get(account.employeeId) ?? "" : "";
     return [account.displayName, account.username, account.phoneNumber ?? "", account.email ?? "", employee].some((value) => fold(value).includes(term));
   });
-}
-
-/** Sort over every loaded account (not just the page on screen), Vietnamese collation; ties keep the name order. */
-export function sortUserAccounts(accounts: readonly UserAccount[], sort: { key: string; direction: "asc" | "desc" }, employeeNames: ReadonlyMap<string, string> = new Map()): UserAccount[] {
-  const value = (account: UserAccount) => {
-    switch (sort.key) {
-      case "username": return account.username;
-      case "phone": return account.phoneNumber ?? "";
-      case "role": return roleSummary(account);
-      case "zone": return zoneSummary(account);
-      case "employee": return account.employeeId ? employeeNames.get(account.employeeId) ?? "" : "";
-      case "status": return account.status;
-      default: return account.displayName;
-    }
-  };
-  const factor = sort.direction === "asc" ? 1 : -1;
-  return [...accounts].sort((a, b) => factor * value(a).localeCompare(value(b), "vi") || a.displayName.localeCompare(b.displayName, "vi"));
 }
 
 /** Number of accounts holding each role (one count per account even when it has the role in several zones). */

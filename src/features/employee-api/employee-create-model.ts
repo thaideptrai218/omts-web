@@ -1,7 +1,7 @@
 import { employeeApiEditorSchema, buildEmployeeSaveBody, localFieldLabels, valuesOf, type EmployeeFormValues } from "./employee-editor-model";
 import { employeeFieldGroup, type EmployeeCreateGroup } from "./employee-editor-validation";
 import { issueEmployeeAccountRequestSchema } from "./employee-account-contract";
-import { emptyGrantSelection, selectionError, type GrantSelection } from "@/features/user-management/user-grant-selection";
+import { emptyGrantSelection, selectionError, type GrantSelection } from "@/features/account-access/user-grant-selection";
 
 /** Values of the create dialog: the profile fields plus the optional login account. */
 export type EmployeeCreateValues = EmployeeFormValues & { createAccount: boolean; username: string; grants: GrantSelection };

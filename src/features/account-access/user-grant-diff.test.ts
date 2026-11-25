@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { heldGrants, heldToDesired, planGrantChanges, summarizePlan, type GrantRow } from "./user-grant-diff";
+import { heldGrants, heldToDesired, planGrantChanges, planSentence, type GrantRow } from "./user-grant-diff";
 
 const ngoc = "11111111-1111-4111-8111-111111111111", thai = "22222222-2222-4222-8222-222222222222", minh = "33333333-3333-4333-8333-333333333333";
 const names: Record<string, string> = { [ngoc]: "Ngọc Vừng", [thai]: "Thái Đẹp Trai Pro Max", [minh]: "Minh Châu" };
@@ -18,22 +18,30 @@ describe("grant plan", () => {
   it("adds only the new zone and never re-sends a pair that is already held", () => {
     const plan = planGrantChanges(held, { allZones: false, zoneIds: [ngoc, thai], accountant: false }, nameOf);
     expect(plan).toEqual([{ kind: "add", role: "ZONE_MANAGER", zoneId: thai, label: "Thái Đẹp Trai Pro Max" }]);
-    expect(summarizePlan(plan)).toBe("Thêm: Thái Đẹp Trai Pro Max");
+    expect(planSentence(plan)).toBe("Khi lưu: thêm vùng Thái Đẹp Trai Pro Max.");
   });
-  it("is empty when nothing changed", () => expect(planGrantChanges(held, heldToDesired(held), nameOf)).toEqual([]));
+  it("is empty when nothing changed, and then says nothing", () => {
+    expect(planGrantChanges(held, heldToDesired(held), nameOf)).toEqual([]);
+    expect(planSentence([])).toBe("");
+  });
+  it("joins several zones and the Accountant into one sentence, leaving out the empty half", () => {
+    const plan = planGrantChanges(held, { allZones: false, zoneIds: [ngoc, thai, minh], accountant: true }, nameOf);
+    expect(planSentence(plan)).toBe("Khi lưu: thêm vùng Thái Đẹp Trai Pro Max, Minh Châu và vai trò Kế toán.");
+    expect(planSentence(planGrantChanges(held, { allZones: false, zoneIds: [], accountant: false }, nameOf))).toBe("Khi lưu: bỏ vùng Ngọc Vừng.");
+  });
   it("adds and removes in one plan, additions first", () => {
     const plan = planGrantChanges(held, { allZones: false, zoneIds: [thai], accountant: false }, nameOf);
     expect(plan.map((item) => `${item.kind}:${item.label}`)).toEqual(["add:Thái Đẹp Trai Pro Max", "remove:Ngọc Vừng"]);
     expect(plan[1].grantId).toBe("g1");
-    expect(summarizePlan(plan)).toBe("Thêm: Thái Đẹp Trai Pro Max · Bỏ: Ngọc Vừng");
+    expect(planSentence(plan)).toBe("Khi lưu: thêm vùng Thái Đẹp Trai Pro Max. Bỏ vùng Ngọc Vừng.");
   });
   it("replaces the single zones when Tất cả vùng is picked: add all-zones, revoke each zone grant", () => {
     const plan = planGrantChanges(held, { allZones: true, zoneIds: [ngoc, thai], accountant: false }, nameOf);
     expect(plan).toEqual([
       { kind: "add", role: "ZONE_MANAGER", zoneId: null, label: "Tất cả vùng" },
-      { kind: "remove", role: "ZONE_MANAGER", zoneId: ngoc, label: "Ngọc Vừng", grantId: "g1", detail: "đã nằm trong Tất cả vùng" },
+      { kind: "remove", role: "ZONE_MANAGER", zoneId: ngoc, label: "Ngọc Vừng", grantId: "g1", detail: "đã có trong tất cả vùng" },
     ]);
-    expect(summarizePlan(plan)).toBe("Thêm: Tất cả vùng · Bỏ: Ngọc Vừng (đã nằm trong Tất cả vùng)");
+    expect(planSentence(plan)).toBe("Khi lưu: thêm tất cả vùng. Bỏ vùng Ngọc Vừng (đã có trong tất cả vùng).");
     // Switching back to the original selection leaves nothing to do.
     expect(planGrantChanges(held, heldToDesired(held), nameOf)).toEqual([]);
   });

@@ -18,13 +18,13 @@ function PlanResults({ results }: { results: readonly PlanResult[] }) {
     <ul className="space-y-1">{results.map((result, index) => <li key={index}>
       {result.ok ? `Đã ${result.item.kind === "add" ? "thêm" : "bỏ"}: ${result.item.label}.` : `Chưa ${result.item.kind === "add" ? "thêm" : "bỏ"} ${result.item.label}: ${result.message}`}
     </li>)}</ul>
-    {results.some((result) => result.ok) && <p className="text-text-muted">Người dùng cần đăng nhập lại để thấy quyền và vùng mới.</p>}
-    {failed && <p className="text-text-muted">Lựa chọn của bạn được giữ nguyên; sửa rồi bấm Lưu thay đổi để thử lại phần chưa xong.</p>}
+    {results.some((result) => result.ok) && <p className="text-text-muted">Nhân viên cần đăng nhập lại mới thấy vai trò và vùng mới.</p>}
+    {failed && <p className="text-text-muted">Phần chưa làm được vẫn giữ nguyên lựa chọn của bạn. Bấm Lưu thay đổi để thử lại.</p>}
   </div>;
 }
 
 /**
- * "Vai trò và vùng" of one account: the editor (current zones ticked, one save for the difference) and, collapsed below it,
+ * Role and zones of one account: the editor (current zones ticked, one save for the difference) and, below it,
  * the read-only history. Zones are read live so a zone created a minute ago is offered at once; only In Use zones can be granted.
  */
 export function UserGrantEditor({ accountId, beforeGrant, onChanged }: { accountId: string; beforeGrant?(role: string): Promise<boolean>; onChanged?(): void }) {
@@ -41,7 +41,7 @@ export function UserGrantEditor({ accountId, beforeGrant, onChanged }: { account
     if (done.some((result) => result.ok)) { grants.refresh(); onChanged?.(); setVersion((now) => now + 1); }
   }
   if (grants.loading || (zonesRemote.loading && !zonesRemote.data)) return <Skeleton />;
-  if (grants.error || !grants.data) return <div className="space-y-2"><ErrorNotice error={grants.error ?? "Chưa đọc được phân quyền."} /><Button className="w-auto" variant="secondary" onClick={grants.reload}>Tải lại phân quyền</Button></div>;
+  if (grants.error || !grants.data) return <div className="space-y-2"><ErrorNotice error={grants.error ?? "Chưa đọc được vai trò và vùng."} /><Button className="w-auto" variant="secondary" onClick={grants.reload}>Tải lại</Button></div>;
   return <div className="space-y-4">
     <ErrorNotice error={zonesRemote.error} />
     {/* The editor restarts from the new grants whenever they change, except after a partial failure: then its key is pinned so the Owner's ticks survive. */}

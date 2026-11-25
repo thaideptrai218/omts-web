@@ -4,7 +4,7 @@ const chip = "inline-flex max-w-full items-center rounded-full border px-2 py-0.
 
 /** Role and zones as small chips (list cells and detail): role chip filled, one outlined chip per zone, whole-cooperative roles say so. */
 export function UserGrantChips({ pairs, limit = 3 }: { pairs: readonly UserPair[]; limit?: number }) {
-  if (!pairs.length) return <span className="text-text-muted">Chưa phân quyền</span>;
+  if (!pairs.length) return <span className="text-text-muted">Chưa có vai trò</span>;
   const roles = [...new Set(pairs.map((pair) => pair.role))];
   return <div className="flex flex-wrap gap-1">{roles.map((role) => {
     const own = pairs.filter((pair) => pair.role === role);

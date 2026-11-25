@@ -1,5 +1,5 @@
 import "server-only";
-import { createUserRequestSchema } from "@/features/user-management/account-credential-contract";
+import { createUserRequestSchema } from "@/features/account-access/account-credential-contract";
 import { forwardOwnerCredentialPost } from "./account-credential-http";
 
 /**

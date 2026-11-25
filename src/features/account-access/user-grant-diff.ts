@@ -38,7 +38,7 @@ export function planGrantChanges(held: readonly HeldGrant[], desired: DesiredGra
   if (desired.allZones) {
     // Replace, not stack: the all-zones grant covers every zone, so each zone grant still held would be redundant and is revoked with it.
     if (!heldAll) adds.push({ kind: "add", role: ZONE_MANAGER_ROLE, zoneId: null, label: "Tất cả vùng" });
-    for (const grant of manager) if (grant.zoneId) removes.push({ kind: "remove", role: ZONE_MANAGER_ROLE, zoneId: grant.zoneId, label: grant.zoneName ?? zoneName(grant.zoneId), grantId: grant.id, detail: "đã nằm trong Tất cả vùng" });
+    for (const grant of manager) if (grant.zoneId) removes.push({ kind: "remove", role: ZONE_MANAGER_ROLE, zoneId: grant.zoneId, label: grant.zoneName ?? zoneName(grant.zoneId), grantId: grant.id, detail: "đã có trong tất cả vùng" });
   } else {
     if (heldAll) removes.push({ kind: "remove", role: ZONE_MANAGER_ROLE, zoneId: null, label: "Tất cả vùng", grantId: heldAll.id });
     const heldIds = new Set(manager.flatMap((grant) => grant.zoneId ? [grant.zoneId] : []));
@@ -51,14 +51,19 @@ export function planGrantChanges(held: readonly HeldGrant[], desired: DesiredGra
   return [...adds, ...removes];
 }
 
-/** The changes as two lists of words ("Vùng nuôi Ngọc Vừng (đã nằm trong Tất cả vùng)"), for the summary box. */
-export function groupPlan(plan: readonly PlanItem[]): { add: string[]; remove: string[] } {
-  const words = (kind: PlanItem["kind"]) => plan.filter((item) => item.kind === kind).map((item) => item.detail ? `${item.label} (${item.detail})` : item.label);
-  return { add: words("add"), remove: words("remove") };
-}
-
-/** "Thêm: Thái Đẹp Trai Pro Max · Bỏ: Ngọc Vừng"; empty when nothing changes. */
-export function summarizePlan(plan: readonly PlanItem[]): string {
-  const { add, remove } = groupPlan(plan);
-  return [add.length ? `Thêm: ${add.join(", ")}` : "", remove.length ? `Bỏ: ${remove.join(", ")}` : ""].filter(Boolean).join(" · ");
+/**
+ * The change in one plain sentence for the summary box: "Khi lưu: thêm vùng Minh Châu, Thái. Bỏ vùng Ngọc Vừng."
+ * A half with nothing in it is left out; "" when nothing changes.
+ */
+export function planSentence(plan: readonly PlanItem[]): string {
+  const say = (kind: PlanItem["kind"]) => {
+    const items = plan.filter((item) => item.kind === kind);
+    const zones = items.filter((item) => item.role === ZONE_MANAGER_ROLE && item.zoneId).map((item) => item.detail ? `${item.label} (${item.detail})` : item.label);
+    return [zones.length && `vùng ${zones.join(", ")}`, items.some((item) => item.role === ZONE_MANAGER_ROLE && !item.zoneId) && "tất cả vùng", items.some((item) => item.role === ACCOUNTANT_ROLE) && "vai trò Kế toán"].filter(Boolean).join(" và ");
+  };
+  const halves = [["thêm", say("add")], ["bỏ", say("remove")]].filter(([, text]) => text).map(([verb, text], index) => {
+    const phrase = `${verb} ${text}`;
+    return index ? phrase.charAt(0).toLocaleUpperCase("vi") + phrase.slice(1) : phrase;
+  });
+  return halves.length ? `Khi lưu: ${halves.join(". ")}.` : "";
 }

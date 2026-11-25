@@ -26,14 +26,14 @@ export function UserInfoSection({ account, disabled, employeeLabel, onSaved }: {
     const saved = await mutation.run(() => repository.mutate("update", body, account.id));
     if (saved) { onSaved(toUserAccount(saved)); setEditing(false); }
   }
-  if (!editing) return <section aria-label="Thông tin người dùng" className="space-y-3">
+  if (!editing) return <section aria-label="Thông tin đăng nhập" className="space-y-3">
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {([["Tên hiển thị", account.displayName], ["Tên đăng nhập", account.username], ["Số điện thoại", account.phoneNumber], ["Email", account.email], ["Nhân viên liên kết", employeeLabel]] as const)
+      {([["Tên hiển thị", account.displayName], ["Tên đăng nhập", account.username], ["Số điện thoại", account.phoneNumber], ["Email", account.email], ["Nhân viên", employeeLabel]] as const)
         .map(([label, value]) => <div key={label}><dt className="text-xs text-text-muted">{label}</dt><dd className="break-all text-sm font-medium">{value || "—"}</dd></div>)}
     </dl>
-    <Button className="w-auto" variant="secondary" disabled={disabled} onClick={startEdit}>Chỉnh sửa thông tin</Button>
+    <Button className="w-auto" variant="secondary" disabled={disabled} onClick={startEdit}>Sửa thông tin đăng nhập</Button>
   </section>;
-  return <form aria-label="Chỉnh sửa thông tin người dùng" className="space-y-3" noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
+  return <form aria-label="Sửa thông tin đăng nhập" className="space-y-3" noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
     <div className="grid gap-3 sm:grid-cols-2">
       <Field label="Tên hiển thị *" maxLength={200} value={values.displayName} disabled={mutation.pending} onChange={(event) => set("displayName")(event.target.value)} />
       <Field label="Tên đăng nhập *" maxLength={50} value={values.username} disabled={mutation.pending} onChange={(event) => set("username")(event.target.value)} />
