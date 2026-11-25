@@ -31,9 +31,13 @@ export function parseEmployeeCreate(values: EmployeeCreateValues, inactiveZoneId
   const issues: EmployeeCreateIssue[] = checked.success ? [] : checked.error.issues.map(issue => ({ path: issue.path.join("."), message: issue.message }));
   const add = (path: string, message: string) => { if (!issues.some(issue => issue.path === path)) issues.push({ path, message }); };
   if (!values.employeeType) add("employeeType", "Chọn loại nhân viên.");
-  if (!values.workingZoneIds.length) add("workingZoneIds", "Chọn ít nhất một vùng làm việc.");
-  else if (inactiveZoneIds.length) add("workingZoneIds", "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu.");
-  if (values.createAccount) {
+  // A seasonal worker has no fixed zone (placed by assignment); an official employee needs one. A seasonal worker always gets a login, so the phone number is needed.
+  const seasonal = values.employeeType === "SeasonalWorker";
+  if (seasonal && !values.phone.trim()) add("phone", "Nhập số điện thoại: nhân viên thời vụ đăng nhập bằng số điện thoại.");
+  if (!seasonal && !values.workingZoneIds.length) add("workingZoneIds", "Chọn ít nhất một vùng làm việc.");
+  else if (!seasonal && inactiveZoneIds.length) add("workingZoneIds", "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu.");
+  // The login of a seasonal worker is made by the system with the cooperative's default password: no account is requested here.
+  if (values.createAccount && !seasonal) {
     if (!values.username.trim()) add("username", "Nhập tên đăng nhập.");
     else {
       const account = issueEmployeeAccountRequestSchema.safeParse({ username: values.username });
@@ -47,7 +51,7 @@ export function parseEmployeeCreate(values: EmployeeCreateValues, inactiveZoneId
   issues.sort((a, b) => rank(a.path) - rank(b.path));
   if (issues.length || !checked.success) return { ok: false as const, issues };
   // `grants` never enters the request body: the create endpoint accepts a username only, so roles are sent after the account exists.
-  const { createAccount, username } = values;
+  const { createAccount, username } = values.employeeType === "SeasonalWorker" ? { ...values, createAccount: false } : values;
   return {
     ok: true as const,
     body: {

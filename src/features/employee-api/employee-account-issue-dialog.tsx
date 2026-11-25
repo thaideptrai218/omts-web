@@ -24,6 +24,9 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
   const [pending, setPending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   // This is deliberately component state, never shared with the employee/detail cache.
+  // A seasonal worker's account has the cooperative's default password: it is never shown, only said that it is the default.
+  const [fixed, setFixed] = useState<string>();
+  const seasonal = employee.employeeType === "SeasonalWorker";
   const [credential, setCredential] = useState<{ password: string; expiresAt: string; username: string }>();
   const [selection, setSelection] = useState<GrantSelection>(emptyGrantSelection);
   const [grantNotice, setGrantNotice] = useState<{ text?: string; failed: boolean }>();
@@ -70,10 +73,12 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
         savedEmployee.current = result.data.employee;
         // The account exists now; grants go through the grant-create path and a failure never hides the password.
         const accountId = result.data.employee.account?.id;
-        const outcome = accountId && hasAnyRole(selection) ? await applyGrantSelection(accountId, selection, zoneNames.current) : undefined;
+        const outcome = accountId && !seasonal && hasAnyRole(selection) ? await applyGrantSelection(accountId, selection, zoneNames.current) : undefined;
         if (!mounted.current) return;
         setGrantNotice({ text: grantOutcomeNotice(outcome), failed: !!outcome?.failed.length });
-        setCredential({ password: result.data.temporaryPassword, expiresAt: result.data.temporaryPasswordExpiresAt, username: result.data.employee.account?.username ?? checked.data.username });
+        const expiresAt = result.data.temporaryPasswordExpiresAt;
+        if (result.data.fixedPassword || seasonal || !expiresAt) { setFixed(result.data.employee.account?.username ?? checked.data.username); setUsername(""); return; }
+        setCredential({ password: result.data.temporaryPassword, expiresAt, username: result.data.employee.account?.username ?? checked.data.username });
         setUsername(""); setSelection(emptyGrantSelection);
       } else {
         setError(employeeAccountError(result));
@@ -84,10 +89,15 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
     } finally { active.current = false; if (mounted.current) setPending(false); }
   }
   const disabledReason = blocked ? "Chưa cấp lại được. Hãy đóng hộp này và tải lại hồ sơ để kiểm tra." : !employee.phoneNumber ? "Chưa cấp được vì hồ sơ chưa có số điện thoại." : undefined;
+  if (fixed) return createPortal(<Dialog open title="Đã cấp tài khoản thời vụ" onOpenChange={open => { if (!open) acknowledge(); }}>
+    <p className="text-sm">Tên đăng nhập: <strong className="break-all">{fixed}</strong></p>
+    <p className="mt-2 text-sm">Tài khoản thời vụ dùng mật khẩu mặc định của hợp tác xã, họ phải đổi ở lần đăng nhập đầu.</p>
+    <div className="mt-4 flex justify-end"><Button className="w-auto" onClick={acknowledge}>Xong</Button></div>
+  </Dialog>, document.body);
   if (credential) return <EmployeeCredentialDialog username={credential.username} password={credential.password} expiresAt={credential.expiresAt} onClose={acknowledge} grantNotice={grantNotice?.text} grantFailed={grantNotice?.failed} />;
   // The tab sits inside the profile <form>; a <form> nested in a <form> is invalid HTML (React reloads the page in development), so the dialog is rendered on <body>.
   return createPortal(<Dialog open title="Cấp tài khoản đăng nhập" dismissible={!pending} onOpenChange={open => { if (!open) close(); }}>
-    <p className="mb-4 text-sm text-text-muted">Cấp tài khoản cho {employee.fullName}. Mật khẩu tạm chỉ hiện một lần sau khi cấp, nhớ ghi lại.</p>
+    <p className="mb-4 text-sm text-text-muted">Cấp tài khoản cho {employee.fullName}.{seasonal ? "" : " Mật khẩu tạm chỉ hiện một lần sau khi cấp, nhớ ghi lại."}</p>
     {confirmation.dialog}
     <form ref={form} className="space-y-4" noValidate onSubmit={event => { event.preventDefault(); event.stopPropagation(); void save(); }}>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -104,7 +114,7 @@ export function EmployeeAccountIssueDialog({ employee, onClose, onSaved, onRefre
         <p className="min-w-0 flex-1">Hồ sơ chưa có số điện thoại nên chưa cấp được tài khoản.</p>
         {onFixPhone && <Button type="button" className="w-auto" variant="secondary" disabled={pending} onClick={() => { onClose(); onFixPhone(); }}>Bổ sung số điện thoại</Button>}
       </div>}
-      <EmployeeAccountGrantChoice selection={selection} onChange={setSelection} disabled={pending || blocked} username={username} onZones={names => { zoneNames.current = names; }} />
+      {seasonal ? <p className="text-sm text-text-muted">Tài khoản thời vụ dùng mật khẩu mặc định của hợp tác xã, họ phải đổi ở lần đăng nhập đầu.</p> : <EmployeeAccountGrantChoice selection={selection} onChange={setSelection} disabled={pending || blocked} username={username} onZones={names => { zoneNames.current = names; }} />}
       <ErrorNotice error={error} />
       <div className="flex flex-wrap justify-end gap-3">
         <Button className="w-auto" variant="secondary" disabled={pending} onClick={close}>Đóng</Button>

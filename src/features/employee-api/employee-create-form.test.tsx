@@ -188,3 +188,57 @@ describe("create employee dialog: birthday picker", () => {
     expect(repository.write.mock.calls[0][1].birthday).toMatch(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/);
   });
 });
+
+describe("create employee dialog: nội bộ and thời vụ", () => {
+  it("lists nội bộ first and marks the chosen type", () => {
+    render(<EmployeeApiEditor {...props()} />);
+    const options = [...screen.getByLabelText("Loại nhân viên *", { exact: true }).querySelectorAll("option")].map(option => option.textContent);
+    expect(options).toEqual(["Chọn loại nhân viên", "Nội bộ", "Thời vụ"]);
+    type("Loại nhân viên *", "Staff");
+    expect(screen.getByText(/làm ở một vùng cố định/)).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Vùng làm việc *" })).toBeTruthy();
+  });
+  it("hides the zone picker for a seasonal worker, says they work by assignment, and needs a phone number", () => {
+    render(<EmployeeApiEditor {...props()} />);
+    type("Họ và tên *", "Người thời vụ");
+    type("Loại nhân viên *", "SeasonalWorker");
+    expect(screen.queryByRole("group", { name: "Vùng làm việc *" })).toBeNull();
+    expect(screen.getByText("Thời vụ: làm theo phân công, không cố định vùng.")).toBeTruthy();
+    save();
+    expect(repository.write).not.toHaveBeenCalled();
+    expect(screen.getAllByText(/đăng nhập bằng số điện thoại/).length).toBeGreaterThan(0);
+  });
+  it("sends no zones and no account for a seasonal worker, even when zones were ticked as nội bộ first", async () => {
+    repository.write.mockResolvedValue({ status: "success", data: fixture() });
+    render(<EmployeeApiEditor {...props()} />);
+    type("Họ và tên *", "Người thời vụ");
+    type("Loại nhân viên *", "Staff");
+    fireEvent.click(screen.getByRole("checkbox", { name: /Vùng Đông/ }));
+    type("Loại nhân viên *", "SeasonalWorker");
+    type("Số điện thoại *", "0901234567");
+    save();
+    await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
+    const body = repository.write.mock.calls[0][1];
+    expect(body).toMatchObject({ employeeType: "SeasonalWorker", workingZoneIds: [] });
+    expect(body).not.toHaveProperty("account");
+  });
+  it("starts with no zone again when switching back to nội bộ, and then needs one", () => {
+    render(<EmployeeApiEditor {...props()} />);
+    type("Họ và tên *", "Người mới");
+    type("Loại nhân viên *", "Staff");
+    fireEvent.click(screen.getByRole("checkbox", { name: /Vùng Đông/ }));
+    type("Loại nhân viên *", "SeasonalWorker");
+    type("Loại nhân viên *", "Staff");
+    expect((screen.getByRole("checkbox", { name: /Vùng Đông/ }) as HTMLInputElement).checked).toBe(false);
+    save();
+    expect(repository.write).not.toHaveBeenCalled();
+    expect(screen.getByText("Chọn ít nhất một vùng làm việc.")).toBeTruthy();
+  });
+  it("tells the account of a seasonal worker is made by the system with the default password, without showing it", () => {
+    render(<EmployeeApiEditor {...props()} />);
+    type("Loại nhân viên *", "SeasonalWorker");
+    fireEvent.click(toggle(/Tài khoản đăng nhập/));
+    expect(screen.getByText(/mật khẩu mặc định của hợp tác xã, họ phải đổi ở lần đăng nhập đầu/)).toBeTruthy();
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+});

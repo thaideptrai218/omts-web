@@ -8,7 +8,8 @@ import { formatHours } from "@/features/payroll/payroll-model";
 import { managementStyles, SortableHeader, type SortState } from "@/components/ui/management-screen/management-table";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import type { EmployeeListItemDto } from "@/features/employee-management/api/employee-contract.schemas";
-import { accountLabel, employmentLabel, employeeTypeLabel, dateLabel } from "./employee-editor-model";
+import { EmployeeTypeBadge } from "./employee-type-badge";
+import { accountLabel, employmentLabel, dateLabel } from "./employee-editor-model";
 import { EmployeeDetailPanel } from "./employee-detail-panel";
 import type { EmployeeDetailCache } from "./use-employee-detail";
 import type { Employee } from "./contracts";
@@ -46,14 +47,14 @@ const text = (value: string, className = "") => <span className={`${styles.trunc
 const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase("vi") ?? "?";
 export const employeeColumns: readonly Column[] = [
   // The name is the identity column and stays FIRST: while a row is open the management kit keeps only the first data column (plus the last), so any other order hides the name beside the detail pane.
-  { key: "name", label: "Họ và tên", width: 190, sort: "name", render: (row, chip) => <span className={styles.nameCell}><span className={styles.avatar} aria-hidden="true">{initial(row.fullName)}</span>{text(row.fullName, styles.name)}{chip}</span> },
+  { key: "name", label: "Họ và tên", width: 190, sort: "name", render: (row, chip) => <span className={styles.nameCell}><span className={styles.avatar} aria-hidden="true">{initial(row.fullName)}</span>{text(row.fullName, styles.name)}<EmployeeTypeBadge type={row.employeeType} />{chip}</span> },
   // The backend cannot sort by login name, so this header is plain. The code stays available in the column picker.
   { key: "username", label: "Tên đăng nhập", width: 160, render: (row, _chip, link) => link ?? <span className={styles.meta}>—</span> },
   // Role and zones come from the account list (Owner only), not from the employee list, so the cell is empty without them.
   { key: "role", label: "Vai trò và vùng", width: 220, render: (_row, _chip, _link, grants) => grants ?? <span className={styles.meta}>—</span> },
   { key: "code", label: "Mã nhân viên", width: 116, sort: "code", defaultHidden: true, render: row => text(row.code, "font-mono tabular-nums") },
   { key: "phone", label: "Số điện thoại", width: 122, sort: "phone", render: row => text(row.phoneNumber ?? "—") },
-  { key: "type", label: "Loại nhân viên", width: 132, sort: "type", render: row => <span className={styles.typeChip} title={employeeTypeLabel(row.employeeType)}>{employeeTypeLabel(row.employeeType)}</span> },
+  { key: "type", label: "Loại nhân viên", width: 132, sort: "type", render: row => row.employeeType ? <EmployeeTypeBadge type={row.employeeType} showLabel /> : <span className={styles.meta}>—</span> },
   { key: "jobs", label: "Loại công việc", width: 140, defaultHidden: true, render: row => text(row.jobTypes.map(job => job.name).join(", ")) },
   { key: "zones", label: "Vùng làm việc", width: 112, render: row => <span className={styles.wrap} title={row.workingZones.map(zone => `${zone.code} · ${zone.name}`).join(", ")}>{row.workingZones.map(zone => zone.code).join(", ") || "—"}</span> },
   { key: "lastDay", label: "Ngày làm cuối", width: 116, sort: "lastWorkingDay", defaultHidden: true, render: row => text(row.lastWorkingDay ? dateLabel(row.lastWorkingDay) : "—") },

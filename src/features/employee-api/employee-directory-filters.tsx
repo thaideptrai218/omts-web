@@ -3,6 +3,7 @@ import { FilterGroup, FilterPills } from "@/components/ui/management-screen/mana
 import { managementStyles } from "@/components/ui/management-screen/management-table";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { fixedRoleLabels } from "@/features/account-access/user-account-model";
+import { EmployeeTypeFilter } from "./employee-type-filter";
 import type { AccountFilters } from "./employee-account-filter";
 import styles from "./employee-directory.module.css";
 
@@ -23,7 +24,7 @@ export function EmployeeDirectoryFilters({ employeeType, setEmployeeType, status
   return <>
     <div className={styles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilters} onClick={onReset}>Đặt lại</button></div>
     {!unlinked && <>
-    <FilterPills legend="Loại nhân viên" name="employee-type" value={employeeType} options={[["SeasonalWorker", "Thời vụ"], ["Staff", "Nội bộ"]]} onChange={setEmployeeType} />
+    <EmployeeTypeFilter value={employeeType} onChange={setEmployeeType} />
     <FilterPills legend="Tình trạng làm việc" name="employee-status" value={statusId} options={[["401", "Đang làm việc"], ["402", "Đã nghỉ việc"]]} onChange={setStatusId} />
     <FilterGroup legend="Vùng làm việc"><SelectBox aria-label="Vùng làm việc" className={styles.zoneSelect} value={zoneId} onChange={event => setZoneId(event.target.value)}>
       <option value="">Tất cả vùng</option>

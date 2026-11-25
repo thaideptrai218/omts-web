@@ -1,4 +1,5 @@
 "use client";
+import { EmployeeTypeBadge } from "./employee-type-badge";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AccountAccessPanel } from "@/features/account-access/account-access-panel";
@@ -23,6 +24,8 @@ export function EmployeeAccountTab({ employee, onSaved, onRefresh, onAccountChan
   const account = employee.account;
   const canGrant = employee.status === "Employed" && employee.canMaintain && !employee.hasStaffAccount;
   return <div className="space-y-4">
+    <p className="flex flex-wrap items-center gap-2 text-sm"><strong>{employee.fullName}</strong><EmployeeTypeBadge type={employee.employeeType} showLabel /></p>
+    {employee.employeeType === "SeasonalWorker" && <p className="text-sm text-text-muted">Tài khoản thời vụ dùng mật khẩu mặc định của hợp tác xã, họ phải đổi ở lần đăng nhập đầu.</p>}
     {account ? (canReset
       ? <AccountAccessPanel account={account} employeeLabel={`${employee.code} · ${employee.fullName}`} workingZoneIds={employee.workingZones.map(zone => zone.id)} onOpenWork={goToTab("work")} onChanged={() => onAccountChanged?.()} />
       : <dl className="grid gap-4 sm:grid-cols-3">

@@ -47,7 +47,9 @@ describe("employee login account operation contract", () => {
     const receipt = { employee: payload.employee, temporaryPassword: payload.temporaryPassword,
       temporaryPasswordExpiresAt: payload.temporaryPasswordExpiresAt, accountMessageCode: payload.accountMessageCode };
     expect(issueEmployeeAccountResponseSchema.safeParse(receipt).success).toBe(true);
-    for (const changed of [{ ...receipt, temporaryPassword: null }, { ...receipt, temporaryPasswordExpiresAt: null },
+    // The fixed password of a seasonal account never expires.
+    expect(issueEmployeeAccountResponseSchema.safeParse({ ...receipt, temporaryPasswordExpiresAt: null, fixedPassword: true }).success).toBe(true);
+    for (const changed of [{ ...receipt, temporaryPassword: null },
       { ...receipt, temporaryPasswordExpiresAt: "tomorrow" }, { ...receipt, passwordHash: "forbidden" },
       { ...receipt, employee: { ...receipt.employee, account: null } }]) {
       expect(issueEmployeeAccountResponseSchema.safeParse(changed).success).toBe(false);

@@ -54,8 +54,8 @@ export function useEmployeeInlineEditor({ employee, active, setActive, zones, lo
     if (tab === "work") {
       if (!draft.employeeType && base.employeeType) next.push({ path: "employeeType", message: "Chọn loại nhân viên." });
       if (draft.employeeType && draft.employeeType !== base.employeeType && !draft.employeeTypeFrom) next.push({ path: "employeeTypeFrom", message: "Chọn ngày áp dụng loại nhân viên." });
-      if (!draft.workingZoneIds.length) next.push({ path: "workingZoneIds", message: "Chọn ít nhất một vùng làm việc." });
-      if (draft.workingZoneIds.some(id => zones.find(zone => zone.id === id)?.statusId !== 101)) next.push({ path: "workingZoneIds", message: "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu." });
+      if (draft.employeeType !== "SeasonalWorker" && !draft.workingZoneIds.length) next.push({ path: "workingZoneIds", message: "Chọn ít nhất một vùng làm việc." });
+      if (draft.employeeType !== "SeasonalWorker" && draft.workingZoneIds.some(id => zones.find(zone => zone.id === id)?.statusId !== 101)) next.push({ path: "workingZoneIds", message: "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu." });
     }
     setIssues(next);
     if (next.length || !checked.success) { requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]')?.focus()); return; }
