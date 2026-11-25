@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: state.push }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify: state.notify }) }));
-vi.mock("./repository", () => ({ lotRepository: { detail: state.detail, movements: state.movements, remove: state.remove, weigh: vi.fn(), reopen: vi.fn(), close: vi.fn() } }));
+vi.mock("./repository", () => ({ lotRepository: { detail: state.detail, movements: state.movements, remove: state.remove, weigh: vi.fn(), cages: vi.fn(async () => ({ status: "success", data: { lotId: "122bb318-a72e-49aa-a8d7-a6169f889007", lotCode: "LTH000007", rowVersion: "v1", canEdit: true, cages: [], products: [] } })), reopen: vi.fn(), close: vi.fn() } }));
 vi.mock("@/features/history/history-repository", () => ({ readRecordHistory: vi.fn(async () => ({ status: "success", data: [] })) }));
 vi.mock("@/features/cultivation-api/harvest-detail", () => ({ HarvestLotDetail: () => <p>Biểu mẫu sửa chuyến thu hoạch</p> }));
 import { LotDetailPanel } from "./lot-detail";

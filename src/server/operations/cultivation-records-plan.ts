@@ -5,6 +5,7 @@ import { cycle } from "@/features/cultivation-api/contracts";
 import { crewSuggestions } from "@/features/cultivation-api/record-crew-contracts";
 import { historyList } from "@/features/history/history-contracts";
 import { finishHarvestResult, finishHarvestValues, matchesFinishedSelection } from "@/features/cultivation-api/finish-harvest-contracts";
+import { cageSheet } from "@/features/harvest-lots/cage-contracts";
 import * as lots from "@/features/harvest-lots/contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
@@ -19,6 +20,8 @@ const lotList = z.strictObject({ action: z.literal("lots"), ...lotFilters, page:
 const lotExport = z.strictObject({ action: z.literal("export"), ...lotFilters });
 /** Weigh (Cân thực tế), reopen with a reason and close by hand: each answers the lot as it is now. */
 const lotActions = new Set(["weigh", "reopen", "close"]);
+/** Cage weighing: one cage added, corrected or taken off the sheet; each answers the whole sheet. */
+const cageActions = new Set(["cage-add", "cage-update", "cage-remove"]);
 
 export function cultivationRecordsPlan(area: OperationArea, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   if (new Set(query.keys()).size !== query.size) return;
@@ -63,6 +66,11 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     if (!q.success) return;
     return { area, action: "detail", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/harvest-lots/${q.data.id}`, schema: c.harvestDetail, expectedId: q.data.id };
   }
+  if (area === "harvest" && method === "GET" && query.get("action") === "cages") {
+    const q = z.strictObject({ action: z.literal("cages"), id: z.guid(), zoneId: z.guid() }).safeParse(Object.fromEntries(query));
+    if (!q.success) return;
+    return { area, action: "cages", method: "GET", zoneId: q.data.zoneId, permission: "View", path: `/api/harvest-lots/${q.data.id}/cages`, schema: cageSheet };
+  }
   if (area === "harvest" && method === "GET" && query.get("action") === "crew-suggestions") {
     const q = z.strictObject({ action: z.literal("crew-suggestions"), id: z.guid(), zoneId: z.guid(), date: z.iso.date() }).safeParse(Object.fromEntries(query));
     if (!q.success) return;
@@ -85,11 +93,11 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     return { area, action, zoneId, permission: action === "preview" ? "Create" : "View", method: "GET", path: seeding ? action === "seed-lots" ? `/api/rafts/${id}/seed-lots` : `/api/cultivation-cycles/${id}/${action === "preview" ? "seeding-complete/preview" : "seeding-records"}` : `/api/rafts/${id}/${material ? "material-usages" : "harvest-lots"}`, schema: seeding ? action === "seed-lots" ? c.seedLots : action === "preview" ? c.seedingPreview : c.seedingList : material ? c.materialList : c.harvestList };
   }
   if (method !== "POST" || query.size) return;
-  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-lane", "finish-harvest", "weigh", "reopen", "close"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
+  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-lane", "finish-harvest", "weigh", "reopen", "close", "cage-add", "cage-update", "cage-remove"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
   if (!m.success) return;
   const { action, id, zoneId, body } = m.data;
-  if (lotActions.has(action) && area !== "harvest") return;
-  const base = { area, action, zoneId, method: "POST" as const, permission: action === "correct" || lotActions.has(action) ? "Edit" : action === "remove" ? "Delete" : "Create" };
+  if ((lotActions.has(action) || cageActions.has(action)) && area !== "harvest") return;
+  const base = { area, action, zoneId, method: "POST" as const, permission: action === "correct" || lotActions.has(action) || cageActions.has(action) ? "Edit" : action === "remove" ? "Delete" : "Create" };
   // The Cooperative Owner may complete while employees are not checked out yet (MSG-LABOR-37), with a reason.
   const ownerApproval = { ownerApproved: z.boolean().optional(), approvalReason: z.string().trim().min(1).max(1000).optional() };
   const version = { rowVersion: z.string().min(1) }, reason = { reason: z.string().trim().min(1), ...version };
@@ -104,6 +112,18 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     const lane = z.strictObject({ laneNumber: z.number().int().min(1).max(999_999), ...ownerApproval }).safeParse(body);
     if (!lane.success) return;
     return { ...base, permission: "Create", path: `/api/rafts/${id}/lanes/${lane.data.laneNumber}/finish-harvest`, ...(lane.data.ownerApproved ? { body: { ownerApproved: true, approvalReason: lane.data.approvalReason } } : {}), schema: c.finishLaneResult };
+  }
+  if (area === "harvest" && cageActions.has(action)) {
+    const root = `/api/harvest-lots/${id}/cages`;
+    if (action === "cage-add") { const values = lots.cageValues.safeParse(body); return values.success ? { ...base, path: root, body: values.data, schema: cageSheet } : undefined; }
+    if (action === "cage-update") {
+      const values = lots.cageUpdateValues.safeParse(body);
+      if (!values.success) return;
+      const { cageId, ...rest } = values.data;
+      return { ...base, method: "PUT", path: `${root}/${cageId}`, body: rest, schema: cageSheet };
+    }
+    const values = lots.cageRemoveValues.safeParse(body);
+    return values.success ? { ...base, method: "DELETE", path: `${root}/${values.data.cageId}`, schema: cageSheet } : undefined;
   }
   if (area === "harvest" && lotActions.has(action)) {
     const values = (action === "weigh" ? lots.weighValues : action === "reopen" ? lots.reopenValues : lots.closeValues).safeParse(body);

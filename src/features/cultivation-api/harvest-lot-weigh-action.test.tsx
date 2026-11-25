@@ -13,12 +13,13 @@ const lot = (patch: object = {}) => ({ status: "success", data: { id: "lot", lot
   figures: { invoicedKg: 0, soldKg: 0, returnedKg: 0, remainingKg: 100, lostKg: 0, differenceKg: 0, notFinal: true }, photos: [], rowVersion: "v", statusId: 2904, status: "AwaitingWeighing", weighedKg: null, canWeigh: true, canCorrect: false, productLines: [], ...patch } });
 
 it("offers Cân on a lot awaiting weighing and opens the weighing in place", async () => {
-  read.mockResolvedValue(lot());
+  const sheet = { status: "success", data: { lotId: "122bb318-a72e-49aa-a8d7-a6169f889007", lotCode: "B1-LOT", rowVersion: "v", canEdit: true, products: [], cages: [] } };
+  read.mockImplementation(async (action: string) => action === "cages" ? sheet : lot());
   render(<ToastProvider><HarvestLotPreview id="lot" zoneId="z" onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
   expect(await screen.findByText("Chờ cân")).toBeTruthy();
   expect(screen.getByText("Chưa cân")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Cân" }));
-  expect(await screen.findByLabelText("Kg cân thực tế")).toBeTruthy();
+  expect(await screen.findByLabelText(/Kg của lồng tiếp theo/)).toBeTruthy();
   expect(screen.queryByRole("dialog")).toBeNull();
 });
 
