@@ -43,6 +43,8 @@ describe("tester workflow safeguards", () => {
       warning: { code: "MSG-WATER-01", text: "Chưa đọc được pH, độ mặn, nhiệt độ." } };
     const recognition = { photoKey: "photo-key-qa", measuredAt: "2026-10-01T08:00:00+07:00", ocr, valuesOutside: [], thresholdWarning: null };
     const recorded = waterFixture(), onSaved = vi.fn();
+    // A measurement older than 15 days is refused (BR-WATER-03), so the clock stays next to the recognised time.
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-02T08:00:00+07:00"));
     repository.upload.mockResolvedValue({ status: "success", data: recognition });
     repository.write.mockResolvedValue({ status: "success", data: recorded });
     render(<NewMeasurement zoneId={ids.zone} zoneName="Vùng QA" onClose={vi.fn()} onSaved={onSaved} />);

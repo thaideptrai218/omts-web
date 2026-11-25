@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -11,11 +11,12 @@ import { InputInventorySettings } from "@/features/input-items/inventory-setting
 import { ProductSettings } from "@/features/products/product-settings";
 import { HarvestSettingsPanel } from "./harvest-settings-panel";
 import { WaterThresholdSettingsPanel } from "./water-threshold-settings-panel";
+import { AttendanceSettingsPanel } from "./attendance-settings-panel";
 import { filterSettingsGroups, pickSettingsItem, settingsItemKey, suggestSettingsItems } from "./settings-hub-filter";
 import styles from "./settings-page.module.css";
 
-/** Settings that open in place on this page; every other item links to its own page ("Mở màn"). */
-const panels: Record<string, ComponentType> = { "cash-book": CashBookSettings, "input-inventory": InputInventorySettings, products: ProductSettings, customers: CustomerSettingsPanel, harvest: HarvestSettingsPanel, "water-thresholds": WaterThresholdSettingsPanel };
+/** Settings that open in place on this page; every other item opens its own page at once (inside the same sidebar). */
+const panels: Record<string, ComponentType> = { "cash-book": CashBookSettings, "input-inventory": InputInventorySettings, products: ProductSettings, customers: CustomerSettingsPanel, harvest: HarvestSettingsPanel, "water-thresholds": WaterThresholdSettingsPanel, attendance: AttendanceSettingsPanel };
 
 /**
  * Thiết lập hub: the groups and their items on the left (a select on phones), the chosen item on the right without leaving
@@ -31,7 +32,13 @@ export function SettingsPage() {
   const itemCount =sections.reduce((total, section) => total + section.items.length, 0);
   const hasAny = itemCount > 0;
 
-  const select = (key: string) => router.replace(`/settings?section=${encodeURIComponent(key)}`, { scroll: false });
+  const select = (key: string) => {
+    const item = sections.flatMap((section) => section.items).find((entry) => settingsItemKey(entry) === key);
+    if (item && !item.panel) router.push(item.href); else router.replace(`/settings?section=${encodeURIComponent(key)}`, { scroll: false });
+  };
+  // Landing on /settings (or a link-only deep link) goes straight to that page; typing in the search never jumps.
+  const target = active && !active.panel && !query ? active.href : undefined;
+  useEffect(() => { if (target) router.replace(target); }, [target, router]);
 
   const Panel = active?.panel ? panels[active.panel] : undefined;
   return <div className={styles.page}>
@@ -43,8 +50,8 @@ export function SettingsPage() {
       </div>}
     </header>
     {hasAny && <ScreenGuide id="settings-hub" steps={[
-      { title: "Chọn một mục bên trái", text: "Mỗi mục là một nhóm thiết lập, ví dụ sổ quỹ hay sản phẩm." },
-      { title: "Sửa ngay bên phải", text: "Nội dung hiện ngay trên trang này, không phải chuyển trang." },
+      { title: "Chọn một mục bên trái", text: "Mỗi mục là một nhóm thiết lập, ví dụ sổ quỹ, sản phẩm hay thu hoạch." },
+      { title: "Sửa ngay bên phải", text: "Mục thiết lập hiện ngay trên trang này; mục khác mở thẳng trang của nó, vẫn giữ danh sách bên trái." },
       { title: "Chỉ thấy phần bạn được sửa", text: "Mục nào không hiện nghĩa là bạn chưa được cấp quyền chỉnh." },
     ]} />}
     {!hasAny
@@ -84,10 +91,7 @@ export function SettingsPage() {
               {active.editor && <p className={styles.editor}>{active.editor}</p>}
             </header>
             <div className={styles.cardBody}>
-              {Panel ? <Panel /> : <div className={styles.linkPanel}>
-                {active.hint && <p className={styles.hint}><strong>Việc thường làm:</strong> {active.hint}</p>}
-                <Link href={active.href} className={styles.open}>Mở {active.label}<InterfaceIcon name="chevron-right" /></Link>
-              </div>}
+              {Panel ? <Panel /> : active.hint ? <p className={styles.hint}>{active.hint}</p> : null}
             </div>
           </section>}
         </div>}

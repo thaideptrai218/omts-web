@@ -44,6 +44,7 @@ export function UserGrantEditorForm({ accountId, held, zones, beforeGrant, onApp
   const heldAll = manager.some((grant) => grant.allZones), heldZoneIds = manager.flatMap((grant) => grant.zoneId ? [grant.zoneId] : []);
   const plan = planGrantChanges(held, draft, (id) => known.get(id) ?? "Vùng đã chọn");
   const { add, remove } = groupPlan(plan);
+  const leavesNothing = plan.length > 0 && !draft.allZones && draft.zoneIds.length === 0 && !draft.accountant;
   const reasonProblem = remove.length && !reason.trim() ? "Nhập lý do bỏ quyền." : undefined;
   const disabledReason = !plan.length ? "Chưa có thay đổi nào để lưu." : reasonProblem;
   const toggleZone = (id: string) => setDraft((now) => ({ ...now, zoneIds: now.zoneIds.includes(id) ? now.zoneIds.filter((zoneId) => zoneId !== id) : [...now.zoneIds, id] }));
@@ -81,12 +82,13 @@ export function UserGrantEditorForm({ accountId, held, zones, beforeGrant, onApp
     <fieldset className="space-y-2 rounded-card border border-border p-3" disabled={pending}>
       <legend className="px-1 font-semibold">Kế toán · cả hợp tác xã</legend>
       <AccountantBlock held={held.some((grant) => grant.role === "ACCOUNTANT")} wanted={draft.accountant} disabled={pending} onChange={(next) => void setAccountant(next)} />
-      <p className="text-xs text-text-muted">Hợp tác xã chỉ có 1 Kế toán, làm việc ở tất cả vùng.</p>
+      <p className="text-xs text-text-muted">Kế toán làm việc ở tất cả vùng của hợp tác xã.</p>
     </fieldset>
     {plan.length > 0 && <div className="space-y-1 rounded-control border border-border bg-surface-subtle p-3 text-sm" aria-live="polite">
       <p className="font-semibold">Thay đổi sẽ lưu</p>
       {add.length > 0 && <p><span className="font-semibold text-primary">+ Sẽ thêm:</span> {add.join(", ")}</p>}
       {remove.length > 0 && <p><span className="font-semibold text-danger">− Sẽ bỏ:</span> {remove.join(", ")}</p>}
+      {leavesNothing && <p role="alert" className="font-semibold text-danger">Sau khi lưu, người này không còn vai trò hay vùng nào nên sẽ không đăng nhập được.</p>}
     </div>}
     {remove.length > 0 && <Field label="Lý do bỏ quyền *" maxLength={1000} autoComplete="off" value={reason} disabled={pending} onChange={(event) => setReason(event.target.value)} />}
     <div className="flex flex-wrap items-center gap-3">

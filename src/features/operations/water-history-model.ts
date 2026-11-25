@@ -35,6 +35,9 @@ export async function readAllWaterHistory(query: { zoneId: string; from: string;
 /** A measurement is "outside" when the backend flagged values beyond the thresholds it was recorded with. */
 export const isOutside = (row: WaterRow) => row.valuesOutside.length > 0 || !!row.violatedValues;
 
+/** A zone with no thresholds judges nothing: its rows are neither inside nor outside. */
+export const hasNoThresholds = (row: WaterRow) => Object.values(row.thresholdsUsed).every(value => value === null || value === undefined);
+
 export function filterWater(rows: readonly WaterRow[], filters: WaterFilters): WaterRow[] {
   const term = foldVietnamese(filters.search.trim());
   return rows.filter(row => (!filters.raftId || row.raftId === filters.raftId) && (!filters.exceeded || isOutside(row))

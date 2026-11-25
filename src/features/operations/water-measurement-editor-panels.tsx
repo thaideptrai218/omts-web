@@ -19,7 +19,7 @@ export function MeasurementOcrNotices({ ocr }: { ocr?: WaterRecognition }) {
       {ocr.status === "Failed" && (
         <p role="status" className="mb-4 rounded-control bg-primary-soft p-4">Chưa đọc được số đo từ ảnh; các giá trị đã được nhập tay.</p>
       )}
-      {ocr.status !== "Failed" && ocr.warning && <p role="status" className="mb-4 rounded-control bg-primary-soft p-4">{ocr.warning.text}</p>}
+      {ocr.status !== "Failed" && ocr.warning && <p role="status" className="mb-4 rounded-control bg-primary-soft p-4">{/[àáảãạăâđêôơưèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]/i.test(ocr.warning.text) ? ocr.warning.text : "Chưa đọc được đủ chỉ số từ ảnh. Hãy xem máy đo và nhập các giá trị còn thiếu."}</p>}
       {uncertainFields.length > 0 && <p className="mb-4">OCR chưa chắc chắn ở: {uncertainFields.join(", ")}. Hãy đối chiếu ảnh.</p>}
     </>
   );

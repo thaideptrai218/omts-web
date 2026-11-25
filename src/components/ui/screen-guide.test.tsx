@@ -9,42 +9,44 @@ describe("ScreenGuide", () => {
   beforeEach(() => window.localStorage.clear());
   afterEach(cleanup);
 
-  it("shows the numbered steps the first time", () => {
+  it("is only a small button until it is opened, so it takes no room from the screen", () => {
     render(<ScreenGuide id="t1" steps={steps} />);
-    expect(screen.getByRole("heading", { name: "Bắt đầu từ đây" })).toBeTruthy();
-    expect(screen.getByText("Chọn vùng")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Xem hướng dẫn" })).toBeTruthy();
+    expect(screen.queryByText("Chọn vùng")).toBeNull();
   });
 
-  it("folds to a link that brings it back, and remembers the choice per screen", () => {
-    const first = render(<ScreenGuide id="t2" steps={steps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Ẩn hướng dẫn" }));
-    expect(screen.queryByText("Chọn vùng")).toBeNull();
-    first.unmount();
+  it("walks through the steps one at a time with Tiếp, Trước and Xong", () => {
     render(<ScreenGuide id="t2" steps={steps} />);
-    expect(screen.queryByText("Chọn vùng")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Xem hướng dẫn" }));
     expect(screen.getByText("Chọn vùng")).toBeTruthy();
-  });
-
-  it("starts folded on a phone-sized screen unless the user opened it on purpose", () => {
-    const original = window.innerWidth;
-    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
-    try {
-      const small = render(<ScreenGuide id="t4" steps={steps} />);
-      expect(screen.queryByText("Chọn vùng")).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "Xem hướng dẫn" }));
-      expect(screen.getByText("Chọn vùng")).toBeTruthy();
-      small.unmount();
-      render(<ScreenGuide id="t4" steps={steps} />);
-      expect(screen.getByText("Chọn vùng")).toBeTruthy();
-    } finally { Object.defineProperty(window, "innerWidth", { configurable: true, value: original }); }
-  });
-
-  it("keeps another screen's guide open", () => {
-    window.localStorage.setItem("omts.guide.other.dismissed", "1");
-    render(<ScreenGuide id="t3" steps={steps} />);
+    expect(screen.getByText(/Bước 1\/2/)).toBeTruthy();
+    expect(screen.queryByText("Bấm ô")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp" }));
     expect(screen.getByText("Bấm ô")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Trước" }));
+    expect(screen.getByText("Chọn vùng")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp" }));
+    fireEvent.click(screen.getByRole("button", { name: "Xong" }));
+    expect(screen.queryByText("Bấm ô")).toBeNull();
+  });
+
+  it("closes with the cross and with Escape, and starts from step 1 when opened again", () => {
+    render(<ScreenGuide id="t3" steps={steps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Xem hướng dẫn" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Xem hướng dẫn" }));
+    expect(screen.getByText(/Bước 1\/2/)).toBeTruthy();
+  });
+
+  it("remembers per screen that the guide was opened, and shows nothing for a guide without steps", () => {
+    render(<ScreenGuide id="t4" steps={steps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Xem hướng dẫn" }));
+    expect(window.localStorage.getItem("omts.guide.t4.seen")).toBe("1");
+    expect(window.localStorage.getItem("omts.guide.other.seen")).toBeNull();
+    cleanup();
+    const { container } = render(<ScreenGuide id="t5" steps={[]} />);
+    expect(container.textContent).toBe("");
   });
 });
-
-

@@ -69,7 +69,7 @@ describe("settings hub search and selection", () => {
   });
   it("prefers ?section=, then the ?group= first item, then the first item", () => {
     expect(settingsItemKey(pickSettingsItem(groups, "harvest", "hr")!)).toBe("harvest");
-    expect(pickSettingsItem(groups, null, "hr")?.label).toBe("Loại công việc và đơn giá");
+    expect(pickSettingsItem(groups, null, "hr")?.label).toBe("Thiết lập chấm công");
     expect(pickSettingsItem(groups, "missing", "missing")?.label).toBe("Hồ sơ hợp tác xã");
     expect(pickSettingsItem([], null, null)).toBeUndefined();
   });

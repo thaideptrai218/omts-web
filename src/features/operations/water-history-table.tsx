@@ -9,7 +9,7 @@ import type { UnsavedGuard } from "@/features/farming-management/use-unsaved-gua
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { displayTime, statusLabel } from "./ui";
-import { isOutside, type WaterRow, type WaterSortKey, type WaterZoneRef } from "./water-history-model";
+import { hasNoThresholds, isOutside, type WaterRow, type WaterSortKey, type WaterZoneRef } from "./water-history-model";
 import { WaterMeasurementPanel } from "./water-measurement-panel";
 import { formatMeasuredValue } from "./water-measurement-shared";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
@@ -23,7 +23,7 @@ export const waterColumns: readonly Column[] = [
   { key: "ph", label: "pH", weight: 8, sort: "ph", numeric: true, render: row => formatMeasuredValue(row.ph) },
   { key: "salinity", label: "Độ mặn (‰)", weight: 11, sort: "salinity", numeric: true, render: row => formatMeasuredValue(row.salinity) },
   { key: "temperature", label: "Nhiệt độ (°C)", weight: 12, sort: "temperature", numeric: true, render: row => formatMeasuredValue(row.temperature) },
-  { key: "alert", label: "Cảnh báo", weight: 14, sort: "alert", render: row => <StatusPill tone={isOutside(row) ? "danger" : "neutral"}>{isOutside(row) ? "Vượt ngưỡng" : "Trong ngưỡng"}</StatusPill> },
+  { key: "alert", label: "Cảnh báo", weight: 14, sort: "alert", render: row => <StatusPill tone={isOutside(row) ? "danger" : "neutral"}>{isOutside(row) ? "Vượt ngưỡng" : hasNoThresholds(row) ? "Chưa đặt ngưỡng" : "Trong ngưỡng"}</StatusPill> },
   { key: "status", label: "Trạng thái", weight: 12, sort: "status", render: row => <StatusPill tone={row.statusCode === "ACTIVE" ? "success" : "neutral"}>{statusLabel(row.statusCode)}</StatusPill> },
   { key: "by", label: "Người ghi", weight: 16, sort: "by", render: row => <span className={styles.truncated} title={row.measuredBy?.name}>{row.measuredBy?.name ?? "—"}</span> },
 ];

@@ -22,6 +22,23 @@ type Recognition = z.infer<typeof c.recognitionSchema>;
 const IN_USE_RAFT = "101";
 const emptyValues = { raftId: "", measuredAt: "", ph: "", salinity: "", temperature: "" };
 const readValue = (field: { value: number } | null | undefined) => field ? String(field.value) : "";
+const MAX_AGE_MS = 15 * 24 * 60 * 60 * 1000;
+const VIETNAMESE = /[àáảãạăâđêôơưèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]/i;
+/** The photo reader answers in English when it cannot read a value; the screen always says it in Vietnamese. */
+const ocrWarning = (text: string) => VIETNAMESE.test(text) ? text : "Chưa đọc được đủ chỉ số từ ảnh. Hãy xem máy đo và nhập các giá trị còn thiếu.";
+/** BR-WATER-03: every field present, at most 3 decimals, and a measuring time not older than 15 days. */
+function measurementProblem(values: typeof emptyValues) {
+  if (!values.raftId) return "Chọn bè đo.";
+  if (!values.measuredAt) return "Nhập thời điểm đo.";
+  const labels = { ph: "pH", salinity: "Độ mặn", temperature: "Nhiệt độ" } as const;
+  for (const key of ["ph", "salinity", "temperature"] as const) {
+    if (values[key] === "") return `Nhập ${labels[key]}.`;
+    if ((values[key].split(/[.,]/)[1]?.length ?? 0) > 3) return `${labels[key]} chỉ được có tối đa 3 chữ số thập phân.`;
+  }
+  const at = Date.parse(toApiTime(values.measuredAt) ?? "");
+  if (!Number.isNaN(at) && Date.now() - at > MAX_AGE_MS) return "Thời điểm đo không được sớm hơn 15 ngày.";
+  return undefined;
+}
 
 /**
  * Records a measurement in two steps (backend WATER-01): the meter photo is read first (recognize, nothing is saved),
@@ -37,6 +54,7 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
   const [review, setReview] = useState<c.WaterHistory>();
   const attempt = useRef<z.infer<typeof c.recordWaterSchema>>(undefined);
   const mutation = useMutation();
+  const [formError, setFormError] = useState<string>();
   const rafts = useRemote(useCallback((signal: AbortSignal) => loadOptions("rafts", signal, { zoneId, statusId: IN_USE_RAFT }), [zoneId]));
   const dirty = !!photo || !!recognition || JSON.stringify(values) !== JSON.stringify(emptyValues);
   const close = async () => {
@@ -60,6 +78,9 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
 
   async function save() {
     if (!recognition) return;
+    const problem = measurementProblem(values);
+    setFormError(problem);
+    if (problem) return;
     // Reuse the previous payload (same clientOperationId) when the last submit's outcome is unknown.
     if (!mutation.uncertain) {
       attempt.current = {
@@ -83,13 +104,12 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
     if (result) setReview(result);
   }
 
-  const filled = !!values.raftId && !!values.measuredAt && values.ph !== "" && values.salinity !== "" && values.temperature !== "";
-  const setField = (key: keyof typeof emptyValues) => (e: { target: { value: string } }) => setValues((current) => ({ ...current, [key]: e.target.value }));
+  const setField = (key: keyof typeof emptyValues) => (e: { target: { value: string } }) => { setFormError(undefined); setValues((current) => ({ ...current, [key]: e.target.value })); };
 
   return (
     <Dialog open title={`Ghi phép đo · ${zoneName}`} size="lg" dismissible={!mutation.pending} onOpenChange={(open) => { if (!open) close(); }}>
       {confirmation.dialog}
-      <ErrorNotice error={mutation.error || rafts.error} />
+      <ErrorNotice error={formError || mutation.error || rafts.error} />
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void (recognition ? save() : recognize()); }}>
         <fieldset disabled={mutation.pending || mutation.uncertain} className="space-y-4">
           <CollapsibleSection title="Ảnh máy đo" description="Ảnh dùng để đọc các chỉ số nước." columns={1}>
@@ -104,7 +124,7 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
           </CollapsibleSection>
           {recognition && (
             <>
-              {recognition.ocr.warning && <p role="status" className="rounded-control bg-primary-soft p-3">{recognition.ocr.warning.text}</p>}
+              {recognition.ocr.warning && <p role="status" className="rounded-control bg-primary-soft p-3">{ocrWarning(recognition.ocr.warning.text)}</p>}
               {recognition.thresholdWarning && <p role="alert" className="rounded-control border border-danger p-3 text-danger">{recognition.thresholdWarning.text}</p>}
               <CollapsibleSection title="Phép đo" description="Đối chiếu thời gian, bè và chỉ số với ảnh máy đo." columns={2}>
               <Select label="Bè đo *" value={values.raftId} required onChange={setField("raftId")}>
@@ -121,7 +141,7 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
           {mutation.uncertain ? (
             <Button key="retry-save" className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked}>Gửi lại lượt đang chờ</Button>
           ) : recognition ? (
-            <Button key="save" className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked || !filled}>Lưu phép đo</Button>
+            <Button key="save" className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked}>Lưu phép đo</Button>
           ) : (
             <Button key="recognize" className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked || !photo}>Nhận dạng từ ảnh</Button>
           )}

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { useSettingsSections } from "@/components/layout/settings-sections-context";
 import { settingsItemForPath, settingsItemKey } from "./settings-hub-filter";
+import { ScreenGuide } from "@/components/ui/screen-guide";
 import styles from "./settings-page.module.css";
 
 const COLLAPSED_KEY = "omts.settings-sidebar.collapsed";
@@ -58,6 +59,11 @@ function Frame({ activeKey, children }: Readonly<{ activeKey: string; children: 
         </div>)}
       </nav>
       <section className={`${styles.card} ${styles.routeContent}`}>{children}</section>
+      <ScreenGuide id="settings-frame" steps={[
+        { title: "Chọn mục bên trái", text: "Danh sách bên trái luôn có sẵn; bấm một mục là mở thẳng trang của nó." },
+        { title: "Sửa ở bên phải", text: "Nội dung của mục hiện ngay bên phải, bạn chỉnh và lưu tại đó." },
+        { title: "Thu gọn khi cần chỗ rộng", text: "Bấm Thu gọn ở đầu danh sách để chỉ còn biểu tượng và có thêm chỗ cho nội dung." },
+      ]} />
     </div>
   </div>;
 }
