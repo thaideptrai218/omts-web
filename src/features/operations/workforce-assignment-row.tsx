@@ -1,4 +1,6 @@
 "use client";
+import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
+import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import { Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
@@ -21,8 +23,8 @@ const recorded = (value: string | null) => (value ? displayTime(value) : "Chưa 
  *   check-in also needs a job type and no prior check-in/out (a raft is optional: zone-level assignments have none); the check-out needs a check-in;
  * - correct attendance: the Owner or Staff with ATTENDANCE Edit in the zone, once the day has started (it is also the way to enter a missing check-in).
  */
-function AssignmentDetail({ row, zoneName, allowed, disabled, pending, onAct, onCorrect }: {
-  row: Assignment; zoneName(id: string): string; allowed(action: string, zoneId?: string): boolean; disabled: boolean; pending: boolean;
+function AssignmentDetail({ row, kind, zoneName, allowed, disabled, pending, onAct, onCorrect }: {
+  row: Assignment; kind?: string; zoneName(id: string): string; allowed(action: string, zoneId?: string): boolean; disabled: boolean; pending: boolean;
   onAct(row: Assignment, action: AssignmentAction): void; onCorrect(row: Assignment): void;
 }) {
   const canRemove = row.date >= businessToday() && !row.checkedInAt && !row.checkedOutAt && allowed("Delete", row.zoneId);
@@ -36,7 +38,7 @@ function AssignmentDetail({ row, zoneName, allowed, disabled, pending, onAct, on
   const noCheckIn = !row.checkedInAt;
   return <section id={`assignment-${row.id}`} className={styles.detail} aria-label={`Chi tiết phân công ${row.employeeName}`}>
     <div className={styles.infoHead}>
-      <h3>{row.employeeName}</h3>
+      <h3>{row.employeeName}<EmployeeTypeBadge type={kind} showLabel className="ml-2" /></h3>
       <span className={styles.status} data-state={attendanceState(row)}>{attendanceLabel[attendanceState(row)]}</span>
     </div>
     <dl className={styles.facts}>
@@ -68,6 +70,7 @@ export function WorkforceAssignmentRow({ row, columns, open, zoneName, allowed, 
   disabled: boolean; pending: boolean; onToggle(): void; onAct(row: Assignment, action: AssignmentAction): void;
   selectable: boolean; selected: boolean; onSelect(on: boolean): void; onCorrect(row: Assignment): void;
 }) {
+  const kind = useEmployeeKinds()(row.employeeId);
   return <Fragment>
     <OpenableTableRow data-selected={open || undefined} onOpen={onToggle}>
       {selectable && <td className={styles.checkCell} onClick={(event) => event.stopPropagation()}>
@@ -78,11 +81,11 @@ export function WorkforceAssignmentRow({ row, columns, open, zoneName, allowed, 
           <InterfaceIcon name={open ? "chevron-down" : "chevron-right"} />
         </button>
       </td>
-      {columns.map((column) => <td key={column.key}>{column.render(row, zoneName)}</td>)}
+      {columns.map((column) => <td key={column.key}>{column.render(row, zoneName, kind)}</td>)}
       {selectable && <QuickActionCell row={row} allowed={allowed} disabled={disabled} pending={pending} onAct={onAct} />}
     </OpenableTableRow>
     {open && <DetailRow colSpan={columns.length + (selectable ? 3 : 1)} className={styles.detailCell}>
-      <div className={managementStyles.viewWidth}><AssignmentDetail row={row} zoneName={zoneName} allowed={allowed} disabled={disabled} pending={pending} onAct={onAct} onCorrect={onCorrect} /></div>
+      <div className={managementStyles.viewWidth}><AssignmentDetail row={row} kind={kind} zoneName={zoneName} allowed={allowed} disabled={disabled} pending={pending} onAct={onAct} onCorrect={onCorrect} /></div>
     </DetailRow>}
   </Fragment>;
 }

@@ -1,4 +1,6 @@
 "use client";
+import { matchesEmployeeType } from "@/features/employee-api/employee-type-filter";
+import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import type { SortState } from "@/components/ui/management-screen/management-table";
@@ -35,7 +37,8 @@ export function useWorkforceBoard() {
   const [notice, setNotice] = useState<string>();
   const [zoneId, setZoneId] = useState("");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(""), [typeFilter, setTypeFilter] = useState("");
+  const kindOf = useEmployeeKinds();
   const [mode, setMode] = useState<WorkforceTab>("assignments");
   const [sort, setSort] = useState<SortState>({ key: "", direction: "asc" });
   const [page, setPage] = useState(1);
@@ -83,7 +86,7 @@ export function useWorkforceBoard() {
   // Zone + free-text filtering feeds the summary; the status filter only narrows the table.
   const scopedRows = allRows?.filter(
     (row) =>
-      (!zoneId || row.zoneId === zoneId) &&
+      (!zoneId || row.zoneId === zoneId) && matchesEmployeeType(kindOf(row.employeeId), typeFilter) &&
       (!term || [row.employeeName, row.raftCode ?? "", row.job].some((value) => value.toLocaleLowerCase("vi-VN").includes(term))),
   );
   const zoneName = (id: string) => String(zones.data?.find((zone) => zone.id === id)?.name ?? id);
@@ -148,12 +151,12 @@ export function useWorkforceBoard() {
   return {
     context, day, form, setForm, notice, setNotice, zoneId, search, status, mode, sort, pageSize, expanded, pendingId,
     zones, rows, carry, allRows, requests, pendingRequests, editor, allowed, today, selected, setSelected, bulkResults, clearBulkResults: () => setBulkResults(undefined), bulk, correcting, setCorrecting, zoneName, zoneOptions, scopedRows, filteredRows, visibleRows, currentPage,
-    hasFilter: !!zoneId || !!search || !!status,
-    setDay: changed(setDay), setZoneId: changed(setZoneId), setSearch: changed(setSearch), setStatus: changed(setStatus),
+    typeFilter, hasFilter: !!zoneId || !!search || !!status || !!typeFilter,
+    setDay: changed(setDay), setZoneId: changed(setZoneId), setSearch: changed(setSearch), setStatus: changed(setStatus), setTypeFilter: changed(setTypeFilter),
     setMode: changed<WorkforceTab>(setMode), setSort: changed<SortState>(setSort), setPageSize: changed<number>(setPageSize),
     setPage: (next: number) => { setPage(next); setExpanded(undefined); },
     toggleRow: (id: string) => setExpanded((value) => (value === id ? undefined : id)),
-    reset: changed<void>(() => { setZoneId(""); setSearch(""); setStatus(""); }),
+    reset: changed<void>(() => { setZoneId(""); setSearch(""); setStatus(""); setTypeFilter(""); }),
     moveDay, goToday: () => changed(setDay)(businessToday()), act,
   };
 }

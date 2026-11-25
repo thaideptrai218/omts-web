@@ -1,3 +1,4 @@
+import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
 import { Button } from "@/components/ui/button";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { assignmentLabel, cellAccessibleName, type DayState, type ScheduleCell, type SchedulePerson } from "./schedule-model";
@@ -17,7 +18,7 @@ export function ScheduleGrid({ days, people, zoneId, today, retry, onCell }: {
         {entry.error && <div className={styles.dayError}><p role="alert">{entry.error}</p><Button variant="ghost" onClick={() => retry(entry.day)}
           aria-label={`Thử lại ngày ${formatVietnameseDate(entry.day)}`}>Thử lại</Button></div>}
       </th>)}</tr></thead>
-      <tbody>{people.map((person) => <tr key={person.id}><th scope="row">{person.name}{person.code && <small className={styles.date}>{person.code}</small>}</th>
+      <tbody>{people.map((person) => <tr key={person.id}><th scope="row">{person.name}<EmployeeTypeBadge type={person.kind} className="ml-1.5" />{person.code && <small className={styles.date}>{person.code}</small>}</th>
         {days.map((entry, dayIndex) => {
           const assignments = entry.rows.filter((row) => row.zoneId === zoneId && row.employeeId === person.id);
           return <td key={entry.day} data-past={entry.day < today || undefined}>

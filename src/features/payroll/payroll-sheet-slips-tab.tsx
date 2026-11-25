@@ -1,4 +1,5 @@
 "use client";
+import { EmployeeKindBadgeById } from "@/features/employee-api/employee-kind-badge-by-id";
 import { Fragment, useState } from "react";
 import { Money } from "@/features/operations/ui";
 import type { Slip } from "./contracts";
@@ -29,7 +30,7 @@ export function PayrollSheetSlipsTab({ slips }: { slips: readonly Slip[] }) {
     <tbody>{slips.length === 0 ? <tr><td colSpan={heads.length} className={s.emptyCell}>Bảng lương chưa có phiếu lương.</td></tr> : slips.map((slip) => <Fragment key={slip.id}>
       <tr data-selected={open?.id === slip.id || undefined}>
         <td><button type="button" className={s.codeButton} aria-expanded={open?.id === slip.id && open.tab === "payments"} onClick={() => toggle(slip.id, "payments")}>{slip.code}</button></td>
-        <td><a className={`${s.name} ${s.link}`} href={`/workspace/employees?recordId=${slip.employeeId}&search=${encodeURIComponent(slip.employeeName)}`}>{slip.employeeName}</a></td>
+        <td><a className={`${s.name} ${s.link}`} href={`/workspace/employees?recordId=${slip.employeeId}&search=${encodeURIComponent(slip.employeeName)}`}>{slip.employeeName}</a><EmployeeKindBadgeById employeeId={slip.employeeId} /></td>
         <td className={s.right}><button type="button" className={s.linkButton} aria-label={`Xem chấm công chi tiết của ${slip.employeeName}`} onClick={() => toggle(slip.id, "attendance")}>{formatHours(slip.hours)}</button></td>
         <td className={s.right}><button type="button" className={s.linkButton} aria-label={`Xem cách tính lương chính của ${slip.employeeName}`} onClick={() => toggle(slip.id, "attendance")}><Money value={slip.mainPay} /></button>{slip.hourlyRateNote && <div className={s.muted}>× {slip.hourlyRateNote}</div>}</td>
         <td className={s.right}><Money value={slip.bonus} /></td><td className={s.right}><Money value={slip.income} /></td><td className={s.right}><Money value={slip.deduction} /></td>

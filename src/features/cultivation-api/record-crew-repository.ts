@@ -5,7 +5,7 @@ import type { z } from "zod";
 import { crewSuggestions } from "./record-crew-contracts";
 
 /** `busy` is set when the employee is already assigned to another place that day: the picker shows who and where, and does not offer them. */
-export type CrewOption = { id: string; name: string; preferred: boolean; busy?: string };
+export type CrewOption = { id: string; name: string; preferred: boolean; busy?: string; /** "Staff" or "SeasonalWorker" when the lookup says. */ kind?: string };
 type Assigned = { zoneId: string; raftId: string | null; raftCode: string | null; job: string } | null | undefined;
 function busyText(assignment: Assigned, raftId: string | undefined, zoneId: string): string | undefined {
   if (!assignment) return undefined;
@@ -29,8 +29,9 @@ export async function readRecordCrew(raftId: string | undefined, zoneId: string,
   if (lookups.status === "success") {
     const all = new Map(lookups.data.employees.map(item => [item.id, item.name]));
     const assigned = new Map(lookups.data.employees.map(item => [item.id, item.assignment]));
+    const kinds = new Map(lookups.data.employees.map(item => [item.id, item.type ?? undefined]));
     for (const [id, name] of preferred) all.set(id, name);
-    return { status: "success", data: sorted([...all].map(([id, name]) => ({ id, name, preferred: preferred.has(id), busy: preferred.has(id) ? undefined : busyText(assigned.get(id), raftId, zoneId) }))) };
+    return { status: "success", data: sorted([...all].map(([id, name]) => ({ id, name, preferred: preferred.has(id), kind: kinds.get(id), busy: preferred.has(id) ? undefined : busyText(assigned.get(id), raftId, zoneId) }))) };
   }
   if (suggested.status === "success") return { status: "success", data: sorted([...preferred].map(([id, name]) => ({ id, name, preferred: true }))) };
   // Both reads failed: a missing endpoint is a quiet empty list, any other failure keeps its message.

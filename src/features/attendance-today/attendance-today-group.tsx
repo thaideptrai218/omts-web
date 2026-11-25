@@ -1,11 +1,14 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
 import { displayTime } from "@/features/operations/ui";
-import { isPreviousOpen, offeredStep, todayLabel, todayState, type AttendanceAllowed, type AttendanceStep, type TodayCrew } from "./attendance-today-model";
+import { isPreviousOpen, offeredStep, todayLabel, todayState, type AttendanceAllowed, type AttendanceStep, type TodayCrew, type TodayPerson } from "./attendance-today-model";
 import type { AttendanceTodayActions } from "./use-attendance-today-actions";
 import styles from "./attendance-today.module.css";
 
-export function AttendanceTodayGroup({ group, day, zoneId, allowed, actions, previous = false, onCrew }: {
+export function AttendanceTodayGroup({ group, day, zoneId, allowed, actions, previous = false, kindOf, onCrew }: {
+  /** The kind of a person (nội bộ or thời vụ) for the marker after the name. */
+  kindOf(row: TodayPerson): string | undefined;
   group: TodayCrew; day: string; zoneId: string; allowed: AttendanceAllowed; actions: AttendanceTodayActions; previous?: boolean;
   onCrew(group: TodayCrew, step: AttendanceStep): void;
 }) {
@@ -26,7 +29,7 @@ export function AttendanceTodayGroup({ group, day, zoneId, allowed, actions, pre
     <ul className={styles.people}>{group.people.map(row => {
       const step = offeredStep(row, day, zoneId, allowed);
       return <li key={row.key} className={styles.person} aria-busy={actions.pendingKey === row.key || undefined}>
-        <div className={styles.identity}><strong>{row.name}</strong><small>{row.assignment?.job || row.code || "Nhân viên nội bộ"}</small></div>
+        <div className={styles.identity}><strong>{row.name}<EmployeeTypeBadge type={kindOf(row)} className="ml-1.5" /></strong><small>{row.assignment?.job || row.code || "Nhân viên nội bộ"}</small></div>
         <div className={styles.times}>
           <span>Vào: {row.checkedInAt ? displayTime(row.checkedInAt) : "—"}</span>
           <span>Ra: {row.checkedOutAt ? displayTime(row.checkedOutAt) : "—"}</span>

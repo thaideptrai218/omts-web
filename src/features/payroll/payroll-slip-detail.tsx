@@ -1,4 +1,5 @@
 "use client";
+import { EmployeeKindBadgeById } from "@/features/employee-api/employee-kind-badge-by-id";
 import { useCallback, useId, useState } from "react";
 import { ExportMenu } from "@/components/ui/export-menu";
 import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/management-table";
@@ -34,7 +35,7 @@ export function PayrollSlipDetail({ slipId, initialTab = "payments" }: { slipId:
   ];
   return <section aria-label={`Chi tiết phiếu lương ${slip.code}`} className={s.slipDetail}>
     <div className={s.slipHead}>
-      <div className="flex flex-wrap items-center justify-between gap-2"><strong>{slip.code} · {slip.employeeName}</strong>
+      <div className="flex flex-wrap items-center justify-between gap-2"><strong>{slip.code} · {slip.employeeName}<EmployeeKindBadgeById employeeId={slip.employeeId} /></strong>
         <ExportMenu pending={file.pending} onPick={(format) => void file.run(() => payrollRepository.exportSlip(slip.id, format), true)} /></div>
       <ErrorNotice error={file.error} />
       <div className={s.subTable}><PayrollDataTable caption="Thu nhập theo công việc" columns={lines} rows={slip.lines.map((line, index) => ({ ...line, id: String(index) }))} emptyText="Phiếu lương chưa có dòng thu nhập." /></div>

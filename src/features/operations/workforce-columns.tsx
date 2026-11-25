@@ -1,3 +1,4 @@
+import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
 import type { ReactNode } from "react";
 import type { SortState } from "@/components/ui/management-screen/management-table";
 import { businessToday, displayTime } from "./ui";
@@ -9,7 +10,8 @@ export type WorkforceColumn = {
   label: string;
   /** Views that offer this column. */
   modes: readonly WorkforceTab[];
-  render(row: Assignment, zoneName: (id: string) => string): ReactNode;
+  /** `kind`: "Staff" or "SeasonalWorker" when known, for the marker after the name. */
+  render(row: Assignment, zoneName: (id: string) => string, kind?: string): ReactNode;
   compare(a: Assignment, b: Assignment, zoneName: (id: string) => string): number;
 };
 
@@ -18,7 +20,7 @@ const both: readonly WorkforceTab[] = ["assignments", "attendance"];
 const recorded = (value: string | null) => (value ? displayTime(value) : "Chưa ghi nhận");
 
 export const workforceColumns: readonly WorkforceColumn[] = [
-  { key: "employee", label: "Nhân viên", modes: both, render: (row) => <strong>{row.employeeName}</strong>, compare: (a, b) => text(a.employeeName, b.employeeName) },
+  { key: "employee", label: "Nhân viên", modes: both, render: (row, _zone, kind) => <strong>{row.employeeName}<EmployeeTypeBadge type={kind} className="ml-1.5" /></strong>, compare: (a, b) => text(a.employeeName, b.employeeName) },
   { key: "zone", label: "Vùng", modes: both, render: (row, zoneName) => zoneName(row.zoneId), compare: (a, b, zoneName) => text(zoneName(a.zoneId), zoneName(b.zoneId)) },
   { key: "raft", label: "Bè", modes: both, render: (row) => row.raftCode || "Cấp vùng", compare: (a, b) => text(a.raftCode ?? "", b.raftCode ?? "") },
   { key: "job", label: "Công việc", modes: both, render: (row) => row.job, compare: (a, b) => text(a.job, b.job) },
