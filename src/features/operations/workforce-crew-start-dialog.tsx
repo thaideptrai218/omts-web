@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
+import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, Note, Select, businessTime } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
@@ -32,7 +34,7 @@ export function CrewStartDialog({ rows, today, zoneName, allowed, onClose, onSav
   const [groupKey, setGroupKey] = useState(""), [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const [time, setTime] = useState(() => businessTime().slice(11, 16)), [reason, setReason] = useState(""), [problem, setProblem] = useState<string>();
   const editor = useOperationEditor(onClose, !!groupKey || !!reason);
-  const group = crews.find((item) => item.key === groupKey);
+  const group = crews.find((item) => item.key === groupKey), kindOf = useEmployeeKinds();
 
   function pick(key: string) {
     setGroupKey(key);
@@ -64,7 +66,7 @@ export function CrewStartDialog({ rows, today, zoneName, allowed, onClose, onSav
             <legend>Thành viên vào làm ({ticked.size}/{group.members.length})</legend>
             {group.members.map((member) => <label key={member.id} className="flex gap-3 py-1.5">
               <input type="checkbox" checked={ticked.has(member.employeeId)} onChange={(event) => setTicked((current) => { const next = new Set(current); if (event.target.checked) next.add(member.employeeId); else next.delete(member.employeeId); return next; })} />
-              {member.employeeName} · {member.job}
+              <span className="min-w-0">{member.employeeName}<EmployeeTypeBadge type={kindOf(member.employeeId)} className="ml-1.5" /> · {member.job}</span>
             </label>)}
           </fieldset>}
           <Field label="Giờ bắt đầu *" type="time" required value={time} onChange={(event) => setTime(event.target.value)} />

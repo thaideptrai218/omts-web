@@ -60,4 +60,10 @@ describe("approved sales/workforce writes and draft safety", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tải lại danh mục phân công" })); await waitFor(() => expect(mocks.read).toHaveBeenCalledTimes(2));
     await waitFor(() => expect((screen.getByLabelText("Bè làm việc (bỏ trống nếu làm ở vùng, ví dụ ươm)") as HTMLSelectElement).value).toBe(raftId)); expect((screen.getByLabelText("QA staff · Đã duyệt nghỉ ngày này") as HTMLInputElement).checked).toBe(true); expect(mocks.write).not.toHaveBeenCalled();
   });
+  it("marks each employee as nội bộ or thời vụ in the assignment list and filters by it", async () => {
+    mocks.subjectType = "CooperativeOwner"; mocks.read.mockResolvedValue({ status: "success", data: { jobs: [], employees: [{ id: ids.receipt, name: "An nội bộ", onLeave: false, type: "Staff" }, { id: ids.item, name: "Bình thời vụ", onLeave: false, type: "SeasonalWorker" }] } });
+    render(<AssignmentEditor mode="assign" initialDay={businessToday()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(await screen.findByLabelText(/^Bình thời vụs*Thời vụ/)).toBeTruthy(); expect(screen.getByLabelText(/^An nội bộs*Nội bộ/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Thời vụ")); expect(screen.queryByLabelText(/^An nội bộs*Nội bộ/)).toBeNull(); expect(screen.getByLabelText(/^Bình thời vụs*Thời vụ/)).toBeTruthy();
+  });
 });
