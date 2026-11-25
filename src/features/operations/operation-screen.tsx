@@ -3,7 +3,6 @@ import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed, type OperationArea } from "./permissions";
-import { PaymentScreen } from "./payment-screen";
 import { WaterScreen } from "./water-screen";
 import { PurchaseRequestsScreen } from "./new-module-screens";
 import { CustomerPaymentsScreen } from "@/features/customer-payments/payments-screen";
@@ -46,7 +45,7 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   // The receipts are split into Nhập giống and Nhập vật tư; the old address moves to the screen of the receipt's kind.
   if (area === "purchase-receipts") return <Suspense><LegacyReceiptsRedirect /></Suspense>;
   if (area === "seed-lots") return <ScreenRedirect to={SEED_LOTS_PATH} />;
-  if (process.env.NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT === "v2" && area === "supplier-payments") return <PaymentsV2Screen />;
+  if (area === "supplier-payments") return <PaymentsV2Screen />;
   if (area === "job-types") return <JobTypesScreen />;
   if (area === "cultivation-cycles") return <CyclesScreen />;
   if (area === "seeding" || area === "material-usages" || area === "harvest") return <CultivationRecordsScreen area={area} />;
@@ -76,5 +75,5 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "purchase-requests") return <PurchaseRequestsScreen />;
   if (area === "workforce") return <WorkforceScreen />;
   if (area === "my-work") return <MyWorkScreen />;
-  return area === "supplier-payments" ? <PaymentScreen /> : <WaterScreen />;
+  return <WaterScreen />;
 }

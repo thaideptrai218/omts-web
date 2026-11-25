@@ -63,9 +63,13 @@ describe("farming BFF authorization, uploads and file projection", () => {
     expect(form.getAll("zoneIds")).toEqual([ids.zone, ids.otherZone]); expect(form.has("file")).toBe(false); expect(fetcher.mock.calls[0][1]?.method).toBe("PUT");
     const text = await response.text(); expect(text).toContain(`/api/operations/zone-licenses?action=file&id=${ids.license}`); expect(text).not.toContain("secret"); expect(text).not.toContain("never-return");
   });
-  it.each(["create", "replace"])("requires a file for %s and a version for update", async (action) => {
+  it.each(["create", "replace"])("saves a license on %s without a file", async (action) => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(licenseFixture()));
+    expect((await handleFarmingRequest(upload(action, payload), "zone-licenses")).status).toBe(200);
+    expect((fetcher.mock.calls[0][1]?.body as FormData).has("file")).toBe(false);
+  });
+  it("requires a version for update", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch");
-    expect((await handleFarmingRequest(upload(action, payload), "zone-licenses")).status).toBe(400);
     expect((await handleFarmingRequest(upload("update", payload), "zone-licenses")).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
   });
   it("rejects extra files and wrong media types before writing", async () => {

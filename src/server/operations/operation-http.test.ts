@@ -4,7 +4,7 @@ const gateway = vi.hoisted(() => ({ mode: "api", resolve: vi.fn(), application: 
 vi.mock("../auth/session-gateway.instance", () => ({ getSessionGateway: () => gateway }));
 import { handleOperationRequest, localFileTarget } from "./operation-http";
 import { resolved, replacedSession } from "../employees/__tests__/employee-fixture";
-import { ids, receiptFixture, waterFixture } from "@/features/operations/__tests__/fixtures";
+import { ids, waterFixture } from "@/features/operations/__tests__/fixtures";
 import type { FunctionPermission } from "@/features/access/domain/function-permission";
 function configure(subjectType = "CooperativeOwner", permissions: FunctionPermission[] = []) {
   vi.stubEnv("NODE_ENV", "test"); vi.stubEnv("OMTS_DATA_SOURCE", "api"); vi.stubEnv("OMTS_API_BASE_URL", "http://127.0.0.1:8080"); vi.stubEnv("OMTS_API_TIMEOUT_MS", "1000");
@@ -116,10 +116,10 @@ describe("operations BFF authorization and evidence boundary", () => {
     const reader = vi.spyOn(request.body!, "getReader");
     expect((await handleOperationRequest(request, "water")).status).toBe(403); expect(reader).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
   });
-  it("requires All zones for supplier payments and View as well as Export", async () => {
+  it("denies supplier payments without a payments grant and checks View as well as Export", async () => {
     const fetcher = vi.spyOn(globalThis, "fetch");
-    configure("Staff", [{ functionCode: "SUPPLIER_PAYMENTS", action: "View", scope: { kind: "zones", zoneIds: [ids.zone] }, dataScope: "AssignedZone" }]);
-    expect((await handleOperationRequest(get(""), "supplier-payments")).status).toBe(403);
+    configure("Staff", [{ functionCode: "WATER_MEASUREMENTS", action: "View", scope: { kind: "all-zones" }, dataScope: "AssignedZone" }]);
+    expect((await handleOperationRequest(get("action=list"), "supplier-payments")).status).toBe(403);
     configure("Staff", [{ functionCode: "WATER_MEASUREMENTS", action: "Export", scope: { kind: "all-zones" }, dataScope: "AssignedZone" }]);
     expect((await handleOperationRequest(get(`action=export&zoneId=${ids.zone}`), "water")).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
   });
@@ -144,14 +144,6 @@ describe("operations BFF authorization and evidence boundary", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(waterFixture()));
     const response = await handleOperationRequest(get(`action=detail&id=${ids.water}`), "water");
     expect(response.status).toBe(401); expect(await response.text()).not.toContain("Vùng QA");
-  });
-  it("loads the owning receipt before reading local evidence and never sends bearer to the file request", async () => {
-    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(receiptFixture({ invoicePhotoUrls: ["/api/files/local/invoices/qa.png?expires=123&sig=abc"] })))
-      .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { headers: { "Content-Type": "image/png" } }));
-    const response = await handleOperationRequest(get(`action=invoice&id=${ids.receipt}&index=0`), "purchase-receipts");
-    expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toContain("no-store");
-    expect(fetcher.mock.calls[0][0].toString()).toBe(`http://127.0.0.1:8080/api/purchase-receipts/${ids.receipt}`);
-    expect(fetcher.mock.calls[1][1]?.headers).toBeUndefined();
   });
   it.each(["https://evil.test/api/files/local/a", "//evil.test/api/files/local/a", "/api/me", "/api/files/local/../../me", "http://user@127.0.0.1:8080/api/files/local/a"])("rejects untrusted file target %s", (value) => {
     expect(localFileTarget(value, "http://127.0.0.1:8080")).toBeUndefined();

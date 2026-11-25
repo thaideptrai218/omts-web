@@ -39,7 +39,9 @@ describe("purchasing and water contracts", () => {
   it("does not infer payment-wide or another-zone rights from one grant", () => {
     const staff = { subjectType: "Staff" };
     const grant = { functionCode: "SUPPLIER_PAYMENTS", action: "Create" as const, scope: { kind: "zones" as const, zoneIds: [ids.zone] }, dataScope: "AssignedZone" as const };
-    expect(operationAllowed("supplier-payments", staff, [grant], "Create")).toBe(false);
+    // Supplier payments are not scoped to a zone: any grant that names a zone, or all zones, is enough; a grant naming none is not.
+    expect(operationAllowed("supplier-payments", staff, [grant], "Create")).toBe(true);
+    expect(operationAllowed("supplier-payments", staff, [{ ...grant, scope: { kind: "zones", zoneIds: [] } }], "Create")).toBe(false);
     expect(operationAllowed("supplier-payments", staff, [{ ...grant, scope: { kind: "all-zones" } }], "Create")).toBe(true);
     expect(operationAllowed("water", staff, [{ ...grant, functionCode: "WATER_MEASUREMENTS" }], "Create", ids.otherZone)).toBe(false);
     expect(operationAllowed("water", staff, [{ ...grant, functionCode: "WATER_MEASUREMENTS" }], "Create", ids.zone)).toBe(true);

@@ -7,7 +7,7 @@ import { farmingZoneListQuerySchema, prepareFarmingZoneListRequest } from "@/fea
 
 export const backendEndpointSchema = z.enum([
   "login", "refresh", "identity", "permissions", "profileRead", "profileUpdate", "logout",
-  "employeeUpdate", "employeeUnlink", "employeeList", "employeeRead", "employeeLinkableAccounts",
+  "employeeUpdate", "employeeUnlink", "employeeList", "employeeRead",
   "farmingZoneList", "passwordChange",
 ]);
 type Endpoint = z.infer<typeof backendEndpointSchema>;
@@ -23,7 +23,6 @@ const routes: Readonly<Record<StaticEndpoint, Readonly<{ path: string; method: T
   profileUpdate: { path: "/api/me/profile", method: "PUT" },
   logout: { path: "/api/auth/logout", method: "POST" },
   passwordChange: { path: "/api/me/password", method: "POST" },
-  employeeLinkableAccounts: { path: "/api/employees/linkable-accounts", method: "GET" },
 };
 
 const employeeIdParameters = z.strictObject({ employeeId: apiIdSchema });

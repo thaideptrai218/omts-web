@@ -27,7 +27,7 @@ describe("employee bounded HTTP error projection", () => {
     expect(result).not.toHaveProperty("detail"); expect(result).not.toHaveProperty("employee_name");
   });
 
-  it.each(["login", "identity", "permissions", "profileRead", "profileUpdate", "logout", "employeeList", "employeeRead", "employeeLinkableAccounts"] as const)(
+  it.each(["login", "identity", "permissions", "profileRead", "profileUpdate", "logout", "employeeList", "employeeRead"] as const)(
     "does not expand endpoint %s error exposure", async (endpoint) => {
       const result = await readBackendResponse(problem({ code: "MSG01", field: "Full name", existingEmployeeId: employeeId }), endpoint);
       expect(result).not.toHaveProperty("employeeProblem");

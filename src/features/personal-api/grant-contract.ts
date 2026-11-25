@@ -11,5 +11,4 @@ export const grantRoleCodes = ["ZONE_MANAGER", "ACCOUNTANT"] as const;
 export const createGrantSchema = z.strictObject({ accountId: z.guid(), zoneId: z.guid().nullable(), role: z.enum(grantRoleCodes) });
 export const permissionCatalogSchema = z.array(z.object({ code: z.string().min(1), name: z.string(), cooperativeWide: z.boolean(), isDashboardTile: z.boolean(), supportedActions: z.array(z.string()) }))
   .refine((rows) => new Set(rows.map((row) => row.code)).size === rows.length);
-export const roleImpactSchema = z.object({ accountCount: z.number().int().nonnegative(), zoneCount: z.number().int().nonnegative(), allZonesGranted: z.boolean(), accounts: z.array(z.string()) });
 export const rolePermissionsSchema = z.array(z.object({ functionCode: z.string(), actions: z.array(z.string()), dataScope: z.string().optional() }));

@@ -60,13 +60,20 @@ describe("license editor draft and history behavior", () => {
     fireEvent.click(screen.getByRole("button", { name: "Xem giấy tờ thay thế" }));
     await waitFor(() => expect(callbacks.onNavigate).toHaveBeenCalledWith(next)); expect(repository.upload).not.toHaveBeenCalled();
   });
-  it("requires a file on creation and retains an edited draft until explicit discard", async () => {
-    const callbacks = props();
+  it("saves a new licence without a file", async () => {
+    const callbacks = props(), saved = licenseFixture();
+    repository.upload.mockResolvedValue({ status: "success", data: saved });
     render(<LicenseEditor {...callbacks} record={null} mode="create" />);
     fireEvent.change(screen.getByLabelText("Số giấy tờ *"), { target: { value: "QA-GP" } });
     fireEvent.change(screen.getByLabelText("Ngày hết hạn *"), { target: { value: "29/10/2027" } });
     fireEvent.submit(screen.getByRole("button", { name: "Lưu" }).closest("form")!);
-    await screen.findByText("Chọn tệp PDF, JPEG hoặc PNG để lưu giấy tờ."); expect(repository.upload).not.toHaveBeenCalled();
+    await waitFor(() => expect(repository.upload).toHaveBeenCalledTimes(1));
+    expect(repository.upload.mock.calls[0][1]).toEqual([]); expect(callbacks.onSaved).toHaveBeenCalledWith(saved);
+  });
+  it("retains an edited draft until explicit discard", async () => {
+    const callbacks = props();
+    render(<LicenseEditor {...callbacks} record={null} mode="create" />);
+    fireEvent.change(screen.getByLabelText("Số giấy tờ *"), { target: { value: "QA-GP" } });
     fireEvent.click(screen.getByRole("button", { name: "Bỏ qua" })); expect(callbacks.onClose).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Tiếp tục sửa" })); expect((screen.getByLabelText("Số giấy tờ *") as HTMLInputElement).value).toBe("QA-GP");
     fireEvent.click(screen.getByRole("button", { name: "Bỏ qua" })); fireEvent.click(screen.getByRole("button", { name: "Bỏ bản nháp" })); expect(callbacks.onClose).toHaveBeenCalledTimes(1);
@@ -75,7 +82,7 @@ describe("license editor draft and history behavior", () => {
     const callbacks = props();
     render(<LicenseEditor {...callbacks} record={null} mode="create" />);
     fireEvent.change(screen.getByLabelText("Số giấy tờ *"), { target: { value: "QA-GP" } });
-    fireEvent.change(screen.getByLabelText("Tệp giấy tờ *"), { target: { files: [new File(["png"], "qa.png", { type: "image/png" })] } });
+    fireEvent.change(screen.getByLabelText("Tệp giấy tờ (không bắt buộc)"), { target: { files: [new File(["png"], "qa.png", { type: "image/png" })] } });
     fireEvent.submit(screen.getByRole("button", { name: "Lưu" }).closest("form")!);
     await screen.findByText("Nhập ngày hết hạn của giấy tờ."); expect(repository.upload).not.toHaveBeenCalled();
     expect(screen.queryByLabelText("Vùng được giấy tờ bao phủ")).toBeNull();
@@ -98,7 +105,7 @@ describe("license editor draft and history behavior", () => {
     render(<LicenseEditor {...callbacks} record={null} mode="create" />);
     fireEvent.change(screen.getByLabelText("Số giấy tờ *"), { target: { value: "Bản nháp đang nhập" } });
     fireEvent.change(screen.getByLabelText("Ngày hết hạn *"), { target: { value: "29/10/2027" } });
-    fireEvent.change(screen.getByLabelText("Tệp giấy tờ *"), { target: { files: [new File(["png"], "qa.png", { type: "image/png" })] } });
+    fireEvent.change(screen.getByLabelText("Tệp giấy tờ (không bắt buộc)"), { target: { files: [new File(["png"], "qa.png", { type: "image/png" })] } });
     fireEvent.submit(screen.getByRole("button", { name: "Lưu" }).closest("form")!);
     fireEvent.click(await screen.findByRole("button", { name: "Tải hồ sơ mới để đối chiếu" }));
     fireEvent.click(await screen.findByRole("button", { name: "Đối chiếu bản QA-GP-01" }));

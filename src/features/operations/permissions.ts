@@ -75,7 +75,7 @@ export function operationAllowed(area: OperationArea, identity: { subjectType: s
   }
   if (identity.subjectType === "CooperativeOwner") return true;
   if (identity.subjectType !== "Staff" || action === "Thresholds") return false;
-  if (process.env.NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT === "v2" && ["purchase-receipts", "supplier-payments"].includes(area)) return permissions.some(p => p.functionCode === (area === "purchase-receipts" ? "PURCHASE_RECEIPTS" : "SUPPLIER_PAYMENTS") && p.action === action && (p.scope.kind === "all-zones" || p.scope.zoneIds.length > 0));
+  if (area === "purchase-receipts" || area === "supplier-payments") return permissions.some(p => p.functionCode === (area === "purchase-receipts" ? "PURCHASE_RECEIPTS" : "SUPPLIER_PAYMENTS") && p.action === action && (p.scope.kind === "all-zones" || p.scope.zoneIds.length > 0));
   const logAction = area === "cultivation-cycles" && ["LogsView", "LogsCreate", "LogsEdit", "LogsDelete"].includes(action);
   // Truy xuất lô: công bố nguồn gốc và sửa dữ liệu truy xuất thuộc chức năng PROVENANCE (Publish / Edit), còn xem và xuất thuộc LOT_TRACING.
   const provenance = area === "lot-tracing" && (action === "Publish" || action === "Correct");
@@ -90,6 +90,5 @@ export function operationAllowed(area: OperationArea, identity: { subjectType: s
   if (grants.some((entry) => entry.dataScope === "OwnRecords" && (entry.scope.kind === "all-zones"
     ? !assigned.some((grant) => grant.scope.kind === "all-zones") : entry.scope.zoneIds.some((zone) => !coversZone(zone))))) return false;
   return assigned.some((entry) => entry.functionCode === code && entry.action === requiredAction
-    && (area !== "supplier-payments" || entry.scope.kind === "all-zones")
     && (!zoneId || entry.scope.kind === "all-zones" || entry.scope.kind === "zones" && entry.scope.zoneIds.includes(zoneId)));
 }
