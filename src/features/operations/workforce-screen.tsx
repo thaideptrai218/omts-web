@@ -54,9 +54,9 @@ export function WorkforceScreen() {
       {editor.mutation.blocked && <p>Chưa thể gửi tiếp. Đối chiếu phân công và chấm công trước khi lập lượt mới; tải lại không tự gửi lại thao tác.</p>}
     </div>}
     <ScreenGuide id="workforce" steps={[
-      { title: "Chọn ngày và vùng", text: "Dùng bộ lọc bên trái để xem phân công của ngày và vùng cần làm." },
-      { title: "Mở một dòng", text: "Bấm vào dòng để xem chi tiết, ghi vào làm, ra về, sửa chấm công hoặc gỡ phân công." },
-      { title: "Đổi việc và duyệt yêu cầu", text: "Dùng nút Đổi việc trong ngày và Duyệt yêu cầu ở thanh trên; thiết lập chấm công nằm trong nút ba chấm." },
+      { title: "Chọn ngày và vùng", text: "Dùng bộ lọc bên trái để xem phân công của ngày và vùng cần làm.", target: "text:Bộ lọc" },
+      { title: "Mở một dòng", text: "Bấm vào dòng để xem chi tiết, ghi vào làm, ra về, sửa chấm công hoặc gỡ phân công.", target: "table tbody tr" },
+      { title: "Đổi việc và duyệt yêu cầu", text: "Dùng nút Đổi việc trong ngày và Duyệt yêu cầu ở thanh trên; thiết lập chấm công nay nằm trong Cài đặt.", target: "text:Đổi việc" },
     ]} />
     <div className={styles.modeTabs}><Subtabs label="Cách xem lịch làm việc" tabs={modes} value={board.mode} onChange={board.setMode} idPrefix="workforce" /></div>
     {board.mode === "staff" ? <StaffAttendanceTab board={board} /> : <>

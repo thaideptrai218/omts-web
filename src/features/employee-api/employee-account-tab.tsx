@@ -19,8 +19,8 @@ export function EmployeeAccountTab({ employee, onSaved, onRefresh, canReset = fa
   const canGrant = employee.status === "Employed" && employee.canMaintain && !employee.hasStaffAccount;
   return <div className="space-y-4">
     <ScreenGuide id="employee-account-tab" steps={[
-      { title: "Cấp tài khoản", text: "Nhân viên cần tài khoản mới đăng nhập được vào ứng dụng." },
-      { title: "Hoặc liên kết", text: "Nếu họ đã có tài khoản, hãy liên kết thay vì tạo thêm." },
+      { title: "Cấp tài khoản", text: "Nhân viên cần tài khoản mới đăng nhập được vào ứng dụng.", target: "text:Cấp tài khoản" },
+      { title: "Hoặc liên kết", text: "Nếu họ đã có tài khoản, hãy liên kết thay vì tạo thêm.", target: "text:Liên kết" },
       { title: "Chọn vai trò", text: "Chọn ngay khi cấp, hoặc sau này ở Quản lý người dùng." },
     ]} />
     {account ? <>

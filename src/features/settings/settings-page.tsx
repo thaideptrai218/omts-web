@@ -50,9 +50,9 @@ export function SettingsPage() {
       </div>}
     </header>
     {hasAny && <ScreenGuide id="settings-hub" steps={[
-      { title: "Chọn một mục bên trái", text: "Mỗi mục là một nhóm thiết lập, ví dụ sổ quỹ, sản phẩm hay thu hoạch." },
-      { title: "Sửa ngay bên phải", text: "Mục thiết lập hiện ngay trên trang này; mục khác mở thẳng trang của nó, vẫn giữ danh sách bên trái." },
-      { title: "Chỉ thấy phần bạn được sửa", text: "Mục nào không hiện nghĩa là bạn chưa được cấp quyền chỉnh." },
+      { title: "Chọn một mục bên trái", text: "Mỗi mục là một nhóm thiết lập, ví dụ sổ quỹ, sản phẩm hay thu hoạch.", target: "[data-guide=\"settings-list\"]" },
+      { title: "Sửa ngay bên phải", text: "Mục thiết lập hiện ngay ở khung này; mục khác mở thẳng trang của nó, vẫn giữ danh sách bên trái.", target: "[data-guide=\"settings-content\"]" },
+      { title: "Tìm nhanh một thiết lập", text: "Gõ vào ô tìm kiếm, ví dụ mật khẩu hay sổ quỹ. Mục nào không hiện nghĩa là bạn chưa được cấp quyền chỉnh.", target: "input[aria-label=\"Tìm kiếm thiết lập\"]" },
     ]} />}
     {!hasAny
       ? <div className={styles.empty} role="status">
@@ -74,7 +74,7 @@ export function SettingsPage() {
               {section.items.map((item) => <option key={settingsItemKey(item)} value={settingsItemKey(item)}>{item.label}</option>)}
             </optgroup>)}
           </select>
-          <nav className={styles.sidebar} aria-label="Nhóm thiết lập">
+          <nav className={styles.sidebar} aria-label="Nhóm thiết lập" data-guide="settings-list">
             {visible.map((section) => <div key={section.label} className={styles.group}>
               <h2 className={styles.groupLabel}>{section.label}</h2>
               <ul>{section.items.map((item) => <li key={settingsItemKey(item)}>
@@ -84,7 +84,7 @@ export function SettingsPage() {
               </li>)}</ul>
             </div>)}
           </nav>
-          {active && <section className={styles.card} aria-labelledby="settings-panel-title">
+          {active && <section data-guide="settings-content" className={styles.card} aria-labelledby="settings-panel-title">
             <header className={styles.cardHead}>
               <h2 id="settings-panel-title">{active.label}</h2>
               {active.description && <p>{active.description}</p>}

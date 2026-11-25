@@ -72,8 +72,8 @@ function AttendanceTodayBoard({ day, allowed }: { day: string; allowed: Attendan
       <div className={styles.content}>
         <ScreenGuide id="attendance-today" steps={[
           { title: "Xem ai chưa vào làm", text: "Danh sách chia theo tổ (cả nhóm làm cùng bè hoặc vùng); người chưa vào làm hiện trạng thái \"Chưa vào làm\"." },
-          { title: "Bấm Vào làm / Ra về", text: "Bấm cho từng người, hoặc \"cả tổ\" để ghi một lần cho cả nhóm cùng bè hoặc vùng." },
-          { title: "Nhìn khối \"Chưa ra về từ hôm qua\"", text: "Người vào làm hôm qua mà chưa ra về nằm ở đó, bấm Ra về để chốt." },
+          { title: "Bấm Vào làm / Ra về", text: "Bấm cho từng người, hoặc \"cả tổ\" để ghi một lần cho cả nhóm cùng bè hoặc vùng.", target: "text:Vào làm" },
+          { title: "Nhìn khối \"Chưa ra về từ hôm qua\"", text: "Người vào làm hôm qua mà chưa ra về nằm ở đó, bấm Ra về để chốt.", target: "text:Chưa ra về từ hôm qua" },
         ]} />
         <ErrorNotice error={actions.error} />
         {actions.blocked && <div className={styles.reconcile} role="alert"><p>Chưa rõ kết quả hoặc dữ liệu đã đổi. Tải lại và đối chiếu trước khi ghi tiếp.</p>

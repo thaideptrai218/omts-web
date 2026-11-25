@@ -47,8 +47,8 @@ function Frame({ activeKey, children }: Readonly<{ activeKey: string; children: 
           {section.items.map((item) => <option key={settingsItemKey(item)} value={settingsItemKey(item)}>{item.label}</option>)}
         </optgroup>)}
       </select>
-      <nav className={styles.sidebar} aria-label="Nhóm thiết lập">
-        <button type="button" className={styles.collapse} aria-pressed={collapsed} aria-label={collapsed ? "Mở rộng danh sách cài đặt" : "Thu gọn danh sách cài đặt"} title={collapsed ? "Mở rộng" : "Thu gọn"} onClick={() => setCollapsed(!collapsed)}>
+      <nav className={styles.sidebar} aria-label="Nhóm thiết lập" data-guide="settings-list">
+        <button type="button" data-guide="settings-collapse" className={styles.collapse} aria-pressed={collapsed} aria-label={collapsed ? "Mở rộng danh sách cài đặt" : "Thu gọn danh sách cài đặt"} title={collapsed ? "Mở rộng" : "Thu gọn"} onClick={() => setCollapsed(!collapsed)}>
           <InterfaceIcon name="menu" /><span>{collapsed ? "Mở rộng" : "Thu gọn"}</span>
         </button>
         {sections.map((section) => <div key={section.label} className={styles.group}>
@@ -58,11 +58,11 @@ function Frame({ activeKey, children }: Readonly<{ activeKey: string; children: 
           </li>)}</ul>
         </div>)}
       </nav>
-      <section className={`${styles.card} ${styles.routeContent}`}>{children}</section>
+      <section data-guide="settings-content" className={`${styles.card} ${styles.routeContent}`}>{children}</section>
       <ScreenGuide id="settings-frame" steps={[
-        { title: "Chọn mục bên trái", text: "Danh sách bên trái luôn có sẵn; bấm một mục là mở thẳng trang của nó." },
-        { title: "Sửa ở bên phải", text: "Nội dung của mục hiện ngay bên phải, bạn chỉnh và lưu tại đó." },
-        { title: "Thu gọn khi cần chỗ rộng", text: "Bấm Thu gọn ở đầu danh sách để chỉ còn biểu tượng và có thêm chỗ cho nội dung." },
+        { title: "Chọn mục bên trái", text: "Danh sách này luôn có sẵn; bấm một mục là mở thẳng trang của nó.", target: "[data-guide=\"settings-list\"]" },
+        { title: "Sửa ở bên phải", text: "Nội dung của mục hiện ở khung này, bạn chỉnh và lưu tại đó.", target: "[data-guide=\"settings-content\"]" },
+        { title: "Thu gọn khi cần chỗ rộng", text: "Bấm Thu gọn để danh sách chỉ còn biểu tượng, nội dung có thêm chỗ.", target: "[data-guide=\"settings-collapse\"]" },
       ]} />
     </div>
   </div>;
