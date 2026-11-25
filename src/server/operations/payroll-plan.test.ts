@@ -98,10 +98,6 @@ describe("payroll areas: the Owner writes, the Accountant only reads", () => {
     expect(operationAllowed(area, { subjectType: "Staff" }, [], "View")).toBe(false);
     for (const subjectType of ["Trader", "Admin"]) expect(operationAllowed(area, { subjectType }, grants, "View")).toBe(false);
   });
-  it.each(["payroll-settings"] as const)("%s is the Owner's alone", (area) => {
-    expect(operationAllowed(area, { subjectType: "CooperativeOwner" }, [], "Edit")).toBe(true);
-    expect(operationAllowed(area, { subjectType: "Staff" }, grants, "View")).toBe(false);
-  });
   it("lists only employees owed pay unless includeAll=true is sent", () => {
     expect(planOperation("payroll-payments", "GET", q("action=payable&search=an&includeAll=true"))?.path).toBe("/api/payrolls/payable-employees?search=an&includeAll=true");
     expect(planOperation("payroll-payments", "GET", q("action=payable"))?.path).toBe("/api/payrolls/payable-employees");

@@ -1,7 +1,7 @@
 import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
-import { grantHistorySchema, grantRowSchema, permissionCatalogSchema, roleImpactSchema, type grantRoleCodes } from "./grant-contract";
+import { grantHistorySchema, grantRowSchema, permissionCatalogSchema, type grantRoleCodes } from "./grant-contract";
 async function read<T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal): Promise<WorkspaceResult<T>> {
   try {
     const response = await bffFetch(path, { cache: "no-store", credentials: "same-origin", redirect: "error", signal: signal ?? AbortSignal.timeout(30_000) });
@@ -12,7 +12,6 @@ async function read<T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal)
 }
 export const readAccountGrants = (id: string, signal?: AbortSignal) => read(`/api/account-grants?accountId=${encodeURIComponent(id)}`, grantHistorySchema, signal);
 export const readPermissionFunctions = (signal?: AbortSignal) => read("/api/permission-functions", permissionCatalogSchema, signal);
-export const readRoleImpact = (id: string, signal?: AbortSignal) => read(`/api/role-impact?roleId=${encodeURIComponent(id)}`, roleImpactSchema, signal);
 /** FARM-05: adds one zone-role pair (zoneId null = all zones); the backend checks the zone is In Use and the pair is not a duplicate. */
 export async function createAccountGrant(accountId: string, zoneId: string | null, role: (typeof grantRoleCodes)[number]): Promise<WorkspaceResult<z.infer<typeof grantRowSchema>>> {
   try {

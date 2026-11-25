@@ -23,7 +23,7 @@ const responseHeaders = { "Cache-Control": "private, no-store, max-age=0", Vary:
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: responseHeaders });
 const farmingAreas = new Set<string>(["harvest", "seeding", "material-usages", "cultivation-cycles"]);
 const hrAreas = new Set<string>(["payroll", "payroll-payments", "workforce"]);
-const uploadQuery = z.strictObject({ action: z.enum(["invoice-photos", "recognize", ...farmingRecordUploadActions, ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
+const uploadQuery = z.strictObject({ action: z.enum(["recognize", ...farmingRecordUploadActions, ...lotTracingUploadActions, ...claimUploadActions]), id: z.guid().optional(), zoneId: z.guid().optional() });
 
 function browserFiles(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
@@ -35,7 +35,6 @@ function browserFiles(value: unknown): unknown {
   if (record.measurement) return { ...record, measurement: browserFiles(record.measurement) };
   if (typeof record.id !== "string") return value;
   if (Array.isArray(record.photos) && typeof record.zoneId === "string") return { ...record, photos: record.photos.map((photo, index) => ({ ...(photo as object), url: `/api/operations/harvest?action=photo&id=${record.id}&zoneId=${record.zoneId}&index=${index}` })) };
-  if (Array.isArray(record.invoicePhotoUrls)) return { ...record, invoicePhotoUrls: record.invoicePhotoUrls.map((_, index) => `/api/operations/purchase-receipts?action=invoice&id=${record.id}&index=${index}`) };
   if ("photoUrl" in record) return { ...record, photoUrl: record.photoUrl ? `/api/operations/water?action=photo&id=${record.id}` : null };
   return value;
 }
@@ -70,9 +69,7 @@ export async function handleOperationRequest(request: Request, areaName: string)
         plan = farmingRecordUpload(area.data, upload.action, upload.id, upload.zoneId)?.plan;
         if (area.data === "lot-tracing" && upload.id) plan = lotTracingUpload(upload.action, upload.id)?.plan;
         if (area.data === "claim-reports" && upload.id) plan = claimUpload(upload.action, upload.id)?.plan;
-        if (area.data === "purchase-receipts" && upload.action === "invoice-photos" && upload.id) {
-          plan = { area: area.data, action: upload.action, path: `/api/purchase-receipts/${upload.id}/invoice-photos`, method: "POST", permission: "Edit", schema: c.receiptSchema };
-        } else if (area.data === "water" && upload.action === "recognize" && upload.zoneId) {
+        if (area.data === "water" && upload.action === "recognize" && upload.zoneId) {
           plan = { area: area.data, action: upload.action, zoneId: upload.zoneId, path: `/api/zones/${upload.zoneId}/water-measurements/recognize`,
             method: "POST", permission: "Create", schema: c.recognitionSchema };
         }
@@ -174,9 +171,9 @@ export async function handleOperationRequest(request: Request, areaName: string)
         }
         data = parsed.data;
       }
-      if (plan.file === "invoice" || plan.file === "photo") {
+      if (plan.file === "photo") {
         const record = data as Record<string, unknown>;
-        const raw = plan.file === "invoice" ? (record.invoicePhotoUrls as string[])[plan.index ?? 0] : area.data === "harvest" || area.data === "seeding" || area.data === "claim-reports" || area.data === "quality-claims" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
+        const raw = area.data === "harvest" || area.data === "seeding" || area.data === "claim-reports" || area.data === "quality-claims" || plan.action === "log-photo" ? (record.photos as { url: string }[])[plan.index ?? 0]?.url : record.photoUrl;
         const target = localFileTarget(raw, backend.config.origin);
         if (!target) return json({ status: "not-found" }, 404);
         const file = await fetch(target, { cache: "no-store", redirect: "error", credentials: "omit", signal: controller.signal });

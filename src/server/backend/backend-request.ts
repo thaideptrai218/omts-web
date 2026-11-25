@@ -5,7 +5,7 @@ import { employeeUpdateRequestSchema } from "@/features/employee-management/api/
 import { prepareEmployeePutRequest } from "@/features/employee-management/api/employee-mutation-request";
 import { employeeRowVersionSchema } from "@/features/employee-management/schemas/employee-row-version";
 import {
-  employeeListRequestSchema, employeeDetailRequestSchema, employeePickerRequestSchema,
+  employeeListRequestSchema, employeeDetailRequestSchema,
   type EmployeeListQuery,
 } from "@/features/employee-management/api/employee-read-request";
 import { farmingZoneListQuerySchema, type FarmingZoneListQuery } from "@/features/farming-zones/api/farming-zone-read-request";
@@ -23,7 +23,6 @@ const requestSchema = z.union([
   z.strictObject({ endpoint: z.literal("employeeUnlink"), employeeId: apiIdSchema, accessToken: token, recordVersion: employeeRowVersionSchema }),
   employeeListRequestSchema.extend({ accessToken: token }),
   employeeDetailRequestSchema.extend({ accessToken: token }),
-  employeePickerRequestSchema.extend({ accessToken: token }),
   z.strictObject({ endpoint: z.literal("farmingZoneList"), accessToken: token, query: farmingZoneListQuerySchema }),
 ]);
 

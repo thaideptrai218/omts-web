@@ -30,6 +30,7 @@ import { createPersonalRepository } from "@/features/personal-api/repository";
 import { canReadProducts } from "@/features/products/product-permissions";
 import { buildSettingsGroups } from "@/features/settings/settings-hub-groups";
 import { SEED_LOTS_PATH, kindText } from "@/features/input-items/stock-kind";
+import { SYSTEM_ADMIN_ACCOUNTS_ENABLED } from "@/features/admin-api/availability";
 
 const resourceIcons: Record<ResourceKey, InterfaceIconName> = {
   zones: "zone", rafts: "raft", "input-items": "material", suppliers: "supplier",
@@ -41,7 +42,7 @@ const operationIcons: Record<OperationArea, InterfaceIconName> = {
   seeding: "product", "material-usages": "material", harvest: "work",
   "cultivation-cycles": "raft",
   "purchase-receipts": "receipt", "supplier-payments": "payment", water: "water",
-  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "end-of-day-report": "calendar", "product-report": "product", "customer-report": "users", "supplier-report": "supplier", "financial-report": "payment", "purchase-requests": "request", workforce: "attendance", "my-work": "work", "seed-lots": "product", "labor-costs": "raft", "payroll-settings": "work",
+  "sales-products": "product", "sales-invoices": "receipt", "customer-payments": "payment", "lot-tracing": "search", "harvest-yield": "waves", "claim-reports": "request", "quality-claims": "request", "sales-returns": "receipt", "sales-invoice-list": "receipt", payroll: "payment", "payroll-payments": "payment", "sales-report": "dashboard", "price-trend-report": "grid", "after-sales-report": "list", "end-of-day-report": "calendar", "product-report": "product", "customer-report": "users", "supplier-report": "supplier", "financial-report": "payment", "purchase-requests": "request", workforce: "attendance", "my-work": "work", "seed-lots": "product", "labor-costs": "raft",
 };
 
 /** The group whose links are the input catalogue and the two issue lists; they are built from permissions, not from the generic resource list. */
@@ -122,7 +123,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
     const cashGroup = cashBook && <NavigationGroup label="Sổ quỹ" compact={compact}><div className={styles.navigationItems}>{link("/operations/cash-book", "Sổ quỹ", "payment")}</div></NavigationGroup>;
     return <nav aria-label="Chức năng" className={styles.navigation}>
       <NavigationLink href="/dashboard" label="Tổng quan" active={active("/dashboard")} onNavigate={onNavigate} />
-      {context.identity.subjectType === "SystemAdministrator" && <NavigationGroup label="Quản trị hệ thống" compact={compact}><div className={styles.navigationItems}>{link("/system/accounts", "Tài khoản & nhật ký", "roles")}</div></NavigationGroup>}
+      {SYSTEM_ADMIN_ACCOUNTS_ENABLED && context.identity.subjectType === "SystemAdministrator" && <NavigationGroup label="Quản trị hệ thống" compact={compact}><div className={styles.navigationItems}>{link("/system/accounts", "Tài khoản & nhật ký", "roles")}</div></NavigationGroup>}
       {cashBookFirst(profile) && cashGroup}
       {orderGroups(workspaceGroups, profile).map((group) => {
         if (financeWorkspace && group.label === FARMING_GROUP) return null;
@@ -203,7 +204,7 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
 
 export function ApiWorkspaceHome() {
   const context = useApiWorkspace();
-  if (context.identity.subjectType === "SystemAdministrator") return <section><ManagementHeading title="Quản trị hệ thống" description="Quản lý truy cập của các tài khoản trên hệ thống." icon="roles" /><Link href="/system/accounts" className="mt-6 flex items-center justify-between rounded-card border border-border bg-surface p-5 font-semibold hover:border-primary">Tài khoản và nhật ký quản trị<span aria-hidden="true">→</span></Link></section>;
+  if (context.identity.subjectType === "SystemAdministrator") return <section><ManagementHeading title="Quản trị hệ thống" description="Quản lý truy cập của các tài khoản trên hệ thống." icon="roles" />{!SYSTEM_ADMIN_ACCOUNTS_ENABLED ? <p className="mt-6 text-sm text-text-muted">Chức năng quản trị tài khoản chưa có trên hệ thống.</p> : <Link href="/system/accounts" className="mt-6 flex items-center justify-between rounded-card border border-border bg-surface p-5 font-semibold hover:border-primary">Tài khoản và nhật ký quản trị<span aria-hidden="true">→</span></Link>}</section>;
   // Kế toán: "Việc tiền hôm nay" (RoleToday) đứng trước số liệu tổng quan; Chủ HTX không có khối này, khối "Chờ chủ duyệt" nằm trong OwnerOverview.
   if (canSeeOverview(context.identity, context.permissions.functionPermissions)) return <div className="grid gap-6"><RoleToday /><OwnerOverview /></div>;
   const visible = resourceKeys.filter((key) => resourceAllowed(key, context.identity, context.permissions.functionPermissions));

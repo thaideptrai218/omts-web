@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { grantHistorySchema, permissionCatalogSchema, roleImpactSchema } from "@/features/personal-api/grant-contract";
+import { grantHistorySchema, permissionCatalogSchema } from "@/features/personal-api/grant-contract";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { parseServerBackendConfig } from "../config/backend-config";
 import { readBackendResponse } from "../backend/backend-response";
@@ -8,7 +8,6 @@ import { sameEmployeeSession } from "../employees/employee-session";
 const accessReads = {
   grants: { key: "accountId", schema: grantHistorySchema, path: (id: string) => `/api/accounts/${id}/grants` },
   functions: { key: null, schema: permissionCatalogSchema, path: () => "/api/permission-functions" },
-  impact: { key: "roleId", schema: roleImpactSchema, path: (id: string) => `/api/roles/${id}/impact` },
 } as const;
 export const handleAccountGrantsRequest = (request: Request) => handleOwnerAccessRead(request, "grants");
 export async function handleOwnerAccessRead(request: Request, area: keyof typeof accessReads) {

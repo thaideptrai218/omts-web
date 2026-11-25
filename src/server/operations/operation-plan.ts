@@ -24,23 +24,20 @@ import { lotTracingPlan } from "./lot-tracing-plan";
 import { payrollPlan } from "./payroll-plan";
 import { seedLotsPlan } from "./seed-lots-plan";
 import { laborCostsPlan } from "./labor-costs-plan";
-import { payrollSettingsPlan } from "./payroll-settings-plan";
 
 const id = z.guid(), empty = z.strictObject({});
-const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(), supplierId: id.optional(), receiptId: id.optional(),
-  raftId: id.optional(), itemId: id.optional(), itemGroup: z.enum(["Seed", "Material", "Other"]).optional(), method: c.paymentMethod.optional(),
-  statusId: z.string().regex(/^[1-9]\d{2,3}$/).optional(), status: z.enum(["Active", "Draft", "Confirmed", "Corrected", "Voided", "All"]).optional(),
-  from: z.iso.date().optional(), to: z.iso.date().optional(), code: z.string().max(100).optional(), groupBy: z.enum(["day", "month"]).optional(),
-  page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.string().regex(/^[1-9]\d{0,2}$/).refine((v) => Number(v) <= 100).optional(),
-  index: z.string().regex(/^\d{1,3}$/).optional() });
+const querySchema = z.strictObject({ action: z.string().default("list"), id: id.optional(), zoneId: id.optional(),
+  status: z.enum(["Active", "Draft", "Confirmed", "Corrected", "Voided", "All"]).optional(), from: z.iso.date().optional(), to: z.iso.date().optional(),
+  groupBy: z.enum(["day", "month"]).optional(),
+  page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.string().regex(/^[1-9]\d{0,2}$/).refine((v) => Number(v) <= 100).optional() });
 const mutationSchema = z.strictObject({ action: z.string(), id: id.optional(), zoneId: id.optional(), body: z.unknown().default({}) });
 export type OperationPlan = { area: OperationArea; action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE";
-  permission: string; zoneId?: string; body?: unknown; multipartFields?: boolean; schema: z.ZodType; file?: "export" | "invoice" | "photo"; /** Định dạng tệp xuất; bỏ trống = Excel. */ exportFormat?: "pdf"; index?: number; expectedId?: string; noContent?: boolean; /** Sent as the `Idempotency-Key` header (payroll payments): a repeat with the same key returns the first result. */ idempotencyKey?: string };
+  permission: string; zoneId?: string; body?: unknown; multipartFields?: boolean; schema: z.ZodType; file?: "export" | "photo"; /** Định dạng tệp xuất; bỏ trống = Excel. */ exportFormat?: "pdf"; index?: number; expectedId?: string; noContent?: boolean; /** Sent as the `Idempotency-Key` header (payroll payments): a repeat with the same key returns the first result. */ idempotencyKey?: string };
 
 export function planOperation(areaName: string, method: string, query: URLSearchParams, input?: unknown): OperationPlan | undefined {
   const area = z.enum(operationAreas).safeParse(areaName);
   if (!area.success) return undefined;
-  if (process.env.NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT === "v2" && ["purchase-receipts", "supplier-payments"].includes(area.data)) return purchasingV2Plan(area.data, method, query, input);
+  if (area.data === "purchase-receipts" || area.data === "supplier-payments") return purchasingV2Plan(area.data, method, query, input);
   if (area.data === "sales-invoices") return salesInvoicesPlan(method, query, input);
   if (area.data === "customer-payments") return customerPaymentsPlan(method, query, input);
   if (area.data === "harvest-yield") return harvestYieldPlan(method, query, input);
@@ -58,7 +55,6 @@ export function planOperation(areaName: string, method: string, query: URLSearch
   if (area.data === "lot-tracing") return lotTracingPlan(method, query, input);
   if (area.data === "payroll" || area.data === "payroll-payments") return payrollPlan(area.data, method, query, input);
   if (area.data === "labor-costs") return laborCostsPlan(method, query, input);
-  if (area.data === "payroll-settings") return payrollSettingsPlan(method, query, input);
   if (area.data === "water" && query.get("action") === "zones-overview") return waterOverviewPlan(method, query);
   if (area.data === "job-types") return jobTypesPlan(method, query, input);
   if (area.data === "cultivation-cycles") return cultivationPlan(method, query, input);
@@ -77,23 +73,7 @@ export function planOperation(areaName: string, method: string, query: URLSearch
     return path + (values.size ? `?${values}` : "");
   };
   if (method === "GET") {
-    const { action, id: recordId, zoneId, supplierId } = q.data;
-    if (key === "purchase-receipts") {
-      const path = "/api/purchase-receipts";
-      const listPath = (suffix = "") => filtered(path + suffix, ["itemGroup", "itemId", "zoneId", "raftId", "supplierId", "statusId", "from", "to", "code", "page", "pageSize"]);
-      if (action === "list") return make(action, listPath(), c.receiptSearchSchema);
-      if (action === "detail" && recordId) return make(action, `${path}/${recordId}`, c.receiptSchema);
-      if (action === "return-detail" && recordId) return make(action, `/api/purchase-returns/${recordId}`, c.returnSchema);
-      if (action === "returns" && recordId) return make(action, `${path}/${recordId}/returns`, z.array(c.receiptSchema.shape.returns.element));
-      if (action === "costs") return make(action, listPath("/raft-material-costs"), c.raftCostsSchema);
-      if (action === "export") return { ...make(action, listPath("/export"), empty, "Export"), file: "export" };
-      if (action === "invoice" && recordId && q.data.index !== undefined) return { ...make(action, `${path}/${recordId}`, c.receiptSchema), file: "invoice", index: Number(q.data.index) };
-    }
-    if (key === "supplier-payments") {
-      if (action === "list") return make(action, filtered("/api/supplier-payments", ["supplierId", "receiptId", "zoneId", "method", "statusId", "from", "to", "page", "pageSize"]), c.paymentSearchSchema);
-      if (action === "debts") return make(action, "/api/suppliers/debts", c.debtsSchema);
-      if (action === "debt" && supplierId) return make(action, `/api/suppliers/${supplierId}/debt`, c.debtSchema);
-    }
+    const { action, id: recordId, zoneId } = q.data;
     if (key === "water") {
       const path = `/api/zones/${zoneId}/water-measurements`;
       if (action === "list" && zoneId) return make(action, filtered(path, ["from", "to", "status", "page", "pageSize"]), c.waterHistorySchema);
@@ -113,26 +93,6 @@ export function planOperation(areaName: string, method: string, query: URLSearch
     const parsed = validator.safeParse(body);
     return parsed.success ? { ...make(action, path, schema, permission, verb, bodyless ? undefined : parsed.data), zoneId } : undefined;
   };
-  if (key === "purchase-receipts") {
-    const path = `/api/purchase-receipts${recordId ? `/${recordId}` : ""}`;
-    if (action === "create" && !recordId) {
-      const result = write(path, c.saveReceiptSchema, c.receiptSchema, "Create");
-      return result ? { ...result, zoneId: (result.body as z.infer<typeof c.saveReceiptSchema>).zoneId } : undefined;
-    }
-    if (!recordId) return undefined;
-    if (action === "update") {
-      const result = write(path, c.saveReceiptSchema.refine((v) => v.rowVersion !== null), c.receiptSchema, "Edit", "PUT");
-      return result ? { ...result, zoneId: (result.body as z.infer<typeof c.saveReceiptSchema>).zoneId } : undefined;
-    }
-    if (action === "complete") return write(path + "/complete", c.completeReceiptSchema, c.receiptSchema, "Edit");
-    if (action === "cancel") return write(path + "/cancel", c.cancelReceiptSchema, c.receiptSchema, "Delete");
-    if (action === "copy") return write(path + "/copy", empty, c.receiptSchema, "Create", "POST", true);
-    if (action === "return") return write(path + "/returns", c.saveReturnSchema, c.receiptSchema, "Create");
-  }
-  if (key === "supplier-payments") {
-    if (action === "record" && !recordId) return write("/api/supplier-payments", c.recordPaymentSchema, c.paymentSchema, "Create");
-    if (action === "allocate" && recordId) return write(`/api/supplier-payments/${recordId}/allocate`, c.allocatePaymentSchema, c.paymentSchema, "Create");
-  }
   if (key === "water") {
     if (action === "record" && zoneId) return write(`/api/zones/${zoneId}/water-measurements`, c.recordWaterSchema, c.waterSchema, "Create");
     if (action === "set-thresholds") return write(zoneId ? `/api/zones/${zoneId}/water-thresholds` : "/api/water-thresholds", c.setThresholdsSchema,

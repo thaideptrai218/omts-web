@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { adminAccount, adminActivity, adminPage, adminStatusChange } from "@/features/admin-api/contracts";
+import { SYSTEM_ADMIN_ACCOUNTS_ENABLED } from "@/features/admin-api/availability";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -8,6 +9,7 @@ import { readBackendResponse } from "../backend/backend-response";
 import { sameEmployeeSession } from "../employees/employee-session";
 export async function handleAdmin(request: Request) {
   const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "private, no-store", Vary: "Cookie" } });
+  if (!SYSTEM_ADMIN_ACCOUNTS_ENABLED) return json({ status: "not-found" }, 404);
   const gateway = getSessionGateway(), backend = parseServerBackendConfig(process.env);
   if (gateway.mode !== "api" || backend.status !== "valid" || backend.config.source !== "api") return json({ status: "unavailable" }, 503);
   try {

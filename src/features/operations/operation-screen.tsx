@@ -3,7 +3,6 @@ import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { operationAllowed, type OperationArea } from "./permissions";
-import { PaymentScreen } from "./payment-screen";
 import { WaterScreen } from "./water-screen";
 import { PurchaseRequestsScreen } from "./new-module-screens";
 import { CustomerPaymentsScreen } from "@/features/customer-payments/payments-screen";
@@ -11,7 +10,6 @@ import { SalesInvoiceListScreen } from "@/features/sales-invoice-list/invoice-li
 import { ClaimReportScreen } from "@/features/quality-claims/claim-report-screen";
 import { QualityClaimsScreen } from "@/features/quality-claims/quality-claims-screen";
 import { SalesReturnsScreen } from "@/features/sales-returns/sales-returns-screen";
-import { PayrollSettingsPage } from "@/features/hr-setup/payroll-settings-page";
 import { PayrollScreen } from "@/features/payroll/payroll-screen";
 import { PayrollPaymentsScreen } from "@/features/payroll/payroll-payments-screen";
 import { LaborCostsScreen } from "@/features/labor-costs/labor-costs-screen";
@@ -46,7 +44,7 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   // The receipts are split into Nhập giống and Nhập vật tư; the old address moves to the screen of the receipt's kind.
   if (area === "purchase-receipts") return <Suspense><LegacyReceiptsRedirect /></Suspense>;
   if (area === "seed-lots") return <ScreenRedirect to={SEED_LOTS_PATH} />;
-  if (process.env.NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT === "v2" && area === "supplier-payments") return <PaymentsV2Screen />;
+  if (area === "supplier-payments") return <PaymentsV2Screen />;
   if (area === "job-types") return <JobTypesScreen />;
   if (area === "cultivation-cycles") return <CyclesScreen />;
   if (area === "seeding" || area === "material-usages" || area === "harvest") return <CultivationRecordsScreen area={area} />;
@@ -63,8 +61,6 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "payroll") return <Suspense><PayrollScreen /></Suspense>;
   if (area === "payroll-payments") return <PayrollPaymentsScreen />;
   if (area === "labor-costs") return <LaborCostsScreen />;
-  // The period settings stay a dialog (also opened from the payroll screen); this page is the gear destination that hosts it.
-  if (area === "payroll-settings") return <PayrollSettingsPage />;
   if (area === "sales-report") return <SalesPerformanceScreen />;
   if (area === "customer-report") return <CustomerReportScreen />;
   if (area === "end-of-day-report") return <EndOfDayReportScreen />;
@@ -76,5 +72,5 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "purchase-requests") return <PurchaseRequestsScreen />;
   if (area === "workforce") return <WorkforceScreen />;
   if (area === "my-work") return <MyWorkScreen />;
-  return area === "supplier-payments" ? <PaymentScreen /> : <WaterScreen />;
+  return <WaterScreen />;
 }

@@ -10,7 +10,7 @@
 
 ## Cấu hình phía server
 - URL backend, khóa và cấu hình Redis chỉ ở server, **không** dùng `NEXT_PUBLIC_*`.
-- Ngoại lệ đã ghi nhận (biến public lúc build): `NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT=v2` và `NEXT_PUBLIC_VIETMAP_API_KEY`.
+- Ngoại lệ đã ghi nhận (biến public lúc build): `NEXT_PUBLIC_VIETMAP_API_KEY`.
 
 ## Quy tắc BFF (`src/app/api`)
 - Whitelist endpoint cố định, kiểm tra schema, CSRF, giới hạn kích thước body, header `no-store`, kiểm tra lại session sau mỗi phản hồi.

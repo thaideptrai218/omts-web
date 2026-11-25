@@ -50,7 +50,7 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
     }
     if (plan.upload) {
       const damage = plan.upload === "lane-damage";
-      const input = await readOperationUpload(request, !damage && plan.upload !== "license", { maxFiles: damage ? 3 : 1, optionalFile: plan.action === "update", maxBytes: (damage ? 31 : 12) * 1024 * 1024 });
+      const input = await readOperationUpload(request, !damage && plan.upload !== "license", { maxFiles: damage ? 3 : 1, optionalFile: plan.upload === "license", maxBytes: (damage ? 31 : 12) * 1024 * 1024 });
       if (!input) return json({ status: "invalid-input", code: damage ? "MSG-GEN-01" : "MSG01", ...(damage ? { problem: { field: "Photos", hint: "Cần từ 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh không quá 10 MB." } } : {}) }, 400);
       const values = (plan.uploadBody ?? (plan.upload === "license" ? saveLicenseSchema : z.strictObject({}))).safeParse(input.payload);
       if (!values.success || plan.action === "update" && !("rowVersion" in (values.data as object))) return json({ status: "invalid-input", code: "MSG01" }, 400);

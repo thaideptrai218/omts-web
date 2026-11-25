@@ -16,7 +16,7 @@
   - `app/layout.tsx`: `<AuthProvider enabled={mode==="mock"}>`.
   - login, register, recover, onboarding cũng rẽ nhánh theo chế độ.
 - Ở chế độ `mock`, các handler `/api/*` trả 404 `{status:"disabled"}`.
-- Biến phụ: `NEXT_PUBLIC_OMTS_PURCHASING_CONTRACT=v2` đổi plan/quyền purchasing lúc build; `NEXT_PUBLIC_VIETMAP_API_KEY` là khóa bản đồ phía trình duyệt.
+- Biến phụ: `NEXT_PUBLIC_VIETMAP_API_KEY` là khóa bản đồ phía trình duyệt. Hợp đồng purchasing v2 là đường duy nhất, không còn cờ chọn.
 
 ## Mẫu repository
 Component → service → repository interface → adapter mock hoặc API.

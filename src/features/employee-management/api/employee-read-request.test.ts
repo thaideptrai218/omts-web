@@ -56,7 +56,7 @@ describe("employee GET requests and wire query", () => {
     expect(prepareEmployeeReadRequest(input)).toEqual({ status: "invalid-input" });
   });
 
-  it("uses a GUID detail route and a distinct linkable-account picker route", () => {
+  it("uses a GUID detail route and rejects the removed linkable-account route", () => {
     expect(prepareEmployeeReadRequest({ endpoint: "employeeRead", employeeId })).toEqual({ status: "prepared", request: {
       method: "GET", path: `/api/employees/${employeeId}`, headers: { Accept: "application/json" },
     } });
