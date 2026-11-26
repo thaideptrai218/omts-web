@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { DetailRow } from "./detail-pane";
 import { ManagementLayout, type DetailLayout } from "./management-layout";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); window.localStorage.clear(); });
 
 function renderOpenRow(detailLayout?: DetailLayout) {
   return render(<ManagementLayout storageKey="test" icon="search" title="Danh sách" actions={null} filters={null} detailLayout={detailLayout}>
@@ -29,4 +29,19 @@ it("keeps the detail as the row under the clicked one by default", () => {
   const detailCell = screen.getByText("Chi tiết dòng 1").closest("td");
   expect(detailCell?.getAttribute("colspan")).toBe("3");
   expect(container.querySelector("[data-management-screen]")?.hasAttribute("data-detail-open")).toBe(false);
+});
+
+it("lets the user switch the layout from the toolbar and remembers it for that screen in this browser", () => {
+  renderOpenRow();
+  const toggle = screen.getByRole("button", { name: "Chia đôi màn hình khi mở chi tiết" });
+  expect(toggle.getAttribute("aria-pressed")).toBe("false");
+  fireEvent.click(toggle);
+  expect(screen.getByRole("complementary", { name: "Chi tiết" }).textContent).toContain("Chi tiết dòng 1");
+  expect(window.localStorage.getItem("omts-detail-layout-test")).toBe("split");
+  cleanup();
+  renderOpenRow();
+  expect(screen.getByRole("button", { name: "Chia đôi màn hình khi mở chi tiết" }).getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(screen.getByRole("button", { name: "Chia đôi màn hình khi mở chi tiết" }));
+  expect(screen.queryByRole("complementary", { name: "Chi tiết" })).toBeNull();
+  expect(screen.getByText("Chi tiết dòng 1").closest("td")).toBeTruthy();
 });

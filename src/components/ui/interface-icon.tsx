@@ -35,6 +35,8 @@ const paths = {
   upload: "M12 16V5m-4 4 4-4 4 4M4 19h16",
   download: "M12 5v11m-4-4 4 4 4-4M4 19h16",
   columns: "M4 5h16v14H4V5Zm5 0v14m6-14v14",
+  "layout-split": "M3 4h18v16H3V4Zm7 0v16",
+  "layout-rows": "M3 4h18v6H3V4Zm0 10h18v6H3v-6Z",
   help: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7m0 3.5v.5",
   "chevron-right": "m9 6 6 6-6 6",
   refresh:
