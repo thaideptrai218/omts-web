@@ -10,7 +10,7 @@ import local from "./water-screen.module.css";
 export function WaterPeriodTable({ data }: { data: WaterChartData }) {
   const { rows, gaps } = tableOfPeriods(data.periods), gap = gapText(gaps);
   if (!rows.length) return null;
-  return <details className={local.periodTable}>
+  return <details className={`${local.card} ${local.periodTable}`}>
     <summary>Số liệu chi tiết theo kỳ · {rows.length} kỳ có lượt đo</summary>
     {gap && <p className={local.gapLine}>{gap}</p>}
     <div className={local.periodScroll}>
