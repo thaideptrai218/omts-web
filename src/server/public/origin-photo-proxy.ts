@@ -19,7 +19,7 @@ export async function fetchOriginPhoto(
   const parsedConfig = parseServerBackendConfig(environment);
   if (parsedConfig.status !== "valid" || parsedConfig.config.source !== "api") return { status: "unavailable" };
   const { origin, timeoutMs } = parsedConfig.config;
-  const target = backendPhotoUrl(searchParams, origin);
+  const target = backendPhotoUrl(searchParams, origin, environment);
   if (!target) return { status: "bad-request" };
   try {
     const response = await fetcher(target, {

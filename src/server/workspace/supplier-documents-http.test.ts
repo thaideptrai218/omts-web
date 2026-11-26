@@ -37,5 +37,11 @@ describe("supplier certificate privacy and identity", () => {
   it("does not expose upload result after session replacement", async () => {
     setup(); gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce({ status: "anonymous" }); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(supplier())); expect((await handleSupplierDocuments(request(true))).status).toBe(401);
   });
+  it("accepts a presigned certificate link from the configured R2 bucket only", () => {
+    const r2 = "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com", signed = (key: string) => `${r2}/omts-files-staging/${key}?X-Amz-Signature=${"b".repeat(64)}`;
+    vi.stubEnv("OMTS_FILE_STORAGE_ORIGIN", `${r2}/omts-files-staging`);
+    expect(certificateTarget(signed("supplier-certificates/2026/11/qa.pdf"), origin)?.target.href).toBe(signed("supplier-certificates/2026/11/qa.pdf"));
+    expect(certificateTarget(signed("raft-photos/2026/11/qa.png"), origin)).toBeUndefined();
+  });
   it.each(["https://evil.test/api/files/local/supplier-certificates/qa.pdf", `${origin}/api/files/local/raft-photos/qa.png`, `${origin}/api/files/local/supplier-certificates/qa.pdf?redirect=evil`])("rejects a non-certificate evidence target %s", (value) => { expect(certificateTarget(value, origin)).toBeUndefined(); });
 });

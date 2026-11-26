@@ -9,10 +9,10 @@ import { parseServerBackendConfig } from "../config/backend-config";
 import { readBackendResponse } from "../backend/backend-response";
 import { sameEmployeeSession } from "../employees/employee-session";
 import { readOperationUpload, readBoundedBytes } from "../operations/bounded-body";
-import { localFileTarget } from "../operations/evidence-target";
+import { localFileTarget, storedFileKey } from "../operations/evidence-target";
 export function certificateTarget(raw: string, origin: string) {
   const target = localFileTarget(raw, origin);
-  return target?.pathname.startsWith("/api/files/local/supplier-certificates/") ? { target, fingerprint: createHash("sha256").update(target.pathname).digest("hex") } : undefined;
+  return target && storedFileKey(target, origin)?.startsWith("supplier-certificates/") ? { target, fingerprint: createHash("sha256").update(target.pathname).digest("hex") } : undefined;
 }
 export async function handleSupplierDocuments(request: Request) {
   const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
