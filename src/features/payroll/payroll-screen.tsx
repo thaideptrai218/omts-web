@@ -24,7 +24,7 @@ export function PayrollScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
   // A link from an employee profile opens this list on one sheet: ?recordId=<id>&search=<code>. Cancelled sheets are then included.
   const params = useSearchParams(), linkedId = params?.get("recordId") ?? undefined, linkedSearch = params?.get("search") ?? "";
   const [search, setSearch] = useState(linkedSearch), [periodType, setPeriodType] = useState<"" | PeriodType>(""), [statuses, setStatuses] = useState<readonly PayrollStatus[]>(linkedId ? payrollStatuses : defaultStatuses);
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SheetPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string | undefined>(linkedId), [selected, setSelected] = useState<ReadonlySet<string>>(new Set()), [creating, setCreating] = useState(false), [notice, setNotice] = useState<string>();
   const exportList = useMutation(), writer = usePayrollWriter();

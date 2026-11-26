@@ -9,7 +9,7 @@ export const normaliseSettingsQuery = (query: string) => foldVietnamese(query.tr
 
 type SettingsItem = SettingsSection["items"][number];
 
-/** True when the folded query is in the item's title or one of its synonyms (so "mật khẩu" finds Quản lý người dùng). */
+/** True when the folded query is in the item's title or one of its synonyms (so "đơn giá" finds Loại công việc và đơn giá). */
 const itemMatches = (item: SettingsItem, term: string) =>
   foldVietnamese(item.label).includes(term) || (item.keywords ?? []).some((keyword) => foldVietnamese(keyword).includes(term));
 

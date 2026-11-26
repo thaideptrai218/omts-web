@@ -70,8 +70,6 @@ export const harvestSaved = z.object({ lot: z.object({ id: z.guid(), lotCode: z.
 /** Answer of weigh, reopen and close: the lot as it is now and the message of the API. */
 export const harvestLotAnswer = z.object({ lot: harvestDetail, message: z.string().nullish(), messageCode: z.string().nullish() });
 export const harvestCorrected = z.object({ lot: harvestDetail, everySeededLaneHarvested: z.boolean().nullish(), cycleRowVersion: z.string().nullish(), ...crewAssignmentFields, warnings: z.array(harvestWarning).default([]) });
-/** POST /api/rafts/{raftId}/lanes/{n}/finish-harvest (no body): changed=false when the lane was already Harvested. */
-export const finishLaneResult = z.object({ laneNumber: z.number().int(), state: z.string(), changed: z.boolean(), lotCode: z.string().nullish(), everySeededLaneHarvested: z.boolean().nullish(), cycleRowVersion: z.string().nullish(), message: z.string().nullish() });
 /** A correction never changes which plan line a lot belongs to. */
 export const harvestCorrection = harvestBase.safeExtend({ replaceCrew: z.boolean().optional(), keepPhotoKeys: z.array(z.string().min(1)).max(3), reason: z.string().trim().min(1), rowVersion: z.string().min(1) });
 export const laneState = z.union([z.enum(["NotSeeded", "Growing", "BeingHarvested", "Harvested", "OutOfService"]), z.number().int().min(0).max(4)]);

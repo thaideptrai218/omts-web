@@ -2,9 +2,9 @@
 import { buildSettingsGroups, type SettingsGate } from "./settings-hub-groups";
 import { filterSettingsGroups, normaliseSettingsQuery, pickSettingsItem, settingsItemKey, suggestSettingsItems } from "./settings-hub-filter";
 
-const none: SettingsGate = { isOwner: false, holds: () => false, operation: () => false, resource: () => false, canReadProducts: false };
+const none: SettingsGate = { isOwner: false, holds: () => false, operation: () => false, canReadProducts: false };
 /** An Owner passes every gate, like the real workspace checks do. */
-const owner: SettingsGate = { isOwner: true, holds: () => true, operation: () => true, resource: () => true, canReadProducts: true };
+const owner: SettingsGate = { isOwner: true, holds: () => true, operation: () => true, canReadProducts: true };
 const labels = (gate: SettingsGate) => buildSettingsGroups(gate).flatMap((group) => group.items.map((item) => item.label));
 
 describe("settings hub groups", () => {
@@ -12,12 +12,23 @@ describe("settings hub groups", () => {
     const groups = buildSettingsGroups(owner);
     expect(groups.map((group) => group.key)).toEqual(["cooperative", "users", "farming", "inputs", "hr", "sales", "finance", "system"]);
     expect(groups.flatMap((group) => group.items).every((item) => !!item.editor)).toBe(true);
-    expect(groups.find((group) => group.key === "users")?.items[0].href).toBe("/workspace/accounts");
+  });
+
+  it("lists Tài khoản người dùng and Vai trò và quyền under Người dùng, each opening its own page", () => {
+    const users = buildSettingsGroups(owner).find((group) => group.key === "users");
+    expect(users?.label).toBe("Người dùng");
+    expect(users?.items.map((item) => [item.label, item.href])).toEqual([["Tài khoản người dùng", "/workspace/accounts"], ["Vai trò và quyền", "/workspace/roles"]]);
+    expect(labels(owner)).not.toContain("Quản lý người dùng");
+  });
+
+  it("hides the Người dùng group from everyone but the Owner", () => {
+    expect(labels({ ...none, holds: () => true, operation: () => true, canReadProducts: true })).not.toContain("Tài khoản người dùng");
+    expect(buildSettingsGroups(none).some((group) => group.key === "users")).toBe(false);
   });
 
   it("hides every Owner-only setting from a zone manager: reading farming data does not make a setting editable", () => {
     const held = ["CULTIVATION_CYCLES", "INPUT_ISSUES", "CUSTOMERS"];
-    const manager: SettingsGate = { ...none, holds: (fn, action) => held.includes(fn) && action === "View", operation: (area) => area === "water", resource: (key) => key === "zones" || key === "rafts", canReadProducts: true };
+    const manager: SettingsGate = { ...none, holds: (fn, action) => held.includes(fn) && action === "View", operation: (area) => area === "water", canReadProducts: true };
     expect(labels(manager)).toEqual([]);
   });
 
@@ -49,11 +60,10 @@ describe("settings hub search and selection", () => {
   });
   it("finds items by meaning: synonyms with and without accents", () => {
     const find = (query: string) => filterSettingsGroups(groups, query).flatMap((group) => group.items.map((item) => item.label));
-    expect(find("mật khẩu")).toContain("Quản lý người dùng");
-    expect(find("phan quyen")).toEqual(expect.arrayContaining(["Quản lý người dùng", "Vai trò và quyền"]));
-    expect(find("nhân viên đăng nhập")).toContain("Quản lý người dùng");
-    expect(find("zone")).toContain("Quản lý người dùng");
-    expect(find("chấm công")).toContain("Chấm công");
+    expect(find("phan quyen")).toEqual(["Tài khoản người dùng", "Vai trò và quyền"]);
+    expect(find("mật khẩu")).toContain("Tài khoản người dùng");
+    expect(find("nhan vien dang nhap")).toEqual(["Tài khoản người dùng"]);
+    expect(find("đơn giá")).toContain("Loại công việc và đơn giá");
     expect(find("thu chi")).toEqual(["Sổ quỹ"]);
     expect(find("ví")).toContain("Sổ quỹ");
   });
@@ -69,7 +79,7 @@ describe("settings hub search and selection", () => {
   });
   it("prefers ?section=, then the ?group= first item, then the first item", () => {
     expect(settingsItemKey(pickSettingsItem(groups, "harvest", "hr")!)).toBe("harvest");
-    expect(pickSettingsItem(groups, null, "hr")?.label).toBe("Chấm công");
+    expect(pickSettingsItem(groups, null, "hr")?.label).toBe("Thiết lập chấm công");
     expect(pickSettingsItem(groups, "missing", "missing")?.label).toBe("Hồ sơ hợp tác xã");
     expect(pickSettingsItem([], null, null)).toBeUndefined();
   });

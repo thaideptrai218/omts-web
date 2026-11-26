@@ -12,7 +12,7 @@ describe("kế hoạch BFF cho danh sách hóa đơn bán", () => {
     expect(p).toMatchObject({ area: "sales-invoice-list", method: "GET", permission: "View", zoneId: id(1) });
     const u = url(p);
     expect(u.pathname).toBe("/api/sales-invoices");
-    expect(Object.fromEntries(u.searchParams)).toMatchObject({ from: "2026-11-01", to: "2026-11-09", statusId: "3501", paid: "false", code: "HD01", cashCollectedByMe: "true", page: "1", pageSize: "20" });
+    expect(Object.fromEntries(u.searchParams)).toMatchObject({ from: "2026-11-01", to: "2026-11-09", statusId: "3501", paid: "false", code: "HD01", cashCollectedByMe: "true", page: "1", pageSize: "10" });
   });
   it("xuất danh sách: Export, file export, không phân trang", () => {
     const p = plan("GET", q("action=export&from=2026-11-01&to=2026-11-09&page=2"));

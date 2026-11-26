@@ -15,7 +15,7 @@ import { logListSchema, logRequest } from "./log-repository";
 import { LogEditor, photoHref } from "./log-screen";
 
 /** One opened log at a time; its correction and removal actions belong to that detail. */
-export function CycleLogsTab({ cycleId, zoneId, openCycle, canCreate, canEdit, dirtyRef }: { cycleId: string; zoneId?: string; openCycle: boolean; canCreate: boolean; canEdit: boolean; dirtyRef?: RefObject<boolean> }) {
+export function CycleLogsTab({ cycleId, startDate, zoneId, openCycle, canCreate, canEdit, dirtyRef }: { cycleId: string; startDate?: string; zoneId?: string; openCycle: boolean; canCreate: boolean; canEdit: boolean; dirtyRef?: RefObject<boolean> }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => logRequest("list", cycleId, logListSchema, undefined, undefined, signal), [cycleId]));
   const [editor, setEditor] = useState<CultivationLog | null>(), [opened, setOpened] = useState<string>();
   const mutation = useMutation(), confirmation = useActionDialog(), { notify } = useToast();
@@ -41,7 +41,7 @@ export function CycleLogsTab({ cycleId, zoneId, openCycle, canCreate, canEdit, d
         <tbody>{remote.data.map(log => <Fragment key={log.id}>
           <tr onClick={() => void toggle(log.id)}><td><button type="button" className={styles.link} aria-expanded={opened === log.id} onClick={event => { event.stopPropagation(); void toggle(log.id); }}>{formatVietnameseDate(log.visitDate)}</button></td><td className="whitespace-pre-wrap">{log.notes ?? "—"}</td><td>{log.recordedByName ?? "—"}<br /><small>{displayTime(log.recordedAt)}</small></td></tr>
           {opened === log.id && <tr><td colSpan={3}><section aria-label={`Nhật ký ngày ${formatVietnameseDate(log.visitDate)}`}>
-            {editor?.id === log.id ? <LogEditor key={log.id} cycleId={cycleId} dirtyRef={dirtyRef} record={log} onClose={() => setEditor(undefined)} onSaved={saved} /> : <>
+            {editor?.id === log.id ? <LogEditor key={log.id} cycleId={cycleId} startDate={startDate} dirtyRef={dirtyRef} record={log} onClose={() => setEditor(undefined)} onSaved={saved} /> : <>
               <p className="whitespace-pre-wrap">{log.notes ?? "—"}</p>
               {zoneId && <RecordHistory kind="care-log" id={log.id} zoneId={zoneId} />}
               <div>{log.photos.map((photo, index) => { const href = photoHref(photo.url); return href ? <a key={photo.key} className={`${styles.link} mr-2`} href={href} target="_blank" rel="noopener noreferrer">Ảnh {index + 1}</a> : <span key={photo.key}>Ảnh {index + 1} không khả dụng</span>; })}</div>
@@ -51,6 +51,6 @@ export function CycleLogsTab({ cycleId, zoneId, openCycle, canCreate, canEdit, d
         </Fragment>)}</tbody></table>}
     <TabFooter left={<Button key="reload-logs" type="button" className="w-auto" variant="ghost" disabled={mutation.pending || editor !== undefined} onClick={remote.reload}>Tải lại nhật ký</Button>}
       right={openCycle && canCreate ? <Button key="write-log" type="button" className="w-auto" disabled={editor !== undefined} onClick={() => setEditor(null)}>Ghi nhật ký chăm sóc</Button> : undefined} />
-    {editor === null && <LogEditor key="create-log" cycleId={cycleId} dirtyRef={dirtyRef} record={null} onClose={() => setEditor(undefined)} onSaved={saved} />}
+    {editor === null && <LogEditor key="create-log" cycleId={cycleId} startDate={startDate} dirtyRef={dirtyRef} record={null} onClose={() => setEditor(undefined)} onSaved={saved} />}
   </>;
 }

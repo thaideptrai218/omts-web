@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { EmployeeTwoGroupPicker } from "@/features/employee-api/employee-two-group-picker";
+import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, Note, Select, businessTime } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
@@ -32,7 +34,7 @@ export function CrewStartDialog({ rows, today, zoneName, allowed, onClose, onSav
   const [groupKey, setGroupKey] = useState(""), [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const [time, setTime] = useState(() => businessTime().slice(11, 16)), [reason, setReason] = useState(""), [problem, setProblem] = useState<string>();
   const editor = useOperationEditor(onClose, !!groupKey || !!reason);
-  const group = crews.find((item) => item.key === groupKey);
+  const group = crews.find((item) => item.key === groupKey), kindOf = useEmployeeKinds();
 
   function pick(key: string) {
     setGroupKey(key);
@@ -60,12 +62,10 @@ export function CrewStartDialog({ rows, today, zoneName, allowed, onClose, onSav
             <option value="">Chọn tổ</option>
             {crews.map((item) => <option key={item.key} value={item.key}>{item.label} · {item.members.length} người</option>)}
           </Select>
-          {group && <fieldset className="max-h-56 overflow-auto rounded-control border border-border p-3">
+          {group && <fieldset className="space-y-2">
             <legend>Thành viên vào làm ({ticked.size}/{group.members.length})</legend>
-            {group.members.map((member) => <label key={member.id} className="flex gap-3 py-1.5">
-              <input type="checkbox" checked={ticked.has(member.employeeId)} onChange={(event) => setTicked((current) => { const next = new Set(current); if (event.target.checked) next.add(member.employeeId); else next.delete(member.employeeId); return next; })} />
-              {member.employeeName} · {member.job}
-            </label>)}
+            <EmployeeTwoGroupPicker name="crew-start-member" label="Thành viên vào làm" values={[...ticked]} onChange={(ids) => setTicked(new Set(ids))}
+              people={group.members.map((member) => ({ id: member.employeeId, name: member.employeeName, kind: kindOf(member.employeeId), note: <small className="block text-text-muted">{member.job}</small> }))} />
           </fieldset>}
           <Field label="Giờ bắt đầu *" type="time" required value={time} onChange={(event) => setTime(event.target.value)} />
           <Note label="Lý do vào làm cả tổ *" required maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} />

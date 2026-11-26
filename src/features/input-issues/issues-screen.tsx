@@ -58,7 +58,7 @@ function IssuesList({ kind, helpHref, linkedCode }: { kind: IssueKind; helpHref?
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>(emptyFilters);
   const [time, setTime] = useState<TimeRangeValue>(() => linkedCode ? allTime : presetValue("thisMonth"));
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<IssuePage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const offered = useMemo(() => columns.filter((column) => !column.only || column.only === kind), [kind]);
   const defaults = useMemo(() => offered.filter((column) => !column.hidden).map((column) => column.key).join(","), [offered]);

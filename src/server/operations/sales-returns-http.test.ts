@@ -27,7 +27,7 @@ describe("the sales-returns door of the BFF", () => {
     configure("Staff", [grant("View")]);
     const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], total: 0, page: 1, pageSize: 15, totals: { value: 0, backForSaleKg: 0, discardedKg: 0 } }));
     expect((await read("action=list")).status).toBe(200);
-    expect(String(fetcher.mock.calls[0][0])).toBe("http://127.0.0.1:8080/api/sales-returns?page=1&pageSize=15");
+    expect(String(fetcher.mock.calls[0][0])).toBe("http://127.0.0.1:8080/api/sales-returns?page=1&pageSize=10");
     expect((await read(`action=preview&id=${invoice}`)).status).toBe(403);
     expect((await post({ action: "create", id: invoice, body })).status).toBe(403);
     expect((await post({ action: "cancel", id: invoice, body: { reason: "x", rowVersion: "AAA" } })).status).toBe(403);

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { accountantWarningFor, applyGrantSelection, grantLabel, grantOutcomeNotice } from "./employee-account-grants";
-import { emptyGrantSelection, type GrantSelection } from "@/features/user-management/user-grant-selection";
+import { emptyGrantSelection, type GrantSelection } from "@/features/account-access/user-grant-selection";
 
 const zoneA = "11111111-1111-4111-8111-111111111111", zoneB = "22222222-2222-4222-8222-222222222222";
 const names = new Map([[zoneA, "Vùng A"], [zoneB, "Vùng B"]]);
@@ -18,7 +18,7 @@ describe("employee account grants", () => {
     const outcome = await applyGrantSelection("acc-1", managerOfBoth, names, create);
     expect(create.mock.calls).toEqual([["acc-1", zoneA, "ZONE_MANAGER"], ["acc-1", zoneB, "ZONE_MANAGER"], ["acc-1", null, "ACCOUNTANT"]]);
     expect(outcome).toEqual({ granted: 1, failed: ["Quản lý vùng · Vùng B", "Kế toán · Tất cả vùng"] });
-    expect(grantOutcomeNotice(outcome)).toContain("chưa gán được: Quản lý vùng · Vùng B; Kế toán · Tất cả vùng");
+    expect(grantOutcomeNotice(outcome)).toContain("chưa thêm được: Quản lý vùng · Vùng B; Kế toán · Tất cả vùng");
   });
   it("sends nothing and says nothing when no role was chosen", async () => {
     const create = vi.fn();

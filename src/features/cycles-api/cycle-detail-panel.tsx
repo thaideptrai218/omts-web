@@ -38,7 +38,7 @@ export function CycleDetailPanel({ row, zoneId, zoneLabel, access, guard, onChan
     progress: <CycleProgressTab row={row} zoneId={zoneId} canSeeFlow={access.view} />,
     plan: row.cycle ? <CyclePlanTab row={row} zoneId={zoneId} access={access} dirtyRef={guard.dirty} onChanged={onChanged} /> : start("empty"),
     history: <CycleHistoryTab zoneId={zoneId} raftId={row.raftId} />,
-    logs: row.cycle ? <CycleLogsTab dirtyRef={guard.dirty} cycleId={row.cycle.id} zoneId={zoneId} openCycle={row.canEdit} canCreate={access.logsCreate} canEdit={access.logsEdit} /> : null,
+    logs: row.cycle ? <CycleLogsTab dirtyRef={guard.dirty} cycleId={row.cycle.id} startDate={row.cycle.startDate} zoneId={zoneId} openCycle={row.canEdit} canCreate={access.logsCreate} canEdit={access.logsEdit} /> : null,
   };
   return <section id={`cycle-preview-${row.raftId}`} className={styles.detail} aria-label="Chi tiết hành trình của bè">
     <header className={styles.header}><h3><Link className={styles.link} href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>Bè {row.raftCode}</Link></h3><StatusPill tone={state === "open" ? "success" : "neutral"}>{cycleStateLabel(state)}</StatusPill>

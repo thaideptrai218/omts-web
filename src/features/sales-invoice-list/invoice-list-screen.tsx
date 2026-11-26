@@ -49,7 +49,7 @@ const defaults = columns.filter((column) => !column.hidden).map((column) => colu
 // The list API has no sort parameter: the headers are the shared sortable header without a sort key, so they stay plain until the API has one.
 const unsorted: SortState = { key: "", direction: "desc" };
 const ignoreSort = () => undefined;
-const pageSizes = [20, 50, 100];
+const pageSizes = [10, 30, 50, 100];
 
 /** SCR-SALE-05 Hóa đơn bán: danh sách hóa đơn của các vùng bạn được xem, lọc theo kỳ/vùng/khách/lô/trạng thái, chi tiết mở dưới dòng và các lệnh theo quyền (SALE-09). Cùng khung với màn Nhập hàng. */
 export function SalesInvoiceListScreen(props: { helpHref?: string }) {

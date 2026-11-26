@@ -18,14 +18,25 @@ describe("existing repository adapters", () => {
     scheduleService.remove("row", ids.zone);
     expect(mocks.write.mock.lastCall).toMatchObject({ 0: "remove", 1: {}, 3: "row", 4: ids.zone });
   });
-  it("scopes paginated active employee reads and projects only roster data", async () => {
-    const employee = { id: ids.person, fullName: "An", code: "NV01", status: "Employed", workingZones: [{ id: ids.zone }], outstandingWage: 123 };
+  it("scopes paginated active employee reads and projects only roster data, then adds the seasonal workers who have no zone", async () => {
+    const employee = { id: ids.person, fullName: "An", code: "NV01", status: "Employed", employeeType: "Staff", workingZones: [{ id: ids.zone }], outstandingWage: 123 };
+    const seasonal = { id: "seasonal-1", fullName: "Bình", code: "TV01", status: "Employed", employeeType: "SeasonalWorker", workingZones: [] };
     mocks.employees.mockResolvedValueOnce({ status: "success", data: { items: [employee, { ...employee, id: "outside", workingZones: [{ id: ids.otherZone }] }], total: 101 } })
-      .mockResolvedValueOnce({ status: "success", data: { items: [{ ...employee, id: ids.secondPerson }], total: 101 } });
+      .mockResolvedValueOnce({ status: "success", data: { items: [{ ...employee, id: ids.secondPerson }], total: 101 } })
+      .mockResolvedValueOnce({ status: "success", data: { items: [seasonal], total: 1 } });
     const result = await scheduleService.people(ids.zone, new AbortController().signal);
-    expect(mocks.employees).toHaveBeenCalledTimes(2);
-    expect(mocks.employees.mock.calls.map((call) => call[1])).toEqual([1, 2].map((page) => ({ zoneId: ids.zone, statusId: "401", page: String(page), pageSize: "100" })));
-    expect(result).toEqual({ status: "success", data: [{ id: ids.person, name: "An", code: "NV01", eligible: true }, { id: ids.secondPerson, name: "An", code: "NV01", eligible: true }] });
+    expect(mocks.employees).toHaveBeenCalledTimes(3);
+    expect(mocks.employees.mock.calls.map((call) => call[1])).toEqual([
+      ...[1, 2].map((page) => ({ zoneId: ids.zone, statusId: "401", page: String(page), pageSize: "100" })),
+      { employeeType: "SeasonalWorker", statusId: "401", page: "1", pageSize: "100" }]);
+    expect(result).toEqual({ status: "success", data: [
+      { id: ids.person, name: "An", code: "NV01", eligible: true, kind: "Staff" }, { id: ids.secondPerson, name: "An", code: "NV01", eligible: true, kind: "Staff" },
+      { id: "seasonal-1", name: "Bình", code: "TV01", eligible: true, kind: "SeasonalWorker" }] });
+  });
+  it("keeps the roster of the zone when the seasonal workers cannot be read", async () => {
+    const employee = { id: ids.person, fullName: "An", code: "NV01", status: "Employed", employeeType: "Staff", workingZones: [{ id: ids.zone }] };
+    mocks.employees.mockResolvedValueOnce({ status: "success", data: { items: [employee], total: 1 } }).mockResolvedValueOnce({ status: "error", httpStatus: 403, uncertain: false });
+    expect(await scheduleService.people(ids.zone, new AbortController().signal)).toEqual({ status: "success", data: [{ id: ids.person, name: "An", code: "NV01", eligible: true, kind: "Staff" }] });
   });
   it("does not hide a roster failure or start a read after abort", async () => {
     mocks.employees.mockResolvedValue({ status: "error", httpStatus: 403, uncertain: false });

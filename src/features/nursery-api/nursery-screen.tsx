@@ -39,7 +39,7 @@ function NurseryDirectory({ zones, initialZone, initialLot }: { zones: readonly 
   const [zoneId, setZoneId] = useState(zones.some(zone => zone.id === initialZone) ? initialZone : zones[0]?.id ?? "");
   const [search, setSearch] = useState(code), [status, setStatus] = useState("");
   const [time, setTime] = useState<TimeRangeValue>({ kind: "preset", preset: "all", from: "", to: "" });
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const [expanded, setExpanded] = useState<string>(), [linkPlaced, setLinkPlaced] = useState(!code), [detailVersion, setDetailVersion] = useState(0);
   const [creating, setCreating] = useState(!!initialLot), [completing, setCompleting] = useState<{ batch: NurseryDetail; mode: CompletionMode }>();
   const [stored, store] = useStoredValue("omts-columns-nursery-v3", defaultNurseryColumns.join(",")), visible = nurseryColumns.filter(column => stored.split(",").includes(column.key)).map(column => column.key);

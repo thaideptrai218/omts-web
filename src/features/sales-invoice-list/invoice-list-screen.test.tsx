@@ -40,7 +40,7 @@ describe("SalesInvoiceListScreen", () => {
     expect(screen.getByText(/Số hóa đơn/).textContent).toMatch(/Số hóa đơn 1 · Tổng tiền hóa đơn hoàn thành 15\.800\.000/);
     expect(within(row).getByText("15.800.000")).toBeTruthy(); expect(within(row).getByText("Còn 5.000.000")).toBeTruthy(); expect(within(row).getByText("09/11/2026 10:12")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/Completed|Cancelled|Sent|PayLater/);
-    expect(read.mock.calls[0].slice(0, 2)).toMatchObject(["list", { from: expect.any(String), to: expect.any(String), page: "1", pageSize: "20" }]);
+    expect(read.mock.calls[0].slice(0, 2)).toMatchObject(["list", { from: expect.any(String), to: expect.any(String), page: "1", pageSize: "10" }]);
   });
 
   it("shows an error with retry, and an empty state when nothing matches", async () => {

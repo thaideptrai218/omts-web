@@ -6,11 +6,11 @@ import { AppShell } from "@/components/layout/app-shell";
 import type { SettingsSection } from "@/components/layout/header-menu";
 import { SettingsPage } from "./settings-page";
 
-const nav = vi.hoisted(() => ({ section: null as string | null }));
+const nav = vi.hoisted(() => ({ section: null as string | null, pushed: null as string | null }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/settings",
   useSearchParams: () => new URLSearchParams(nav.section ? { section: nav.section } : {}),
-  useRouter: () => ({ replace: (href: string) => { nav.section = new URL(href, "http://x").searchParams.get("section"); } }),
+  useRouter: () => ({ replace: (href: string) => { nav.section = new URL(href, "http://x").searchParams.get("section"); }, push: (href: string) => { nav.pushed = href; } }),
 }));
 vi.mock("@/features/cash-book/cash-settings", () => ({ CashBookSettings: () => <p>Nội dung sổ quỹ</p> }));
 vi.mock("@/features/input-items/inventory-settings", () => ({ InputInventorySettings: () => <p>Nội dung vật tư</p> }));
@@ -18,9 +18,9 @@ afterEach(() => { cleanup(); nav.section = null; });
 
 const sections: SettingsSection[] = [
   { label: "Quản lý", items: [{ href: "/settings?section=cash-book", panel: "cash-book", label: "Sổ quỹ", icon: "payment", description: "Tài khoản và loại thu chi." }] },
-  { label: "Phân quyền", items: [
-    { href: "/workspace/accounts", label: "Tài khoản nhân viên nội bộ", icon: "id-card", description: "Trạng thái truy cập và vai trò theo vùng." },
-    { href: "/workspace/roles", label: "Vai trò và quyền", icon: "roles", description: "Đối chiếu quyền hiện hành." },
+  { label: "Hệ thống", items: [
+    { href: "/audit", label: "Nhật ký thao tác", icon: "search", description: "Ai đã làm gì và lúc nào." },
+    { href: "/account/devices", label: "Phiên đăng nhập", icon: "lock", description: "Thiết bị đang đăng nhập." },
   ] },
   { label: "Hợp tác xã", items: [{ href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", description: "Thông tin pháp lý và liên hệ." }] },
   { label: "Trống", items: [] },
@@ -32,24 +32,25 @@ describe("settings page", () => {
   it("groups the permitted items on the left and shows the first one in place", () => {
     inShell(sections);
     expect(screen.getByRole("heading", { level: 1, name: "Cài đặt" })).toBeTruthy();
-    expect(sidebar().getAllByRole("heading").map((heading) => heading.textContent)).toEqual(["Quản lý", "Phân quyền", "Hợp tác xã"]);
+    expect(sidebar().getAllByRole("heading").map((heading) => heading.textContent)).toEqual(["Quản lý", "Hệ thống", "Hợp tác xã"]);
     expect(sidebar().getByRole("button", { name: "Sổ quỹ" }).getAttribute("aria-current")).toBe("true");
     expect(screen.getByText("Nội dung sổ quỹ")).toBeTruthy();
   });
-  it("opens the chosen item on the right without leaving the page; items not moved yet link to their page", () => {
+  it("opens a settings panel on the right without leaving the page, and a page item at once with no extra step", () => {
     const view = inShell(sections);
+    nav.pushed = null;
     fireEvent.click(sidebar().getByRole("button", { name: "Hồ sơ hợp tác xã" }));
+    expect(nav.pushed).toBe("/cooperative/profile");
+    expect(screen.queryByRole("link", { name: /^Mở / })).toBeNull();
+    fireEvent.click(sidebar().getByRole("button", { name: "Sổ quỹ" }));
     view.rerender(<AppShell settingsSections={sections} onLogout={vi.fn()}><SettingsPage /></AppShell>);
-    expect(nav.section).toBe("/cooperative/profile");
-    const panel = within(screen.getByRole("region", { name: "Hồ sơ hợp tác xã" }));
-    expect(panel.getByText("Thông tin pháp lý và liên hệ.")).toBeTruthy();
-    expect(panel.getByRole("link", { name: /Mở Hồ sơ hợp tác xã/ }).getAttribute("href")).toBe("/cooperative/profile");
-    expect(screen.queryByText("Nội dung sổ quỹ")).toBeNull();
+    expect(nav.section).toBe("cash-book");
+    expect(screen.getByText("Nội dung sổ quỹ")).toBeTruthy();
   });
   it("filters items by title and description without regard to Vietnamese accents", () => {
     inShell(sections);
-    fireEvent.change(screen.getByRole("searchbox", { name: "Tìm kiếm thiết lập" }), { target: { value: "VAI TRO" } });
-    expect(sidebar().getByRole("button", { name: "Vai trò và quyền" })).toBeTruthy();
+    fireEvent.change(screen.getByRole("searchbox", { name: "Tìm kiếm thiết lập" }), { target: { value: "PHIEN DANG NHAP" } });
+    expect(sidebar().getByRole("button", { name: "Phiên đăng nhập" })).toBeTruthy();
     expect(sidebar().queryByRole("button", { name: "Sổ quỹ" })).toBeNull();
   });
   it("explains when nothing matches the search", () => {
@@ -61,18 +62,18 @@ describe("settings page", () => {
     inShell(sections);
     fireEvent.change(screen.getByRole("searchbox", { name: "Tìm kiếm thiết lập" }), { target: { value: "khong co gi" } });
     expect(screen.getByRole("status").textContent).toContain("Thử:");
-    fireEvent.click(within(screen.getByRole("status")).getByRole("button", { name: "Tài khoản nhân viên nội bộ" }));
-    expect(nav.section).toBe("/workspace/accounts");
+    fireEvent.click(within(screen.getByRole("status")).getByRole("button", { name: "Nhật ký thao tác" }));
+    expect(nav.pushed).toBe("/audit");
   });
-  it("finds an item by a synonym, and shows a link-only panel as a primary link with its hint", () => {
-    const withKeywords: SettingsSection[] = [{ label: "Người dùng", items: [{ href: "/workspace/accounts", label: "Quản lý người dùng", icon: "id-card", keywords: ["mật khẩu"], hint: "Tạo tài khoản.", editor: "Chỉ chủ hợp tác xã sửa được" }] }, ...sections];
+  it("finds an item by a synonym and shows its hint while searching, without jumping away", () => {
+    const withKeywords: SettingsSection[] = [{ label: "Bảo mật", items: [{ href: "/account/security", label: "Đổi mật khẩu", icon: "lock", keywords: ["mật khẩu"], hint: "Đổi mật khẩu đăng nhập.", editor: "Chỉ chủ hợp tác xã sửa được" }] }, ...sections];
     inShell(withKeywords);
     fireEvent.change(screen.getByRole("searchbox", { name: "Tìm kiếm thiết lập" }), { target: { value: "mat khau" } });
-    expect(sidebar().getByRole("button", { name: "Quản lý người dùng" })).toBeTruthy();
-    const panel = within(screen.getByRole("region", { name: "Quản lý người dùng" }));
-    expect(panel.getByText(/Việc thường làm/)).toBeTruthy();
+    expect(sidebar().getByRole("button", { name: "Đổi mật khẩu" })).toBeTruthy();
+    const panel = within(screen.getByRole("region", { name: "Đổi mật khẩu" }));
+    expect(panel.getByText("Đổi mật khẩu đăng nhập.")).toBeTruthy();
     expect(panel.getByText("Chỉ chủ hợp tác xã sửa được")).toBeTruthy();
-    expect(panel.getByRole("link", { name: /Mở Quản lý người dùng/ })).toBeTruthy();
+    expect(panel.queryByRole("link", { name: /^Mở / })).toBeNull();
   });
   it("works with a single item: shows it in place and drops the pointless search box", () => {
     inShell([sections[0]]);

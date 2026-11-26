@@ -6,6 +6,7 @@ import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { businessToday, ErrorNotice, Skeleton, useMutation } from "@/features/operations/ui";
 import { employmentChangedSchema, type Employee } from "./contracts";
+import { EmployeeTypeBadge } from "./employee-type-badge";
 import { EmployeeDetailTabs } from "./employee-detail-tabs";
 import type { AnyTabKey } from "./employee-tabs";
 import { employmentLabel } from "./employee-editor-model";
@@ -16,11 +17,11 @@ import { useEmployeeDetail, type EmployeeDetailCache } from "./use-employee-deta
 import type { EmployeeLeaveGuard } from "./use-employee-inline-editor";
 import styles from "./employee-detail.module.css";
 
-export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, jobTypes, lookupsReady, onGuardChange, payroll, manage = true, initialTab }: {
+export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, jobTypes, lookupsReady, onGuardChange, onAccountChanged, payroll, manage = true, initialTab }: {
   initialTab?: AnyTabKey;
   /** `note`: what happened to the linked account when employment ended; the directory adds it to its confirmation. */
   payroll?: boolean; manage?: boolean; id: string; cache: EmployeeDetailCache; onOpen?(id: string): void; onSaved(employee: Employee, note?: string): void; revision?: number;
-  zones?: ApiRecord[]; jobTypes?: { id: string; name: string }[]; lookupsReady?: boolean; onGuardChange?(guard: EmployeeLeaveGuard | undefined): void;
+  zones?: ApiRecord[]; jobTypes?: { id: string; name: string }[]; lookupsReady?: boolean; onGuardChange?(guard: EmployeeLeaveGuard | undefined): void; onAccountChanged?(): void;
 }) {
   const detail = useEmployeeDetail(id, cache, revision);
   const repository = useMemo(() => createOperationsRepository("employees"), []);
@@ -47,9 +48,9 @@ export function EmployeeDetailPanel({ id, cache, onSaved, revision = 0, zones, j
     </>}
     {employee && <>
       <header className={styles.header}>
-        <div><h3>{employee.fullName}</h3><StatusPill tone={employee.status === "Employed" ? "success" : "neutral"}>{employmentLabel(employee.status)}</StatusPill></div>
+        <div><h3>{employee.fullName}</h3><EmployeeTypeBadge type={employee.employeeType} showLabel /><StatusPill tone={employee.status === "Employed" ? "success" : "neutral"}>{employmentLabel(employee.status)}</StatusPill></div>
       </header>
-      <EmployeeDetailTabs employee={employee} onSaved={saved} onRefresh={reload} busy={detail.loading || mutation.pending || mutation.blocked} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={onGuardChange} payroll={payroll} manage={manage} initialTab={initialTab} onStatusAction={() => { setAction(employee.status === "Employed" ? "end-employment" : "resume"); }} />
+      <EmployeeDetailTabs employee={employee} onSaved={saved} onRefresh={reload} busy={detail.loading || mutation.pending || mutation.blocked} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={onGuardChange} onAccountChanged={onAccountChanged} payroll={payroll} manage={manage} initialTab={initialTab} onStatusAction={() => { setAction(employee.status === "Employed" ? "end-employment" : "resume"); }} />
       {action && <EmployeeStatusActionDialog action={action} baseline={employee} pending={mutation.pending} busy={mutation.busy} onCancel={() => setAction(undefined)} onConfirm={(choice) => void confirm(choice)} />}
     </>}
   </section>;

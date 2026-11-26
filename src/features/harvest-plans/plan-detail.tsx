@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { Dialog } from "@/components/ui/dialog";
 import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/management-table";
 import { useToast } from "@/components/ui/toast-provider";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
@@ -16,10 +17,11 @@ import { ProductSizeChip } from "@/features/products/product-size";
 import { LotLink } from "@/features/products/lot-link";
 import { orderHref } from "@/features/sales-orders/order-labels";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
-import { PLAN, type PlanAction, type PlanView } from "./contracts";
+import { PLAN, type PlanAction, type PlanExecutor, type PlanView } from "./contracts";
+import { PlanExecutorChoice } from "./plan-executor-choice";
 import type { PlanAccess } from "./plan-access";
 import { PLANS_PATH, PlanStatus } from "./plan-labels";
-import { planNextStepHint, planTotals } from "./plan-logic";
+import { executorLabel, planNextStepHint, planTotals } from "./plan-logic";
 import { PlanLineActions } from "./plan-line-actions";
 import { PlanStaffingTab } from "./plan-staffing-tab";
 import styles from "./plans.module.css";
@@ -30,7 +32,7 @@ const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "staffing" a
 const dash = (value: string | null | undefined) => value || "—";
 const zoneCodes = (zones: readonly { code: string }[]) => zones.map((zone) => zone.code).join(", ") || "—";
 
-/** The row opened under the list: the plan with its lines and lanes, and the buttons the API allows now, and under "Nhân công" the employees chosen for each line. */
+/** The row opened under the list: the plan with its lines (rafts), and the buttons the API allows now, and under "Nhân công" the employees chosen for each line. */
 export function PlanDetailPanel({ id, access, onChanged }: { id: string; access: PlanAccess; onChanged(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => planRepository.detail(id, signal), [id]));
   const [tab, setTab] = useState<Tab>("info");
@@ -45,9 +47,10 @@ export function PlanDetailPanel({ id, access, onChanged }: { id: string; access:
 function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess; onChanged(): void }) {
   const router = useRouter(), confirmation = useActionDialog(), { notify } = useToast();
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false);
+  const [assigning, setAssigning] = useState(false), [executor, setExecutor] = useState<PlanExecutor>("ZoneManager");
   const can = (action: PlanAction) => plan.allowedActions.includes(action);
   const totals = planTotals(plan.lines);
-  const hint = planNextStepHint(plan.statusId, access.owner ? "owner" : "zone");
+  const hint = planNextStepHint(plan.statusId, access.owner ? "owner" : "zone", plan.executor);
 
   async function run(work: () => Promise<Result<unknown>>, done: string) {
     setPending(true); setError(undefined);
@@ -60,10 +63,12 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
     if (reason) await run(() => planRepository.cancel(plan.id, reason, plan.rowVersion), `Đã hủy kế hoạch thu hoạch ${plan.code}.`);
   }
   async function assign() {
-    if (await confirmation.confirm(`Giao kế hoạch ${plan.code} cho quản lý ${plan.zones.length > 1 ? "các vùng" : "vùng"} ${zoneCodes(plan.zones)}? Quản lý vùng sẽ được báo và thu hoạch theo kế hoạch.`)) await run(() => planRepository.assign(plan.id, plan.rowVersion), `Đã giao ${plan.code} cho quản lý vùng.`);
+    setAssigning(false);
+    const done = executor === "Owner" ? `Đã phân công ${plan.code}: chủ tự thu hoạch.` : `Đã giao ${plan.code} cho quản lý vùng.`;
+    await run(() => planRepository.assign(plan.id, plan.rowVersion, executor), done);
   }
   async function receive() {
-    if (await confirmation.confirm(`Nhận kế hoạch thu hoạch ${plan.code}? Sau khi nhận, bạn ghi lô thu hoạch cho từng bè.`)) await run(() => planRepository.receive(plan.id, plan.rowVersion), `Đã nhận kế hoạch ${plan.code}.`);
+    if (await confirmation.confirm(`Nhận kế hoạch thu hoạch ${plan.code}? Sau khi nhận, bạn bấm Thu hoạch ở từng bè.`)) await run(() => planRepository.receive(plan.id, plan.rowVersion), `Đã nhận kế hoạch ${plan.code}.`);
   }
   async function handOver() {
     if (await confirmation.confirm(`Bàn giao kế hoạch ${plan.code} cho chủ? Chủ hợp tác xã sẽ được báo để kiểm tra và hoàn thành.`)) await run(() => planRepository.handOver(plan.id, plan.rowVersion), `Đã bàn giao ${plan.code} cho chủ.`);
@@ -73,13 +78,19 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
   }
 
   return <div className={listStyles.tabBody}>{confirmation.dialog}
-    <header className={docStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} /></div></header>
+    {assigning && <Dialog open title={`Phân công ${plan.code}`} mobileLayout="compact" onOpenChange={(open) => { if (!open) setAssigning(false); }}>
+      <PlanExecutorChoice value={executor} onChange={setExecutor} />
+      <p className="mt-3 text-sm text-text-muted">{executor === "Owner" ? "Kế hoạch sẽ không gửi cho quản lý vùng." : `Quản lý ${plan.zones.length > 1 ? "các vùng" : "vùng"} ${zoneCodes(plan.zones)} sẽ được báo.`} Không đổi được sau khi phân công.</p>
+      <div className="mt-5 flex flex-wrap gap-3"><Button className="w-auto" onClick={() => void assign()}>Phân công</Button><Button className="w-auto" variant="secondary" onClick={() => setAssigning(false)}>Quay lại</Button></div>
+    </Dialog>}
+    <header className={docStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} />{plan.statusId !== PLAN.draft && <span className={styles.executorTag}>{executorLabel[plan.executor]}</span>}</div></header>
     {hint && <p className="text-sm text-text-muted" data-testid="plan-next-step">{hint}</p>}
     <div className={`${docStyles.headFacts} ${styles.planFacts}`}>
       <div><span>Thời gian dự kiến:</span><strong>{viDateTime(plan.plannedAt)}</strong></div>
       <div><span>Vùng:</span>{plan.zones.length ? <strong className="flex flex-wrap gap-x-2">{plan.zones.map((zone) => <Link key={zone.id} className={docStyles.link} href={farmingReferenceHref("zone", { recordId: zone.id, search: zone.code })}>{zone.code}</Link>)}</strong> : <strong>—</strong>}</div>
       <div><span>Đơn đặt hàng:</span>{plan.orders.length ? <strong className="flex flex-wrap gap-x-2">{plan.orders.map((order) => <Link key={order.id} className={docStyles.link} href={orderHref(order.code)}>{order.code}</Link>)}</strong> : <strong>—</strong>}</div>
       <div><span>Người tạo:</span><strong>{dash(plan.createdBy?.name)}</strong></div>
+      {plan.statusId !== PLAN.draft && <div><span>Người thực hiện:</span><strong>{executorLabel[plan.executor]}</strong></div>}
       <div><span>Giao lúc:</span><strong>{plan.assignedAt ? viDateTime(plan.assignedAt) : "—"}</strong></div>
       {plan.statusId === PLAN.cancelled
         ? <><div><span>Hủy lúc:</span><strong>{plan.cancelledAt ? viDateTime(plan.cancelledAt) : "—"}</strong></div>
@@ -112,7 +123,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
       </div>
       <div>
         {can("Edit") && access.edit && <Button className="w-auto" disabled={pending} onClick={() => router.push(`${PLANS_PATH}/${plan.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
-        {can("Assign") && access.edit && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => void assign()}><InterfaceIcon name="check" className="size-4" />Giao QLV</Button>}
+        {can("Assign") && access.edit && <Button className="w-auto" variant="secondary" disabled={pending} onClick={() => { setExecutor("ZoneManager"); setAssigning(true); }}><InterfaceIcon name="check" className="size-4" />Phân công</Button>}
         {can("Receive") && access.harvest && <Button className="w-auto" disabled={pending} onClick={() => void receive()}><InterfaceIcon name="check" className="size-4" />Nhận kế hoạch</Button>}
         {can("HandOver") && access.harvest && <Button className="w-auto" disabled={pending} onClick={() => void handOver()}><InterfaceIcon name="check" className="size-4" />Bàn giao cho chủ</Button>}
         {can("Finish") && access.edit && <Button className="w-auto" disabled={pending} onClick={() => void finish()}><InterfaceIcon name="check" className="size-4" />Hoàn thành</Button>}

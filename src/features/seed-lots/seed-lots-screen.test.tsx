@@ -42,7 +42,7 @@ it("shows nothing and calls nothing to an account that may not read the receipts
 it("lists the lots with every column of the plan, the totals, links by code and no action button on a closed row", async () => {
   owner(); mount();
   await screen.findByText("PN000004-1");
-  expect(state.list.mock.calls[0][0]).toMatchObject({ sort: "code", sortDir: "desc", page: "1", pageSize: "15" });
+  expect(state.list.mock.calls[0][0]).toMatchObject({ sort: "code", sortDir: "desc", page: "1", pageSize: "10" });
   for (const heading of ["Mã lô giống", "Phiếu nhập", "Ngày nhập", "Nhà cung cấp", "Giống", "Sản phẩm", "Nhập", "Còn", "Tiến độ sử dụng", "Thu hoạch \\(kg\\)", "Đã bán \\(kg\\)"]) expect(screen.getByRole("columnheader", { name: new RegExp(`^${heading}`) })).toBeTruthy();
   const totalsRow = screen.getByRole("row", { name: "Tổng hợp theo bộ lọc" });
   expect(within(totalsRow).getByText("Tổng (1 lô)")).toBeTruthy();

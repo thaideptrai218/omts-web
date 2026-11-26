@@ -28,13 +28,16 @@ function RaftResourceLocationPicker(props: Props) {
   return remote.loading ? <div className="sm:col-span-2"><Skeleton /></div> : <PickerFields {...props} pins={pins} />;
 }
 
-function PickerFields({ resource, values, setValues, pins }: Props & { pins: ContextPin[] }) {
+function PickerFields({ resource, record, values, setValues, pins }: Props & { pins: ContextPin[] }) {
   const target = useRef<HTMLDivElement>(null), [missing, setMissing] = useState(false);
+  const noun = resource === "zones" ? "vùng" : "bè";
+  // A new raft needs its place on the map (BR-FARM-12); an existing raft saved before this rule can still be edited without one.
+  const required = resource === "zones" || !record;
   return <div ref={target} className="relative sm:col-span-2">
     <LocationPicker id={`api-${resource}-location`} latitude={values.latitude ?? ""} longitude={values.longitude ?? ""} pins={pins}
-      error={missing ? "Chọn vị trí của vùng trên bản đồ." : undefined}
+      error={missing ? `Chọn vị trí của ${noun} trên bản đồ.` : undefined}
       onChange={next => { setValues(current => ({ ...current, ...next })); setMissing(false); }} />
-    {resource === "zones" && <input className="sr-only" aria-label="Vị trí vùng nuôi" tabIndex={-1} required
+    {required && <input className="sr-only" aria-label={`Vị trí ${noun} nuôi`} tabIndex={-1} required
       value={values.latitude && values.longitude ? "selected" : ""} onChange={() => {}}
       onFocus={() => target.current?.querySelector<HTMLElement>("[tabindex='0']")?.focus()}
       onInvalid={event => { event.preventDefault(); setMissing(true); target.current?.querySelector<HTMLElement>("[tabindex='0']")?.focus(); }} />}

@@ -9,9 +9,11 @@ import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { loadOptions } from "@/features/operations/lookups";
 import { businessToday, ErrorNotice, Select, Skeleton, useRemote } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { EmployeeTypeFilter, filterByEmployeeType } from "@/features/employee-api/employee-type-filter";
+import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import { AttendanceCrewDialog } from "./attendance-crew-dialog";
 import { AttendanceTodayGroup } from "./attendance-today-group";
-import { attendanceAccess, attendanceSummary, grantedZones, groupPeople, isPreviousOpen, searchPeople, todayPeople, type AttendanceAllowed, type AttendanceStep, type TodayCrew } from "./attendance-today-model";
+import { attendanceAccess, attendanceSummary, grantedZones, groupPeople, isPreviousOpen, searchPeople, todayPeople, type AttendanceAllowed, type AttendanceStep, type TodayCrew, type TodayPerson } from "./attendance-today-model";
 import { readAttendanceToday, type TodaySnapshot } from "./attendance-today-service";
 import { useAttendanceTodayActions } from "./use-attendance-today-actions";
 import styles from "./attendance-today.module.css";
@@ -31,7 +33,10 @@ export function AttendanceTodayScreen() {
 
 function AttendanceTodayBoard({ day, allowed }: { day: string; allowed: AttendanceAllowed }) {
   const [pickedZone, setPickedZone] = useState("");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(""), [typeFilter, setTypeFilter] = useState("");
+  const kindOf = useEmployeeKinds();
+  // Staff attendance rows are official employees by definition; an assignment row asks the employee list.
+  const personKind = (row: TodayPerson) => row.source === "staff" ? "Staff" as const : kindOf(row.employeeId);
   const [refreshing, setRefreshing] = useState(false);
   const [dialog, setDialog] = useState<{ group: TodayCrew; step: AttendanceStep }>();
   const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
@@ -42,7 +47,7 @@ function AttendanceTodayBoard({ day, allowed }: { day: string; allowed: Attendan
   const zoneId = options.some(zone => zone.id === pickedZone) ? pickedZone : options.length === 1 ? options[0].id : "";
   const actions = useAttendanceTodayActions(day, zoneId, allowed, () => { setRefreshing(true); list.refresh(); }, refreshing);
   const zoneName = (id: string) => String(options.find(zone => zone.id === id)?.name ?? "Vùng được cấp");
-  const people = list.data ? todayPeople(list.data, day, zoneId, allowed) : [];
+  const people = list.data ? filterByEmployeeType(todayPeople(list.data, day, zoneId, allowed), typeFilter, personKind) : [];
   // Searching finds a whole crew: its buttons always apply to the same full membership that is visible.
   const groups = groupPeople(people.filter(row => !isPreviousOpen(row, day)), zoneName)
     .filter(group => searchPeople(group.people, search, zoneName).length > 0);
@@ -62,6 +67,7 @@ function AttendanceTodayBoard({ day, allowed }: { day: string; allowed: Attendan
         {options.length !== 1 && <option value="">Tất cả vùng được cấp</option>}
         {options.map(zone => <option key={zone.id} value={zone.id}>{String(zone.name ?? zone.id)}</option>)}
       </Select></FilterGroup>
+      <EmployeeTypeFilter value={typeFilter} onChange={setTypeFilter} name="attendance-employee-type" />
       {ready && !allowed("AttendanceCreate", zoneId || undefined) && <p className={styles.readOnly}>Bạn chỉ có quyền xem chấm công trong phạm vi này.</p>}
     </>}>
     {ready && <dl className={styles.summary} aria-label="Tổng hợp chấm công">
@@ -72,8 +78,8 @@ function AttendanceTodayBoard({ day, allowed }: { day: string; allowed: Attendan
       <div className={styles.content}>
         <ScreenGuide id="attendance-today" steps={[
           { title: "Xem ai chưa vào làm", text: "Danh sách chia theo tổ (cả nhóm làm cùng bè hoặc vùng); người chưa vào làm hiện trạng thái \"Chưa vào làm\"." },
-          { title: "Bấm Vào làm / Ra về", text: "Bấm cho từng người, hoặc \"cả tổ\" để ghi một lần cho cả nhóm cùng bè hoặc vùng." },
-          { title: "Nhìn khối \"Chưa ra về từ hôm qua\"", text: "Người vào làm hôm qua mà chưa ra về nằm ở đó, bấm Ra về để chốt." },
+          { title: "Bấm Vào làm / Ra về", text: "Bấm cho từng người, hoặc \"cả tổ\" để ghi một lần cho cả nhóm cùng bè hoặc vùng.", target: "text:Vào làm" },
+          { title: "Nhìn khối \"Chưa ra về từ hôm qua\"", text: "Người vào làm hôm qua mà chưa ra về nằm ở đó, bấm Ra về để chốt.", target: "text:Chưa ra về từ hôm qua" },
         ]} />
         <ErrorNotice error={actions.error} />
         {actions.blocked && <div className={styles.reconcile} role="alert"><p>Chưa rõ kết quả hoặc dữ liệu đã đổi. Tải lại và đối chiếu trước khi ghi tiếp.</p>
@@ -86,8 +92,8 @@ function AttendanceTodayBoard({ day, allowed }: { day: string; allowed: Attendan
           : loading ? <Skeleton />
           : !options.length ? <ListStateMessage>Chưa có vùng được cấp để xem chấm công.</ListStateMessage>
           : ready && <>
-            {carry.length > 0 && <AttendanceTodayGroup group={{ key: "carry", label: "Chưa ra về từ hôm qua", people: carry }} previous day={day} zoneId={zoneId} allowed={allowed} actions={actions} onCrew={onCrew} />}
-            {groups.map(group => <AttendanceTodayGroup key={group.key} group={group} day={day} zoneId={zoneId} allowed={allowed} actions={actions} onCrew={onCrew} />)}
+            {carry.length > 0 && <AttendanceTodayGroup group={{ key: "carry", label: "Chưa ra về từ hôm qua", people: carry }} previous day={day} zoneId={zoneId} allowed={allowed} actions={actions} kindOf={personKind} onCrew={onCrew} />}
+            {groups.map(group => <AttendanceTodayGroup key={group.key} group={group} day={day} zoneId={zoneId} allowed={allowed} actions={actions} kindOf={personKind} onCrew={onCrew} />)}
             {!groups.length && !carry.length && <ListStateMessage>{search ? "Không tìm thấy người hoặc tổ phù hợp." : <>
               Chưa có phân công hoặc nhân viên nội bộ trong phạm vi hôm nay.{" "}
               <Link href="/work/schedule" className="font-medium text-primary underline underline-offset-4">Thêm phân công</Link>

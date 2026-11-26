@@ -52,9 +52,14 @@ it("accepts v2 read item and read-all acknowledgements while checking the affect
   expect((await handleInbox(request({ action: "read-all" }))).status).toBe(200);
   expect((await handleInbox(request({ action: "read", id }))).status).toBe(502); expect(fetcher).toHaveBeenCalledTimes(3);
 });
-it("does not downgrade malformed v2 content to a legacy row", async () => {
-  setup(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [{ ...v2(), isMandatory: true, messageParams: { zone_name: [] } }], total: 1, unreadCount: 1 }));
-  expect((await handleInbox(new Request("http://localhost:3003/api/inbox"))).status).toBe(502);
+it("shows unreadable v2 parameters as a neutral row, never as a legacy row or the server's English, and keeps the rest of the list", async () => {
+  setup(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [{ ...v2(), isMandatory: true, messageParams: { zone_name: [] } }, { ...v2(), id: "122bb318-a72e-49aa-a8d7-a6169f889008" }], total: 2, unreadCount: 2 }));
+  const response = await handleInbox(new Request("http://localhost:3003/api/inbox"));
+  expect(response.status).toBe(200);
+  const { data } = await response.json();
+  expect(data.items[0]).toMatchObject({ title: "Thông báo mới", isMandatory: false });
+  expect(JSON.stringify(data)).not.toContain("English");
+  expect(data.items[1].title).toBe("Nhắc đo nước");
 });
 it("rejects a read acknowledgement that still says unread and a mismatched page", async () => {
   setup(); vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(v2()))

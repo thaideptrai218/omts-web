@@ -18,7 +18,7 @@ import { productRepository } from "./repository";
 
 /** Nhập – xuất: every movement of the product in kg, newest first, with the balance after it; corrections are hidden together with the rows they undo. */
 export function ProductMovementsTab({ productId, note }: { productId: string; note?: ReactNode }) {
-  const [kind, setKind] = useState(""), [reversals, setReversals] = useState(false), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [kind, setKind] = useState(""), [reversals, setReversals] = useState(false), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const remote = useRemote(useCallback((signal: AbortSignal) => productRepository.movements(productId,
     { kind: kind || undefined, includeReversals: reversals ? "true" : undefined, page: String(page), pageSize: String(pageSize) }, signal), [productId, kind, reversals, page, pageSize]));
   const exportFile = useMutation(), data = remote.data;

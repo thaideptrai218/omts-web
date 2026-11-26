@@ -74,7 +74,7 @@ function Staffing({ plan, staffing, access }: { plan: PlanView; staffing: PlanSt
       : <div className={styles.crewList}>{lines.map((line) => <section key={line.lineId} aria-label={`Nhân công bè ${line.raftCode}`} className={styles.crewCard}>
         <header className={styles.crewHead}>
           <h4><Link className={purchaseStyles.link} href={farmingReferenceHref("raft", { zoneId: line.zoneId, recordId: line.raftId, search: line.raftCode })}>{line.raftCode}</Link></h4>
-          <span>Vùng {line.zoneCode} · Luống {line.laneNumbers.join(", ") || "—"} · Ngày {viDate(line.plannedDate)}</span>
+          <span>Vùng {line.zoneCode} · Ngày {viDate(line.plannedDate)}</span>
         </header>
         <div className={styles.crewBody}>
         {editing && editable(line)

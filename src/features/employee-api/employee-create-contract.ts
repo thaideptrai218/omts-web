@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { apiTextSchema } from "@/features/auth/api/auth-contract.schemas";
 import { employeeViewSchema } from "@/features/employee-management/api/employee-contract.schemas";
-import { createProfileSchema, validProfileDate, validStartDate } from "./contracts";
+import { createProfileSchema, staffHasZone, validProfileDate, validStartDate } from "./contracts";
 import { issueEmployeeAccountRequestSchema } from "./employee-account-contract";
 
 /**
@@ -11,7 +11,8 @@ import { issueEmployeeAccountRequestSchema } from "./employee-account-contract";
 export const createEmployeeRequestSchema = createProfileSchema
   .extend({ account: issueEmployeeAccountRequestSchema.optional() })
   .refine(validProfileDate, { path: ["birthday"] })
-  .refine(validStartDate, { path: ["startDate"] });
+  .refine(validStartDate, { path: ["startDate"] })
+  .refine(staffHasZone, { path: ["workingZoneIds"] });
 
 /** Backend answer when an account was requested: the one-time password must be present and the account linked. */
 export const employeeCreatedWithAccountSchema = z.object({

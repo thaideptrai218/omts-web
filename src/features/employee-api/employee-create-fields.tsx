@@ -4,6 +4,8 @@ import { digitsOnly, phoneInputProps, phoneInputValue } from "@/components/form/
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import { businessToday, control, Field, Note, Select } from "@/features/operations/ui";
+import { withEmployeeType } from "./employee-editor-model";
+import { EmployeeTypeBadge } from "./employee-type-badge";
 import type { EmployeeCreateValues } from "./employee-create-model";
 import styles from "./employee-create-form.module.css";
 
@@ -60,11 +62,12 @@ export function EmployeeCreateBasicFields({ values, setValues, errorProps, field
         <FieldError path="gender" fieldError={fieldError} />
       </div>
       <div>
-        <Select label="Loại nhân viên *" required {...errorProps("employeeType")} value={values.employeeType} onChange={event => set({ employeeType: event.target.value })}>
+        <Select label="Loại nhân viên *" required {...errorProps("employeeType")} value={values.employeeType} onChange={event => setValues(current => withEmployeeType(current, event.target.value))}>
           <option value="">Chọn loại nhân viên</option>
-          <option value="SeasonalWorker">Thời vụ</option>
           <option value="Staff">Nội bộ</option>
+          <option value="SeasonalWorker">Thời vụ</option>
         </Select>
+        {values.employeeType && <p className={styles.hint}><EmployeeTypeBadge type={values.employeeType} showLabel /> {values.employeeType === "Staff" ? "Nhân viên chính thức, lương tháng cố định, làm ở một vùng cố định." : "Gọi khi có việc, trả theo giờ hoặc theo ca, làm vùng nào do phân công."}</p>}
         <FieldError path="employeeType" fieldError={fieldError} />
       </div>
     </div>
@@ -89,7 +92,7 @@ export function EmployeeCreateWorkFields({ values, setValues, errorProps, fieldE
         <FieldError path="startDate" fieldError={fieldError} />
       </div>
     </div>
-    <fieldset className={styles.choices} tabIndex={-1} {...errorProps("workingZoneIds")}>
+    {values.employeeType === "SeasonalWorker" ? <p className={styles.hint}>Thời vụ: làm theo phân công, không cố định vùng.</p> : <fieldset className={styles.choices} tabIndex={-1} {...errorProps("workingZoneIds")}>
       <legend>Vùng làm việc *</legend>
       {offered.map(zone => (
         <label key={zone.id} className={styles.choice}>
@@ -103,7 +106,7 @@ export function EmployeeCreateWorkFields({ values, setValues, errorProps, fieldE
         </label>
       ))}
       {!offered.length && !missing.length && <p className={styles.hint}>Chưa có vùng đang hoạt động.</p>}
-    </fieldset>
+    </fieldset>}
     <FieldError path="workingZoneIds" fieldError={fieldError} />
     <fieldset className={styles.choices} tabIndex={-1} {...errorProps("jobTypeIds")}>
       <legend>Loại công việc</legend>

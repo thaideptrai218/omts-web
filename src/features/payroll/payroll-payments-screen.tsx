@@ -21,7 +21,7 @@ const defaultColumns = columns.map((column) => column.key).join(",");
 /** SCR-LABOR-11 "Thanh toán lương": the wage payments made (sheet payments and advances) and the standalone "Thanh toán lương". */
 export function PayrollPaymentsScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
   const [search, setSearch] = useState(""), [time, setTime] = useState<TimeRangeValue>(allTime), [filters, setFilters] = useState<PaymentFilters>(noPaymentFilters);
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0), [expanded, setExpanded] = useState<string>();
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0), [expanded, setExpanded] = useState<string>();
   const [data, setData] = useState<PaymentPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [paying, setPaying] = useState(false), [notice, setNotice] = useState<string>();
   const writer = usePayrollWriter();
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-payroll-payments", defaultColumns);

@@ -16,7 +16,7 @@ import { LotWeighForm } from "@/features/harvest-lots/lot-weigh-form";
 import { harvestDetail } from "./records-contracts";
 import { RecordCrewDetail } from "./record-crew-detail";
 import { HarvestLotDetail } from "./harvest-detail";
-import { CagesWithEstimatedKg, KgWithApproxCages } from "./harvest-quantity-cell";
+import { CagesWithWeighedKg, KgWithApproxCages } from "./harvest-quantity-cell";
 import { useAllowed } from "./records-shared";
 import styles from "./cultivation-flow.module.css";
 const repository = createOperationsRepository("harvest");
@@ -38,11 +38,10 @@ export function HarvestLotInfo({ record }: { record: Lot }) {
       <div><dt>Người ghi nhận</dt><dd>{record.recordedByName ?? "—"}</dd></div>
       <div><dt>Vùng / bè nuôi</dt><dd><Link href={farmingReferenceHref("zone", { recordId: record.zoneId, search: record.zoneCode })}>{record.zoneCode}</Link> · <Link href={farmingReferenceHref("raft", { zoneId: record.zoneId, recordId: record.raftId, search: record.raftCode })}>{record.raftCode}</Link></dd></div>
       {record.harvestPlan && <div><dt>Kế hoạch</dt><dd><PlanRefLink code={record.harvestPlan.code} /></dd></div>}
-      <div><dt>Làn thu hoạch / đã thu hết</dt><dd>{record.laneNumbers.join(", ")} / {record.finishedLaneNumbers.join(", ") || "Chưa có"}</dd></div>
-      <div><dt>Số lồng thu hoạch</dt><dd><CagesWithEstimatedKg cages={record.cageCount} kg={record.estimatedKg} /></dd></div>
+      {!record.harvestPlan && <div><dt>Làn thu hoạch / đã thu hết</dt><dd>{record.laneNumbers.join(", ")} / {record.finishedLaneNumbers.join(", ") || "Chưa có"}</dd></div>}
+      <div><dt>Số lồng thu hoạch</dt><dd><CagesWithWeighedKg cages={record.cageCount} weighedKg={record.weighedKg} /></dd></div>
       {weighing && <div><dt>Kg cân thực tế</dt><dd>{record.weighedKg == null ? "Chưa cân" : <>{kgText(record.weighedKg)}{record.weighedAt && <span className="mt-1 block text-xs font-normal text-text-muted">{displayTime(record.weighedAt)}{record.weighedByName ? ` · ${record.weighedByName}` : ""}</span>}</>}</dd></div>}
-      {lines.length > 0 && <div><dt>Sản phẩm thu hoạch</dt><dd>{lines.map((line) => <span key={line.productId} className="block">{line.productName}: {line.cageCount.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} lồng · ước tính {kgText(line.kg)}{line.weighedKg != null ? ` · cân ${kgText(line.weighedKg)}` : ""}</span>)}</dd></div>}
-      <div><dt>Quy đổi tại thời điểm ghi</dt><dd>{record.kgPerCage.toLocaleString("vi-VN")} kg/lồng</dd></div>
+      {lines.length > 0 && <div><dt>Sản phẩm thu hoạch</dt><dd>{lines.map((line) => <span key={line.productId} className="block">{line.productName}: {line.cageCount.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} lồng{line.weighedKg != null ? ` · cân ${kgText(line.weighedKg)}` : " · chờ cân"}</span>)}</dd></div>}
       {record.overPlanReason && <div><dt>Lý do thu vượt kế hoạch</dt><dd>{record.overPlanReason}</dd></div>}
       {([["Đã lập hóa đơn", record.figures.invoicedKg], ["Đã bán", record.figures.soldKg], ["Đã trả lại", record.figures.returnedKg], ["Còn để bán", record.figures.remainingKg], ["Kg tồn khi đóng lô", record.figures.lostKg]] as const)
         .filter(([label, value]) => label !== "Kg tồn khi đóng lô" || value > 0)

@@ -12,7 +12,7 @@ export function ResourceExtras({ resource, record, busy, dirty, blocked, onSaved
   const context = useApiWorkspace(), [open, setOpen] = useState(false);
   const owner = context.identity.subjectType === "CooperativeOwner";
   if (resource === "suppliers") return <div className="mt-5 border-t border-border pt-4"><Button className="w-auto" variant="secondary" disabled={busy || dirty || blocked} onClick={() => setOpen(true)}>Chứng nhận nhà cung cấp</Button>{dirty && <p className="mt-2 text-sm">Lưu hoặc hủy thay đổi hồ sơ trước khi mở chứng nhận.</p>}{open && <SupplierDocumentsDialog id={record.id} canEdit={resourceAllowed("suppliers", context.identity, context.permissions.functionPermissions, "Edit")} onClose={(saved) => { setOpen(false); if (saved) onSaved(saved); }} />}</div>;
-  // Accounts (grants) and roles (permission matrix) now live in the "Quản lý người dùng" screen (features/user-management).
+  // Accounts (grants) and roles (permission matrix) are managed from the Nhân viên screen (features/account-access, features/employee-api).
   if (resource !== "rafts" && (resource !== "zones" || !owner)) return null;
   return <div className="mt-5 border-t border-border pt-4">
     {!open && <TabFooter right={<Button key={resource === "zones" ? "open-zone-licenses" : "open-raft-photos"} type="button" className="w-auto" variant="secondary" disabled={busy || dirty || blocked} onClick={() => setOpen(true)}>{resource === "zones" ? "Giấy tờ và gia hạn" : "Ảnh và sơ đồ tình trạng bè"}</Button>} />}

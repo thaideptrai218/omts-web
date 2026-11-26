@@ -78,14 +78,15 @@ function CustomerList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const context = useApiWorkspace();
   const can = (fn: string, action: string) => context.identity.subjectType === "CooperativeOwner" || context.permissions.functionPermissions.some((p) => p.functionCode === fn && p.action === action);
   const canView = can("CUSTOMERS", "View"), canCreate = can("CUSTOMERS", "Create"), canEdit = can("CUSTOMERS", "Edit"), canExport = can("CUSTOMERS", "Export"), canDebt = can("CUSTOMER_DEBTS", "View");
-  const access: CustomerAccess = { edit: canEdit, remove: can("CUSTOMERS", "Delete"), history: can("SALES_INVOICES", "View"), requests: can("PURCHASE_REQUESTS", "View"), debt: canDebt,
+  const isOwnerAccount = context.identity.subjectType === "CooperativeOwner";
+  const access: CustomerAccess = { merge: isOwnerAccount, edit: canEdit, remove: isOwnerAccount && can("CUSTOMERS", "Delete"), history: can("SALES_INVOICES", "View"), requests: can("PURCHASE_REQUESTS", "View"), debt: canDebt,
     pay: can("CUSTOMER_PAYMENTS", "Create"), adjust: can("CUSTOMER_PAYMENTS", "Edit"), confirm: can("CUSTOMER_PAYMENTS", "Edit"), exportDebt: can("CUSTOMER_DEBTS", "Export") };
   const linkPending = useRef(linkedCode);
   // A linked code is looked for among every status, so that a discontinued customer opens too.
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState({ ...emptyFilters, status: linkedCode ? "All" : "InUse" });
   const [birthday, setBirthday] = useState<TimeRangeValue>(allTime), [lastTransaction, setLastTransaction] = useState<TimeRangeValue>(allTime), [salesTime, setSalesTime] = useState<TimeRangeValue>(allTime), [created, setCreated] = useState<TimeRangeValue>(allTime);
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" });
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<CustomerPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [creating, setCreating] = useState(false), [importing, setImporting] = useState(false), { notify } = useToast(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();

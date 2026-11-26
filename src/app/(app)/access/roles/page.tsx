@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 export const instant = false;
 
-/** With the real API this address forwards to /workspace/roles (tab "Vai trò" of "Quản lý người dùng"); the mock data source keeps its demo screen. */
+/** With the real API this address forwards to /workspace/roles (Cài đặt > Người dùng > Vai trò và quyền); the mock data source keeps its demo screen. */
 export default async function RoleManagementPage() {
   await connection();
   if (getSessionGateway().mode === "mock") return <RoleManagementExperience />;

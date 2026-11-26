@@ -81,13 +81,13 @@ it("starts from an order with the order linked, lets the Owner choose zone and r
   expect(screen.getByText("Hàu sữa (SP000001)")).toBeTruthy();
   // The orders still need 100 kg of the product, 8 cages at 12,5 kg a cage.
   expect((screen.getByLabelText("lồng dự kiến dòng 1") as HTMLInputElement).value).toBe("8");
-  await user.click(screen.getByRole("button", { name: "Lưu & Giao QLV" }));
+  await user.click(screen.getByRole("button", { name: "Lưu & Phân công" }));
   await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));
   expect(state.create.mock.calls[0][0]).toEqual({
     code: null, plannedAt: "2026-11-14T06:00:00+07:00", note: null, salesOrderIds: [ids.order],
     lines: [{ raftId: ids.raft, laneNumbers: [], expectedCageCount: 8, note: null }],
   });
-  await waitFor(() => expect(state.assign).toHaveBeenCalledWith(ids.plan, "v1"));
+  await waitFor(() => expect(state.assign).toHaveBeenCalledWith(ids.plan, "v1", "ZoneManager"));
   await waitFor(() => expect(state.push).toHaveBeenCalledWith("/farming/harvest-plans?code=KHT000001"));
 });
 
@@ -173,7 +173,7 @@ it("lets a plan already given out change only the lines without a lot or a skipp
   expect((screen.getByLabelText("Vùng dòng 2") as HTMLSelectElement).disabled).toBe(true);
   expect((screen.getByLabelText("lồng dự kiến dòng 1") as HTMLInputElement).disabled).toBe(false);
   expect((screen.getByLabelText("Mã kế hoạch") as HTMLInputElement).disabled).toBe(true);
-  expect(screen.queryByRole("button", { name: "Lưu & Giao QLV" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Lưu & Phân công" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(state.update).toHaveBeenCalledTimes(1));
   expect(state.update.mock.calls[0][0]).toBe(ids.plan);
@@ -201,8 +201,8 @@ it("sets the cages of the rafts against what the orders still need and asks befo
   expect(await screen.findByText("KHT còn thiếu 50 kg Hàu sữa so với đơn đặt hàng. Vẫn lưu?")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Quay lại" }));
   expect(state.create).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Lưu & Giao QLV" }));
-  expect(await screen.findByText("KHT còn thiếu 50 kg Hàu sữa so với đơn đặt hàng. Vẫn lưu và giao QLV?")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Lưu & Phân công" }));
+  expect(await screen.findByText("KHT còn thiếu 50 kg Hàu sữa so với đơn đặt hàng. Vẫn lưu và phân công?")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Đồng ý" }));
   await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));
   expect(state.create.mock.calls[0][0].lines).toEqual([{ raftId: ids.raft, laneNumbers: [], expectedCageCount: 4, note: null }]);

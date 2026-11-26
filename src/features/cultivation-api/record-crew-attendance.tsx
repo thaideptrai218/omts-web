@@ -1,6 +1,8 @@
 "use client";
 import { z } from "zod";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
+import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import { Note } from "@/features/operations/ui";
 import { CrewAttendanceButton, useCrewAttendanceActions } from "./record-crew-attendance-actions";
 
@@ -33,10 +35,10 @@ export function useIsCooperativeOwner() { return useApiWorkspace().identity.subj
 
 /** Why completing is blocked (employees still at work) and, for the Owner only, the reason field that lets them complete anyway. */
 export function AttendanceGatePanel({ employees, isOwner, reason, onReason }: { employees: readonly OpenAttendanceEmployee[]; isOwner: boolean; reason: string; onReason(value: string): void }) {
-  const actions = useCrewAttendanceActions();
+  const actions = useCrewAttendanceActions(), kindOf = useEmployeeKinds();
   return <section role="alert" aria-label="Nhân viên chưa điểm danh ra về" className="my-3 space-y-2 rounded-control border border-warning p-3 text-sm">
     <p className="font-medium">Còn {employees.length} nhân viên chưa điểm danh ra về, nên chưa thể hoàn tất.</p>
-    <ul className="list-disc pl-5">{employees.map(item => <li key={item.id}>{item.name}{item.code ? ` · ${item.code}` : ""} ({item.checkedIn ? "đang làm, chưa ra về" : "chưa điểm danh vào"})
+    <ul className="list-disc pl-5">{employees.map(item => <li key={item.id}>{item.name}<EmployeeTypeBadge type={kindOf(item.id)} className="ml-1.5" />{item.code ? ` · ${item.code}` : ""} ({item.checkedIn ? "đang làm, chưa ra về" : "chưa điểm danh vào"})
       <CrewAttendanceButton employeeId={item.id} name={item.name} checkedIn={item.checkedIn} actions={actions} /></li>)}</ul>
     {actions.error && <p role="alert" className="text-danger">{actions.error}</p>}
     {isOwner

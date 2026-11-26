@@ -1,138 +1,108 @@
 // @vitest-environment jsdom
 import { useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { employeeDetailFixture } from "@/features/employee-management/api/employee-wire.fixtures";
 import { employeeViewSchema, type Employee } from "./contracts";
 import { EmployeeAccountTab } from "./employee-account-tab";
 import { employeeAccountError } from "./employee-account-error";
 
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ children, title }: { children: ReactNode; title: string }) => <div role="dialog" aria-label={title}>{children}</div> }));
+vi.mock("@/features/operations/lookups", () => ({ loadOptions: async () => ({ status: "success", data: [] }) }));
 const fetchMock = vi.fn();
 const secret = "Synthetic-Only-Temp!91";
 const saved = () => employeeViewSchema.parse(employeeDetailFixture());
 const withoutAccount = (): Employee => ({ ...saved(), account: null, hasStaffAccount: false });
-function Harness() {
+const created = () => Response.json({ status: "success", data: { account: { id: saved().account!.id, username: "nguyen.van.an", displayName: "Nguyễn Văn An" }, temporaryPassword: secret, temporaryPasswordExpiresAt: "2026-11-11T12:00:00+07:00" } });
+const open = () => fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
+const dialog = () => within(screen.getByRole("dialog", { name: "Tạo tài khoản người dùng" }));
+const submit = () => fireEvent.submit(dialog().getByRole("button", { name: "Lưu" }).closest("form")!);
+function Harness({ onAccountChanged, onRefresh }: { onAccountChanged?(): void; onRefresh?(): void }) {
   const [employee, setEmployee] = useState(withoutAccount);
-  return <EmployeeAccountTab employee={employee} onSaved={setEmployee} />;
-}
-function openAndFill() {
-  fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản đăng nhập" }));
-  fireEvent.change(screen.getByLabelText("Tên tài khoản *"), { target: { value: "fixture.an" } });
+  return <EmployeeAccountTab employee={employee} onSaved={setEmployee} onAccountChanged={onAccountChanged} onRefresh={onRefresh} />;
 }
 beforeEach(() => { fetchMock.mockReset(); vi.stubGlobal("fetch", fetchMock); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-describe("employee account handover", () => {
-  it("shows one-time credentials, copies them and destroys the dialog on acknowledgement without transmitting a secret", async () => {
+describe("employee account tab: Cấp tài khoản opens the shared create form", () => {
+  it("fills the form from the employee, posts them as the linked employee, shows the password once and tells the list to refresh", async () => {
     const clipboard = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: clipboard } });
-    fetchMock.mockResolvedValue(Response.json({ status: "success", data: { employee: saved(), temporaryPassword: secret, temporaryPasswordExpiresAt: "2026-11-11T12:00:00+07:00" } }));
-    const local = vi.spyOn(Storage.prototype, "setItem");
-    render(<Harness />); openAndFill();
-    fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
+    fetchMock.mockResolvedValue(created());
+    const local = vi.spyOn(Storage.prototype, "setItem"), changed = vi.fn(), refresh = vi.fn();
+    render(<Harness onAccountChanged={changed} onRefresh={refresh} />); open();
+    expect((dialog().getByLabelText("Tên hiển thị *") as HTMLInputElement).value).toBe("Nguyễn Văn An");
+    expect((dialog().getByLabelText("Điện thoại *") as HTMLInputElement).value).toBe("0900000000");
+    expect((dialog().getByLabelText("Tên đăng nhập *") as HTMLInputElement).value).toBe("nguyen.van.an");
+    expect(dialog().getByText(/Hệ thống tạo mật khẩu tạm, hiện một lần sau khi lưu/)).toBeTruthy();
+    expect(dialog().queryByLabelText(/Mật khẩu/)).toBeNull();
+    submit();
     expect(await screen.findByText(secret)).toBeTruthy();
-    expect(screen.getByText(/sẽ không được hiển thị lại/)).toBeTruthy();
-    expect(screen.getByText("Hết hạn")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Sao chép mật khẩu tạm" }));
     await waitFor(() => expect(clipboard).toHaveBeenCalledWith(secret));
     fireEvent.click(screen.getByRole("button", { name: "Đã bàn giao, đóng" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.body.textContent).not.toContain(secret);
-    expect(screen.getByText("@fixture.an")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Cấp tài khoản đăng nhập" })).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(refresh).toHaveBeenCalledTimes(1);
     const [url, request] = fetchMock.mock.calls[0];
-    expect(url).toBe("/api/operations/employees?");
-    expect(JSON.parse(request.body)).toEqual({ action: "issue-account", id: saved().id, body: { username: "fixture.an" } });
-    // The employee has no email anywhere: the dialog offers no such field.
-    expect(screen.queryByLabelText(/Email/)).toBeNull();
+    expect(url).toBe("/api/accounts");
+    expect(JSON.parse(request.body)).toEqual({ displayName: "Nguyễn Văn An", username: "nguyen.van.an", phoneNumber: "0900000000", email: null, employeeId: saved().id, grants: [], note: null });
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain(secret);
     expect(local).not.toHaveBeenCalled();
   });
-  it("grants the chosen role after the account exists and still shows the password when a grant fails", async () => {
-    const grantRow = { id: "33333333-3333-4333-8333-333333333333", roleId: "44444444-4444-4444-8444-444444444444", roleName: "Kế toán", zoneId: null, zoneName: null, allZones: true, effectiveFrom: "2026-11-20", effectiveTo: null, state: "Effective", revokedAt: null, revokeReason: null };
-    for (const grantResponse of [Response.json({ status: "success", data: grantRow }), Response.json({ status: "error", code: "MSG-GEN-02" }, { status: 409 })]) {
-      fetchMock.mockReset();
-      fetchMock.mockImplementation(async (url: string) => String(url).startsWith("/api/operations/employees")
-        ? Response.json({ status: "success", data: { employee: saved(), temporaryPassword: secret, temporaryPasswordExpiresAt: "2026-11-11T12:00:00+07:00" } })
-        : String(url).startsWith("/api/account-grants/create") ? grantResponse.clone() : Response.json({ status: "error" }, { status: 500 }));
-      const view = render(<Harness />); openAndFill();
-      fireEvent.click(screen.getByLabelText("Kế toán"));
-      fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản và phân quyền" }));
-      expect(await screen.findByText(secret)).toBeTruthy();
-      const grantCalls = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/account-grants/create"));
-      expect(grantCalls).toHaveLength(1);
-      expect(JSON.parse(grantCalls[0][1].body)).toEqual({ accountId: saved().account!.id, zoneId: null, role: "ACCOUNTANT" });
-      expect(await screen.findByText(grantResponse.ok ? /Đã phân quyền/ : /chưa gán được: Kế toán · Tất cả vùng/)).toBeTruthy();
-      view.unmount();
-    }
+  it("sends a chosen role together with the employee", async () => {
+    fetchMock.mockResolvedValue(created());
+    render(<Harness />); open();
+    fireEvent.change(dialog().getByLabelText("Vai trò của dòng 1"), { target: { value: "ACCOUNTANT" } });
+    submit();
+    await screen.findByText(secret);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).grants).toEqual([{ zoneId: null, role: "ACCOUNTANT" }]);
   });
-  it("sends the username only, prevents double-submit and never replays an uncertain write", async () => {
+  it("prevents a double submit and never replays an uncertain write", async () => {
     let finish!: (value: Response) => void;
     fetchMock.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
-    render(<Harness />); openAndFill();
-    const submit = screen.getByRole("button", { name: "Cấp tài khoản" }).closest("form")!;
-    fireEvent.submit(submit); fireEvent.submit(submit);
+    render(<Harness />); open();
+    const form = dialog().getByRole("button", { name: "Lưu" }).closest("form")!;
+    fireEvent.submit(form); fireEvent.submit(form);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).body).toEqual({ username: "fixture.an" });
     finish(Response.json({ status: "unavailable" }, { status: 503 }));
-    await screen.findByText(/Chưa xác định được kết quả/);
-    fireEvent.submit(submit);
+    await screen.findByText(/Chưa biết tài khoản đã được tạo chưa/);
+    fireEvent.submit(form);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect((screen.getByRole("button", { name: "Cấp tài khoản" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((dialog().getByRole("button", { name: "Lưu" }) as HTMLButtonElement).disabled).toBe(true);
   });
-  it("retains entered values after a known failure and uses safe Vietnamese copy", async () => {
-    fetchMock.mockResolvedValue(Response.json({ status: "error", code: "MSG-ACCOUNT-09", message: secret }, { status: 409 }));
-    render(<Harness />); openAndFill();
-    fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
-    await screen.findByText(/đã được sử dụng/);
-    expect((screen.getByLabelText("Tên tài khoản *") as HTMLInputElement).value).toBe("fixture.an");
+  it("keeps what was typed after a known failure and uses safe Vietnamese copy", async () => {
+    fetchMock.mockResolvedValue(Response.json({ status: "rejected", code: "MSG-ACCOUNT-09", message: secret }, { status: 409 }));
+    render(<Harness />); open(); submit();
+    await screen.findByText(/đã có người dùng/);
+    expect((dialog().getByLabelText("Tên đăng nhập *") as HTMLInputElement).value).toBe("nguyen.van.an");
     expect(document.body.textContent).not.toContain(secret);
-    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    fireEvent.click(dialog().getByRole("button", { name: "Hủy" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
-  it("requests a fresh detail read after closing an uncertain issuance", async () => {
-    const refresh = vi.fn(), onSaved = vi.fn();
-    fetchMock.mockResolvedValue(Response.json({ status: "unavailable" }, { status: 503 }));
-    render(<EmployeeAccountTab employee={withoutAccount()} onSaved={onSaved} onRefresh={refresh} />);
-    openAndFill();
-    fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
-    await screen.findByText(/Chưa xác định được kết quả/);
-    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
-    expect(refresh).toHaveBeenCalledTimes(1);
-    expect(onSaved).not.toHaveBeenCalled();
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-  it("prefills a suggested username and explains a missing phone with a way to fix it", () => {
-    const withoutPhone = { ...withoutAccount(), phoneNumber: "" };
-    render(<EmployeeAccountTab employee={withoutPhone} onSaved={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản đăng nhập" }));
-    expect((screen.getByLabelText("Tên tài khoản *") as HTMLInputElement).value).toMatch(/^[a-z0-9.]+$/);
-    expect(screen.getByRole("alert").textContent).toMatch(/chưa có số điện thoại/);
-    expect(screen.getByRole("button", { name: "Bổ sung số điện thoại" })).toBeTruthy();
-    const submit = screen.getByRole("button", { name: "Cấp tài khoản" }) as HTMLButtonElement;
-    expect(submit.disabled).toBe(true);
-    expect(document.getElementById(submit.getAttribute("aria-describedby")!)?.textContent).toMatch(/số điện thoại/);
-  });
-  it("focuses an empty username before sending and has no account action for Left or inaccessible employees", () => {
-    const view = render(<EmployeeAccountTab employee={withoutAccount()} onSaved={vi.fn()} />);
-    openAndFill();
-    fireEvent.change(screen.getByLabelText("Tên tài khoản *"), { target: { value: "   " } });
-    fireEvent.click(screen.getByRole("button", { name: "Cấp tài khoản" }));
-    expect(document.activeElement).toBe(screen.getByLabelText("Tên tài khoản *"));
+  it("asks for the phone when the profile has none, without sending anything", () => {
+    render(<EmployeeAccountTab employee={{ ...withoutAccount(), phoneNumber: "" }} onSaved={vi.fn()} />); open();
+    submit();
+    expect(screen.getByRole("alert").textContent).toMatch(/10 chữ số/);
     expect(fetchMock).not.toHaveBeenCalled();
-    view.unmount();
+  });
+  it("says a seasonal worker has no login account and offers no way to create or link one", () => {
+    render(<EmployeeAccountTab employee={{ ...withoutAccount(), employeeType: "SeasonalWorker" }} onSaved={vi.fn()} />);
+    expect(screen.getByText(/Không có tài khoản đăng nhập/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cấp tài khoản" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Liên kết tài khoản có sẵn" })).toBeNull();
+  });
+  it("has no account action for a Left or inaccessible employee", () => {
     const left = render(<EmployeeAccountTab employee={{ ...withoutAccount(), status: "Left" }} onSaved={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: "Cấp tài khoản đăng nhập" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cấp tài khoản" })).toBeNull();
     left.unmount();
     render(<EmployeeAccountTab employee={{ ...withoutAccount(), canMaintain: false }} onSaved={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: "Cấp tài khoản đăng nhập" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cấp tài khoản" })).toBeNull();
   });
   it.each([
-    ["MSG-GEN-01", 400, /Kiểm tra tên tài khoản và số điện thoại/],
-    ["MSG-GEN-09", 409, /đã có tài khoản hoặc đã nghỉ việc/],
+    ["MSG-GEN-01", 400, /kiểm tra tên đăng nhập và số điện thoại/],
+    ["MSG-GEN-09", 409, /đã có tài khoản hoặc nhân viên đã nghỉ việc/],
     ["MSG06", 409, /Hồ sơ đã thay đổi/],
     [undefined, 403, /Chỉ Chủ hợp tác xã/],
     ["MSG-GEN-08", 400, /Chỉ Chủ hợp tác xã/],

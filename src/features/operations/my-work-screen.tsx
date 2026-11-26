@@ -27,7 +27,7 @@ export function MyWorkScreen() {
   const [tab, setTab] = useState<MyWorkTab>("assignments");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(10);
   const [expanded, setExpanded] = useState<string>();
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState<string>();

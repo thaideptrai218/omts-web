@@ -6,18 +6,18 @@ const license = z.object({ document_type: z.enum(["SEA_AREA_ALLOCATION", "AQUACU
 const licenseNames = { SEA_AREA_ALLOCATION: "Quyết định giao khu vực biển", AQUACULTURE_LICENSE: "Giấy phép nuôi trồng thủy sản", FOOD_SAFETY_COMMITMENT: "Cam kết an toàn thực phẩm", OTHER: "Giấy tờ" };
 const date = (value: string) => value.split("-").reverse().join("/");
 const amount = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 6 });
-const outside = z.object({ indicator: z.enum(["PH", "SALINITY"]), value: z.number().finite(), unit: z.string().nullable(), direction: z.enum(["High", "Low"]),
+const outside = z.object({ indicator: z.enum(["PH", "SALINITY", "TEMPERATURE"]), value: z.number().finite(), unit: z.string().nullable(), direction: z.enum(["High", "Low"]),
   min: z.number().finite().nullable(), max: z.number().finite().nullable() });
 
 /** Catalogue #23: translate atomic parameters, never derive identifiers or messages from English prose. */
 export function notificationText(code: string | null, parameters: unknown, fallback: { title: string; body: string | null }) {
   if (code === null) return fallback; // Historical rows can predate structured content.
   if (code === "MSG-WATER-03") {
-    const parsed = z.object({ corrected: z.boolean(), zone_name: text, raft_code: text.nullable(), measurement_time: z.iso.datetime({ offset: true }), values_outside: z.array(outside).min(1).max(2) }).safeParse(parameters);
+    const parsed = z.object({ corrected: z.boolean(), zone_name: text, raft_code: text.nullable(), measurement_time: z.iso.datetime({ offset: true }), values_outside: z.array(outside).min(1).max(3) }).safeParse(parameters);
     if (!parsed.success) return undefined;
     const p = parsed.data, when = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(p.measurement_time));
     const values = p.values_outside.map((v) => {
-      const unit = v.indicator === "SALINITY" ? " ‰" : "", metric = v.indicator === "PH" ? "pH" : "Độ mặn";
+      const unit = { PH: "", SALINITY: " ‰", TEMPERATURE: " °C" }[v.indicator], metric = { PH: "pH", SALINITY: "Độ mặn", TEMPERATURE: "Nhiệt độ" }[v.indicator];
       const limit = v.min !== null && v.max !== null ? `${amount(v.min)}–${amount(v.max)}${unit}` : v.min !== null ? `ít nhất ${amount(v.min)}${unit}` : v.max !== null ? `tối đa ${amount(v.max)}${unit}` : "chưa đặt ngưỡng";
       return `${metric} ${amount(v.value)}${unit} ${v.direction === "High" ? "cao" : "thấp"} hơn ngưỡng cho phép (${limit})`;
     }).join("; ");
@@ -90,5 +90,8 @@ export function notificationText(code: string | null, parameters: unknown, fallb
     return { title: "Đã hoàn thành thả giống", body: `Bè ${p.raft_code} đã thả giống ${amount(p.seeded_count)}/${amount(p.lane_count)} làn.` };
   }
   // A later module can add a code before this client ships its translation.
-  return { title: "Thông báo mới", body: "Bạn có thông báo mới từ hợp tác xã." };
+  return neutralNotificationText;
 }
+
+/** Shown for a later code, and for a known code whose parameters this client cannot read, so one row never hides the whole list. */
+export const neutralNotificationText = { title: "Thông báo mới", body: "Bạn có thông báo mới từ hợp tác xã." };

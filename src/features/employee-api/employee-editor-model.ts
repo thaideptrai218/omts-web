@@ -87,13 +87,24 @@ export function buildEmployeeSaveBody(data: z.infer<typeof employeeApiEditorSche
     ward: data.wardCommune || null,
     otherInformation: data.otherInformation || null,
     notes: data.notes || null,
-    workingZoneIds: data.workingZoneIds,
+    // A seasonal worker has no fixed working zone: none is sent, whatever was ticked before the type was switched.
+    workingZoneIds: data.employeeType === "SeasonalWorker" ? [] : data.workingZoneIds,
     bankAccount: toEmployeeBankAccount(data.bankAccount),
     ...(data.employeeType ? { employeeType: data.employeeType } : {}),
     ...(baseline && data.employeeType && data.employeeType !== baseline.employeeType ? { employeeTypeFrom: data.employeeTypeFrom } : {}),
     jobTypeIds: data.jobTypeIds,
     ...(baseline ? { rowVersion: baseline.rowVersion } : {}),
   };
+}
+
+/**
+ * Switching the type in a form: a seasonal worker has no zone, so the zones are emptied; going back to an official (nội bộ) employee gives back the zones the record had when it was one, else none to choose.
+ * The date a changed type applies from is asked only on an existing record, as before.
+ */
+export function withEmployeeType<T extends { employeeType: string; workingZoneIds: string[] }>(values: T, employeeType: string, baseline?: Employee | null): T {
+  if (employeeType === values.employeeType) return values;
+  const zones = employeeType === "SeasonalWorker" ? [] : baseline?.employeeType === "Staff" ? baseline.workingZones.map(zone => zone.id) : [];
+  return { ...values, employeeType, workingZoneIds: zones };
 }
 
 /** API form validation stays separate from the legacy mock editor. */

@@ -47,14 +47,14 @@ export const weighedKgValue = z.number().positive().max(1_000_000_000).refine(de
 const version = { rowVersion: z.string().min(1).max(200) };
 
 /**
- * Body of POST weigh: a lot with product lines names the weighed kg of every line (`lineNumber` counts from 1 in the order of the lines), a lot without lines gives one `weighedKg`.
- * `weighedAt` is optional (the API takes now) and may not be before the harvest or in the future; the API checks that against the lot.
+ * Body of POST weigh ("Hoàn tất"): the kg of the lot are the sum of its cages on the sheet, so only the version of the sheet and an optional time go.
+ * `weighedAt` (the API takes now) may not be before the harvest or in the future; the API checks that against the lot.
  */
-export const weighValues = z.strictObject({
-  ...version, weighedAt: z.iso.datetime({ offset: true }).optional(),
-  lines: z.array(z.strictObject({ lineNumber: z.number().int().min(1).max(50), weighedKg: weighedKgValue })).max(50).refine((lines) => new Set(lines.map((line) => line.lineNumber)).size === lines.length),
-  weighedKg: weighedKgValue.optional(),
-}).refine((value) => (value.lines.length > 0) !== (value.weighedKg !== undefined));
+export const weighValues = z.strictObject({ ...version, weighedAt: z.iso.datetime({ offset: true }).optional() });
+/** Body of POST/PUT of one cage: `productId` is left out when the lot has one product; `clientOperationId` makes an add safe to send again. */
+export const cageValues = z.strictObject({ kg: weighedKgValue, productId: z.guid().optional(), clientOperationId: z.guid().optional() });
+export const cageUpdateValues = z.strictObject({ cageId: z.guid(), kg: weighedKgValue, productId: z.guid().optional() });
+export const cageRemoveValues = z.strictObject({ cageId: z.guid() });
 export const reopenValues = z.strictObject({ ...version, reason: z.string().trim().min(1).max(1000) });
 /** Close by hand: the kg left over (0 or more, 2 decimals) and, above 0, why it was not sold. The Owner may close although the crew is not checked out, with a reason. */
 export const closeValues = z.strictObject({

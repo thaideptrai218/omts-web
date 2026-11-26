@@ -12,8 +12,10 @@ import { sameEmployeeSession } from "../employees/employee-session";
 
 const id = z.guid();
 const resourceSchema = z.enum(resourceKeys);
-const mutationSchema = z.strictObject({ action: z.enum(["create", "update", "discontinue", "reactivate", "lock", "unlock"]),
+const mutationSchema = z.strictObject({ action: z.enum(["create", "update", "discontinue", "reactivate", "lock", "unlock", "delete"]),
   id: id.optional(), zoneId: id.optional(), body: z.record(z.string(), z.json()) });
+/** Account list flag the Owner may send: only the literal value "true" is accepted. Deleted accounts are never requested: the web hides them. */
+const accountFlags = ["unlinked"];
 const paths: Record<ResourceKey, string> = { zones: "/api/zones", suppliers: "/api/suppliers", "input-items": "/api/farming-input-items",
   employees: "/api/employees", rafts: "/api/rafts", accounts: "/api/accounts", roles: "/api/roles", customers: "/api/customers" };
 
@@ -36,7 +38,8 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     const query = new URL(request.url).searchParams;
     if (request.method === "GET") {
       const keys = [...query.keys()];
-      if (new Set(keys).size !== keys.length || keys.some((name) => !["proposal", "id", "zoneId", "search", "page", "pageSize", "statusId", ...(category ? [category.key] : [])].includes(name))) return json({ status: "invalid-input" }, 400);
+      if (new Set(keys).size !== keys.length || keys.some((name) => !["proposal", "id", "zoneId", "search", "page", "pageSize", "statusId", ...(key === "accounts" ? accountFlags : []), ...(category ? [category.key] : [])].includes(name))) return json({ status: "invalid-input" }, 400);
+      for (const name of accountFlags) if (query.has(name) && query.get(name) !== "true") return json({ status: "invalid-input" }, 400);
       if (category && query.has(category.key) && (query.has("id") || !category.options.some(([value]) => value === query.get(category.key)))) return json({ status: "invalid-input" }, 400);
       if (query.has("proposal")) {
         // Code proposals: input items, zones (KV01...) and rafts (needs the zone id in the query).
@@ -67,7 +70,7 @@ export async function handleResourceRequest(request: Request, resourceName: stri
       ({ action, zoneId, body } = input.data); recordId = input.data.id;
       if (!resources[key].editable || (action === "create" && resources[key].creatable === false) || (action !== "create" && !recordId)
         || (key === "customers" && !["create", "update"].includes(action))
-        || (["lock", "unlock"].includes(action) && key !== "accounts")) return json({ status: "invalid-input" }, 400);
+        || (["lock", "unlock", "delete"].includes(action) && key !== "accounts")) return json({ status: "invalid-input" }, 400);
       const allowed = [...resources[key].fields.map((field) => field.key), "rowVersion", "reason",
         ...(key === "employees" ? ["workingZoneIds", "bankAccount", "accountId"] : []), ...(key === "rafts" ? ["laneCount", "lengthM", "widthM", "laneLengths"] : [])];
       if (key === "rafts" && ["create", "update"].includes(action)) {
@@ -86,10 +89,10 @@ export async function handleResourceRequest(request: Request, resourceName: stri
     if (key === "rafts" && !recordId && !zoneId) return json({ status: "invalid-input" }, 400);
     let path = key === "rafts" && !recordId ? `/api/zones/${zoneId}/rafts` : paths[key] + (recordId ? `/${recordId}` : "");
     if (action === "proposal") path += "/next-code";
-    if (["discontinue", "reactivate", "lock", "unlock"].includes(action)) path += `/${action}`;
+    if (["discontinue", "reactivate", "lock", "unlock", "delete"].includes(action)) path += `/${action}`;
     const upstreamQuery = new URLSearchParams();
     if (action === "list") {
-      const allowed = key === "roles" || key === "rafts" ? ["statusId"] : key === "input-items" ? ["search", "statusId"] : ["search", "statusId", "page", "pageSize"];
+      const allowed = key === "roles" || key === "rafts" ? ["statusId"] : key === "input-items" ? ["search", "statusId"] : ["search", "statusId", "page", "pageSize", ...(key === "accounts" ? accountFlags : [])];
       for (const name of allowed) if (query.has(name)) upstreamQuery.set(name, query.get(name)!);
       if (category && query.has(category.key)) upstreamQuery.set(category.key, query.get(category.key)!);
     }

@@ -8,13 +8,24 @@
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
 .sidebar, .card { border: 1px solid var(--omts-color-border); border-radius: 8px; background: var(--omts-color-surface); min-width: 0; }
 .sidebar { padding: 6px 8px; }
-/* The list never makes the row taller than the page beside it: it takes the height of the work card and scrolls inside (scrollbar hidden). */
+/* One behaviour everywhere: the list is as tall as the window (scrolls inside, scrollbar hidden) and stays in view while the page beside it scrolls. */
 @media (min-width: 900px) {
-  .layout { align-items: stretch; }
-  .layout > .card { min-height: clamp(420px, 68dvh, 620px); }
-  .sidebar { height: 0; min-height: 100%; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
+  .layout { align-items: start; }
+  .layout > .card { min-height: calc(100dvh - 130px); }
+  .sidebar { position: sticky; top: 122px; max-height: calc(100dvh - 170px); overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
   .sidebar::-webkit-scrollbar { display: none; }
+  .layoutCollapsed { grid-template-columns: 52px minmax(0, 1fr) !important; }
+  .layoutCollapsed .sidebar { padding: 6px 4px; }
+  .layoutCollapsed .sidebar a { justify-content: center; padding-inline: 0; }
+  .layoutCollapsed .sidebar a span, .layoutCollapsed .groupLabel, .layoutCollapsed .collapse span { display: none; }
+  .layoutCollapsed .group + .group { margin-top: 2px; }
 }
+.collapse { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 30px; padding: 4px 10px; margin-bottom: 4px; border: 0; border-radius: 6px; background: none; font-size: 12px; color: var(--omts-color-text-muted); cursor: pointer; }
+.collapse svg { flex-shrink: 0; width: 15px; height: 15px; }
+.collapse:hover { background: var(--omts-color-surface-subtle); }
+.layoutCollapsed .collapse { justify-content: center; padding-inline: 0; }
+@media (max-width: 899px) { .collapse { display: none; } }
+
 .group + .group { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--omts-color-border); }
 .groupLabel { padding: 8px 8px 4px; font-size: 11px; font-weight: 600; color: var(--omts-color-text-muted); }
 .sidebar ul { display: flex; flex-direction: column; gap: 1px; }

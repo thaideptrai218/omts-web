@@ -16,15 +16,15 @@ export type OriginFetchResult =
   | Readonly<{ status: "unavailable" }>;
 
 /** Đổi ảnh sang nguồn an toàn (ảnh không dùng được bị loại); bỏ các URL không hiển thị để không rò rỉ sang trình duyệt. */
-function withSafePhotos(page: ProvenancePage, origin: string): ProvenancePage {
-  const safe = (urls: string[]) => urls.flatMap((raw) => resolvePhotoSource(raw, origin) ?? []);
+function withSafePhotos(page: ProvenancePage, origin: string, environment: Readonly<Record<string, unknown>>): ProvenancePage {
+  const safe = (urls: string[]) => urls.flatMap((raw) => resolvePhotoSource(raw, origin, environment) ?? []);
   return {
     ...page,
     // Logo và ảnh bìa là dữ liệu công khai của HTX (hồ sơ trong Thiết lập) và đi qua proxy ảnh; tệp chứng nhận thì chưa công khai nên vẫn bị loại.
     cooperative: {
       ...page.cooperative,
-      logoUrl: page.cooperative.logoUrl ? resolvePhotoSource(page.cooperative.logoUrl, origin) : null,
-      coverPhotoUrl: page.cooperative.coverPhotoUrl ? resolvePhotoSource(page.cooperative.coverPhotoUrl, origin) : null,
+      logoUrl: page.cooperative.logoUrl ? resolvePhotoSource(page.cooperative.logoUrl, origin, environment) : null,
+      coverPhotoUrl: page.cooperative.coverPhotoUrl ? resolvePhotoSource(page.cooperative.coverPhotoUrl, origin, environment) : null,
       certifications: page.cooperative.certifications.map((c) => ({ ...c, fileUrl: null })),
     },
     lots: page.lots.map((lot) => lot.origin
@@ -81,7 +81,7 @@ export async function fetchProvenancePage(
     const body = await readBoundedBody(response, MAX_PAGE_BYTES);
     if (!body) return { status: "unavailable" };
     const parsed = provenancePageSchema.safeParse(JSON.parse(new TextDecoder().decode(body)));
-    return parsed.success ? { status: "ok", page: withSafePhotos(parsed.data, origin) } : { status: "unavailable" };
+    return parsed.success ? { status: "ok", page: withSafePhotos(parsed.data, origin, environment) } : { status: "unavailable" };
   } catch {
     // Không ném lại lỗi gốc: tránh lộ origin backend ra giao diện.
     return { status: "unavailable" };

@@ -47,7 +47,7 @@ it("shows nothing and calls nothing to an account that may not read harvest reco
 it("lists lots newest code first with every column, the totals of the filtered lots and no action button on a closed row", async () => {
   owner(); mount();
   await screen.findByText("LTH000007");
-  expect(state.list.mock.calls[0][0]).toMatchObject({ sort: "code", desc: "true", page: "1", pageSize: "15" });
+  expect(state.list.mock.calls[0][0]).toMatchObject({ sort: "code", desc: "true", page: "1", pageSize: "10" });
   for (const heading of ["Mã lô", "Thời gian thu", "Vùng / bè", "Sản phẩm", "Lồng", "Kg cân", "Đã bán", "Còn lại", "Hao hụt", "KHT", "Trạng thái"]) expect(screen.getByRole("columnheader", { name: new RegExp(heading) })).toBeTruthy();
   const totalsRow = screen.getByRole("row", { name: "Tổng hợp theo bộ lọc" });
   expect(within(totalsRow).getByText("Tổng (1 lô)")).toBeTruthy();

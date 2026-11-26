@@ -57,3 +57,17 @@ it("shows Lô giống only to an account that reads the receipts", () => {
   const receipts = setup("Staff", [{ functionCode: "PURCHASE_RECEIPTS", action: "View" }]);
   expect(receipts.querySelector('a[href="/farming/seed-lots"]')).not.toBeNull();
 });
+
+it("gives a zone manager Mua hàng with receipts, returns and the supplier list, but no supplier payments, customers or sales", () => {
+  const codes = (fn: string, actions: string[]) => actions.map((action) => ({ functionCode: fn, action }));
+  const nav = setup("Staff", [
+    ...codes("PURCHASE_RECEIPTS", ["View", "Create", "Edit", "Delete", "Export"]), ...codes("SUPPLIERS", ["View"]),
+    ...codes("CULTIVATION_CYCLES", ["View", "Create"]), ...codes("WORK_ASSIGNMENTS", ["View", "Create"]), ...codes("HARVESTS", ["View", "Create"]),
+  ]);
+  const buying = open(nav, "Mua hàng");
+  expect(hrefs(buying)).toEqual(expect.arrayContaining([
+    ["Nhập giống", "/operations/seed-receipts"], ["Nhập vật tư", "/operations/supply-receipts"], ["Trả giống nhập", "/operations/seed-returns"], ["Trả vật tư nhập", "/operations/supply-returns"], ["Nhà cung cấp", "/workspace/suppliers"],
+  ]));
+  expect(buying.querySelector('a[href="/operations/supplier-payments"]')).toBeNull();
+  for (const href of ["/workspace/customers", "/sales/orders", "/operations/sales-invoice-list", "/operations/customer-payments", "/operations/sales-returns"]) expect(nav.querySelector(`a[href="${href}"]`)).toBeNull();
+});

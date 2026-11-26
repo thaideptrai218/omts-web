@@ -12,7 +12,7 @@ const filters = {
 const filterNames = Object.keys(filters) as (keyof typeof filters)[];
 const readQuery = z.strictObject({
   action: z.enum(["list", "export", "detail", "preview"]), id: id.optional(), ...filters,
-  page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["15", "30", "50", "100"]).optional(),
+  page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "15", "30", "50", "100"]).optional(),
 });
 const writeInput = z.strictObject({ action: z.enum(["create", "cancel"]), id, zoneId: z.undefined().optional(), body: z.unknown().default({}) });
 
@@ -38,7 +38,7 @@ export function salesReturnsPlan(method: string, query: URLSearchParams, input?:
     if (q.id || q.from && q.to && q.from > q.to || !only([...filterNames, ...(q.action === "list" ? ["page", "pageSize"] : [])])) return;
     const params = new URLSearchParams();
     for (const name of filterNames) if (q[name] !== undefined) params.set(name, q[name]);
-    if (q.action === "list") { params.set("page", q.page ?? "1"); params.set("pageSize", q.pageSize ?? "15"); }
+    if (q.action === "list") { params.set("page", q.page ?? "1"); params.set("pageSize", q.pageSize ?? "10"); }
     const path = `/api/sales-returns${q.action === "export" ? "/export" : ""}${params.size ? `?${params}` : ""}`;
     return q.action === "export" ? { ...base, path, zoneId: q.zoneId, permission: "View", schema: z.strictObject({}), file: "export" } : { ...base, path, zoneId: q.zoneId, permission: "View", schema: c.returnPage };
   }

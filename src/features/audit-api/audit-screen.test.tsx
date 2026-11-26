@@ -28,7 +28,7 @@ it("loads the log by itself with server paging and has no lookup button or expor
   expect(await screen.findByText("TT000012")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Tra cứu" })).toBeNull();
   expect(screen.queryByRole("button", { name: /Xuất file/ })).toBeNull();
-  expect(lastQuery()).toMatchObject({ page: "1", pageSize: "15", recordCode: "", recordType: "", action: "" });
+  expect(lastQuery()).toMatchObject({ page: "1", pageSize: "10", recordCode: "", recordType: "", action: "" });
   expect(lastQuery().from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   expect(screen.getByRole("navigation", { name: "Phân trang" }).textContent).toContain("1–1 trong 1 thao tác");
 });

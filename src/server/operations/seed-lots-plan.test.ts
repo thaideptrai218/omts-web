@@ -22,7 +22,7 @@ describe("seed lot list and export", () => {
   });
   it("lists the first page of the whole cooperative when nothing is filtered", () => {
     const plan = get({ action: "list" });
-    expect(plan).toMatchObject({ path: "/api/seed-lots?page=1&pageSize=15", permission: "View" });
+    expect(plan).toMatchObject({ path: "/api/seed-lots?page=1&pageSize=10", permission: "View" });
     expect(plan?.zoneId).toBeUndefined();
   });
   it.each<Record<string, string>>([

@@ -12,7 +12,7 @@ const mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 const many = <T extends z.ZodType>(value: T) => z.union([value, z.array(value).max(20)]).optional();
 const sort = { sortBy: z.enum(["code", "date", "supplier", "total", "status"]).optional(), sortDir: z.enum(["asc", "desc"]).optional() };
 const period = { from: z.iso.date().optional(), to: z.iso.date().optional(), search: z.string().max(200).optional(), supplierId: z.guid().optional(), statusIds: many(z.enum(["1701", "1702", "1703", "1901", "1902", "1903"])), zoneIds: many(z.guid()) };
-const paging = { page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["15", "30", "50"]).optional() };
+const paging = { page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "15", "30", "50"]).optional() };
 /** A receipt or a return is a Seed document or a Supply document (Material and Other) and never mixes them; the Giống and Vật tư screens each ask for one kind. */
 const documentKind = z.enum(["Seed", "Supply"]);
 const receiptFilters = { ...period, ...sort, kind: documentKind.optional(), itemGroups: many(z.enum(["Seed", "Material", "Other"])), raftId: z.guid().optional() };

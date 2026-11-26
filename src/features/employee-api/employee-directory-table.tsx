@@ -8,7 +8,8 @@ import { formatHours } from "@/features/payroll/payroll-model";
 import { managementStyles, SortableHeader, type SortState } from "@/components/ui/management-screen/management-table";
 import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import type { EmployeeListItemDto } from "@/features/employee-management/api/employee-contract.schemas";
-import { accountLabel, employmentLabel, employeeTypeLabel, dateLabel } from "./employee-editor-model";
+import { EmployeeTypeBadge } from "./employee-type-badge";
+import { accountLabel, employmentLabel, dateLabel } from "./employee-editor-model";
 import { EmployeeDetailPanel } from "./employee-detail-panel";
 import type { EmployeeDetailCache } from "./use-employee-detail";
 import type { Employee } from "./contracts";
@@ -38,12 +39,12 @@ const text = (value: string, className = "") => <span className={`${styles.trunc
 const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase("vi") ?? "?";
 export const employeeColumns: readonly Column[] = [
   // The name is the identity column and stays FIRST: while a row is open the management kit keeps only the first data column (plus the last), so any other order hides the name beside the detail pane.
-  { key: "name", label: "Họ và tên", width: 190, sort: "name", render: (row, chip) => <span className={styles.nameCell}><span className={styles.avatar} aria-hidden="true">{initial(row.fullName)}</span>{text(row.fullName, styles.name)}{chip}</span> },
+  { key: "name", label: "Họ và tên", width: 190, sort: "name", render: (row, chip) => <span className={styles.nameCell}><span className={styles.avatar} aria-hidden="true">{initial(row.fullName)}</span>{text(row.fullName, styles.name)}<EmployeeTypeBadge type={row.employeeType} />{chip}</span> },
   // The backend cannot sort by login name, so this header is plain. The code stays available in the column picker.
   { key: "username", label: "Tên đăng nhập", width: 160, render: (row, _chip, link) => link ?? <span className={styles.meta}>—</span> },
   { key: "code", label: "Mã nhân viên", width: 116, sort: "code", defaultHidden: true, render: row => text(row.code, "font-mono tabular-nums") },
   { key: "phone", label: "Số điện thoại", width: 122, sort: "phone", render: row => text(row.phoneNumber ?? "—") },
-  { key: "type", label: "Loại nhân viên", width: 132, sort: "type", render: row => <span className={styles.typeChip} title={employeeTypeLabel(row.employeeType)}>{employeeTypeLabel(row.employeeType)}</span> },
+  { key: "type", label: "Loại nhân viên", width: 132, sort: "type", render: row => row.employeeType ? <EmployeeTypeBadge type={row.employeeType} showLabel /> : <span className={styles.meta}>—</span> },
   { key: "jobs", label: "Loại công việc", width: 140, defaultHidden: true, render: row => text(row.jobTypes.map(job => job.name).join(", ")) },
   { key: "zones", label: "Vùng làm việc", width: 112, render: row => <span className={styles.wrap} title={row.workingZones.map(zone => `${zone.code} · ${zone.name}`).join(", ")}>{row.workingZones.map(zone => zone.code).join(", ") || "—"}</span> },
   { key: "lastDay", label: "Ngày làm cuối", width: 116, sort: "lastWorkingDay", defaultHidden: true, render: row => text(row.lastWorkingDay ? dateLabel(row.lastWorkingDay) : "—") },
@@ -54,7 +55,10 @@ export const employeeColumns: readonly Column[] = [
 export const defaultEmployeeColumns = employeeColumns.filter(column => !column.defaultHidden).map(column => column.key);
 
 /** Pointer row opening supplements a native chevron button; rows add no extra keyboard stop. */
-export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detailRevision = 0, visible = defaultEmployeeColumns, zones = [], jobTypes = [], lookupsReady = false, onGuardChange, initialExpandedId, sort, onSort, selection, access = { manage: true, payroll: true } }: {
+export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detailRevision = 0, visible = defaultEmployeeColumns, zones = [], jobTypes = [], lookupsReady = false, onGuardChange, initialExpandedId, sort, onSort, selection, access = { manage: true, payroll: true }, onAccountChanged, initialExpandedTab }: {
+  /** Tab the initially expanded row opens on. */
+  initialExpandedTab?: "account";
+  onAccountChanged?(): void;
   /** What the viewer may open in a profile; the default is the Owner's. */
   access?: { manage: boolean; payroll: boolean };
   items: EmployeeListItemDto[]; disabled: boolean; onOpen?(id: string): void; cache: EmployeeDetailCache; onSaved(employee: Employee, note?: string): void; detailRevision?: number;
@@ -67,7 +71,7 @@ export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detail
 }) {
   const [expandedId, setExpandedId] = useState<string | undefined>(initialExpandedId);
   // Set by the account chip: that row opens on the account tab; `n` remounts the panel when the row was already open on another tab.
-  const [accountTab, setAccountTab] = useState<{ id: string; n: number }>();
+  const [accountTab, setAccountTab] = useState<{ id: string; n: number } | undefined>(() => initialExpandedTab && initialExpandedId ? { id: initialExpandedId, n: 1 } : undefined);
   const guard = useRef<EmployeeLeaveGuard | undefined>(undefined);
   const registerGuard = useCallback((next: EmployeeLeaveGuard | undefined) => { guard.current = next; onGuardChange?.(next); }, [onGuardChange]);
   // Fixed columns (chevron, checkbox) are taken off the width the others may use.
@@ -111,7 +115,7 @@ export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detail
         {columns.map(column => <td key={column.key} data-label={column.label}>{column.render(row, row.account ? <AccountChip row={row} openAccount={access.manage && !disabled ? openAccount : undefined} /> : undefined, row.account ? <AccountChip plain row={row} openAccount={access.manage && !disabled ? openAccount : undefined} /> : undefined)}</td>)}
       </OpenableTableRow>
       {expandedId === row.id && <DetailRow colSpan={span} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
-        <EmployeeDetailPanel key={accountTab?.id === row.id ? accountTab.n : 0} initialTab={accountTab?.id === row.id ? "account" : undefined} id={row.id} cache={cache} onSaved={onSaved} revision={detailRevision} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={registerGuard} payroll={access.payroll} manage={access.manage} />
+        <EmployeeDetailPanel key={accountTab?.id === row.id ? accountTab.n : 0} initialTab={accountTab?.id === row.id ? "account" : undefined} id={row.id} cache={cache} onSaved={onSaved} revision={detailRevision} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={registerGuard} payroll={access.payroll} manage={access.manage} onAccountChanged={onAccountChanged} />
       </div></DetailRow>}
     </Fragment>)}</tbody>
   </table>;

@@ -32,6 +32,12 @@ describe("harvest plan contracts", () => {
     expect(planView.safeParse({ ...plan, lines: [{ ...plan.lines[0], zone: undefined }] }).success).toBe(false);
   });
 
+  it("reads who harvests a plan, taking the zone manager when the API does not say or says something else", () => {
+    expect(planView.parse(plan).executor).toBe("ZoneManager");
+    expect(planView.parse({ ...plan, executor: "Owner" }).executor).toBe("Owner");
+    expect(planView.parse({ ...plan, executor: "Somebody" }).executor).toBe("ZoneManager");
+  });
+
   it("reads the Nhân công of a plan and one saved line, and refuses a line without its day", () => {
     const line = { lineId: id(7), raftId: id(2), raftCode: "B1", zoneId: id(1), zoneCode: "Z1", laneNumbers: [1, 2], plannedDate: "2026-11-18", canEdit: true,
       employees: [{ employeeId: id(8), code: "NV000001", name: "An", assignmentId: id(9), checkedIn: true }] };

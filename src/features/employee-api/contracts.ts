@@ -8,11 +8,13 @@ import { normalizeEmployeePhone } from "@/features/employee-management/schemas/e
 
 export { employeePageSchema, employeeViewSchema, jobTypeOptionsSchema } from "@/features/employee-management/api/employee-contract.schemas";
 export type { EmployeeViewDto as Employee } from "@/features/employee-management/api/employee-contract.schemas";
-export const createProfileSchema = employeeUpdateRequestSchema.omit({ rowVersion: true }).extend({ employeeType: z.enum(["SeasonalWorker", "Staff"]), workingZoneIds: z.array(z.guid()).min(1).refine(ids => new Set(ids).size === ids.length) });
+export const createProfileSchema = employeeUpdateRequestSchema.omit({ rowVersion: true }).extend({ employeeType: z.enum(["SeasonalWorker", "Staff"]), workingZoneIds: z.array(z.guid()).refine(ids => new Set(ids).size === ids.length) });
+/** An official (Staff) employee has a fixed working zone; a seasonal worker has none and is placed by assignment. */
+export const staffHasZone = <T extends { employeeType?: string; workingZoneIds: readonly string[] }>(value: T) => value.employeeType !== "Staff" || value.workingZoneIds.length > 0;
 /** Start of work cannot lie in the future. */
 export const validStartDate = <T extends { startDate?: string | null }>(value: T) => !value.startDate || value.startDate <= employeeBusinessDate(new Date());
 export function validProfileDate<T extends { birthday?: string | null }>(value: T) { return !value.birthday || value.birthday <= employeeBusinessDate(new Date()); }
-export const createProfileInputSchema = createProfileSchema.refine(validProfileDate, { path: ["birthday"] }).refine(validStartDate, { path: ["startDate"] });
+export const createProfileInputSchema = createProfileSchema.refine(validProfileDate, { path: ["birthday"] }).refine(validStartDate, { path: ["startDate"] }).refine(staffHasZone, { path: ["workingZoneIds"] });
 export const updateProfileInputSchema = employeeUpdateRequestSchema
   .refine(validProfileDate, { path: ["birthday"] })
   .refine(validStartDate, { path: ["startDate"] })

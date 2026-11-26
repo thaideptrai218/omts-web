@@ -1,4 +1,5 @@
 "use client";
+import { EmployeeTypeFilter } from "@/features/employee-api/employee-type-filter";
 import { SelectBox } from "@/components/ui/select-box";
 import { FilterGroup, FilterPills } from "@/components/ui/management-screen/management-layout";
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
@@ -46,6 +47,7 @@ export function WorkforceFilterRail({ board }: { board: WorkforceBoard }) {
         {board.zoneOptions.map((id) => <option key={id} value={id}>{board.zoneName(id)}</option>)}
       </SelectBox>
     </FilterGroup>}
+    <EmployeeTypeFilter value={board.typeFilter} onChange={board.setTypeFilter} name="workforce-employee-type" />
     <FilterPills legend="Trạng thái chấm công" name="workforce-status" value={board.status} options={Object.entries(attendanceLabel)} onChange={board.setStatus} />
     {board.mode !== "staff" && <button type="button" className={`${managementStyles.linkButton} ${styles.reload}`} disabled={rows.loading || board.editor.pending} onClick={rows.reload}>Làm mới danh sách</button>}
   </>;

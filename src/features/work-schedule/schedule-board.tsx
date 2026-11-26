@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ErrorNotice, Skeleton, businessToday, useRemote } from "@/features/operations/ui";
+import { EmployeeTypeFilter, filterByEmployeeType } from "@/features/employee-api/employee-type-filter";
 import { CopyWeekDialog } from "./copy-week-dialog";
 import { ScheduleCellDialog } from "./schedule-cell-dialog";
 import { ScheduleGrid } from "./schedule-grid";
@@ -17,8 +18,9 @@ export function ScheduleBoard({ monday, zoneId, allowed, canReadPeople }: {
   const roster = useRemote(useMemo(() => (signal: AbortSignal) => canReadPeople ? scheduleService.people(zoneId, signal)
     : Promise.resolve({ status: "success" as const, data: [] }), [zoneId, canReadPeople]));
   const [cell, setCell] = useState<ScheduleCell>();
-  const [copying, setCopying] = useState(false);
-  const people = schedulePeople(roster.data || [], week.days.flatMap((day) => day.rows), zoneId);
+  const [copying, setCopying] = useState(false), [typeFilter, setTypeFilter] = useState("");
+  const everyone = schedulePeople(roster.data || [], week.days.flatMap((day) => day.rows), zoneId);
+  const people = filterByEmployeeType(everyone, typeFilter, (person) => person.kind);
   const ready = !roster.loading && !roster.error && !week.days.some((day) => day.loading || day.error);
 
   function closeCell() {
@@ -27,7 +29,7 @@ export function ScheduleBoard({ monday, zoneId, allowed, canReadPeople }: {
   }
 
   return <section className={styles.board} aria-label="Phân công trong tuần">
-    <div className={styles.boardToolbar}><p>{people.length} nhân viên · Ngày đã qua chỉ xem</p>
+    <div className={styles.boardToolbar}><p>{people.length} nhân viên · Ngày đã qua chỉ xem</p><EmployeeTypeFilter value={typeFilter} onChange={setTypeFilter} name="schedule-employee-type" />
       {allowed("Create", zoneId) && <Button className="w-auto" disabled={!ready || !canReadPeople} title={!canReadPeople ? "Bạn chưa có quyền xem danh sách nhân viên của vùng." : !ready ? "Lịch đang tải hoặc có lỗi, chờ tải xong rồi thử lại." : undefined} onClick={() => setCopying(true)}>Chép từ tuần trước</Button>}
     </div>
     {!canReadPeople && <p role="status" className={styles.warning}>Bạn chưa có quyền xem danh sách nhân viên trong vùng. Lịch chỉ hiển thị những người đã có phân công.</p>}

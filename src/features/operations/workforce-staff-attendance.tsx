@@ -1,4 +1,6 @@
 "use client";
+import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
+import { filterByEmployeeType } from "@/features/employee-api/employee-type-filter";
 import { useEffect, useMemo } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -26,9 +28,10 @@ export function StaffAttendanceTab({ board }: { board: WorkforceBoard }) {
   useEffect(() => { reset(); }, [list.data, reset]);
   const canRecord = day === today && board.allowed("AttendanceCreate");
   const readOnlyReason = staffReadOnlyReason(day, today, board.allowed("AttendanceCreate"));
-  const term = board.search.trim(), filtered = !!term || !!board.status;
+  const term = board.search.trim(), filtered = !!term || !!board.status || !!board.typeFilter;
   // Same search box and attendance-status filter as the other two tabs.
-  const rows = list.data && filterStaffRows(list.data.map(actions.merged), term, board.status);
+  // Everyone on this tab is an official (nội bộ) employee, so choosing "Thời vụ" leaves it empty.
+  const rows = list.data && filterByEmployeeType(filterStaffRows(list.data.map(actions.merged), term, board.status), board.typeFilter, () => "Staff");
   const waiting = rows?.filter((row) => !row.checkedInAt && !row.checkedOutAt && !row.onLeave) ?? [];
   const busy = actions.batching || actions.pending.size > 0;
 
@@ -54,7 +57,7 @@ export function StaffAttendanceTab({ board }: { board: WorkforceBoard }) {
           <tbody>{rows.map((row) => {
             const pending = actions.pending.has(row.employeeId), step = staffStep(row);
             return <tr key={row.employeeId} aria-busy={pending || undefined}>
-              <td><strong>{row.employeeName}</strong></td><td>{row.employeeCode ?? "—"}</td>
+              <td><strong>{row.employeeName}</strong><EmployeeTypeBadge type="Staff" className="ml-1.5" /></td><td>{row.employeeCode ?? "—"}</td>
               <td className="tabular-nums">{recorded(row.checkedInAt)}</td><td className="tabular-nums">{recorded(row.checkedOutAt)}</td>
               <td><span className={styles.status} data-state={staffState(row)}>{staffStateLabel(row)}</span></td>
               {canRecord && <td>{step && <Button type="button" className="w-auto whitespace-nowrap" variant={step === "check-in" ? "primary" : "secondary"} disabled={actions.batching} isPending={pending}
