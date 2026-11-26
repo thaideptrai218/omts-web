@@ -35,11 +35,19 @@ function useNarrowScreen(maxWidth = 900) {
 }
 
 /**
+ * Where an open row's detail goes. "inline" (default): a full-width row right under the clicked one, the list keeps all its
+ * columns. "split": a pane beside the list, which narrows to its key columns (full screen on a
+ * narrow viewport).
+ */
+export type DetailLayout = "split" | "inline";
+
+/**
  * The management screen frame: one viewport on desktop with only the list scrolling. The toolbar and the body share one
  * column template, so the search box lines up with the list and stays put when the filter rail closes.
  */
-export function ManagementLayout({ storageKey, icon, title, search, actions, filters, filterLabel = "Bộ lọc", footer, children }: {
-  storageKey: string; icon: InterfaceIconName; title: string; search?: ReactNode; actions: ReactNode; filters: ReactNode; filterLabel?: string; footer?: ReactNode; children: ReactNode;
+export function ManagementLayout({ storageKey, icon, title, search, actions, filters, filterLabel = "Bộ lọc", footer, detailLayout = "inline", children }: {
+  storageKey: string; icon: InterfaceIconName; title: string; search?: ReactNode; actions: ReactNode; filters: ReactNode; filterLabel?: string; footer?: ReactNode;
+  detailLayout?: DetailLayout; children: ReactNode;
 }) {
   const [stored, store] = useStoredValue(`omts-filter-rail-${storageKey}`, "open");
   const narrow = useNarrowScreen();
@@ -51,7 +59,8 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
   // The right-hand pane an open row's detail renders into (see DetailRow); hidden by CSS while no row is open.
   const [pane, setPane] = useState<HTMLElement | null>(null);
   useFitManagementViewport(root);
-  return <section ref={root} className={`${styles.theme} ${styles.screen}`} data-management-screen data-filters={open ? "open" : "closed"}>
+  const split = detailLayout === "split";
+  return <section ref={root} className={`${styles.theme} ${styles.screen}`} data-management-screen data-detail-layout={detailLayout} data-filters={open ? "open" : "closed"}>
     <header className={styles.toolbar}>
       <div className={styles.title}><InterfaceIcon name={icon} className="size-[18px] shrink-0" /><h1>{title}</h1></div>
       <div className={styles.tools}>{/* Không có ô tìm kiếm (màn không có gì để tìm): giữ một khoảng trống cùng cột để các nút bên phải không nhảy chỗ. */}
@@ -68,17 +77,18 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
         {/* Outside the list box, which clips its content, so the button can straddle the list's left border. */}
         {!open && <button type="button" className={`${styles.railToggle} ${styles.railOpen}`} aria-label="Hiện bộ lọc" title="Hiện bộ lọc" onClick={() => setOpen(true)}>{narrow ? <><InterfaceIcon name="panel-open" /> Bộ lọc</> : <InterfaceIcon name="chevron-right" />}</button>}
         <div className={styles.list}>
-          <DetailPaneTarget.Provider value={pane}>{children}</DetailPaneTarget.Provider>
+          {/* Inline: no pane target, so every DetailRow renders as the row under the clicked one. */}
+          <DetailPaneTarget.Provider value={split ? pane : null}>{children}</DetailPaneTarget.Provider>
         </div>
         {footer}
       </div>
-      <aside className={styles.detailPane} aria-label="Chi tiết" onKeyDown={event => {
+      {split && <aside className={styles.detailPane} aria-label="Chi tiết" onKeyDown={event => {
         // Esc closes the detail, but only a key pressed inside it (a dialog opened from it handles its own Esc).
         if (event.key === "Escape" && !event.defaultPrevented && event.target instanceof Node && event.currentTarget.contains(event.target)) closeOpenRow(event.currentTarget);
       }}>
         <button type="button" className={styles.detailClose} aria-label="Đóng chi tiết" title="Đóng chi tiết (Esc)" onClick={event => closeOpenRow(event.currentTarget.parentElement!)}><InterfaceIcon name="close" /></button>
         <div className={styles.detailPaneBody} ref={setPane} />
-      </aside>
+      </aside>}
     </div>
   </section>;
 }
