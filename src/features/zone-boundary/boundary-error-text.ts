@@ -34,3 +34,11 @@ export function scanFailureText(errorCode: string | null): string {
   if (errorCode === "NOT_CONFIGURED") return "Máy chủ chưa bật tính năng đọc ảnh sơ đồ. Hãy nhờ nhóm kỹ thuật kiểm tra.";
   return "Chưa đọc được ảnh lúc này vì dịch vụ đọc ảnh chưa phản hồi. Hãy thử lại sau ít phút.";
 }
+
+/** The In Use rafts that sit outside a boundary that was just saved, as one sentence (the first 10 codes, then how many more). */
+export function outsideRaftsText(details: { count: number; raftCodes: readonly string[] } | null | undefined): string {
+  const codes = details?.raftCodes ?? [], count = Math.max(details?.count ?? 0, codes.length);
+  if (count === 0) return "";
+  const shown = codes.slice(0, 10).join(", "), more = count - Math.min(codes.length, 10);
+  return `${count} bè đang nằm ngoài ranh giới mới${shown ? `: ${shown}` : ""}${more > 0 && shown ? ` và ${more} bè khác` : ""}. Hãy kiểm tra vị trí các bè này.`;
+}
