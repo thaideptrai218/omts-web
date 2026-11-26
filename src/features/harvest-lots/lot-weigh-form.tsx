@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import type { z } from "zod";
+import { ApproxKg } from "@/components/ui/approx-kg";
 import { Button } from "@/components/ui/button";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
 import { useToast } from "@/components/ui/toast-provider";
@@ -88,7 +89,7 @@ export function LotWeighForm({ lot, zoneId, onClose, onSaved }: { lot: Lot; zone
         <div><dt className="text-xs text-text-muted">Mã lô</dt><dd className="font-mono">{lot.lotCode}</dd></div>
         <div><dt className="text-xs text-text-muted">Bè</dt><dd>{lot.raftCode}</dd></div>
         <div><dt className="text-xs text-text-muted">Sản phẩm</dt><dd>{lines.length ? lines.map((line) => line.productName).join(", ") : "—"}</dd></div>
-        <div><dt className="text-xs text-text-muted">Số lồng mang lên</dt><dd className="tabular-nums">{fmt(sheet.harvestedCages || lot.cageCount)} lồng <span className="block text-xs text-text-muted">quy đổi ≈ {fmt(sheet.estimatedKg || lot.estimatedKg)} kg, chỉ tham khảo</span></dd></div>
+        <div><dt className="text-xs text-text-muted">Số lồng mang lên</dt><dd className="tabular-nums">{fmt(sheet.harvestedCages || lot.cageCount)} lồng <ApproxKg className="block" cages={sheet.harvestedCages || lot.cageCount} kgPerCage={(sheet.estimatedKg || lot.estimatedKg) / (sheet.harvestedCages || lot.cageCount)} /></dd></div>
       </dl>
       {!editable && <p role="status" className="rounded-control border border-border bg-surface-subtle p-3 text-sm">{closed ? "Lô đã đóng, phiếu cân chỉ để xem." : "Bạn chỉ xem được phiếu cân của lô này."}</p>}
       {editable && <CageNextInput sheet={sheet} pending={busy} onAdd={add} />}
