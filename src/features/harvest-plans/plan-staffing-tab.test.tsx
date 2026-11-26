@@ -6,9 +6,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const id = (n: number) => `00000000-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`;
 const ids = { plan: id(1), line1: id(2), line2: id(3), raft1: id(4), raft2: id(5), zone1: id(6), zone2: id(7), an: id(8), binh: id(9), chi: id(10) };
 const names: Record<string, string> = { [ids.an]: "An", [ids.binh]: "Bình", [ids.chi]: "Chi" };
-const state = vi.hoisted(() => ({ staffing: vi.fn(), saveStaffing: vi.fn(), detail: vi.fn(), picker: vi.fn() }));
+const state = vi.hoisted(() => ({ staffing: vi.fn(), saveStaffing: vi.fn(), detail: vi.fn(), picker: vi.fn(), roster: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
-vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), planRepository: { staffing: state.staffing, saveStaffing: state.saveStaffing, detail: state.detail } }));
+vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), planRepository: { staffing: state.staffing, saveStaffing: state.saveStaffing, detail: state.detail, roster: state.roster } }));
 vi.mock("@/features/cultivation-api/record-crew-picker", () => ({
   RecordCrewPicker: (props: { label?: string; raftId?: string; zoneId: string; day?: string; values: string[]; locked?: readonly string[]; onChange(values: string[]): void }) => {
     state.picker(props);
@@ -38,7 +38,11 @@ const view = (patch: object = {}) => ({
 const ok = (data: unknown) => ({ status: "success", data });
 const renderTab = (plan = view(), access = owner) => render(<ToastProvider><PlanStaffingTab plan={plan} access={access} /></ToastProvider>);
 
-beforeEach(() => { state.staffing.mockReset(); state.saveStaffing.mockReset(); state.picker.mockReset(); state.detail.mockReset(); });
+beforeEach(() => { state.staffing.mockReset(); state.saveStaffing.mockReset(); state.picker.mockReset(); state.detail.mockReset();
+  // The roster has its own tests (plan-roster-section.test.tsx): here it is an empty roster nobody can change.
+  state.roster.mockReset().mockResolvedValue({ status: "success", data: { planId: ids.plan, planCode: "KHT000001", rowVersion: "p1", rosterVersion: "v0", requiredPeople: null, canEdit: false, people: [],
+    summary: { requiredPeople: null, confirmed: 0, invited: 0, declined: 0, external: 0, missing: 0, ready: true } } });
+});
 afterEach(cleanup);
 
 it("shows each line with its raft link, zone, lanes, day, the employees and who checked in", async () => {

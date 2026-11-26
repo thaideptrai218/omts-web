@@ -23,6 +23,8 @@ import type { PlanAccess } from "./plan-access";
 import { PLANS_PATH, PlanStatus } from "./plan-labels";
 import { executorLabel, planNextStepHint, planTotals } from "./plan-logic";
 import { PlanLineActions } from "./plan-line-actions";
+import { PlanStaffingChip } from "./plan-staffing-chip";
+import { shortHarvestWarning } from "./plan-roster-logic";
 import { PlanStaffingTab } from "./plan-staffing-tab";
 import styles from "./plans.module.css";
 import { errorText, planRepository, type Result } from "./repository";
@@ -68,7 +70,8 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
     await run(() => planRepository.assign(plan.id, plan.rowVersion, executor), done);
   }
   async function receive() {
-    if (await confirmation.confirm(`Nhận kế hoạch thu hoạch ${plan.code}? Sau khi nhận, bạn bấm Thu hoạch ở từng bè.`)) await run(() => planRepository.receive(plan.id, plan.rowVersion), `Đã nhận kế hoạch ${plan.code}.`);
+    const warning = shortHarvestWarning(plan.staffing);
+    if (await confirmation.confirm(`Nhận kế hoạch thu hoạch ${plan.code}? Sau khi nhận, bạn bấm Thu hoạch ở từng bè.${warning ? ` ${warning}` : ""}`)) await run(() => planRepository.receive(plan.id, plan.rowVersion), `Đã nhận kế hoạch ${plan.code}.`);
   }
   async function handOver() {
     if (await confirmation.confirm(`Bàn giao kế hoạch ${plan.code} cho chủ? Chủ hợp tác xã sẽ được báo để kiểm tra và hoàn thành.`)) await run(() => planRepository.handOver(plan.id, plan.rowVersion), `Đã bàn giao ${plan.code} cho chủ.`);
@@ -83,7 +86,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
       <p className="mt-3 text-sm text-text-muted">{executor === "Owner" ? "Kế hoạch sẽ không gửi cho quản lý vùng." : `Quản lý ${plan.zones.length > 1 ? "các vùng" : "vùng"} ${zoneCodes(plan.zones)} sẽ được báo.`} Không đổi được sau khi phân công.</p>
       <div className="mt-5 flex flex-wrap gap-3"><Button className="w-auto" onClick={() => void assign()}>Phân công</Button><Button className="w-auto" variant="secondary" onClick={() => setAssigning(false)}>Quay lại</Button></div>
     </Dialog>}
-    <header className={docStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} />{plan.statusId !== PLAN.draft && <span className={styles.executorTag}>{executorLabel[plan.executor]}</span>}</div></header>
+    <header className={docStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} />{plan.statusId !== PLAN.draft && <span className={styles.executorTag}>{executorLabel[plan.executor]}</span>}<PlanStaffingChip statusId={plan.statusId} staffing={plan.staffing} /></div></header>
     {hint && <p className="text-sm text-text-muted" data-testid="plan-next-step">{hint}</p>}
     <div className={`${docStyles.headFacts} ${styles.planFacts}`}>
       <div><span>Thời gian dự kiến:</span><strong>{viDateTime(plan.plannedAt)}</strong></div>

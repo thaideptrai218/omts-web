@@ -52,6 +52,7 @@ const reads: Record<string, Read> = {
   plans: (q) => ({ path: `${P}${forward(q, [...listFilters, ...paging])}`, method: "GET", access: plans("View"), schema: c.planPage }),
   plan: (_q, ref) => ({ path: `${P}/${ref.id}`, method: "GET", access: plans("View"), schema: c.planView, expectedId: ref.id }),
   "plan-staffing": (_q, ref) => ({ path: `${P}/${ref.id}/staffing`, method: "GET", access: plans("View"), schema: c.planStaffing, expectedId: ref.id }),
+  "plan-roster": (_q, ref) => ({ path: `${P}/${ref.id}/staffing/roster`, method: "GET", access: plans("View"), schema: c.roster, expectedId: ref.id }),
   "plan-by-code": (q) => ({ path: `${P}/by-code/${encodeURIComponent(q.code)}`, method: "GET", access: plans("View"), schema: c.planView }),
   "plan-next-code": () => ({ path: `${P}/next-code`, method: "GET", access: plans("Create"), schema: c.nextCode }),
   "plan-eligible-rafts": (q) => ({ path: `${P}/eligible-rafts${forward(q, ["zoneId"])}`, method: "GET", access: plans("Create"), schema: c.eligibleRafts }),
@@ -59,7 +60,7 @@ const reads: Record<string, Read> = {
   "plans-assigned": () => ({ path: `${P}/assigned`, method: "GET", access: harvests("View"), schema: c.planList }),
 };
 /** The reads that need the id of a record. */
-const needsId = new Set(["plan", "plan-order-draft", "plan-staffing"]);
+const needsId = new Set(["plan", "plan-order-draft", "plan-staffing", "plan-roster"]);
 
 // Raft plans send no lanes; [] also retains an existing plan's legacy lanes.
 const lineBody = z.strictObject({ id: id.optional(), raftId: id, laneNumbers: lanes.or(z.tuple([])), expectedCageCount: z.number().positive().max(100_000).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6).nullable().optional(), note: text(500) });
@@ -68,7 +69,13 @@ const planBody = z.strictObject({
 });
 const versioned = z.strictObject({ rowVersion: rowVersion.optional() });
 const crew = z.array(id).max(100).refine((values) => new Set(values).size === values.length);
+const person = z.string().trim().min(1).max(200), phone = z.string().trim().min(1).max(30);
 const write = z.discriminatedUnion("action", [
+  z.strictObject({ action: z.literal("plan-roster-invite"), id, body: z.strictObject({ employeeIds: crew.refine((values) => values.length > 0) }) }),
+  z.strictObject({ action: z.literal("plan-roster-required"), id, body: z.strictObject({ requiredPeople: z.number().int().min(1).max(500).nullable(), rowVersion: rowVersion.optional() }) }),
+  z.strictObject({ action: z.literal("plan-roster-confirm"), id, rowId: id, body: z.strictObject({ reason }) }),
+  z.strictObject({ action: z.literal("plan-roster-remove"), id, rowId: id, body: z.strictObject({ reason: reason.optional() }) }),
+  z.strictObject({ action: z.literal("plan-roster-external"), id, body: z.strictObject({ fullName: person, phoneNumber: phone, note: text(500), address: text(300), ownerApproved: z.boolean().optional() }) }),
   z.strictObject({ action: z.literal("plan-create"), body: planBody.omit({ rowVersion: true }) }),
   z.strictObject({ action: z.literal("plan-update"), id, body: planBody.required({ rowVersion: true }) }),
   z.strictObject({ action: z.literal("plan-assign"), id, body: z.strictObject({ rowVersion: rowVersion.optional(), executor: z.enum(c.planExecutors).optional() }) }),
@@ -92,6 +99,11 @@ function planWrite(p: z.infer<typeof write>): Plan {
     case "plan-cancel": return { path: `${P}/${p.id}/cancel`, method: "POST", access: plans("Delete"), schema: c.ack, body: p.body };
     case "plan-skip-lanes": return { path: `${P}/${p.id}/lines/${p.lineId}/skip-lanes`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
     case "plan-line-staffing": return { path: `${P}/${p.id}/lines/${p.lineId}/staffing`, method: "PUT", access: assignments("Create"), schema: c.staffingLine, body: p.body };
+    case "plan-roster-invite": return { path: `${P}/${p.id}/staffing/invite`, method: "POST", access: harvests("Create"), schema: c.roster, body: p.body };
+    case "plan-roster-required": return { path: `${P}/${p.id}/staffing/required`, method: "PUT", access: harvests("Create"), schema: c.roster, body: p.body };
+    case "plan-roster-confirm": return { path: `${P}/${p.id}/staffing/${p.rowId}/confirm`, method: "POST", access: harvests("Create"), schema: c.roster, body: p.body };
+    case "plan-roster-remove": return { path: `${P}/${p.id}/staffing/${p.rowId}/remove`, method: "POST", access: harvests("Create"), schema: c.roster, body: p.body };
+    case "plan-roster-external": return { path: `${P}/${p.id}/staffing/external`, method: "POST", access: harvests("Create"), schema: c.externalAdded, body: p.body };
     case "plan-unskip-lanes": return { path: `${P}/${p.id}/lines/${p.lineId}/unskip-lanes`, method: "POST", access: harvests("Create"), schema: c.ack, body: p.body };
   }
 }
@@ -99,7 +111,12 @@ function planWrite(p: z.infer<typeof write>): Plan {
 const readQuery = z.record(z.string().max(60), z.string().max(200));
 
 /** The allow-listed part of a problem answer that tells the form what to fix; nothing else of it reaches the browser. */
-const projectProblem = (data: unknown) => problemExtras.safeParse(data).data;
+const projectProblem = (data: unknown) => {
+  const extras = problemExtras.safeParse(data).data;
+  // A phone number that belongs to another working employee names them (`existingEmployeeId`): the screen offers to invite that employee.
+  const named = z.object({ existingEmployeeId: id }).safeParse(data).data?.existingEmployeeId;
+  return named ? { ...extras, existingId: named } : extras;
+};
 const allowed = (access: Access, identity: { subjectType: string }, functions: readonly { functionCode: string; action: string }[]) =>
   identity.subjectType === "CooperativeOwner" || identity.subjectType === "Staff" && access.any.some(([fn, action]) => functions.some((p) => p.functionCode === fn && p.action === action));
 

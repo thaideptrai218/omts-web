@@ -35,15 +35,17 @@ export const planLine = z.object({
   expectedHarvestDate: z.iso.date().nullish(),
 });
 export const planOrder = z.object({ id, code: text, statusId: count, status: text, customer: z.object({ id, code: text, name: text }).nullish() });
+/** How the staffing stands against the people needed (the summary of the roster, also carried by the plan and by each plan of a list). */
+export const staffingSummary = z.object({ requiredPeople: count.nullable(), confirmed: count, invited: count, declined: count, external: count, missing: count, ready: z.boolean() });
 export const planProgress = z.object({ lines: count, linesDone: count, lanes: count, lanesHarvested: count, lanesSkipped: count });
 export const planView = z.object({
   id, code: text, statusId: count, status: text, zones: z.array(zoneRef), plannedAt: text, note: opt, createdBy: account.nullish(),
   executor, assignedAt: opt, assignedBy: account.nullish(), completedAt: opt, cancelledAt: opt, cancelledBy: account.nullish(), cancelReason: opt,
-  lines: z.array(planLine), orders: z.array(planOrder), progress: planProgress, allowedActions: z.array(text), createdAt: text, rowVersion: text,
+  lines: z.array(planLine), orders: z.array(planOrder), progress: planProgress, allowedActions: z.array(text), createdAt: text, rowVersion: text, staffing: staffingSummary.nullish(),
 });
 export const planRow = z.object({
   id, code: text, statusId: count, status: text, zones: z.array(zoneRef), plannedAt: text, note: opt, raftCodes: z.array(text), orders: z.array(planOrder), progress: planProgress,
-  createdBy: opt, rowVersion: text, expectedCageCount: cages.nullish(), executor,
+  createdBy: opt, rowVersion: text, expectedCageCount: cages.nullish(), executor, staffing: staffingSummary.nullish(),
 });
 export const planPage = z.object({ items: z.array(planRow), page: count, pageSize: count, total: count });
 export const nextCode = z.object({ code: text });
@@ -72,7 +74,20 @@ export const staffingEmployee = z.object({ employeeId: id, code: text, name: tex
 export const staffingLine = z.object({
   lineId: id, raftId: id, raftCode: text, zoneId: id, zoneCode: text, laneNumbers: z.array(count), plannedDate: z.iso.date(), employees: z.array(staffingEmployee), canEdit: z.boolean(),
 });
-export const planStaffing = z.object({ planId: id, planCode: text, rowVersion: text, lines: z.array(staffingLine), canEdit: z.boolean() });
+/**
+ * The roster of a plan (GET api/harvest-plans/{id}/staffing/roster): the employees chosen for the whole plan with their answers, and the people the Owner needs. `confirmed` counts the employees who accepted (or were confirmed
+ * by the Owner) and `external` the people hired outside the system; `missing` is a warning, never a block. `rosterVersion` changes whenever the roster or the number needed changes.
+ */
+export const rosterStates = ["Invited", "Confirmed", "ConfirmedManually", "Declined", "External"] as const;
+export type RosterState = (typeof rosterStates)[number];
+export const rosterPerson = z.object({
+  id, employeeId: id, code: opt, name: text, phoneNumber: opt, type: z.enum(["Staff", "SeasonalWorker"]).nullish(), hasAccount: z.boolean(), state: z.enum(rosterStates),
+  invitedAt: text, respondedAt: opt, reason: opt, confirmedBy: opt, rowVersion: text,
+});
+export const roster = z.object({ planId: id, planCode: text, rowVersion: text, rosterVersion: text, requiredPeople: count.nullable(), summary: staffingSummary, people: z.array(rosterPerson), canEdit: z.boolean() });
+/** "Bổ sung nhân công": the roster with the new person and the login made for them (the password is never read or shown). */
+export const externalAdded = z.object({ roster, person: rosterPerson, username: opt, fixedPassword: z.boolean().nullish(), accountMessageCode: opt, accountNote: opt });
+export const planStaffing = z.object({ planId: id, planCode: text, rowVersion: text, lines: z.array(staffingLine), canEdit: z.boolean(), roster: roster.nullish() });
 
 /** A save, assign, receive, hand over, finish or cancel answers `{ plan, message, messageCode }`; the skip actions answer the plan itself. */
 export const planAnswer = z.union([z.object({ plan: planView }).transform((value) => value.plan), planView]);
@@ -85,6 +100,10 @@ export type PlanView = z.infer<typeof planView>;
 export type StaffingEmployee = z.infer<typeof staffingEmployee>;
 export type StaffingLine = z.infer<typeof staffingLine>;
 export type PlanStaffing = z.infer<typeof planStaffing>;
+export type StaffingSummary = z.infer<typeof staffingSummary>;
+export type RosterPerson = z.infer<typeof rosterPerson>;
+export type PlanRoster = z.infer<typeof roster>;
+export type ExternalAdded = z.infer<typeof externalAdded>;
 export type PlanLine = z.infer<typeof planLine>;
 export type PlanLane = z.infer<typeof planLane>;
 export type PlanRow = z.infer<typeof planRow>;

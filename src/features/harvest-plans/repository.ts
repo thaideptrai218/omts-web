@@ -23,6 +23,24 @@ export function staffingErrorText(result: Result<unknown>) {
   return message && vietnamese.test(message) ? message : errorText(result);
 }
 
+/**
+ * The text of a failed roster call. The people needed, the reason and the phone number each have their own sentence; a finished plan comes with the API's Vietnamese; a stale plan asks to reload.
+ */
+export function rosterErrorText(result: Result<unknown>) {
+  if (result.status === "success") return undefined;
+  const fields = [...(result.problem?.fields ?? []), ...(result.problem?.field ? [result.problem.field] : [])];
+  if (result.code === "MSG-GEN-01") {
+    if (fields.includes("Required people")) return "Số người cần phải từ 1 đến 500.";
+    if (fields.includes("Reason")) return "Nhập lý do.";
+    if (fields.includes("Phone number")) return "Nhập số điện thoại hợp lệ.";
+    if (fields.includes("Full name")) return "Nhập họ tên.";
+    if (fields.includes("Employees")) return "Chọn ít nhất một nhân viên.";
+  }
+  if (result.code === "MSG06") return "Kế hoạch vừa được người khác sửa. Bấm Làm mới rồi thử lại.";
+  if (result.code === "MSG-GEN-09") return result.problem?.message && vietnamese.test(result.problem.message) ? result.problem.message : "Kế hoạch đã xong hoặc đã hủy nên không đổi người được.";
+  return errorText(result);
+}
+
 export const planRepository = {
   list: (values: ListQuery, signal?: AbortSignal) => read("plans", values, c.planPage, signal),
   detail: (id: string, signal?: AbortSignal) => read("plan", { id }, c.planView, signal),
@@ -51,4 +69,15 @@ export const planRepository = {
   /** Sets the whole crew of one line (employees left out are taken off); answers the line. */
   saveStaffing: (id: string, lineId: string, employeeIds: string[], rowVersion?: string) =>
     json("plan-line-staffing", { id, lineId, body: { employeeIds, ...(rowVersion ? { rowVersion } : {}) } }, c.staffingLine),
+  /** The people chosen for the whole plan with their answers and the people needed; the screen polls it. */
+  roster: (id: string, signal?: AbortSignal) => read("plan-roster", { id }, c.roster, signal),
+  /** Chooses employees (staff and seasonal): those not on the roster are invited and told in the mobile app. */
+  invite: (id: string, employeeIds: string[]) => json("plan-roster-invite", { id, body: { employeeIds } }, c.roster),
+  /** The people needed (1 to 500, null clears it); never a block. */
+  setRequired: (id: string, requiredPeople: number | null, rowVersion?: string) => json("plan-roster-required", { id, body: { requiredPeople, ...(rowVersion ? { rowVersion } : {}) } }, c.roster),
+  /** The Owner (or the zone manager of the plan) confirms for an employee: the reason is required. */
+  confirmStaff: (id: string, rowId: string, reason: string) => json("plan-roster-confirm", { id, rowId, body: { reason } }, c.roster),
+  removeStaff: (id: string, rowId: string, reason?: string) => json("plan-roster-remove", { id, rowId, body: reason ? { reason } : {} }, c.roster),
+  /** "Bổ sung nhân công": a person hired outside the system, counted at once; a seasonal login is made for them. */
+  addExternal: (id: string, body: { fullName: string; phoneNumber: string; note?: string; address?: string; ownerApproved?: boolean }) => json("plan-roster-external", { id, body }, c.externalAdded),
 };

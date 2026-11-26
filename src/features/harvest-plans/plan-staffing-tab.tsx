@@ -12,6 +12,7 @@ import { farmingReferenceHref } from "@/features/farming-management/farming-refe
 import { ErrorNotice, Skeleton, businessToday, useRemote } from "@/features/operations/ui";
 import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
+import { PlanRosterSection } from "./plan-roster-section";
 import { PLAN, type PlanStaffing, type PlanView, type StaffingLine } from "./contracts";
 import type { PlanAccess } from "./plan-access";
 import styles from "./plans.module.css";
@@ -32,9 +33,14 @@ function closedNote(plan: PlanView, staffing: PlanStaffing) {
 /** The "Nhân công" subtab of a plan: the employees of each line, chosen in place and saved as the work assignments of the line's raft on the day of the plan. */
 export function PlanStaffingTab({ plan, access }: { plan: PlanView; access: PlanAccess }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => planRepository.staffing(plan.id, signal), [plan.id]));
-  if (remote.loading) return <div className={listStyles.tabBody}><Skeleton /></div>;
-  if (remote.error || !remote.data) return <div className={listStyles.tabBody}><ListStateMessage error={remote.error ?? "Không tải được nhân công của kế hoạch."} onRetry={remote.reload} retryLabel="Tải lại nhân công" /></div>;
-  return <Staffing plan={plan} staffing={remote.data} access={access} />;
+  const crew = remote.loading ? <Skeleton />
+    : remote.error || !remote.data ? <ListStateMessage error={remote.error ?? "Không tải được nhân công của kế hoạch."} onRetry={remote.reload} retryLabel="Tải lại nhân công" />
+      : <Staffing plan={plan} staffing={remote.data} access={access} />;
+  return <div className={listStyles.tabBody}>
+    <PlanRosterSection plan={plan} access={access} />
+    <h4 className="mt-4 text-sm font-semibold">Nhân công theo bè</h4>
+    {crew}
+  </div>;
 }
 
 function Staffing({ plan, staffing, access }: { plan: PlanView; staffing: PlanStaffing; access: PlanAccess }) {
@@ -43,6 +49,7 @@ function Staffing({ plan, staffing, access }: { plan: PlanView; staffing: PlanSt
   const [editing, setEditing] = useState(false), [pending, setPending] = useState(false), [error, setError] = useState<string>();
   const editable = (line: StaffingLine) => line.canEdit && access.staff;
   const canEdit = lines.some(editable);
+  const confirmedIds = (staffing.roster?.people ?? []).filter((person) => person.state === "Confirmed" || person.state === "ConfirmedManually" || person.state === "External").map((person) => person.employeeId);
   const changed = (line: StaffingLine) => editable(line) && !same(draft[line.lineId] ?? ids(line), ids(line));
 
   function start() {
@@ -69,7 +76,7 @@ function Staffing({ plan, staffing, access }: { plan: PlanView; staffing: PlanSt
   }
 
   const note = canEdit ? undefined : closedNote(plan, staffing);
-  return <div className={listStyles.tabBody}>
+  return <div>
     {!lines.length ? <p className={styles.crewEmpty}>Kế hoạch chưa có dòng nào để chọn nhân công.</p>
       : <div className={styles.crewList}>{lines.map((line) => <section key={line.lineId} aria-label={`Nhân công bè ${line.raftCode}`} className={styles.crewCard}>
         <header className={styles.crewHead}>
@@ -78,7 +85,7 @@ function Staffing({ plan, staffing, access }: { plan: PlanView; staffing: PlanSt
         </header>
         <div className={styles.crewBody}>
         {editing && editable(line)
-          ? <RecordCrewPicker label={`Nhân viên bè ${line.raftCode}`} raftId={line.raftId} zoneId={line.zoneId} day={line.plannedDate}
+          ? <RecordCrewPicker confirmedIds={confirmedIds} label={`Nhân viên bè ${line.raftCode}`} raftId={line.raftId} zoneId={line.zoneId} day={line.plannedDate}
               values={draft[line.lineId] ?? ids(line)} locked={line.employees.filter((employee) => employee.checkedIn).map((employee) => employee.employeeId)}
               onChange={(values) => setDraft((current) => ({ ...current, [line.lineId]: values }))} />
           : line.employees.length
