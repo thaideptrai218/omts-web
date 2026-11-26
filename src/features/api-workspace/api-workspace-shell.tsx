@@ -1,5 +1,5 @@
 ﻿"use client";
-import { Suspense, createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import type { PermissionProjection } from "@/features/access/domain/function-permission";
 import type { BrowserIdentityDto } from "@/server/backend/browser-dto";
 import { LOCAL_SIGN_OUT_MESSAGE, logoutWithApi } from "@/features/auth/api/api-auth-client";
@@ -15,7 +15,6 @@ import { InboxBell } from "@/features/inbox-api/inbox-bell";
 import { SelectedZonesProvider } from "./selected-zones";
 import { ZonePicker } from "./zone-picker";
 import { NavigationGroup, NavigationLink, NavigationSection } from "@/components/layout/navigation-group";
-import { FarmingWorkflowNav } from "@/features/farming-management/farming-workflow-nav";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
@@ -51,7 +50,7 @@ const FARMING_GROUP = "Nuôi trồng";
 /** Moved out of Nuôi trồng into Kinh doanh and Báo cáo; they stay hidden from the finance workspace like the group they came from. */
 const farmingReports = ["harvest-yield", "lot-tracing"];
 const workspaceGroups = [
-  // Thả giống, Thu hoạch and Sử dụng vật tư are steps of Hành trình (FarmingWorkflowNav), not menu entries; their routes stay.
+  // Thả giống, Thu hoạch and Sử dụng vật tư are not menu entries: they open from the cycle and raft screens; their routes stay.
   { label: FARMING_GROUP, resources: ["zones", "rafts"], operations: ["cultivation-cycles", "water"] },
   { label: INPUT_GROUP, resources: [], operations: [] },
   { label: "Mua hàng", resources: ["suppliers"], operations: ["supplier-payments"] },
@@ -195,7 +194,6 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
       else { setError("Chưa thể đăng xuất. Kiểm tra kết nối rồi thử lại."); setPending(false); }
     }}>
       {error && <p role="alert" className="mb-4 rounded-control border border-danger/30 bg-surface p-4 text-danger">{error}</p>}
-      {!financeWorkspace && <Suspense><FarmingWorkflowNav identity={context.identity} permissions={context.permissions} /></Suspense>}
       {children}
     </AppShell>
   </SelectedZonesProvider></WorkspaceContext.Provider>;
