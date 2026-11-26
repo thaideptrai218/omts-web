@@ -199,7 +199,7 @@ export function AssignmentEditor({
               <legend>Nhân viên được phân công</legend>
               {options.data && !options.data.employees.length
                 ? <p>Chưa có nhân viên đang làm việc.</p>
-                : <EmployeeTwoGroupPicker name="assignment-employee" label="Nhân viên được phân công" values={employeeIds} onChange={setEmployeeIds}
+                : <EmployeeTwoGroupPicker zoneIds={values.zoneId ? [values.zoneId] : undefined} name="assignment-employee" label="Nhân viên được phân công" values={employeeIds} onChange={setEmployeeIds}
                   people={(options.data?.employees ?? []).map((r) => ({ id: r.id, name: r.name, kind: kindOf(r.id), note: r.onLeave ? <small className="block text-text-muted">Đã duyệt nghỉ ngày này</small> : undefined }))} />}
             </fieldset>
             {mode === "assign" && (

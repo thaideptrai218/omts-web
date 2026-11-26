@@ -46,6 +46,7 @@ export const seedingRecord = z.object({
   recordedByName: z.string().nullish().transform(value => value ?? null), recordedAt: z.string(),
   canCorrect: z.boolean().default(false), rowVersion: z.string(),
   issueId: z.guid().nullish(), issueCode: z.string().nullish(),
+  responsibleAccountId: z.guid().nullish(), responsibleName: z.string().nullish(),
 });
 
 const seedingListRead = z.object({
@@ -71,7 +72,7 @@ export const seedingList = seedingListRead;
 /** Legacy cycles retain lot/plan inputs; V2 supplies cycleId and a free positive daily quantity. */
 export const seedValues = z.strictObject({
   cycleId: z.guid().optional(), seedingDate: z.iso.date(), seedLotId: z.guid().optional(),
-  lanePercents: lanePercentValues.optional(), crew: crewIds.optional(),
+  lanePercents: lanePercentValues.optional(), crew: crewIds.optional(), responsibleAccountId: z.guid().optional(),
   laneNumbers: numbers.min(1).refine(value => new Set(value).size === value.length),
   quantity: z.number().positive(), confirmOverPlan: z.boolean().optional(),
   overPlanReason: z.string().trim().min(1).max(1000).optional(),

@@ -4,7 +4,7 @@ import type { NurseryPlan } from "./nursery-plan";
 
 const labels: Record<string, string> = { seedLotId: "Lô giống", quantity: "Số mảnh vào ươm", startDate: "Ngày bắt đầu ươm",
   survivors: "Số sống sót (ước tính)", completedOn: "Ngày hoàn tất ươm",
-  rowVersion: "Phiên bản bản ghi", note: "Ghi chú", keepPhotoIds: "Ảnh", reason: "Lý do", crew: "Nhân viên thực hiện", approvalReason: "Lý do hoàn tất" };
+  rowVersion: "Phiên bản bản ghi", note: "Ghi chú", keepPhotoIds: "Ảnh", reason: "Lý do", crew: "Nhân viên thực hiện", responsibleAccountId: "Người phụ trách", approvalReason: "Lý do hoàn tất" };
 export function validationProblem(path?: PropertyKey, hint?: string) {
   const field = typeof path === "string" ? labels[path] ?? path : "Dữ liệu";
   return { field, hint: hint && /[À-ỹ]/.test(hint) ? hint : `Vui lòng kiểm tra trường ${field.toLocaleLowerCase("vi-VN")}.` };

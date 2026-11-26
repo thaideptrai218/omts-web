@@ -15,12 +15,13 @@ import { nurseryDisplayText } from "./nursery-display-text";
 import { nurseryQuantityValue } from "./nursery-quantity-value";
 import { useToast } from "@/components/ui/toast-provider";
 import { RecordCrewPicker } from "@/features/cultivation-api/record-crew-picker";
+import { ResponsiblePersonField, responsibleText, useResponsiblePeople } from "@/features/cultivation-api/responsible-person-field";
 import { crewAssignmentNotice } from "@/features/cultivation-api/record-crew-assignment-notice";
 
 /** `initialLotId` starts the form with that seed lot chosen (a link from the Lô giống screen); a lot the zone does not offer leaves the choice empty and the form asks for it. */
 export function NurseryStartDialog({ zones, initialZone, initialLotId = "", onClose, onSaved }: { zones: readonly ZoneRow[]; initialZone: string; initialLotId?: string; onClose(): void; onSaved(batch: NurseryDetail): void }) {
   const [zoneId, setZoneId] = useState(zones.some(zone => zone.id === initialZone) ? initialZone : zones[0]?.id ?? "");
-  return <Dialog open size="lg" title="Bắt đầu ươm giống" onOpenChange={open => { if (!open) onClose(); }} onCloseRequest={onClose} dismissible={false}>
+  return <Dialog open size="xl" title="Bắt đầu ươm giống" onOpenChange={open => { if (!open) onClose(); }} onCloseRequest={onClose} dismissible={false}>
     <StartForm key={zoneId} zones={zones} zoneId={zoneId} initialLotId={initialLotId} onZone={setZoneId} onClose={onClose} onSaved={onSaved} />
   </Dialog>;
 }
@@ -30,10 +31,11 @@ function StartForm({ zones, zoneId, initialLotId, onZone, onClose, onSaved }: { 
   const [photos, setPhotos] = useState<NurseryPhotoDraft[]>([]), [photoBusy, setPhotoBusy] = useState(false), [review, setReview] = useState(false), [error, setError] = useState<string>();
   const { notify } = useToast(), mutation = useNurseryMutation(), confirmation = useActionDialog(), lot = lots.data?.lots.find(item => item.id === lotId);
   const zone = zones.find(item => item.id === zoneId);
+  const people = useResponsiblePeople(zoneId), [responsible, setResponsible] = useState("");
   // The pieces leave the lot's stock at the start (no negative stock): above what is on hand is refused here, before the review, as well as by the backend.
   const typed = nurseryQuantityValue(quantity);
   const overStock = lot && lot.onHand != null && Number.isFinite(typed) && typed > lot.onHand ? `Số mảnh: lô ${lot.code} chỉ còn ${quantityText(lot.onHand, lot.unit)} trong kho. Nhập tối đa ${quantityText(lot.onHand, lot.unit)}.` : undefined;
-  async function leave(action: () => void) { if (!mutation.busy() && !photoBusy && (!(quantity || note || photos.length || lotId !== initialLotId || crew.length) || await confirmation.confirm("Bỏ thông tin ươm giống chưa lưu?"))) action(); }
+  async function leave(action: () => void) { if (!mutation.busy() && !photoBusy && (!(quantity || note || photos.length || lotId !== initialLotId || crew.length || responsible) || await confirmation.confirm("Bỏ thông tin ươm giống chưa lưu?"))) action(); }
   function validate() {
     if (!lot) return "Lô giống: chọn lô giống trong kho.";
     if (!quantity || !Number.isFinite(nurseryQuantityValue(quantity)) || nurseryQuantityValue(quantity) <= 0) return "Số mảnh: nhập số lớn hơn 0, tối đa 2 chữ số thập phân.";
@@ -46,7 +48,7 @@ function StartForm({ zones, zoneId, initialLotId, onZone, onClose, onSaved }: { 
     if (mutation.busy() || mutation.blocked || photoBusy) return;
     const found = validate(); setError(found); if (found) return;
     if (!review) { setReview(true); return; }
-    const result = await mutation.run(() => nurseryService.save("create", zoneId, nurseryMultipart({ seedLotId: lotId, quantity: nurseryQuantityValue(quantity), startDate: date, note, ...(crew.length ? { crew } : {}) }, photos.map(photo => photo.file))));
+    const result = await mutation.run(() => nurseryService.save("create", zoneId, nurseryMultipart({ seedLotId: lotId, quantity: nurseryQuantityValue(quantity), startDate: date, note, ...(crew.length ? { crew } : {}), ...(responsible ? { responsibleAccountId: responsible } : {}) }, photos.map(photo => photo.file))));
     if (result) {
       const crewNotice = crewAssignmentNotice(result.crewAssignment);
       if (crewNotice) notify({ tone: result.crewAssignment?.skipped.length ? "warning" : "info", title: crewNotice });
@@ -56,15 +58,17 @@ function StartForm({ zones, zoneId, initialLotId, onZone, onClose, onSaved }: { 
   return <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>{confirmation.dialog}
     <p className="mb-3 text-sm font-medium">Bước {review ? "2/2 · Xem lại và xác nhận" : "1/2 · Thông tin ươm giống"}</p>
     <fieldset disabled={mutation.pending || mutation.blocked || photoBusy} className="min-w-0 space-y-3">
-      {!review ? <>
+      {!review ? <div className="grid min-w-0 items-start gap-4 md:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 space-y-3">
         <Select label="Vùng ươm" value={zoneId} onChange={event => void leave(() => onZone(event.target.value))}>{zones.map(zone => <option key={zone.id} value={zone.id}>{zone.code} · {zone.name}</option>)}</Select>
         {lots.loading ? <Skeleton /> : lots.error ? <><ErrorNotice error={nurseryDisplayText(lots.error)} /><Button key="retry-start-lots" type="button" variant="secondary" onClick={lots.reload}>Tải lại lô giống</Button></> : <Select label="Lô giống trong kho" value={lotId} onChange={event => setLotId(event.target.value)}><option value="">Chọn lô giống</option>{lots.data?.lots.filter(item => (item.onHand ?? 0) > 0).map(item => <option key={item.id} value={item.id}>{item.code} · {item.itemName} · Tồn {quantityText(item.onHand, item.unit)}</option>)}</Select>}
         {!lots.loading && !lots.error && !lots.data?.lots.length && <p className="text-sm">Không có lô giống còn tồn kho trong vùng này.</p>}
         <div className="grid gap-3 sm:grid-cols-2"><UnitField label="Số mảnh vào ươm" unit="mảnh" decimals={2} min={0} value={quantity} onChange={setQuantity} required hint={lot?.onHand != null ? `Tồn kho của lô: ${quantityText(lot.onHand, lot.unit)}` : undefined} error={overStock} /><Field label="Ngày bắt đầu ươm *" type="date" value={date} onChange={event => setDate(event.target.value)} max={businessToday()} required /></div>
         <Note label="Ghi chú" value={note} onChange={event => setNote(event.target.value)} maxLength={1000} />
+        <ResponsiblePersonField people={people} value={responsible} onChange={setResponsible} />
         <RecordCrewPicker label="Nhân viên ươm" zoneId={zoneId} values={crew} onChange={setCrew} />
+      </div>
         <NurseryPhotoField photos={photos} onChange={setPhotos} onBusy={setPhotoBusy} />
-      </> : <NurseryReviewTable rows={[["Vùng ươm", zone ? `${zone.code} · ${zone.name}` : "—"], ["Lô giống", lot?.code], ["Nhà cung cấp", lot?.supplierName ?? "—"], ["Số mảnh vào ươm", quantityText(nurseryQuantityValue(quantity))], ["Ngày bắt đầu", date.split("-").reverse().join("/")], ["Tồn trước khi ươm", quantityText(lot?.onHand, lot?.unit)], ["Tồn sau khi ươm", lot?.onHand == null ? "—" : quantityText(lot.onHand - nurseryQuantityValue(quantity), lot.unit)], ["Ảnh hiện trường", `${photos.length} ảnh`], ["Ghi chú", nurseryDisplayText(note) || "—"]]} />}
+      </div> : <NurseryReviewTable rows={[["Vùng ươm", zone ? `${zone.code} · ${zone.name}` : "—"], ["Lô giống", lot?.code], ["Nhà cung cấp", lot?.supplierName ?? "—"], ["Số mảnh vào ươm", quantityText(nurseryQuantityValue(quantity))], ["Ngày bắt đầu", date.split("-").reverse().join("/")], ["Tồn trước khi ươm", quantityText(lot?.onHand, lot?.unit)], ["Tồn sau khi ươm", lot?.onHand == null ? "—" : quantityText(lot.onHand - nurseryQuantityValue(quantity), lot.unit)], ["Người phụ trách", responsibleText(people, responsible)], ["Ảnh hiện trường", `${photos.length} ảnh`], ["Ghi chú", nurseryDisplayText(note) || "—"]]} />}
     </fieldset>
     <ErrorNotice error={nurseryDisplayText(error ?? mutation.error)} />
     {mutation.blocked && <p role="alert" className="text-sm">Hãy đóng cửa sổ và tải lại danh sách để đối chiếu kết quả trước khi ghi lại.</p>}

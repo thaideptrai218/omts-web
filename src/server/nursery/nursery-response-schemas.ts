@@ -29,7 +29,8 @@ export const nurseryList = z.object({ items: z.array(z.object({ ...common, seedL
 /** Cycles/rafts currently drawing seed from this batch. */
 const usage = z.object({ cycleId: z.string(), cycleCode: text, cycleStartDate: text, cycleStatus: text, raftId: z.string(), raftCode: z.string(),
   seeded: number.nullish(), lastSeedingOn: text });
-export const nurseryDetail = z.object({ ...common, seedLot: lot, seedLotOnHand: number,
+export const responsiblePeople = z.array(z.object({ accountId: z.string(), name: z.string(), isSelf: z.boolean() }));
+export const nurseryDetail = z.object({ responsibleAccountId: text, responsibleName: text, ...common, seedLot: lot, seedLotOnHand: number,
   note: text, issueId: text, issueCode: text, cancelReason: text, cancelledAt: text,
   recordedByAccountId: text, recordedByName: text, createdAt: text,
   startPhotos: z.array(photo).default([]), completionPhotos: z.array(photo).default([]),
