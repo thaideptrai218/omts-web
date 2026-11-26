@@ -39,4 +39,3 @@ button.accountChip { cursor:pointer; }
 button.accountChip:hover { background:var(--omts-color-primary); color:#fff; }
 .accountChip[data-locked] { background:var(--omts-color-surface-subtle); color:var(--omts-color-text-muted); }
 
-.grantsCell { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }

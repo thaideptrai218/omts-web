@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
 import { createWorkspaceRepository } from "@/features/api-workspace/workspace-repository";
 import { loadOptions } from "@/features/operations/lookups";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
@@ -21,13 +20,13 @@ function holderNames(accounts: readonly UserAccount[], code: string): string {
 }
 
 /**
- * "Xem quyền của vai trò" from an employee's account tab: the two fixed roles (they cannot be created, edited or deleted) with how many
- * accounts hold each, and the read-only permission matrix of the selected role. Holder counts come from the accounts' Effective pairs.
+ * "Vai trò và quyền": the two fixed roles (they cannot be created, edited or deleted) with how many accounts hold each, and the read-only
+ * permission matrix of the selected role. Holder counts come from the accounts' Effective pairs, read here once. The reserved EMPLOYEE role is not offered.
  */
-export function RolePermissionsDialog({ onClose }: { onClose(): void }) {
+export function RolePermissionsPanel() {
   const accounts = useRemote(useCallback((signal: AbortSignal) => loadOptions("accounts", signal), []));
   const list = useMemo(() => accounts.data?.map(toUserAccount), [accounts.data]);
-  return <Dialog open title="Quyền của vai trò" size="xl" onOpenChange={(open) => { if (!open) onClose(); }}><RolePermissions accounts={list} /></Dialog>;
+  return <RolePermissions accounts={list} />;
 }
 
 function RolePermissions({ accounts }: { accounts: readonly UserAccount[] | undefined }) {

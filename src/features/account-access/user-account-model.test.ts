@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { accountantUniquenessWarning } from "./accountant-uniqueness-warning";
-import { countRoleHolders, copyUserGrants, filterUserAccounts, missingWorkingZones, toUserAccount, type UserAccount, type UserPair } from "./user-account-model";
+import { countRoleHolders, copyUserGrants, toUserAccount, type UserAccount, type UserPair } from "./user-account-model";
 import { grantsToSelection, selectionError, selectionToGrants } from "./user-grant-selection";
 
 const zoneA = "11111111-1111-4111-8111-111111111111", zoneB = "22222222-2222-4222-8222-222222222222";
 const pair = (role: string, zoneId: string | null, id = `${role}-${zoneId}`): UserPair => ({ id, role, roleName: role, zoneId, zoneName: zoneId === zoneA ? "Vùng A" : zoneId === zoneB ? "Vùng B" : null, allZones: zoneId === null });
 const account = (id: string, displayName: string, pairs: UserPair[], extra: Partial<UserAccount> = {}): UserAccount =>
-  ({ id, displayName, username: id, phoneNumber: null, email: null, status: "Active", employeeId: null, pairs, rowVersion: "v", ...extra });
+  ({ id, displayName, username: id, phoneNumber: null, email: null, status: "Active", employeeId: null, pairs, rowVersion: "v", note: null, mustChangePassword: false, deleted: false, ...extra });
 
 describe("accountant uniqueness warning (decision D9)", () => {
   const existing = account("ketoan1", "Kế toán Lan", [pair("ACCOUNTANT", null)]);
@@ -44,25 +44,21 @@ describe("grant selection", () => {
   });
 });
 
-describe("role holder count and list helpers", () => {
+describe("role holder count", () => {
   const accounts = [account("a", "An", [pair("ZONE_MANAGER", zoneA), pair("ZONE_MANAGER", zoneB)]), account("b", "Bình", [pair("ACCOUNTANT", null)]), account("c", "Chi", [], { status: "Locked" })];
   it("counts an account once per role even with several zones", () => expect(countRoleHolders(accounts)).toEqual({ ZONE_MANAGER: 1, ACCOUNTANT: 1 }));
-  it("filters by role, zone (all-zone pairs match any zone), status and search over name and linked employee", () => {
-    expect(filterUserAccounts(accounts, { search: "", role: "ZONE_MANAGER", zoneId: "", status: "" }).map((a) => a.id)).toEqual(["a"]);
-    expect(filterUserAccounts(accounts, { search: "", role: "", zoneId: zoneB, status: "" }).map((a) => a.id)).toEqual(["a", "b"]);
-    expect(filterUserAccounts(accounts, { search: "", role: "NONE", zoneId: "", status: "Locked" }).map((a) => a.id)).toEqual(["c"]);
-    expect(filterUserAccounts([...accounts, account("d", "Dũng", [], { employeeId: "e1" })], { search: "nv0001", role: "", zoneId: "", status: "" }, new Map([["e1", "NV0001 · Dũng"]])).map((a) => a.id)).toEqual(["d"]);
-  });
-});
-
-describe("worker zone hint (decision D8)", () => {
-  it("lists Zone Manager zones the employee does not work in; all-zone and Accountant pairs never count", () => {
-    const pairs = [pair("ZONE_MANAGER", zoneA), pair("ZONE_MANAGER", zoneB), pair("ZONE_MANAGER", null), pair("ACCOUNTANT", null)];
-    expect(missingWorkingZones(pairs, [zoneA]).map((p) => p.zoneId)).toEqual([zoneB]);
-  });
 });
 
 describe("toUserAccount", () => {
+  it("hides the reserved Employee role: only Quản lý vùng and Kế toán pairs are kept", () => {
+    const record = { id: "x", username: "u", displayName: "U", status: "Active", rowVersion: "v", pairs: [pair("EMPLOYEE", null), pair("ZONE_MANAGER", zoneA), pair("ACCOUNTANT", null)] };
+    expect(toUserAccount(record).pairs.map((p) => p.role)).toEqual(["ZONE_MANAGER", "ACCOUNTANT"]);
+    expect(toUserAccount({ ...record, pairs: [pair("EMPLOYEE", null)] }).pairs).toEqual([]);
+  });
+  it("reads the note, the pending password and the deleted mark", () => {
+    const saved = toUserAccount({ id: "x", username: "u", displayName: "U", status: "Deleted", rowVersion: "v", note: "Ghi", mustChangePassword: true });
+    expect(saved).toMatchObject({ note: "Ghi", mustChangePassword: true, deleted: true });
+  });
   it("treats a record without pairs as no role yet", () => {
     expect(toUserAccount({ id: "x", username: "u", displayName: "U", status: "Active", rowVersion: "v" }).pairs).toEqual([]);
   });

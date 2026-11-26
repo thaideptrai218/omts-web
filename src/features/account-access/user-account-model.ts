@@ -11,6 +11,10 @@ export type UserPair = { id: string; zoneId: string | null; zoneName: string | n
 export type UserAccount = {
   id: string; username: string; displayName: string; phoneNumber: string | null; email: string | null; status: string;
   employeeId: string | null; pairs: UserPair[]; rowVersion: string | undefined;
+  /** Optional free note of the Owner; "Chờ đổi mật khẩu" while the temporary password has not been replaced; soft-deleted accounts stay in the list only when asked. */
+  note: string | null; mustChangePassword: boolean; deleted: boolean;
+  /** "Staff" for a normal account; anything else (the Owner) is protected from lock and delete. */
+  subjectType?: string | null;
 };
 
 /** Reads the workspace record (backend StaffAccountView) into the shape the screen needs; absent pairs mean "no role yet". */
@@ -19,31 +23,16 @@ export function toUserAccount(record: ApiRecord): UserAccount {
   return {
     id: record.id, username: text(record.username) ?? "", displayName: text(record.displayName) ?? "", phoneNumber: text(record.phoneNumber),
     email: text(record.email), status: text(record.status) ?? "", employeeId: text(record.employeeId), rowVersion: record.rowVersion,
-    pairs: Array.isArray(record.pairs) ? (record.pairs as UserPair[]) : [],
+    // The reserved Employee role (future Zalo login) is never shown or offered: only the two roles an Owner assigns count here.
+    pairs: Array.isArray(record.pairs) ? (record.pairs as UserPair[]).filter((pair) => pair.role === ZONE_MANAGER_ROLE || pair.role === ACCOUNTANT_ROLE) : [],
+    subjectType: text(record.subjectType), note: text(record.note), mustChangePassword: record.mustChangePassword === true, deleted: record.deleted === true || record.status === "Deleted",
   };
 }
 
 export const roleLabel = (code: string, fallback?: string) => roleDisplayName(code, fallback);
 /** One vocabulary for the lock action: the status is "Đang hoạt động" / "Đã khóa"; the actions are "Khóa tài khoản" / "Mở khóa tài khoản". */
-export const accountStatusLabel = (status: string) => status === "Active" ? "Đang hoạt động" : "Đã khóa";
+export const accountStatusLabel = (status: string) => status === "Active" ? "Đang hoạt động" : status === "Deleted" ? "Đã xóa" : "Đã khóa";
 export const pairZoneLabel = (pair: UserPair) => pair.allZones ? "Tất cả vùng" : pair.zoneName || "Vùng chưa có tên";
-
-export type UserFilters = { search: string; role: string; zoneId: string; status: string };
-export const emptyUserFilters: UserFilters = { search: "", role: "", zoneId: "", status: "" };
-const fold = (value: string) => value.toLocaleLowerCase("vi");
-
-/** Client-side filter over loaded accounts. A role/zone filter matches an Effective pair; "all zones" pairs match any zone. */
-export function filterUserAccounts(accounts: readonly UserAccount[], filters: UserFilters, employeeNames: ReadonlyMap<string, string> = new Map()): UserAccount[] {
-  const term = fold(filters.search.trim());
-  return accounts.filter((account) => {
-    if (filters.status && account.status !== filters.status) return false;
-    if (filters.role && !(filters.role === "NONE" ? account.pairs.length === 0 : account.pairs.some((pair) => pair.role === filters.role))) return false;
-    if (filters.zoneId && !account.pairs.some((pair) => pair.allZones || pair.zoneId === filters.zoneId)) return false;
-    if (!term) return true;
-    const employee = account.employeeId ? employeeNames.get(account.employeeId) ?? "" : "";
-    return [account.displayName, account.username, account.phoneNumber ?? "", account.email ?? "", employee].some((value) => fold(value).includes(term));
-  });
-}
 
 /** Number of accounts holding each role (one count per account even when it has the role in several zones). */
 export function countRoleHolders(accounts: readonly UserAccount[]): Record<string, number> {
@@ -66,9 +55,4 @@ export function copyUserGrants(template: Pick<UserAccount, "pairs">): CreateUser
     seen.add(key); drafts.push({ zoneId, role: pair.role });
   }
   return drafts;
-}
-
-/** Zones a Zone Manager grant covers that the linked employee does not list as a working zone (hint of D8). */
-export function missingWorkingZones(pairs: readonly UserPair[], workingZoneIds: readonly string[]): UserPair[] {
-  return pairs.filter((pair) => pair.role === ZONE_MANAGER_ROLE && !pair.allZones && pair.zoneId && !workingZoneIds.includes(pair.zoneId));
 }

@@ -10,16 +10,20 @@ const labels = (gate: SettingsGate) => buildSettingsGroups(gate).flatMap((group)
 describe("settings hub groups", () => {
   it("shows the Owner every group in KiotViet order, each item with an editor caption", () => {
     const groups = buildSettingsGroups(owner);
-    expect(groups.map((group) => group.key)).toEqual(["cooperative", "farming", "inputs", "hr", "sales", "finance", "system"]);
+    expect(groups.map((group) => group.key)).toEqual(["cooperative", "users", "farming", "inputs", "hr", "sales", "finance", "system"]);
     expect(groups.flatMap((group) => group.items).every((item) => !!item.editor)).toBe(true);
   });
 
-  it("does not list user management or roles: logins and roles are set from the employee screen", () => {
-    const all = labels(owner);
-    expect(all).not.toContain("Quản lý người dùng");
-    expect(all).not.toContain("Vai trò và quyền");
-    expect(buildSettingsGroups(owner).flatMap((group) => group.items).some((item) => item.href.startsWith("/workspace/accounts") || item.href.startsWith("/workspace/roles"))).toBe(false);
-    expect(buildSettingsGroups(owner).some((group) => group.label === "Người dùng")).toBe(false);
+  it("lists Tài khoản người dùng and Vai trò và quyền under Người dùng, each opening its own page", () => {
+    const users = buildSettingsGroups(owner).find((group) => group.key === "users");
+    expect(users?.label).toBe("Người dùng");
+    expect(users?.items.map((item) => [item.label, item.href])).toEqual([["Tài khoản người dùng", "/workspace/accounts"], ["Vai trò và quyền", "/workspace/roles"]]);
+    expect(labels(owner)).not.toContain("Quản lý người dùng");
+  });
+
+  it("hides the Người dùng group from everyone but the Owner", () => {
+    expect(labels({ ...none, holds: () => true, operation: () => true, canReadProducts: true })).not.toContain("Tài khoản người dùng");
+    expect(buildSettingsGroups(none).some((group) => group.key === "users")).toBe(false);
   });
 
   it("hides every Owner-only setting from a zone manager: reading farming data does not make a setting editable", () => {
@@ -56,8 +60,9 @@ describe("settings hub search and selection", () => {
   });
   it("finds items by meaning: synonyms with and without accents", () => {
     const find = (query: string) => filterSettingsGroups(groups, query).flatMap((group) => group.items.map((item) => item.label));
-    expect(find("phan quyen")).toEqual([]);
-    expect(find("tài khoản")).not.toContain("Quản lý người dùng");
+    expect(find("phan quyen")).toEqual(["Tài khoản người dùng", "Vai trò và quyền"]);
+    expect(find("mật khẩu")).toContain("Tài khoản người dùng");
+    expect(find("nhan vien dang nhap")).toEqual(["Tài khoản người dùng"]);
     expect(find("đơn giá")).toContain("Loại công việc và đơn giá");
     expect(find("thu chi")).toEqual(["Sổ quỹ"]);
     expect(find("ví")).toContain("Sổ quỹ");

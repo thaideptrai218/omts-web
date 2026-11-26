@@ -5,27 +5,23 @@ vi.mock("next/navigation", () => ({ redirect, notFound: () => { throw new Error(
 vi.mock("next/server", () => ({ connection: async () => undefined }));
 vi.mock("@/server/auth/session-gateway.instance", () => ({ getSessionGateway: () => ({ mode: "api" }) }));
 vi.mock("@/features/api-workspace/api-resource-screen", () => ({ ApiResourceScreen: () => null }));
-vi.mock("@/features/employee-api/employee-account-link-redirect", () => ({ EmployeeAccountLinkRedirect: () => null }));
 import WorkspaceResourcePage from "./page";
 
-const page = (resource: string, search: Record<string, string | string[] | undefined> = {}) => WorkspaceResourcePage({ params: Promise.resolve({ resource }), searchParams: Promise.resolve(search) });
+const page = (resource: string) => WorkspaceResourcePage({ params: Promise.resolve({ resource }) });
 beforeEach(() => { redirect.mockClear(); });
 
-describe("old user management addresses", () => {
-  it("send /workspace/roles to the Nhân viên screen", async () => {
-    await expect(page("roles")).rejects.toThrow("redirect:/workspace/employees");
-  });
-  it("send /workspace/accounts to the Nhân viên screen", async () => {
-    await expect(page("accounts")).rejects.toThrow("redirect:/workspace/employees");
-    await expect(page("accounts", { accountId: "not-an-id" })).rejects.toThrow("redirect:/workspace/employees");
-    await expect(page("accounts", { accountId: ["a", "b"] })).rejects.toThrow("redirect:/workspace/employees");
-  });
-  it("find the employee for /workspace/accounts?accountId=<id>", async () => {
-    const element = await page("accounts", { accountId: "11111111-1111-4111-8111-111111111111" });
-    expect(element).toMatchObject({ props: { accountId: "11111111-1111-4111-8111-111111111111" } });
+describe("user management addresses", () => {
+  it("open Tài khoản người dùng and Vai trò và quyền on their own, with no redirect to the Nhân viên screen", async () => {
+    for (const resource of ["accounts", "roles"]) {
+      expect(await page(resource)).toMatchObject({ props: { resource } });
+    }
     expect(redirect).not.toHaveBeenCalled();
   });
-  it("still opens the other resources", async () => {
+  it("still sends the input catalogue to its own screen and opens the other resources", async () => {
+    await expect(page("input-items")).rejects.toThrow("redirect:/inputs/items");
     expect(await page("zones")).toBeTruthy();
+  });
+  it("answers an unknown resource with not found", async () => {
+    await expect(page("nothing")).rejects.toThrow("notFound");
   });
 });

@@ -7,13 +7,12 @@ import { HelpLink, ManagementLayout } from "@/components/ui/management-screen/ma
 import { BulkBar, ColumnPicker, ListStateMessage, ManagementScroller, type SortState } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { ScreenGuide, type GuideStep } from "@/components/ui/screen-guide";
-import { useUserAccounts } from "@/features/account-access/use-user-accounts";
 import { loadOptions } from "@/features/operations/lookups";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { readSelectionPages } from "@/features/operations/selection-pages";
 import { ErrorNotice, useRemote } from "@/features/operations/ui";
 import { employeePageSchema, jobTypeOptionsSchema, type Employee } from "./contracts";
-import { emptyAccountFilters, filtersNeedAccounts, hasAccountFilters, readWithLoadedAccounts, type AccountFilters } from "./employee-account-filter";
+import { filterNeedsAccounts, readWithAccountFilter, type AccountFilter } from "./employee-account-filter";
 import { searchWithAccountNames } from "./employee-account-name-search";
 import { EmployeeDirectoryFilters } from "./employee-directory-filters";
 import { EmployeeDirectoryPaging } from "./employee-directory-paging";
@@ -22,15 +21,14 @@ import { defaultEmployeeColumns, employeeColumns, EmployeeDirectoryTable, type E
 import { EmployeeApiEditor } from "./employee-editor";
 import { employeeFileRepository } from "./employee-file-repository";
 import { EmployeeImportDialog } from "./employee-import-dialog";
-import { EmployeeUnlinkedAccounts } from "./employee-unlinked-accounts";
 import { payrollColumnKeys } from "./employee-viewer-access";
 import { isPermissionDenied, PermissionDeniedNotice } from "./permission-denied-notice";
 import { useEmployeeDirectoryList } from "./use-employee-directory-list";
 import { exportLimitMessage, useEmployeeFileAction } from "./use-employee-file-action";
 import styles from "./employee-directory.module.css";
 
-/** v3: the role and zones column was added, so an older saved choice must not hide it. */
-export const EMPLOYEE_COLUMNS_STORAGE = "omts-columns-employees-v3";
+/** v4: the role and zones column moved to the Tài khoản người dùng screen. */
+export const EMPLOYEE_COLUMNS_STORAGE = "omts-columns-employees-v4";
 /** Owner directory shares the same fixed management frame and data contracts as the other production lists. */
 export function EmployeeDirectory({ readOnly = false, access = { manage: true, payroll: true } }: { readOnly?: boolean; access?: { manage: boolean; payroll: boolean } }) {
   const repository = useMemo(() => createOperationsRepository("employees"), []);
@@ -42,12 +40,11 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   const [search, setSearch] = useState(linkedSearch), [term, setTerm] = useState(linkedSearch.trim());
   const [statusId, setStatusId] = useState(linkedId ? "" : "401"), [zoneId, setZoneId] = useState(params?.get("zoneId") ?? "");
   const [employeeType, setEmployeeType] = useState(""), [jobTypeId, setJobTypeId] = useState("");
-  // Login filters (Owner only). ?account=unlinked&openAccount=<id> opens the logins that no employee holds, with that one open (old account links end up here).
+  // Simple account filter (Owner only): ?account=has|none. Role, zones and the account itself are managed on the Tài khoản người dùng screen.
   const accountParam = params?.get("account") ?? "";
-  // ?tab=account opens the linked employee on the login tab (old account links come this way).
+  // ?tab=account opens the employee on the login tab.
   const startTab = access.manage && params?.get("tab") === "account" ? "account" : undefined;
-  const [accountFilters, setAccountFilters] = useState<AccountFilters>(() => ({ ...emptyAccountFilters, account: access.manage && (accountParam === "has" || accountParam === "none" || accountParam === "unlinked") ? accountParam : "" }));
-  const accountData = useUserAccounts(access.manage);
+  const [accountFilter, setAccountFilter] = useState<AccountFilter>(() => access.manage && (accountParam === "has" || accountParam === "none") ? accountParam : "");
   // No header chosen: the backend keeps its own default order.
   const [sort, setSort] = useState<SortState>();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -56,7 +53,7 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   const [notice, setNotice] = useState<string>();
   const [storedColumns, storeColumns] = useStoredValue(EMPLOYEE_COLUMNS_STORAGE, defaultEmployeeColumns.join(","));
   // Pay columns (monthly hours, wage debt) exist only for a viewer with payroll access; for others they are not even offered in the picker.
-  const columns = employeeColumns.filter(column => (access.payroll || !payrollColumnKeys.includes(column.key)) && (access.manage || column.key !== "role"));
+  const columns = employeeColumns.filter(column => access.payroll || !payrollColumnKeys.includes(column.key));
   // The name column is the row's identity: a saved column choice can never hide it (a stale choice once left only the code and the debt).
   // Likewise the status: it is the LAST column, the only other one the kit keeps beside an open detail pane. Both are pinned and not offered in the picker.
   const pinned = ["name", "status"], pickable = columns.filter(column => !pinned.includes(column.key));
@@ -77,24 +74,22 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   const list = useEmployeeDirectoryList(useCallback((signal: AbortSignal) => {
     const read = (query: Record<string, string | undefined>, signal: AbortSignal) => repository.read("list", query, employeePageSchema, signal);
     const base = { zoneId, employeeType, jobTypeId, sortBy: sort?.key, sortDir: sort?.direction };
-    // Logins without an employee are listed from the account list, so there is nothing to read here.
-    if (accountFilters.account === "unlinked") return Promise.resolve({ status: "success" as const, data: { items: [], page: 1, pageSize, total: 0 } });
-    if (filtersNeedAccounts(accountFilters)) return readWithLoadedAccounts(index => readSelectionPages(read, { ...base, search: "", page: String(index), pageSize: "100" }, { statusId }, signal), accountFilters, term, page, pageSize, signal);
+    if (filterNeedsAccounts(accountFilter)) return readWithAccountFilter(index => readSelectionPages(read, { ...base, search: "", page: String(index), pageSize: "100" }, { statusId }, signal), accountFilter, term, page, pageSize);
     // The backend searches name, code and phone only; a typed login name is matched web-side on top of it.
     return searchWithAccountNames(term, pageSize,
       () => readSelectionPages(read, { ...base, search: term, page: String(page), pageSize: String(pageSize) }, { statusId }, signal),
       accountPage => readSelectionPages(read, { ...base, search: "", page: String(accountPage), pageSize: "100" }, { statusId }, signal));
-  }, [repository, term, statusId, zoneId, employeeType, jobTypeId, accountFilters, sort, page, pageSize]));
+  }, [repository, term, statusId, zoneId, employeeType, jobTypeId, accountFilter, sort, page, pageSize]));
   const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
   const jobTypes = useRemote(useCallback((signal: AbortSignal) => repository.read("job-types", {}, jobTypeOptionsSchema, signal), [repository]));
   const lookupsReady = !!zones.data && !!jobTypes.data && !zones.loading && !jobTypes.loading;
   // Export of the current filters and sort (no paging) or of the ticked rows only (ids replace the filters).
-  // The server knows nothing of the account filters, so with them on the rows are read here and exported by id: the file holds what the list shows.
+  // The server knows nothing of the account filter, so with it on the rows are read here and exported by id: the file holds what the list shows.
   const exportAll = useEmployeeFileAction(async () => {
-    if (!filtersNeedAccounts(accountFilters)) return employeeFileRepository.exportFile({ search: term, statusId, zoneId, employeeType, jobTypeId, ...order });
+    if (!filterNeedsAccounts(accountFilter)) return employeeFileRepository.exportFile({ search: term, statusId, zoneId, employeeType, jobTypeId, ...order });
     const read = (query: Record<string, string | undefined>, signal: AbortSignal) => repository.read("list", query, employeePageSchema, signal);
     const signal = AbortSignal.timeout(60_000), base = { zoneId, employeeType, jobTypeId, sortBy: sort?.key, sortDir: sort?.direction };
-    const matched = await readWithLoadedAccounts(index => readSelectionPages(read, { ...base, search: "", page: String(index), pageSize: "100" }, { statusId }, signal), accountFilters, term, 1, 5000, signal);
+    const matched = await readWithAccountFilter(index => readSelectionPages(read, { ...base, search: "", page: String(index), pageSize: "100" }, { statusId }, signal), accountFilter, term, 1, 5000);
     if (matched.status !== "success") return matched;
     if (!matched.data.items.length) return { status: "error" as const, httpStatus: 400, uncertain: false };
     return employeeFileRepository.exportFile(order, matched.data.items.map(row => row.id));
@@ -105,15 +100,14 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   const duplicateNote = (employee: Employee) => employee.duplicateIdNumber ? ` Cảnh báo: số CCCD này trùng với ${employee.duplicateIdNumber.fullName} (${employee.duplicateIdNumber.code}).` : "";
   function saved(employee: Employee, note?: string) { refresh(); setNotice(`Đã cập nhật hồ sơ nhân viên.${note ? ` ${note}` : ""}${duplicateNote(employee)}`); }
   function retry() { refresh(); zones.reload(); }
-  const hasFilters = !!search || !!zoneId || statusId !== "401" || !!employeeType || !!jobTypeId || hasAccountFilters(accountFilters);
-  const resetFilters = () => { setSearch(""); setTerm(""); setStatusId("401"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setAccountFilters(emptyAccountFilters); };
-  /** A login was changed in a profile or in the unlinked list: the role column and the login chips follow. */
-  const accountChanged = () => { accountData.refresh(); list.reload(); };
-  const unlinked = accountFilters.account === "unlinked", unlinkedCount = accountData.accounts?.filter(account => !account.employeeId).length ?? 0;
+  const hasFilters = !!search || !!zoneId || statusId !== "401" || !!employeeType || !!jobTypeId || !!accountFilter;
+  const resetFilters = () => { setSearch(""); setTerm(""); setStatusId("401"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setAccountFilter(""); };
+  /** An account was created from a profile: the username column follows. */
+  const accountChanged = () => list.reload();
   const filters = <EmployeeDirectoryFilters employeeType={employeeType} setEmployeeType={value => filter(() => setEmployeeType(value))} statusId={statusId} setStatusId={value => filter(() => setStatusId(value))}
     zoneId={zoneId} setZoneId={value => filter(() => setZoneId(value))} zones={zones.data ?? []} jobTypeId={jobTypeId} setJobTypeId={value => filter(() => setJobTypeId(value))} jobTypes={jobTypes.data ?? []}
     hasFilters={hasFilters} onReset={() => filter(resetFilters)}
-    accountFilters={access.manage ? accountFilters : undefined} setAccountFilters={value => filter(() => setAccountFilters(value))} />;
+    accountFilter={access.manage ? accountFilter : undefined} setAccountFilter={value => filter(() => setAccountFilter(value))} />;
   const selection = { selected, onToggle: (id: string, on: boolean) => setSelected(current => { const next = new Set(current); if (on) next.add(id); else next.delete(id); return next; }),
     onToggleAll: (on: boolean) => setSelected(on ? new Set(list.data?.items.map(row => row.id)) : new Set()) };
   const fileError = exportAll.error || exportSelected.error;
@@ -129,23 +123,20 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
       </>}
       <ColumnPicker columns={pickable} visible={visible} onChange={keys => storeColumns(keys.join(","))} /><HelpLink />
     </>}
-    footer={unlinked ? <p className="px-3 py-2 text-sm text-text-muted">{unlinkedCount} tài khoản chưa gắn nhân viên</p> : <EmployeeDirectoryPaging page={list.data?.page ?? page} total={list.data?.total ?? 0} loading={list.loading} pageSize={pageSize} setPage={goToPage} setPageSize={value => filter(() => setPageSize(value))} />}>
+    footer={<EmployeeDirectoryPaging page={list.data?.page ?? page} total={list.data?.total ?? 0} loading={list.loading} pageSize={pageSize} setPage={goToPage} setPageSize={value => filter(() => setPageSize(value))} />}>
     {(notice || fileError || zones.error || jobTypes.error) && <div className={styles.feedback}>{notice && <p role="status">{notice}</p>}<ErrorNotice error={fileError || zones.error || jobTypes.error} />{(zones.error || jobTypes.error) && <button type="button" onClick={retry}>Tải lại danh mục</button>}</div>}
     {!readOnly && <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>
       <Button className="w-auto" variant="secondary" aria-label="Xuất file các dòng đã chọn" isPending={exportSelected.pending} onClick={() => void exportSelected.run()}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>
     </BulkBar>}
     <ManagementScroller busy={list.loading}>
-      {unlinked ? (accountData.error ? <ListStateMessage error={accountData.error} onRetry={accountData.reload} retryLabel="Tải lại" />
-          : !accountData.accounts ? <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3].map(key => <div key={key} />)}</div>
-          : <EmployeeUnlinkedAccounts accounts={accountData.accounts} search={search} initialOpenId={params?.get("openAccount") ?? undefined} onChanged={accountData.refresh} />)
-        : isPermissionDenied(list.error) ? <PermissionDeniedNotice message={list.error} />
+      {isPermissionDenied(list.error) ? <PermissionDeniedNotice message={list.error} />
         : list.error ? <ListStateMessage error={list.error} onRetry={retry} retryLabel="Tải lại" />
         : !list.data ? <div role="status" aria-label="Đang tải danh sách" className={styles.skeleton}>{[1, 2, 3, 4, 5].map(key => <div key={key} />)}</div>
         : linkedId && !list.data.items.some(item => item.id === linkedId) ? <EmployeeDetailPanel key={linkedId} id={linkedId} cache={cache} onSaved={saved} revision={detailRevision} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onGuardChange={registerGuard} onAccountChanged={accountChanged} payroll={access.payroll} manage={access.manage} initialTab={startTab} />
         : !list.data.items.length ? <ListStateMessage>{hasFilters ? "Không có nhân viên phù hợp bộ lọc." : "Chưa có nhân viên."}
           {hasFilters && <button type="button" className="ml-2 font-semibold underline" onClick={() => filter(resetFilters)}>Xóa bộ lọc</button>}
           {!hasFilters && !readOnly && <button type="button" className="ml-2 font-semibold underline" disabled={!lookupsReady} onClick={() => leave(() => { setCreating(true); setSerial(value => value + 1); })}>Thêm nhân viên</button>}</ListStateMessage>
-        : <EmployeeDirectoryTable items={list.data.items} disabled={list.loading} cache={cache} detailRevision={detailRevision} onSaved={saved} visible={visible} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onGuardChange={registerGuard} initialExpandedId={linkedId} initialExpandedTab={startTab} access={access} accounts={accountData.byId} onAccountChanged={accountChanged}
+        : <EmployeeDirectoryTable items={list.data.items} disabled={list.loading} cache={cache} detailRevision={detailRevision} onSaved={saved} visible={visible} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onGuardChange={registerGuard} initialExpandedId={linkedId} initialExpandedTab={startTab} access={access} onAccountChanged={accountChanged}
           sort={sort ?? { key: "", direction: "asc" }} onSort={next => filter(() => setSort(next))} selection={readOnly ? undefined : selection} />}
     </ManagementScroller>
     {creating && <EmployeeApiEditor key={serial} record={null} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onClose={() => setCreating(false)} onAdopt={() => {}} onSaved={employee => {
@@ -159,8 +150,8 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
 function guideSteps(manage: boolean): GuideStep[] {
   return [
     { title: "Tìm nhân viên", text: "Gõ tên, mã, số điện thoại hoặc tên đăng nhập.", target: 'input[aria-label="Tìm nhân viên"]' },
-    ...(manage ? [{ title: "Lọc theo tài khoản", text: "Chọn Chưa có tài khoản để thấy ai cần cấp tài khoản, hoặc lọc theo vai trò và vùng phụ trách.", target: "text:Chưa có tài khoản" }] : []),
-    { title: "Mở một nhân viên", text: manage ? "Bấm vào nhân viên, rồi mở tab Tài khoản đăng nhập. Chưa có tài khoản thì cấp ở đó." : "Xem thông tin công việc của nhân viên.", target: '[aria-controls^="employee-preview-"]' },
+    ...(manage ? [{ title: "Lọc theo tài khoản", text: "Chọn Chưa có tài khoản để thấy ai cần được cấp tài khoản.", target: "text:Chưa có tài khoản" }] : []),
+    { title: "Mở một nhân viên", text: manage ? "Bấm vào nhân viên, rồi mở tab Tài khoản đăng nhập. Nhân viên nội bộ chưa có tài khoản thì cấp ở đó." : "Xem thông tin công việc của nhân viên.", target: '[aria-controls^="employee-preview-"]' },
     ...(manage ? [
       { title: "Chọn vai trò và vùng", text: "Bấm vào vùng để thêm hoặc bỏ, rồi bấm Lưu thay đổi. Kế toán thì làm cho cả hợp tác xã.", target: 'form[aria-label="Vai trò và vùng phụ trách"]' },
       { title: "Đổi mật khẩu hoặc khóa", text: "Đặt lại mật khẩu cho một mật khẩu tạm mới, chỉ hiện một lần. Khóa tài khoản thì người đó không đăng nhập được nữa.", target: "text:Đặt lại mật khẩu" },

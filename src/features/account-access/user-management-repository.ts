@@ -1,6 +1,6 @@
 import { bffFetch } from "@/features/auth/api/bff-fetch";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
-import { accountCredentialSchema, type AccountCredential } from "./account-credential-contract";
+import { accountCredentialSchema, type AccountCredential, type CreateUserRequest } from "./account-credential-contract";
 
 /**
  * Posts a write whose success is a one-time credential. A 5xx, a 401 or a success we could not read leaves the outcome
@@ -21,3 +21,6 @@ async function postCredential(path: string, body: unknown): Promise<WorkspaceRes
 
 /** Owner-only "Đặt lại mật khẩu": ends every session of the account and returns a new temporary password once. */
 export const resetAccountPassword = (accountId: string) => postCredential(`/api/accounts/${encodeURIComponent(accountId)}/reset-password`, { confirmed: true });
+
+/** Owner-only "Tạo tài khoản": a new staff account with its zone-role pairs inline; the answer carries the one-time temporary password. */
+export const createStaffAccount = (body: CreateUserRequest) => postCredential("/api/accounts", body);
