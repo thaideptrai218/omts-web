@@ -34,7 +34,7 @@ function ZoneDirectory({ helpHref }: { helpHref?: string }) {
   const functions = permissions.functionPermissions, owner = identity.subjectType === "CooperativeOwner";
   const canView = resourceAllowed("zones", identity, functions), canCreate = resourceAllowed("zones", identity, functions, "Create");
   const accessFor = (zoneId: string): ZoneAccess => ({ edit: resourceAllowed("zones", identity, functions, "Edit"), rafts: resourceAllowed("rafts", identity, functions),
-    licenses: owner, staff: owner, cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), water: operationAllowed("water", identity, functions, "View", zoneId), yield: operationAllowed("harvest-yield", identity, functions, "View", zoneId),
+    licenses: owner, staff: owner, water: operationAllowed("water", identity, functions, "View", zoneId), waterCreate: operationAllowed("water", identity, functions, "Create", zoneId),
     raft: { edit: resourceAllowed("rafts", identity, functions, "Edit"), photoEdit: owner, cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), costs: operationAllowed("purchase-receipts", identity, functions, "View", zoneId) } });
   const params = useSearchParams(), recordId = params.get("recordId") ?? "", linkedId = UUID.test(recordId) ? recordId : undefined;
   const [filters, setFilters] = useState<ZoneFilters>({ ...emptyZoneFilters, search: params.get("search") ?? "" });
