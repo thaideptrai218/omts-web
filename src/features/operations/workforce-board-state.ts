@@ -94,9 +94,10 @@ export function useWorkforceBoard() {
   const lastPage = Math.max(1, Math.ceil((filteredRows?.length ?? 0) / pageSize));
   const currentPage = Math.min(page, lastPage);
   const visibleRows = filteredRows?.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  // Zone filter options: zones the user may view plus any zone that appears in the loaded rows.
+  // Zone filter options: In Use zones the user may view plus any other zone that appears in the loaded rows; a discontinued zone is never offered.
+  const discontinued = new Set(zones.data?.filter((zone) => zone.statusId === 102).map((zone) => zone.id));
   const zoneOptions = [
-    ...new Set([...(zones.data?.filter((zone) => allowed("View", zone.id)).map((zone) => zone.id) ?? []), ...(allRows?.map((row) => row.zoneId) ?? [])]),
+    ...new Set([...(zones.data?.filter((zone) => zone.statusId !== 102 && allowed("View", zone.id)).map((zone) => zone.id) ?? []), ...(allRows?.map((row) => row.zoneId).filter((id) => !discontinued.has(id)) ?? [])]),
   ];
 
   /** Wraps a filter setter so the list restarts from page 1 with no open row. */

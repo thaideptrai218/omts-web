@@ -32,6 +32,8 @@ export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: s
   const tabs = useMemo(() => ([["info", "Thông tin", true], ["map", "Bản đồ", true], ["rafts", "Bè nuôi", access.rafts], ["licenses", "Giấy phép", access.licenses],
     ["staff", "Nhân viên", access.staff], ["water", "Quan trắc nước", access.water]] as const).filter(entry => entry[2]).map(([key, label]) => ({ key, label })), [access]);
   const prefix = `zone-${id}`;
+  // A licence is offered for In Use zones; the open zone stays in the list so its own documents can be added whatever its status.
+  const coverable = useMemo(() => zones.filter(row => row.statusId !== DISCONTINUED || row.id === id), [zones, id]);
 
   function saved(record: ZoneDetail) { detail.replace(record); onChanged(); }
   async function confirm() {
@@ -46,7 +48,7 @@ export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: s
   const content: Record<TabKey, ReactNode> = zone ? {
     info: <ZoneInfoTab zone={zone} canEdit={access.edit} canSeeLicense={access.licenses} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload} onStatus={() => { mutation.reviewed(); setAction(zone.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
     map: <ZoneMapTab zone={zone} canSeeRafts={access.rafts} onOpenRaft={raftId => void guard.leave(() => { setOpenRaft(raftId); setTab("rafts"); })} />,
-    rafts: <ZoneRaftsTab zoneId={id} raftAccess={access.raft} guard={guard} openId={openRaft} />, licenses: <ZoneLicensesTab zoneId={id} zones={zones} guard={guard} />,
+    rafts: <ZoneRaftsTab zoneId={id} raftAccess={access.raft} guard={guard} openId={openRaft} />, licenses: <ZoneLicensesTab zoneId={id} zones={coverable} guard={guard} />,
     staff: <ZoneStaffTab zoneId={id} />, water: <ZoneWaterTab zoneId={id} zoneName={zone.name} canCreate={access.waterCreate && zone.statusId === IN_USE} />,
   } : { info: null, map: null, rafts: null, licenses: null, staff: null, water: null };
   return <section id={`zone-preview-${id}`} className={styles.detail} aria-label="Chi tiết vùng nuôi">

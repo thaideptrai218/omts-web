@@ -40,3 +40,13 @@ it("keeps every zone when no narrowing selection exists", async () => {
   expect(within(screen.getByRole("combobox", { name: "Vùng nuôi" })).getAllByRole("option").map(option => option.textContent))
     .toEqual(["Tất cả vùng đã chọn", "Z1 · Ngọc Vừng", "Z2 · Minh Châu", "Z3 · Quan Lạn"]);
 });
+
+it("lists In Use zones only in the header and the raft zone select, with no discontinued suffix", async () => {
+  const discontinued = { ...zones[0], id: zoneId(9), code: "Z9", name: "Vùng cũ", statusId: 102, status: "Discontinued" };
+  state.list.mockImplementation(async (resource: string) => ({ status: "success", data: { items: resource === "zones" ? [...zones, discontinued] : [], page: 1, pageSize: 100, total: resource === "zones" ? zones.length + 1 : 0 } }));
+  render(<SelectedZonesProvider accountId="acc-1" enabled><ApiResourceScreen resource="rafts" /></SelectedZonesProvider>);
+  await screen.findByRole("option", { name: "Z1 · Ngọc Vừng" });
+  expect(screen.queryByRole("option", { name: /Z9/ })).toBeNull();
+  expect(screen.queryByText(/ngừng sử dụng\)/)).toBeNull();
+  expect(state.list).toHaveBeenCalledWith("zones", expect.objectContaining({ statusId: "101" }));
+});

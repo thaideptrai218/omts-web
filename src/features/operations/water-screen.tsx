@@ -16,7 +16,7 @@ import { useStickyRemote } from "@/features/farming-management/use-sticky-remote
 import { useUnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
 import { WaterZoneOverview } from "@/features/water-overview/water-zone-overview";
 import * as c from "./contracts";
-import { loadOptions } from "./lookups";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { operationAllowed } from "./permissions";
 import { businessTime, useMutation, useRemote } from "./ui";
 import { WaterChartSection } from "./water-chart-section";
@@ -34,7 +34,7 @@ export { MeasurementEditor } from "./water-measurement-editor";
 export { NewMeasurement } from "./water-new-measurement-dialog";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
+const loadZones = loadInUseZones;
 const noLinkedRecord = { status: "success" as const, data: undefined as c.WaterMeasurement | undefined };
 
 /** Theo dõi chất lượng nước: measurements of one zone (`?zoneId=`), a row (`?recordId=`) opens its record in place; no zone shows the zone overview. */

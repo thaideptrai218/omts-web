@@ -86,7 +86,7 @@ function ZoneDirectory({ helpHref }: { helpHref?: string }) {
     footer={<ManagementPagination page={current} pageSize={pageSize} total={rows.length} unit="vùng nuôi" disabled={list.loading && !list.data} onPage={next => void guard.leave(() => { setPage(next); setExpanded(undefined); })} onPageSize={size => change(() => setPageSize(size))} />}>
     {guard.dialog}
     <ManagementScroller busy={list.loading}>
-      {mapOpen ? <div className="p-3"><GlobalZoneMap /></div>
+      {mapOpen ? <div className="p-3"><GlobalZoneMap allowDiscontinued /></div>
         : list.error && !list.data ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại" />
         : !list.data ? <ListSkeleton />
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có vùng nuôi phù hợp bộ lọc." : "Chưa có vùng nuôi."}</ListStateMessage>

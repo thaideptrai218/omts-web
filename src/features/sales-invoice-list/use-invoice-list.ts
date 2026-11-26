@@ -1,13 +1,13 @@
 "use client";
 import { useMemo } from "react";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { loadOptions } from "@/features/operations/lookups";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { operationAllowed } from "@/features/operations/permissions";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { useRemote } from "@/features/operations/ui";
 
 export const invoiceRepository = createOperationsRepository("sales-invoice-list");
-const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
+const loadZones = loadInUseZones;
 type ZoneOption = { id: string; label: string };
 
 /** What the caller may do on the invoice list; `View` is also checked per zone, so the zone filter offers only the zones the caller may see. */

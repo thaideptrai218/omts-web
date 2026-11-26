@@ -73,10 +73,9 @@ function Editor({ access, disposal, copy, prefill, products, zones }: { access: 
   const origin = disposal ?? copy;
   const [doc, setDoc] = useState<Saved | undefined>(disposal ? { id: disposal.id, rowVersion: disposal.rowVersion, statusId: disposal.statusId, code: disposal.code } : undefined);
   const completed = doc?.statusId === DISPOSAL.completed;
-  const usableZones = zones.filter((zone) => zone.inUse);
   const [lines, setLines] = useState<Line[]>(() => origin?.lines.map(lineFrom) ?? prefill?.lines ?? []);
   const [disposedAt, setDisposedAt] = useState(disposal ? vnLocal(disposal.disposedAt) : nowLocal()), [code, setCode] = useState(disposal?.code ?? "");
-  const [zoneId, setZoneId] = useState(origin?.zoneId ?? prefill?.zoneId ?? (usableZones.length === 1 ? usableZones[0].id : ""));
+  const [zoneId, setZoneId] = useState(origin?.zoneId ?? prefill?.zoneId ?? (zones.length === 1 ? zones[0].id : ""));
   const [reason, setReason] = useState(origin?.reason ?? ""), [notes, setNotes] = useState(origin?.notes ?? "");
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false);
   const [lots, setLots] = useState<Record<string, LotState>>({}), requested = useRef(new Set<string>());
@@ -140,7 +139,7 @@ function Editor({ access, disposal, copy, prefill, products, zones }: { access: 
     if (result.status === "success") { notify({ tone: "success", title: `Đã xóa phiếu tạm ${doc.code}.` }); router.push(DISPOSALS_PATH); } else setError(errorText(result));
   }
 
-  const missingZone = origin?.zoneId && !usableZones.some((zone) => zone.id === origin.zoneId);
+  const missingZone = origin?.zoneId && !zones.some((zone) => zone.id === origin.zoneId);
   const title = completed ? `Sửa phiếu ${doc?.code}` : doc ? `Phiếu tạm ${doc.code}` : copy ? `Sao chép ${copy.code}` : "Xuất hủy hàu";
   return <EditorFrame title={title} backHref={DISPOSALS_PATH} source={copy ? `Sao chép từ phiếu ${copy.code}; kiểm tra lại lô và số kg.` : completed ? "Sửa lô hoặc số kg: số còn lại của sản phẩm được tính lại theo phiếu mới." : undefined}
     tools={<><ItemFinder placeholder="Tìm sản phẩm theo mã hoặc tên" items={finderItems} onPick={add} />{doc && doc.statusId === DISPOSAL.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
@@ -171,7 +170,7 @@ function Editor({ access, disposal, copy, prefill, products, zones }: { access: 
         <div className={purchaseStyles.sideScroll}>
           <div className={purchaseStyles.sideTop}><div className={purchaseStyles.person} title="Người lập"><InterfaceIcon name="user" /><span>{disposal?.createdBy ?? access.username}</span></div><DatePickerField label="Thời gian" withTime value={disposedAt} max={nowLocal()} onChange={setDisposedAt} /></div>
           <SideRow label="Vùng *"><SelectBox aria-label="Vùng" value={zoneId} onChange={(event) => changeZone(event.target.value)}>
-            <option value="">Chọn vùng</option>{missingZone && <option value={origin?.zoneId ?? ""}>{origin?.zoneCode}</option>}{usableZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</SelectBox></SideRow>
+            <option value="">Chọn vùng</option>{missingZone && <option value={origin?.zoneId ?? ""}>{origin?.zoneCode}</option>}{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</SelectBox></SideRow>
           <SideRow label="Mã xuất hủy hàu"><input aria-label="Mã xuất hủy hàu" maxLength={30} placeholder="Mã phiếu tự động" title="Để trống để hệ thống tự cấp mã" value={code} onChange={(event) => setCode(event.target.value.replace(/\s/g, ""))} /></SideRow>
           <SideRow label="Trạng thái">{disposalStatusLabel[doc?.statusId ?? DISPOSAL.draft]}</SideRow>
           <div className={purchaseStyles.divider} />

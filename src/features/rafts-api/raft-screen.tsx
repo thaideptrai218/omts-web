@@ -102,7 +102,7 @@ function RaftWorkspace({ zones, zoneId, onZone, all, onAll, helpHref }: { zones:
     <RailHead canReset={hasFilter || (zones.length > 1 && !showAll)} onReset={() => change(() => { setFilters(emptyRaftFilters); if (zones.length > 1) onAll(true); })} />
     <FilterGroup legend="Vùng nuôi"><SelectBox aria-label="Vùng nuôi" className={styles.railSelect} value={showAll ? ALL_ZONES : zoneId} onChange={event => void guard.leave(() => { const value = event.target.value; onAll(value === ALL_ZONES); setPage(1); setExpanded(undefined); if (value !== ALL_ZONES) onZone(value); })}>
       {zones.length > 1 && <option value={ALL_ZONES}>Tất cả vùng đã chọn</option>}
-      {zones.map(zone => <option key={zone.id} value={zone.id}>{zoneLabelOf(zone)}{zone.statusId === 102 ? " (ngừng sử dụng)" : ""}</option>)}</SelectBox></FilterGroup>
+      {zones.map(zone => <option key={zone.id} value={zone.id}>{zoneLabelOf(zone)}</option>)}</SelectBox></FilterGroup>
     <FilterPills legend="Trạng thái" name="raft-status" value={filters.statusId} options={[["101", "Đang sử dụng"], ["102", "Ngừng sử dụng"]]} onChange={value => setFilter("statusId", value)} />
   </>;
   return <ManagementLayout storageKey="rafts" icon="raft" title="Bè nuôi" filters={rail} filterLabel="Bộ lọc bè nuôi"

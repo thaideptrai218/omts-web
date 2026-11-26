@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { loadOptions } from "@/features/operations/lookups";
 import { operationAllowed } from "@/features/operations/permissions";
 import { createOperationsRepository } from "@/features/operations/repository";
@@ -13,7 +14,7 @@ import { filterCycleGroups, matchesLinked, regroup, sortRows, type LinkedScope, 
 import { insightsOf, kpisOf, previousRange } from "./yield-summary-model";
 
 const repo = createOperationsRepository("harvest-yield");
-const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
+const loadZones = loadInUseZones;
 const IN_USE_RAFT = "101";
 export type ZoneOption = { id: string; label: string };
 type Scope = { raftId: string; statuses: StatusKey[] };

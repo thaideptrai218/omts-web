@@ -7,7 +7,7 @@ import { HelpLink, ManagementLayout } from "@/components/ui/management-screen/ma
 import { BulkBar, ColumnPicker, ListStateMessage, ManagementScroller, type SortState } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { ScreenGuide, type GuideStep } from "@/components/ui/screen-guide";
-import { loadOptions } from "@/features/operations/lookups";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { readSelectionPages } from "@/features/operations/selection-pages";
 import { ErrorNotice, useRemote } from "@/features/operations/ui";
@@ -80,7 +80,7 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
       () => readSelectionPages(read, { ...base, search: term, page: String(page), pageSize: String(pageSize) }, { statusId }, signal),
       accountPage => readSelectionPages(read, { ...base, search: "", page: String(accountPage), pageSize: "100" }, { statusId }, signal));
   }, [repository, term, statusId, zoneId, employeeType, jobTypeId, accountFilter, sort, page, pageSize]));
-  const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
+  const zones = useRemote(useCallback((signal: AbortSignal) => loadInUseZones(signal), []));
   const jobTypes = useRemote(useCallback((signal: AbortSignal) => repository.read("job-types", {}, jobTypeOptionsSchema, signal), [repository]));
   const lookupsReady = !!zones.data && !!jobTypes.data && !zones.loading && !jobTypes.loading;
   // Export of the current filters and sort (no paging) or of the ticked rows only (ids replace the filters).
