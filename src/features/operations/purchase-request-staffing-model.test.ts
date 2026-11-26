@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildStaffingPayload, filterStaffingEmployees } from "./purchase-request-staffing-model";
+import { buildStaffingPayload } from "./purchase-request-staffing-model";
 
 const id = (n: number) => `00000000-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`;
 const today = "2026-11-24";
@@ -23,15 +23,5 @@ describe("buildStaffingPayload", () => {
     expect(built).toEqual({ ok: true, value: { cages: 8, workDate: "2026-11-25", pickupDate: "2026-11-26", cagesPerEmployeePerDay: 4, employeeIds: [id(1), id(3)], note: "ghi chú", rowVersion: "AAAA" } });
     const none = buildStaffingPayload({ cages: "1", pickupDate: "2026-11-30", selectedIds: [], chosenIds: [id(1)] }, { ...request, staffing }, today);
     expect(none.ok).toBe(false);
-  });
-});
-
-describe("filterStaffingEmployees", () => {
-  const rows = [{ id: id(1), name: "Nguyễn Văn Hải", available: true }, { id: id(2), name: "Trần Thị Lan", available: false, unavailableReason: "Đang nghỉ phép" }];
-  it("matches by name ignoring case and diacritics, and keeps everything for an empty search", () => {
-    expect(filterStaffingEmployees(rows, "hai").map((row) => row.id)).toEqual([id(1)]);
-    expect(filterStaffingEmployees(rows, "  LAN ").map((row) => row.id)).toEqual([id(2)]);
-    expect(filterStaffingEmployees(rows, "")).toHaveLength(2);
-    expect(filterStaffingEmployees(rows, "zzz")).toEqual([]);
   });
 });

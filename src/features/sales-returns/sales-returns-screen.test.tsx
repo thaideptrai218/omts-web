@@ -42,7 +42,7 @@ describe("the list Trả hàng bán", () => {
   });
   it("lists the returns newest code first with every column, links to the invoice, order and customer, and the totals of the filtered returns", async () => {
     mount(); await screen.findByText("TL000001");
-    expect(last()).toMatchObject({ sort: "code", sortDir: "desc", page: "1", pageSize: "15" });
+    expect(last()).toMatchObject({ sort: "code", sortDir: "desc", page: "1", pageSize: "10" });
     expect(last().from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     for (const heading of ["Mã phiếu", "Thời gian", "Hóa đơn", "Đơn đặt hàng", "Khách hàng", "Vùng", "Giá trị", "Kg bán lại", "Kg hủy", "Trạng thái"]) expect(screen.getByRole("columnheader", { name: new RegExp(heading) })).toBeTruthy();
     const row = screen.getByText("TL000001").closest("tr")!;

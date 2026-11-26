@@ -10,19 +10,19 @@ import type { WaterFilters } from "./water-history-model";
 import local from "./water-screen.module.css";
 
 type Props = {
-  zones: readonly ApiRecord[]; zoneId: string; time: TimeRangeValue; filters: WaterFilters; rafts: readonly (readonly [string, string])[]; canReset: boolean;
+  zones: readonly ApiRecord[]; zoneId: string; merged?: boolean; time: TimeRangeValue; filters: WaterFilters; rafts: readonly (readonly [string, string])[]; canReset: boolean;
   onZone(zoneId: string): void; onTime(value: TimeRangeValue): void; onFilter<K extends keyof WaterFilters>(key: K, value: WaterFilters[K]): void; onReset(): void;
 };
 
 /** Filter column: zone and time range go to the backend; status, raft and "vượt ngưỡng" narrow the rows already read. */
-export function WaterZoneFilters({ zones, zoneId, time, filters, rafts, canReset, onZone, onTime, onFilter, onReset }: Props) {
+export function WaterZoneFilters({ zones, zoneId, merged = false, time, filters, rafts, canReset, onZone, onTime, onFilter, onReset }: Props) {
   return <>
     <RailHead canReset={canReset} onReset={onReset} />
     <FilterGroup legend="Vùng nuôi"><SelectBox aria-label="Vùng nuôi" className={styles.railSelect} value={zoneId} onChange={event => onZone(event.target.value)}>
-      <option value="">Tất cả vùng (tổng quan)</option>
+      <option value="">{merged ? "Tất cả vùng đã chọn" : "Tất cả vùng (tổng quan)"}</option>
       {zones.map(zone => <option key={zone.id} value={zone.id}>{String(zone.name)}{zone.statusId === 102 ? " (ngừng sử dụng)" : ""}</option>)}
     </SelectBox></FilterGroup>
-    {zoneId && <>
+    {(zoneId || merged) && <>
       <TimeRangeFilter legend="Thời gian đo" value={time} onChange={onTime} />
       {time.kind === "preset" && time.preset === "all" && <p className={local.railHint}>Chưa chọn mốc: danh sách lấy 3 tháng gần nhất, biểu đồ 12 tháng.</p>}
       <FilterPills legend="Trạng thái" name="water-status" value={filters.status} options={[["Active", "Đang hiệu lực"], ["Voided", "Đã hủy"]]} onChange={value => onFilter("status", value)} />

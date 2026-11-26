@@ -58,7 +58,7 @@ export function PurchaseReturnsScreen(props: { helpHref?: string; /** Fixes the 
 function ReturnsList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCode: string; kind: StockKind }) {
   const access = usePurchaseAccess(), router = useRouter(), lookups = usePurchaseLookups(), exportFile = useMutation(), linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [time, setTime] = useState<TimeRangeValue>(() => linkedCode ? allTime : presetValue("thisMonth"));
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<Page<ReturnRow> & { totalValue: number }>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>(), { notify } = useToast();
   const [stored, store] = useStoredValue(`omts-columns-purchase-returns-${kind}`, defaults);
   const text = kindText[kind];

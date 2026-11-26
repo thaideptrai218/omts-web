@@ -26,10 +26,10 @@ Tờ đối chiếu "ai làm màn nào" cho Chủ HTX, Quản lý vùng (QLV) v�
 | Lô giống | Làm | Xem (kèm đơn giá, D2) | Xem + xuất |
 | Xuất dùng vật tư | Làm | Làm | Xem + xuất |
 | Xuất hủy vật tư | Làm | — | Làm |
-| Nhà cung cấp | Làm | Xem | Xem + xuất |
-| Phiếu nhập giống/vật tư (thấy đơn giá) | Làm | Làm | Xem + xuất |
+| Nhà cung cấp (danh sách và chi tiết trong Mua hàng) | Làm | Xem (không thêm/sửa/ngừng/nhập file/xuất; chủ chốt 26/11) | Xem + xuất |
+| Phiếu nhập giống/vật tư (thấy đơn giá), thiết lập giá trên phiếu | Làm | Làm, mọi vùng, kho chung (PURCHASE_RECEIPTS Xem/Tạo/Sửa/Xóa/Xuất) | Xem + xuất |
 | Trả hàng nhập | Làm | Làm | Xem |
-| Thanh toán nhà cung cấp, công nợ NCC | Làm | — | Làm |
+| Thanh toán nhà cung cấp, công nợ NCC | Làm | — (403, không có SUPPLIER_PAYMENTS) | Làm |
 
 ## Nhân sự
 
@@ -73,10 +73,19 @@ Tờ đối chiếu "ai làm màn nào" cho Chủ HTX, Quản lý vùng (QLV) v�
 | Màn | Chủ HTX | QLV | KT |
 |---|---|---|---|
 | Hồ sơ HTX, ngân hàng nhận tiền, chứng nhận, nhật ký thao tác | Làm | — | — |
-| Tài khoản nội bộ, vai trò và phân quyền vùng, đặt lại mật khẩu | Làm | — | — |
+| Tài khoản người dùng: tạo, sửa, vai trò và vùng phụ trách, đặt lại mật khẩu, khóa hoặc mở khóa, xóa (Cài đặt, nhóm Người dùng) | Làm | — | — |
+| Vai trò và quyền (hai vai trò cố định, chỉ xem; Cài đặt, nhóm Người dùng) | Xem | — | — |
 | Hồ sơ cá nhân | Làm | Làm | Làm |
 
 Mỗi HTX có một Kế toán, xem mọi vùng; thêm người thứ hai chỉ cảnh báo, vẫn lưu được (D9).
+
+**Cập nhật 25/11/2026 (đã được thay bằng cập nhật 26/11 ngay bên dưới).** "Quản lý người dùng" và "Vai trò và quyền" không còn trong Cài đặt. Chủ cấp tài khoản, chọn vai trò (Quản lý vùng, Kế toán), chọn vùng phụ trách, đặt lại mật khẩu, khóa hoặc mở khóa ngay ở màn Nhân viên (tab Tài khoản đăng nhập); nút "Xem quyền của vai trò" ở cùng tab. Bộ lọc của danh sách nhân viên có thêm: tài khoản (đã có, chưa có, chưa gắn nhân viên), vai trò, vùng phụ trách. Tài khoản chưa gắn nhân viên nào (backend cho phép) nằm ở bộ lọc "Tài khoản chưa gắn nhân viên" với cùng thao tác. Địa chỉ cũ `/workspace/accounts` và `/workspace/roles` chuyển sang màn Nhân viên; `?accountId=` mở đúng nhân viên giữ tài khoản đó.
+
+**Cập nhật 26/11/2026 (Chủ HTX quyết định, thay đoạn 25/11).** Nhân viên và tài khoản là hai việc riêng, theo cách KiotViet tách "Nhân viên" và "Quản lý người dùng". **Nhân viên** (menu Nhân sự) là hồ sơ người của HTX và vùng làm việc. **Tài khoản người dùng** (Cài đặt, nhóm Người dùng, `/workspace/accounts`) là tài khoản đăng nhập; có tài khoản không cần là nhân viên (chủ, kế toán), thêm nhân viên không cần tài khoản. "Vai trò và quyền" (`/workspace/roles`) cũng nằm ở nhóm này, chỉ để xem hai vai trò cố định; vai trò Employee dành cho đăng nhập Zalo sau này nên không hiện.
+
+- Màn Tài khoản người dùng: danh sách (tên hiển thị, tên đăng nhập, điện thoại, email, vai trò và vùng, nhân viên, trạng thái, ghi chú tùy chọn), tìm, lọc theo vai trò, vùng, trạng thái, có gắn nhân viên, công tắc "Hiện cả tài khoản đã xóa". "Tạo tài khoản người dùng" không có ô mật khẩu: hệ thống tạo mật khẩu tạm và hiện một lần. Mỗi dòng phân quyền là vai trò và vùng; một vùng chỉ có một vai trò, Kế toán làm cho mọi vùng (thêm Kế toán thứ hai chỉ cảnh báo). Chi tiết có ba tab: Thông tin, Phân quyền, Bảo mật (đặt lại mật khẩu, khóa hoặc mở khóa, xóa người dùng đều bắt buộc lý do; không khóa hay xóa tài khoản chủ hoặc tài khoản đang đăng nhập). Xóa là xóa mềm: tài khoản bị đăng xuất, mất mọi vai trò, nhân viên đã gắn được gỡ ra, tên đăng nhập, điện thoại và email vẫn được giữ.
+- Màn Nhân viên: giữ thông tin và vùng làm việc. Tab tài khoản chỉ hiện tên đăng nhập, trạng thái, vai trò và vùng (chỉ đọc) kèm nút "Mở tài khoản"; nhân viên nội bộ chưa có tài khoản có nút "Cấp tài khoản" mở đúng form tạo của màn Tài khoản người dùng, đã điền sẵn nhân viên. Nhân viên thời vụ không có tài khoản và không bao giờ được chọn ở ô "Gắn với nhân viên". Bộ lọc danh sách chỉ còn "Có tài khoản / Chưa có tài khoản".
+- Địa chỉ cũ: `/workspace/accounts` và `/workspace/roles` mở thẳng màn mới trong khung Cài đặt, `?accountId=` mở chi tiết tài khoản đó (thông báo của hệ thống dùng link này).
 
 ## Bàn giao kế hoạch thu hoạch và phân công nhân sự ngay (quyết định 24/11/2026)
 

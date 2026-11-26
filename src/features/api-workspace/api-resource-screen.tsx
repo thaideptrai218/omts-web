@@ -18,6 +18,8 @@ import { SupplierScreen } from "@/features/suppliers-api/supplier-screen";
 import { CustomerScreen } from "@/features/customers/customer-screen";
 import { ZoneScreen } from "@/features/zones-api/zone-screen";
 import { RaftScreen } from "@/features/rafts-api/raft-screen";
+import { UserAccountsScreen } from "@/features/user-accounts/user-accounts-screen";
+import { UserRolesScreen } from "@/features/user-accounts/user-roles-screen";
 import { useScopedZones } from "./selected-zones";
 import { workspaceError } from "./workspace-error";
 import { GlobalZoneMap } from "@/features/farming-api/global-zone-map";
@@ -45,6 +47,8 @@ export function ApiResourceScreen({ resource }: { resource: ResourceKey }) {
   if (resource === "customers") return <CustomerScreen />;
   if (resource === "zones") return <ZoneScreen />;
   if (resource === "rafts") return <RaftScreen />;
+  if (resource === "accounts") return <UserAccountsScreen />;
+  if (resource === "roles") return <UserRolesScreen />;
   return resource === "employees" ? <EmployeeApiScreen /> : <GenericResourceScreen resource={resource} />;
 }
 

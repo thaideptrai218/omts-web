@@ -1,10 +1,9 @@
-import type { ApiRecord, WorkspaceResult } from "@/features/api-workspace/workspace-repository";
-import { loadOptions } from "@/features/operations/lookups";
+import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { createAccountGrant } from "@/features/personal-api/account-grants-repository";
-import { accountantUniquenessWarning } from "@/features/user-management/accountant-uniqueness-warning";
-import type { CreateUserGrant } from "@/features/user-management/account-credential-contract";
-import { fixedRoleLabels, toUserAccount } from "@/features/user-management/user-account-model";
-import { selectionError, selectionToGrants, type GrantSelection } from "@/features/user-management/user-grant-selection";
+import { accountantWarningFromServer } from "@/features/account-access/accountant-uniqueness-warning";
+import type { CreateUserGrant } from "@/features/account-access/account-credential-contract";
+import { fixedRoleLabels } from "@/features/account-access/user-account-model";
+import { selectionError, selectionToGrants, type GrantSelection } from "@/features/account-access/user-grant-selection";
 
 /**
  * The backend issue-account endpoint (POST /api/employees/{id}/account) and the employee create body accept a username only,
@@ -34,18 +33,13 @@ export async function applyGrantSelection(accountId: string, selection: GrantSel
   return outcome;
 }
 
-/** Shown next to the one-time password so the Owner knows exactly what to finish in "Quản lý người dùng". */
+/** Shown next to the one-time password so the Owner knows exactly what is still left to do. */
 export function grantOutcomeNotice(outcome: GrantApplyOutcome | undefined): string | undefined {
   if (!outcome) return undefined;
-  if (outcome.failed.length) return `Tài khoản đã được tạo nhưng chưa gán được: ${outcome.failed.join("; ")}. Hãy thêm các quyền này tại Quản lý người dùng.`;
-  return outcome.granted ? "Đã phân quyền. Nhân viên cần đăng nhập lại để thấy quyền và vùng mới." : undefined;
+  if (outcome.failed.length) return `Đã tạo tài khoản nhưng chưa thêm được: ${outcome.failed.join("; ")}. Hãy chọn lại ở tab Tài khoản đăng nhập của nhân viên.`;
+  return outcome.granted ? "Đã chọn vai trò và vùng. Nhân viên cần đăng nhập lại mới thấy thay đổi." : undefined;
 }
 
 /** Warn, never block (D9): the loader reads all accounts; when it fails there is simply no warning. */
-export async function accountantWarningFor(selection: GrantSelection, load: (signal: AbortSignal) => Promise<WorkspaceResult<ApiRecord[]>> = signal => loadOptions("accounts", signal)): Promise<string | undefined> {
-  if (!selection.accountant) return undefined;
-  try {
-    const result = await load(AbortSignal.timeout(15_000));
-    return result.status === "success" ? accountantUniquenessWarning(result.data.map(toUserAccount), ["ACCOUNTANT"]) : undefined;
-  } catch { return undefined; }
-}
+export const accountantWarningFor = (selection: GrantSelection, load?: Parameters<typeof accountantWarningFromServer>[1]): Promise<string | undefined> =>
+  selection.accountant ? accountantWarningFromServer(undefined, load) : Promise.resolve(undefined);

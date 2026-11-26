@@ -50,7 +50,7 @@ function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail
   const params = useSearchParams(), raftId = params?.get("raftId") ?? undefined;
   const recordId = params?.get("recordId") ?? params?.get("cycleId") ?? undefined;
   const [filters, setFilters] = useState<CycleFilters>({ ...emptyCycleFilters, search: raftId ? "" : params?.get("search") ?? "" }), [sort, setSort] = useState<SortState>({ key: "raft", direction: "asc" });
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [expanded, setExpanded] = useState(raftId), [linkPlaced, setLinkPlaced] = useState(!raftId && !recordId);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [expanded, setExpanded] = useState(raftId), [linkPlaced, setLinkPlaced] = useState(!raftId && !recordId);
   const guard = useUnsavedGuard(), { notify } = useToast();
   const [storedColumns, storeColumns] = useStoredValue(`omts-columns-${storageKey}`, cycleColumns.map(column => column.key).join(","));
   const visible = cycleColumns.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);

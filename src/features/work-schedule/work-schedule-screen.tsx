@@ -53,9 +53,9 @@ function ScheduleScreenContent() {
       </nav>
     </header>
     <ScreenGuide id="work-schedule" steps={[
-      { title: "Chọn vùng và tuần", text: "Chọn vùng làm việc, rồi chọn tuần cần xếp lịch." },
-      { title: "Bấm ô để xếp việc", text: "Bấm vào ô của một người để thêm, đổi hoặc gỡ phân công ngày đó." },
-      { title: "Chép từ tuần trước", text: "Muốn nhanh thì bấm \"Chép từ tuần trước\", xem rồi xác nhận." },
+      { title: "Chọn vùng và tuần", text: "Chọn vùng làm việc, rồi chọn tuần cần xếp lịch.", target: "p[aria-live=\"polite\"]" },
+      { title: "Bấm ô để xếp việc", text: "Bấm vào ô của một người để thêm, đổi hoặc gỡ phân công ngày đó.", target: "table tbody td button" },
+      { title: "Chép từ tuần trước", text: "Muốn nhanh thì bấm \"Chép từ tuần trước\", xem rồi xác nhận.", target: "text:Chép từ tuần trước" },
     ]} />
     <p className={styles.range} aria-live="polite">{formatVietnameseDate(monday)} – {formatVietnameseDate(shiftDay(monday, 6))}</p>
     {!isDateOnly(pickedDay) && <ErrorNotice error="Chọn ngày hợp lệ để đổi tuần." />}

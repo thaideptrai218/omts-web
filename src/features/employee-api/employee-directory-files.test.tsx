@@ -37,7 +37,7 @@ it("lists the toolbar in design order and shows the code column first after the 
   expect(headers[3]).toBe("Tên đăng nhập"); expect(headers.at(-1)).toBe("Tình trạng");
   expect(screen.queryByRole("columnheader", { name: "Mã nhân viên" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Chọn trường hiển thị" })); fireEvent.click(screen.getByRole("checkbox", { name: "Mã nhân viên" }));
-  expect(screen.getByRole("columnheader", { name: "Mã nhân viên" })).toBeTruthy(); expect(localStorage.getItem("omts-columns-employees-v2")).toContain("code");
+  expect(screen.getByRole("columnheader", { name: "Mã nhân viên" })).toBeTruthy(); expect(localStorage.getItem("omts-columns-employees-v4")).toContain("code");
   expect(screen.getByText("NV000001")).toBeTruthy();
 });
 

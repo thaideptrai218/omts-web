@@ -16,7 +16,7 @@ const filters = {
   search: z.string().max(100).optional(), sort: z.enum(["code", "time", "amount"]).optional(), desc: z.enum(["true", "false"]).optional(),
 };
 const read = z.discriminatedUnion("action", [
-  z.strictObject({ action: z.literal("book"), ...filters, page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["15", "30", "50"]).optional() }),
+  z.strictObject({ action: z.literal("book"), ...filters, page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "15", "30", "50"]).optional() }),
   z.strictObject({ action: z.literal("export"), ...filters }),
   z.strictObject({ action: z.literal("voucher"), id: z.guid() }),
   z.strictObject({ action: z.literal("accounts"), kind: c.accountKind.optional(), includeInactive: z.enum(["true", "false"]).optional() }),

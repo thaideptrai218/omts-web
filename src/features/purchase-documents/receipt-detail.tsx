@@ -150,7 +150,7 @@ function Actions({ receipt, access, header, onChanged, onSaved }: { receipt: Rec
     <div>
       {canOpen && <Button className="w-auto" onClick={() => router.push(`${kindText[receipt.kind].receiptsPath}/${receipt.id}/edit`)}><InterfaceIcon name="pencil" className="size-4" />Mở phiếu</Button>}
       {canOpen && <Button className="w-auto" variant="secondary" isPending={pending} disabled={!header} onClick={() => void saveHeader()}><InterfaceIcon name="check" className="size-4" />Lưu</Button>}
-      {access.owner && receipt.statusId !== RECEIPT.cancelled && <Button className="w-auto" variant="secondary" onClick={() => setPricing(true)}><InterfaceIcon name="payment" className="size-4" />Thiết lập giá</Button>}
+      {access.edit && receipt.statusId !== RECEIPT.cancelled && <Button className="w-auto" variant="secondary" onClick={() => setPricing(true)}><InterfaceIcon name="payment" className="size-4" />Thiết lập giá</Button>}
       {canReturn && <Button className="w-auto" variant="secondary" onClick={() => router.push(`${kindText[receipt.kind].returnsPath}/new?receipt=${receipt.id}`)}><InterfaceIcon name="upload" className="size-4" />{kindText[receipt.kind].receiptReturn}</Button>}
     </div>
     {pricing && <PriceSetupDialog receiptId={receipt.id} receiptCode={receipt.code} onClose={() => setPricing(false)} />}

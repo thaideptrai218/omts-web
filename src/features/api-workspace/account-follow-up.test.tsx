@@ -11,10 +11,10 @@ import { ApiResourceScreen } from "./api-resource-screen";
 const id = "ab03cd89-d7c9-40b9-bb15-908d6abdb840";
 beforeEach(() => { vi.clearAllMocks(); state.list.mockResolvedValue({ status: "success", data: { items: [], page: 1, pageSize: 20, total: 0 } }); state.detail.mockResolvedValue({ status: "success", data: { id, username: "qa.staff", displayName: "QA Staff", phoneNumber: "0900000000", email: null, status: "Active", rowVersion: "AQID" } }); });
 afterEach(cleanup);
-describe("employee account follow-up navigation", () => {
+describe("account follow-up navigation (notifications link to ?accountId=)", () => {
   it("opens the specifically requested account for review without running a mutation", async () => {
     state.query = `accountId=${id}`; render(<ApiResourceScreen resource="accounts" />);
-    await screen.findByRole("dialog", { name: "Hồ sơ · Tài khoản nhân viên nội bộ" }); expect(state.detail).toHaveBeenCalledWith(id, expect.any(AbortSignal)); expect(state.mutate).not.toHaveBeenCalled();
+    await screen.findByRole("dialog", { name: /^Tài khoản / }); expect(state.detail).toHaveBeenCalledWith(id, expect.any(AbortSignal)); expect(state.mutate).not.toHaveBeenCalled();
   });
   it("does not turn duplicate or malformed account IDs in the URL into a backend read", async () => {
     state.query = `accountId=${id}&accountId=bad`; render(<ApiResourceScreen resource="accounts" />);

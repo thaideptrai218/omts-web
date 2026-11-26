@@ -26,6 +26,14 @@ it("resolves a linked employee absent from the scoped list through its detail pa
   expect(screen.getByText(/45 nhân viên/)).toBeTruthy();
   expect(screen.queryByText("Không có nhân viên phù hợp bộ lọc.")).toBeNull();
 });
+it("opens a linked employee on the login tab when the link says ?tab=account, and only for the Owner", async () => {
+  repository.query = `recordId=${first().id}&tab=account`;
+  const view = render(<EmployeeDirectory />);
+  expect((await screen.findByRole("region", { name: `Chi tiết ${first().id}` })).getAttribute("data-tab")).toBe("account");
+  view.unmount();
+  render(<EmployeeDirectory readOnly access={{ manage: false, payroll: false }} />);
+  expect((await screen.findByRole("region", { name: `Chi tiết ${first().id}` })).hasAttribute("data-tab")).toBe(false);
+});
 it("closed rows expose only native chevrons, click and keyboard toggle one open row without making the row a tab stop", async () => {
   const user = userEvent.setup();
   render(<EmployeeDirectoryTable items={[first(), second()]} disabled={false} cache={new Map()} onSaved={vi.fn()} />);
@@ -91,14 +99,14 @@ it("offers only real columns and remembers browser column choices across mounts"
   fireEvent.click(screen.getByRole("checkbox", { name: "Số điện thoại" }));
   expect(screen.getByRole("columnheader", { name: "Loại công việc" })).toBeTruthy();
   expect(screen.queryByRole("columnheader", { name: "Số điện thoại" })).toBeNull();
-  expect(localStorage.getItem("omts-columns-employees-v2")).toContain("jobs");
+  expect(localStorage.getItem("omts-columns-employees-v4")).toContain("jobs");
   view.unmount(); render(<EmployeeDirectory />); await screen.findByText(first().fullName);
   expect(screen.getByRole("columnheader", { name: "Loại công việc" })).toBeTruthy();
   expect(screen.queryByRole("columnheader", { name: "Số điện thoại" })).toBeNull();
 });
 it.each(["code,debt", "code", "debt", "garbage,,", ""])("a stale column choice %j still lists the name as the first data column, with no width of its own", async stored => {
   // The management kit keeps only the first data column (and the last) beside an open detail pane, so the name must come first.
-  localStorage.setItem("omts-columns-employees-v2", stored);
+  localStorage.setItem("omts-columns-employees-v4", stored);
   const { container } = render(<EmployeeDirectory />); await screen.findByText(first().fullName);
   const headers = screen.getAllByRole("columnheader").map(cell => cell.textContent);
   expect(headers.slice(0, 3)).toEqual(["", "Mở dòng", "Họ và tên"]);

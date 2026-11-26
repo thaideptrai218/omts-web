@@ -86,7 +86,7 @@ export function CashBookScreen({ helpHref }: { helpHref?: string }) {
   // A link such as /operations/cash-book?search=TT000012 opens on that voucher (all funds, all time).
   const [start] = useState(() => cashBookStart(params));
   const [fund, setFund] = useState<CashFund | "All">(start.fund), [time, setTime] = useState<TimeRangeValue>(start.time), [filters, setFilters] = useState(emptyFilters), [search, setSearch] = useState(start.search);
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<BookPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>(), { notify } = useToast(), [opened, setOpened] = useState<Opened>();
   const [stored, store] = useStoredValue("omts-columns-cash-book", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);

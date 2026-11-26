@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closeValues, lotMovements, lotPage, reopenValues, weighValues } from "./contracts";
+import { cageValues, closeValues, lotMovements, lotPage, reopenValues, weighValues } from "./contracts";
 import { lotStatusText } from "./lot-labels";
 
 const id = "122bb318-a72e-49aa-a8d7-a6169f889007";
@@ -25,11 +25,15 @@ describe("lot list contract", () => {
 });
 
 describe("lot writes", () => {
-  it("weigh: lines xor one kg, 3 decimals", () => {
-    expect(weighValues.safeParse({ rowVersion: "v", lines: [{ lineNumber: 1, weighedKg: 1.001 }] }).success).toBe(true);
-    expect(weighValues.safeParse({ rowVersion: "v", lines: [], weighedKg: 2 }).success).toBe(true);
-    expect(weighValues.safeParse({ rowVersion: "v", lines: [] }).success).toBe(false);
-    expect(weighValues.safeParse({ rowVersion: "v", lines: [{ lineNumber: 1, weighedKg: 1.0001 }] }).success).toBe(false);
+  it("weigh: only the version and an optional time (the kg come from the cages)", () => {
+    expect(weighValues.safeParse({ rowVersion: "v" }).success).toBe(true);
+    expect(weighValues.safeParse({ rowVersion: "v", weighedAt: "2026-11-17T10:30:00+07:00" }).success).toBe(true);
+    expect(weighValues.safeParse({ rowVersion: "v", weighedKg: 2 }).success).toBe(false);
+  });
+  it("cage kg: above 0, at most 3 decimals", () => {
+    expect(cageValues.safeParse({ kg: 12.125 }).success).toBe(true);
+    expect(cageValues.safeParse({ kg: 0 }).success).toBe(false);
+    expect(cageValues.safeParse({ kg: 1.0001 }).success).toBe(false);
   });
   it("reopen needs a reason; close needs a reason above 0 kg", () => {
     expect(reopenValues.safeParse({ rowVersion: "v", reason: " " }).success).toBe(false);

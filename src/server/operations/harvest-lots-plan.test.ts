@@ -61,24 +61,33 @@ describe("lot movements", () => {
 
 describe("weigh", () => {
   const weigh = (body: unknown) => post("weigh", body);
-  it("posts the kg of every line and the time to the weigh route", () => {
-    const body = { rowVersion: "v1", weighedAt: "2026-11-17T10:30:00+07:00", lines: [{ lineNumber: 1, weighedKg: 120.125 }, { lineNumber: 2, weighedKg: 80 }] };
+  it("posts the version of the sheet and the time to the weigh route", () => {
+    const body = { rowVersion: "v1", weighedAt: "2026-11-17T10:30:00+07:00" };
     expect(weigh(body)).toMatchObject({ method: "POST", path: `/api/harvest-lots/${lot}/weigh`, permission: "Edit", zoneId: zone, body });
   });
-  it("posts one kg for a lot without lines", () => expect(weigh({ rowVersion: "v1", lines: [], weighedKg: 55.5 })?.body).toEqual({ rowVersion: "v1", lines: [], weighedKg: 55.5 }));
+  it("leaves the time out so the API takes now", () => expect(weigh({ rowVersion: "v1" })?.body).toEqual({ rowVersion: "v1" }));
   it.each([
-    ["no kg at all", { rowVersion: "v1", lines: [] }],
-    ["lines and a lot kg together", { rowVersion: "v1", lines: [{ lineNumber: 1, weighedKg: 5 }], weighedKg: 5 }],
-    ["a zero kg", { rowVersion: "v1", lines: [{ lineNumber: 1, weighedKg: 0 }] }],
-    ["a negative kg", { rowVersion: "v1", lines: [], weighedKg: -1 }],
-    ["4 decimals", { rowVersion: "v1", lines: [{ lineNumber: 1, weighedKg: 1.2345 }] }],
-    ["a repeated line", { rowVersion: "v1", lines: [{ lineNumber: 1, weighedKg: 1 }, { lineNumber: 1, weighedKg: 2 }] }],
-    ["line 0", { rowVersion: "v1", lines: [{ lineNumber: 0, weighedKg: 1 }] }],
-    ["a time without offset", { rowVersion: "v1", weighedAt: "2026-11-17T10:30:00", lines: [], weighedKg: 1 }],
-    ["no version", { lines: [], weighedKg: 1 }],
-    ["an unknown field", { rowVersion: "v1", lines: [], weighedKg: 1, extra: true }],
+    ["typed kg of lines (gone)", { rowVersion: "v1", lines: [{ lineNumber: 1, weighedKg: 5 }] }],
+    ["a typed lot kg (gone)", { rowVersion: "v1", weighedKg: 5 }],
+    ["a time without offset", { rowVersion: "v1", weighedAt: "2026-11-17T10:30:00" }],
+    ["no version", {}],
+    ["an unknown field", { rowVersion: "v1", extra: true }],
   ])("refuses %s", (_name, body) => expect(weigh(body)).toBeUndefined());
-  it("is not offered for seeding", () => expect(post("weigh", { rowVersion: "v1", lines: [], weighedKg: 1 }, "seeding")).toBeUndefined());
+  it("is not offered for seeding", () => expect(post("weigh", { rowVersion: "v1" }, "seeding")).toBeUndefined());
+});
+
+describe("cage weighing", () => {
+  const cage = "529ec3ce-af8f-42f7-a08f-4bab36ba7e77", op = "529ec3ce-af8f-42f7-a08f-4bab36ba7e78";
+  it("reads the sheet of the lot", () => expect(get({ action: "cages", id: lot, zoneId: zone })).toMatchObject({ method: "GET", path: `/api/harvest-lots/${lot}/cages`, permission: "View", zoneId: zone }));
+  it("needs the lot and its zone to read", () => { expect(get({ action: "cages", id: lot })).toBeUndefined(); expect(get({ action: "cages", id: "../x", zoneId: zone })).toBeUndefined(); });
+  it("weighs one more cage with the retry key", () => expect(post("cage-add", { kg: 12.5, productId: product, clientOperationId: op })).toMatchObject({ method: "POST", path: `/api/harvest-lots/${lot}/cages`, permission: "Edit", body: { kg: 12.5, productId: product, clientOperationId: op } }));
+  it("corrects a cage by id, the cage id only in the path", () => expect(post("cage-update", { cageId: cage, kg: 10 })).toMatchObject({ method: "PUT", path: `/api/harvest-lots/${lot}/cages/${cage}`, permission: "Edit", body: { kg: 10 } }));
+  it("takes a cage off the sheet", () => expect(post("cage-remove", { cageId: cage })).toMatchObject({ method: "DELETE", path: `/api/harvest-lots/${lot}/cages/${cage}`, permission: "Edit" }));
+  it.each([
+    ["cage-add", { kg: 0 }], ["cage-add", { kg: 1.2345 }], ["cage-add", { kg: 5, extra: 1 }], ["cage-add", { kg: 5, productId: "x" }],
+    ["cage-update", { kg: 5 }], ["cage-update", { cageId: "../x", kg: 5 }], ["cage-remove", {}], ["cage-remove", { cageId: "a/b" }],
+  ])("refuses %s with %j", (action, body) => expect(post(action, body)).toBeUndefined());
+  it("is not offered for seeding", () => expect(post("cage-add", { kg: 5 }, "seeding")).toBeUndefined());
 });
 
 describe("reopen and close", () => {

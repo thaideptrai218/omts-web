@@ -72,7 +72,7 @@ function SeedLotsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const view = operationAllowed("seed-lots", identity, permissions.functionPermissions, "View"), mayExport = operationAllowed("seed-lots", identity, permissions.functionPermissions, "Export");
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>(emptyFilters), [time, setTime] = useState<TimeRangeValue>(allTime);
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SeedLotPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const [stored, store] = useStoredValue("omts-columns-seed-lots-v2", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);

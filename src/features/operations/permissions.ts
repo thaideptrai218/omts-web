@@ -41,9 +41,9 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
 export function operationAllowed(area: OperationArea, identity: { subjectType: string }, permissions: readonly FunctionPermission[], action = "View", zoneId?: string) {
   if (unfinishedAreas.includes(area)) return false;
   if (area === "my-work") return identity.subjectType === "Staff";
-  // Bảng lương, Thanh toán lương và Chi phí nhân công: Chủ hợp tác xã làm mọi việc; Kế toán (PAYROLL View/Export) chỉ xem và xuất, mọi thao tác ghi vẫn chỉ của Chủ.
+  // Bảng lương, Thanh toán lương và Chi phí nhân công: Chủ hợp tác xã làm mọi việc; Kế toán lập, sửa, xuất theo đúng quyền PAYROLL được cấp (SRS v6.2, BF-06.2).
   if (area === "payroll" || area === "payroll-payments" || area === "labor-costs") return identity.subjectType === "CooperativeOwner"
-    || identity.subjectType === "Staff" && (action === "View" || action === "Export") && permissions.some((p) => p.functionCode === "PAYROLL" && p.action === action);
+    || identity.subjectType === "Staff" && permissions.some((p) => p.functionCode === "PAYROLL" && p.action === action);
   // Báo vấn đề chất lượng chỉ dành cho thương lái: Chủ HTX không có hồ sơ khách hàng nên backend trả 403.
   if (area === "claim-reports") return identity.subjectType === "Trader";
   // Thanh toán của khách là chức năng toàn HTX (không theo vùng): Chủ HTX hoặc nhân viên có quyền CUSTOMER_PAYMENTS đúng hành động.

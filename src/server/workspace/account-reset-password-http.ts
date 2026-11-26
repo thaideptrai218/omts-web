@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { resetPasswordRequestSchema } from "@/features/user-management/account-credential-contract";
+import { resetPasswordRequestSchema } from "@/features/account-access/account-credential-contract";
 import { forwardOwnerCredentialPost } from "./account-credential-http";
 
 const accountIdSchema = z.guid();

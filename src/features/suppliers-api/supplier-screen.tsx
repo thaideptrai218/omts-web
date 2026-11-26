@@ -65,7 +65,7 @@ function SupplierList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [purchaseTime, setPurchaseTime] = useState<TimeRangeValue>(allTime);
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" });
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SupplierPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [expanded, setExpanded] = useState<string>(), [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [creating, setCreating] = useState(false), [importing, setImporting] = useState(false), { notify } = useToast(), [bulkOutcome, setBulkOutcome] = useState<BulkResult>();

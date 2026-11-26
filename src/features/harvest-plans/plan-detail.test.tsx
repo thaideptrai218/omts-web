@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 
 const id = (n: number) => `00000000-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`;
-const state = vi.hoisted(() => ({ detail: vi.fn() }));
+const state = vi.hoisted(() => ({ detail: vi.fn(), assign: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
-vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), planRepository: { detail: state.detail } }));
+vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), planRepository: { detail: state.detail, assign: state.assign } }));
 vi.mock("@/features/products/lot-link", async () => {
   const { lotHref } = await import("@/features/products/product-helpers");
   return { LotLink: ({ code }: { code: string }) => <a href={lotHref(code)}>{code}</a> };
@@ -22,7 +23,7 @@ const view = (patch: object = {}) => ({
   createdBy: { id: id(8), name: "Nguyễn Văn Hải" }, assignedAt: "2026-11-18T01:17:00+07:00", completedAt: null, cancelledAt: null, cancelReason: null,
   orders: [{ id: id(9), code: "DH000005" }],
   lines: [{ id: id(2), lineNumber: 1, raftId: id(4), raftCode: "B1-01", zone: { id: id(6), code: "DEMO-01", name: "Vùng demo" }, note: null, lanes: [lane(3, "Harvested", "DEMO-01-B1-01-20261118")], expectedProduct: { id: id(10), code: "SP000001", name: "Hàu sữa" }, expectedCageCount: 2.5, state: "Harvested", canHarvest: false, lot: { id: id(11), lotCode: "DEMO-01-B1-01-20261118" } }],
-  progress: { lines: 1, linesDone: 1, lanes: 1, lanesHarvested: 1, lanesSkipped: 0 }, allowedActions: ["Edit", "Assign", "Cancel"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "p1", ...patch,
+  progress: { lines: 1, linesDone: 1, lanes: 1, lanesHarvested: 1, lanesSkipped: 0 }, allowedActions: ["Edit", "Assign", "Cancel"], createdAt: "2026-11-12T08:00:00+07:00", rowVersion: "p1", executor: "ZoneManager", ...patch,
 }) as unknown as PlanView;
 const open = async (plan: PlanView, access = owner) => {
   state.detail.mockResolvedValue({ status: "success", data: plan });
@@ -30,7 +31,13 @@ const open = async (plan: PlanView, access = owner) => {
   return screen.findByRole("heading", { name: plan.code });
 };
 
-beforeEach(() => state.detail.mockReset());
+// jsdom has no <dialog> modal methods.
+beforeAll(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } });
+});
+afterAll(() => { Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"); Reflect.deleteProperty(HTMLDialogElement.prototype, "close"); });
+beforeEach(() => { state.detail.mockReset(); state.assign.mockReset(); });
 afterEach(cleanup);
 
 it("lays the plan out like the invoice row: facts, linked lines, note and sums", async () => {
@@ -52,11 +59,11 @@ it("lays the plan out like the invoice row: facts, linked lines, note and sums",
   }
 });
 
-it("puts Sao chép and Hủy kế hoạch on the left and Chỉnh sửa, Giao QLV on the right, as the API allows", async () => {
+it("puts Sao chép and Hủy kế hoạch on the left and Chỉnh sửa, Phân công on the right, as the API allows", async () => {
   await open(view());
   const [left, right] = [...document.querySelectorAll("footer > div")];
   expect([...left.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Sao chép", "Hủy kế hoạch"]);
-  expect([...right.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Chỉnh sửa", "Giao QLV"]);
+  expect([...right.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Chỉnh sửa", "Phân công"]);
   cleanup();
   await open(view({ allowedActions: [] }), { ...owner, create: false });
   expect(screen.queryByRole("button", { name: "Hủy kế hoạch" })).toBeNull();
@@ -100,4 +107,40 @@ it("shows Hoàn thành to the Owner of a HandedOver plan with the check-then-com
   await open(view({ statusId: 4206, status: "Received", allowedActions: [] }), ownerAccess);
   expect(screen.getByText("Đã nhận")).toBeTruthy();
   expect(buttons()).not.toContain("Hoàn thành");
+});
+
+const draft = (patch: object = {}) => view({ statusId: 4201, status: "Draft", allowedActions: ["Edit", "Assign", "Cancel"], ...patch });
+
+it("asks who harvests at Phân công: the zone manager by default, the Owner on choice, sent with the assignment", async () => {
+  const user = userEvent.setup();
+  state.assign.mockResolvedValue({ status: "success", data: {} });
+  await open(draft(), ownerAccess);
+  await user.click(screen.getByRole("button", { name: "Phân công" }));
+  const manager = screen.getByRole("radio", { name: /Giao quản lý vùng/ }) as HTMLInputElement;
+  expect(manager.checked).toBe(true);
+  expect(screen.getByText("Chủ ghi thu hoạch và hoàn thành, không qua quản lý vùng.")).toBeTruthy();
+  await user.click(screen.getByRole("radio", { name: /Chủ tự làm/ }));
+  await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Phân công" }));
+  await waitFor(() => expect(state.assign).toHaveBeenCalledWith(id(1), "p1", "Owner"));
+});
+
+it("keeps the zone manager as the default executor when the dialog is confirmed untouched", async () => {
+  const user = userEvent.setup();
+  state.assign.mockResolvedValue({ status: "success", data: {} });
+  await open(draft(), ownerAccess);
+  await user.click(screen.getByRole("button", { name: "Phân công" }));
+  await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Phân công" }));
+  await waitFor(() => expect(state.assign).toHaveBeenCalledWith(id(1), "p1", "ZoneManager"));
+});
+
+it("walks an Owner plan: hint and buttons come from the API, no Receive or HandOver, the executor is shown", async () => {
+  await open(view({ executor: "Owner", allowedActions: ["Edit", "Cancel", "Harvest", "SkipLane"] }), ownerAccess);
+  expect(screen.getByTestId("plan-next-step").textContent).toBe("Chủ tự thu hoạch: bấm Thu hoạch ở từng bè trong kế hoạch.");
+  expect(screen.getByText("Người thực hiện:").nextElementSibling!.textContent).toBe("Chủ tự làm");
+  expect(buttons()).not.toEqual(expect.arrayContaining(["Nhận kế hoạch", "Bàn giao cho chủ", "Hoàn thành"]));
+  cleanup();
+  await open(view({ executor: "Owner", statusId: 4203, status: "Harvesting", allowedActions: ["Edit", "Finish"] }), ownerAccess);
+  expect(screen.getByTestId("plan-next-step").textContent).toContain("bấm Hoàn thành");
+  expect(buttons()).toEqual(expect.arrayContaining(["Hoàn thành"]));
+  expect(buttons()).not.toContain("Nhận kế hoạch");
 });

@@ -82,7 +82,7 @@ function OpenedDocument({ opened, onClose }: { opened?: Opened; onClose(changed?
 }
 
 function HistoryTab({ id }: { id: string }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [opened, setOpened] = useState<Opened>();
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [opened, setOpened] = useState<Opened>();
   const remote = useRemote(useCallback((signal: AbortSignal) => supplierRepository.history(id, page, pageSize, signal), [id, page, pageSize]));
   return <div className={styles.tabBody}>
     {remote.loading ? <Skeleton /> : remote.error ? <ListStateMessage error={remote.error} onRetry={remote.reload} /> : remote.data && <>
@@ -101,7 +101,7 @@ function DebtTab({ id, access, onChanged }: { id: string; access: SupplierAccess
   const [kind, setKind] = useState(""), [page, setPage] = useState(1), [pay, setPay] = useState(false), [opened, setOpened] = useState<Opened>();
   const exportFile = useMutation();
   const entries = useMemo(() => [...(remote.data?.entries ?? [])].reverse().filter((entry) => !kind || entry.kind === kind), [remote.data, kind]);
-  const shown = entries.slice((page - 1) * 15, page * 15);
+  const shown = entries.slice((page - 1) * 10, page * 10);
   const open = (entry: (typeof entries)[number]) => setOpened({ kind: entry.kind === "Receipt" ? "Receipt" : entry.kind === "Return" ? "Return" : "Payment", id: entry.id });
   const canOpen = (entry: (typeof entries)[number]) => entry.kind === "Receipt" || entry.kind === "Return" ? access.history : entry.kind === "Payment" || entry.kind === "PaidBack";
   return <div className={styles.tabBody}>
@@ -110,7 +110,7 @@ function DebtTab({ id, access, onChanged }: { id: string; access: SupplierAccess
       <DataTable responsive headings={["Mã phiếu", "Thời gian", "Loại", "Giá trị", "Nợ cần trả"]} empty={!shown.length}>{shown.map((entry, index) => <tr key={`${entry.kind}:${entry.id}:${index}`}>
         <td data-label="Mã phiếu">{canOpen(entry) ? <button type="button" className={managementStyles.linkButton} onClick={() => open(entry)}>{entry.code}</button> : entry.code}</td>
         <td data-label="Thời gian">{formatVietnameseDate(entry.date)}</td><td data-label="Loại">{kinds[entry.kind]}</td><td data-label="Giá trị"><Money value={entry.amount} /></td><td data-label="Nợ cần trả"><Money value={entry.debtAfter} /></td></tr>)}</DataTable>
-      {entries.length > 15 && <ManagementPagination page={page} pageSize={15} pageSizes={[15]} total={entries.length} unit="giao dịch" onPage={setPage} onPageSize={() => undefined} />}
+      {entries.length > 10 && <ManagementPagination page={page} pageSize={10} pageSizes={[10]} total={entries.length} unit="giao dịch" onPage={setPage} onPageSize={() => undefined} />}
       <ErrorNotice error={exportFile.error} />
       <footer className={styles.tabFooter}>
         {access.exportDebt && <div><Button className="w-auto" variant="ghost" isPending={exportFile.pending} onClick={() => void exportFile.run(() => downloadDebt({ supplierId: id, ...period }), true)}><InterfaceIcon name="download" className="size-4" />Xuất file công nợ</Button></div>}

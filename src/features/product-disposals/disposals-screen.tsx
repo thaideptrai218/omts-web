@@ -54,7 +54,7 @@ function DisposalsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>(emptyFilters);
   const [time, setTime] = useState<TimeRangeValue>(() => linkedCode ? allTime : presetValue("thisMonth"));
-  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<DisposalPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const defaults = useMemo(() => columns.filter((column) => !column.hidden).map((column) => column.key).join(","), []);
   const [stored, store] = useStoredValue("omts-columns-product-disposals", defaults);

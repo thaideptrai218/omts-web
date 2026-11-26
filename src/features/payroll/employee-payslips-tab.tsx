@@ -18,7 +18,7 @@ export function SheetLink({ row }: { row: Pick<EmployeeSlipRow, "payrollId" | "p
 
 /** The "Phiếu lương" tab of an employee (KiotViet section 7): clicking a payslip code opens its detail under the row. */
 export function EmployeePayslipsTab({ employeeId }: { employeeId: string }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [open, setOpen] = useState<string>();
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [open, setOpen] = useState<string>();
   const remote = useRemote(useCallback((signal: AbortSignal) => payrollRepository.employeeSlips(employeeId, { page, pageSize }, signal), [employeeId, page, pageSize]));
   const data = remote.data;
   if (remote.loading) return <Skeleton />;

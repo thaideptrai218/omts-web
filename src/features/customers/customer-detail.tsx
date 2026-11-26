@@ -22,7 +22,8 @@ import { customerError, customerRepository, errorText } from "./repository";
 import styles from "./customers.module.css";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 
-export type CustomerAccess = { edit: boolean; remove: boolean; history: boolean; requests: boolean; debt: boolean; pay: boolean; adjust: boolean; confirm: boolean; exportDebt: boolean };
+/** `merge` (gộp hồ sơ) is the Owner's alone: the Accountant manages customer profiles but neither merges nor deletes them (ST-CASH-RPT-001). */
+export type CustomerAccess = { merge?: boolean; edit: boolean; remove: boolean; history: boolean; requests: boolean; debt: boolean; pay: boolean; adjust: boolean; confirm: boolean; exportDebt: boolean };
 type Tab = "info" | "sales" | "requests" | "debt";
 const invoiceStatus: Record<number, string> = { 3501: "Hoàn thành", 3502: "Đã hủy" };
 const requestStatus: Record<number, string> = { 3201: "Chờ phản hồi", 3202: "Đã chấp nhận", 3203: "Đã từ chối", 3204: "Đã hủy", 3206: "Hoàn thành" };
@@ -94,7 +95,7 @@ function InfoTab({ id, access, required, onChanged, onRemoved }: { id: string; a
     {access.edit || access.remove ? <footer className={listStyles.tabFooter}>
       <div>
         {access.remove && !record.isUsed && <Button className="w-auto" variant="ghost" isPending={pending} onClick={() => void remove()}><InterfaceIcon name="trash" className="size-4" />Xóa</Button>}
-        {access.edit && !discontinued && <Button className="w-auto" variant="ghost" disabled={pending} onClick={() => setMerging(true)}><InterfaceIcon name="users" className="size-4" />Gộp hồ sơ</Button>}
+        {access.merge && access.edit && !discontinued && <Button className="w-auto" variant="ghost" disabled={pending} onClick={() => setMerging(true)}><InterfaceIcon name="users" className="size-4" />Gộp hồ sơ</Button>}
       </div>
       {access.edit && <div>
         {!discontinued && <Button className="w-auto" onClick={() => setEditing(true)}><InterfaceIcon name="pencil" className="size-4" />Chỉnh sửa</Button>}
@@ -109,7 +110,7 @@ function InfoTab({ id, access, required, onChanged, onRemoved }: { id: string; a
 function fiveYears() { const to = new Date(), from = new Date(to); from.setFullYear(to.getFullYear() - 5); return { from: toQueryDate(from), to: toQueryDate(to) }; }
 
 function SalesTab({ id, withCuts }: { id: string; withCuts: boolean }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), period = useMemo(() => fiveYears(), []);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), period = useMemo(() => fiveYears(), []);
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.invoices({ customerId: id, ...period, page, pageSize }, signal), [id, period, page, pageSize]));
   const cuts = useRemote(useCallback((signal: AbortSignal) => withCuts ? customerRepository.debt(id, { kinds: ["PriceCut"], page: 1, pageSize: 50 }, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [id, withCuts]));
   const items = remote.data?.page.items ?? [];
@@ -128,7 +129,7 @@ function SalesTab({ id, withCuts }: { id: string; withCuts: boolean }) {
 }
 
 function RequestsTab({ id }: { id: string }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.requests(id, page, pageSize, signal), [id, page, pageSize]));
   return <div className={listStyles.tabBody}>
     {remote.loading ? <Skeleton /> : remote.error ? <ListStateMessage error={remote.error} onRetry={remote.reload} /> : remote.data && <>
@@ -144,7 +145,7 @@ type Dialog = { kind: "pay" | "discount" | "adjust" | "qr" } | { kind: "payment"
 const filterKinds = ["Invoice", "PriceCut", "Payment", "Discount", "PaidBack", "Adjustment"] as const;
 
 function DebtTab({ id, access, onChanged }: { id: string; access: CustomerAccess; onChanged(): void }) {
-  const [kind, setKind] = useState(""), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15), [dialog, setDialog] = useState<Dialog>();
+  const [kind, setKind] = useState(""), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [dialog, setDialog] = useState<Dialog>();
   const remote = useRemote(useCallback((signal: AbortSignal) => customerRepository.debt(id, { kinds: kind ? [kind] : [], page, pageSize }, signal), [id, kind, page, pageSize]));
   const exportFile = useMutation(), confirmation = useActionDialog(), { notify } = useToast(), [error, setError] = useState<string>(), [busyId, setBusyId] = useState<string>();
   const done = () => { setDialog(undefined); remote.reload(); onChanged(); };

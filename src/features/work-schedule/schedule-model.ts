@@ -2,7 +2,8 @@ import type { FunctionPermission } from "@/features/access/domain/function-permi
 import type { Assignment } from "@/features/operations/workforce-shared";
 import { isDateOnly } from "@/shared/format/date-only";
 
-export type SchedulePerson = { id: string; name: string; code?: string; eligible: boolean };
+/** `kind`: "Staff" (nội bộ, fixed zone) or "SeasonalWorker" (thời vụ, placed by assignment) when known. */
+export type SchedulePerson = { id: string; name: string; code?: string; eligible: boolean; kind?: string };
 export type DayState = { day: string; rows: Assignment[]; loading: boolean; error?: string };
 export type ScheduleCell = { person: SchedulePerson; day: string; assignments: Assignment[] };
 export type ScheduleAccess = (action: "View" | "Create" | "Edit" | "Delete", zoneId?: string) => boolean;

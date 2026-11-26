@@ -1,15 +1,18 @@
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
 import { control, Select } from "@/features/operations/ui";
 import type { EmployeeEditorFieldsProps } from "./employee-editor-fields";
+import { withEmployeeType } from "./employee-editor-model";
+import { EmployeeTypeBadge } from "./employee-type-badge";
 
 /** Existing work-type, effective-date, job and zone controls. */
 export function EmployeeEditorWorkFields({ values, setValues, errorProps, baseline, availableZones, zoneOptions, jobTypes, fieldError }: EmployeeEditorFieldsProps) {
   const error = (path: string) => fieldError?.(path) && <p id={`employee-inline-error-${path}`} role="alert" className="text-xs text-danger">{fieldError(path)}</p>;
   return <>
-      <Select label={baseline ? "Loại nhân viên" : "Loại nhân viên *"} required={!baseline} {...errorProps("employeeType")} value={values.employeeType} onChange={event => setValues({ ...values, employeeType: event.target.value })}>
+      <Select label={baseline ? "Loại nhân viên" : "Loại nhân viên *"} required={!baseline} {...errorProps("employeeType")} value={values.employeeType} onChange={event => setValues(withEmployeeType(values, event.target.value, baseline))}>
         {(!baseline || !baseline.employeeType) && <option value="">Chọn loại nhân viên</option>}
-        <option value="SeasonalWorker">Thời vụ</option><option value="Staff">Nội bộ</option>
+        <option value="Staff">Nội bộ</option><option value="SeasonalWorker">Thời vụ</option>
       </Select>
+      {values.employeeType && <p className="text-xs text-text-muted"><EmployeeTypeBadge type={values.employeeType} showLabel /> {values.employeeType === "Staff" ? "Làm ở vùng cố định, lương tháng cố định." : "Làm theo phân công, không cố định vùng."}</p>}
       {error("employeeType")}
       {baseline && values.employeeType && values.employeeType !== baseline.employeeType && <label className="block text-sm font-semibold">
         Áp dụng từ ngày *
@@ -23,7 +26,7 @@ export function EmployeeEditorWorkFields({ values, setValues, errorProps, baseli
         </label>)}
       </fieldset>
       {error("jobTypeIds")}
-      <fieldset className="rounded-control border border-border p-3" tabIndex={-1} {...errorProps("workingZoneIds")}>
+      {values.employeeType === "SeasonalWorker" ? <p className="text-sm text-text-muted">Thời vụ: làm theo phân công, không cố định vùng.</p> : <fieldset className="rounded-control border border-border p-3" tabIndex={-1} {...errorProps("workingZoneIds")}>
         <legend className="font-semibold">{baseline ? "Vùng làm việc" : "Vùng làm việc *"}</legend>
         {availableZones.map((zone) => (
           <label key={zone.id} className="flex min-h-12 items-center gap-3">
@@ -58,7 +61,7 @@ export function EmployeeEditorWorkFields({ values, setValues, errorProps, baseli
               Vùng chưa có trong danh mục
             </label>
           ))}
-      </fieldset>
+      </fieldset>}
       {error("workingZoneIds")}
   </>;
 }

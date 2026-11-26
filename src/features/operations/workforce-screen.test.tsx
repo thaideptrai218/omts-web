@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-const mocks = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), options: vi.fn(), subjectType: "CooperativeOwner", permissions: [] as unknown[] }));
+const mocks = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), options: vi.fn(), subjectType: "CooperativeOwner", permissions: [] as unknown[], kinds: new Map<string, string>() }));
+// The kind of each employee (nội bộ / thời vụ) comes from the employee list, which this suite does not serve: it is given here.
+vi.mock("@/features/employee-api/use-employee-types", () => { const kindOf = (id?: string | null) => id ? mocks.kinds.get(id) : undefined; return { useEmployeeKinds: () => kindOf, useEmployeeFacts: () => ({ kindOf, zonesOf: () => [] }) }; });
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mocks.read, write: mocks.write }) }));
 vi.mock("./lookups", () => ({ loadOptions: (...args: unknown[]) => mocks.options(...args) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType }, permissions: { functionPermissions: mocks.permissions } }) }));
@@ -15,7 +17,7 @@ beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } });
 });
 afterAll(() => { Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"); Reflect.deleteProperty(HTMLDialogElement.prototype, "close"); });
-beforeEach(() => { vi.resetAllMocks(); window.localStorage.clear(); mocks.subjectType = "CooperativeOwner"; mocks.permissions = []; mocks.options.mockResolvedValue({ status: "success", data: [{ id: ids.zone, name: "Vùng Đông" }] }); });
+beforeEach(() => { vi.resetAllMocks(); window.localStorage.clear(); mocks.subjectType = "CooperativeOwner"; mocks.permissions = []; mocks.kinds.clear(); mocks.options.mockResolvedValue({ status: "success", data: [{ id: ids.zone, name: "Vùng Đông" }] }); });
 afterEach(cleanup);
 
 const row = (id: string, name: string, patch: Record<string, unknown> = {}) => ({ id, employeeId: ids.item, employeeName: name, zoneId: ids.zone, raftId: ids.water, raftCode: "BE01", jobTypeId: ids.line, job: "Thu hoạch", date: businessToday(), checkedInAt: null, checkedOutAt: null, ...patch });
@@ -140,6 +142,23 @@ describe("workforce day board in the management design", () => {
     expect(screen.queryByText("Nhân viên An")).toBeNull();
     expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
     expect(mocks.read.mock.calls.filter((call) => call[0] === "list" && (call[1] as { day: string }).day === businessToday())).toHaveLength(1);
+  });
+
+  it("marks nội bộ and thời vụ people and filters the board by kind", async () => {
+    const staff = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", seasonal = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2";
+    mocks.kinds.set(staff, "Staff"); mocks.kinds.set(seasonal, "SeasonalWorker");
+    mocks.read.mockResolvedValue({ status: "success", data: [row("a", "Nhân viên An", { employeeId: staff }), row("b", "Nhân viên Bình", { employeeId: seasonal })] });
+    render(<WorkforceScreen />);
+    await screen.findByText("Nhân viên An");
+    expect(within(screen.getByText("Nhân viên An").closest("tr")!).getByText("Nội bộ")).toBeTruthy();
+    expect(within(screen.getByText("Nhân viên Bình").closest("tr")!).getByText("Thời vụ")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Thời vụ"));
+    await waitFor(() => expect(screen.queryByText("Nhân viên An")).toBeNull());
+    expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Nội bộ"));
+    await waitFor(() => expect(screen.queryByText("Nhân viên Bình")).toBeNull());
+    fireEvent.click(screen.getByLabelText("Tất cả", { selector: 'input[name="workforce-employee-type"]' }));
+    expect(await screen.findByText("Nhân viên Bình")).toBeTruthy();
   });
 
   it("keeps the error state with a retry when the list API fails", async () => {

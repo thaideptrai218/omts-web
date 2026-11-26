@@ -1,6 +1,6 @@
 import "server-only";
 import type { ZodType } from "zod";
-import { backendAccountWithPasswordSchema } from "@/features/user-management/account-credential-contract";
+import { backendAccountWithPasswordSchema } from "@/features/account-access/account-credential-contract";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";

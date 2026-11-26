@@ -1,9 +1,8 @@
 import type { z } from "zod";
-import { foldVietnamese } from "@/shared/presentation/fold-text";
-import { staffingPlanSchema, type PurchaseRequest, type StaffingEmployee } from "./new-module-contracts";
+import { staffingPlanSchema, type PurchaseRequest } from "./new-module-contracts";
 import type { ReviewResult } from "./purchase-request-review-presentation";
 
-/** Logic thuần của "Kế hoạch nhân sự" trong chi tiết yêu cầu mua: dựng nội dung gửi POST /api/purchase-requests/{id}/staffing và lọc danh sách nhân viên. */
+/** Logic thuần của "Kế hoạch nhân sự" trong chi tiết yêu cầu mua: dựng nội dung gửi POST /api/purchase-requests/{id}/staffing. */
 export type StaffingPlanBody = z.infer<typeof staffingPlanSchema>;
 export type StaffingFormInput = { cages: string; pickupDate: string; selectedIds: readonly string[]; chosenIds: readonly string[] };
 
@@ -31,10 +30,4 @@ export function buildStaffingPayload(form: StaffingFormInput, request: Pick<Purc
   }
   const parsed = staffingPlanSchema.safeParse(body);
   return parsed.success ? { ok: true, value: parsed.data } : { ok: false, error: "Kế hoạch nhân sự chưa hợp lệ. Hãy kiểm tra số lồng, ngày lấy hàng và nhân viên đã chọn." };
-}
-
-/** Nhân viên khớp ô tìm (tên, không phân biệt hoa thường và dấu); ô trống giữ nguyên danh sách. */
-export function filterStaffingEmployees(employees: readonly StaffingEmployee[], search: string): StaffingEmployee[] {
-  const needle = foldVietnamese(search.trim()).toLowerCase();
-  return needle ? employees.filter((employee) => foldVietnamese(employee.name).toLowerCase().includes(needle)) : [...employees];
 }

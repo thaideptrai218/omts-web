@@ -3,9 +3,10 @@ import { useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { loadOptions } from "@/features/operations/lookups";
 import { ErrorNotice, useRemote } from "@/features/operations/ui";
-import { type GrantSelection } from "@/features/user-management/user-grant-selection";
-import { grantSummaryLine } from "@/features/user-management/user-grant-summary";
-import { UserRoleZonePicker } from "@/features/user-management/user-role-zone-picker";
+import { type GrantSelection } from "@/features/account-access/user-grant-selection";
+import { grantSummaryLine } from "@/features/account-access/user-grant-summary";
+import { UserRoleZonePicker } from "@/features/account-access/user-role-zone-picker";
+import { EmployeeAccountCopyGrants } from "./employee-account-copy-grants";
 
 /**
  * Role cards and zone chips used by "Cấp tài khoản đăng nhập" and "Tạo tài khoản đăng nhập khi lưu".
@@ -23,6 +24,7 @@ export function EmployeeAccountGrantChoice({ selection, onChange, disabled, onZo
     : wanted && remote.error ? <div className="space-y-2"><ErrorNotice error={remote.error} /><Button type="button" className="w-auto" variant="secondary" onClick={remote.reload}>Tải lại danh sách vùng</Button></div> : undefined;
   return <div className="space-y-3">
     <UserRoleZonePicker selection={selection} zones={zones} disabled={disabled} onChange={onChange} zonesNote={note} />
+    <EmployeeAccountCopyGrants onPick={onChange} disabled={disabled} />
     {username !== undefined && <p className="rounded-control bg-surface-subtle p-2 text-sm" aria-live="polite">{grantSummaryLine(username, selection, zones)}</p>}
   </div>;
 }

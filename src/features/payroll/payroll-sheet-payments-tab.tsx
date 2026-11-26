@@ -1,4 +1,5 @@
 "use client";
+import { EmployeeKindBadgeById } from "@/features/employee-api/employee-kind-badge-by-id";
 import { useCallback, useState } from "react";
 import { ListStateMessage, ManagementPagination } from "@/components/ui/management-screen/management-table";
 import { StatusPill } from "@/components/ui/management-page";
@@ -13,7 +14,7 @@ import s from "./payroll-screen.module.css";
 export const paymentColumns: readonly DataColumn<PaymentRow>[] = [
   { key: "code", label: "Mã phiếu chi", render: (row) => <span className={s.mono}>{row.voucherCode}</span> },
   { key: "time", label: "Thời gian", render: (row) => formatDateTime(row.paidAt) },
-  { key: "employee", label: "Nhân viên", render: (row) => <a className={`${s.name} ${s.link}`} href={`/workspace/employees?recordId=${row.employeeId}&search=${encodeURIComponent(row.employeeName)}`}>{row.employeeName}</a> },
+  { key: "employee", label: "Nhân viên", render: (row) => <><a className={`${s.name} ${s.link}`} href={`/workspace/employees?recordId=${row.employeeId}&search=${encodeURIComponent(row.employeeName)}`}>{row.employeeName}</a><EmployeeKindBadgeById employeeId={row.employeeId} /></> },
   { key: "method", label: "Phương thức", render: (row) => methodLabel[row.method] },
   { key: "amount", label: "Số tiền", right: true, render: (row) => <Money value={row.amount} /> },
   { key: "status", label: "Trạng thái", render: (row) => <StatusPill tone={row.status === "Cancelled" ? "danger" : "success"}>{paymentStatusLabel[row.status]}</StatusPill> },
@@ -21,7 +22,7 @@ export const paymentColumns: readonly DataColumn<PaymentRow>[] = [
 
 /** Tab "Lịch sử thanh toán" of an open sheet (KiotViet): the payment vouchers made for this sheet, newest first, with their total. */
 export function PayrollSheetPaymentsTab({ sheetId, paid }: { sheetId: string; paid: number }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const remote = useRemote(useCallback((signal: AbortSignal) => payrollRepository.payments({ search: "", from: "", to: "", page, pageSize, payrollId: sheetId }, signal), [sheetId, page, pageSize]));
   const data = remote.data;
   if (remote.loading) return <Skeleton />;

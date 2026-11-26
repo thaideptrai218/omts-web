@@ -1,7 +1,7 @@
 import { employeeApiEditorSchema, buildEmployeeSaveBody, localFieldLabels, valuesOf, type EmployeeFormValues } from "./employee-editor-model";
 import { employeeFieldGroup, type EmployeeCreateGroup } from "./employee-editor-validation";
 import { issueEmployeeAccountRequestSchema } from "./employee-account-contract";
-import { emptyGrantSelection, selectionError, type GrantSelection } from "@/features/user-management/user-grant-selection";
+import { emptyGrantSelection, selectionError, type GrantSelection } from "@/features/account-access/user-grant-selection";
 
 /** Values of the create dialog: the profile fields plus the optional login account. */
 export type EmployeeCreateValues = EmployeeFormValues & { createAccount: boolean; username: string; grants: GrantSelection };
@@ -31,9 +31,12 @@ export function parseEmployeeCreate(values: EmployeeCreateValues, inactiveZoneId
   const issues: EmployeeCreateIssue[] = checked.success ? [] : checked.error.issues.map(issue => ({ path: issue.path.join("."), message: issue.message }));
   const add = (path: string, message: string) => { if (!issues.some(issue => issue.path === path)) issues.push({ path, message }); };
   if (!values.employeeType) add("employeeType", "Chọn loại nhân viên.");
-  if (!values.workingZoneIds.length) add("workingZoneIds", "Chọn ít nhất một vùng làm việc.");
-  else if (inactiveZoneIds.length) add("workingZoneIds", "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu.");
-  if (values.createAccount) {
+  // A seasonal worker has no fixed zone (placed by assignment) and no login account; an official employee needs a zone.
+  const seasonal = values.employeeType === "SeasonalWorker";
+  if (!seasonal && !values.workingZoneIds.length) add("workingZoneIds", "Chọn ít nhất một vùng làm việc.");
+  else if (!seasonal && inactiveZoneIds.length) add("workingZoneIds", "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu.");
+  // A seasonal worker has no account: none is requested.
+  if (values.createAccount && !seasonal) {
     if (!values.username.trim()) add("username", "Nhập tên đăng nhập.");
     else {
       const account = issueEmployeeAccountRequestSchema.safeParse({ username: values.username });
@@ -47,7 +50,7 @@ export function parseEmployeeCreate(values: EmployeeCreateValues, inactiveZoneId
   issues.sort((a, b) => rank(a.path) - rank(b.path));
   if (issues.length || !checked.success) return { ok: false as const, issues };
   // `grants` never enters the request body: the create endpoint accepts a username only, so roles are sent after the account exists.
-  const { createAccount, username } = values;
+  const { createAccount, username } = values.employeeType === "SeasonalWorker" ? { ...values, createAccount: false } : values;
   return {
     ok: true as const,
     body: {

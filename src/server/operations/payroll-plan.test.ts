@@ -86,14 +86,13 @@ describe("payroll payments", () => {
   });
 });
 
-describe("payroll areas: the Owner writes, the Accountant only reads", () => {
+describe("payroll areas: the Owner does everything, the Accountant does what the PAYROLL grants allow", () => {
   const grant = (action: string) => ({ functionCode: "PAYROLL", action, dataScope: "AssignedZone", scope: { kind: "all-zones", zoneIds: [] } });
-  const grants = [grant("View"), grant("Export")] as never;
-  it.each(["payroll", "payroll-payments", "labor-costs"] as const)("%s: Owner does everything, a Staff with PAYROLL View/Export only views and exports", (area) => {
+  const grants = [grant("View"), grant("Create"), grant("Edit"), grant("Export")] as never;
+  it.each(["payroll", "payroll-payments", "labor-costs"] as const)("%s: Owner does everything, a Staff with PAYROLL grants does exactly those actions", (area) => {
     expect(operationAllowed(area, { subjectType: "CooperativeOwner" }, [], "Delete")).toBe(true);
-    expect(operationAllowed(area, { subjectType: "Staff" }, grants, "View")).toBe(true);
-    expect(operationAllowed(area, { subjectType: "Staff" }, grants, "Export")).toBe(true);
-    for (const action of ["Create", "Edit", "Delete"]) expect(operationAllowed(area, { subjectType: "Staff" }, grants, action)).toBe(false);
+    for (const action of ["View", "Create", "Edit", "Export"]) expect(operationAllowed(area, { subjectType: "Staff" }, grants, action)).toBe(true);
+    expect(operationAllowed(area, { subjectType: "Staff" }, grants, "Delete")).toBe(false);
     // Without the grant (a Zone Manager) or for other subjects there is no access at all.
     expect(operationAllowed(area, { subjectType: "Staff" }, [], "View")).toBe(false);
     for (const subjectType of ["Trader", "Admin"]) expect(operationAllowed(area, { subjectType }, grants, "View")).toBe(false);

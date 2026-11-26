@@ -56,3 +56,14 @@ it("remembers a closed filter rail and offers a named control to reopen it", asy
   await screen.findByText("Trại giống");
   expect(screen.getByRole("button", { name: "Hiện bộ lọc" })).toBeTruthy();
 });
+
+it("is read-only for a zone manager: the list and detail show, with no add, import, export, select, edit, payment or debt controls", async () => {
+  grant(["SUPPLIERS", "View"], ["PURCHASE_RECEIPTS", "View"], ["PURCHASE_RECEIPTS", "Create"], ["PURCHASE_RECEIPTS", "Edit"], ["PURCHASE_RECEIPTS", "Export"]);
+  const user = userEvent.setup();
+  render(<ToastProvider><SupplierScreen /></ToastProvider>);
+  await user.click(await screen.findByText("Trại giống"));
+  await waitFor(() => expect(screen.getByRole("tablist")).toBeTruthy());
+  for (const name of [/Thêm nhà cung cấp/, /Import/, /Xuất/, /Thanh toán/, /Chỉnh sửa|Sửa/]) expect(screen.queryByRole("button", { name })).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: "Chọn Trại giống" })).toBeNull();
+  expect(screen.queryByRole("tab", { name: "Nợ cần trả nhà cung cấp" })).toBeNull();
+});

@@ -46,7 +46,7 @@ it("shows each line with its raft link, zone, lanes, day, the employees and who 
   renderTab();
   const first = await screen.findByRole("region", { name: "Nhân công bè B01" });
   expect(within(first).getByRole("link", { name: "B01" }).getAttribute("href")).toContain(`/farming/rafts?zoneId=${ids.zone1}&recordId=${ids.raft1}`);
-  expect(within(first).getByText("Vùng KV01 · Luống 1, 2 · Ngày 01/01/2099")).toBeTruthy();
+  expect(within(first).getByText("Vùng KV01 · Ngày 01/01/2099")).toBeTruthy();
   expect(within(first).getByRole("link", { name: "An" }).getAttribute("href")).toBe(`/employees?recordId=${ids.an}`);
   expect(within(first).getAllByText("Đã điểm danh")).toHaveLength(1);
   expect(within(screen.getByRole("region", { name: "Nhân công bè B11" })).getByText("Chưa chọn nhân công cho bè này.")).toBeTruthy();

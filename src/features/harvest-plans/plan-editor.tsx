@@ -18,7 +18,8 @@ import { UnitInput } from "@/components/form/unit-input";
 import { EditorFrame, SideRow, nowLocal, viDateTime, vnLocal } from "@/features/purchase-documents/document-parts";
 import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import styles from "./plans.module.css";
-import { PLAN, type EligibleRaft, type PlanDraft, type PlanView } from "./contracts";
+import { PLAN, type EligibleRaft, type PlanDraft, type PlanExecutor, type PlanView } from "./contracts";
+import { PlanExecutorChoice } from "./plan-executor-choice";
 import { PlanCoverage } from "./plan-coverage";
 import { usePlanAccess, type PlanAccess } from "./plan-access";
 import { PLANS_PATH, planHref, planStatusLabel } from "./plan-labels";
@@ -74,7 +75,7 @@ function Editor({ access, start, eligible }: { access: PlanAccess; start: Start;
   const { kgPerCage: settingKgPerCage } = useKgPerCage(identity.subjectType === "CooperativeOwner" ? identity.accountId : undefined); // Owner-only read: others use the default kg of a cage.
   const kgPerCage = settingKgPerCage ?? DEFAULT_KG_PER_CAGE;
   const [form, setForm] = useState<PlanForm>(() => initialForm(start));
-  const [error, setError] = useState<string>(), [pending, setPending] = useState(false);
+  const [error, setError] = useState<string>(), [pending, setPending] = useState(false), [executor, setExecutor] = useState<PlanExecutor>("ZoneManager");
   const givenOut = !!plan && plan.statusId !== PLAN.draft;
   /** The rafts that can be chosen, with the rafts of the lines already on the plan (they may have stopped being eligible, e.g. their lot is recorded). */
   const catalog = useMemo(() => {
@@ -112,14 +113,14 @@ function Editor({ access, start, eligible }: { access: PlanAccess; start: Start;
     const problem = planFormProblem(form);
     if (problem) { setError(problem); return; }
     const lacking = shortageText(rows);
-    if (lacking && !(await confirmation.confirm(`KHT còn thiếu ${lacking} so với đơn đặt hàng. Vẫn ${assign ? "lưu và giao QLV" : "lưu"}?`))) return;
+    if (lacking && !(await confirmation.confirm(`KHT còn thiếu ${lacking} so với đơn đặt hàng. Vẫn ${assign ? "lưu và phân công" : "lưu"}?`))) return;
     setPending(true); setError(undefined);
     const body = buildPlanBody(form);
     const result = plan ? await planRepository.update(plan.id, body) : await planRepository.create(body);
     if (result.status !== "success") { setPending(false); setError(problemText(result)); return; }
     const saved = result.data;
     if (assign) {
-      const given = await planRepository.assign(saved.id, saved.rowVersion);
+      const given = await planRepository.assign(saved.id, saved.rowVersion, executor);
       if (given.status !== "success") {
         setPending(false);
         notify({ tone: "danger", title: `Đã lưu ${saved.code} nhưng chưa giao được: ${errorText(given) ?? "không rõ lỗi"}` });
@@ -128,7 +129,7 @@ function Editor({ access, start, eligible }: { access: PlanAccess; start: Start;
       }
     }
     setPending(false);
-    notify({ tone: "success", title: assign ? `Đã lưu và giao ${saved.code} cho quản lý vùng.` : `Đã lưu kế hoạch thu hoạch ${saved.code}.` });
+    notify({ tone: "success", title: assign ? executor === "Owner" ? `Đã lưu và phân công ${saved.code}: chủ tự thu hoạch.` : `Đã lưu và giao ${saved.code} cho quản lý vùng.` : `Đã lưu kế hoạch thu hoạch ${saved.code}.` });
     router.push(planHref(saved.code));
   }
 
@@ -173,6 +174,7 @@ function Editor({ access, start, eligible }: { access: PlanAccess; start: Start;
           {form.orderIds.length > 0 && <PlanCoverage rows={rows} loading={orders.loading} error={orders.error} onRetry={orders.reload} />}
           <textarea className={purchaseStyles.sideNote} aria-label="Ghi chú" placeholder="Ghi chú" maxLength={1000} value={form.note} onChange={(event) => patch({ note: event.target.value })} />
           {earlyWarnings.length > 0 && <div className={styles.earlyWarning} role="status"><strong>Cảnh báo: thu hoạch sớm hơn dự kiến</strong><ul>{earlyWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
+          {!givenOut && <PlanExecutorChoice value={executor} onChange={setExecutor} disabled={pending} />}
           <ErrorNotice error={error} />
           {!access.owner && <p className={purchaseStyles.sub}>Chỉ Chủ hợp tác xã lập và giao kế hoạch thu hoạch.</p>}
           {plan && <Link className={purchaseStyles.sub} href={planHref(plan.code)}>Xem kế hoạch</Link>}
@@ -180,7 +182,7 @@ function Editor({ access, start, eligible }: { access: PlanAccess; start: Start;
         <div className={purchaseStyles.sideActions}>
           {givenOut ? <Button disabled={pending} onClick={() => void save(false)}>Lưu</Button> : <>
             <Button variant="secondary" disabled={pending} onClick={() => void save(false)}>Lưu tạm</Button>
-            <Button disabled={pending} onClick={() => void save(true)}>Lưu &amp; Giao QLV</Button>
+            <Button disabled={pending} onClick={() => void save(true)}>Lưu &amp; Phân công</Button>
           </>}
         </div>
       </aside>

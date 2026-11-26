@@ -19,7 +19,7 @@ export function farmingRecordUpload(area: OperationArea, action: string, id?: st
   } else if (area === "harvest" && ["harvest-record", "harvest-correct"].includes(action)) {
     const correcting = action === "harvest-correct";
     plan = { ...base, path: correcting ? `/api/harvest-lots/${id}` : `/api/rafts/${id}/harvest-lots`, method: correcting ? "PUT" : "POST", permission: correcting ? "Edit" : "Create", schema: correcting ? c.harvestCorrected : c.harvestSaved };
-    validator = correcting ? c.harvestCorrection : c.harvestValues; requiredPhotos = !correcting;
+    validator = correcting ? c.harvestCorrection : c.harvestValues; // Harvest photos are optional (0 to 3).
   } else if (area === "cultivation-cycles" && ["log-record", "log-correct"].includes(action)) {
     const correcting = action === "log-correct";
     plan = { ...base, path: correcting ? `/api/cultivation-logs/${id}` : `/api/cultivation-cycles/${id}/cultivation-logs`, method: correcting ? "PUT" : "POST", permission: correcting ? "LogsEdit" : "LogsCreate", schema: z.object({ log: cultivationLog }) };

@@ -54,8 +54,8 @@ export const linesTotals = (lines: readonly HarvestLine[]) => ({ cages: round2(l
  * A line that has no product yet (a cycle that has none) offers the product to pick; there is no way to add a second line or to remove one. A lot made before this rule that
  * still has several lines shows them all, so a correction does not drop one.
  */
-export function HarvestProductLines({ lines, products, loading, error, disabled, onChange }: {
-  lines: HarvestLine[]; products: readonly ProductRow[]; loading?: boolean; error?: string; disabled?: boolean; onChange(lines: HarvestLine[]): void;
+export function HarvestProductLines({ lines, products, loading, error, disabled, hideKg = false, onChange }: {
+  lines: HarvestLine[]; products: readonly ProductRow[]; loading?: boolean; error?: string; disabled?: boolean; /** The kg are not typed (a lot from a plan: they come from the port weighing). */ hideKg?: boolean; onChange(lines: HarvestLine[]): void;
 }) {
   const factorOf = (productId: string) => cageUnitOf(products.find((product) => product.id === productId)?.units ?? [])?.factor;
   const autoKg = (productId: string, cages: string) => { const factor = factorOf(productId), count = number(cages); return factor && count && count > 0 ? String(round2(count * factor)) : ""; };
@@ -66,7 +66,7 @@ export function HarvestProductLines({ lines, products, loading, error, disabled,
   const setCages = (line: HarvestLine, cages: string) => patch(line.key, { cages, kg: refill(line, line.productId, cages) });
   const totals = linesTotals(lines);
   return <div className={styles.productLines}>
-    <table><thead><tr><th>Sản phẩm</th><th>Số lồng</th><th>Số kg</th></tr></thead>
+    <table><thead><tr><th>Sản phẩm</th><th>Số lồng</th>{!hideKg && <th>Số kg</th>}</tr></thead>
       <tbody>{lines.map((line, index) => {
         const position = index + 1, factor = factorOf(line.productId), product = products.find((row) => row.id === line.productId);
         return <tr key={line.key}>
@@ -77,12 +77,12 @@ export function HarvestProductLines({ lines, products, loading, error, disabled,
               {products.map((row) => <option key={row.id} value={row.id}>{row.name} ({row.code})</option>)}
             </SelectBox>}</td>
           <td className={styles.cageCell}><UnitInput label={`Số lồng dòng ${position}`} unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} disabled={disabled} value={number(line.cages)} onChange={(cages) => setCages(line, cages === null ? "" : String(cages))} /></td>
-          <td><input aria-label={`Số kg dòng ${position}`} className={`omts-control ${styles.kgInput}`} inputMode="decimal" disabled={disabled} value={line.kg}
+          {!hideKg && <td><input aria-label={`Số kg dòng ${position}`} className={`omts-control ${styles.kgInput}`} inputMode="decimal" disabled={disabled} value={line.kg}
             placeholder={factor ? undefined : "Theo kg/lồng của lô"} title={factor ? `1 lồng = ${fmt(factor)} kg; sửa được` : undefined}
-            onChange={(event) => { const text = event.target.value.replace(/[^\d.,]/g, ""); patch(line.key, { kg: text }); }} /></td>
+            onChange={(event) => { const text = event.target.value.replace(/[^\d.,]/g, ""); patch(line.key, { kg: text }); }} /></td>}
         </tr>;
       })}</tbody>
-      {lines.length > 1 && <tfoot><tr><th>Tổng</th><th>{fmt(totals.cages)} lồng</th><th>{fmt(Math.round(totals.kg * 100) / 100)} kg</th></tr></tfoot>}
+      {lines.length > 1 && <tfoot><tr><th>Tổng</th><th>{fmt(totals.cages)} lồng</th>{!hideKg && <th>{fmt(Math.round(totals.kg * 100) / 100)} kg</th>}</tr></tfoot>}
     </table>
     {error && <p role="alert" className={styles.harvestHint}>Không tải được danh sách sản phẩm. {error}</p>}
   </div>;

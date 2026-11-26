@@ -126,7 +126,8 @@ it("requires an effective date when the work tab changes employee type", async (
   const body = repository.write.mock.calls[0][1] as { employeeType: string; employeeTypeFrom: string };
   expect(body.employeeType).toBe("SeasonalWorker");
   expect(body.employeeTypeFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-  expectPreserved(employee, { employeeType: "SeasonalWorker", employeeTypeFrom: body.employeeTypeFrom });
+  // A seasonal worker has no fixed zone: none is sent.
+  expectPreserved(employee, { employeeType: "SeasonalWorker", employeeTypeFrom: body.employeeTypeFrom, workingZoneIds: [] });
 });
 
 it("prevents duplicate submissions and keeps save pending until the request completes", async () => {

@@ -11,13 +11,13 @@ export function KgWithApproxCages({ kg, kgPerCage }: { kg: number; kgPerCage?: n
   );
 }
 
-/** Exact cage count as the lead number, estimated kg as the small secondary line. */
-export function CagesWithEstimatedKg({ cages, kg }: { cages: number; kg: number }) {
+/** Exact cage count as the lead number; the kg are the port weighing ("Chờ cân" until it is done), the conversion estimate is never shown as kg. */
+export function CagesWithWeighedKg({ cages, weighedKg }: { cages: number; weighedKg?: number | null }) {
   return (
     <>
       <span className="font-semibold tabular-nums">{cages.toLocaleString("vi-VN")} lồng</span>
       <span className="mt-1 block whitespace-nowrap text-xs font-normal text-text-muted tabular-nums">
-        ≈ {kg.toLocaleString("vi-VN")} kg
+        {weighedKg == null ? "Chờ cân" : `cân ${weighedKg.toLocaleString("vi-VN")} kg`}
       </span>
     </>
   );

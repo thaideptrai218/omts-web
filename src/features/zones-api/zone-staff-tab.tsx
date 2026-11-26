@@ -14,7 +14,7 @@ import styles from "@/features/farming-management/farming-management.module.css"
 const repository = createOperationsRepository("employees");
 /** "Nhân viên": employees assigned to the zone (the employee list already filters by `zoneId`); each name opens that employee. */
 export function ZoneStaffTab({ zoneId }: { zoneId: string }) {
-  const [statusId, setStatusId] = useState("401"), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(15);
+  const [statusId, setStatusId] = useState("401"), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const remote = useRemote(useCallback((signal: AbortSignal) => repository.read("list", { zoneId, statusId, page: String(page), pageSize: String(pageSize) }, employeePageSchema, signal), [zoneId, statusId, page, pageSize]));
   return <>
     <div className={styles.subToolbar}>

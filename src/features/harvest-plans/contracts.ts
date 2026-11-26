@@ -10,6 +10,11 @@ const id = z.guid(), text = z.string(), opt = text.nullish(), count = z.number()
 export const PLAN = { draft: 4201, assigned: 4202, harvesting: 4203, completed: 4204, cancelled: 4205, received: 4206, handedOver: 4207 } as const;
 export const laneStates = ["Planned", "Harvested", "Skipped"] as const;
 export type PlanLaneState = (typeof laneStates)[number];
+/** Who harvests a plan: the zone manager (receives, harvests, hands over) or the Owner himself (harvests and completes). Chosen once, when the plan is assigned; plans made before the choice are ZoneManager. */
+export const planExecutors = ["ZoneManager", "Owner"] as const;
+export type PlanExecutor = (typeof planExecutors)[number];
+/** Defensive: an answer without `executor` (an older API) reads as a plan of the zone manager. */
+const executor = z.enum(planExecutors).catch("ZoneManager").default("ZoneManager");
 /** What the caller may do with a plan now (`allowedActions`); the screens show exactly these buttons. */
 export type PlanAction = "Edit" | "Assign" | "Receive" | "HandOver" | "Finish" | "Cancel" | "Harvest" | "SkipLane";
 
@@ -33,12 +38,12 @@ export const planOrder = z.object({ id, code: text, statusId: count, status: tex
 export const planProgress = z.object({ lines: count, linesDone: count, lanes: count, lanesHarvested: count, lanesSkipped: count });
 export const planView = z.object({
   id, code: text, statusId: count, status: text, zones: z.array(zoneRef), plannedAt: text, note: opt, createdBy: account.nullish(),
-  assignedAt: opt, assignedBy: account.nullish(), completedAt: opt, cancelledAt: opt, cancelledBy: account.nullish(), cancelReason: opt,
+  executor, assignedAt: opt, assignedBy: account.nullish(), completedAt: opt, cancelledAt: opt, cancelledBy: account.nullish(), cancelReason: opt,
   lines: z.array(planLine), orders: z.array(planOrder), progress: planProgress, allowedActions: z.array(text), createdAt: text, rowVersion: text,
 });
 export const planRow = z.object({
   id, code: text, statusId: count, status: text, zones: z.array(zoneRef), plannedAt: text, note: opt, raftCodes: z.array(text), orders: z.array(planOrder), progress: planProgress,
-  createdBy: opt, rowVersion: text, expectedCageCount: cages.nullish(),
+  createdBy: opt, rowVersion: text, expectedCageCount: cages.nullish(), executor,
 });
 export const planPage = z.object({ items: z.array(planRow), page: count, pageSize: count, total: count });
 export const nextCode = z.object({ code: text });

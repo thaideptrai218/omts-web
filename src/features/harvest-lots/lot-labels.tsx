@@ -5,6 +5,8 @@ import { LOT } from "./contracts";
 export const LOTS_PATH = "/farming/harvest-lots";
 /** A lot is opened in its list by its code: names and ids do not belong in an address. */
 export const lotsHref = (code: string) => `${LOTS_PATH}?code=${encodeURIComponent(code)}`;
+/** The list opened on one lot with its weighing sheet already open (after a harvest is recorded). */
+export const lotWeighHref = (code: string) => `${lotsHref(code)}&weigh=1`;
 
 /** The lot statuses by id (2904 is new: a lot waits for its weighing and is not for sale until then). */
 export const lotStatusLabel: Record<number, string> = { [LOT.awaitingWeighing]: "Chờ cân", [LOT.open]: "Đang mở", [LOT.reopened]: "Mở lại", [LOT.closed]: "Đã đóng" };
