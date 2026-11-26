@@ -18,10 +18,11 @@ const groups = [
  * each with its own count, search and "Chọn tất cả". A person whose kind is not known yet is listed with the Nội bộ group, without a marker.
  * `locked` people stay ticked and cannot be unticked. The caller keeps its own data loading and decides who is offered.
  */
-export function EmployeeTwoGroupPicker({ people, values, onChange, locked = [], name, label }: {
+export function EmployeeTwoGroupPicker({ people, values, onChange, locked = [], name, label, zoneIds }: {
   people: readonly PickerPerson[]; values: readonly string[]; onChange(values: string[]): void; locked?: readonly string[]; name: string; label?: string;
+  /** The zones of the work: nội bộ staff of other zones are not offered (thời vụ can be sent anywhere). */ zoneIds?: readonly string[];
 }) {
-  const { kindOf, zonesOf } = useEmployeeFacts();
+  const { kindOf, zonesOf, worksIn } = useEmployeeFacts();
   const [searches, setSearches] = useState<Record<string, string>>({});
   const kindOfPerson = (person: PickerPerson) => (person.kind === "SeasonalWorker" || person.kind === "Staff" ? person.kind : kindOf(person.id)) ?? "Staff";
   const isTicked = (id: string) => values.includes(id) || locked.includes(id);
@@ -29,7 +30,10 @@ export function EmployeeTwoGroupPicker({ people, values, onChange, locked = [], 
 
   return <div className="grid gap-3 md:grid-cols-2" role="group" aria-label={label ?? "Chọn nhân viên"}>
     {groups.map((group) => {
-      const members = people.filter((person) => kindOfPerson(person) === group.kind), term = foldVietnamese((searches[group.kind] ?? "").trim());
+      const all = people.filter((person) => kindOfPerson(person) === group.kind);
+      // Someone already chosen stays visible, so an older record can still be read and corrected.
+      const members = group.kind === "Staff" && zoneIds?.length ? all.filter((person) => isTicked(person.id) || worksIn(person.id, zoneIds)) : all;
+      const hidden = all.length - members.length, term = foldVietnamese((searches[group.kind] ?? "").trim());
       const shown = members.filter((person) => foldVietnamese(person.name).includes(term));
       const choosable = shown.filter((person) => !person.disabled && !locked.includes(person.id)), allTicked = choosable.length > 0 && choosable.every((person) => values.includes(person.id));
       const chosen = members.filter((person) => isTicked(person.id)).length;
@@ -37,7 +41,7 @@ export function EmployeeTwoGroupPicker({ people, values, onChange, locked = [], 
         <header className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <h4 className="flex items-center gap-1.5 text-sm font-semibold"><EmployeeTypeBadge type={group.kind} showLabel={group.kind === "Staff"} /><span className="font-normal text-text-muted">{members.length} người{chosen ? `, đã chọn ${chosen}` : ""}</span></h4>
-            <p className="text-xs text-text-muted">{group.hint}</p>
+            <p className="text-xs text-text-muted">{group.hint}{hidden > 0 ? `. Ẩn ${hidden} người thuộc vùng khác` : ""}</p>
           </div>
           <button type="button" className="text-sm font-medium text-primary underline underline-offset-4 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50" disabled={!choosable.length}
             onClick={() => onChange(allTicked ? values.filter((id) => !choosable.some((person) => person.id === id)) : [...new Set([...values, ...choosable.map((person) => person.id)])])}>
@@ -53,7 +57,7 @@ export function EmployeeTwoGroupPicker({ people, values, onChange, locked = [], 
               <span className="min-w-0">{person.name}{zones.length > 0 && <small className="block text-text-muted">Vùng {zones.join(", ")}</small>}{person.note}</span>
             </label>;
           })}
-          {members.length === 0 && <p className="text-sm text-text-muted">{group.empty}</p>}
+          {members.length === 0 && <p className="text-sm text-text-muted">{hidden > 0 ? "Vùng này chưa có nhân viên nội bộ." : group.empty}</p>}
           {members.length > 0 && shown.length === 0 && <p className="text-sm text-text-muted">Không có ai khớp tìm kiếm.</p>}
         </div>
       </section>;

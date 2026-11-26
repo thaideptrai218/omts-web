@@ -86,7 +86,7 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
           <Facts flat items={[
             ["Lô giống", batch.seedLot.receiptCode ? <Link className="underline" href={farmingReferenceHref("purchaseReceipt", { code: batch.seedLot.receiptCode })}>{batch.seedLot.code}</Link> : batch.seedLot.code],
             ["Tên giống", batch.seedLot.itemName], ["Nhà cung cấp", batch.seedLot.supplierName],
-            ["Tồn kho hiện tại của lô", quantityText(batch.seedLotOnHand, batch.seedLot.unit)], ["Người ghi nhận", batch.recordedByName],
+            ["Tồn kho hiện tại của lô", quantityText(batch.seedLotOnHand, batch.seedLot.unit)], ["Người ghi nhận", batch.recordedByName], ["Người phụ trách", batch.responsibleName ?? "—"],
             ...(batch.issueCode ? [["Phiếu xuất dùng", <Link key="issue" className="underline" href={issueLink(batch.issueCode)!}>{batch.issueCode}</Link>]] as const : []),
             ...(batch.completedOn ? [["Ngày hoàn tất", formatVietnameseDate(batch.completedOn)]] as const : []),
             ...(batch.closedOn ? [["Ngày đóng đợt ươm", formatVietnameseDate(batch.closedOn)]] as const : []),

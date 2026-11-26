@@ -20,7 +20,7 @@ export function RecordCrewPicker({ raftId, zoneId, values, onChange, label = "Nh
   return <fieldset className="space-y-2"><legend className="text-sm font-medium">{label}</legend>
     {remote.loading ? <Skeleton /> : remote.error ? <><ErrorNotice error={remote.error} /><Button key="retry-crew" type="button" variant="secondary" className="w-auto" onClick={remote.reload}>Tải lại nhân viên</Button></>
       : !remote.data?.length ? <p className="text-sm text-text-muted">Chưa có danh sách nhân viên để chọn.</p>
-        : <EmployeeTwoGroupPicker name={`crew-${label}`} label={label} values={values} onChange={onChange} locked={locked} people={[...remote.data].sort((a, b) => Number(confirmedIds.includes(b.id)) - Number(confirmedIds.includes(a.id))).map(item => ({
+        : <EmployeeTwoGroupPicker zoneIds={[zoneId]} name={`crew-${label}`} label={label} values={values} onChange={onChange} locked={locked} people={[...remote.data].sort((a, b) => Number(confirmedIds.includes(b.id)) - Number(confirmedIds.includes(a.id))).map(item => ({
           id: item.id, name: item.name, kind: item.kind, disabled: !!item.busy,
           note: locked.includes(item.id) ? <small className="block text-text-muted">Đã điểm danh nên không bỏ khỏi bè được</small> : <>{confirmedIds.includes(item.id) && <small className="block text-text-muted">Đã xác nhận thu hoạch</small>}{item.preferred && <small className="block text-text-muted">Đã phân công cho bè {dayText}</small>}{item.busy && <small className="block text-text-muted">{item.busy}</small>}</>,
         }))} />}

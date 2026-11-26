@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { compressPhoto, photoValidationMessage } from "./photo-compression";
 import type { StepPhoto } from "./photo-contracts";
 
@@ -12,7 +11,7 @@ function LocalPreview({ file, index }: { file: File; index: number }) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
   // eslint-disable-next-line @next/next/no-img-element -- local object URL with effect cleanup
-  return <img ref={preview} alt={`Ảnh mới ${index + 1}`} className="h-20 w-24 rounded-control object-cover" />;
+  return <img ref={preview} alt={`Ảnh mới ${index + 1}`} className="size-full object-cover" />;
 }
 
 export function PhotoPicker({ files, onChange, existing = [], onRemoveExisting, required = true, error, disabled, onBusyChange, label = "Ảnh hiện trường" }: {
@@ -36,20 +35,23 @@ export function PhotoPicker({ files, onChange, existing = [], onRemoveExisting, 
     } catch (cause) { setLocalError((cause as Error).message); }
     finally { setBusy(false); onBusyChange?.(false); }
   }
-  return <fieldset className="min-w-0 rounded-control border border-border p-3" disabled={disabled || busy} aria-describedby={`${id}-help${error || localError ? ` ${id}-error` : ""}`}>
+  const tile = "relative size-16 overflow-hidden rounded-control border border-border";
+  const remove = "absolute right-0.5 top-0.5 grid size-5 place-items-center rounded-full bg-black/65 text-sm leading-none text-white";
+  return <fieldset className="min-w-0 self-start rounded-control border border-dashed border-border bg-surface-subtle p-3" disabled={disabled || busy} aria-describedby={`${id}-help${error || localError ? ` ${id}-error` : ""}`}>
     <legend className="px-1 text-sm font-medium">{label}{required ? " *" : " (tùy chọn)"} · {total}/3</legend>
-    <p id={`${id}-help`} className="text-xs text-text-muted">{required ? "Chọn từ 1 đến 3" : "Tối đa 3"} ảnh JPEG/PNG, mỗi ảnh tối đa 10 MB.</p>
     <label htmlFor={id} className="sr-only">Chọn {label.toLowerCase()}</label>
     <input id={id} ref={fileInput} type="file" accept="image/jpeg,image/png" multiple className="sr-only" tabIndex={-1} disabled={total >= 3 || disabled || busy} aria-invalid={!!(error || localError)} onChange={event => { const inputs = Array.from(event.target.files ?? []); event.target.value = ""; void add(inputs); }} />
-    <div className="mt-2 flex flex-wrap items-center gap-3"><Button type="button" variant="secondary" className="w-auto" disabled={total >= 3 || disabled || busy} aria-controls={id} onClick={() => fileInput.current?.click()}>{total ? "Thêm ảnh" : "Chọn ảnh"}</Button><span aria-live="polite" className="text-xs text-text-muted">{total ? `Đã chọn ${total}/3 ảnh` : "Chưa chọn ảnh"}</span></div>
-    <div className="mt-2 flex flex-wrap gap-3">{existing.map((photo, index) => <figure key={photo.id ?? photo.key ?? photo.url} className="w-24">
+    <div className="flex flex-wrap gap-2">{existing.map((photo, index) => <figure key={photo.id ?? photo.key ?? photo.url} className={tile}>
       {/* eslint-disable-next-line @next/next/no-img-element -- signed or BFF photo URL */}
-      <img src={photo.url} alt={`Ảnh đã lưu ${index + 1}`} className="h-20 w-24 rounded-control object-cover" />
-      {onRemoveExisting && <button type="button" className="min-h-8 text-xs text-danger" onClick={() => onRemoveExisting(photo.id ?? photo.key ?? photo.url)}>Xóa ảnh đã lưu {index + 1}</button>}
-    </figure>)}{files.map((file, index) => <figure key={`${file.name}-${file.lastModified}-${index}`} className="w-24">
+      <img src={photo.url} alt={`Ảnh đã lưu ${index + 1}`} className="size-full object-cover" />
+      {onRemoveExisting && <button type="button" className={remove} aria-label={`Xóa ảnh đã lưu ${index + 1}`} title="Xóa ảnh" onClick={() => onRemoveExisting(photo.id ?? photo.key ?? photo.url)}>×</button>}
+    </figure>)}{files.map((file, index) => <figure key={`${file.name}-${file.lastModified}-${index}`} className={tile}>
       <LocalPreview file={file} index={index} />
-      <button type="button" className="min-h-8 text-xs text-danger" onClick={() => onChange(files.filter((_, at) => at !== index))}>Xóa ảnh mới {index + 1}</button>
-    </figure>)}</div>
+      <button type="button" className={remove} aria-label={`Xóa ảnh mới ${index + 1}`} title="Bỏ ảnh" onClick={() => onChange(files.filter((_, at) => at !== index))}>×</button>
+    </figure>)}
+      {total < 3 && <button type="button" className="grid size-16 place-items-center rounded-control border border-dashed border-border bg-surface text-xs font-semibold text-primary disabled:opacity-50" disabled={disabled || busy} aria-controls={id} onClick={() => fileInput.current?.click()}>+ Ảnh</button>}
+    </div>
+    <p id={`${id}-help`} className="mt-2 text-xs text-text-muted">{required ? "Chọn từ 1 đến 3" : "Tối đa 3"} ảnh JPEG hoặc PNG, mỗi ảnh 10 MB.</p>
     {busy && <p role="status" className="text-xs">Đang nén ảnh…</p>}
     {(error || localError) && <p id={`${id}-error`} role="alert" className="text-xs text-danger">{error || localError}</p>}
   </fieldset>;

@@ -56,7 +56,7 @@ it("prefills customer, line, pickup and source from a purchase request and sends
   const user = userEvent.setup();
   render(<ToastProvider><OrderEditorPage requestId={ids.request} /></ToastProvider>);
   expect(await screen.findByText("Thương lái An")).toBeTruthy();
-  expect((screen.getByLabelText("số lượng dòng 1") as HTMLInputElement).value).toBe("120.5");
+  expect((screen.getByLabelText("số lượng dòng 1") as HTMLInputElement).value).toBe("120,5");
   expect((screen.getByLabelText("Nguồn đặt") as HTMLSelectElement).disabled).toBe(true);
   await user.click(screen.getByRole("button", { name: "Đặt hàng" }));
   await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));

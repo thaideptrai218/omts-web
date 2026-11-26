@@ -42,6 +42,7 @@ export function SeedingRecordDetails({ record: v, zoneId, nurseryCode, completed
         </dl></section>
         <section className={flowStyles.detailGroup} aria-label="Ghi nhận"><h5>Ghi nhận</h5><dl>
           <dt>Người ghi nhận</dt><dd>{v.recordedByName ?? "—"}</dd>
+          <dt>Người phụ trách</dt><dd>{v.responsibleName ?? "—"}</dd>
           <dt>Thời điểm</dt><dd>{displayTime(v.recordedAt)}</dd>
         </dl></section>
         <p className={flowStyles.detailNote}>Số lượng thuộc cả lần thả giống, không chia đều cho từng làn.</p>

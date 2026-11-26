@@ -84,7 +84,7 @@ export function PlanRosterSection({ plan, access, onRoster }: { plan: PlanView; 
   if (!roster) return <div role="alert" className="rounded-control border border-border p-4 text-sm">{live.error ?? "Không tải được danh sách nhân công."} <Button className="ml-2 w-auto" variant="secondary" onClick={() => void live.refresh()}>Làm mới</Button></div>;
 
   return <section aria-label="Người thu hoạch của kế hoạch" className="space-y-3">{confirmation.dialog}
-    {dialog === "invite" && <PlanRosterInviteDialog day={day} onRoster={roster.people.map((person) => person.employeeId)} preselected={conflict ? [conflict.employeeId] : []} pending={pending} error={dialogError}
+    {dialog === "invite" && <PlanRosterInviteDialog day={day} zoneIds={plan.lines.map((line) => line.zone.id)} onRoster={roster.people.map((person) => person.employeeId)} preselected={conflict ? [conflict.employeeId] : []} pending={pending} error={dialogError}
       onInvite={(ids) => void invite(ids)} onClose={() => { setDialog(undefined); setDialogError(undefined); }} />}
     {dialog === "external" && <PlanRosterExternalDialog zoneManager={!access.owner} pending={pending} error={dialogError} conflict={conflict} onSubmit={(form) => void addExternal(form)}
       onInviteConflict={() => setDialog("invite")} onClose={() => { setDialog(undefined); setDialogError(undefined); setConflict(undefined); }} />}

@@ -14,6 +14,7 @@ import { nurseryDisplayText } from "./nursery-display-text";
 import { nurseryQuantityValue } from "./nursery-quantity-value";
 import { useToast } from "@/components/ui/toast-provider";
 import { RecordCrewPicker } from "@/features/cultivation-api/record-crew-picker";
+import { ResponsiblePersonField, useResponsiblePeople } from "@/features/cultivation-api/responsible-person-field";
 import { crewAssignmentNotice } from "@/features/cultivation-api/record-crew-assignment-notice";
 
 export type NurseryEditGuard = { canLeave(): Promise<boolean> };
@@ -21,9 +22,10 @@ export function NurseryEditForm({ batch, onClose, onSaved, onReload, leaveRef, g
   const [quantity, setQuantity] = useState(String(batch.quantityIn)), [date, setDate] = useState(batch.startDate), [note, setNote] = useState(batch.note ?? "");
   const [kept, setKept] = useState(batch.startPhotos), [photos, setPhotos] = useState<NurseryPhotoDraft[]>([]), [photoBusy, setPhotoBusy] = useState(false), [error, setError] = useState<string>();
   const [crew, setCrew] = useState<string[]>(() => batch.crew?.map(member => member.id) ?? []);
+  const people = useResponsiblePeople(batch.zoneId), [responsible, setResponsible] = useState(batch.responsibleAccountId ?? "");
   const { notify } = useToast(), mutation = useNurseryMutation(), confirmation = useActionDialog();
   const photosChanged = kept.length !== batch.startPhotos.length || photos.length > 0;
-  const dirty = quantity !== String(batch.quantityIn) || date !== batch.startDate || note !== (batch.note ?? "") || photosChanged || JSON.stringify(crew) !== JSON.stringify(batch.crew?.map(member => member.id) ?? []);
+  const dirty = responsible !== (batch.responsibleAccountId ?? "") || quantity !== String(batch.quantityIn) || date !== batch.startDate || note !== (batch.note ?? "") || photosChanged || JSON.stringify(crew) !== JSON.stringify(batch.crew?.map(member => member.id) ?? []);
   const { dirty: dirtyRef, pending: pendingRef } = guard;
   useEffect(() => {
     dirtyRef.current = dirty; pendingRef.current = mutation.pending || photoBusy;
@@ -42,7 +44,7 @@ export function NurseryEditForm({ batch, onClose, onSaved, onReload, leaveRef, g
     if (!date || date > businessToday()) { setError("Ngày bắt đầu ươm phải không sau hôm nay."); return; }
     if (photosChanged && (kept.length + photos.length < 1 || kept.length + photos.length > 3)) { setError("Ảnh: cần giữ hoặc chọn từ 1 đến 3 ảnh hiện trường."); return; }
     setError(undefined);
-    const form = nurseryMultipart({ quantity: nurseryQuantityValue(quantity), startDate: date, note, rowVersion: batch.rowVersion, replaceCrew: true, ...(crew.length ? { crew } : {}),
+    const form = nurseryMultipart({ quantity: nurseryQuantityValue(quantity), startDate: date, note, rowVersion: batch.rowVersion, replaceCrew: true, ...(crew.length ? { crew } : {}), ...(responsible ? { responsibleAccountId: responsible } : {}),
       ...(photosChanged ? { keepPhotoIds: kept.map(photo => photo.id) } : {}) }, photos.map(photo => photo.file));
     const result = await mutation.run(() => nurseryService.save("update", batch.zoneId, form, batch.id));
     if (result) {
@@ -53,11 +55,13 @@ export function NurseryEditForm({ batch, onClose, onSaved, onReload, leaveRef, g
   }
   return <form noValidate aria-label={`Chỉnh sửa ${batch.code}`} onSubmit={event => { event.preventDefault(); void save(); }}>{confirmation.dialog}
       <dl className="mb-3 grid gap-2 text-sm sm:grid-cols-2"><div><dt className="text-xs text-text-muted">Vùng ươm</dt><dd>{batch.zoneCode} · {batch.zoneName}</dd></div><div><dt className="text-xs text-text-muted">Lô giống</dt><dd>{batch.seedLot.code}</dd></div></dl>
-      <fieldset disabled={mutation.pending || mutation.blocked || photoBusy} className="min-w-0 space-y-3">
+      <fieldset disabled={mutation.pending || mutation.blocked || photoBusy} className="grid min-w-0 items-start gap-4 md:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2"><UnitField label="Số mảnh vào ươm" unit="mảnh" decimals={2} min={0} value={quantity} onChange={setQuantity} required hint={mostAllowed === undefined ? undefined : `Tối đa theo kho: ${quantityText(mostAllowed, batch.seedLot.unit)}`} error={overStock} />
           <Field label="Ngày bắt đầu ươm *" type="date" value={date} onChange={event => setDate(event.target.value)} max={businessToday()} required /></div>
         <Note label="Ghi chú" value={note} onChange={event => setNote(event.target.value)} maxLength={1000} />
+        <ResponsiblePersonField people={people} value={responsible} onChange={setResponsible} saved={{ id: batch.responsibleAccountId, name: batch.responsibleName }} />
         <RecordCrewPicker label="Nhân viên ươm" zoneId={batch.zoneId} values={crew} onChange={setCrew} />
+      </div>
         <NurseryPhotoField photos={photos} onChange={setPhotos} kept={kept} onRemoveKept={id => setKept(current => current.filter(photo => photo.id !== id))} onBusy={setPhotoBusy} />
       </fieldset>
       <ErrorNotice error={nurseryDisplayText(error ?? mutation.error)} />
