@@ -20,3 +20,16 @@ export function licenseReminders<Row extends OverviewRow & { state: string; expi
   return newestLicensePerType(rows).filter(row => row.documentId && (row.state === "Expired" || row.state === "ExpiringSoon"))
     .map(row => ({ key: row.documentId!, expired: row.state === "Expired", text: `${typeLabel(row.documentType)}${row.documentNumber ? ` ${row.documentNumber}` : ""}: ${expiryText(row.expiryDate, today).toLowerCase()}` }));
 }
+
+type ListedRow = OverviewRow & { documentId: string | null };
+const newestFirst = (a: OverviewRow, b: OverviewRow) => (b.effectiveDate ?? "").localeCompare(a.effectiveDate ?? "");
+/**
+ * Every document of the zone for the list: documents in force first, then a "Missing" row for each required type with nothing on file,
+ * then the replaced ones; newest effective date first inside each group.
+ */
+export function orderLicenses<Row extends ListedRow>(rows: readonly Row[]): Row[] {
+  const inForce = rows.filter(row => row.documentId && !row.isReplaced).sort(newestFirst);
+  const missing = rows.filter(row => !row.documentId);
+  const replaced = rows.filter(row => row.documentId && row.isReplaced).sort(newestFirst);
+  return [...inForce, ...missing, ...replaced];
+}

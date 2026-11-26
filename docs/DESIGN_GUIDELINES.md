@@ -155,3 +155,4 @@ Người dùng chọn màu chủ đạo trong menu avatar → `Chủ đề` (lư
 - Không dựng nút, cột, số liệu giả cho chức năng chưa có dữ liệu thật.
 - Dữ liệu chỉ hiện theo đúng quyền của tài khoản.
 - Có trạng thái đang tải, lỗi kèm cách thử lại, và danh sách trống.
+- Vùng nuôi ngừng sử dụng chỉ hiện ở màn Vùng nuôi. Mọi ô chọn vùng khác chỉ liệt kê vùng Đang sử dụng (`loadInUseZones` / `useZoneChoice`), không thêm hậu tố "(ngừng sử dụng)". Ngoại lệ: bản ghi đã gắn với vùng ngừng sử dụng (ví dụ nhân viên đang được phân vào vùng đó) vẫn hiện vùng ấy để người dùng gỡ được.

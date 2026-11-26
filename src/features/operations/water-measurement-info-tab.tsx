@@ -1,22 +1,16 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { Facts, TabFooter } from "@/features/farming-management/detail-parts";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import styles from "@/features/farming-management/farming-management.module.css";
 import * as c from "./contracts";
-import { loadOptions } from "./lookups";
-import { ErrorNotice, displayTime, statusLabel, useMutation, useRemote } from "./ui";
-import { CORRECTION_INVALID, correctionBody, draftOf, type WaterDraft } from "./water-correction-model";
+import { displayTime, statusLabel } from "./ui";
 import { againstThreshold } from "./water-history-model";
-import { WaterEditFields } from "./water-measurement-edit-fields";
-import { formatMeasuredValue, waterRepository } from "./water-measurement-shared";
-import { WaterReviewNotice } from "./water-review-notice";
+import { formatMeasuredValue } from "./water-measurement-shared";
 import local from "./water-screen.module.css";
 
-const IN_USE_RAFT = "101";
 const range = (min: number | null, max: number | null) => min === null && max === null ? "Chưa đặt" : `${min ?? "—"} – ${max ?? "—"}`;
 const VERDICT = { none: "Chưa đặt ngưỡng", ok: "Trong ngưỡng", low: "Thấp hơn ngưỡng", high: "Cao hơn ngưỡng" } as const;
 
@@ -35,53 +29,13 @@ function ThresholdsUsed({ record }: { record: c.WaterMeasurement }) {
   </table>;
 }
 
-/** "Thông tin": the measurement and its thresholds; `Hiệu chỉnh` turns the facts into inputs with `Bỏ qua` / `Lưu` in the footer. */
-export function WaterMeasurementInfoTab({ record, zoneName, canChange, busy, dirtyRef, onSaved, onReload, onVoid }: {
-  record: c.WaterMeasurement; zoneName: string; canChange: boolean; busy: boolean; dirtyRef: RefObject<boolean>;
-  onSaved(record: c.WaterMeasurement): void; onReload(): void; onVoid(): void;
-}) {
-  const [editing, setEditing] = useState(false), [draft, setDraft] = useState<WaterDraft>(() => draftOf(record));
-  const [problem, setProblem] = useState<string>(), [reloaded, setReloaded] = useState(false);
-  const mutation = useMutation();
-  const dirty = editing && JSON.stringify(draft) !== JSON.stringify(draftOf(record));
-  useEffect(() => { dirtyRef.current = dirty; return () => { dirtyRef.current = false; }; }, [dirty, dirtyRef]);
-  const rafts = useRemote(useCallback((signal: AbortSignal) => editing
-    ? loadOptions("rafts", signal, { zoneId: record.zoneId, statusId: IN_USE_RAFT })
-    : Promise.resolve({ status: "success" as const, data: [] }), [editing, record.zoneId]));
-  const raftOptions = (rafts.data ?? []).map(raft => ({ id: raft.id, code: String(raft.code) }));
-  if (!raftOptions.some(raft => raft.id === record.raftId)) raftOptions.unshift({ id: record.raftId, code: record.raftCode });
-  const locked = busy || mutation.pending;
-
-  function begin() { setDraft(draftOf(record)); setProblem(undefined); setReloaded(false); mutation.reviewed(); setEditing(true); }
-  function cancel() { if (mutation.busy()) return; setEditing(false); setProblem(undefined); mutation.reviewed(); }
-  async function save() {
-    if (!editing || mutation.busy() || mutation.blocked || busy) return;
-    const body = correctionBody(draft);
-    setProblem(body ? undefined : CORRECTION_INVALID);
-    if (!body) return;
-    const result = await mutation.run(() => waterRepository.write("correct", body, c.waterSchema, record.id));
-    if (!result) return;
-    setEditing(false);
-    onSaved(result);
-  }
-
-  return <form noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
-    {record.violatedValues && !editing && <p role="alert" className={local.alertLine}>Vượt ngưỡng: {record.violatedValues}</p>}
-    <fieldset disabled={locked || mutation.blocked} className="min-w-0 border-0 p-0">
-      {editing ? <WaterEditFields draft={draft} setDraft={setDraft} rafts={raftOptions} /> : <>
-        <Facts items={[["Thời điểm đo", displayTime(record.measuredAt)], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: record.zoneId, search: record.zoneCode })}>{zoneName || record.zoneName}</Link>], ["Bè đo", <Link key="raft" className={styles.link} href={farmingReferenceHref("raft", { zoneId: record.zoneId, recordId: record.raftId, search: record.raftCode })}>{record.raftCode}</Link>], ["Người ghi", record.measuredBy?.name],
-          ["Trạng thái", statusLabel(record.statusCode)], ["Cảnh báo", statusLabel(record.alertState)], ["Lý do hủy", record.voidReason]]} />
-        <ThresholdsUsed record={record} />
-      </>}
-    </fieldset>
-    <ErrorNotice error={problem ?? rafts.error ?? mutation.error} />
-    {mutation.blocked && <WaterReviewNotice reloadLabel="Tải phép đo mới để đối chiếu" text="Chưa xác nhận được kết quả lưu. Hãy tải phép đo mới để đối chiếu; nội dung đang nhập vẫn được giữ." reloaded={reloaded} busy={busy} canContinue={!mutation.uncertain}
-      onReload={() => { onReload(); setReloaded(true); }} onReviewed={() => { mutation.reviewed(); setReloaded(false); }} reviewedLabel="Đã đối chiếu, tiếp tục sửa" />}
-    {canChange && <TabFooter
-      left={!editing && <Button key="void" type="button" className="w-auto" variant="ghost" disabled={locked} onClick={onVoid}><InterfaceIcon name="trash" className="size-4" />Hủy bỏ phép đo</Button>}
-      right={editing
-        ? <><Button key="cancel" type="button" className="w-auto" variant="secondary" disabled={mutation.pending} onClick={cancel}>Bỏ qua</Button>
-          <Button key="save" type="submit" className="w-auto" disabled={busy || mutation.blocked} isPending={mutation.pending}>Lưu</Button></>
-        : <Button key="edit" type="button" className="w-auto" disabled={locked} onClick={begin}><InterfaceIcon name="pencil" className="size-4" />Hiệu chỉnh</Button>} />}
-  </form>;
+/** "Thông tin": the measurement and the thresholds it was judged with. A recorded measurement is never corrected; the only change is `Hủy bỏ phép đo`. */
+export function WaterMeasurementInfoTab({ record, zoneName, canChange, busy, onVoid }: { record: c.WaterMeasurement; zoneName: string; canChange: boolean; busy: boolean; onVoid(): void }) {
+  return <div>
+    {record.violatedValues && <p role="alert" className={local.alertLine}>Vượt ngưỡng: {record.violatedValues}</p>}
+    <Facts items={[["Thời điểm đo", displayTime(record.measuredAt)], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: record.zoneId, search: record.zoneCode })}>{zoneName || record.zoneName}</Link>], ["Bè đo", <Link key="raft" className={styles.link} href={farmingReferenceHref("raft", { zoneId: record.zoneId, recordId: record.raftId, search: record.raftCode })}>{record.raftCode}</Link>], ["Người ghi", record.measuredBy?.name],
+      ["Trạng thái", statusLabel(record.statusCode)], ["Cảnh báo", statusLabel(record.alertState)], ["Lý do hủy", record.voidReason]]} />
+    <ThresholdsUsed record={record} />
+    {canChange && <TabFooter left={<Button key="void" type="button" className="w-auto" variant="ghost" disabled={busy} onClick={onVoid}><InterfaceIcon name="trash" className="size-4" />Hủy bỏ phép đo</Button>} />}
+  </div>;
 }

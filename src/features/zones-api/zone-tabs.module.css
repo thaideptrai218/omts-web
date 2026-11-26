@@ -1,0 +1,20 @@
+/* Layout helpers of the zone record: scrolling tab body and the map tab. */
+.tabScroll { max-height:calc(100vh - 290px); min-height:200px; overflow:auto; }
+@media (max-width:760px) { .tabScroll { max-height:none; } }
+
+.mapBar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; font-size:12px; color:var(--omts-color-text-muted); }
+.mapStage { position:relative; min-width:0; }
+.expanded { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; gap:8px; padding:12px; background:var(--omts-color-surface); }
+.expanded .mapStage { flex:1; min-height:0; }
+.pick { position:absolute; left:10px; top:10px; z-index:5; display:flex; align-items:center; gap:8px; max-width:calc(100% - 80px); padding:6px 8px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); box-shadow:0 4px 14px rgb(0 0 0 / .18); font-size:13px; }
+
+/* Subtab tables and footers, same look as the Supplier history subtab. */
+.tabBody { min-width:0; padding-top:4px; }
+.nowrap { white-space:nowrap; }
+.number { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.outside { color:var(--omts-color-danger); font-weight:650; }
+.thresholds { margin:0 0 8px; font-size:13px; color:var(--omts-color-text-muted); }
+.thresholds strong { font-weight:650; color:var(--omts-color-text); }
+.footLink { display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:5px 10px; border:1px solid transparent; border-radius:6px; background:transparent; font-size:12px; font-weight:500; color:var(--omts-color-text); cursor:pointer; }
+.footLink:hover { color:var(--omts-color-primary); }
+.footLink:focus-visible { outline:2px solid var(--omts-color-primary); outline-offset:1px; }

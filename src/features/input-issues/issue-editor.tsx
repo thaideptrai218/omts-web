@@ -76,7 +76,6 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
   const [doc, setDoc] = useState<Saved | undefined>(issue ? { id: issue.id, rowVersion: issue.rowVersion, statusId: issue.statusId, code: issue.code } : undefined);
   const completed = doc?.statusId === ISSUE.completed;
-  const usableZones = zones.filter((zone) => zone.inUse);
   // "Xuất dùng" from an item of the catalogue opens a new issue with that item on the first line.
   const [lines, setLines] = useState<Line[]>(() => {
     if (origin) return origin.lines.map((line) => lineFrom(line, itemsById, !copy));
@@ -84,7 +83,7 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
     return start && start.statusId === IN_USE ? [newLine(start)] : [];
   });
   const [issuedAt, setIssuedAt] = useState(issue ? vnLocal(issue.issuedAt) : nowLocal()), [code, setCode] = useState(issue?.code ?? "");
-  const firstZone = !origin && usableZones.length === 1 ? usableZones[0].id : "";
+  const firstZone = !origin && zones.length === 1 ? zones[0].id : "";
   const [zoneId, setZoneId] = useState(origin?.zoneId ?? firstZone);
   const [raftId, setRaftId] = useState(() => { if (origin?.raftId) return origin.raftId; const own = rafts.filter((raft) => raft.zoneId === (origin?.zoneId ?? firstZone)); return own.length === 1 ? own[0].id : ""; });
   const [typeId, setTypeId] = useState(origin?.issueTypeId ?? ""), [receiverId, setReceiverId] = useState(origin?.receiverEmployeeId ?? "");
@@ -181,7 +180,7 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
     if (result.status === "success") { notify({ tone: "success", title: `Đã xóa phiếu tạm ${doc.code}.` }); router.push(info.path); } else setError(errorText(result));
   }
 
-  const missingZone = origin?.zoneId && !usableZones.some((zone) => zone.id === origin.zoneId);
+  const missingZone = origin?.zoneId && !zones.some((zone) => zone.id === origin.zoneId);
   const missingRaft = origin?.raftId && origin.zoneId === zoneId && !zoneRafts.some((raft) => raft.id === origin.raftId);
   const missingReceiver = origin?.receiverEmployeeId && !receivers.receivers.some((person) => person.id === origin.receiverEmployeeId);
   const title = completed ? `Sửa phiếu ${doc?.code}` : doc ? `Phiếu tạm ${doc.code}` : copy ? `Sao chép ${copy.code}` : info.title;
@@ -220,7 +219,7 @@ function Editor({ kind, access, issue, copy, items, rafts, zones, types, startIt
           {/* Same frame as the purchase receipt: who and when on top, then where the goods go, then the code and status. */}
           <div className={purchaseStyles.sideTop}><div className={purchaseStyles.person} title="Người lập"><InterfaceIcon name="user" /><span>{issue?.createdBy ?? access.username}</span></div><DatePickerField label="Thời gian" withTime value={issuedAt} max={nowLocal()} onChange={setIssuedAt} /></div>
           {use && <div className={styles.placeRow}>
-            {select(zoneId, changeZone, "Vùng", <><option value="">Chọn vùng *</option>{missingZone && <option value={origin?.zoneId ?? ""}>{origin?.zoneCode}</option>}{usableZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</>)}
+            {select(zoneId, changeZone, "Vùng", <><option value="">Chọn vùng *</option>{missingZone && <option value={origin?.zoneId ?? ""}>{origin?.zoneCode}</option>}{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</>)}
             {select(raftId, setRaftId, "Bè", <><option value="">Chọn bè *</option>{missingRaft && <option value={origin?.raftId ?? ""}>{origin?.raftCode}</option>}{zoneRafts.map((raft) => <option key={raft.id} value={raft.id}>{raft.code}</option>)}</>, !zoneId)}
           </div>}
           <SideRow label={info.codeLabel}><input aria-label={info.codeLabel} maxLength={30} placeholder="Mã phiếu tự động" title="Để trống để hệ thống tự cấp mã" value={code} onChange={(event) => setCode(event.target.value.replace(/\s/g, ""))} /></SideRow>

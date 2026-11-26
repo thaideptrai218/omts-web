@@ -34,7 +34,7 @@ function ZoneDirectory({ helpHref }: { helpHref?: string }) {
   const functions = permissions.functionPermissions, owner = identity.subjectType === "CooperativeOwner";
   const canView = resourceAllowed("zones", identity, functions), canCreate = resourceAllowed("zones", identity, functions, "Create");
   const accessFor = (zoneId: string): ZoneAccess => ({ edit: resourceAllowed("zones", identity, functions, "Edit"), rafts: resourceAllowed("rafts", identity, functions),
-    licenses: owner, staff: owner, cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), water: operationAllowed("water", identity, functions, "View", zoneId), yield: operationAllowed("harvest-yield", identity, functions, "View", zoneId),
+    licenses: owner, staff: owner, water: operationAllowed("water", identity, functions, "View", zoneId), waterCreate: operationAllowed("water", identity, functions, "Create", zoneId),
     raft: { edit: resourceAllowed("rafts", identity, functions, "Edit"), photoEdit: owner, cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zoneId), costs: operationAllowed("purchase-receipts", identity, functions, "View", zoneId) } });
   const params = useSearchParams(), recordId = params.get("recordId") ?? "", linkedId = UUID.test(recordId) ? recordId : undefined;
   const [filters, setFilters] = useState<ZoneFilters>({ ...emptyZoneFilters, search: params.get("search") ?? "" });
@@ -86,7 +86,7 @@ function ZoneDirectory({ helpHref }: { helpHref?: string }) {
     footer={<ManagementPagination page={current} pageSize={pageSize} total={rows.length} unit="vùng nuôi" disabled={list.loading && !list.data} onPage={next => void guard.leave(() => { setPage(next); setExpanded(undefined); })} onPageSize={size => change(() => setPageSize(size))} />}>
     {guard.dialog}
     <ManagementScroller busy={list.loading}>
-      {mapOpen ? <div className="p-3"><GlobalZoneMap /></div>
+      {mapOpen ? <div className="p-3"><GlobalZoneMap allowDiscontinued /></div>
         : list.error && !list.data ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại" />
         : !list.data ? <ListSkeleton />
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có vùng nuôi phù hợp bộ lọc." : "Chưa có vùng nuôi."}</ListStateMessage>

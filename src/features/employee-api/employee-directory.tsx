@@ -7,7 +7,8 @@ import { HelpLink, ManagementLayout } from "@/components/ui/management-screen/ma
 import { BulkBar, ColumnPicker, ListStateMessage, ManagementScroller, type SortState } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { ScreenGuide, type GuideStep } from "@/components/ui/screen-guide";
-import { loadOptions } from "@/features/operations/lookups";
+import { useLinkedZone } from "@/features/farming-management/use-linked-zone";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { readSelectionPages } from "@/features/operations/selection-pages";
 import { ErrorNotice, useRemote } from "@/features/operations/ui";
@@ -80,8 +81,10 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
       () => readSelectionPages(read, { ...base, search: term, page: String(page), pageSize: String(pageSize) }, { statusId }, signal),
       accountPage => readSelectionPages(read, { ...base, search: "", page: String(accountPage), pageSize: "100" }, { statusId }, signal));
   }, [repository, term, statusId, zoneId, employeeType, jobTypeId, accountFilter, sort, page, pageSize]));
-  const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
+  const zones = useRemote(useCallback((signal: AbortSignal) => loadInUseZones(signal), []));
   const jobTypes = useRemote(useCallback((signal: AbortSignal) => repository.read("job-types", {}, jobTypeOptionsSchema, signal), [repository]));
+  // A link to a discontinued zone filters by that zone and shows it as one extra option; editors still get In Use zones only.
+  const linkedZone = useLinkedZone(zoneId, id => !zones.data || zones.data.some(zone => zone.id === id));
   const lookupsReady = !!zones.data && !!jobTypes.data && !zones.loading && !jobTypes.loading;
   // Export of the current filters and sort (no paging) or of the ticked rows only (ids replace the filters).
   // The server knows nothing of the account filter, so with it on the rows are read here and exported by id: the file holds what the list shows.
@@ -105,7 +108,7 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   /** An account was created from a profile: the username column follows. */
   const accountChanged = () => list.reload();
   const filters = <EmployeeDirectoryFilters employeeType={employeeType} setEmployeeType={value => filter(() => setEmployeeType(value))} statusId={statusId} setStatusId={value => filter(() => setStatusId(value))}
-    zoneId={zoneId} setZoneId={value => filter(() => setZoneId(value))} zones={zones.data ?? []} jobTypeId={jobTypeId} setJobTypeId={value => filter(() => setJobTypeId(value))} jobTypes={jobTypes.data ?? []}
+    zoneId={zoneId} setZoneId={value => filter(() => setZoneId(value))} zones={linkedZone.zone ? [...(zones.data ?? []), linkedZone.zone] : zones.data ?? []} jobTypeId={jobTypeId} setJobTypeId={value => filter(() => setJobTypeId(value))} jobTypes={jobTypes.data ?? []}
     hasFilters={hasFilters} onReset={() => filter(resetFilters)}
     accountFilter={access.manage ? accountFilter : undefined} setAccountFilter={value => filter(() => setAccountFilter(value))} />;
   const selection = { selected, onToggle: (id: string, on: boolean) => setSelected(current => { const next = new Set(current); if (on) next.add(id); else next.delete(id); return next; }),

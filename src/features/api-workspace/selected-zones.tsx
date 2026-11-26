@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { loadOptions } from "@/features/operations/lookups";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { useRemote } from "@/features/operations/ui";
 import {
   readStoredZoneSelection, resolveZoneSelection, toggleZoneSelection, writeStoredZoneSelection, zoneSelectionLabel,
@@ -23,11 +23,11 @@ const noop = () => {};
 const unscoped: SelectedZones = { status: "idle", zones: [], selectedIds: [], allSelected: true, label: "Tất cả vùng nuôi", selectAll: noop, toggle: noop, reload: noop };
 const SelectedZonesContext = createContext<SelectedZones>(unscoped);
 
-/** The zones the signed-in account may see and the subset chosen in the header; the choice is remembered per browser. */
+/** The In Use zones the signed-in account may see and the subset chosen in the header; the choice is remembered per browser. */
 export function SelectedZonesProvider({ accountId, enabled, children }: Readonly<{ accountId: string; enabled: boolean; children: ReactNode }>) {
   const loader = useCallback(async (signal: AbortSignal) => {
     if (!enabled) return { status: "success" as const, data: [] };
-    return loadOptions("zones", signal);
+    return loadInUseZones(signal);
   }, [enabled]);
   const remote = useRemote(loader);
   const [override, setOverride] = useState<StoredZoneSelection>();

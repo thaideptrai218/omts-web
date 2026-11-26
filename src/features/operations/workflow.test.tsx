@@ -67,22 +67,11 @@ describe("tester workflow safeguards", () => {
       raftId: ids.raft, measuredAt: "2026-10-01T08:00:00+07:00", ph: 7.5, salinity: 25, temperature: 26, photoKey: "photo-key-qa", clientOperationId: expect.any(String),
     })]);
   });
-  it("corrects an active measurement in place with a reason and no version", async () => {
-    const record = waterFixture(), onSaved = vi.fn();
-    repository.write.mockResolvedValue({ status: "success", data: waterFixture({ ph: 7.8 }) });
-    render(<MeasurementEditor record={record} onClose={vi.fn()} onSaved={onSaved} onOpen={vi.fn()} />);
-    const editButton = screen.getByRole("button", { name: "Hiệu chỉnh" });
-    expect(editButton.getAttribute("type")).toBe("button");
-    await userEvent.click(editButton);
-    expect(repository.write).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Lưu" })).not.toBe(editButton);
-    expect(screen.getByRole("button", { name: "Lưu" }).getAttribute("type")).toBe("submit");
-    fireEvent.change(screen.getByLabelText("pH (0–14) *"), { target: { value: "7.8" } });
-    fireEvent.change(screen.getByLabelText("Lý do hiệu chỉnh *"), { target: { value: "Đọc lại ảnh" } });
-    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
-    await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
-    expect(repository.write.mock.calls[0].slice(0, 3)).toEqual(["correct", { raftId: ids.raft, measuredAt: "2026-10-01T08:00:00+07:00", ph: 7.8, salinity: 25, temperature: 26, reason: "Đọc lại ảnh" }, expect.anything()]);
-    expect(onSaved).toHaveBeenCalledOnce();
+  it("offers no correction of a recorded measurement, only voiding", () => {
+    render(<MeasurementEditor record={waterFixture()} onClose={vi.fn()} onSaved={vi.fn()} onOpen={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Hiệu chỉnh" })).toBeNull();
+    expect(screen.queryByLabelText("Lý do hiệu chỉnh *")).toBeNull();
+    expect(screen.getByRole("button", { name: "Hủy bỏ phép đo" })).toBeTruthy();
   });
   it("voids an active measurement with only a reason after confirmation", async () => {
     repository.write.mockResolvedValue({ status: "success", data: waterFixture({ statusCode: "VOIDED", status: "Voided", voidReason: "Đo nhầm bè" }) });
@@ -93,9 +82,8 @@ describe("tester workflow safeguards", () => {
     await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
     expect(repository.write.mock.calls[0].slice(0, 2)).toEqual(["void", { reason: "Đo nhầm bè" }]);
   });
-  it("does not offer editing or voiding a voided measurement", () => {
+  it("does not offer voiding a voided measurement", () => {
     render(<MeasurementEditor record={waterFixture({ statusCode: "VOIDED", status: "Voided", voidReason: "Đo nhầm bè" })} onClose={vi.fn()} onSaved={vi.fn()} onOpen={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: "Hiệu chỉnh" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Hủy bỏ phép đo" })).toBeNull();
     expect(screen.getByText("Lý do hủy: Đo nhầm bè")).toBeTruthy();
     expect(repository.write).not.toHaveBeenCalled();

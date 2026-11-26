@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { SelectBox } from "@/components/ui/select-box";
 import { useToast } from "@/components/ui/toast-provider";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { loadOptions } from "@/features/operations/lookups";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { WaterThresholdPanel } from "@/features/operations/water-threshold-panel";
 
@@ -14,7 +14,7 @@ export function WaterThresholdSettingsPanel() {
 }
 
 function OwnerWaterThresholds() {
-  const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
+  const zones = useRemote(useCallback((signal: AbortSignal) => loadInUseZones(signal), []));
   const [zoneId, setZoneId] = useState("");
   const dirty = useRef(false), { notify } = useToast();
   const rows = zones.data ?? [], current = zoneId || String(rows[0]?.id ?? "");

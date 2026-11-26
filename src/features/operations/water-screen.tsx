@@ -16,7 +16,8 @@ import { useStickyRemote } from "@/features/farming-management/use-sticky-remote
 import { useUnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
 import { WaterZoneOverview } from "@/features/water-overview/water-zone-overview";
 import * as c from "./contracts";
-import { loadOptions } from "./lookups";
+import { useLinkedZone } from "@/features/farming-management/use-linked-zone";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { operationAllowed } from "./permissions";
 import { businessTime, useMutation, useRemote } from "./ui";
 import { WaterChartSection } from "./water-chart-section";
@@ -34,7 +35,7 @@ export { MeasurementEditor } from "./water-measurement-editor";
 export { NewMeasurement } from "./water-new-measurement-dialog";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
+const loadZones = loadInUseZones;
 const noLinkedRecord = { status: "success" as const, data: undefined as c.WaterMeasurement | undefined };
 
 /** Theo dõi chất lượng nước: measurements of one zone (`?zoneId=`), a row (`?recordId=`) opens its record in place; no zone shows the zone overview. */
@@ -56,10 +57,16 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   // undefined = no explicit choice yet: a linked measurement then decides the zone, otherwise the overview shows.
   const [choice, setChoice] = useState<string | undefined>(initialZoneId || (UUID.test(linkedZone) ? linkedZone : undefined));
   const linked = useRemote<c.WaterMeasurement | undefined>(useCallback((signal: AbortSignal) => linkedId ? repository.read("detail", { id: linkedId }, c.waterSchema, signal) : Promise.resolve(noLinkedRecord), [linkedId]));
-  const { zones: offered, zoneId: scopedZone, narrowed } = useScopedZones(zones.data?.filter(row => operationAllowed("water", identity, functions, "View", row.id)) ?? [], choice ?? linked.data?.zoneId ?? "", initialZoneId || undefined);
+  // A link or linked measurement of a discontinued zone opens that zone as one extra read-only option; manual choices stay In Use zones.
+  const wantedZone = choice ?? linked.data?.zoneId ?? "";
+  const linkedZoneRead = useLinkedZone(wantedZone, id => !zones.data || zones.data.some(row => row.id === id));
+  const frozenId = linkedZoneRead.zone && operationAllowed("water", identity, functions, "View", linkedZoneRead.zone.id) ? linkedZoneRead.zone.id : undefined;
+  const { zones: scopedOffered, zoneId: scopedZone, narrowed } = useScopedZones(zones.data?.filter(row => operationAllowed("water", identity, functions, "View", row.id)) ?? [], wantedZone, initialZoneId || undefined);
+  const offered = linkedZoneRead.zone && frozenId ? [...scopedOffered, linkedZoneRead.zone] : scopedOffered;
   // Several zones chosen in the header and none picked here: the overview of those zones shows, instead of silently opening the first one (BUG-70).
   const explicitZone = choice ?? linked.data?.zoneId ?? "";
-  const zoneId = narrowed && offered.length > 1 && !offered.some(row => row.id === explicitZone) ? "" : scopedZone;
+  const zoneId = frozenId && explicitZone === frozenId ? frozenId : narrowed && scopedOffered.length > 1 && !scopedOffered.some(row => row.id === explicitZone) ? "" : scopedZone;
+  const frozen = (id: string) => id === frozenId;
 
   const [time, setTime] = useState<TimeRangeValue>(allTime), [filters, setFilters] = useState<WaterFilters>(() => ({ ...emptyWaterFilters, status: linkedId ? "" : emptyWaterFilters.status }));
   const [datedLink, setDatedLink] = useState(false);
@@ -77,8 +84,8 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   const visible = waterColumns.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);
 
   // Several zones chosen in the header and none picked here: the measurements of all of them are listed together.
-  const merged = !zoneId && narrowed && offered.length > 1, listed = merged ? ALL_WATER_ZONES : zoneId;
-  const zoneRefs = offered.map(row => ({ id: row.id, code: String(row.code ?? ""), name: String(row.name ?? "") })), zonesKey = zoneRefs.map(row => row.id).join(",");
+  const merged = !zoneId && narrowed && scopedOffered.length > 1, listed = merged ? ALL_WATER_ZONES : zoneId;
+  const zoneRefs = scopedOffered.map(row => ({ id: row.id, code: String(row.code ?? ""), name: String(row.name ?? "") })), zonesKey = zoneRefs.map(row => row.id).join(",");
   const history = useStickyRemote(useCallback((signal: AbortSignal) => merged
     ? readWaterOfZones(zoneRefs, { from: time.from, to: time.to, status: filters.status }, signal)
     : zoneId
@@ -104,16 +111,16 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   const canReset = hasFilter || filters.status !== emptyWaterFilters.status || time.kind !== "preset" || time.preset !== "all";
   const currentZone = offered.find(row => row.id === zoneId);
   const zone: WaterZoneRef = { id: zoneId, code: String(currentZone?.code ?? ""), name: String(currentZone?.name ?? "") };
-  const canExport = !!zoneId && operationAllowed("water", identity, functions, "Export", zoneId), canCreate = !!zoneId && operationAllowed("water", identity, functions, "Create", zoneId);
+  const canExport = !!zoneId && operationAllowed("water", identity, functions, "Export", zoneId), canCreate = !!zoneId && !frozen(zoneId) && operationAllowed("water", identity, functions, "Create", zoneId);
   const changed = (message: string) => { history.reload(); setRevision(value => value + 1); notify({ tone: "success", title: message }); };
 
   const list = !zoneId && !merged ? null : history.error && !loaded ? <ListStateMessage error={history.error} onRetry={history.reload} retryLabel="Tải lại" />
     : !loaded ? <ListSkeleton />
     : !shown.length ? <ListStateMessage>{hasFilter ? "Không có phép đo phù hợp bộ lọc." : "Chưa có phép đo trong khoảng thời gian này."}</ListStateMessage>
-    : <WaterHistoryTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} canEditIn={id => operationAllowed("water", identity, functions, "Edit", id)} guard={guard} onChanged={changed}
+    : <WaterHistoryTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} canEditIn={id => !frozen(id) && operationAllowed("water", identity, functions, "Edit", id)} guard={guard} onChanged={changed}
       onToggle={id => void guard.leave(() => { setThresholdsOpen(false); setExpanded(open => open === id ? undefined : id); })} />;
   const overview = zones.error && !zones.data ? <ListStateMessage error={zones.error} onRetry={zones.reload} retryLabel="Tải lại danh sách vùng" />
-    : !zones.data || linked.loading ? <ListSkeleton /> : <div className={local.overview}><WaterZoneOverview onSelectZone={id => change(() => setChoice(id))} /></div>;
+    : !zones.data || linked.loading || !linkedZoneRead.settled ? <ListSkeleton /> : <div className={local.overview}><WaterZoneOverview onSelectZone={id => change(() => setChoice(id))} /></div>;
 
   return <ManagementLayout storageKey="water" icon="waves" title="Theo dõi chất lượng nước" filterLabel="Bộ lọc theo dõi chất lượng nước"
     filters={<WaterZoneFilters zones={offered} zoneId={zoneId} merged={merged} time={time} filters={filters} rafts={raftsOf(loaded?.items ?? [])} canReset={canReset}

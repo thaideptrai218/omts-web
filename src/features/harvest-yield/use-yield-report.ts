@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { loadOptions } from "@/features/operations/lookups";
 import { operationAllowed } from "@/features/operations/permissions";
 import { createOperationsRepository } from "@/features/operations/repository";
@@ -13,7 +14,7 @@ import { filterCycleGroups, matchesLinked, regroup, sortRows, type LinkedScope, 
 import { insightsOf, kpisOf, previousRange } from "./yield-summary-model";
 
 const repo = createOperationsRepository("harvest-yield");
-const loadZones = (signal: AbortSignal) => loadOptions("zones", signal);
+const loadZones = loadInUseZones;
 const IN_USE_RAFT = "101";
 export type ZoneOption = { id: string; label: string };
 type Scope = { raftId: string; statuses: StatusKey[] };
@@ -39,9 +40,9 @@ export function useYieldReport(linked: LinkedScope & Parameters<typeof linkedYie
     .map((zone) => ({ id: zone.id, label: String(zone.name ?? zone.code ?? zone.id) })), [zones.data, workspace.identity, workspace.permissions.functionPermissions]);
 
   const zoneKey = applied.zoneIds.join(","), zoneIds = useMemo(() => zoneKey ? zoneKey.split(",") : [], [zoneKey]);
-  const exportQuery = useMemo(() => toQuery(applied, zoneOptions.length), [applied, zoneOptions.length]);
+  const exportQuery = useMemo(() => toQuery(applied), [applied]);
   // Cách gộp không nằm trong truy vấn đọc: đổi cách gộp không làm tải lại.
-  const readQuery = useMemo(() => toQuery({ from: applied.from, to: applied.to, groupBy: "Cycle", zoneIds }, zoneOptions.length), [applied.from, applied.to, zoneIds, zoneOptions.length]);
+  const readQuery = useMemo(() => toQuery({ from: applied.from, to: applied.to, groupBy: "Cycle", zoneIds }), [applied.from, applied.to, zoneIds]);
   const report = useRemote(useCallback((signal: AbortSignal) => repo.read("list", readQuery, harvestYieldReport, signal), [readQuery]));
 
   const range = useMemo(() => previousRange(readQuery.from ?? "", readQuery.to ?? ""), [readQuery]);

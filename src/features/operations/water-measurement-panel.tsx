@@ -17,7 +17,7 @@ import type { WaterZoneRef } from "./water-history-model";
 
 type TabKey = "info" | "photo";
 
-/** One measurement opened in place: its facts and thresholds, the meter photo, and the correction / void actions. */
+/** One measurement opened in place: its facts and thresholds, the meter photo, and the void action. */
 export function WaterMeasurementPanel({ id, zone, canEdit, guard, onChanged }: { id: string; zone: WaterZoneRef; canEdit: boolean; guard: UnsavedGuard; onChanged(notice: string): void }) {
   const detail = useStickyRemote(useCallback((signal: AbortSignal) => waterRepository.read("detail", { id }, c.waterSchema, signal), [id]));
   const mutation = useMutation();
@@ -33,8 +33,7 @@ export function WaterMeasurementPanel({ id, zone, canEdit, guard, onChanged }: {
     if (result) { setVoiding(false); saved(result, `Đã hủy phép đo tại bè ${record.raftCode}.`); }
   }
   const content: Record<TabKey, ReactNode> = record ? {
-    info: <WaterMeasurementInfoTab record={record} zoneName={zone.name} canChange={canEdit && record.statusCode === "ACTIVE"} busy={busy} dirtyRef={guard.dirty}
-      onSaved={next => saved(next, `Đã hiệu chỉnh phép đo tại bè ${next.raftCode}.`)} onReload={detail.reload} onVoid={() => { mutation.reviewed(); setVoiding(true); }} />,
+    info: <WaterMeasurementInfoTab record={record} zoneName={zone.name} canChange={canEdit && record.statusCode === "ACTIVE"} busy={busy} onVoid={() => { mutation.reviewed(); setVoiding(true); }} />,
     photo: <EvidenceGallery title="Ảnh máy đo" images={[{ id: record.id, url: record.photoUrl, label: `Ảnh phép đo ${displayTime(record.measuredAt)}` }]} />,
   } : { info: null, photo: null };
 

@@ -10,7 +10,7 @@ import { Skeleton, useRemote } from "@/features/operations/ui";
 import type { ZoneDetail } from "./zone-model";
 import { readZoneRafts, skipped } from "./zone-summary-reads";
 import type { ZoneRaft } from "./zone-summary-model";
-import styles from "./zone-kpi.module.css";
+import styles from "./zone-tabs.module.css";
 
 const VietMapView = dynamic(() => import("@/features/farming-api/vietmap-view"), { ssr: false, loading: () => <Skeleton /> });
 const hasPoint = (point: { latitude?: number | null; longitude?: number | null }) => typeof point.latitude === "number" && typeof point.longitude === "number";

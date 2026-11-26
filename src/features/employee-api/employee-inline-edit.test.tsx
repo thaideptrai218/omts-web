@@ -14,12 +14,12 @@ const nextJobId = "20d6d85a-9acd-4ae2-935f-a72525a9c833";
 const record = (): Employee => ({ ...employeeViewSchema.parse(employeeDetailFixture()), jobTypes: [{ id: jobId, name: "Thu hoạch", status: "In Use" }] });
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
-async function setup(employee = record(), zoneStatus = 101) {
+async function setup(employee = record(), zoneStatus = 101, zones = [{ id: workingZoneId, code: "V01", name: "Vùng Đông", statusId: zoneStatus }]) {
   repository.read.mockResolvedValue({ status: "success", data: employee });
   repository.write.mockResolvedValue({ status: "success", data: employee });
   const onSaved = vi.fn(), onGuardChange = vi.fn();
   render(<EmployeeDetailPanel id={employee.id} cache={new Map()} onOpen={vi.fn()} onSaved={onSaved}
-    zones={[{ id: workingZoneId, code: "V01", name: "Vùng Đông", statusId: zoneStatus }]}
+    zones={zones}
     jobTypes={[{ id: jobId, name: "Thu hoạch" }, { id: nextJobId, name: "Treo giống" }]}
     lookupsReady onGuardChange={onGuardChange} />);
   await screen.findByRole("tab", { name: "Thông tin" });
@@ -90,6 +90,22 @@ it("maps backend field errors below the personal field without opening a dialog"
   await waitFor(() => expect(phone.getAttribute("aria-invalid")).toBe("true"));
   expect(document.getElementById(phone.getAttribute("aria-describedby")!)?.textContent).toContain("Kiểm tra giá trị đã nhập");
   expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("keeps showing a zone the employee already works in after it was discontinued, so it can be unticked", async () => {
+  // The offered list holds In Use zones only, so the discontinued zone comes from the employee's own record.
+  await setup(record(), 101, []); tab("Công việc"); edit();
+  const held = panel().getByRole("checkbox", { name: /Vùng Đông \(đã ngừng — cần bỏ chọn\)/ }) as HTMLInputElement;
+  expect(held.checked).toBe(true);
+  save();
+  expect(repository.write).not.toHaveBeenCalled();
+  expect(panel().getByText(/Bỏ chọn vùng đã ngừng/)).toBeTruthy();
+});
+
+it("lists In Use zones without a suffix next to the held discontinued zone", async () => {
+  await setup(record(), 101, [{ id: "11111111-1111-4111-8111-111111111111", code: "V02", name: "Vùng Tây", statusId: 101 }]); tab("Công việc"); edit();
+  expect((panel().getByRole("checkbox", { name: "V02 · Vùng Tây" }) as HTMLInputElement).checked).toBe(false);
+  expect(panel().getAllByRole("checkbox", { name: /đã ngừng/ })).toHaveLength(1);
 });
 
 it("requires at least one working zone in the work tab", async () => {

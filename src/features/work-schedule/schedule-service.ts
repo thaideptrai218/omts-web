@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { employeePageSchema } from "@/features/employee-management/api/employee-contract.schemas";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { loadOptions } from "@/features/operations/lookups";
 import { assignWorkSchema, assignmentSchema, crewWorkSchema, workforceLookupsSchema } from "@/features/operations/new-module-contracts";
 import { createOperationsRepository } from "@/features/operations/repository";
@@ -28,7 +29,7 @@ async function seasonalPeople(signal: AbortSignal): Promise<SchedulePerson[]> {
 }
 
 export const scheduleService = {
-  zones: (signal: AbortSignal) => loadOptions("zones", signal),
+  zones: (signal: AbortSignal) => loadInUseZones(signal),
   rafts: (zoneId: string, signal: AbortSignal) => loadOptions("rafts", signal, { zoneId, statusId: "101" }),
   day: (day: string, signal: AbortSignal) => workforceRepository.read("list", { day }, z.array(assignmentSchema), signal),
   lookups: (day: string, signal: AbortSignal) => workforceRepository.read("lookups", { day }, workforceLookupsSchema, signal),

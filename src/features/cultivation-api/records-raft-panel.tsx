@@ -1,4 +1,5 @@
 "use client";
+import { useZoneActionBlocked } from "@/features/farming-management/read-only-zones";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
@@ -33,8 +34,8 @@ function HistoricalHarvestRecord({ id, zoneId }: { id: string; zoneId: string })
 
 /** Opened raft row of the seeding, material-use and harvest screens: the area's records and the lane progress, in place. */
 export function RecordsRaftPanel({ area, row, zoneId, zoneLabel, onChanged }: { area: RecordsArea; row: CycleRow; zoneId: string; zoneLabel: string; onChanged(notice: string): void }) {
-  const { identity, permissions } = useApiWorkspace();
-  const canStart = canStartCycle(row) && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Create", zoneId);
+  const { identity, permissions } = useApiWorkspace(), blocked = useZoneActionBlocked(zoneId);
+  const canStart = canStartCycle(row) && !blocked("Create") && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Create", zoneId);
   // A cycle started here opens right on this screen: its id goes to the URL, the list reloads and the records panel replaces the empty state.
   const started = (cycleId: string | undefined) => { replaceUrlParams({ ...(cycleId ? { cycleId } : {}) }); onChanged("Đã bắt đầu chu kỳ nuôi"); };
   // The screen writes raftId and cycleId of the open row itself; the URL can lag a render behind, so only this raft's cycleId counts.

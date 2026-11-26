@@ -23,7 +23,7 @@ import { UserRolesScreen } from "@/features/user-accounts/user-roles-screen";
 import { useScopedZones } from "./selected-zones";
 import { workspaceError } from "./workspace-error";
 import { GlobalZoneMap } from "@/features/farming-api/global-zone-map";
-import { loadOptions } from "@/features/operations/lookups";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { useDirectoryView } from "@/components/ui/use-directory-view";
 import { ResourceEditor } from "./api-resource-editor";
 import { ResourcePager, ResourceViewToggle } from "./api-resource-list-controls";
@@ -134,7 +134,7 @@ function GenericResourceWorkspace({ resource }: { resource: ResourceKey }) {
         if (controller.signal.aborted) return;
         setZoneLoading(true);
         setZoneError(undefined);
-        const result = await loadOptions("zones", controller.signal);
+        const result = await loadInUseZones(controller.signal);
         if (controller.signal.aborted) return;
         setZoneLoading(false);
         if (result.status === "success") {

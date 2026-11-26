@@ -6,7 +6,7 @@ import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-fi
 import type { TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { SelectBox } from "@/components/ui/select-box";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { loadOptions } from "@/features/operations/lookups";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { operationAllowed, type OperationArea } from "@/features/operations/permissions";
 import { useRemote } from "@/features/operations/ui";
 import s from "./report-live.module.css";
@@ -16,7 +16,7 @@ export type ReportZoneOption = Readonly<{ id: string; label: string }>;
 /** Vùng nuôi mà tài khoản được xem báo cáo `area` (đúng quyền theo vùng); dùng cho ô lọc vùng và để biết có bao nhiêu vùng. */
 export function useReportZones(area: OperationArea) {
   const workspace = useApiWorkspace();
-  const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
+  const zones = useRemote(useCallback((signal: AbortSignal) => loadInUseZones(signal), []));
   const options = useMemo<ReportZoneOption[]>(() => (zones.data ?? [])
     .filter((zone) => operationAllowed(area, workspace.identity, workspace.permissions.functionPermissions, "View", zone.id))
     .map((zone) => ({ id: zone.id, label: String(zone.name ?? zone.code ?? zone.id) })), [zones.data, area, workspace.identity, workspace.permissions.functionPermissions]);

@@ -2,8 +2,9 @@ import { ToastProvider } from "@/components/ui/toast-provider";
 // @vitest-environment jsdom
 import type { ReactElement } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render as renderUi, screen, act } from "@testing-library/react";
-const state = vi.hoisted(() => ({ read: vi.fn(), params: "" }));
+import { cleanup, fireEvent, render as renderUi, screen, act, waitFor } from "@testing-library/react";
+const state = vi.hoisted(() => ({ read: vi.fn(), params: "", readZoneDetail: vi.fn() }));
+vi.mock("@/features/zones-api/zone-model", async original => ({ ...(await original<typeof import("@/features/zones-api/zone-model")>()), readZoneDetail: state.readZoneDetail }));
 const zoneId = "00000000-0000-4000-8000-000000000001", raftId = "00000000-0000-4000-8000-0000000000a1";
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.params) }));
 vi.mock("./repository", () => ({ readCycles: state.read, writeCycle: vi.fn() }));
@@ -36,4 +37,16 @@ it("opens a linked raft without applying the child lot search to the raft direct
   await screen.findByRole("region", { name: "Chi tiết hành trình của bè" });
   expect((screen.getByRole("searchbox", { name: "Tìm bè nuôi" }) as HTMLInputElement).value).toBe("");
   expect(state.read).toHaveBeenCalledWith(expect.objectContaining({ action: "progress", cycleId: "00000000-0000-4000-8000-0000000000c1" }), expect.anything(), expect.anything());
+});
+
+it("opens the discontinued zone a link names, not the first In Use zone", async () => {
+  const oldZone = "00000000-0000-4000-8000-000000000009";
+  state.readZoneDetail.mockResolvedValue({ status: "success", data: { id: oldZone, code: "Z9", name: "Vùng cũ", location: null, area: null, statusId: 102, status: "Discontinued", inUseRaftCount: 0, licenseState: null, latitude: null, longitude: null, rowVersion: "AQ==" } });
+  state.params = new URLSearchParams({ zoneId: oldZone }).toString();
+  state.read.mockResolvedValue({ status: "success", data: [] });
+  render(<CyclesScreen />);
+  await screen.findByRole("option", { name: "Z9 · Vùng cũ (ngừng sử dụng)" });
+  expect((screen.getByRole("combobox", { name: "Vùng nuôi" }) as HTMLSelectElement).value).toBe(oldZone);
+  await waitFor(() => expect(state.read).toHaveBeenCalledWith(expect.objectContaining({ action: "zone", zoneId: oldZone }), expect.anything(), expect.anything()));
+  expect(state.read).not.toHaveBeenCalledWith(expect.objectContaining({ action: "zone", zoneId }), expect.anything(), expect.anything());
 });

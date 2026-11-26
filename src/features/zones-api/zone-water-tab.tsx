@@ -1,45 +1,52 @@
 "use client";
 import Link from "next/link";
-import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
-import { useCallback, type ReactNode } from "react";
-import { ListStateMessage } from "@/components/ui/management-screen/management-table";
+import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { ListStateMessage, ManagementPagination, managementStyles } from "@/components/ui/management-screen/management-table";
 import { StatusPill } from "@/components/ui/management-page";
 import { TabFooter } from "@/features/farming-management/detail-parts";
-import { displayTime, Skeleton, useRemote } from "@/features/operations/ui";
-import styles from "@/features/farming-management/farming-management.module.css";
-import kpi from "./zone-kpi.module.css";
-import { indicatorLabel, rangeText } from "./zone-summary-model";
-import { readZoneWater } from "./zone-summary-reads";
+import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
+import { waterHistorySchema, zoneThresholdsSchema } from "@/features/operations/contracts";
+import { createOperationsRepository } from "@/features/operations/repository";
+import { DataTable, Skeleton, useRemote } from "@/features/operations/ui";
+import { NewMeasurement } from "@/features/operations/water-new-measurement-dialog";
+import { formatVietnameseDateTime } from "@/shared/format/date-time";
+import { indicatorLabel } from "./zone-summary-model";
+import { FooterLink } from "./zone-tab-parts";
+import { outsideIndicators, thresholdsLine } from "./zone-water-model";
+import local from "./zone-tabs.module.css";
 
-const Lines = ({ items }: { items: readonly (readonly [string, ReactNode])[] }) =>
-  <dl className={kpi.lines}>{items.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value ?? "—"}</dd></div>)}</dl>;
+const water = createOperationsRepository("water");
 
-/** "Quan trắc nước": left column = newest measurement and thresholds in force; right = the five newest measurements. Full history lives on the water screen. */
-export function ZoneWaterTab({ zoneId }: { zoneId: string }) {
-  const remote = useRemote(useCallback((signal: AbortSignal) => readZoneWater(zoneId, signal), [zoneId]));
-  if (remote.loading) return <Skeleton />;
-  if (remote.error || !remote.data) return <ListStateMessage error={remote.error ?? "Không tải được dữ liệu chất lượng nước."} onRetry={remote.reload} retryLabel="Tải lại" />;
-  const { thresholds, latest } = remote.data;
-  // A voided measurement is excluded from the data in use, so "latest" is the newest ACTIVE row.
-  const last = latest.find(row => row.statusCode !== "VOIDED" && row.alertState !== "Voided");
-  const outside = last?.valuesOutside.map(item => indicatorLabel(item.indicator)).join(", ");
-  return <>
-    <div className={kpi.twoCol}>
-      <div>
-        <h4>Lần đo gần nhất</h4>
-        {last ? <Lines items={[["Thời điểm", <Link key="measurement" className={styles.link} href={farmingReferenceHref("water", { zoneId, recordId: last.id })}>{displayTime(last.measuredAt)}</Link>], ["Bè", last.raftId ? <Link key="raft" className={styles.link} href={farmingReferenceHref("raft", { zoneId, recordId: last.raftId, search: last.raftCode })}>{last.raftCode}</Link> : last.raftCode], ["pH", last.ph], ["Độ mặn (‰)", last.salinity], ["Nhiệt độ (°C)", last.temperature],
-          ["Cảnh báo", outside ? <span className={kpi.danger}>Vượt ngưỡng: {outside}</span> : "Không"]]} /> : <p className={styles.hint}>Chưa có phép đo nước.</p>}
-        <h4>Ngưỡng đang áp dụng</h4>
-        <Lines items={[["pH", rangeText(thresholds.phMin, thresholds.phMax)], ["Độ mặn (‰)", rangeText(thresholds.salinityMin, thresholds.salinityMax)], ["Nhiệt độ (°C)", rangeText(thresholds.temperatureMin, thresholds.temperatureMax)]]} />
-      </div>
-      <div>
-        <h4>5 lần đo gần nhất</h4>
-        {latest.length === 0 ? <p className={styles.hint}>Vùng chưa có phép đo nước.</p>
-          : <table className={styles.subTable}><thead><tr><th scope="col">Thời điểm</th><th scope="col">Bè</th><th scope="col">pH</th><th scope="col">Độ mặn</th><th scope="col">Nhiệt độ</th><th scope="col">Cảnh báo</th></tr></thead>
-            <tbody>{latest.map(row => <tr key={row.id}><td><Link className={styles.link} href={farmingReferenceHref("water", { zoneId, recordId: row.id })}>{displayTime(row.measuredAt)}</Link></td><td>{row.raftId ? <Link className={styles.link} href={farmingReferenceHref("raft", { zoneId, recordId: row.raftId, search: row.raftCode })}>{row.raftCode}</Link> : row.raftCode}</td><td>{row.ph}</td><td>{row.salinity}</td><td>{row.temperature}</td>
-              <td>{row.alertState === "Voided" ? <StatusPill tone="neutral">Đã hủy</StatusPill> : row.valuesOutside.length ? <StatusPill tone="danger">{row.valuesOutside.map(item => indicatorLabel(item.indicator)).join(", ")}</StatusPill> : "Không"}</td></tr>)}</tbody></table>}
-      </div>
-    </div>
-    <TabFooter right={<Link className={styles.footerLink} href={farmingReferenceHref("water", { zoneId })}>Mở theo dõi chất lượng nước</Link>} />
-  </>;
+/**
+ * "Quan trắc nước": thresholds in force on one line, then the measurements of the zone newest first, paged by the server.
+ * Values outside their thresholds are highlighted. "Đo nhanh" records a measurement for this zone and reloads the list.
+ */
+export function ZoneWaterTab({ zoneId, zoneName, canCreate }: { zoneId: string; zoneName: string; canCreate: boolean }) {
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [adding, setAdding] = useState(false);
+  const limits = useRemote(useCallback((signal: AbortSignal) => water.read("thresholds", { zoneId }, zoneThresholdsSchema, signal), [zoneId]));
+  const remote = useRemote(useCallback((signal: AbortSignal) => water.read("list", { zoneId, page: String(page), pageSize: String(pageSize) }, waterHistorySchema, signal), [zoneId, page, pageSize]));
+  const saved = () => { setAdding(false); setPage(1); remote.reload(); };
+  return <div className={local.tabBody}>
+    {limits.data ? <p className={local.thresholds}><strong>Ngưỡng đang áp dụng:</strong> {thresholdsLine(limits.data.thresholds)}</p>
+      : limits.error ? <p className={local.thresholds}>Không tải được ngưỡng đang áp dụng. <button type="button" className={managementStyles.linkButton} onClick={limits.reload}>Tải lại</button></p> : null}
+    {remote.loading ? <Skeleton /> : remote.error || !remote.data ? <ListStateMessage error={remote.error ?? "Không tải được dữ liệu chất lượng nước."} onRetry={remote.reload} retryLabel="Tải lại" />
+      : <>
+        <DataTable responsive headings={["Thời điểm", "Bè", "pH", "Độ mặn (‰)", "Nhiệt độ (°C)", "Cảnh báo"]} empty={!remote.data.items.length}>{remote.data.items.map(row => {
+          const voided = row.alertState === "Voided", outside = voided ? { ph: false, salinity: false, temperature: false } : outsideIndicators(row.valuesOutside);
+          return <tr key={row.id}>
+            <td data-label="Thời điểm" className={local.nowrap}>{formatVietnameseDateTime(row.measuredAt)}</td>
+            <td data-label="Bè" className={local.nowrap}><Link className={managementStyles.linkButton} href={farmingReferenceHref("raft", { zoneId, search: row.raftCode })}>{row.raftCode}</Link></td>
+            <td data-label="pH" className={`${local.number} ${outside.ph ? local.outside : ""}`}>{row.ph}</td>
+            <td data-label="Độ mặn (‰)" className={`${local.number} ${outside.salinity ? local.outside : ""}`}>{row.salinity}</td>
+            <td data-label="Nhiệt độ (°C)" className={`${local.number} ${outside.temperature ? local.outside : ""}`}>{row.temperature}</td>
+            <td data-label="Cảnh báo">{voided ? <StatusPill tone="neutral">Đã hủy</StatusPill> : row.valuesOutside.length ? <StatusPill tone="danger">{row.valuesOutside.map(item => indicatorLabel(item.indicator)).join(", ")}</StatusPill> : "Không"}</td>
+          </tr>;
+        })}</DataTable>
+        <ManagementPagination page={remote.data.page} pageSize={remote.data.pageSize} total={remote.data.total} unit="phép đo" onPage={setPage} onPageSize={size => { setPageSize(size); setPage(1); }} /></>}
+    <TabFooter left={<FooterLink href={farmingReferenceHref("water", { zoneId })} icon="water">Mở theo dõi chất lượng nước</FooterLink>}
+      right={canCreate ? <Button key="quick" type="button" className="w-auto" onClick={() => setAdding(true)}><InterfaceIcon name="add" className="size-4" />Đo nhanh</Button> : undefined} />
+    {adding && <NewMeasurement zoneId={zoneId} zoneName={zoneName} onClose={() => setAdding(false)} onSaved={saved} />}
+  </div>;
 }

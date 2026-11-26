@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), query: "" }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(repository.query) }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
-vi.mock("@/features/operations/lookups", () => ({ loadOptions: async () => ({ status: "success", data: [{ id: "zone-one", code: "V01", name: "Vùng Đông", statusId: 102 }] }) }));
+vi.mock("@/features/operations/lookups", () => ({ loadOptions: async () => ({ status: "success", data: [{ id: "zone-one", code: "V01", name: "Vùng Đông", statusId: 101 }, { id: "zone-two", code: "V02", name: "Vùng Tây", statusId: 102 }] }) }));
 vi.mock("./employee-detail-panel", () => ({ EmployeeDetailPanel: ({ id, initialTab }: { id: string; initialTab?: string }) => <section id={`employee-preview-${id}`} aria-label={`Chi tiết ${id}`} data-tab={initialTab}>Chi tiết đã mở</section> }));
 import { employeeDetailFixture } from "@/features/employee-management/api/employee-wire.fixtures";
 import { employeeViewSchema } from "./contracts";
@@ -120,7 +120,9 @@ it("status pills, zone, reset, server paging and debounced search drive the actu
   render(<EmployeeDirectory />); await screen.findByText(first().fullName);
   const latestQuery = () => repository.read.mock.calls.filter(call => call[0] === "list").at(-1)?.[1];
   expect(latestQuery()).toMatchObject({ statusId: "401", page: "1", pageSize: "10" });
-  expect(screen.getByRole("option", { name: "V01 · Vùng Đông (đã ngừng)" })).toBeTruthy();
+  // Only In Use zones are offered, with no status suffix: a discontinued zone belongs to the Vùng nuôi screen alone.
+  expect(screen.getByRole("option", { name: "V01 · Vùng Đông" })).toBeTruthy();
+  expect(screen.queryByRole("option", { name: /Vùng Tây/ })).toBeNull();
   fireEvent.click(screen.getByRole("radio", { name: "Đã nghỉ việc" }));
   await waitFor(() => expect(latestQuery()).toMatchObject({ statusId: "402", page: "1" }));
   fireEvent.change(screen.getByRole("combobox", { name: "Vùng làm việc" }), { target: { value: "zone-one" } });

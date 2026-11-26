@@ -43,10 +43,11 @@ function AttendanceTodayBoard({ day, allowed }: { day: string; allowed: Attendan
   const list = useRemote<TodaySnapshot>(useCallback((signal: AbortSignal) => readAttendanceToday(day, signal)
     .catch(() => ({ status: "error" as const, httpStatus: 0, uncertain: false }))
     .then(result => { if (!signal.aborted) setRefreshing(false); return result; }), [day]));
-  const options = grantedZones(zones.data ?? [], allowed);
+  // Every zone is read so rows of a discontinued zone keep their name; only In Use zones can be picked.
+  const options = grantedZones((zones.data ?? []).filter(zone => zone.statusId !== 102), allowed);
   const zoneId = options.some(zone => zone.id === pickedZone) ? pickedZone : options.length === 1 ? options[0].id : "";
   const actions = useAttendanceTodayActions(day, zoneId, allowed, () => { setRefreshing(true); list.refresh(); }, refreshing);
-  const zoneName = (id: string) => String(options.find(zone => zone.id === id)?.name ?? "Vùng được cấp");
+  const zoneName = (id: string) => String(zones.data?.find(zone => zone.id === id)?.name ?? "Vùng được cấp");
   const people = list.data ? filterByEmployeeType(todayPeople(list.data, day, zoneId, allowed), typeFilter, personKind) : [];
   // Searching finds a whole crew: its buttons always apply to the same full membership that is visible.
   const groups = groupPeople(people.filter(row => !isPreviousOpen(row, day)), zoneName)

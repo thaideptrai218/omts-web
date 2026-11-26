@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
-import { loadOptions } from "@/features/operations/lookups";
+import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { useRemote } from "@/features/operations/ui";
 import { inputRepository, issueRepository } from "@/features/input-items/repository";
 import type { IssueKind, IssueType } from "@/features/input-items/contracts";
@@ -35,14 +35,14 @@ export function useIssueAccess(kind: IssueKind) {
 }
 export type IssueAccess = ReturnType<typeof useIssueAccess>;
 
-export type ZoneOption = { id: string; code: string; name: string; inUse: boolean };
-/** The zones the account can see, for the filter and the zone of a use issue. */
+export type ZoneOption = { id: string; code: string; name: string };
+/** The In Use zones the account can see, for the filters and the zone of a document; a discontinued zone of an existing document is shown from the document itself. */
 export function useZoneOptions(enabled = true) {
   const remote = useRemote<ZoneOption[]>(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<ZoneOption[]>> => {
     if (!enabled) return { status: "success", data: [] };
-    const result = await loadOptions("zones", signal);
+    const result = await loadInUseZones(signal);
     return result.status === "success"
-      ? { status: "success", data: result.data.map((row): ZoneOption => ({ id: row.id, code: String(row.code ?? ""), name: String(row.name ?? ""), inUse: row.statusId === 101 })) }
+      ? { status: "success", data: result.data.map((row): ZoneOption => ({ id: row.id, code: String(row.code ?? ""), name: String(row.name ?? "") })) }
       : result;
   }, [enabled]));
   return { zones: remote.data ?? [], loading: remote.loading, error: remote.error };

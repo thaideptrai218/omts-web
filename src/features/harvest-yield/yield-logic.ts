@@ -45,10 +45,9 @@ export function filterProblem(f: Filters): string | null {
   return null;
 }
 
-/** Truy vấn gửi BFF; chọn hết hoặc không chọn vùng nào đều nghĩa là mọi vùng được phép xem. */
-export function toQuery(f: Filters, allZoneCount: number): Record<string, string | undefined> {
-  const all = !f.zoneIds.length || allZoneCount > 0 && f.zoneIds.length >= allZoneCount;
-  return { from: f.from, to: f.to, groupBy: f.groupBy === "Month" ? "cycle" : groupingValue(f.groupBy), zoneIds: all ? undefined : f.zoneIds.join(",") };
+/** Truy vấn gửi BFF; không chọn vùng nào nghĩa là mọi vùng được phép xem. Vùng đã chọn luôn được gửi đi: danh sách chọn chỉ có vùng đang sử dụng nên "chọn hết" vẫn không gồm vùng đã ngừng. */
+export function toQuery(f: Filters): Record<string, string | undefined> {
+  return { from: f.from, to: f.to, groupBy: f.groupBy === "Month" ? "cycle" : groupingValue(f.groupBy), zoneIds: f.zoneIds.length ? f.zoneIds.join(",") : undefined };
 }
 
 export const sortGroups = (groups: readonly YieldRow[], sort: Sort): YieldRow[] => sortRows(groups, sort.key, sort.dir);

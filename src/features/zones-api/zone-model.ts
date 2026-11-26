@@ -2,6 +2,7 @@ import { z } from "zod";
 import { farmingZoneListItemSchema, farmingZoneViewSchema, type FarmingZoneListItemDto, type FarmingZoneViewDto } from "@/features/farming-zones/api/farming-zone-contract.schemas";
 import { createWorkspaceRepository, type WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { loadOptions } from "@/features/operations/lookups";
+import { loadInUseZones } from "./in-use-zones";
 import { foldVietnamese } from "@/shared/presentation/fold-text";
 
 export type ZoneRow = FarmingZoneListItemDto;
@@ -11,12 +12,18 @@ export const zoneStatusLabel = (statusId: number) => statusId === IN_USE ? "Đan
 export const licenseFilterOptions = [["Valid", "Còn hiệu lực"], ["ExpiringSoon", "Sắp hết hạn"], ["Expired", "Hết hạn"], ["NotYetEffective", "Chưa có hiệu lực"], ["Missing", "Thiếu hồ sơ"]] as const;
 
 const invalid = { status: "error", httpStatus: 502, uncertain: false } as const;
-/** Reads every zone once; search, filter, sort and paging then run over the whole set on the client. */
-export async function readAllZones(signal: AbortSignal): Promise<WorkspaceResult<ZoneRow[]>> {
-  const result = await loadOptions("zones", signal);
+const parseRows = (result: WorkspaceResult<unknown>): WorkspaceResult<ZoneRow[]> => {
   if (result.status !== "success") return result;
   const parsed = z.array(farmingZoneListItemSchema).safeParse(result.data);
   return parsed.success ? { status: "success", data: parsed.data } : invalid;
+};
+/** Reads every zone, discontinued ones included, once; search, filter, sort and paging then run over the whole set on the client. Only the Vùng nuôi screen needs this. */
+export async function readAllZones(signal: AbortSignal): Promise<WorkspaceResult<ZoneRow[]>> {
+  return parseRows(await loadOptions("zones", signal));
+}
+/** The zones every other screen may offer: In Use only. */
+export async function readInUseZones(signal: AbortSignal): Promise<WorkspaceResult<ZoneRow[]>> {
+  return parseRows(await loadInUseZones(signal));
 }
 export async function readZoneDetail(id: string, signal?: AbortSignal): Promise<WorkspaceResult<ZoneDetail>> {
   const result = await createWorkspaceRepository("zones").detail(id, signal);
