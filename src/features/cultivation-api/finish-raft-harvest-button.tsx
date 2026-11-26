@@ -50,7 +50,7 @@ function FinishRaftHarvest({ data, zoneId, raftId, onChanged }: Props) {
   return <div className="mb-4 flex flex-wrap items-center gap-3">
     <Button type="button" className="w-auto" disabled={!hasLots} onClick={() => { mutation.reviewed(); setOpen(true); }}>Hoàn tất thu hoạch bè</Button>
     {!hasLots && <span className="text-sm text-text-muted">Ghi nhận ít nhất một lô thu hoạch trước khi hoàn tất.</span>}
-    {open && <Dialog open title={`Hoàn tất thu hoạch bè ${data.raftCode}?`} dismissible={!mutation.pending} mobileLayout="compact" onOpenChange={next => { if (!next) close(); }}>
+    {open && <Dialog open title="Hoàn tất thu hoạch bè" dismissible={!mutation.pending} mobileLayout="compact" onOpenChange={next => { if (!next) close(); }}>
       <p className="text-sm">Hoàn tất thu hoạch bè {data.raftCode}? Tất cả làn của bè sẽ được đánh dấu đã thu xong.</p>
       <p className="mt-2 text-sm text-text-muted">Làn {compressLaneNumbers(lanes)}. Muốn hoàn tác phải sửa lô kèm lý do.</p>
       {openCrew ? <AttendanceGatePanel employees={openCrew} isOwner={isOwner} reason={approval} onReason={setApproval} /> : !refused?.length && <ErrorNotice error={mutation.error} />}
