@@ -77,7 +77,8 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
       if ("employee" in data) { delete data.message; delete data.messageCode; }
       // Receipts (issue-account, create with account) keep the credential fields; everything else returns the bare employee.
       // A create or update answers with the bare employee; the duplicate ID number warning travels inside it so the screen can show it.
-      const bare = data.duplicateIdNumber ? { ...employee, duplicateIdNumber: data.duplicateIdNumber } : employee;
+      const outcome = data.fixedPassword === true || data.accountNote ? { accountOutcome: { fixedPassword: data.fixedPassword === true, accountNote: !!data.accountNote } } : {};
+      const bare = { ...employee, ...(data.duplicateIdNumber ? { duplicateIdNumber: data.duplicateIdNumber } : {}), ...outcome };
       return json({ status: "success", data: "employee" in data && !plan.receipt && !["end-employment", "resume", "issue-account"].includes(plan.action) ? bare : data });
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); }
   } catch { return json({ status: "unavailable" }, 503); }

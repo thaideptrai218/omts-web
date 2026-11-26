@@ -1,5 +1,5 @@
-/** The two fixed roles of the cooperative (BR-FARM-07) in Vietnamese. The single place that turns a backend role code or English role name into UI copy. */
-export const fixedRoleLabels: Record<string, string> = { ZONE_MANAGER: "Quản lý vùng", ACCOUNTANT: "Kế toán" };
+/** The fixed roles of the cooperative (BR-FARM-07; EMPLOYEE is the reserved read-only role of an employee account, never offered to choose) in Vietnamese. The single place that turns a backend role code or English role name into UI copy. */
+export const fixedRoleLabels: Record<string, string> = { ZONE_MANAGER: "Quản lý vùng", ACCOUNTANT: "Kế toán", EMPLOYEE: "Nhân viên" };
 
 /** "Zone Manager" / "zone-manager" -> "ZONE_MANAGER", so a role name from the backend maps like its code. */
 const toCode = (name: string) => name.trim().toUpperCase().replace(/[\s-]+/g, "_");

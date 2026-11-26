@@ -6,8 +6,8 @@ import styles from "./employee-create-form.module.css";
 
 /** Owner-only switch: the account is created by the same save and its password is shown once afterwards. */
 export function EmployeeCreateAccountFields({ values, setValues, errorProps, fieldError, onZones }: EmployeeCreateFieldsProps & { onZones?(names: Map<string, string>): void }) {
-  // A seasonal worker has no login account: nothing to choose.
-  if (values.employeeType === "SeasonalWorker") return <p className={styles.hint}>Nhân viên thời vụ không có tài khoản đăng nhập.</p>;
+  // A thời vụ person with a phone number gets their login from the save itself (default password of the cooperative): nothing to choose.
+  if (values.employeeType === "SeasonalWorker") return <p className={styles.hint}>Nhập số điện thoại để tạo tài khoản đăng nhập cho họ. Họ dùng mật khẩu mặc định của hợp tác xã và phải đổi ở lần đăng nhập đầu.</p>;
   return <>
     <label className={styles.switch}>
       <input type="checkbox" role="switch" checked={values.createAccount} onChange={event => setValues(current => ({ ...current, createAccount: event.target.checked }))} />

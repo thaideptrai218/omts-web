@@ -231,11 +231,11 @@ describe("create employee dialog: nội bộ and thời vụ", () => {
     expect(repository.write).not.toHaveBeenCalled();
     expect(screen.getByText("Chọn ít nhất một vùng làm việc.")).toBeTruthy();
   });
-  it("tells a seasonal worker has no login account and offers no account switch", () => {
+  it("tells a thời vụ person gets a login from the phone number and offers no account switch", () => {
     render(<EmployeeApiEditor {...props()} />);
     type("Loại nhân viên *", "SeasonalWorker");
     fireEvent.click(toggle(/Tài khoản đăng nhập/));
-    expect(screen.getByText("Nhân viên thời vụ không có tài khoản đăng nhập.")).toBeTruthy();
+    expect(screen.getByText(/Nhập số điện thoại để tạo tài khoản đăng nhập cho họ\. Họ dùng mật khẩu mặc định của hợp tác xã và phải đổi ở lần đăng nhập đầu\./)).toBeTruthy();
     expect(screen.queryByRole("switch")).toBeNull();
   });
 });

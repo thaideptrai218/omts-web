@@ -63,6 +63,8 @@ export const duplicateIdNumberSchema = z.object({ employeeId: apiIdSchema, code:
 
 export const employeeViewSchema = employeeListItemSchema.extend({
   duplicateIdNumber: duplicateIdNumberSchema.nullish(),
+  /** Added by the BFF on a save that made (or failed to make) the login of a seasonal worker; carries no password. */
+  accountOutcome: z.object({ fixedPassword: z.boolean(), accountNote: z.boolean() }).nullish(),
   birthday: employeeDateOnlySchema.nullish(),
   gender: employeeGenderSchema.nullish(),
   // Only sent to callers who may maintain the employee; the list never carries it.
@@ -85,6 +87,9 @@ export const employeeSavedSchema = z.object({
   message: z.string(),
   messageCode: apiTextSchema,
   duplicateIdNumber: duplicateIdNumberSchema.nullish(),
+  // A seasonal worker saved with a phone number gets a login with the fixed first password. Only these flags are read; the password never leaves the server.
+  fixedPassword: z.boolean().nullish(),
+  accountNote: z.string().nullish(),
 });
 
 export type EmployeeListItemDto = z.infer<typeof employeeListItemSchema>;

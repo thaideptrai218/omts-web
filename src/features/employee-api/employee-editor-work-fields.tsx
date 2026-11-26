@@ -26,7 +26,7 @@ export function EmployeeEditorWorkFields({ values, setValues, errorProps, baseli
         </label>)}
       </fieldset>
       {error("jobTypeIds")}
-      {values.employeeType === "SeasonalWorker" ? <p className="text-sm text-text-muted">Thời vụ: làm theo phân công, không cố định vùng.</p> : <fieldset className="rounded-control border border-border p-3" tabIndex={-1} {...errorProps("workingZoneIds")}>
+      {values.employeeType === "SeasonalWorker" ? <p className="text-sm text-text-muted">Thời vụ: làm theo phân công, không cố định vùng. Có số điện thoại thì họ có tài khoản đăng nhập.</p> : <fieldset className="rounded-control border border-border p-3" tabIndex={-1} {...errorProps("workingZoneIds")}>
         <legend className="font-semibold">{baseline ? "Vùng làm việc" : "Vùng làm việc *"}</legend>
         {availableZones.map((zone) => (
           <label key={zone.id} className="flex min-h-12 items-center gap-3">

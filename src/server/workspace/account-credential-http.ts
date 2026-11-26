@@ -50,7 +50,10 @@ export async function forwardOwnerCredentialPost<T>(request: Request, plan: Plan
     const credential = backendAccountWithPasswordSchema.safeParse(result.data);
     if (!credential.success) return json({ status: "invalid-response" }, 502);
     if (signal.aborted) return json({ status: "unavailable" }, 503);
-    const { account, temporaryPassword, temporaryPasswordExpiresAt } = credential.data;
+    const { account, temporaryPassword, temporaryPasswordExpiresAt, fixedPassword } = credential.data;
+    // A thời vụ account has the cooperative's default password: only the fact travels, never the password.
+    if (fixedPassword === true) return json({ status: "success", data: { account: { id: account.id, username: account.username, displayName: account.displayName }, fixedPassword: true } });
+    if (!temporaryPasswordExpiresAt) return json({ status: "invalid-response" }, 502);
     return json({ status: "success", data: { account: { id: account.id, username: account.username, displayName: account.displayName }, temporaryPassword, temporaryPasswordExpiresAt } });
   } catch { return json({ status: "unavailable" }, 503); }
 }

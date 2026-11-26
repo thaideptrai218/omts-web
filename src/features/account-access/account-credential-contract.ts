@@ -27,8 +27,10 @@ export const resetPasswordRequestSchema = z.strictObject({ confirmed: z.literal(
  */
 export const accountCredentialSchema = z.strictObject({
   account: z.strictObject({ id: z.guid(), username: z.string(), displayName: z.string() }),
-  temporaryPassword: z.string().min(1),
-  temporaryPasswordExpiresAt: z.iso.datetime({ offset: true }),
+  /** Absent when `fixedPassword` is true: a thời vụ account always starts with the cooperative's default password, which is never shown. */
+  temporaryPassword: z.string().min(1).optional(),
+  temporaryPasswordExpiresAt: z.iso.datetime({ offset: true }).optional(),
+  fixedPassword: z.boolean().optional(),
 });
 export type AccountCredential = z.infer<typeof accountCredentialSchema>;
 
@@ -36,5 +38,6 @@ export type AccountCredential = z.infer<typeof accountCredentialSchema>;
 export const backendAccountWithPasswordSchema = z.object({
   account: z.object({ id: z.guid(), username: z.string(), displayName: z.string() }),
   temporaryPassword: z.string().min(1),
-  temporaryPasswordExpiresAt: z.iso.datetime({ offset: true }),
+  temporaryPasswordExpiresAt: z.iso.datetime({ offset: true }).nullish(),
+  fixedPassword: z.boolean().nullish(),
 });

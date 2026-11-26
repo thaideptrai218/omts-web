@@ -35,30 +35,31 @@ function LinkedAccount({ account }: { account: NonNullable<Employee["account"]> 
 /**
  * Tab "Tài khoản đăng nhập" of one employee, kept light: it shows the linked account (name, state, role and zones, read only) and opens it on the
  * Tài khoản người dùng screen, where roles, password, lock and delete are managed. An official (nội bộ) employee without an account gets "Cấp tài khoản",
- * which opens the same create form as that screen with the employee filled in. Seasonal workers have no account. `canReset` is the Owner.
+ * which opens the same create form as that screen with the employee filled in. A thời vụ person gets their login by saving a phone number (default password of the cooperative). `canReset` is the Owner.
  */
 export function EmployeeAccountTab({ employee, onSaved, onRefresh, onAccountChanged, canReset = false }: {
   employee: Employee; onSaved(employee: Employee): void; onRefresh?(): void; onAccountChanged?(): void; canReset?: boolean;
 }) {
   const [dialog, setDialog] = useState<"create" | "link">();
   const account = employee.account;
-  const canGrant = employee.employeeType === "Staff" && employee.status === "Employed" && employee.canMaintain && !employee.hasStaffAccount;
+  const seasonal = employee.employeeType === "SeasonalWorker";
+  const canGrant = (employee.employeeType === "Staff" || seasonal) && employee.status === "Employed" && employee.canMaintain && !employee.hasStaffAccount;
   return <div className="space-y-4">
     <p className="flex flex-wrap items-center gap-2 text-sm"><strong>{employee.fullName}</strong><EmployeeTypeBadge type={employee.employeeType} showLabel /></p>
     {account ? (canReset
-      ? <LinkedAccount account={account} />
+      ? <><LinkedAccount account={account} />{seasonal && <p className="mt-3 text-sm text-text-muted">Người thời vụ dùng mật khẩu mặc định của hợp tác xã. Mở tài khoản và chọn Đặt lại mật khẩu để đặt lại về mật khẩu mặc định của hợp tác xã.</p>}</>
       : <dl className="grid gap-4 sm:grid-cols-3">
         <div><dt className="text-sm text-text-muted">Tên đăng nhập</dt><dd className="break-all font-semibold">@{account.username}</dd></div>
         <div><dt className="text-sm text-text-muted">Tên hiển thị</dt><dd className="break-words">{account.displayName}</dd></div>
         <div><dt className="text-sm text-text-muted">Tình trạng</dt><dd>{accountLabel(account.status)}</dd></div>
       </dl>)
-      : employee.employeeType === "SeasonalWorker" ? <p className="font-semibold">Không có tài khoản đăng nhập. Nhân viên thời vụ làm theo phân công, không cần tài khoản.</p> : <>
+      : <>
         <p className="font-semibold">Chưa có tài khoản đăng nhập.</p>
         {canGrant && <>
-          <p className="text-sm text-text-muted">Tạo tài khoản mới cho nhân viên này, hoặc gắn một tài khoản có sẵn chưa thuộc nhân viên nào.</p>
+          <p className="text-sm text-text-muted">{seasonal ? "Nhập số điện thoại ở tab Thông tin để tài khoản tự được tạo, hoặc cấp tài khoản ngay tại đây. Họ dùng mật khẩu mặc định của hợp tác xã." : "Tạo tài khoản mới cho nhân viên này, hoặc gắn một tài khoản có sẵn chưa thuộc nhân viên nào."}</p>
           <div className="flex flex-wrap gap-3">
             <Button className="w-auto" onClick={() => setDialog("create")}>Cấp tài khoản</Button>
-            <Button className="w-auto" variant="secondary" onClick={() => setDialog("link")}>Liên kết tài khoản có sẵn</Button>
+            {!seasonal && <Button className="w-auto" variant="secondary" onClick={() => setDialog("link")}>Liên kết tài khoản có sẵn</Button>}
           </div>
         </>}
         {employee.status === "Left" && <p className="text-sm text-text-muted">Nhân viên đã nghỉ việc nên không cấp tài khoản được. Bấm &ldquo;Làm việc lại&rdquo; ở tab Thông tin nếu cần cấp.</p>}

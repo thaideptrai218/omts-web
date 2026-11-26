@@ -9,15 +9,14 @@ export type PickableEmployee = Pick<EmployeeListItemDto, "id" | "code" | "fullNa
 const EMPLOYED = "401", MAX_PAGES = 20;
 
 /**
- * Employees an account may be given to: official (nội bộ, `Staff`) staff who still work here and hold no account yet.
- * Seasonal workers are never offered, whatever the backend would accept. Reads every page once (100 at a time).
+ * Employees an account may be given to: working staff (nội bộ) and thời vụ people who hold no account yet. Reads every page once (100 at a time).
  */
 export async function loadAccountlessStaff(signal: AbortSignal): Promise<WorkspaceResult<PickableEmployee[]>> {
   const repository = createOperationsRepository("employees"), found: PickableEmployee[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const result = await repository.read("list", { statusId: EMPLOYED, employeeType: "Staff", page: String(page), pageSize: "100" }, employeePageSchema, signal);
+    const result = await repository.read("list", { statusId: EMPLOYED, page: String(page), pageSize: "100" }, employeePageSchema, signal);
     if (result.status !== "success") return result;
-    found.push(...result.data.items.filter((row) => !row.account && row.employeeType === "Staff"));
+    found.push(...result.data.items.filter((row) => !row.account && (row.employeeType === "Staff" || row.employeeType === "SeasonalWorker")));
     if (page * 100 >= result.data.total || !result.data.items.length) return { status: "success", data: found };
   }
   return { status: "success", data: found };

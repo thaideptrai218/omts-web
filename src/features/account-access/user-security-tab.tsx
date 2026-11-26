@@ -25,12 +25,15 @@ export function UserSecurityTab({ account, isSelf, onChanged, onDeleted }: { acc
   const repository = useMemo(() => createWorkspaceRepository("accounts"), []);
   const reset = useMutation(), change = useMutation(), alive = useRef(true), state = accountState(account);
   const locked = state === "locked", deleted = state === "deleted", protectedAccount = isSelf || (!!account.subjectType && account.subjectType !== "Staff");
-  const busy = reset.pending || change.pending;
+  const seasonal = account.pairs.some((pair) => pair.role === "EMPLOYEE"), busy = reset.pending || change.pending;
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const note = (text: string) => setRecent({ text, at: new Date().toISOString() });
   async function resetPassword() {
     const issued = await reset.run(() => resetAccountPassword(account.id));
-    if (issued) { setAction(undefined); setCredential(issued); note("Đã đặt lại mật khẩu"); }
+    if (!issued) return;
+    setAction(undefined);
+    if (issued.fixedPassword) note("Đã đặt lại về mật khẩu mặc định của hợp tác xã. Họ phải đổi ở lần đăng nhập sau");
+    else { setCredential(issued); note("Đã đặt lại mật khẩu"); }
   }
   async function toggleLock(reason: string | undefined) {
     if (!reason) return;
@@ -56,8 +59,8 @@ export function UserSecurityTab({ account, isSelf, onChanged, onDeleted }: { acc
       {protectedAccount && <p className="text-xs text-text-muted">{isSelf ? "Đây là tài khoản bạn đang đăng nhập nên không khóa hay xóa được." : "Đây là tài khoản chủ hợp tác xã nên không khóa hay xóa được."}</p>}
     </div>}
     <ErrorNotice error={action ? undefined : reset.error || change.error} />
-    {action === "reset" && <UserActionDialog title="Đặt lại mật khẩu?" body={`Đặt lại mật khẩu của ${account.displayName}? Mật khẩu tạm mới chỉ hiện một lần và mọi lần đăng nhập hiện tại của họ sẽ bị đăng xuất.`}
-      confirmLabel="Đặt lại mật khẩu" pendingLabel="Đang đặt lại..." error={reset.error} onConfirm={resetPassword} onClose={() => setAction(undefined)} />}
+    {action === "reset" && <UserActionDialog title="Đặt lại mật khẩu?" body={seasonal ? `Đặt lại về mật khẩu mặc định của hợp tác xã cho ${account.displayName}? Họ phải đổi ở lần đăng nhập sau và mọi lần đăng nhập hiện tại sẽ bị đăng xuất.` : `Đặt lại mật khẩu của ${account.displayName}? Mật khẩu tạm mới chỉ hiện một lần và mọi lần đăng nhập hiện tại của họ sẽ bị đăng xuất.`}
+      confirmLabel={seasonal ? "Đặt lại về mặc định" : "Đặt lại mật khẩu"} pendingLabel="Đang đặt lại..." error={reset.error} onConfirm={resetPassword} onClose={() => setAction(undefined)} />}
     {action === "lock" && <UserActionDialog title={locked ? "Mở khóa tài khoản?" : "Khóa tài khoản?"} body={locked ? "Người này sẽ đăng nhập lại được." : "Người này sẽ bị đăng xuất và không đăng nhập được cho đến khi bạn mở khóa."}
       reasonLabel={locked ? "Lý do mở khóa" : "Lý do khóa"} confirmLabel={locked ? "Mở khóa" : "Khóa tài khoản"} pendingLabel={locked ? "Đang mở khóa..." : "Đang khóa..."} error={change.error} onConfirm={toggleLock} onClose={() => setAction(undefined)} />}
     {action === "delete" && <UserActionDialog title="Xóa người dùng?" body={`Xóa tài khoản ${account.displayName}? Người này bị đăng xuất, mất mọi vai trò và vùng, và không đăng nhập được nữa. Nhân viên đã gắn (nếu có) được gỡ ra để cấp tài khoản mới. Tên đăng nhập, số điện thoại và email vẫn được giữ.`}

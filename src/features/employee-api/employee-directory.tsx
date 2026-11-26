@@ -1,4 +1,5 @@
 ﻿"use client";
+import { accountOutcomeNote } from "./employee-account-outcome-note";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -98,7 +99,7 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   function refresh() { setCache(new Map()); setDetailRevision(value => value + 1); list.reload(); jobTypes.reload(); }
   // The backend saves a profile whose ID number another profile already holds, and says so: show that next to the confirmation.
   const duplicateNote = (employee: Employee) => employee.duplicateIdNumber ? ` Cảnh báo: số CCCD này trùng với ${employee.duplicateIdNumber.fullName} (${employee.duplicateIdNumber.code}).` : "";
-  function saved(employee: Employee, note?: string) { refresh(); setNotice(`Đã cập nhật hồ sơ nhân viên.${note ? ` ${note}` : ""}${duplicateNote(employee)}`); }
+  function saved(employee: Employee, note?: string) { refresh(); setNotice(`Đã cập nhật hồ sơ nhân viên.${note ? ` ${note}` : ""}${duplicateNote(employee)}${accountOutcomeNote(employee)}`); }
   function retry() { refresh(); zones.reload(); }
   const hasFilters = !!search || !!zoneId || statusId !== "401" || !!employeeType || !!jobTypeId || !!accountFilter;
   const resetFilters = () => { setSearch(""); setTerm(""); setStatusId("401"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setAccountFilter(""); };
@@ -140,7 +141,7 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
           sort={sort ?? { key: "", direction: "asc" }} onSort={next => filter(() => setSort(next))} selection={readOnly ? undefined : selection} />}
     </ManagementScroller>
     {creating && <EmployeeApiEditor key={serial} record={null} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onClose={() => setCreating(false)} onAdopt={() => {}} onSaved={employee => {
-      setCreating(false); setSearch(employee.fullName); setTerm(employee.fullName); setStatusId(employee.status === "Employed" ? "401" : "402"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setPage(1); setSelected(new Set()); refresh(); setNotice(`Đã lưu hồ sơ nhân viên.${duplicateNote(employee)}`);
+      setCreating(false); setSearch(employee.fullName); setTerm(employee.fullName); setStatusId(employee.status === "Employed" ? "401" : "402"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setPage(1); setSelected(new Set()); refresh(); setNotice(`Đã lưu hồ sơ nhân viên.${duplicateNote(employee)}${accountOutcomeNote(employee)}`);
     }} />}
     {importing && <EmployeeImportDialog onClose={() => setImporting(false)} onImported={count => { setNotice(`Đã nhập ${count} nhân viên.`); setPage(1); setSelected(new Set()); refresh(); }} />}
   </ManagementLayout></>;

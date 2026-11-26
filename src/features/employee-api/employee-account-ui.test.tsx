@@ -34,7 +34,7 @@ describe("employee account tab: Cấp tài khoản opens the shared create form"
     expect((dialog().getByLabelText("Tên hiển thị *") as HTMLInputElement).value).toBe("Nguyễn Văn An");
     expect((dialog().getByLabelText("Điện thoại *") as HTMLInputElement).value).toBe("0900000000");
     expect((dialog().getByLabelText("Tên đăng nhập *") as HTMLInputElement).value).toBe("nguyen.van.an");
-    expect(dialog().getByText(/Hệ thống tạo mật khẩu tạm, hiện một lần sau khi lưu/)).toBeTruthy();
+    expect(dialog().getByText(/Nhân viên nội bộ nhận mật khẩu tạm, hiện một lần sau khi lưu/)).toBeTruthy();
     expect(dialog().queryByLabelText(/Mật khẩu/)).toBeNull();
     submit();
     expect(await screen.findByText(secret)).toBeTruthy();
@@ -87,10 +87,10 @@ describe("employee account tab: Cấp tài khoản opens the shared create form"
     expect(screen.getByRole("alert").textContent).toMatch(/10 chữ số/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it("says a seasonal worker has no login account and offers no way to create or link one", () => {
+  it("offers a thời vụ person without an account the same Cấp tài khoản, with the default password, and no way to link one", () => {
     render(<EmployeeAccountTab employee={{ ...withoutAccount(), employeeType: "SeasonalWorker" }} onSaved={vi.fn()} />);
-    expect(screen.getByText(/Không có tài khoản đăng nhập/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Cấp tài khoản" })).toBeNull();
+    expect(screen.getByText(/Họ dùng mật khẩu mặc định của hợp tác xã/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cấp tài khoản" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Liên kết tài khoản có sẵn" })).toBeNull();
   });
   it("has no account action for a Left or inaccessible employee", () => {

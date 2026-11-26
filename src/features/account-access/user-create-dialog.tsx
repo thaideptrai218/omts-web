@@ -25,7 +25,7 @@ const FOCUS: Record<Exclude<CreateAccountField, "grants">, string> = { displayNa
 /**
  * "Tạo tài khoản người dùng": the ONE form that makes a login, used by the account screen and by an employee's "Cấp tài khoản"
  * (then `employee` is given: the person is fixed and their name and phone are filled in). There are no password fields: the system makes a
- * temporary password and shows it once after saving. Seasonal workers are never offered. `onCreated` runs once the one-time password is acknowledged.
+ * temporary password and shows it once after saving. Thời vụ people are offered too: their account starts with the cooperative's default password, which is never shown. `onCreated` runs once the one-time password is acknowledged.
  */
 export function UserCreateDialog({ employee, onClose, onCreated }: { employee?: PickableEmployee; onClose(): void; onCreated(account: AccountCredential["account"]): void }) {
   const [values, setValues] = useState({ displayName: employee?.fullName ?? "", username: employee ? suggestUsername(employee.fullName) : "", phoneNumber: employee?.phoneNumber ?? "", email: "", note: "" });
@@ -63,7 +63,8 @@ export function UserCreateDialog({ employee, onClose, onCreated }: { employee?: 
       const warning = checked.body.grants.some((grant) => grant.role === ACCOUNTANT_ROLE) ? await accountantWarningFromServer() : undefined;
       if (warning && !(await confirmation.confirm(warning))) return;
       const result = await createStaffAccount(checked.body);
-      if (result.status === "success") setCredential(result.data);
+      if (result.status === "success" && result.data.fixedPassword) { onClose(); onCreated(result.data.account); }
+      else if (result.status === "success") setCredential(result.data);
       else { setError(createAccountError(result)); setBlocked(result.uncertain); }
     } catch { setBlocked(true); setError(createAccountError({ status: "error", httpStatus: 0, uncertain: true })); }
     finally { busy.current = false; setPending(false); }
@@ -89,7 +90,7 @@ export function UserCreateDialog({ employee, onClose, onCreated }: { employee?: 
         <Field label="Email" name="email" type="email" maxLength={254} autoComplete="off" value={values.email} disabled={pending || blocked} onChange={(event) => set("email", event.target.value)} />
         <Field label="Tên đăng nhập *" name="username" maxLength={50} autoComplete="off" value={values.username} disabled={pending || blocked} onChange={(event) => { setUsernameTouched(true); set("username", event.target.value); }} />
       </div>
-      <p className="rounded-control bg-surface-subtle p-2 text-sm">Hệ thống tạo mật khẩu tạm, hiện một lần sau khi lưu.</p>
+      <p className="rounded-control bg-surface-subtle p-2 text-sm">Nhân viên nội bộ nhận mật khẩu tạm, hiện một lần sau khi lưu. Người thời vụ dùng mật khẩu mặc định của hợp tác xã và phải đổi ở lần đăng nhập đầu.</p>
       <div className="space-y-1">
         <p className="text-xs font-medium text-text-muted">Gắn với nhân viên</p>
         {employee ? <p className="flex min-h-9 items-center gap-2 text-sm font-semibold">{employee.fullName}<EmployeeTypeBadge type={employee.employeeType} showLabel /></p>
@@ -98,7 +99,7 @@ export function UserCreateDialog({ employee, onClose, onCreated }: { employee?: 
             {(staff.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.fullName} · {item.code}</option>)}
           </SelectBox>}
         {!employee && staff.error ? <p className="text-xs text-danger">Chưa đọc được danh sách nhân viên. Bạn vẫn tạo được tài khoản không gắn nhân viên.</p>
-          : <p className="text-xs text-text-muted">{person ? "Tài khoản này sẽ là tài khoản đăng nhập của nhân viên đó." : "Chủ hoặc kế toán không cần gắn nhân viên. Chỉ hiện nhân viên nội bộ chưa có tài khoản."}</p>}
+          : <p className="text-xs text-text-muted">{person ? "Tài khoản này sẽ là tài khoản đăng nhập của nhân viên đó." : "Chủ hoặc kế toán không cần gắn nhân viên. Chỉ hiện nhân viên đang làm việc chưa có tài khoản."}</p>}
       </div>
       <UserCreateGrantRows rows={rows} zones={zones} disabled={pending || blocked} zonesNote={zonesRemote.loading ? "Đang tải danh sách vùng…" : zonesRemote.error ? "Chưa đọc được danh sách vùng." : undefined} onChange={setRows} />
       {person && <ZoneWorkHint zoneNames={missingZoneNames} employeeId={person.id} employeeName={person.fullName} />}
