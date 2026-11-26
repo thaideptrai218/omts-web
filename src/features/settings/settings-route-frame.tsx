@@ -1,10 +1,11 @@
 "use client";
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { useSettingsSections } from "@/components/layout/settings-sections-context";
 import { settingsItemForPath, settingsItemKey } from "./settings-hub-filter";
+import { SettingsFilterSlotContext } from "@/components/ui/management-screen/settings-filter-slot-context";
 import { ScreenGuide } from "@/components/ui/screen-guide";
 import styles from "./settings-page.module.css";
 
@@ -24,7 +25,8 @@ function subscribe(onChange: () => void) {
 /**
  * Every page the gear menu can open (e.g. Hồ sơ hợp tác xã, Nhật ký thao tác) is shown inside the same sidebar as the
  * Thiết lập hub, with its own entry selected. The sidebar lists exactly the permitted gear items, so nothing the viewer
- * may not use appears. Any other page (and `/settings` itself, which draws its own layout) is returned untouched.
+ * may not use appears. A list screen inside it shows its filters in the
+ * sidebar's place on request (SettingsFilterSlotContext). Any other page (and `/settings` itself, which draws its own layout) is returned untouched.
  */
 export function SettingsRouteFrame({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname(), sections = useSettingsSections();
@@ -35,9 +37,11 @@ export function SettingsRouteFrame({ children }: Readonly<{ children: ReactNode 
 function Frame({ activeKey, children }: Readonly<{ activeKey: string; children: ReactNode }>) {
   const sections = useSettingsSections(), router = useRouter();
   const collapsed = useSyncExternalStore(subscribe, isCollapsed, () => false);
+  const [column, setColumn] = useState<HTMLElement | null>(null), [filtering, setFiltering] = useState(false);
+  const filterSlot = useMemo(() => ({ column, setFiltering }), [column]);
   return <div className={styles.page}>
     <p className={styles.crumb}><Link href="/settings">Cài đặt</Link></p>
-    <div className={collapsed ? `${styles.layout} ${styles.layoutCollapsed}` : styles.layout}>
+    <div className={collapsed && !filtering ? `${styles.layout} ${styles.layoutCollapsed}` : styles.layout}>
       {/* Phones and tablets: one select replaces the list, like the hub. */}
       <select className={styles.picker} aria-label="Chọn thiết lập" value={activeKey} onChange={(event) => {
         const target = sections.flatMap((section) => section.items).find((item) => settingsItemKey(item) === event.target.value);
@@ -47,7 +51,7 @@ function Frame({ activeKey, children }: Readonly<{ activeKey: string; children: 
           {section.items.map((item) => <option key={settingsItemKey(item)} value={settingsItemKey(item)}>{item.label}</option>)}
         </optgroup>)}
       </select>
-      <nav className={styles.sidebar} aria-label="Nhóm thiết lập" data-guide="settings-list">
+      <nav className={styles.sidebar} hidden={filtering} aria-label="Nhóm thiết lập" data-guide="settings-list">
         <button type="button" data-guide="settings-collapse" className={styles.collapse} aria-pressed={collapsed} aria-label={collapsed ? "Mở rộng danh sách cài đặt" : "Thu gọn danh sách cài đặt"} title={collapsed ? "Mở rộng" : "Thu gọn"} onClick={() => setCollapsed(!collapsed)}>
           <InterfaceIcon name="menu" /><span>{collapsed ? "Mở rộng" : "Thu gọn"}</span>
         </button>
@@ -58,9 +62,13 @@ function Frame({ activeKey, children }: Readonly<{ activeKey: string; children: 
           </li>)}</ul>
         </div>)}
       </nav>
-      <section data-guide="settings-content" className={`${styles.card} ${styles.routeContent}`}>{children}</section>
+      {/* Filled by the open list screen's filter panel; takes no room while empty. */}
+      <div ref={setColumn} className={styles.filterSlot} />
+      <section data-guide="settings-content" className={`${styles.card} ${styles.routeContent}`}>
+        <SettingsFilterSlotContext.Provider value={filterSlot}>{children}</SettingsFilterSlotContext.Provider>
+      </section>
       <ScreenGuide id="settings-frame" steps={[
-        { title: "Chọn mục bên trái", text: "Danh sách này luôn có sẵn; bấm một mục là mở thẳng trang của nó.", target: "[data-guide=\"settings-list\"]" },
+        { title: "Chọn mục bên trái", text: "Bấm một mục là mở thẳng trang của nó. Khi đang mở bộ lọc, đóng bộ lọc để thấy lại danh sách.", target: "[data-guide=\"settings-list\"]" },
         { title: "Sửa ở bên phải", text: "Nội dung của mục hiện ở khung này, bạn chỉnh và lưu tại đó.", target: "[data-guide=\"settings-content\"]" },
         { title: "Thu gọn khi cần chỗ rộng", text: "Bấm Thu gọn để danh sách chỉ còn biểu tượng, nội dung có thêm chỗ.", target: "[data-guide=\"settings-collapse\"]" },
       ]} />
