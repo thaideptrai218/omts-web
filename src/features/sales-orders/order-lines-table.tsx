@@ -3,6 +3,8 @@ import Link from "next/link";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { MoneyInput, QuantityStepper, fmt } from "@/features/purchase-documents/document-parts";
 import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
+import { ApproxKg } from "@/components/ui/approx-kg";
+import { kgPerCageOfUnit } from "@/shared/format/approx-kg";
 import { productHref } from "@/features/products/product-helpers";
 import { ProductSizeChip } from "@/features/products/product-size";
 import styles from "./order-lines.module.css";
@@ -47,7 +49,7 @@ export function OrderLinesTable({ lines, onChange, onRemove }: { lines: readonly
             if (next) onChange(line.key, { unitId: next.id, unitPrice: next.salePrice, listPrice: next.salePrice });
           }}>{line.units.map((row) => <option key={row.id} value={row.id}>{unitLabel(row)}</option>)}</select>
         </div>
-        {unit && unit.factor !== 1 && <span className={styles.convert}>= {fmt(kgOf)} kg</span>}
+        {unit && unit.factor !== 1 && (kgPerCageOfUnit(unit) ? <span className={styles.convert}><ApproxKg cages={parseQuantity(line.quantity)} kgPerCage={unit.factor} /> (ước tính)</span> : <span className={styles.convert}>= {fmt(kgOf)} kg</span>)}
         {line.delivered > 0 && <span className={purchaseStyles.cap}>đã giao {fmt(line.delivered)}</span>}
       </div></td>
       <td><MoneyInput label={`Đơn giá dòng ${position}`} className={purchaseStyles.cellInput} value={line.unitPrice} onChange={(unitPrice) => onChange(line.key, { unitPrice })} />

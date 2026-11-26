@@ -7,17 +7,23 @@ import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
 import { ORDER, type OrderView } from "@/features/sales-orders/contracts";
 import { orderRepository } from "@/features/sales-orders/repository";
 import Link from "next/link";
+import { approxKgText, kgPerCageOfUnit } from "@/shared/format/approx-kg";
 import { PLAN, type PlanView } from "./contracts";
 import { planHref } from "./plan-labels";
 import { planRepository } from "./repository";
 
 type Entry = { id: string; code: string; customer: string; pickupAt: string | null };
 
+const approxOf = (line: OrderView["lines"][number]) => {
+  const text = approxKgText(line.quantity - line.deliveredQuantity, kgPerCageOfUnit({ name: line.unitName, factor: line.factor }));
+  return text ? ` (${text})` : "";
+};
+
 /** What is still to deliver of an order, by product: ordered minus delivered, in the unit of each line (read once for the editor, which also sums it). */
 function Remaining({ order, loading }: { order?: OrderView; loading: boolean }) {
   if (!order) return <small>{loading ? "Đang tải hàng của đơn…" : "Không tải được hàng của đơn."}</small>;
   const left = order.lines.filter((line) => line.quantity > line.deliveredQuantity);
-  return <small>{left.length ? `Còn lại: ${left.map((line) => `${line.productName} ${fmt(line.quantity - line.deliveredQuantity)} ${line.unitName}`).join(" · ")}` : "Đơn đã giao đủ."}</small>;
+  return <small>{left.length ? `Còn lại: ${left.map((line) => `${line.productName} ${fmt(line.quantity - line.deliveredQuantity)} ${line.unitName}${approxOf(line)}`).join(" · ")}` : "Đơn đã giao đủ."}</small>;
 }
 
 /**
