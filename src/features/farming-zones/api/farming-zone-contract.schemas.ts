@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiIdSchema, apiTextSchema } from "@/features/auth/api/auth-contract.schemas";
+import { zoneBoundarySchema } from "@/features/zone-boundary/boundary-contract";
 
 // Wire snapshot: omts-backend develop@953f597, FarmingZoneDtos.cs.
 // A list row is not a detail: only detail carries coordinates and rowVersion. Keep that distinction before binding the UI.
@@ -27,6 +28,8 @@ export const farmingZonePageSchema = z.object({
 export const farmingZoneViewSchema = zoneBaseSchema.extend({
   latitude: z.number().min(-90).max(90).nullable(),
   longitude: z.number().min(-180).max(180).nullable(),
+  /** The licensed sea area as GeoJSON, null when none; a malformed one reads as null so the zone still opens. */
+  boundary: zoneBoundarySchema.optional(),
   rowVersion: apiTextSchema,
 });
 
