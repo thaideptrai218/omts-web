@@ -5,7 +5,7 @@ import { employeePageSchema, type EmployeeListItemDto } from "@/features/employe
 import { createOperationsRepository } from "@/features/operations/repository";
 import { useRemote } from "@/features/operations/ui";
 
-export type PickableEmployee = Pick<EmployeeListItemDto, "id" | "code" | "fullName" | "phoneNumber" | "employeeType">;
+export type PickableEmployee = Pick<EmployeeListItemDto, "id" | "code" | "fullName" | "phoneNumber" | "employeeType"> & Partial<Pick<EmployeeListItemDto, "workingZones">>;
 const EMPLOYED = "401", MAX_PAGES = 20;
 
 /**

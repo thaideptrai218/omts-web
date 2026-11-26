@@ -12,12 +12,13 @@ import { loadOptions } from "@/features/operations/lookups";
 import { ErrorNotice, Field, useRemote } from "@/features/operations/ui";
 import { accountantWarningFromServer } from "./accountant-uniqueness-warning";
 import type { AccountCredential } from "./account-credential-contract";
-import { ACCOUNTANT_ROLE } from "./user-account-model";
+import { ACCOUNTANT_ROLE, ZONE_MANAGER_ROLE } from "./user-account-model";
 import { UserCreateGrantRows } from "./user-create-grant-rows";
 import { checkCreateAccount, createAccountError, newGrantRow, type CreateAccountField, type GrantRow } from "./user-create-model";
 import { UserCredentialDialog } from "./user-credential-dialog";
 import { createStaffAccount } from "./user-management-repository";
 import { useAccountlessStaff, type PickableEmployee } from "./use-accountless-staff";
+import { ZoneWorkHint } from "./zone-work-hint";
 
 const FOCUS: Record<Exclude<CreateAccountField, "grants">, string> = { displayName: "displayName", username: "username", phoneNumber: "phoneNumber", email: "email", note: "note" };
 
@@ -70,6 +71,10 @@ export function UserCreateDialog({ employee, onClose, onCreated }: { employee?: 
   const acknowledge = (account: AccountCredential["account"]) => { setCredential(undefined); onClose(); onCreated(account); };
   if (credential) return <UserCredentialDialog title="Đã tạo tài khoản" credential={credential} onClose={() => acknowledge(credential.account)} />;
   const person = employee ?? staff.data?.find((item) => item.id === employeeId);
+  // Warn (never block) when a chosen zone is not among the person's working zones.
+  const workZoneIds = person?.workingZones?.map((zone) => zone.id);
+  const missingZoneNames = workZoneIds ? [...new Set(rows.filter((row) => row.role === ZONE_MANAGER_ROLE && !row.allZones).flatMap((row) => row.zoneIds))]
+    .filter((id) => !workZoneIds.includes(id)).map((id) => zones.find((zone) => zone.id === id)?.name ?? "đã chọn") : [];
   const noteField: ReactNode = <details className="rounded-card border border-border px-3 py-2" open={!!values.note}>
     <summary className="cursor-pointer text-sm font-semibold">Ghi chú</summary>
     <textarea name="note" aria-label="Ghi chú" className="omts-control mt-2 min-h-20" maxLength={500} value={values.note} disabled={pending} onChange={(event) => set("note", event.target.value)} />
@@ -96,6 +101,7 @@ export function UserCreateDialog({ employee, onClose, onCreated }: { employee?: 
           : <p className="text-xs text-text-muted">{person ? "Tài khoản này sẽ là tài khoản đăng nhập của nhân viên đó." : "Chủ hoặc kế toán không cần gắn nhân viên. Chỉ hiện nhân viên nội bộ chưa có tài khoản."}</p>}
       </div>
       <UserCreateGrantRows rows={rows} zones={zones} disabled={pending || blocked} zonesNote={zonesRemote.loading ? "Đang tải danh sách vùng…" : zonesRemote.error ? "Chưa đọc được danh sách vùng." : undefined} onChange={setRows} />
+      {person && <ZoneWorkHint zoneNames={missingZoneNames} employeeId={person.id} employeeName={person.fullName} />}
       {noteField}
       <ErrorNotice error={error} />
       <div className="flex flex-wrap justify-end gap-3">

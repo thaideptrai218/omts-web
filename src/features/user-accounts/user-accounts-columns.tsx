@@ -19,7 +19,7 @@ export const accountColumns: readonly AccountColumn[] = [
   { key: "username", label: "Tên đăng nhập", width: 130, sort: "username", render: (account) => <span className={styles.wrap}>{account.username}</span> },
   { key: "phone", label: "Điện thoại", width: 104, sort: "phone", render: (account) => plain(account.phoneNumber) },
   { key: "email", label: "Email", width: 150, sort: "email", render: (account) => plain(account.email) },
-  { key: "roles", label: "Vai trò và vùng", width: 200, render: (account) => account.deleted ? <span className="text-text-muted">—</span> : <UserGrantLineChips pairs={account.pairs} /> },
+  { key: "roles", label: "Vai trò và vùng", width: 200, render: (account) => <UserGrantLineChips pairs={account.pairs} /> },
   { key: "employee", label: "Nhân viên", width: 150, render: (account, employee) => <span className={styles.wrap}><LinkedEmployeeText account={account} employee={employee} /></span> },
   { key: "note", label: "Ghi chú", width: 170, sort: "note", defaultHidden: true, render: (account) => plain(account.note) },
   { key: "state", label: "Trạng thái", width: 130, sort: "state", render: (account) => { const state = accountState(account); return <StatusPill tone={tone[state]}>{accountStateLabel[state]}</StatusPill>; } },

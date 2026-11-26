@@ -8,13 +8,17 @@ import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
 import { ErrorNotice, Field, useMutation } from "@/features/operations/ui";
 import { toUserAccount, type UserAccount } from "./user-account-model";
 
-export type LinkedEmployee = { id: string; name: string; type?: string | null };
+/** `zoneIds` are the employee's working zones (Vùng làm việc); absent when unknown. */
+export type LinkedEmployee = { id: string; name: string; type?: string | null; zoneIds?: readonly string[] };
+
+/** Where the Nhân viên screen opens one employee (also used by the zone hint). */
+export const employeeProfileHref = (id: string, name: string) => `/workspace/employees?recordId=${encodeURIComponent(id)}&search=${encodeURIComponent(name)}`;
 
 /** The linked employee with a link to the Nhân viên screen, or the plain words when there is none. */
 export function LinkedEmployeeText({ account, employee }: { account: Pick<UserAccount, "employeeId">; employee?: LinkedEmployee }) {
   if (!account.employeeId) return <>Không gắn nhân viên</>;
   const name = employee?.name ?? "Nhân viên đã gắn";
-  return <span className="inline-flex flex-wrap items-center gap-1.5"><Link className="font-semibold underline" href={`/workspace/employees?recordId=${encodeURIComponent(account.employeeId)}&search=${encodeURIComponent(name)}`}>{name}</Link><EmployeeTypeBadge type={employee?.type} /></span>;
+  return <span className="inline-flex flex-wrap items-center gap-1.5"><Link className="font-semibold underline" href={employeeProfileHref(account.employeeId, name)}>{name}</Link><EmployeeTypeBadge type={employee?.type} /></span>;
 }
 
 /**

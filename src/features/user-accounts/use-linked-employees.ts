@@ -15,7 +15,7 @@ async function loadLinkedEmployees(signal: AbortSignal): Promise<WorkspaceResult
     for (let page = 1; page <= MAX_PAGES; page++) {
       const result = await repository.read("list", { statusId, page: String(page), pageSize: "100" }, employeePageSchema, signal);
       if (result.status !== "success") return result;
-      found.push(...result.data.items.map((row) => ({ id: row.id, name: row.fullName, type: row.employeeType })));
+      found.push(...result.data.items.map((row) => ({ id: row.id, name: row.fullName, type: row.employeeType, zoneIds: row.workingZones.map((zone) => zone.id) })));
       if (page * 100 >= result.data.total || !result.data.items.length) break;
     }
   }

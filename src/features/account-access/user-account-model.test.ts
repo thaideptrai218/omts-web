@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { accountantUniquenessWarning } from "./accountant-uniqueness-warning";
-import { countRoleHolders, copyUserGrants, toUserAccount, type UserAccount, type UserPair } from "./user-account-model";
+import { countRoleHolders, copyUserGrants, missingWorkingZones, toUserAccount, type UserAccount, type UserPair } from "./user-account-model";
 import { grantsToSelection, selectionError, selectionToGrants } from "./user-grant-selection";
 
 const zoneA = "11111111-1111-4111-8111-111111111111", zoneB = "22222222-2222-4222-8222-222222222222";
@@ -61,5 +61,13 @@ describe("toUserAccount", () => {
   });
   it("treats a record without pairs as no role yet", () => {
     expect(toUserAccount({ id: "x", username: "u", displayName: "U", status: "Active", rowVersion: "v" }).pairs).toEqual([]);
+  });
+});
+
+describe("missingWorkingZones", () => {
+  it("lists Zone Manager zones outside the employee's work zones, never an all-zones grant or the Accountant", () => {
+    expect(missingWorkingZones([pair("ZONE_MANAGER", zoneA), pair("ZONE_MANAGER", zoneB)], [zoneA]).map((item) => item.zoneId)).toEqual([zoneB]);
+    expect(missingWorkingZones([pair("ZONE_MANAGER", null), pair("ACCOUNTANT", null)], [])).toEqual([]);
+    expect(missingWorkingZones([pair("ZONE_MANAGER", zoneA)], [zoneA])).toEqual([]);
   });
 });

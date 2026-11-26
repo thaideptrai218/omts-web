@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
-const ids = { self: "99999999-9999-4999-8999-999999999999", ngoc: "11111111-1111-4111-8111-111111111111", minh: "22222222-2222-4222-8222-222222222222", emp: "33333333-3333-4333-8333-333333333333" };
-const mocks = vi.hoisted(() => ({ query: "", subject: "CooperativeOwner", accountId: "", accounts: [] as Record<string, unknown>[], deleted: [] as Record<string, unknown>[],
+const ids = { gone: "55555555-5555-4555-8555-555555555555", self: "99999999-9999-4999-8999-999999999999", ngoc: "11111111-1111-4111-8111-111111111111", minh: "22222222-2222-4222-8222-222222222222", emp: "33333333-3333-4333-8333-333333333333" };
+const mocks = vi.hoisted(() => ({ query: "", subject: "CooperativeOwner", accountId: "", accounts: [] as Record<string, unknown>[], deleted: [] as Record<string, unknown>[], workZones: [] as string[],
   detail: vi.fn(), mutate: vi.fn(), create: vi.fn(), reset: vi.fn(), loadOptions: vi.fn() }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(mocks.query) }));
 vi.mock("next/link", () => ({ default: ({ href, children }: { href: string; children: ReactNode }) => <a href={href}>{children}</a> }));
@@ -12,7 +12,7 @@ vi.mock("@/components/ui/screen-guide", () => ({ ScreenGuide: () => null }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subject, accountId: mocks.accountId } }) }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: mocks.loadOptions }));
-vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => ({ read: async () => ({ status: "success", data: { items: [{ id: ids.emp, code: "NV1", fullName: "Nguyễn Văn An", phoneNumber: "0900000001", employeeType: "Staff", account: null }], page: 1, pageSize: 100, total: 1 } }) }) }));
+vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => ({ read: async () => ({ status: "success", data: { items: [{ id: ids.emp, code: "NV1", fullName: "Nguyễn Văn An", phoneNumber: "0900000001", employeeType: "Staff", account: null, workingZones: mocks.workZones.map((id) => ({ id, code: id, name: id })) }], page: 1, pageSize: 100, total: 1 } }) }) }));
 vi.mock("@/features/api-workspace/workspace-repository", async (original) => ({ ...(await original<object>()), createWorkspaceRepository: () => ({ detail: mocks.detail, mutate: mocks.mutate }) }));
 vi.mock("@/features/account-access/user-management-repository", () => ({ createStaffAccount: mocks.create, resetAccountPassword: mocks.reset }));
 vi.mock("@/features/account-access/user-grant-editor", () => ({ UserGrantEditor: () => <p>Bộ chọn vai trò và vùng</p> }));
@@ -32,9 +32,9 @@ const zones = [{ id: ids.ngoc, name: "Ngọc Vừng", statusId: 101 }, { id: ids
 
 beforeEach(() => {
   vi.clearAllMocks(); localStorage.clear();
-  Object.assign(mocks, { query: "", subject: "CooperativeOwner", accountId: ids.self, accounts: [quanLy, keToan, locked, pending], deleted: [gone] });
-  mocks.loadOptions.mockImplementation(async (resource: string, _signal: unknown, query: Record<string, string> = {}) =>
-    ({ status: "success", data: resource === "zones" ? zones : resource === "accounts" ? [...mocks.accounts, ...(query.includeDeleted ? mocks.deleted : [])] : [] }));
+  Object.assign(mocks, { workZones: [ids.ngoc], query: "", subject: "CooperativeOwner", accountId: ids.self, accounts: [quanLy, keToan, locked, pending], deleted: [gone] });
+  mocks.loadOptions.mockImplementation(async (resource: string) =>
+    ({ status: "success", data: resource === "zones" ? zones : resource === "accounts" ? [...mocks.accounts] : [] }));
   mocks.detail.mockImplementation(async (id: string) => ({ status: "success", data: [...mocks.accounts, ...mocks.deleted, owner].find((item) => item.id === id) }));
 });
 afterEach(cleanup);
@@ -94,14 +94,26 @@ describe("Tài khoản người dùng list", () => {
     fireEvent.change(search, { target: { value: "khong co ai" } });
     expect(screen.getByText("Không có tài khoản phù hợp bộ lọc.")).toBeTruthy();
   });
-  it("shows deleted accounts only with the switch on, and reads them from the server then", async () => {
+  it("never lists deleted accounts: no switch, no Đã xóa filter, includeDeleted never sent", async () => {
     render(<UserAccountsScreen />);
     await screen.findByRole("button", { name: "Mở tài khoản Lê Minh Tuấn" });
-    expect(mocks.loadOptions).not.toHaveBeenCalledWith("accounts", expect.anything(), { includeDeleted: "true" });
-    fireEvent.click(screen.getByRole("switch", { name: "Hiện cả tài khoản đã xóa" }));
-    expect(await screen.findByRole("button", { name: "Mở tài khoản Đã Xóa" })).toBeTruthy();
-    expect(mocks.loadOptions).toHaveBeenCalledWith("accounts", expect.anything(), { includeDeleted: "true" });
-    expect(within(row("Đã Xóa")).getByText("Đã xóa")).toBeTruthy();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByText("Hiện cả tài khoản đã xóa")).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Đã xóa" })).toBeNull();
+    expect(screen.queryByText("Đã Xóa")).toBeNull();
+    for (const call of mocks.loadOptions.mock.calls) expect(call[2]?.includeDeleted).toBeUndefined();
+  });
+  it("drops a deleted account even if the server sends one", async () => {
+    mocks.accounts = [quanLy, gone];
+    render(<UserAccountsScreen />);
+    await screen.findByRole("button", { name: "Mở tài khoản Lê Minh Tuấn" });
+    expect(screen.queryByRole("button", { name: "Mở tài khoản Đã Xóa" })).toBeNull();
+  });
+  it("shows Không tìm thấy tài khoản for a deleted account opened by ?accountId=", async () => {
+    mocks.query = `accountId=${ids.gone}`; mocks.deleted = [{ ...gone, id: ids.gone }];
+    render(<UserAccountsScreen />);
+    expect(await screen.findByText("Không tìm thấy tài khoản.")).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: "Bảo mật" })).toBeNull();
   });
   it("adds the optional note column from the column picker and sorts by a header", async () => {
     mocks.accounts = [account("n1", "z.user", "Zeta", { note: "Giữ máy chung" }), account("n2", "a.user", "Alpha")];
@@ -183,6 +195,20 @@ describe("create account", () => {
     await screen.findByText("Tmp-Secret-1!");
     expect(mocks.create).toHaveBeenCalledTimes(1);
   });
+  it("warns in the create form when a chosen zone is not among the picked employee's work zones, and still lets you save", async () => {
+    const dialog = await open();
+    expect(dialog.queryByRole("note")).toBeNull();
+    await waitFor(() => expect(dialog.getByRole("option", { name: /Nguyễn Văn An/ })).toBeTruthy());
+    fireEvent.change(dialog.getByLabelText("Gắn với nhân viên"), { target: { value: ids.emp } });
+    fireEvent.change(dialog.getByLabelText("Vai trò của dòng 1"), { target: { value: "ZONE_MANAGER" } });
+    await waitFor(() => expect(dialog.getByRole("button", { name: "Minh Châu" })).toBeTruthy());
+    fireEvent.click(dialog.getByRole("button", { name: "Ngọc Vừng" }));
+    expect(dialog.queryByRole("note")).toBeNull();
+    fireEvent.click(dialog.getByRole("button", { name: "Minh Châu" }));
+    expect(dialog.getByRole("note").textContent).toContain("Người này chưa được ghi làm việc ở vùng Minh Châu.");
+    expect(dialog.getByRole("link", { name: "Mở hồ sơ nhân viên" })).toBeTruthy();
+    expect(dialog.getByRole("button", { name: "Lưu" }).hasAttribute("disabled")).toBe(false);
+  });
   it("asks for a zone when Quản lý vùng has none, without sending", async () => {
     const dialog = await open(); fill(dialog);
     fireEvent.change(dialog.getByLabelText("Vai trò của dòng 1"), { target: { value: "ZONE_MANAGER" } });
@@ -214,6 +240,25 @@ describe("account detail", () => {
     fireEvent.change(dialog.getByLabelText("Ghi chú"), { target: { value: "Trực ca đêm" } });
     fireEvent.click(dialog.getByRole("button", { name: "Lưu" }));
     await waitFor(() => expect(mocks.mutate).toHaveBeenCalledWith("update", { displayName: "Lê Minh Tuấn", username: "quanlyvung1", phoneNumber: "0900000000", email: null, note: "Trực ca đêm", rowVersion: "rv-a1" }, "a1"));
+  });
+  it("warns, with a link to the employee, when a granted zone is not among the employee's work zones", async () => {
+    const dialog = await openDetail("Lê Minh Tuấn");
+    fireEvent.click(dialog.getByRole("tab", { name: "Phân quyền" }));
+    const note = await dialog.findByRole("note");
+    expect(note.textContent).toContain("Người này chưa được ghi làm việc ở vùng Minh Châu. Nên thêm vùng đó vào hồ sơ nhân viên.");
+    expect(within(note).getByRole("link", { name: "Mở hồ sơ nhân viên" }).getAttribute("href")).toBe(`/workspace/employees?recordId=${ids.emp}&search=${encodeURIComponent("Nguyễn Văn An")}`);
+    expect(dialog.getByText("Bộ chọn vai trò và vùng")).toBeTruthy();
+  });
+  it("shows no zone note when the employee works in every granted zone, or the account has no employee", async () => {
+    mocks.workZones = [ids.ngoc, ids.minh];
+    const dialog = await openDetail("Lê Minh Tuấn");
+    fireEvent.click(dialog.getByRole("tab", { name: "Phân quyền" }));
+    await dialog.findByText("Bộ chọn vai trò và vùng");
+    await waitFor(() => expect(dialog.queryByRole("note")).toBeNull());
+    cleanup();
+    const other = await openDetail("Phạm Kế Toán");
+    fireEvent.click(other.getByRole("tab", { name: "Phân quyền" }));
+    expect(other.queryByRole("note")).toBeNull();
   });
   it("shows the role and zone editor on Phân quyền", async () => {
     const dialog = await openDetail("Lê Minh Tuấn");
@@ -264,23 +309,13 @@ describe("account detail", () => {
     await waitFor(() => expect(mocks.mutate).toHaveBeenCalledWith("delete", { reason: "Nghỉ việc", rowVersion: "rv-a1" }, "a1"));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Tài khoản Lê Minh Tuấn" })).toBeNull());
   });
-  it("offers no lock or delete for the Owner account or for yourself, and no actions on a deleted account", async () => {
+  it("offers no lock or delete for the Owner account or for yourself", async () => {
     mocks.accounts = [owner, quanLy];
     const mine = await openDetail("Chủ HTX");
     fireEvent.click(mine.getByRole("tab", { name: "Bảo mật" }));
     expect(mine.queryByRole("button", { name: "Khóa tài khoản" })).toBeNull();
     expect(mine.queryByRole("button", { name: "Xóa người dùng" })).toBeNull();
     expect(mine.getByText(/đang đăng nhập nên không khóa hay xóa được/)).toBeTruthy();
-    cleanup();
-    mocks.accounts = [quanLy]; mocks.accountId = "someone-else"; mocks.deleted = [gone];
-    render(<UserAccountsScreen />);
-    fireEvent.click(await screen.findByRole("switch", { name: "Hiện cả tài khoản đã xóa" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Mở tài khoản Đã Xóa" }));
-    const deleted = within(await screen.findByRole("dialog", { name: "Tài khoản Đã Xóa" }));
-    expect(deleted.queryByRole("button", { name: "Sửa thông tin" })).toBeNull();
-    fireEvent.click(deleted.getByRole("tab", { name: "Bảo mật" }));
-    expect(deleted.queryByRole("button", { name: "Đặt lại mật khẩu" })).toBeNull();
-    expect(deleted.queryByRole("button", { name: "Xóa người dùng" })).toBeNull();
   });
   it("opens the account named by a single valid ?accountId=", async () => {
     mocks.query = "accountId=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

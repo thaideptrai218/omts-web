@@ -11,7 +11,7 @@ export type UserPair = { id: string; zoneId: string | null; zoneName: string | n
 export type UserAccount = {
   id: string; username: string; displayName: string; phoneNumber: string | null; email: string | null; status: string;
   employeeId: string | null; pairs: UserPair[]; rowVersion: string | undefined;
-  /** Optional free note of the Owner; "Chờ đổi mật khẩu" while the temporary password has not been replaced; soft-deleted accounts stay in the list only when asked. */
+  /** Optional free note of the Owner; "Chờ đổi mật khẩu" while the temporary password has not been replaced. */
   note: string | null; mustChangePassword: boolean; deleted: boolean;
   /** "Staff" for a normal account; anything else (the Owner) is protected from lock and delete. */
   subjectType?: string | null;
@@ -33,6 +33,11 @@ export const roleLabel = (code: string, fallback?: string) => roleDisplayName(co
 /** One vocabulary for the lock action: the status is "Đang hoạt động" / "Đã khóa"; the actions are "Khóa tài khoản" / "Mở khóa tài khoản". */
 export const accountStatusLabel = (status: string) => status === "Active" ? "Đang hoạt động" : status === "Deleted" ? "Đã xóa" : "Đã khóa";
 export const pairZoneLabel = (pair: UserPair) => pair.allZones ? "Tất cả vùng" : pair.zoneName || "Vùng chưa có tên";
+
+/** Zones a Zone Manager grant covers that the linked employee does not list as a working zone. An "all zones" grant never counts. */
+export function missingWorkingZones(pairs: readonly UserPair[], workingZoneIds: readonly string[]): UserPair[] {
+  return pairs.filter((pair) => pair.role === ZONE_MANAGER_ROLE && !pair.allZones && pair.zoneId && !workingZoneIds.includes(pair.zoneId));
+}
 
 /** Number of accounts holding each role (one count per account even when it has the role in several zones). */
 export function countRoleHolders(accounts: readonly UserAccount[]): Record<string, number> {

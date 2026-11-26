@@ -14,8 +14,8 @@ const id = z.guid();
 const resourceSchema = z.enum(resourceKeys);
 const mutationSchema = z.strictObject({ action: z.enum(["create", "update", "discontinue", "reactivate", "lock", "unlock", "delete"]),
   id: id.optional(), zoneId: id.optional(), body: z.record(z.string(), z.json()) });
-/** Account list flags the Owner may send: only the literal value "true" is accepted. */
-const accountFlags = ["unlinked", "includeDeleted"];
+/** Account list flag the Owner may send: only the literal value "true" is accepted. Deleted accounts are never requested: the web hides them. */
+const accountFlags = ["unlinked"];
 const paths: Record<ResourceKey, string> = { zones: "/api/zones", suppliers: "/api/suppliers", "input-items": "/api/farming-input-items",
   employees: "/api/employees", rafts: "/api/rafts", accounts: "/api/accounts", roles: "/api/roles", customers: "/api/customers" };
 

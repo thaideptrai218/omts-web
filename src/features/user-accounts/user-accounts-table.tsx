@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { SortableHeader, type SortState } from "@/components/ui/management-screen/management-table";
-import { accountState, type AccountSort } from "@/features/account-access/user-account-list-model";
+import type { AccountSort } from "@/features/account-access/user-account-list-model";
 import type { UserAccount } from "@/features/account-access/user-account-model";
 import type { LinkedEmployee } from "@/features/account-access/user-info-section";
 import { fitColumns } from "@/features/employee-api/employee-column-fit";
@@ -29,7 +29,7 @@ export function UserAccountsTable({ items, visible, openId, employees, sort, onS
   return <table ref={tableRef} className={styles.table} style={{ width: "100%", minWidth: columns.reduce((sum, column) => sum + widthOf(column.key), 0) }}>
     <colgroup>{columns.map((column) => <col key={column.key} style={column.key === "name" ? undefined : { width: widthOf(column.key) }} />)}</colgroup>
     <thead><tr>{columns.map((column) => <SortableHeader key={column.key} label={column.label} sortKey={column.sort} sort={sort} onSort={onSort} />)}</tr></thead>
-    <tbody>{items.map((account) => <OpenableTableRow key={account.id} data-selected={openId === account.id || undefined} data-deleted={accountState(account) === "deleted" || undefined} onOpen={() => onOpen(account.id)}>
+    <tbody>{items.map((account) => <OpenableTableRow key={account.id} data-selected={openId === account.id || undefined} onOpen={() => onOpen(account.id)}>
       {columns.map((column) => <td key={column.key} data-label={column.label}>
         {column.key === "name"
           ? <button type="button" className={styles.open} aria-label={`Mở tài khoản ${account.displayName}`} onClick={() => onOpen(account.id)}>{account.displayName}</button>
