@@ -13,10 +13,10 @@ describe("fixed operation plans", () => {
     expect(planOperation("purchase-receipts", "POST", query(), { action: "copy", id: ids.receipt, body: {} })).toBeUndefined();
     expect(planOperation("supplier-payments", "GET", query("action=debts"))).toMatchObject({ path: "/api/supplier-debts?" });
     expect(planOperation("supplier-payments", "GET", query(`action=debt&supplierId=${ids.supplier}`))).toMatchObject({ path: `/api/supplier-debts/${ids.supplier}` });
-    expect(planOperation("water", "POST", query(), { action: "correct", id: ids.water, body: { raftId: ids.raft, ph: 7, salinity: 25, temperature: 26, measuredAt: "2026-10-01T08:00:00+07:00", reason: "Nhập sai" } }))
-      .toMatchObject({ permission: "Edit", path: `/api/water-measurements/${ids.water}/corrections` });
-    // The v2 backend has no confirm step, OCR re-read or editing presence on a measurement.
-    for (const action of ["confirm", "recognize-again", "editing", "stop-editing"]) expect(planOperation("water", "POST", query(), { action, id: ids.water, body: {} })).toBeUndefined();
+    expect(planOperation("water", "POST", query(), { action: "void", id: ids.water, body: { reason: "Nhập sai" } }))
+      .toMatchObject({ permission: "Edit", path: `/api/water-measurements/${ids.water}/void` });
+    // A recorded measurement is only voided: no correction, confirm step, OCR re-read or editing presence.
+    for (const action of ["correct", "confirm", "recognize-again", "editing", "stop-editing"]) expect(planOperation("water", "POST", query(), { action, id: ids.water, body: {} })).toBeUndefined();
   });
   it("never accepts arbitrary URLs, IDs, query keys or duplicate filters", () => {
     expect(planOperation("water", "GET", query(`action=detail&id=${encodeURIComponent("../auth/login")}`))).toBeUndefined();

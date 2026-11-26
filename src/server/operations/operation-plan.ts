@@ -99,7 +99,6 @@ export function planOperation(areaName: string, method: string, query: URLSearch
       zoneId ? c.zoneThresholdsSchema : z.array(c.zoneThresholdsSchema), "Thresholds", "PUT");
     if (!recordId) return undefined;
     const path = `/api/water-measurements/${recordId}`;
-    if (action === "correct") return write(path + "/corrections", c.correctWaterSchema, c.waterSchema, "Edit");
     if (action === "void") return write(path + "/void", c.voidWaterSchema, c.waterSchema, "Edit");
   }
   return undefined;

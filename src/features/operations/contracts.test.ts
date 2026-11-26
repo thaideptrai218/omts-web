@@ -10,12 +10,10 @@ describe("purchasing and water contracts", () => {
     const water = c.waterSchema.parse({ ...waterFixture(), accessToken: "must-not-leave", measuredBy: { id: ids.supplier, name: "QA", phoneNumber: "must-not-leave" } });
     expect(JSON.stringify({ receipt, water })).not.toContain("must-not-leave");
   });
-  it("requires a reason for a correction (no row version in the v2 model); rejects extra mutation fields", () => {
-    const values = { raftId: ids.raft, measuredAt: "2026-10-01T08:00:00+07:00", ph: 7.5, salinity: 25, temperature: 26 };
-    expect(c.correctWaterSchema.safeParse(values).success).toBe(false);
-    expect(c.correctWaterSchema.safeParse({ ...values, reason: "Đối chiếu ảnh" }).success).toBe(true);
-    expect(c.correctWaterSchema.safeParse({ ...values, reason: "Đối chiếu ảnh", recordVersion: 1 }).success).toBe(false);
-    expect(c.correctWaterSchema.safeParse({ ...values, reason: "Đối chiếu ảnh", zoneId: ids.zone }).success).toBe(false);
+  it("has no correction contract: a recorded measurement is only voided, with a reason", () => {
+    expect("correctWaterSchema" in c).toBe(false);
+    expect(c.voidWaterSchema.safeParse({}).success).toBe(false);
+    expect(c.voidWaterSchema.safeParse({ reason: "Đo nhầm bè" }).success).toBe(true);
   });
   it("accepts the v2 history row and raw chart points the backend returns", () => {
     const thresholdsUsed = { phMin: 7.5, phMax: 8.5, salinityMin: 18, salinityMax: 32, temperatureMin: 15, temperatureMax: 32 };

@@ -78,7 +78,6 @@ export const recordPaymentSchema = z.strictObject({ supplierId: id, receiptId: i
 export const allocatePaymentSchema = z.strictObject({ receiptId: id });
 const waterValues = { raftId: id, measuredAt: time, ph: number.min(0).max(14), salinity: number.min(0).max(50), temperature: number.min(0).max(45) };
 export const recordWaterSchema = z.strictObject({ ...waterValues, photoKey: text.min(1), clientOperationId: z.uuid() });
-export const correctWaterSchema = z.strictObject({ ...waterValues, reason });
 export const voidWaterSchema = z.strictObject({ reason });
 export const setThresholdsSchema = z.strictObject({ phMin: number.min(0).max(14).nullable(), phMax: number.min(0).max(14).nullable(),
   salinityMin: number.min(0).max(50).nullable(), salinityMax: number.min(0).max(50).nullable(),
