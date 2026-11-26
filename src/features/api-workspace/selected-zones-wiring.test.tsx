@@ -18,18 +18,25 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-it("restricts the raft screen's zone select to the header selection and starts on the first selected zone", async () => {
+it("restricts the raft screen's zone select to the header selection and starts on all selected zones", async () => {
   localStorage.setItem("omts.selected-zones.v1.acc-1", JSON.stringify({ kind: "ids", ids: [zoneId(2), zoneId(3)] }));
   render(<SelectedZonesProvider accountId="acc-1" enabled><ApiResourceScreen resource="rafts" /></SelectedZonesProvider>);
   await screen.findByRole("option", { name: "Z2 · Minh Châu" });
   expect(screen.queryByRole("option", { name: "Z1 · Ngọc Vừng" })).toBeNull();
   expect(screen.getByRole("option", { name: "Z3 · Quan Lạn" })).toBeTruthy();
-  expect((screen.getByRole("combobox", { name: "Vùng nuôi" }) as HTMLSelectElement).value).toBe(zoneId(2));
-  await vi.waitFor(() => expect(state.list).toHaveBeenCalledWith("rafts", expect.objectContaining({ zoneId: zoneId(2) })));
+  const select = screen.getByRole("combobox", { name: "Vùng nuôi" }) as HTMLSelectElement;
+  expect(select.selectedOptions[0]?.textContent).toBe("Tất cả vùng đã chọn");
+  await vi.waitFor(() => {
+    expect(state.list).toHaveBeenCalledWith("rafts", expect.objectContaining({ zoneId: zoneId(2) }));
+    expect(state.list).toHaveBeenCalledWith("rafts", expect.objectContaining({ zoneId: zoneId(3) }));
+  });
+  expect(state.list).not.toHaveBeenCalledWith("rafts", expect.objectContaining({ zoneId: zoneId(1) }));
 });
 
 it("keeps every zone when no narrowing selection exists", async () => {
   render(<SelectedZonesProvider accountId="acc-1" enabled><ApiResourceScreen resource="rafts" /></SelectedZonesProvider>);
   await screen.findByRole("option", { name: "Z1 · Ngọc Vừng" });
-  expect(within(screen.getByRole("combobox", { name: "Vùng nuôi" })).getAllByRole("option")).toHaveLength(3);
+  // Every zone plus "Tất cả vùng đã chọn".
+  expect(within(screen.getByRole("combobox", { name: "Vùng nuôi" })).getAllByRole("option").map(option => option.textContent))
+    .toEqual(["Tất cả vùng đã chọn", "Z1 · Ngọc Vừng", "Z2 · Minh Châu", "Z3 · Quan Lạn"]);
 });
