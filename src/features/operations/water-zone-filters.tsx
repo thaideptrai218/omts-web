@@ -20,7 +20,7 @@ export function WaterZoneFilters({ zones, zoneId, merged = false, time, filters,
     <RailHead canReset={canReset} onReset={onReset} />
     <FilterGroup legend="Vùng nuôi"><SelectBox aria-label="Vùng nuôi" className={styles.railSelect} value={zoneId} onChange={event => onZone(event.target.value)}>
       <option value="">{merged ? "Tất cả vùng đã chọn" : "Tất cả vùng (tổng quan)"}</option>
-      {zones.map(zone => <option key={zone.id} value={zone.id}>{String(zone.name)}</option>)}
+      {zones.map(zone => <option key={zone.id} value={zone.id}>{String(zone.name)}{zone.statusId === 102 ? " (ngừng sử dụng)" : ""}</option>)}
     </SelectBox></FilterGroup>
     {(zoneId || merged) && <>
       <TimeRangeFilter legend="Thời gian đo" value={time} onChange={onTime} />

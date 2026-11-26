@@ -13,9 +13,10 @@ import type { WorkspaceResult } from "@/features/api-workspace/workspace-reposit
 import { ListSkeleton, RailHead } from "@/features/farming-management/detail-parts";
 import { useStickyRemote } from "@/features/farming-management/use-sticky-remote";
 import { useUnsavedGuard, type UnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
-import { useZoneChoice } from "@/features/farming-management/use-zone-choice";
+import { ReadOnlyZonesProvider, useZoneReadOnly } from "@/features/farming-management/read-only-zones";
+import { useZoneChoice, zoneOptionLabel } from "@/features/farming-management/use-zone-choice";
 import { operationAllowed, type OperationArea } from "@/features/operations/permissions";
-import type { ZoneRow } from "@/features/zones-api/zone-model";
+import { DISCONTINUED, type ZoneRow } from "@/features/zones-api/zone-model";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { emptyCycleFilters, filterCycleRows, sortCycleRows, type CycleFilters, type CycleRow, type CycleSortKey } from "./cycle-model";
 import { CycleTable, cycleColumns } from "./cycle-table";
@@ -23,7 +24,8 @@ import { zoneCycles } from "./contracts";
 import { readCycles } from "./repository";
 import { useRaftUrlSelection } from "./use-raft-url-selection";
 
-export type RaftRowContext = { row: CycleRow; zoneId: string; zoneLabel: string; guard: UnsavedGuard; refresh(notice: string): void };
+/** `readOnly`: the zone is discontinued and open only through a link, so its records cannot be changed. */
+export type RaftRowContext = { row: CycleRow; zoneId: string; zoneLabel: string; readOnly: boolean; guard: UnsavedGuard; refresh(notice: string): void };
 type Props = { storageKey: string; icon: InterfaceIconName; title: string; area: OperationArea; helpHref?: string; actions?: ReactNode; renderDetail(context: RaftRowContext): ReactNode;
   /** Reads the rafts of a zone with their latest cycle; must be a stable function. Defaults to the cycle API read. */
   loadRows?(zoneId: string, signal: AbortSignal): Promise<WorkspaceResult<CycleRow[]>>;
@@ -40,10 +42,11 @@ export function RaftCycleWorkspace(props: Props) {
   const params = useSearchParams(), { epoch, select } = useRaftUrlSelection(props.openTab);
   const { identity, permissions } = useApiWorkspace();
   const { remote: zones, zones: offered, zoneId, setChoice } = useZoneChoice(zone => operationAllowed(props.area, identity, permissions.functionPermissions, "View", zone.id));
+  const readOnlyZones = useMemo(() => new Set(offered.filter(zone => zone.statusId === DISCONTINUED).map(zone => zone.id)), [offered]);
   if (zones.error && !zones.data) return <ListStateMessage error={zones.error} onRetry={zones.reload} retryLabel="Tải lại danh mục vùng" />;
   if (!zones.data) return <ListSkeleton />;
-  return <ZoneRaftList key={`${props.storageKey}:${zoneId}:${params?.get("recordId") ?? ""}:${params?.get("search") ?? ""}:${epoch}`} {...props} zones={offered} zoneId={zoneId}
-    onZone={id => { setChoice(id); select(id); }} onSelect={row => select(zoneId, row)} />;
+  return <ReadOnlyZonesProvider value={readOnlyZones}><ZoneRaftList key={`${props.storageKey}:${zoneId}:${params?.get("recordId") ?? ""}:${params?.get("search") ?? ""}:${epoch}`} {...props} zones={offered} zoneId={zoneId}
+    onZone={id => { setChoice(id); select(id); }} onSelect={row => select(zoneId, row)} /></ReadOnlyZonesProvider>;
 }
 
 function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail, loadRows = readZoneRows, zones, zoneId, onZone, onSelect }: Props & { zones: readonly ZoneRow[]; zoneId: string; onZone(id: string): void; onSelect(row?: CycleRow): void }) {
@@ -76,7 +79,7 @@ function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail
   const rail = <>
     <RailHead canReset={hasFilter} onReset={() => change(() => setFilters(emptyCycleFilters))} />
     <FilterGroup legend="Vùng nuôi"><SelectBox aria-label="Vùng nuôi" className={styles.railSelect} value={zoneId} onChange={event => void guard.leave(() => onZone(event.target.value))}>
-      {zones.map(zone => <option key={zone.id} value={zone.id}>{zoneLabelOf(zone)}</option>)}</SelectBox></FilterGroup>
+      {zones.map(zone => <option key={zone.id} value={zone.id}>{zoneOptionLabel(zone)}</option>)}</SelectBox></FilterGroup>
     <FilterPills legend="Chu kỳ gần nhất" name={`${storageKey}-cycle-state`} value={filters.state} options={[["open", "Đang mở"], ["closed", "Đã đóng"], ["none", "Chưa có chu kỳ"]]} onChange={value => setFilter("state", value)} />
     <FilterPills legend="Trạng thái bè" name={`${storageKey}-raft-status`} value={filters.raftStatus} options={[["101", "Đang sử dụng"], ["102", "Ngừng sử dụng"]]} onChange={value => setFilter("raftStatus", value)} />
   </>;
@@ -91,7 +94,7 @@ function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail
         : !list.data ? <ListSkeleton />
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có bè phù hợp bộ lọc." : <div className="space-y-3"><p>Vùng này chưa có bè nuôi.</p><RaftSetupLinks zoneId={zoneId} /></div>}</ListStateMessage>
         : <CycleTable zoneId={zoneId} rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} onToggle={toggle}
-          renderDetail={row => renderDetail({ row, zoneId, zoneLabel, guard, refresh })} />}
+          renderDetail={row => renderDetail({ row, zoneId, zoneLabel, readOnly: zones.find(zone => zone.id === zoneId)?.statusId === DISCONTINUED, guard, refresh })} />}
       {storageKey === "cycles" && !!list.data?.length && !list.data.some(row => row.canStart || row.cycle && !row.cycle.closeDate) && !hasFilter && <div className="space-y-3 border-t border-border p-4 text-sm"><p>Chưa có bè sẵn sàng bắt đầu chu kỳ mới trong vùng này. Bè cần đang sử dụng và chưa có chu kỳ đang mở.</p><RaftSetupLinks zoneId={zoneId} /></div>}
     </ManagementScroller>
   </ManagementLayout>;
@@ -99,6 +102,6 @@ function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail
 
 function RaftSetupLinks({ zoneId }: { zoneId: string }) {
   const { identity } = useApiWorkspace();
-  const canCreate = identity.subjectType === "CooperativeOwner";
+  const readOnly = useZoneReadOnly(zoneId), canCreate = identity.subjectType === "CooperativeOwner" && !readOnly;
   return <div className="flex flex-wrap items-center justify-center gap-3">{canCreate && <Link className="rounded-control bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover" href={`/workspace/rafts?zoneId=${encodeURIComponent(zoneId)}`}>Tạo bè nuôi cho vùng này</Link>}<Link className="text-sm font-medium text-primary underline underline-offset-4" href={`/workspace/zones?recordId=${encodeURIComponent(zoneId)}`}>Xem và chỉnh sửa vùng nuôi</Link></div>;
 }

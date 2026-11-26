@@ -1,4 +1,5 @@
 "use client";
+import { useZoneActionBlocked } from "@/features/farming-management/read-only-zones";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
   const [tab, setTab] = useState<Tab>("info"), [editing, setEditing] = useState(false), [reviewRequested, setReviewRequested] = useState(false);
   const [closing, setClosing] = useState(false);
   const editGuard = useRef<NurseryEditGuard>(null);
-  const mutation = useNurseryMutation(), confirmation = useActionDialog(), { identity, permissions } = useApiWorkspace();
+  const mutation = useNurseryMutation(), confirmation = useActionDialog(), { identity, permissions } = useApiWorkspace(), blocked = useZoneActionBlocked(zoneId);
   const { pending: pendingRef } = guard;
   useEffect(() => {
     if (!mutation.pending) return;
@@ -47,7 +48,7 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
     return () => { pendingRef.current = false; };
   }, [mutation.pending, pendingRef]);
   const batch = detail.data, prefix = `nursery-${id}`;
-  const can = (action: string) => !!batch && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, action, batch.zoneId);
+  const can = (action: string) => !!batch && !blocked(action) && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, action, batch.zoneId);
   const edit = batch?.statusId === 4001 && batch.canEdit && can("Edit"), complete = batch?.statusId === 4001 && batch.canComplete && can("Create");
   const correct = batch?.statusId === 4002 && can("Edit");
   const close = batch?.statusId === 4002 && batch.remaining > 0 && can("Edit");

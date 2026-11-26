@@ -3,7 +3,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { ids, waterFixture } from "./__tests__/fixtures";
-const state = vi.hoisted(() => ({ query: "", read: vi.fn() }));
+const state = vi.hoisted(() => ({ query: "", read: vi.fn(), readZoneDetail: vi.fn() }));
+vi.mock("@/features/zones-api/zone-model", async original => ({ ...(await original<typeof import("@/features/zones-api/zone-model")>()), readZoneDetail: state.readZoneDetail }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.query) }));
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: state.read }) }));
 vi.mock("./lookups", () => ({ loadOptions: vi.fn(async () => ({ status: "success", data: [{ id: "529ec3ce-af8f-42f7-a08f-4bab36ba7e63", code: "QA01", name: "Vùng QA" }] })) }));
@@ -29,4 +30,24 @@ it("opens an older linked measurement and replaces it on navigation within the w
   await screen.findByText(`Đang mở ${second.id}`);
   expect(screen.queryByText(`Đang mở ${first.id}`)).toBeNull();
   await waitFor(() => expect(state.read).toHaveBeenCalledWith("list", expect.objectContaining({ from: "2021-02-06", to: "2021-02-06" }), expect.anything(), expect.any(AbortSignal)));
+});
+
+it("opens a discontinued zone named by a link as the selected read-only zone, with no way to add a measurement", async () => {
+  state.readZoneDetail.mockResolvedValue({ status: "success", data: { id: ids.otherZone, code: "Z9", name: "Vùng cũ", location: null, area: null, statusId: 102, status: "Discontinued", inUseRaftCount: 0, licenseState: null, latitude: null, longitude: null, rowVersion: "AQ==" } });
+  state.read.mockResolvedValue({ status: "success", data: { items: [], total: 0, page: 1, pageSize: 100 } });
+  state.query = `zoneId=${ids.otherZone}`;
+  render(<ToastProvider><WaterScreen /></ToastProvider>);
+  const select = await screen.findByRole("combobox", { name: "Vùng nuôi" }) as HTMLSelectElement;
+  await waitFor(() => expect(select.value).toBe(ids.otherZone));
+  expect(screen.getByRole("option", { name: "Vùng cũ (ngừng sử dụng)" })).toBeTruthy();
+  expect(state.read).toHaveBeenCalledWith("list", expect.objectContaining({ zoneId: ids.otherZone }), expect.anything(), expect.anything());
+  expect(screen.queryByRole("button", { name: /Thêm phép đo/ })).toBeNull();
+});
+
+it("still offers Thêm phép đo for an In Use zone named by a link", async () => {
+  state.read.mockResolvedValue({ status: "success", data: { items: [], total: 0, page: 1, pageSize: 100 } });
+  state.query = `zoneId=${ids.zone}`;
+  render(<ToastProvider><WaterScreen /></ToastProvider>);
+  expect(await screen.findByRole("button", { name: /Thêm phép đo/ })).toBeTruthy();
+  expect(state.readZoneDetail).not.toHaveBeenCalled();
 });

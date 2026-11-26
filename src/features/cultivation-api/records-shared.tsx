@@ -1,4 +1,5 @@
 "use client";
+import { useZoneActionBlocked } from "@/features/farming-management/read-only-zones";
 import type { ReactNode } from "react";
 
 import { Dialog } from "@/components/ui/dialog";
@@ -19,9 +20,9 @@ export const harvestRepo = createOperationsRepository("harvest");
 
 /** Permission check for one area, scoped to the selected zone. */
 export function useAllowed(area: OperationArea, zoneId: string) {
-  const context = useApiWorkspace();
+  const context = useApiWorkspace(), blocked = useZoneActionBlocked(zoneId);
   return (action: string) =>
-    operationAllowed(area, context.identity, context.permissions.functionPermissions, action, zoneId);
+    !blocked(action) && operationAllowed(area, context.identity, context.permissions.functionPermissions, action, zoneId);
 }
 
 /** Non-dismissible dialog wrapper for record editors, with the blocked-write notice and a close button. */

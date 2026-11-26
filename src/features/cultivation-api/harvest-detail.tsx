@@ -1,4 +1,5 @@
 "use client";
+import { useZoneActionBlocked } from "@/features/farming-management/read-only-zones";
 import Link from "next/link";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import styles from "./cultivation-flow.module.css";
@@ -32,9 +33,9 @@ export function HarvestLotDetail({ id, zoneId, onClose, onSaved }: { id: string;
   return <section aria-label={remote.data ? `Lô thu hoạch ${remote.data.lotCode}` : "Hồ sơ lô thu hoạch"}><ErrorNotice error={remote.error} />{remote.loading ? <Skeleton /> : remote.data ? <div className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"><div className="min-w-0"><RecordCrewDetail label="Nhân viên cùng thu" crew={remote.data.crew} /><LotForm key={remote.data.rowVersion} record={remote.data} zoneId={zoneId} onClose={onClose} onSaved={onSaved} /></div><aside className="min-w-0 self-start lg:sticky lg:top-16"><EvidenceGallery title="Ảnh chuyến thu hoạch" images={remote.data.photos.map((photo,index) => ({ id: photo.key, url: photo.url, label: `Ảnh thu hoạch ${index+1} · ${remote.data!.lotCode}` }))} /></aside></div> : <Button type="button" variant="secondary" onClick={remote.reload}>Tải lại hồ sơ</Button>}{!remote.data && <Button type="button" className="mt-3" variant="secondary" onClick={onClose}>Đóng</Button>}</section>;
 }
 function LotForm({ record, zoneId, onClose, onSaved }: { record: Lot; zoneId: string; onClose(): void; onSaved(): void }) {
-  const context = useApiWorkspace();
+  const context = useApiWorkspace(), blocked = useZoneActionBlocked(zoneId);
   const { notify } = useToast();
-  const allowed = (action: string) => operationAllowed("harvest", context.identity, context.permissions.functionPermissions, action, zoneId);
+  const allowed = (action: string) => !blocked(action) && operationAllowed("harvest", context.identity, context.permissions.functionPermissions, action, zoneId);
   const editable = record.canCorrect && allowed("Edit"), weighed = record.weighedKg != null;
   // A lot recorded from a plan harvested the whole raft: no lane to pick and no kg to type (the kg come from the port weighing).
   const planned = !!record.harvestPlan;
