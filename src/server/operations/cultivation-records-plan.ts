@@ -93,7 +93,7 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     return { area, action, zoneId, permission: action === "preview" ? "Create" : "View", method: "GET", path: seeding ? action === "seed-lots" ? `/api/rafts/${id}/seed-lots` : `/api/cultivation-cycles/${id}/${action === "preview" ? "seeding-complete/preview" : "seeding-records"}` : `/api/rafts/${id}/${material ? "material-usages" : "harvest-lots"}`, schema: seeding ? action === "seed-lots" ? c.seedLots : action === "preview" ? c.seedingPreview : c.seedingList : material ? c.materialList : c.harvestList };
   }
   if (method !== "POST" || query.size) return;
-  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-lane", "finish-harvest", "weigh", "reopen", "close", "cage-add", "cage-update", "cage-remove"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
+  const m = z.strictObject({ action: z.enum(["record", "correct", "remove", "complete", "finish-harvest", "weigh", "reopen", "close", "cage-add", "cage-update", "cage-remove"]), id: z.guid(), zoneId: z.guid(), body: z.unknown() }).safeParse(input);
   if (!m.success) return;
   const { action, id, zoneId, body } = m.data;
   if ((lotActions.has(action) || cageActions.has(action)) && area !== "harvest") return;
@@ -107,12 +107,6 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
     return { ...base, permission: "Create", path: `/api/rafts/${id}/finish-harvest`, body: values.data, schema: finishHarvestResult.refine(result => matchesFinishedSelection(values.data.laneNumbers, result)) };
   }
   if (action === "finish-harvest") return;
-  if (area === "harvest" && action === "finish-lane") {
-    // One decisive per-lane action (no body): the lane number is validated here and only ever enters the path as digits.
-    const lane = z.strictObject({ laneNumber: z.number().int().min(1).max(999_999), ...ownerApproval }).safeParse(body);
-    if (!lane.success) return;
-    return { ...base, permission: "Create", path: `/api/rafts/${id}/lanes/${lane.data.laneNumber}/finish-harvest`, ...(lane.data.ownerApproved ? { body: { ownerApproved: true, approvalReason: lane.data.approvalReason } } : {}), schema: c.finishLaneResult };
-  }
   if (area === "harvest" && cageActions.has(action)) {
     const root = `/api/harvest-lots/${id}/cages`;
     if (action === "cage-add") { const values = lots.cageValues.safeParse(body); return values.success ? { ...base, path: root, body: values.data, schema: cageSheet } : undefined; }

@@ -8,17 +8,20 @@ const post = (area: "harvest" | "seeding", body: unknown) => cultivationRecordsP
 const order = "529ec3ce-af8f-42f7-a08f-4bab36ba7e65";
 const trip = { laneNumbers: [1, 2], finishedLaneNumbers: [1], cageCount: 0.5, estimatedKg: null };
 
-describe("finish a lane (one decisive per-lane action)", () => {
-  it("posts without a body to the finish-harvest route of the raft and lane", () => {
-    const plan = post("harvest", { action: "finish-lane", id: raft, zoneId: zone, body: { laneNumber: 3 } });
-    expect(plan).toMatchObject({ method: "POST", path: `/api/rafts/${raft}/lanes/3/finish-harvest`, permission: "Create", zoneId: zone });
-    expect(plan?.body).toBeUndefined();
-    expect(plan?.schema.safeParse({ laneNumber: 3, state: "Harvested", changed: false }).success).toBe(true);
+describe("finish the harvest of a raft (one call for all lanes)", () => {
+  it("posts the lane numbers to the finish-harvest route of the raft and checks the answer covers them", () => {
+    const plan = post("harvest", { action: "finish-harvest", id: raft, zoneId: zone, body: { laneNumbers: [1, 3] } });
+    expect(plan).toMatchObject({ method: "POST", path: `/api/rafts/${raft}/finish-harvest`, permission: "Create", zoneId: zone, body: { laneNumbers: [1, 3] } });
+    expect(plan?.schema.safeParse({ finished: [1], alreadyFinished: [3] }).success).toBe(true);
+    expect(plan?.schema.safeParse({ finished: [1], alreadyFinished: [] }).success).toBe(false);
   });
-  it.each([{ laneNumber: 0 }, { laneNumber: 1.5 }, { laneNumber: "1/../2" }, { laneNumber: 1, extra: true }, {}])("rejects the lane %j", body => {
-    expect(post("harvest", { action: "finish-lane", id: raft, zoneId: zone, body })).toBeUndefined();
+  it.each([{ laneNumbers: [] }, { laneNumbers: [0] }, { laneNumbers: [1, 1] }, { laneNumbers: [1], extra: true }, {}])("rejects the body %j", body => {
+    expect(post("harvest", { action: "finish-harvest", id: raft, zoneId: zone, body })).toBeUndefined();
   });
-  it("is not offered for seeding", () => expect(post("seeding", { action: "finish-lane", id: raft, zoneId: zone, body: { laneNumber: 1 } })).toBeUndefined());
+  it("is not offered for seeding and the per-lane route no longer exists", () => {
+    expect(post("seeding", { action: "finish-harvest", id: raft, zoneId: zone, body: { laneNumbers: [1] } })).toBeUndefined();
+    expect(post("harvest", { action: "finish-lane", id: raft, zoneId: zone, body: { laneNumber: 3 } })).toBeUndefined();
+  });
 });
 
 describe("harvest values: purchase request, decimal cages, and no plan cap", () => {

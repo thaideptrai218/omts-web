@@ -19,6 +19,7 @@ import { HarvestRecordsTable } from "./harvest-records-table";
 import Link from "next/link";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import { HarvestLanesBoard } from "./harvest-lanes-board";
+import { FinishRaftHarvestButton } from "./finish-raft-harvest-button";
 import { HarvestCycleProductBanner } from "./harvest-cycle-product-banner";
 import { lotStatusText } from "@/features/harvest-lots/lot-labels";
 import { HarvestPlanSummary } from "./harvest-plan-summary";
@@ -99,7 +100,8 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
             </p>
             {remote.data.cycle && <HarvestCycleProductBanner cycle={remote.data.cycle} />}
             <HarvestPlanSummary data={remote.data} />
-            <HarvestLanesBoard data={remote.data} zoneId={zoneId} raftId={raftId} canFinish={remote.data.canRecordHarvest && allowed("Create")} onChanged={remote.reload} />
+            <FinishRaftHarvestButton data={remote.data} zoneId={zoneId} raftId={raftId} canFinish={remote.data.canRecordHarvest && allowed("Create")} onChanged={remote.reload} />
+            <HarvestLanesBoard data={remote.data} zoneId={zoneId} raftId={raftId} />
             {remote.data.cycle && everySeededLaneHarvested(remote.data.lanes) && <p role="status" className="mb-3 rounded-control border border-success/30 bg-success/5 p-3 text-sm">Tất cả làn đã thu xong. <Link href={farmingReferenceHref("cycle", { zoneId, raftId, cycleId: remote.data.cycle.id, tab: "journey" })}>Kết thúc chu kỳ</Link></p>}
             <div className={flowStyles.harvestFilters}>
               <Field
