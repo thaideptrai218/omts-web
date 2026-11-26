@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { licenseFlagOf } from "./zone-license-flags";
-import { licenseReminders, newestLicensePerType } from "./zone-license-display";
+import { licenseReminders, newestLicensePerType, orderLicenses } from "./zone-license-display";
 
 const row = (documentType: string, patch: object = {}) => ({ documentType, documentTypeName: documentType, state: "Valid", documentId: `${documentType}-${Math.random()}`, documentNumber: "GP-1", effectiveDate: "2026-01-01", expiryDate: "2027-01-01", isReplaced: false, ...patch });
 
@@ -40,5 +40,23 @@ describe("zone licence flag computed from the overview", () => {
     expect(licenseFlagOf([{ state: "Valid" }, { state: "Expired" }, { state: "ExpiringSoon" }])).toBe("Expired");
     expect(licenseFlagOf([{ state: "Valid" }, { state: "ExpiringSoon" }])).toBe("ExpiringSoon");
     expect(licenseFlagOf([{ state: "Valid" }, { state: "Valid" }])).toBe("Valid");
+  });
+});
+
+describe("licence display: every document, in force first", () => {
+  it("lists in-force documents, then missing types, then replaced ones, newest first in each group", () => {
+    const rows = [
+      row("OTHER", { documentId: "old-replaced", isReplaced: true, state: "Replaced", effectiveDate: "2024-01-01" }),
+      row("AQUACULTURE_LICENSE", { documentId: "in-force-old", effectiveDate: "2025-03-01" }),
+      row("FOOD_SAFETY_COMMITMENT", { documentId: null, state: "Missing", effectiveDate: null }),
+      row("OTHER", { documentId: "in-force-new", effectiveDate: "2026-06-01" }),
+      row("AQUACULTURE_LICENSE", { documentId: "newer-replaced", isReplaced: true, state: "Replaced", effectiveDate: "2025-01-01" }),
+    ];
+    expect(orderLicenses(rows).map(entry => entry.documentId)).toEqual(["in-force-new", "in-force-old", null, "newer-replaced", "old-replaced"]);
+  });
+  it("does not drop or change the input", () => {
+    const rows = [row("OTHER", { documentId: "b", isReplaced: true }), row("OTHER", { documentId: "a" })];
+    expect(orderLicenses(rows)).toHaveLength(2);
+    expect(rows.map(entry => entry.documentId)).toEqual(["b", "a"]);
   });
 });
