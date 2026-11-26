@@ -134,7 +134,9 @@ export async function handleOperationRequest(request: Request, areaName: string)
     const controller = new AbortController();
     const abort = () => controller.abort();
     request.signal.addEventListener("abort", abort, { once: true });
-    const budget = upload || plan.action === "recognize-again" ? Math.max(20_000, backend.config.timeoutMs)
+    // The meter photo is read by Gemini on the server (reader timeout 25 s plus storing the photo), so it gets 40 s.
+    const budget = upload && plan.action === "recognize" ? Math.max(40_000, backend.config.timeoutMs)
+      : upload || plan.action === "recognize-again" ? Math.max(20_000, backend.config.timeoutMs)
       : plan.file ? Math.max(15_000, backend.config.timeoutMs) : backend.config.timeoutMs;
     const timeout = setTimeout(abort, budget);
     try {
