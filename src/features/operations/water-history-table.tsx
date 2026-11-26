@@ -9,7 +9,7 @@ import type { UnsavedGuard } from "@/features/farming-management/use-unsaved-gua
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { displayTime, statusLabel } from "./ui";
-import { hasNoThresholds, isOutside, type WaterRow, type WaterSortKey, type WaterZoneRef } from "./water-history-model";
+import { hasNoThresholds, isOutside, type WaterRow, type WaterSortKey, type WaterZoneRef, type ZonedWaterRow } from "./water-history-model";
 import { WaterMeasurementPanel } from "./water-measurement-panel";
 import { formatMeasuredValue } from "./water-measurement-shared";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
@@ -29,9 +29,10 @@ export const waterColumns: readonly Column[] = [
 ];
 
 /** Sortable measurement list of the chosen zone; a row opens its record in place, one at a time, through the unsaved-changes guard. */
-export function WaterHistoryTable({ rows, visible, sort, onSort, expandedId, onToggle, zone, canEdit, guard, onChanged }: {
-  rows: readonly WaterRow[]; visible: readonly string[]; sort: SortState; onSort(next: SortState): void; expandedId?: string; onToggle(id: string): void;
-  zone: WaterZoneRef; canEdit: boolean; guard: UnsavedGuard; onChanged(notice: string): void;
+export function WaterHistoryTable({ rows, visible, sort, onSort, expandedId, onToggle, canEditIn, guard, onChanged }: {
+  rows: readonly ZonedWaterRow[]; visible: readonly string[]; sort: SortState; onSort(next: SortState): void; expandedId?: string; onToggle(id: string): void;
+  /** Whether the account may correct measurements of that zone (a list may hold several zones). */
+  canEditIn(zoneId: string): boolean; guard: UnsavedGuard; onChanged(notice: string): void;
 }) {
   const columns = waterColumns.filter(column => visible.includes(column.key));
   const weight = columns.reduce((total, column) => total + column.weight, 0);
@@ -42,10 +43,10 @@ export function WaterHistoryTable({ rows, visible, sort, onSort, expandedId, onT
     <tbody>{rows.map(row => <Fragment key={row.id}>
       <OpenableTableRow id={`water-row-${row.id}`} data-selected={expandedId === row.id || undefined} onOpen={() => onToggle(row.id)}>
         <td className={styles.expandCell}><button type="button" aria-expanded={expandedId === row.id} aria-controls={`water-preview-${row.id}`} aria-label={`${expandedId === row.id ? "Thu gọn" : "Mở"} phép đo ${displayTime(row.measuredAt)}`} onClick={() => onToggle(row.id)}><InterfaceIcon name={expandedId === row.id ? "chevron-down" : "chevron-right"} /></button></td>
-        {columns.map(column => <td key={column.key} data-label={column.label} className={column.numeric ? styles.number : undefined}>{column.render(row, zone)}</td>)}
+        {columns.map(column => <td key={column.key} data-label={column.label} className={column.numeric ? styles.number : undefined}>{column.render(row, row.zone)}</td>)}
       </OpenableTableRow>
       {expandedId === row.id && <DetailRow colSpan={columns.length + 1} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
-        <WaterMeasurementPanel id={row.id} zone={zone} canEdit={canEdit} guard={guard} onChanged={onChanged} />
+        <WaterMeasurementPanel id={row.id} zone={row.zone} canEdit={canEditIn(row.zone.id)} guard={guard} onChanged={onChanged} />
       </div></DetailRow>}
     </Fragment>)}</tbody>
   </table>;

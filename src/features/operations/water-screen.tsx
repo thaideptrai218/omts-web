@@ -20,7 +20,7 @@ import { loadOptions } from "./lookups";
 import { operationAllowed } from "./permissions";
 import { businessTime, useMutation, useRemote } from "./ui";
 import { WaterChartSection } from "./water-chart-section";
-import { emptyWaterFilters, filterWater, noWaterHistory, raftsOf, readAllWaterHistory, sortWater, type WaterFilters, type WaterSortKey, type WaterZoneRef } from "./water-history-model";
+import { ALL_WATER_ZONES, emptyWaterFilters, filterWater, noWaterHistory, raftsOf, readAllWaterHistory, readWaterOfZones, sortWater, type WaterFilters, type WaterSortKey, type WaterZoneRef } from "./water-history-model";
 import { WaterHistoryTable, waterColumns } from "./water-history-table";
 import { NewMeasurement as NewMeasurementDialog } from "./water-new-measurement-dialog";
 import { waterRepository as repository } from "./water-measurement-shared";
@@ -56,7 +56,10 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   // undefined = no explicit choice yet: a linked measurement then decides the zone, otherwise the overview shows.
   const [choice, setChoice] = useState<string | undefined>(initialZoneId || (UUID.test(linkedZone) ? linkedZone : undefined));
   const linked = useRemote<c.WaterMeasurement | undefined>(useCallback((signal: AbortSignal) => linkedId ? repository.read("detail", { id: linkedId }, c.waterSchema, signal) : Promise.resolve(noLinkedRecord), [linkedId]));
-  const { zones: offered, zoneId } = useScopedZones(zones.data?.filter(row => operationAllowed("water", identity, functions, "View", row.id)) ?? [], choice ?? linked.data?.zoneId ?? "", initialZoneId || undefined);
+  const { zones: offered, zoneId: scopedZone, narrowed } = useScopedZones(zones.data?.filter(row => operationAllowed("water", identity, functions, "View", row.id)) ?? [], choice ?? linked.data?.zoneId ?? "", initialZoneId || undefined);
+  // Several zones chosen in the header and none picked here: the overview of those zones shows, instead of silently opening the first one (BUG-70).
+  const explicitZone = choice ?? linked.data?.zoneId ?? "";
+  const zoneId = narrowed && offered.length > 1 && !offered.some(row => row.id === explicitZone) ? "" : scopedZone;
 
   const [time, setTime] = useState<TimeRangeValue>(allTime), [filters, setFilters] = useState<WaterFilters>(() => ({ ...emptyWaterFilters, status: linkedId ? "" : emptyWaterFilters.status }));
   const [datedLink, setDatedLink] = useState(false);
@@ -73,10 +76,17 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-water", waterColumns.map(column => column.key).join(","));
   const visible = waterColumns.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);
 
-  const history = useStickyRemote(useCallback((signal: AbortSignal) => zoneId
-    ? readAllWaterHistory({ zoneId, from: time.from, to: time.to, status: filters.status }, signal)
-    : Promise.resolve({ status: "success" as const, data: noWaterHistory }), [zoneId, time.from, time.to, filters.status]));
-  const loaded = history.data?.zoneId === zoneId ? history.data : undefined;
+  // Several zones chosen in the header and none picked here: the measurements of all of them are listed together.
+  const merged = !zoneId && narrowed && offered.length > 1, listed = merged ? ALL_WATER_ZONES : zoneId;
+  const zoneRefs = offered.map(row => ({ id: row.id, code: String(row.code ?? ""), name: String(row.name ?? "") })), zonesKey = zoneRefs.map(row => row.id).join(",");
+  const history = useStickyRemote(useCallback((signal: AbortSignal) => merged
+    ? readWaterOfZones(zoneRefs, { from: time.from, to: time.to, status: filters.status }, signal)
+    : zoneId
+      ? readAllWaterHistory({ zoneId, from: time.from, to: time.to, status: filters.status }, signal, { id: zoneId, code: String(offered.find(row => row.id === zoneId)?.code ?? ""), name: String(offered.find(row => row.id === zoneId)?.name ?? "") })
+      : Promise.resolve({ status: "success" as const, data: noWaterHistory }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the zones are keyed by `zonesKey`
+    [merged, zonesKey, zoneId, time.from, time.to, filters.status]));
+  const loaded = history.data?.zoneId === listed ? history.data : undefined;
   const rows = useMemo(() => sortWater(filterWater(loaded?.items ?? [], filters), sort.key as WaterSortKey, sort.direction), [loaded, filters, sort]);
   if (!linkPlaced && loaded) { const index = rows.findIndex(row => row.id === linkedId); if (index >= 0) { setLinkPlaced(true); setPage(Math.floor(index / pageSize) + 1); } }
 
@@ -94,32 +104,35 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   const canReset = hasFilter || filters.status !== emptyWaterFilters.status || time.kind !== "preset" || time.preset !== "all";
   const currentZone = offered.find(row => row.id === zoneId);
   const zone: WaterZoneRef = { id: zoneId, code: String(currentZone?.code ?? ""), name: String(currentZone?.name ?? "") };
-  const canExport = !!zoneId && operationAllowed("water", identity, functions, "Export", zoneId), canEdit = !!zoneId && operationAllowed("water", identity, functions, "Edit", zoneId), canCreate = !!zoneId && operationAllowed("water", identity, functions, "Create", zoneId);
+  const canExport = !!zoneId && operationAllowed("water", identity, functions, "Export", zoneId), canCreate = !!zoneId && operationAllowed("water", identity, functions, "Create", zoneId);
   const changed = (message: string) => { history.reload(); setRevision(value => value + 1); notify({ tone: "success", title: message }); };
 
-  const list = !zoneId ? null : history.error && !loaded ? <ListStateMessage error={history.error} onRetry={history.reload} retryLabel="Tải lại" />
+  const list = !zoneId && !merged ? null : history.error && !loaded ? <ListStateMessage error={history.error} onRetry={history.reload} retryLabel="Tải lại" />
     : !loaded ? <ListSkeleton />
     : !shown.length ? <ListStateMessage>{hasFilter ? "Không có phép đo phù hợp bộ lọc." : "Chưa có phép đo trong khoảng thời gian này."}</ListStateMessage>
-    : <WaterHistoryTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} zone={zone} canEdit={canEdit} guard={guard} onChanged={changed}
+    : <WaterHistoryTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} canEditIn={id => operationAllowed("water", identity, functions, "Edit", id)} guard={guard} onChanged={changed}
       onToggle={id => void guard.leave(() => { setThresholdsOpen(false); setExpanded(open => open === id ? undefined : id); })} />;
   const overview = zones.error && !zones.data ? <ListStateMessage error={zones.error} onRetry={zones.reload} retryLabel="Tải lại danh sách vùng" />
     : !zones.data || linked.loading ? <ListSkeleton /> : <div className={local.overview}><WaterZoneOverview onSelectZone={id => change(() => setChoice(id))} /></div>;
 
   return <ManagementLayout storageKey="water" icon="waves" title="Theo dõi chất lượng nước" filterLabel="Bộ lọc theo dõi chất lượng nước"
-    filters={<WaterZoneFilters zones={offered} zoneId={zoneId} time={time} filters={filters} rafts={raftsOf(loaded?.items ?? [])} canReset={canReset}
+    filters={<WaterZoneFilters zones={offered} zoneId={zoneId} merged={merged} time={time} filters={filters} rafts={raftsOf(loaded?.items ?? [])} canReset={canReset}
       onZone={id => change(() => { setChoice(id); setFilters(previous => ({ ...previous, raftId: "" })); })} onTime={next => change(() => setTime(next))} onFilter={setFilter} onReset={reset} />}
-    search={<input type="search" aria-label="Tìm phép đo" placeholder="Theo bè hoặc người ghi" maxLength={200} value={filters.search} disabled={!zoneId} onChange={event => setFilter("search", event.target.value)} />}
+    search={<input type="search" aria-label="Tìm phép đo" placeholder="Theo bè hoặc người ghi" maxLength={200} value={filters.search} disabled={!zoneId && !merged} onChange={event => setFilter("search", event.target.value)} />}
     actions={<>
       {canCreate && <Button key="add" className="w-auto" onClick={() => setAdding(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm phép đo</Button>}
       {canExport && <Button key="export" className="w-auto" variant="secondary" isPending={exporting.pending} onClick={() => void exporting.run(() => repository.download({ zoneId, from: time.from, to: time.to, status: filters.status || "All" }), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
-      {zoneId && <ColumnPicker columns={waterColumns} visible={visible} onChange={keys => storeColumns(keys.join(","))} />}<HelpLink helpHref={helpHref} />
+      {(zoneId || merged) && <ColumnPicker columns={waterColumns} visible={visible} onChange={keys => storeColumns(keys.join(","))} />}<HelpLink helpHref={helpHref} />
     </>}
-    footer={zoneId ? <ManagementPagination page={current} pageSize={pageSize} total={rows.length} unit="phép đo" disabled={history.loading && !loaded} onPage={next => void guard.leave(() => { setPage(next); setExpanded(undefined); })} onPageSize={size => change(() => setPageSize(size))} /> : undefined}>
+    footer={zoneId || merged ? <ManagementPagination page={current} pageSize={pageSize} total={rows.length} unit="phép đo" disabled={history.loading && !loaded} onPage={next => void guard.leave(() => { setPage(next); setExpanded(undefined); })} onPageSize={size => change(() => setPageSize(size))} /> : undefined}>
     {guard.dialog}
     {adding && zoneId && <NewMeasurementDialog zoneId={zoneId} zoneName={zone.name} onClose={() => setAdding(false)}
       onSaved={() => { setAdding(false); history.reload(); setRevision(value => value + 1); }} />}
     <ManagementScroller busy={history.loading}>
-      {!zoneId ? overview : <>
+      {!zoneId && !merged ? overview : merged ? <>
+        {loaded?.truncated && <p className="px-3 py-2 text-sm text-text-muted">Một vùng có quá nhiều phép đo nên chỉ hiển thị phần mới nhất; hãy thu hẹp khoảng thời gian.</p>}
+        {list}
+      </> : <>
         <WaterPanelStrip chartOpen={chartOpen} thresholdsOpen={thresholdsOpen} note={loaded?.truncated ? `Chỉ hiển thị ${loaded.items.length} phép đo mới nhất; hãy thu hẹp khoảng thời gian.` : undefined}
           onChart={() => setChartOpen(open => !open)} onThresholds={() => void guard.leave(() => { setExpanded(undefined); setThresholdsOpen(open => !open); })} />
         {chartOpen && <WaterChartSection key={`${zoneId}:${revision}`} zoneId={zoneId} from={time.from} to={time.to} />}

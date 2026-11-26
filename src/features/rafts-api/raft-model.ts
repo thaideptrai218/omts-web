@@ -24,6 +24,19 @@ export async function readZoneRafts(zoneId: string, signal: AbortSignal): Promis
   const parsed = z.array(raftRowSchema).safeParse(result.data);
   return parsed.success ? { status: "success", data: parsed.data } : invalid;
 }
+/** A raft row that remembers its zone, so one list can hold the rafts of several zones. */
+export type ZonedRaftRow = RaftRow & { zoneId: string; zoneLabel: string };
+/**
+ * Rafts of several zones in one list: the backend answers per zone, so each zone is read and the rows are joined.
+ * A zone the account may not read is left out; the list fails only when no zone could be read.
+ */
+export async function readRaftsOfZones(zones: readonly { id: string; code: string; name: string }[], signal: AbortSignal): Promise<WorkspaceResult<ZonedRaftRow[]>> {
+  const results = await Promise.all(zones.map(async zone => ({ zone, result: await readZoneRafts(zone.id, signal) })));
+  const rows = results.flatMap(({ zone, result }) => result.status === "success" ? result.data.map(row => ({ ...row, zoneId: zone.id, zoneLabel: `${zone.code} · ${zone.name}` })) : []);
+  const failed = results.find(({ result }) => result.status !== "success");
+  if (failed && failed.result.status !== "success" && results.every(({ result }) => result.status !== "success")) return failed.result;
+  return { status: "success", data: rows };
+}
 export async function readRaftDetail(id: string, signal?: AbortSignal): Promise<WorkspaceResult<RaftDetail>> {
   const result = await createWorkspaceRepository("rafts").detail(id, signal);
   if (result.status !== "success") return result;
@@ -38,11 +51,11 @@ export const parseRaftDetail = (value: unknown): RaftDetail | undefined => {
 export type RaftSortKey = "code" | "lanes" | "status";
 export type RaftFilters = { search: string; statusId: string };
 export const emptyRaftFilters: RaftFilters = { search: "", statusId: "" };
-export function filterRafts(rows: readonly RaftRow[], filters: RaftFilters): RaftRow[] {
+export function filterRafts<T extends RaftRow>(rows: readonly T[], filters: RaftFilters): T[] {
   const term = foldVietnamese(filters.search.trim());
   return rows.filter(row => (!filters.statusId || String(row.statusId) === filters.statusId) && (!term || foldVietnamese(row.code).includes(term)));
 }
-export function sortRafts(rows: readonly RaftRow[], key: RaftSortKey, direction: "asc" | "desc"): RaftRow[] {
+export function sortRafts<T extends RaftRow>(rows: readonly T[], key: RaftSortKey, direction: "asc" | "desc"): T[] {
   const sign = direction === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
     const order = key === "lanes" ? (a.laneCount ?? 0) - (b.laneCount ?? 0) : key === "status" ? a.statusId - b.statusId : 0;

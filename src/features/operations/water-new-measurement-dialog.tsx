@@ -26,18 +26,23 @@ const MAX_AGE_MS = 15 * 24 * 60 * 60 * 1000;
 const VIETNAMESE = /[àáảãạăâđêôơưèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]/i;
 /** The photo reader answers in English when it cannot read a value; the screen always says it in Vietnamese. */
 const ocrWarning = (text: string) => VIETNAMESE.test(text) ? text : "Chưa đọc được đủ chỉ số từ ảnh. Hãy xem máy đo và nhập các giá trị còn thiếu.";
-/** BR-WATER-03: every field present, at most 3 decimals, and a measuring time not older than 15 days. */
+const LABELS = { ph: "pH", salinity: "Độ mặn", temperature: "Nhiệt độ" } as const;
+/** What is missing: the measurement cannot be recorded without these, so the form says which field. */
 function measurementProblem(values: typeof emptyValues) {
   if (!values.raftId) return "Chọn bè đo.";
   if (!values.measuredAt) return "Nhập thời điểm đo.";
-  const labels = { ph: "pH", salinity: "Độ mặn", temperature: "Nhiệt độ" } as const;
+  for (const key of ["ph", "salinity", "temperature"] as const) if (values[key] === "") return `Nhập ${LABELS[key]}.`;
+  return undefined;
+}
+/** BR-WATER-03 deviations are warnings, not blocks: the user reads them and decides to record anyway. */
+function measurementWarnings(values: typeof emptyValues) {
+  const warnings: string[] = [];
   for (const key of ["ph", "salinity", "temperature"] as const) {
-    if (values[key] === "") return `Nhập ${labels[key]}.`;
-    if ((values[key].split(/[.,]/)[1]?.length ?? 0) > 3) return `${labels[key]} chỉ được có tối đa 3 chữ số thập phân.`;
+    if ((values[key].split(/[.,]/)[1]?.length ?? 0) > 3) warnings.push(`${LABELS[key]} có quá 3 chữ số thập phân, hệ thống sẽ làm tròn khi lưu.`);
   }
   const at = Date.parse(toApiTime(values.measuredAt) ?? "");
-  if (!Number.isNaN(at) && Date.now() - at > MAX_AGE_MS) return "Thời điểm đo không được sớm hơn 15 ngày.";
-  return undefined;
+  if (!Number.isNaN(at) && Date.now() - at > MAX_AGE_MS) warnings.push("Thời điểm đo sớm hơn 15 ngày so với hiện tại.");
+  return warnings;
 }
 
 /**
@@ -81,6 +86,8 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
     const problem = measurementProblem(values);
     setFormError(problem);
     if (problem) return;
+    const warnings = measurementWarnings(values);
+    if (warnings.length && !mutation.uncertain && !(await confirmation.confirm(`${warnings.join(" ")} Vẫn ghi phép đo này?`))) return;
     // Reuse the previous payload (same clientOperationId) when the last submit's outcome is unknown.
     if (!mutation.uncertain) {
       attempt.current = {

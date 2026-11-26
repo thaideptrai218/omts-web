@@ -60,8 +60,9 @@ it("opens a row on click with a debt tab only for those who may see debts, and a
   await waitFor(() => expect(screen.getByRole("tablist")).toBeTruthy());
   expect(screen.queryByRole("tab", { name: "Nợ cần thu" })).toBeNull();
   expect(screen.getByText("Tài khoản thương lái")).toBeTruthy();
-  // The profile has documents, so it cannot be deleted; merging and editing are there.
-  await screen.findByRole("button", { name: "Gộp hồ sơ" });
+  // A staff account (the Accountant) edits the profile but neither merges nor deletes it: that is the Owner's (ST-CASH-RPT-001).
+  await screen.findByRole("button", { name: "Chỉnh sửa" });
+  expect(screen.queryByRole("button", { name: "Gộp hồ sơ" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Xóa" })).toBeNull();
 });
 

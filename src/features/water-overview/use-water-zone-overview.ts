@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { useSelectedZones } from "@/features/api-workspace/selected-zones";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { useRemote } from "@/features/operations/ui";
 import { zoneOverviewSchema } from "./contracts";
@@ -19,5 +20,8 @@ export function useWaterZoneOverview() {
   }, []);
   // Tải lại thì cũng lấy mốc thời gian mới để tránh so sánh với đồng hồ cũ.
   const reload = useCallback(() => { setNow(Date.now()); reloadRemote(); }, [reloadRemote]);
-  return { items: remote.data, error: remote.error, loading: remote.loading, now, reload, summary: remote.data ? summarize(remote.data, now) : undefined };
+  // The zones chosen in the header narrow the grid; without a narrowing choice every zone shows.
+  const { status, allSelected, selectedIds } = useSelectedZones();
+  const items = remote.data && status === "ready" && !allSelected ? remote.data.filter(item => selectedIds.includes(item.zoneId)) : remote.data;
+  return { items, error: remote.error, loading: remote.loading, now, reload, summary: items ? summarize(items, now) : undefined };
 }
