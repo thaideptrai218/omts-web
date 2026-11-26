@@ -35,7 +35,7 @@ function useNarrowScreen(maxWidth = 900) {
 }
 
 /**
- * Where an open row's detail goes. "inline" (default): a full-width row right under the clicked one, the list keeps all its
+ * Where an open row's detail goes; the screen's value is the default and the user can switch it from the toolbar. "inline" (default): a full-width row right under the clicked one, the list keeps all its
  * columns. "split": a pane beside the list, which narrows to its key columns (full screen on a
  * narrow viewport).
  */
@@ -59,12 +59,17 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
   // The right-hand pane an open row's detail renders into (see DetailRow); hidden by CSS while no row is open.
   const [pane, setPane] = useState<HTMLElement | null>(null);
   useFitManagementViewport(root);
-  const split = detailLayout === "split";
+  // The screen's detailLayout is only the starting choice: the user flips it with the toolbar button, remembered per screen in this browser.
+  const [storedLayout, storeLayout] = useStoredValue(`omts-detail-layout-${storageKey}`, detailLayout);
+  const split = storedLayout === "split";
   return <section ref={root} className={`${styles.theme} ${styles.screen}`} data-management-screen data-detail-layout={detailLayout} data-filters={open ? "open" : "closed"}>
     <header className={styles.toolbar}>
       <div className={styles.title}><InterfaceIcon name={icon} className="size-[18px] shrink-0" /><h1>{title}</h1></div>
       <div className={styles.tools}>{/* Không có ô tìm kiếm (màn không có gì để tìm): giữ một khoảng trống cùng cột để các nút bên phải không nhảy chỗ. */}
-      {search ? <div className={styles.search}><InterfaceIcon name="search" />{search}</div> : <div aria-hidden="true" />}<div className={styles.actions}>{actions}</div></div>
+      {search ? <div className={styles.search}><InterfaceIcon name="search" />{search}</div> : <div aria-hidden="true" />}<div className={styles.actions}>{actions}
+        {!narrow && <button type="button" className={styles.iconButton} aria-pressed={split} aria-label="Chia đôi màn hình khi mở chi tiết"
+          title={split ? "Chi tiết đang chia đôi màn hình. Bấm để xổ xuống dưới dòng" : "Chi tiết đang xổ xuống dưới dòng. Bấm để chia đôi màn hình"}
+          onClick={() => storeLayout(split ? "inline" : "split")}><InterfaceIcon name={split ? "layout-split" : "layout-rows"} /></button>}</div></div>
     </header>
     <div className={styles.body}>
       {open && narrow && <button type="button" className={styles.drawerBackdrop} aria-label="Đóng bộ lọc" tabIndex={-1} onClick={() => setOpen(false)} />}
