@@ -61,6 +61,7 @@ Import/Export chỉ xuất hiện khi backend hỗ trợ.
 - Mỗi màn chọn một cách bố trí chi tiết bằng prop `detailLayout` của `ManagementLayout` (chi tiết luôn render qua `DetailRow`):
   - `"split"`: chia đôi màn, chi tiết nằm ở khung bên phải; danh sách chỉ giữ ô chọn, chevron, cột định danh (phải là cột đầu) và cột cuối; bộ lọc tạm ẩn. Màn hẹp (≤900px) chi tiết phủ toàn màn.
   - `"inline"` (mặc định): chi tiết xổ xuống ngay dưới dòng được bấm, danh sách giữ đủ cột. Hợp với màn có ít cột hoặc cần so sánh với các dòng khác.
+  - `detailLayout` chỉ là lựa chọn ban đầu. Người dùng đổi bằng nút ▤/◫ cuối thanh công cụ (ẩn ở màn ≤900px); lựa chọn lưu theo từng màn trên trình duyệt (`localStorage` key `omts-detail-layout-<storageKey>`).
 - Nội dung mở ra giữ đúng chiều rộng khung nhìn, không giãn theo số cột đang hiển thị của bảng.
 - Bên trong có **subtab**. Mỗi subtab có bộ action riêng, đặt ở chân subtab đó.
 - Chân subtab chia hai bên. **Bên trái**: action phụ như Xóa, Hủy, Xuất file, kiểu không nền (chữ + icon). **Bên phải**: action chính như Chỉnh sửa, Thanh toán dùng màu chủ đạo; action trạng thái như Ngừng hoạt động dùng nút viền.
