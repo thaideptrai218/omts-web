@@ -105,3 +105,15 @@ it("takes half a cage and refuses an empty count without sending anything", asyn
   expect(await screen.findByText(/Số lồng thu được phải lớn hơn 0/)).toBeTruthy();
   expect(state.upload).not.toHaveBeenCalled();
 });
+
+it("photos are optional: the section is collapsed, titled optional with the 3 maximum, and the form saves with none", async () => {
+  const user = userEvent.setup();
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={plan} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
+  const summary = screen.getByText("Ảnh thu hoạch (không bắt buộc, tối đa 3)");
+  expect(summary.closest("details")?.hasAttribute("open")).toBe(false);
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
+  await waitFor(() => expect(state.upload).toHaveBeenCalledTimes(1));
+  expect(state.upload.mock.calls[0][1]).toHaveLength(0);
+  expect(screen.queryByText(/cần từ 1 đến 3/)).toBeNull();
+});

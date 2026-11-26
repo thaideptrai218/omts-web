@@ -58,14 +58,14 @@ export function HarvestForm({ zoneId, raftId, plan, onClose, onSaved }: {
   const orders = plan.orders ?? [];
 
   function done(saved: z.infer<typeof c.harvestSaved>) {
-    notify({ tone: "success", title: `Đã ghi nhận thu hoạch ${saved.lot.lotCode}.`, ...(saved.everySeededLaneHarvested ? { description: "Tất cả làn đã thu xong. Có thể kết thúc chu kỳ." } : {}) });
+    notify({ tone: "success", title: `Đã ghi nhận thu hoạch ${saved.lot.lotCode}.`, description: saved.everySeededLaneHarvested ? "Tất cả làn đã thu xong. Có thể kết thúc chu kỳ." : "Thu xong cả bè thì bấm Hoàn tất thu hoạch bè ở tab Thu hoạch." });
     const crewNotice = crewAssignmentNotice(saved.crewAssignment);
     if (crewNotice) notify({ tone: saved.crewAssignment?.skipped.length ? "warning" : "info", title: crewNotice });
     for (const text of harvestWarningTexts(saved.warnings)) notify({ tone: "warning", title: text });
     setSavedLot({ code: saved.lot.lotCode });
   }
   async function save() {
-    const bad = photoValidationMessage(photos.length);
+    const bad = photoValidationMessage(photos.length, false);
     setPhotoError(bad);
     if (!productId) { setError("Chọn sản phẩm thu hoạch."); return; }
     if (bad || photoBusy) return;
@@ -104,8 +104,8 @@ export function HarvestForm({ zoneId, raftId, plan, onClose, onSaved }: {
           <p className={flowStyles.harvestHint}>{plan.expectedCageCount != null ? `Kế hoạch dự kiến ${fmt(plan.expectedCageCount)} lồng. ` : ""}Thu cả bè. Số kg sẽ cân từng lồng tại cảng.</p>
         </div>
         <CollapsibleSection title="Nhân viên cùng thu" description="Những người đi thu chuyến này." columns={1}><RecordCrewPicker label="Nhân viên cùng thu" raftId={raftId} zoneId={zoneId} values={crew} onChange={setCrew} /></CollapsibleSection>
-        <CollapsibleSection title="Ảnh thu hoạch" description="Chụp 1 đến 3 ảnh tại hiện trường." columns={1}>
-          <PhotoPicker label="Ảnh chuyến thu hoạch" files={photos} onChange={value => { setPhotos(value); setPhotoError(undefined); }} onBusyChange={setPhotoBusy} error={photoError || farmingFieldError(editor.mutation.failure?.problem, "Photos")} />
+        <CollapsibleSection title="Ảnh thu hoạch (không bắt buộc, tối đa 3)" defaultOpen={false} columns={1}>
+          <PhotoPicker required={false} label="Ảnh chuyến thu hoạch" files={photos} onChange={value => { setPhotos(value); setPhotoError(undefined); }} onBusyChange={setPhotoBusy} error={photoError || farmingFieldError(editor.mutation.failure?.problem, "Photos")} />
         </CollapsibleSection>
       </fieldset>
       <div className={flowStyles.harvestFormFooter}>

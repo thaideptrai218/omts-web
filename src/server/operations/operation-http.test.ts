@@ -35,6 +35,20 @@ describe("operations BFF authorization and evidence boundary", () => {
     expect((await handleOperationRequest(new Request(`http://localhost:3002/api/operations/harvest?action=harvest-record&id=${raft}&zoneId=${zone}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: two }), "harvest")).status).toBe(400);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it("accepts a harvest with no photo and refuses a fourth one", async () => {
+    configure(); const raft = ids.receipt, zone = ids.item;
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ lot: { id: ids.receipt, lotCode: "L1" } }, { status: 201 }));
+    const lot = { laneNumbers: [1], finishedLaneNumbers: [], cageCount: 5, estimatedKg: null, productLines: [{ productId: ids.item, cageCount: 5, kg: null }] };
+    const send = (photos: number) => {
+      const form = new FormData(); form.set("payload", JSON.stringify(lot));
+      for (let index = 0; index < photos; index += 1) form.append("files", new File([new Uint8Array([1])], `a${index}.jpg`, { type: "image/jpeg" }));
+      return handleOperationRequest(new Request(`http://localhost:3002/api/operations/harvest?action=harvest-record&id=${raft}&zoneId=${zone}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form }), "harvest");
+    };
+    expect((await send(0)).status).toBe(200);
+    expect((await send(3)).status).toBe(200);
+    expect((await send(4)).status).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it("sends the plan line of a lot recorded from a harvest plan as a form field and refuses a malformed one or one on a correction", async () => {
     configure(); const raft = ids.receipt, zone = ids.item, line = ids.supplier ?? ids.receipt;
     const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ lot: { id: ids.receipt, lotCode: "L1" } }, { status: 201 }));
