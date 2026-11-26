@@ -7,6 +7,7 @@ import { setDisplayedAccount } from "@/features/auth/api/displayed-account";
 import { resources, resourceKeys, resourceAllowed } from "./resources";
 import { operationModules, operationAllowed } from "@/features/operations/permissions";
 import { OwnerOverview } from "./owner-overview";
+import { DashboardWaterOverview } from "@/features/water-overview/dashboard-water-overview";
 import { RoleToday } from "@/features/workspace-home/role-today";
 import { cashBookFirst, orderGroups, roleProfile } from "@/features/workspace-home/role-profile";
 import { scheduleAllowed } from "@/features/work-schedule/schedule-model";
@@ -207,6 +208,7 @@ export function ApiWorkspaceHome() {
   const visible = resourceKeys.filter((key) => resourceAllowed(key, context.identity, context.permissions.functionPermissions));
   return <section><ManagementHeading title="Tổng quan hoạt động" description="Chọn công việc trong phạm vi được cấp." icon="dashboard" />
     <div className="mt-7 empty:hidden"><RoleToday /></div>
+    <div className="mt-7 empty:hidden"><DashboardWaterOverview /></div>
     <div className="mt-7 grid gap-6 xl:grid-cols-2"><section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Danh mục quản lý</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{visible.map((key) => <a key={key} href={`/workspace/${key}`}
       className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{resources[key].title}<span aria-hidden="true">↗</span></a>)}</div></section>
     <section className="min-w-0"><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Công việc</h2><div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">{operationModules.filter((entry) => entry.key !== "customer-payments" && operationAllowed(entry.key, context.identity, context.permissions.functionPermissions)).map((entry) => <a key={entry.key} href={entry.key === "cultivation-cycles" ? "/farming/cycles" : `/operations/${entry.key}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm font-semibold hover:bg-surface-subtle hover:text-primary">{entry.title}<span aria-hidden="true">↗</span></a>)}</div></section></div>

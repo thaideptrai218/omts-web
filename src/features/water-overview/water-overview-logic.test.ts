@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { zoneOverviewSchema, type ZoneOverviewItem } from "./contracts";
-import { absoluteTimeText, describeValueOutside, isMeasurementStale, relativeTimeText, summarize } from "./water-overview-logic";
+import { absoluteTimeText, dashboardZones, isMeasurementStale, relativeTimeText, summarize, summaryLine } from "./water-overview-logic";
 
 const now = Date.parse("2026-11-09T10:00:00+07:00");
 const ago = (ms: number) => new Date(now - ms).toISOString();
@@ -18,7 +18,7 @@ describe("thời gian tương đối", () => {
     expect(relativeTimeText(new Date(now + HOUR).toISOString(), now)).toBe("Vừa xong");
   });
   it("hiển thị giờ tuyệt đối theo múi giờ Việt Nam", () => {
-    expect(absoluteTimeText("2026-11-09T03:30:00Z")).toContain("10:30");
+    expect(absoluteTimeText("2026-11-09T03:30:00Z")).toBe("09/11/2026 10:30");
     expect(absoluteTimeText(null)).toBe("—");
   });
 });
@@ -37,11 +37,16 @@ describe("chưa đo gần đây", () => {
   });
 });
 
-describe("mô tả giá trị vượt ngưỡng", () => {
-  it("nêu chỉ số, hướng lệch và khoảng cho phép", () => {
-    expect(describeValueOutside({ indicator: "SALINITY", value: 12, unit: "‰", direction: "Low", min: 15, max: 30 })).toBe("Độ mặn 12 ‰ quá thấp (cho phép 15–30 ‰)");
-    expect(describeValueOutside({ indicator: "PH", value: 9, unit: null, direction: "High", min: null, max: 8.5 })).toBe("pH 9 quá cao (cho phép tối đa 8,5)");
-    expect(describeValueOutside({ indicator: "TEMPERATURE", value: 20, unit: "°C", direction: "Low", min: 25, max: null })).toBe("Nhiệt độ 20 °C quá thấp (cho phép tối thiểu 25 °C)");
+describe("tổng quan trên trang Tổng quan", () => {
+  it("chỉ giữ vùng đang sử dụng, vùng cảnh báo đứng trước rồi theo mã vùng", () => {
+    const items = [zone({ zoneId: "a", zoneCode: "Z10" }), zone({ zoneId: "b", zoneCode: "Z02", zoneStatus: "Discontinued", zoneStatusCode: "ZONE_DISCONTINUED", hasWaterAlert: true }),
+      zone({ zoneId: "c", zoneCode: "Z02" }), zone({ zoneId: "d", zoneCode: "Z30", hasWaterAlert: true })];
+    expect(dashboardZones(items).map(item => item.zoneId)).toEqual(["d", "c", "a"]);
+  });
+  it("viết một dòng tóm tắt", () => {
+    expect(summaryLine({ alerting: 1, stale: 6 })).toBe("1 vùng đang cảnh báo · 6 vùng chưa đo gần đây");
+    expect(summaryLine({ alerting: 0, stale: 2 })).toBe("2 vùng chưa đo gần đây");
+    expect(summaryLine({ alerting: 0, stale: 0 })).toBe("Không có vùng nào cảnh báo hoặc chưa đo gần đây");
   });
 });
 

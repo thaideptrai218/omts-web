@@ -1,4 +1,5 @@
-import type { ValueOutside, ZoneOverviewItem } from "./contracts";
+import { formatVietnameseDateTime } from "@/shared/format/date-time";
+import type { ZoneOverviewItem } from "./contracts";
 
 /** "Chưa đo gần đây" (PM 19/11/2026): vùng không có lần đo nào trong 1 tháng gần nhất (tính theo tháng lịch, không phải 24 giờ). */
 export const RECENT_MEASUREMENT_TEXT = "1 tháng";
@@ -23,10 +24,9 @@ export function relativeTimeText(latest: string | null, now: number): string {
   return `${Math.floor(diff / DAY)} ngày trước`;
 }
 
-/** Thời điểm đo tuyệt đối theo giờ Việt Nam. */
+/** Thời điểm đo tuyệt đối theo giờ Việt Nam, dạng dd/mm/yyyy HH:mm. */
 export function absoluteTimeText(latest: string | null): string {
-  if (!latest) return "—";
-  return new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(latest));
+  return latest ? formatVietnameseDateTime(latest) : "—";
 }
 
 export interface OverviewSummary { total: number; alerting: number; stale: number }
@@ -39,22 +39,22 @@ export function summarize(items: readonly ZoneOverviewItem[], now: number): Over
   };
 }
 
-const indicatorNames: Record<string, string> = { PH: "pH", SALINITY: "Độ mặn", TEMPERATURE: "Nhiệt độ" };
-const num = (value: number) => new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(value);
-
-/** Mô tả một giá trị vượt ngưỡng, vd "Độ mặn 12 ‰ quá thấp (cho phép 15–30 ‰)". */
-export function describeValueOutside(v: ValueOutside): string {
-  const unit = v.unit ? ` ${v.unit}` : "";
-  const range = v.min !== null && v.max !== null ? `cho phép ${num(v.min)}–${num(v.max)}${unit}`
-    : v.min !== null ? `cho phép tối thiểu ${num(v.min)}${unit}`
-    : v.max !== null ? `cho phép tối đa ${num(v.max)}${unit}` : "chưa đặt khoảng cho phép";
-  return `${indicatorNames[v.indicator] ?? v.indicator} ${num(v.value)}${unit} quá ${v.direction === "High" ? "cao" : "thấp"} (${range})`;
-}
-
 /** Nhãn tiếng Việt của trạng thái vùng. Backend trả tên trạng thái bằng tiếng Anh ("In Use", "Discontinued"), không đưa ra giao diện nguyên văn. */
 export function zoneStatusLabel(item: { zoneStatus: string; zoneStatusCode: string }): string {
   const key = `${item.zoneStatus} ${item.zoneStatusCode}`;
   if (/discontinu|inactive|stopp|ngừng/i.test(key)) return "Ngừng sử dụng";
   if (/in.?use|active|đang/i.test(key)) return "Đang sử dụng";
   return "Chưa rõ trạng thái";
+}
+
+/** Vùng đang sử dụng, vùng đang cảnh báo đứng trước; trong mỗi nhóm theo mã vùng. Vùng ngừng sử dụng không hiện ở tổng quan. */
+export function dashboardZones(items: readonly ZoneOverviewItem[]): ZoneOverviewItem[] {
+  return items.filter(item => zoneStatusLabel(item) !== "Ngừng sử dụng")
+    .sort((a, b) => Number(b.hasWaterAlert) - Number(a.hasWaterAlert) || a.zoneCode.localeCompare(b.zoneCode, "vi", { numeric: true }));
+}
+
+/** Một dòng tóm tắt: "1 vùng đang cảnh báo · 6 vùng chưa đo gần đây". */
+export function summaryLine({ alerting, stale }: Pick<OverviewSummary, "alerting" | "stale">): string {
+  const parts = [alerting ? `${alerting} vùng đang cảnh báo` : "", stale ? `${stale} vùng chưa đo gần đây` : ""].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "Không có vùng nào cảnh báo hoặc chưa đo gần đây";
 }

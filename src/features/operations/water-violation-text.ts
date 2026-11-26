@@ -25,7 +25,7 @@ export function violationSentence(violations: readonly WaterViolation[]): string
   return violations.length ? `Vượt ngưỡng: ${violations.map(violationText).join(" · ")}` : "";
 }
 
-type OutsideItem = { indicator: string; value: number; direction: "High" | "Low"; min: number | null; max: number | null };
+type OutsideItem = { indicator: string; unit?: string | null; value: number; direction: "High" | "Low"; min: number | null; max: number | null };
 /** Violations from the structured list the backend sends with a measurement. */
 export function violationsFromOutside(items: readonly OutsideItem[]): WaterViolation[] {
   return items.flatMap(item => {
@@ -38,11 +38,11 @@ export function violationsFromOutside(items: readonly OutsideItem[]): WaterViola
 export function violationsAgainst(values: Record<WaterIndicator, number | null>, limits: WaterThresholds): WaterViolation[] {
   const bounds: Record<WaterIndicator, [number | null, number | null]> = {
     ph: [limits.phMin, limits.phMax], salinity: [limits.salinityMin, limits.salinityMax], temperature: [limits.temperatureMin, limits.temperatureMax] };
-  return (Object.keys(bounds) as WaterIndicator[]).flatMap(indicator => {
+  return (Object.keys(bounds) as WaterIndicator[]).flatMap((indicator): WaterViolation[] => {
     const value = values[indicator], [min, max] = bounds[indicator];
     if (value === null || !Number.isFinite(value)) return [];
-    if (min !== null && value < min) return [{ indicator, value, direction: "Low" as const, bound: min }];
-    if (max !== null && value > max) return [{ indicator, value, direction: "High" as const, bound: max }];
+    if (min !== null && value < min) return [{ indicator, value, direction: "Low", bound: min }];
+    if (max !== null && value > max) return [{ indicator, value, direction: "High", bound: max }];
     return [];
   });
 }

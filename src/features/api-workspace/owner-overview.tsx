@@ -1,6 +1,7 @@
 "use client";
 import { operationAllowed } from "@/features/operations/permissions";
 import { formatVietnameseDate } from "@/shared/format/date-only";
+import { DashboardWaterOverview } from "@/features/water-overview/dashboard-water-overview";
 import { OwnerHandedOverPlans } from "@/features/workspace-home/owner-handed-over-plans";
 import { OwnerPendingApprovals } from "@/features/workspace-home/owner-pending-approvals";
 import { useApiWorkspace } from "./api-workspace-shell";
@@ -41,6 +42,7 @@ export function OwnerOverview() {
         <div className={styles.column}>
           {isOwner && <OwnerPendingApprovals remote={dashboard} />}
           {isOwner && <OwnerHandedOverPlans />}
+          <DashboardWaterOverview />
           <OverviewNotifications remote={dashboard} identity={identity} permissions={grants} withTasks={!isOwner} />
           {isOwner && <OverviewRecentActivity remote={data.activity} />}
         </div>

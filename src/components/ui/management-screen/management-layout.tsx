@@ -46,14 +46,16 @@ export type DetailLayout = "split" | "inline";
  * column template, so the search box lines up with the list and stays put when the filter rail closes.
  */
 export function ManagementLayout({ storageKey, icon, title, search, actions, filters, filterLabel = "Bộ lọc", footer, detailLayout = "inline", children }: {
-  storageKey: string; icon: InterfaceIconName; title: string; search?: ReactNode; actions: ReactNode; filters: ReactNode; filterLabel?: string; footer?: ReactNode;
+  storageKey: string; icon: InterfaceIconName; title: string; search?: ReactNode; actions: ReactNode; filters?: ReactNode; filterLabel?: string; footer?: ReactNode;
   detailLayout?: DetailLayout; children: ReactNode;
 }) {
   const [stored, store] = useStoredValue(`omts-filter-rail-${storageKey}`, "open");
   const narrow = useNarrowScreen();
   // On a narrow screen the rail is a drawer that starts closed and is never remembered: the list is what the user came for.
   const [drawer, setDrawer] = useState(false);
-  const open = narrow ? drawer : stored !== "closed";
+  // A screen without `filters` has no rail and no rail toggle: the list takes the full width.
+  const hasRail = filters !== undefined;
+  const open = hasRail && (narrow ? drawer : stored !== "closed");
   const setOpen = (next: boolean) => narrow ? setDrawer(next) : store(next ? "open" : "closed");
   const root = useRef<HTMLElement>(null);
   // The right-hand pane an open row's detail renders into (see DetailRow); hidden by CSS while no row is open.
@@ -80,7 +82,7 @@ export function ManagementLayout({ storageKey, icon, title, search, actions, fil
       </aside>}
       <div className={styles.listColumn}>
         {/* Outside the list box, which clips its content, so the button can straddle the list's left border. */}
-        {!open && <button type="button" className={`${styles.railToggle} ${styles.railOpen}`} aria-label="Hiện bộ lọc" title="Hiện bộ lọc" onClick={() => setOpen(true)}>{narrow ? <><InterfaceIcon name="panel-open" /> Bộ lọc</> : <InterfaceIcon name="chevron-right" />}</button>}
+        {hasRail && !open && <button type="button" className={`${styles.railToggle} ${styles.railOpen}`} aria-label="Hiện bộ lọc" title="Hiện bộ lọc" onClick={() => setOpen(true)}>{narrow ? <><InterfaceIcon name="panel-open" /> Bộ lọc</> : <InterfaceIcon name="chevron-right" />}</button>}
         <div className={styles.list}>
           {/* Inline: no pane target, so every DetailRow renders as the row under the clicked one. */}
           <DetailPaneTarget.Provider value={split ? pane : null}>{children}</DetailPaneTarget.Provider>

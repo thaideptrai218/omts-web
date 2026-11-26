@@ -12,11 +12,9 @@ export type WaterFilters = { search: string; status: string; raftId: string; exc
 export const emptyWaterFilters: WaterFilters = { search: "", status: "Active", raftId: "", exceeded: false };
 
 const PAGE = 100, MAX_PAGES = 30;
-/** `zoneId` says which zone the rows were read for, so a slow answer of the previous zone is never shown under the new one. */
-/** A measurement that remembers its zone, so one list can hold the measurements of several zones. */
+/** A measurement that remembers its zone, for the record opened from a row. */
 export type ZonedWaterRow = WaterRow & { zone: WaterZoneRef };
-/** `ALL_WATER_ZONES` is the `zoneId` of a list that joins every zone chosen in the header. */
-export const ALL_WATER_ZONES = "__all";
+/** `zoneId` says which zone the rows were read for, so a slow answer of the previous zone is never shown under the new one. */
 export type WaterHistoryData = { zoneId: string; items: ZonedWaterRow[]; total: number; truncated: boolean };
 export const noWaterHistory: WaterHistoryData = { zoneId: "", items: [], total: 0, truncated: false };
 
@@ -29,16 +27,6 @@ export async function readAllWaterHistory(query: { zoneId: string; from: string;
   if (read.status !== "success") return read;
   const ref = zone ?? { id: query.zoneId, code: "", name: "" };
   return { status: "success", data: { zoneId: query.zoneId, items: read.data.items.map(row => ({ ...row, zone: ref })), total: read.data.total, truncated: read.data.truncated } };
-}
-
-/** The measurements of several zones in one list: each zone is read, a zone the account may not read is left out, and the list fails only when none could be read. */
-export async function readWaterOfZones(zones: readonly WaterZoneRef[], query: { from: string; to: string; status: string }, signal: AbortSignal): Promise<WorkspaceResult<WaterHistoryData>> {
-  const results = await Promise.all(zones.map(zone => readAllWaterHistory({ ...query, zoneId: zone.id }, signal, zone)));
-  const read = results.flatMap(result => result.status === "success" ? [result.data] : []);
-  const failed = results.find(result => result.status !== "success");
-  if (!read.length && failed) return failed;
-  const items = read.flatMap(data => data.items);
-  return { status: "success", data: { zoneId: ALL_WATER_ZONES, items, total: items.length, truncated: read.some(data => data.truncated) } };
 }
 
 async function readRows(query: { zoneId: string; from: string; to: string; status: string }, signal: AbortSignal): Promise<WorkspaceResult<{ items: WaterRow[]; total: number; truncated: boolean }>> {

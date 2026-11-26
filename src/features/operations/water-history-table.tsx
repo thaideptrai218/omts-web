@@ -13,18 +13,18 @@ import { hasNoThresholds, isOutside, type WaterRow, type WaterSortKey, type Wate
 import { WaterMeasurementPanel } from "./water-measurement-panel";
 import { formatMeasuredValue } from "./water-measurement-shared";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
+import local from "./water-screen.module.css";
 
 type Column = { key: string; label: string; weight: number; sort?: WaterSortKey; numeric?: boolean; render(row: WaterRow, zone: WaterZoneRef): ReactNode };
 
 export const waterColumns: readonly Column[] = [
   { key: "time", label: "Thời điểm đo", weight: 17, sort: "time", render: row => <span className={`${styles.truncated} ${styles.name}`}>{displayTime(row.measuredAt)}</span> },
-  { key: "zone", label: "Vùng", weight: 15, render: (_, zone) => <Link className={`${styles.truncated} ${styles.link}`} title={zone.name} href={farmingReferenceHref("zone", { recordId: zone.id, search: zone.code })}>{zone.name}</Link> },
   { key: "raft", label: "Bè", weight: 9, sort: "raft", render: (row, zone) => <Link className={`${styles.truncated} ${styles.link}`} href={farmingReferenceHref("raft", { zoneId: zone.id, recordId: row.raftId, search: row.raftCode })}>{row.raftCode}</Link> },
   { key: "ph", label: "pH", weight: 8, sort: "ph", numeric: true, render: row => formatMeasuredValue(row.ph) },
   { key: "salinity", label: "Độ mặn (‰)", weight: 11, sort: "salinity", numeric: true, render: row => formatMeasuredValue(row.salinity) },
   { key: "temperature", label: "Nhiệt độ (°C)", weight: 12, sort: "temperature", numeric: true, render: row => formatMeasuredValue(row.temperature) },
-  { key: "alert", label: "Cảnh báo", weight: 14, sort: "alert", render: row => <StatusPill tone={isOutside(row) ? "danger" : "neutral"}>{isOutside(row) ? "Vượt ngưỡng" : hasNoThresholds(row) ? "Chưa đặt ngưỡng" : "Trong ngưỡng"}</StatusPill> },
-  { key: "status", label: "Trạng thái", weight: 12, sort: "status", render: row => <StatusPill tone={row.statusCode === "ACTIVE" ? "success" : "neutral"}>{statusLabel(row.statusCode)}</StatusPill> },
+  { key: "alert", label: "Cảnh báo", weight: 14, sort: "alert", render: row => isOutside(row) ? <StatusPill tone="danger">Vượt ngưỡng</StatusPill> : <span className={local.muted}>{hasNoThresholds(row) ? "Chưa đặt ngưỡng" : "Trong ngưỡng"}</span> },
+  { key: "status", label: "Trạng thái", weight: 12, sort: "status", render: row => row.statusCode === "ACTIVE" ? <span className={local.muted}>{statusLabel(row.statusCode)}</span> : <StatusPill tone="neutral">{statusLabel(row.statusCode)}</StatusPill> },
   { key: "by", label: "Người ghi", weight: 16, sort: "by", render: row => <span className={styles.truncated} title={row.measuredBy?.name}>{row.measuredBy?.name ?? "—"}</span> },
 ];
 
