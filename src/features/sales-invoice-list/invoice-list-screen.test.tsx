@@ -55,14 +55,14 @@ describe("SalesInvoiceListScreen", () => {
     expect(screen.getByText("Bạn không có quyền xem chức năng này.")).toBeTruthy(); expect(read).not.toHaveBeenCalled();
   });
 
-  it("opens the detail in the pane beside the list, as an accessible disclosure with four tabs", async () => {
+  it("opens the detail in the row under the invoice, as an accessible disclosure with four tabs", async () => {
     serve(); await openRow();
     const button = screen.getByRole("button", { name: rowButton });
     expect(button.getAttribute("aria-expanded")).toBe("true");
-    expect(screen.getByLabelText("Chi tiết").querySelector("section")?.getAttribute("aria-label")).toBe("Chi tiết HD000123");
+    expect(screen.getByRole("region", { name: "Chi tiết HD000123" }).closest("td")).toBeTruthy();
     expect(read.mock.calls.find((c) => c[0] === "detail")?.[1]).toEqual({ id: ids.invoice });
     expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Thông tin", "Lịch sử thanh toán", "Gửi hóa đơn", "Lịch sử chỉnh sửa"]);
-    expect(screen.getByRole("table", { name: "Dòng hàng của hóa đơn" })).toBeTruthy(); expect(within(screen.getByLabelText("Chi tiết")).getByText("Hàu sữa")).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Dòng hàng của hóa đơn" })).toBeTruthy(); expect(within(screen.getByRole("region", { name: "Chi tiết HD000123" })).getByText("Hàu sữa")).toBeTruthy();
     // The order the invoice was made from: a link in the list and in the detail; each line shows its unit and quantity.
     expect(screen.getAllByRole("link", { name: "DH000010" }).every((link) => link.getAttribute("href") === "/sales/orders?code=DH000010")).toBe(true);
     expect(screen.getAllByRole("link", { name: "DH000010" })).toHaveLength(2);

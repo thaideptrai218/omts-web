@@ -15,16 +15,16 @@ function renderOpenRow(detailLayout?: DetailLayout) {
   </ManagementLayout>);
 }
 
-it("puts the open row's detail in the pane beside the list by default", () => {
-  const { container } = renderOpenRow();
+it("puts the open row's detail in the pane beside the list when the screen chooses split", () => {
+  const { container } = renderOpenRow("split");
   const pane = screen.getByRole("complementary", { name: "Chi tiết" });
   expect(pane.textContent).toContain("Chi tiết dòng 1");
   expect(container.querySelector("tbody")?.textContent).not.toContain("Chi tiết dòng 1");
   expect(container.querySelector("[data-management-screen]")?.hasAttribute("data-detail-open")).toBe(true);
 });
 
-it("keeps the detail as the row under the clicked one when the screen chooses inline", () => {
-  const { container } = renderOpenRow("inline");
+it("keeps the detail as the row under the clicked one by default", () => {
+  const { container } = renderOpenRow();
   expect(screen.queryByRole("complementary", { name: "Chi tiết" })).toBeNull();
   const detailCell = screen.getByText("Chi tiết dòng 1").closest("td");
   expect(detailCell?.getAttribute("colspan")).toBe("3");

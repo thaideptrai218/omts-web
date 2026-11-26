@@ -35,8 +35,9 @@ function useNarrowScreen(maxWidth = 900) {
 }
 
 /**
- * Where an open row's detail goes. "split": a pane beside the list, which narrows to its key columns (full screen on a
- * narrow viewport). "inline": a full-width row right under the clicked one, the list keeps all its columns.
+ * Where an open row's detail goes. "inline" (default): a full-width row right under the clicked one, the list keeps all its
+ * columns. "split": a pane beside the list, which narrows to its key columns (full screen on a
+ * narrow viewport).
  */
 export type DetailLayout = "split" | "inline";
 
@@ -44,7 +45,7 @@ export type DetailLayout = "split" | "inline";
  * The management screen frame: one viewport on desktop with only the list scrolling. The toolbar and the body share one
  * column template, so the search box lines up with the list and stays put when the filter rail closes.
  */
-export function ManagementLayout({ storageKey, icon, title, search, actions, filters, filterLabel = "Bộ lọc", footer, detailLayout = "split", children }: {
+export function ManagementLayout({ storageKey, icon, title, search, actions, filters, filterLabel = "Bộ lọc", footer, detailLayout = "inline", children }: {
   storageKey: string; icon: InterfaceIconName; title: string; search?: ReactNode; actions: ReactNode; filters: ReactNode; filterLabel?: string; footer?: ReactNode;
   detailLayout?: DetailLayout; children: ReactNode;
 }) {
