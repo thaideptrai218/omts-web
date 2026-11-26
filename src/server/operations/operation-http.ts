@@ -46,7 +46,7 @@ function exportFileName(area: string, query: URLSearchParams, exporting: boolean
 }
 export async function handleOperationRequest(request: Request, areaName: string): Promise<Response> {
   if (areaName === "employees") return handleEmployeeApi(request);
-  if (areaName === "zone-licenses" || areaName === "raft-details") return handleFarmingRequest(request, areaName);
+  if (areaName === "zone-licenses" || areaName === "raft-details" || areaName === "zone-boundary") return handleFarmingRequest(request, areaName);
   const area = z.enum(operationAreas).safeParse(areaName);
   if (!area.success) return json({ status: "not-found" }, 404);
   const gateway = getSessionGateway();

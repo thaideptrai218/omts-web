@@ -59,3 +59,9 @@ export function projectBoundaryWarnings(saved: unknown): BoundaryWarning[] {
   if (!Array.isArray(list)) return [];
   return list.slice(0, 10).flatMap(item => { const parsed = boundaryWarningSchema.safeParse(item); return parsed.success ? [parsed.data] : []; });
 }
+
+/** A boundary the browser may send: strict (a malformed one is refused, never nulled) and bounded like the backend rules, so the BFF forwards nothing the backend would reject on shape alone. */
+const boundaryRequest = strictBoundary.refine(boundary => boundary.features.every(feature => feature.geometry.coordinates.length === 1 && feature.geometry.coordinates[0].length <= 101));
+/** Body of `PUT /api/zones/{id}/boundary`; `boundary: null` clears the boundary. */
+export const saveBoundaryRequestSchema = z.strictObject({ boundary: boundaryRequest.nullable(), rowVersion: z.string().min(1).max(200) });
+export type SaveBoundaryRequest = z.output<typeof saveBoundaryRequestSchema>;

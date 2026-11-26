@@ -123,6 +123,8 @@ export const messageCatalog = {
   LANE_NOT_DAMAGED: "Làn không còn ở tình trạng hỏng. Hãy tải lại hồ sơ làn.",
   LANE_HAS_SEED: "Làn đang có giống. Cần xác nhận ghi mất giống trước khi ngừng hoạt động.",
   LANE_IS_ONLY_ONE: "Bè cần còn ít nhất một làn đang sử dụng.",
+  OCR_BUSY: "Máy chủ đang bận đọc ảnh, vui lòng thử lại sau ít phút.",
+  TOO_MANY_SCANS: "Đã đọc quá nhiều ảnh trong một giờ. Hãy thử lại sau ít phút.",
   "MSG-CUSTOMER-01": "Khách hàng đang vượt hạn mức công nợ nên hóa đơn này không được để lại công nợ. Hãy thu đủ tiền, hoặc thu bớt công nợ cũ của khách trước.",
 } as const;
 

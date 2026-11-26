@@ -42,7 +42,7 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
     if (plan.jsonBody) {
       const guard = createCsrfGuard(process.env);
       if (guard.status !== "available") return json({ status: "unavailable" }, 503);
-      const checked = await guard.guard.check(request, { method: request.method === "PUT" ? "PUT" : "POST", body: "json", maxBytes: 16_384, timeoutMs: 5000 });
+      const checked = await guard.guard.check(request, { method: request.method === "PUT" ? "PUT" : "POST", body: "json", maxBytes: plan.jsonMaxBytes ?? 16_384, timeoutMs: 5000 });
       if (checked.status !== "allowed") return json({ status: "rejected" }, checked.status === "rejected" ? checked.httpStatus : 503);
       const values = plan.jsonBody.safeParse(checked.body.readForValidation());
       if (!values.success) return json({ status: "invalid-input", code: "MSG01" }, 400);
@@ -51,13 +51,14 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
     if (plan.upload) {
       const damage = plan.upload === "lane-damage";
       const input = await readOperationUpload(request, !damage && plan.upload !== "license", { maxFiles: damage ? 3 : 1, optionalFile: plan.upload === "license", maxBytes: (damage ? 31 : 12) * 1024 * 1024 });
-      if (!input) return json({ status: "invalid-input", code: damage ? "MSG-GEN-01" : "MSG01", ...(damage ? { problem: { field: "Photos", hint: "Cần từ 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh không quá 10 MB." } } : {}) }, 400);
+      const scan = plan.upload === "scan-photo";
+      if (!input) return json({ status: "invalid-input", code: damage || scan ? "MSG-GEN-01" : "MSG01", ...(damage ? { problem: { field: "Photos", hint: "Cần từ 1 đến 3 ảnh JPEG hoặc PNG, mỗi ảnh không quá 10 MB." } } : scan ? { problem: { field: "Photo", hint: "Chọn một ảnh JPEG hoặc PNG, tối đa 10 MB." } } : {}) }, 400);
       const values = (plan.uploadBody ?? (plan.upload === "license" ? saveLicenseSchema : z.strictObject({}))).safeParse(input.payload);
       if (!values.success || plan.action === "update" && !("rowVersion" in (values.data as object))) return json({ status: "invalid-input", code: "MSG01" }, 400);
       body = new FormData();
       for (const file of input.files) {
         if (damage && !["image/jpeg", "image/png"].includes(file.type)) return json({ status: "invalid-input", code: "MSG-GEN-01", problem: { field: "Photos", hint: "Chỉ nhận ảnh JPEG hoặc PNG." } }, 400);
-        body.append(damage ? "photos" : "file", file, file.name);
+        body.append(damage ? "photos" : plan.upload === "scan-photo" ? "photo" : "file", file, file.name);
       }
       for (const [key, value] of Object.entries(values.data as Record<string, unknown>)) {
         if (Array.isArray(value)) for (const entry of value) body.append(key, String(entry));
@@ -72,12 +73,13 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
       const upstream = await fetch(new URL(plan.path, backend.config.origin), { method: plan.method, body, cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal,
         headers: { Accept: "application/json", ...(typeof body === "string" ? { "Content-Type": "application/json" } : {}), Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` } });
       // The photo command documents a 201 without a JSON shape. Still perform the session recheck below.
-      const problemCopy = !upstream.ok && plan.action.startsWith("lane-") ? upstream.clone() : undefined;
+      const problemCopy = !upstream.ok && (plan.problem || plan.action.startsWith("lane-")) ? upstream.clone() : undefined;
       if (plan.action === "lane-photo" && upstream.status === 201) void upstream.body?.cancel().catch(() => undefined);
       const result = plan.action === "lane-photo" && upstream.status === 201
         ? { status: "success" as const, httpStatus: 201, data: { done: true } } : await readBackendResponse(upstream, "profileRead");
       if (result.status === "http-error") return json({ status: "rejected", code: result.code, ...(problemCopy ? { problem: await readFarmingProblem(problemCopy) } : {}) }, result.httpStatus);
-      if (result.status !== "success" || ![200, 201].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
+      // Starting a licence-map read is accepted (202) and polled afterwards.
+      if (result.status !== "success" || !(plan.upload === "scan-photo" ? [202] : [200, 201]).includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
       const parsed = plan.schema.safeParse(result.data);
       if (!parsed.success) return json({ status: "invalid-response" }, 502);
       const record = (plan.unwrap ? (parsed.data as Record<string, unknown>)[plan.unwrap] : parsed.data) as Record<string, unknown>;

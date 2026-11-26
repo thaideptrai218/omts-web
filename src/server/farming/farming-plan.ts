@@ -3,11 +3,13 @@ import { z } from "zod";
 import { licenseOverviewSchema, licenseSchema, raftSavedSchema, raftSchema } from "@/features/farming-api/contracts";
 import { planLaneIncidents } from "./lane-incidents-plan";
 import { planLaneProgress } from "./lane-progress-plan";
-export type FarmingArea = "zone-licenses" | "raft-details";
+import { planZoneBoundary } from "./zone-boundary-plan";
+export type FarmingArea = "zone-licenses" | "raft-details" | "zone-boundary";
 const querySchema = z.strictObject({ action: z.enum(["list", "detail", "file", "create", "update", "replace", "photo", "upload-photo", "delete-photo"]),
   id: z.guid().optional(), zoneId: z.guid().optional(), asOf: z.iso.date().optional(), photoId: z.guid().optional() });
-export type FarmingPlan = { action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE"; schema: z.ZodType; file?: string; photoId?: string; unwrap?: "raft"; upload?: "license" | "photo" | "incident-photo" | "lane-damage"; ownerOnly: boolean; jsonBody?: z.ZodType; uploadBody?: z.ZodType; zoneId?: string; incidentId?: string; photoIndex?: number };
+export type FarmingPlan = { action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE"; schema: z.ZodType; file?: string; photoId?: string; unwrap?: "raft"; upload?: "license" | "photo" | "incident-photo" | "lane-damage" | "scan-photo"; ownerOnly: boolean; jsonBody?: z.ZodType; jsonMaxBytes?: number; problem?: boolean; uploadBody?: z.ZodType; zoneId?: string; incidentId?: string; photoIndex?: number };
 export function planFarming(area: FarmingArea, method: string, query: URLSearchParams): FarmingPlan | undefined {
+  if (area === "zone-boundary") return planZoneBoundary(method, query);
   if (query.get("action") === "lane-progress") return planLaneProgress(area, method, query);
   if (query.get("action")?.startsWith("lane-")) return planLaneIncidents(area, method, query);
   if ([...query.keys()].length !== new Set(query.keys()).size) return;
