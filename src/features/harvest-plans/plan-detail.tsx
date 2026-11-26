@@ -32,7 +32,7 @@ const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "staffing" a
 const dash = (value: string | null | undefined) => value || "—";
 const zoneCodes = (zones: readonly { code: string }[]) => zones.map((zone) => zone.code).join(", ") || "—";
 
-/** The row opened under the list: the plan with its lines and lanes, and the buttons the API allows now, and under "Nhân công" the employees chosen for each line. */
+/** The row opened under the list: the plan with its lines (rafts), and the buttons the API allows now, and under "Nhân công" the employees chosen for each line. */
 export function PlanDetailPanel({ id, access, onChanged }: { id: string; access: PlanAccess; onChanged(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => planRepository.detail(id, signal), [id]));
   const [tab, setTab] = useState<Tab>("info");
@@ -68,7 +68,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
     await run(() => planRepository.assign(plan.id, plan.rowVersion, executor), done);
   }
   async function receive() {
-    if (await confirmation.confirm(`Nhận kế hoạch thu hoạch ${plan.code}? Sau khi nhận, bạn ghi lô thu hoạch cho từng bè.`)) await run(() => planRepository.receive(plan.id, plan.rowVersion), `Đã nhận kế hoạch ${plan.code}.`);
+    if (await confirmation.confirm(`Nhận kế hoạch thu hoạch ${plan.code}? Sau khi nhận, bạn bấm Thu hoạch ở từng bè.`)) await run(() => planRepository.receive(plan.id, plan.rowVersion), `Đã nhận kế hoạch ${plan.code}.`);
   }
   async function handOver() {
     if (await confirmation.confirm(`Bàn giao kế hoạch ${plan.code} cho chủ? Chủ hợp tác xã sẽ được báo để kiểm tra và hoàn thành.`)) await run(() => planRepository.handOver(plan.id, plan.rowVersion), `Đã bàn giao ${plan.code} cho chủ.`);

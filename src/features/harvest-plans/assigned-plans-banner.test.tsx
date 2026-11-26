@@ -10,7 +10,7 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
-vi.mock("@/features/cultivation-api/records-harvest-form", () => ({ HarvestForm: (props: { plan: { lineId: string; laneNumbers: number[] } }) => <div role="dialog" aria-label="Form thu hoạch">{props.plan.lineId}:{props.plan.laneNumbers.join(",")}</div> }));
+vi.mock("@/features/cultivation-api/records-harvest-form", () => ({ HarvestForm: (props: { plan: { lineId: string } }) => <div role="dialog" aria-label="Form thu hoạch">{props.plan.lineId}</div> }));
 vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), planRepository: { assigned: state.assigned, skipLanes: state.skip, receive: state.receive } }));
 import { AssignedPlansBanner } from "./assigned-plans-banner";
 import { ToastProvider } from "@/components/ui/toast-provider";
@@ -45,7 +45,7 @@ it("lists only the lines of this raft and opens the harvest form for the line", 
   expect(banner.textContent).toContain("khoảng 8 lồng");
   expect(banner.textContent).not.toContain("B2");
   await user.click(within(banner).getByRole("button", { name: "Thu hoạch" }));
-  expect((await screen.findByRole("dialog", { name: "Form thu hoạch" })).textContent).toBe(`${ids.line}:1,3`);
+  expect((await screen.findByRole("dialog", { name: "Form thu hoạch" })).textContent).toBe(ids.line);
 });
 
 it("shows nothing without the right to record a harvest, for another zone, or when the plan does not allow it", async () => {

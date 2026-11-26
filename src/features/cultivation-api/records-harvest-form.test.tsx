@@ -5,9 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
 const ids = { product: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", line: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b07", zone: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11", raft: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a12", lot: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a14" };
-const state = vi.hoisted(() => ({ upload: vi.fn(), all: vi.fn() }));
-vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
-vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" }, permissions: { functionPermissions: [] } }) }));
+const state = vi.hoisted(() => ({ upload: vi.fn(), all: vi.fn(), push: vi.fn(), subjectType: "CooperativeOwner", permissions: [] as unknown[] }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: state.push }) }));
+vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: state.subjectType }, permissions: { functionPermissions: state.permissions } }) }));
 vi.mock("./records-shared", async (original) => ({ ...(await original<typeof import("./records-shared")>()), harvestRepo: { upload: state.upload, read: vi.fn(), write: vi.fn() } }));
 vi.mock("@/features/products/repository", async (original) => ({ ...(await original<typeof import("@/features/products/repository")>()), productRepository: { all: state.all } }));
 vi.mock("./record-crew-picker", () => ({ RecordCrewPicker: () => null }));
@@ -28,18 +28,18 @@ beforeEach(() => {
   state.all.mockResolvedValue({ status: "success", data: [product] });
   state.upload.mockResolvedValue({ status: "success", data: { lot: { id: ids.lot, lotCode: "B1-LOT1" }, warnings: [] } });
 });
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); state.subjectType = "CooperativeOwner"; state.permissions = []; });
 
-it("records from a plan line: no lane to pick, cages start from the plan, kg and tấn follow read-only, and the body names the plan line and no kg", async () => {
+it("is a same-day action: named by the raft, shows the plan, the order and the customer, starts the cages from the plan and has no kg or tấn", async () => {
   const user = userEvent.setup(), onSaved = vi.fn();
-  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={plan} onClose={() => {}} onSaved={onSaved} /></ToastProvider>);
-  expect(screen.getByRole("dialog", { name: /Thu hoạch theo kế hoạch KHT000001/ })).toBeTruthy();
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={{ ...plan, orders: [{ id: ids.line, code: "DH000006", statusId: 4401, status: "Draft", customer: { id: ids.line, code: "KH01", name: "Khách An" } }] }} onClose={() => {}} onSaved={onSaved} /></ToastProvider>);
+  expect(screen.getByRole("dialog", { name: "Thu hoạch bè B1" })).toBeTruthy();
+  expect(screen.getByLabelText("Kế hoạch thu hoạch").textContent).toContain("KHT000001");
+  expect(screen.getByText("DH000006 · Khách An")).toBeTruthy();
   expect(screen.queryByText(/Làn thu hoạch/)).toBeNull();
+  expect(screen.queryByLabelText("Quy đổi tạm tính")).toBeNull();
+  expect(screen.queryByText(/tấn/)).toBeNull();
   expect((screen.getByLabelText("Số lồng thu được") as HTMLInputElement).value).toBe("6");
-  // 6 cages x the default 50 kg = 300 kg = 0,3 tấn.
-  const conversion = screen.getByLabelText("Quy đổi tạm tính").textContent;
-  expect(conversion).toContain("300 kg");
-  expect(conversion).toContain("0,3 tấn");
   await attachPhoto();
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
@@ -47,7 +47,40 @@ it("records from a plan line: no lane to pick, cages start from the plan, kg and
   const [action, files, body, , raftId, zoneId] = state.upload.mock.calls[0];
   expect([action, files.length, raftId, zoneId]).toEqual(["harvest-record", 1, ids.raft, ids.zone]);
   expect(body).toEqual({ laneNumbers: [], finishedLaneNumbers: [], cageCount: 6, estimatedKg: null, productLines: [{ productId: ids.product, cageCount: 6, kg: null }], harvestPlanLineId: ids.line });
-  await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  // The save does not close the window: the next step is weighing the lot cage by cage.
+  expect(onSaved).not.toHaveBeenCalled();
+  await user.click(await screen.findByRole("button", { name: "Cân từng lồng ngay" }));
+  expect(state.push).toHaveBeenCalledWith("/farming/harvest-lots?code=B1-LOT1&weigh=1");
+});
+
+it("after the save, Để sau closes the window and tells the screen behind it to reload", async () => {
+  const user = userEvent.setup(), onSaved = vi.fn(), onClose = vi.fn();
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={plan} onClose={onClose} onSaved={onSaved} /></ToastProvider>);
+  await attachPhoto();
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
+  expect(await screen.findByText(/đang chờ cân/)).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Để sau" }));
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+it("tells a user who may invoice that the invoice comes after the weighing, and says nothing to one who may not", async () => {
+  const user = userEvent.setup();
+  const withOrder = { ...plan, orders: [{ id: ids.line, code: "DH000006", statusId: 4401, status: "Draft", customer: null }] };
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={withOrder} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
+  await attachPhoto();
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
+  expect(await screen.findByText(/Lập hóa đơn giao khách/)).toBeTruthy();
+  cleanup();
+  state.subjectType = "Staff"; state.permissions = [{ functionCode: "HARVESTS", action: "Create" }];
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={withOrder} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
+  await attachPhoto();
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
+  expect(await screen.findByText(/đang chờ cân/)).toBeTruthy();
+  expect(screen.queryByText(/Lập hóa đơn giao khách/)).toBeNull();
 });
 
 it("harvesting before the oysters are mature only asks in the pop-up and still records on Đồng ý", async () => {

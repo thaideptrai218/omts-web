@@ -135,7 +135,7 @@ it("keeps the zone manager as the default executor when the dialog is confirmed 
 
 it("walks an Owner plan: hint and buttons come from the API, no Receive or HandOver, the executor is shown", async () => {
   await open(view({ executor: "Owner", allowedActions: ["Edit", "Cancel", "Harvest", "SkipLane"] }), ownerAccess);
-  expect(screen.getByTestId("plan-next-step").textContent).toBe("Chủ tự thu hoạch: ghi lô thu hoạch cho từng bè trong kế hoạch.");
+  expect(screen.getByTestId("plan-next-step").textContent).toBe("Chủ tự thu hoạch: bấm Thu hoạch ở từng bè trong kế hoạch.");
   expect(screen.getByText("Người thực hiện:").nextElementSibling!.textContent).toBe("Chủ tự làm");
   expect(buttons()).not.toEqual(expect.arrayContaining(["Nhận kế hoạch", "Bàn giao cho chủ", "Hoàn thành"]));
   cleanup();

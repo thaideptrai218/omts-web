@@ -21,9 +21,9 @@ const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "harvest" as
  * The row opened under the list, laid out like the invoice row: four tabs (the lot, the harvest trip, what was sold of it, the history), each with the buttons that fit it.
  * Weighing and correcting open inline in the row; closing and reopening are pop-ups. The buttons come from the `can*` flags of the API and the rights of the account in the lot's zone.
  */
-export function LotDetailPanel({ id, zoneId, onChanged, onRemoved }: { id: string; zoneId: string; onChanged(): void; onRemoved(): void }) {
+export function LotDetailPanel({ id, zoneId, startWeighing = false, onChanged, onRemoved }: { id: string; zoneId: string; /** Opens on the weighing sheet (a link right after a harvest was recorded). */ startWeighing?: boolean; onChanged(): void; onRemoved(): void }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => lotRepository.detail(id, zoneId, signal), [id, zoneId]));
-  const [tab, setTab] = useState<Tab>("info"), [mode, setMode] = useState<LotMode>("view");
+  const [tab, setTab] = useState<Tab>("info"), [mode, setMode] = useState<LotMode>(startWeighing ? "weigh" : "view");
   if (remote.loading) return <div className={listStyles.detail}><Skeleton /></div>;
   if (remote.error || !remote.data) return <ListStateMessage error={remote.error ?? "Không tải được lô thu hoạch."} onRetry={remote.reload} retryLabel="Tải lại lô" />;
   const lot = remote.data, done = () => { setMode("view"); remote.reload(); onChanged(); };

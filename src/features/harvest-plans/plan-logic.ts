@@ -1,23 +1,12 @@
 import { toInstant } from "@/features/sales-orders/order-logic";
 import { foldVietnamese } from "@/shared/presentation/fold-text";
-import type { PlanExecutor, PlanLane, PlanLine, PlanView } from "./contracts";
+import type { PlanExecutor, PlanLine, PlanView } from "./contracts";
 import { PLAN } from "./contracts";
 
-/** Pure rules of the harvest plan: the lane chips, the totals of a plan, the form lines and the body sent to the API. */
+/** Pure rules of the harvest plan: the totals of a plan, the form lines and the body sent to the API. */
 /** The short label of who harvests a plan, shown in the list and the detail. */
 export const executorLabel: Record<PlanExecutor, string> = { ZoneManager: "Quản lý vùng", Owner: "Chủ tự làm" };
 
-export const laneStateLabel: Record<PlanLane["state"], string> = { Planned: "Kế hoạch", Harvested: "Đã thu", Skipped: "Không thu" };
-
-export type LaneChip = { number: number; text: string; state: PlanLane["state"]; lotCode?: string; title?: string };
-/** One chip of a line: "Luống 3" with its state; a harvested lane names its lot, a skipped lane carries the reason as a tooltip. */
-export function laneChip(lane: PlanLane): LaneChip {
-  const title = lane.state === "Skipped" ? lane.skipReason || "Không thu" : lane.state === "Harvested" ? lane.lotCode ? `Đã thu trong lô ${lane.lotCode}` : "Đã thu" : undefined;
-  return { number: lane.laneNumber, text: `Luống ${lane.laneNumber}: ${laneStateLabel[lane.state]}`, state: lane.state, ...(lane.lotCode ? { lotCode: lane.lotCode } : {}), ...(title ? { title } : {}) };
-}
-
-/** The lanes of a line still to harvest: planned, not skipped, not in a lot. */
-export const plannedLaneNumbers = (line: Pick<PlanLine, "lanes">) => line.lanes.filter((lane) => lane.state === "Planned").map((lane) => lane.laneNumber).sort((a, b) => a - b);
 /** A line (a raft) can be harvested now when the API allows it and it has no lot yet; lanes are no longer planned. */
 export const lineCanHarvest = (line: Pick<PlanLine, "lot" | "canHarvest">) => line.canHarvest && !line.lot;
 
@@ -33,15 +22,15 @@ export function planNextStepHint(statusId: number, viewer: PlanViewer, executor:
   if (executor === "Owner") {
     switch (statusId) {
       case PLAN.draft: return owner ? "Phiếu tạm: kiểm tra các dòng rồi bấm Phân công." : "";
-      case PLAN.assigned: return "Chủ tự thu hoạch: ghi lô thu hoạch cho từng bè trong kế hoạch.";
-      case PLAN.harvesting: return "Đang thu: khi mọi bè đã có lô hoặc đã bỏ luống, bấm Hoàn thành.";
+      case PLAN.assigned: return "Chủ tự thu hoạch: bấm Thu hoạch ở từng bè trong kế hoạch.";
+      case PLAN.harvesting: return "Đang thu: khi mọi bè đã thu xong, bấm Hoàn thành.";
       default: return "";
     }
   }
   switch (statusId) {
     case PLAN.draft: return owner ? "Phiếu tạm: kiểm tra các dòng rồi bấm Phân công." : "";
     case PLAN.assigned: return owner ? "Đã giao, chờ quản lý vùng nhận kế hoạch." : "Cần nhận: bấm Nhận kế hoạch để bắt đầu thu hoạch.";
-    case PLAN.received: return owner ? "Quản lý vùng đã nhận, chờ ghi lô thu hoạch." : "Đã nhận: ghi lô thu hoạch cho từng bè trong kế hoạch.";
+    case PLAN.received: return owner ? "Quản lý vùng đã nhận, chờ thu hoạch." : "Đã nhận: bấm Thu hoạch ở từng bè trong kế hoạch.";
     case PLAN.harvesting: return owner ? "Quản lý vùng đang thu hoạch, chờ bàn giao." : "Đang thu: khi mọi bè đã xong, bấm Bàn giao cho chủ.";
     case PLAN.handedOver: return owner ? "Quản lý vùng đã bàn giao, kiểm tra rồi bấm Hoàn thành." : "Đã bàn giao, chờ chủ hoàn thành.";
     default: return "";
@@ -188,9 +177,10 @@ export function buildPlanBody(form: PlanForm) {
   };
 }
 
-/** What the harvest form needs of a plan line: the lanes to lock (planned ones only) and what the line expects, to start the product line from. */
-export const harvestPlanFor = (plan: Pick<PlanView, "code">, line: PlanLine) => ({
-  lineId: line.id, planCode: plan.code, raftId: line.raftId, raftCode: line.raftCode, laneNumbers: plannedLaneNumbers(line),
+/** What the harvest form needs of a plan line: the raft, what the line expects (to start the cages from) and the orders the plan serves, with their customers. */
+export const harvestPlanFor = (plan: Pick<PlanView, "code"> & Partial<Pick<PlanView, "orders">>, line: PlanLine) => ({
+  orders: plan.orders ?? [],
+  lineId: line.id, planCode: plan.code, raftId: line.raftId, raftCode: line.raftCode,
   expectedProductId: line.expectedProduct?.id, expectedCageCount: line.expectedCageCount ?? undefined, expectedHarvestDate: line.expectedHarvestDate ?? undefined,
 });
 export type HarvestPlanTarget = ReturnType<typeof harvestPlanFor>;

@@ -56,11 +56,11 @@ const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-su
  * the search box shows the code, every status and date is shown and the row with exactly that code opens.
  */
 export function LotsScreen(props: { helpHref?: string }) {
-  const params = useSearchParams(), linkedCode = params.get("code") ?? "", linkedZone = params.get("zoneId") ?? "", linkedRaft = params.get("raftId") ?? "";
-  return <LotsList key={`${linkedCode}:${linkedZone}:${linkedRaft}`} linkedCode={linkedCode} linkedZone={linkedZone} linkedRaft={linkedRaft} {...props} />;
+  const params = useSearchParams(), linkedCode = params.get("code") ?? "", linkedZone = params.get("zoneId") ?? "", linkedRaft = params.get("raftId") ?? "", weigh = params.get("weigh") === "1";
+  return <LotsList key={`${linkedCode}:${linkedZone}:${linkedRaft}:${weigh}`} linkedCode={linkedCode} linkedZone={linkedZone} linkedRaft={linkedRaft} weighLinked={weigh} {...props} />;
 }
 
-function LotsList({ helpHref, linkedCode, linkedZone, linkedRaft }: { helpHref?: string; linkedCode: string; linkedZone: string; linkedRaft: string }) {
+function LotsList({ helpHref, linkedCode, linkedZone, linkedRaft, weighLinked }: { helpHref?: string; linkedCode: string; linkedZone: string; linkedRaft: string; weighLinked: boolean }) {
   const { identity, permissions } = useApiWorkspace(), exportFile = useMutation();
   const view = operationAllowed("harvest", identity, permissions.functionPermissions, "View");
   const linkPending = useRef(linkedCode);
@@ -151,7 +151,7 @@ function LotsList({ helpHref, linkedCode, linkedZone, linkedRaft }: { helpHref?:
               {visible.map((column) => <td key={column.key} className={column.numeric ? issueStyles.num : undefined}>{column.render(row)}</td>)}
             </OpenableTableRow>
             {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
-              <LotDetailPanel id={row.id} zoneId={row.zoneId} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
+              <LotDetailPanel id={row.id} zoneId={row.zoneId} startWeighing={weighLinked && row.lotCode.toLowerCase() === linkedCode.toLowerCase()} onChanged={reload} onRemoved={() => { setExpanded(undefined); reload(); }} />
             </div></DetailRow>}
           </Fragment>)}
         </tbody></table>}
