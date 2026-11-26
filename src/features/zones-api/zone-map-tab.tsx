@@ -5,27 +5,29 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
 import type { MapSelection } from "@/features/farming-api/vietmap-view";
+import { isOutsideBoundary } from "@/features/farming-api/boundary-geometry";
 import type { MapZone } from "@/features/farming-api/zone-map-contract";
+import { readZoneMap } from "@/features/farming-api/zone-map-repository";
 import { Skeleton, useRemote } from "@/features/operations/ui";
-import type { ZoneDetail } from "./zone-model";
-import { readZoneRafts, skipped } from "./zone-summary-reads";
-import type { ZoneRaft } from "./zone-summary-model";
+import { IN_USE, type ZoneDetail } from "./zone-model";
 import styles from "./zone-tabs.module.css";
 
 const VietMapView = dynamic(() => import("@/features/farming-api/vietmap-view"), { ssr: false, loading: () => <Skeleton /> });
-const hasPoint = (point: { latitude?: number | null; longitude?: number | null }) => typeof point.latitude === "number" && typeof point.longitude === "number";
+const hasPoint = (point: { latitude: number | null; longitude: number | null }) => typeof point.latitude === "number" && typeof point.longitude === "number";
 
 /**
- * "Bản đồ": the zone pin and its rafts that have coordinates. "Toàn cảnh" lifts the same map into a fixed overlay on `document.body`
+ * "Bản đồ": the licensed area (one polygon per khu) and the rafts of the zone that have coordinates, from one map read; rafts outside the area are
+ * highlighted. The zone marker appears only for a zone without a boundary that still has a pin. "Toàn cảnh" lifts the same map into a fixed overlay on `document.body`
  * (so no ancestor can clip it); Esc or "Thu gọn" brings it back and returns focus to the button that opened it.
  */
 export function ZoneMapTab({ zone, canSeeRafts, onOpenRaft }: { zone: ZoneDetail; canSeeRafts: boolean; onOpenRaft(raftId: string): void }) {
-  const remote = useRemote(useCallback((signal: AbortSignal) => canSeeRafts ? readZoneRafts(zone.id, signal) : skipped<ZoneRaft[]>([]), [zone.id, canSeeRafts]));
+  // The map read lists In Use zones; a discontinued zone asks for the whole list and picks itself out.
+  const remote = useRemote(useCallback((signal: AbortSignal) => readZoneMap(zone.statusId !== IN_USE, signal), [zone.statusId]));
   const [expanded, setExpanded] = useState(false), [selection, setSelection] = useState<MapSelection>();
   const opener = useRef<HTMLButtonElement>(null), closer = useRef<HTMLButtonElement>(null);
-  const rafts = remote.data;
-  const mapZones = useMemo<MapZone[]>(() => hasPoint(zone) ? [{ id: zone.id, code: zone.code, name: zone.name, latitude: zone.latitude, longitude: zone.longitude, statusId: zone.statusId, status: zone.status,
-    rafts: (rafts ?? []).flatMap(raft => hasPoint(raft) ? [{ id: raft.id, code: raft.code, latitude: raft.latitude ?? null, longitude: raft.longitude ?? null }] : []) }] : [], [zone, rafts]);
+  const row = remote.data?.find(item => item.id === zone.id);
+  const mapZone = useMemo<MapZone | undefined>(() => row && { ...row, ...(row.boundary ? { latitude: null, longitude: null } : {}), rafts: canSeeRafts ? row.rafts : [] }, [row, canSeeRafts]);
+  const mapZones = useMemo(() => mapZone && (mapZone.boundary || hasPoint(mapZone) || mapZone.rafts.some(hasPoint)) ? [mapZone] : [], [mapZone]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -41,11 +43,13 @@ export function ZoneMapTab({ zone, canSeeRafts, onOpenRaft }: { zone: ZoneDetail
   useEffect(() => { if (wasExpanded.current && !expanded) opener.current?.focus(); wasExpanded.current = expanded; }, [expanded]);
 
   if (remote.loading) return <Skeleton />;
-  if (remote.error || !rafts) return <ListStateMessage error={remote.error ?? "Không tải được vị trí bè."} onRetry={remote.reload} retryLabel="Tải lại" />;
-  const total = rafts.length, placed = mapZones[0]?.rafts.length ?? 0;
+  if (remote.error || !remote.data) return <ListStateMessage error={remote.error ?? "Không tải được bản đồ vùng."} onRetry={remote.reload} retryLabel="Tải lại" />;
+  const rafts = mapZone?.rafts ?? [], placed = rafts.filter(hasPoint).length;
+  const outside = rafts.filter(raft => raft.latitude !== null && raft.longitude !== null && isOutsideBoundary({ latitude: raft.latitude, longitude: raft.longitude }, mapZone?.boundary)).length;
+  const where = mapZone?.boundary ? `${mapZone.boundary.features.length} khu theo sơ đồ cấp phép` : mapZone && hasPoint(mapZone) ? `${mapZone.latitude}, ${mapZone.longitude}` : "chưa có ranh giới hoặc tọa độ";
   const pick = (value: MapSelection) => setSelection(value);
   const toolbar = <div className={styles.mapBar}>
-    <span>{hasPoint(zone) ? `Vùng ${zone.code}: ${zone.latitude}, ${zone.longitude}` : "Vùng chưa có tọa độ"}{canSeeRafts ? ` · ${placed}/${total} bè có tọa độ` : ""}</span>
+    <span>{`Vùng ${zone.code}: ${where}`}{canSeeRafts ? ` · ${placed}/${rafts.length} bè có tọa độ` : ""}{outside > 0 ? ` · ${outside} bè ngoài ranh giới` : ""}</span>
     {expanded ? <Button key="collapse" ref={closer} type="button" variant="secondary" className="w-auto" onClick={() => setExpanded(false)}>Thu gọn</Button>
       : <Button key="expand" ref={opener} type="button" variant="secondary" className="w-auto" onClick={() => setExpanded(true)}>Toàn cảnh</Button>}
   </div>;
