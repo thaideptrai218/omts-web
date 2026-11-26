@@ -20,7 +20,7 @@ const hasPoint = (point: { latitude: number | null; longitude: number | null }) 
  * highlighted. The zone marker appears only for a zone without a boundary that still has a pin. "Toàn cảnh" lifts the same map into a fixed overlay on `document.body`
  * (so no ancestor can clip it); Esc or "Thu gọn" brings it back and returns focus to the button that opened it.
  */
-export function ZoneMapTab({ zone, canSeeRafts, onOpenRaft }: { zone: ZoneDetail; canSeeRafts: boolean; onOpenRaft(raftId: string): void }) {
+export function ZoneMapTab({ zone, canSeeRafts, onOpenRaft }: { zone: ZoneDetail; canSeeRafts: boolean; onOpenRaft(raft: { id: string; code: string }): void }) {
   // The map read lists In Use zones; a discontinued zone asks for the whole list and picks itself out.
   const remote = useRemote(useCallback((signal: AbortSignal) => readZoneMap(zone.statusId !== IN_USE, signal), [zone.statusId]));
   const [expanded, setExpanded] = useState(false), [selection, setSelection] = useState<MapSelection>();
@@ -56,7 +56,7 @@ export function ZoneMapTab({ zone, canSeeRafts, onOpenRaft }: { zone: ZoneDetail
   const stage = <div className={styles.mapStage}>
     <VietMapView zones={mapZones} fill={expanded} onSelect={pick} />
     {selection && <div className={styles.pick} role="group" aria-label="Vị trí đang chọn"><strong>{selection.label}</strong>
-      {selection.kind === "rafts" && <Button key="view-raft" type="button" className="w-auto" onClick={() => { setExpanded(false); onOpenRaft(selection.id); }}>Xem bè</Button>}
+      {selection.kind === "rafts" && <Button key="view-raft" type="button" className="w-auto" onClick={() => { setExpanded(false); onOpenRaft({ id: selection.id, code: rafts.find(raft => raft.id === selection.id)?.code ?? "" }); }}>Xem bè</Button>}
       <Button key="close-pick" type="button" variant="secondary" className="w-auto" aria-label="Đóng" onClick={() => setSelection(undefined)}>×</Button></div>}
   </div>;
   return expanded
