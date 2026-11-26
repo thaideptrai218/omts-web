@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 import { backendPhotoUrl, resolvePhotoSource } from "./origin-photo-source";
 import { parseOriginLanguage, parseQrToken } from "./origin-qr-token";
 
@@ -62,4 +63,32 @@ describe("backendPhotoUrl", () => {
     { k: `${KEY}%00` }, { e: "-1" }, { e: "1e9" }, { s: "Z".repeat(64) }, { s: "a".repeat(63) }, { extra: "1" },
   ])("rejects %j", (override) => expect(backendPhotoUrl(params(override as unknown as Record<string, string>), ORIGIN)).toBeNull());
   it("rejects missing parameters", () => expect(backendPhotoUrl(new URLSearchParams(), ORIGIN)).toBeNull());
+});
+
+describe("R2 photos on the public page", () => {
+  const R2 = "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com";
+  const env = { OMTS_FILE_STORAGE_ORIGIN: `${R2}/omts-files-staging` };
+  const AMZ = "X-Amz-Expires=3600&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=key%2F20261126%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20261126T105848Z&X-Amz-SignedHeaders=host&X-Amz-Signature=" + "b".repeat(64);
+  const signed = `${R2}/omts-files-staging/${KEY}?${AMZ}`;
+  it("routes a presigned bucket link through the same-origin proxy and rebuilds the exact link", () => {
+    const src = resolvePhotoSource(signed, ORIGIN, env);
+    expect(src).toMatch(/^\/origin\/photo\?r=/u);
+    expect(src).not.toContain("r2.cloudflarestorage.com");
+    const rebuilt = backendPhotoUrl(new URL(src!, "https://web.example").searchParams, ORIGIN, env);
+    expect(new URL(rebuilt!.href).searchParams.get("X-Amz-Credential")).toBe("key/20261126/auto/s3/aws4_request");
+    expect(rebuilt?.origin).toBe(R2);
+    expect(rebuilt?.pathname).toBe(`/omts-files-staging/${KEY}`);
+    expect([...rebuilt!.searchParams].sort()).toEqual([...new URL(signed).searchParams].sort());
+  });
+  it("keeps passing other https links through while the bucket is not configured", () => expect(resolvePhotoSource(signed, ORIGIN, {})).toBe(signed));
+  it.each([
+    { r: "../etc/passwd" }, { r: "a/../../b.jpg" }, { r: "https://evil.test/x.jpg" }, { other: "1" }, { "X-Amz-Date": "a b" },
+  ])("proxy rejects %j", (override) => {
+    const params = new URLSearchParams({ r: KEY, "X-Amz-Signature": "b".repeat(64), ...(override as unknown as Record<string, string>) });
+    expect(backendPhotoUrl(params, ORIGIN, env)).toBeNull();
+  });
+  it("proxy rejects R2 parameters while the bucket is not configured", () => {
+    expect(backendPhotoUrl(new URLSearchParams({ r: KEY, "X-Amz-Signature": "b".repeat(64) }), ORIGIN, {})).toBeNull();
+  });
+  it("proxy rejects a key without signature parameters", () => expect(backendPhotoUrl(new URLSearchParams({ r: KEY }), ORIGIN, env)).toBeNull());
 });
