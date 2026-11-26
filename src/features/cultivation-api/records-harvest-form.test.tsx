@@ -5,10 +5,11 @@ import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
 const ids = { product: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", line: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b07", zone: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11", raft: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a12", lot: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a14" };
-const state = vi.hoisted(() => ({ upload: vi.fn(), all: vi.fn(), push: vi.fn(), subjectType: "CooperativeOwner", permissions: [] as unknown[] }));
+const state = vi.hoisted(() => ({ roster: vi.fn(), upload: vi.fn(), all: vi.fn(), push: vi.fn(), subjectType: "CooperativeOwner", permissions: [] as unknown[] }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: state.push }) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: state.subjectType }, permissions: { functionPermissions: state.permissions } }) }));
-vi.mock("./records-shared", async (original) => ({ ...(await original<typeof import("./records-shared")>()), harvestRepo: { upload: state.upload, read: vi.fn(), write: vi.fn() } }));
+vi.mock("./records-shared", async (original) => ({ ...(await original<typeof import("./records-shared")>()), harvestRepo: { upload: state.upload, read: vi.fn(async () => ({ status: "error", httpStatus: 404, uncertain: false })), write: vi.fn() } }));
+vi.mock("@/features/harvest-plans/repository", async (original) => ({ ...(await original<typeof import("@/features/harvest-plans/repository")>()), planRepository: { roster: state.roster } }));
 vi.mock("@/features/products/repository", async (original) => ({ ...(await original<typeof import("@/features/products/repository")>()), productRepository: { all: state.all } }));
 vi.mock("./record-crew-picker", () => ({ RecordCrewPicker: () => null }));
 // jsdom cannot decode images; the picker only needs the file back.
@@ -116,4 +117,32 @@ it("photos are optional: the section is collapsed, titled optional with the 3 ma
   await waitFor(() => expect(state.upload).toHaveBeenCalledTimes(1));
   expect(state.upload.mock.calls[0][1]).toHaveLength(0);
   expect(screen.queryByText(/cần từ 1 đến 3/)).toBeNull();
+});
+
+it("refuses more cages than the plan line expects", async () => {
+  const user = userEvent.setup();
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={plan} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
+  const cages = screen.getByLabelText("Số lồng thu được");
+  await user.clear(cages);
+  await user.type(cages, "7");
+  expect(screen.getByText("Không thu quá 6 lồng của kế hoạch.")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  expect(state.upload).not.toHaveBeenCalled();
+});
+
+it("takes the crew from the people who confirmed for the plan instead of asking again", async () => {
+  const user = userEvent.setup();
+  state.roster.mockResolvedValue({ status: "success", data: { requiredPeople: 3, people: [
+    { id: "r1", employeeId: ids.line, name: "Lê Văn Một", state: "Confirmed" },
+    { id: "r2", employeeId: ids.zone, name: "Trần Thị Hai", state: "External" },
+    { id: "r3", employeeId: ids.raft, name: "Người Chưa Trả Lời", state: "Invited" },
+  ] } });
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={{ ...plan, planId: ids.lot }} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
+  expect(await screen.findByText("2 người / cần 3")).toBeTruthy();
+  expect(screen.getByText("Lê Văn Một")).toBeTruthy();
+  expect(screen.queryByText("Người Chưa Trả Lời")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
+  await waitFor(() => expect(state.upload).toHaveBeenCalledTimes(1));
+  expect(state.upload.mock.calls[0][2].crew).toEqual([ids.line, ids.zone]);
 });

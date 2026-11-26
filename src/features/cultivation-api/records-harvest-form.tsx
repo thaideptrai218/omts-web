@@ -18,7 +18,8 @@ import type { HarvestPlanTarget } from "@/features/harvest-plans/plan-logic";
 import { earlyHarvestQuestion } from "@/features/harvest-plans/plan-maturity";
 import { farmingFieldError } from "./farming-problem";
 import { harvestWarningTexts } from "./harvest-warning-text";
-import { RecordCrewPicker } from "./record-crew-picker";
+import { HarvestRaftProgress } from "./harvest-raft-progress-bar";
+import { HarvestCrewSection } from "./harvest-crew-section";
 import { crewAssignmentNotice } from "./record-crew-assignment-notice";
 import { useHarvestProducts } from "./harvest-product-lines";
 import flowStyles from "./cultivation-flow.module.css";
@@ -42,20 +43,22 @@ export function harvestInvalidFieldText(error: z.ZodError): string {
  * Warnings of the saved lot come back as notices.
  */
 export function HarvestForm({ zoneId, raftId, plan, onClose, onSaved }: {
-  zoneId: string; raftId: string; plan: Pick<HarvestPlanTarget, "lineId" | "planCode" | "raftCode" | "expectedProductId" | "expectedCageCount"> & Partial<Pick<HarvestPlanTarget, "expectedHarvestDate" | "orders">>; onClose(): void; onSaved(): void;
+  zoneId: string; raftId: string; plan: Pick<HarvestPlanTarget, "lineId" | "planCode" | "raftCode" | "expectedProductId" | "expectedCageCount"> & Partial<Pick<HarvestPlanTarget, "expectedHarvestDate" | "orders" | "planId">>; onClose(): void; onSaved(): void;
 }) {
   const [productId, setProductId] = useState(plan.expectedProductId ?? ""), [cages, setCages] = useState<number | null>(plan.expectedCageCount ?? null);
   const [started] = useState(cages);
   const products = useHarvestProducts();
   const [error, setError] = useState<string>(), [photos, setPhotos] = useState<File[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false), [photoError, setPhotoError] = useState<string>();
-  const [crew, setCrew] = useState<string[]>([]), [savedLot, setSavedLot] = useState<{ code: string }>();
+  const [crew, setCrew] = useState<string[]>([]), [crewTouched, setCrewTouched] = useState(false), [savedLot, setSavedLot] = useState<{ code: string }>();
   const { notify } = useToast(), router = useRouter(), { identity, permissions } = useApiWorkspace();
   // After the save, closing the window (any way) tells the screen behind it to reload.
-  const editor = useOperationEditor(() => (savedLot ? onSaved() : onClose()), !savedLot && (cages !== started || !!photos.length || !!crew.length), photoBusy);
+  const editor = useOperationEditor(() => (savedLot ? onSaved() : onClose()), !savedLot && (cages !== started || !!photos.length || crewTouched), photoBusy);
   const product = products.products.find(row => row.id === productId);
   const mayInvoice = operationAllowed("sales-invoices", identity, permissions.functionPermissions, "Create", zoneId);
   const orders = plan.orders ?? [];
+  // The owner's rule: a harvest never takes more cages than the plan line expects (the API itself would accept more).
+  const maxCages = plan.expectedCageCount ?? undefined;
 
   function done(saved: z.infer<typeof c.harvestSaved>) {
     notify({ tone: "success", title: `Đã ghi nhận thu hoạch ${saved.lot.lotCode}.`, description: saved.everySeededLaneHarvested ? "Tất cả làn đã thu xong. Có thể kết thúc chu kỳ." : "Thu xong cả bè thì bấm Hoàn tất thu hoạch bè ở tab Thu hoạch." });
@@ -69,6 +72,7 @@ export function HarvestForm({ zoneId, raftId, plan, onClose, onSaved }: {
     setPhotoError(bad);
     if (!productId) { setError("Chọn sản phẩm thu hoạch."); return; }
     if (bad || photoBusy) return;
+    if (cages != null && maxCages != null && cages > maxCages) { setError(`Không thu quá ${fmt(maxCages)} lồng của kế hoạch.`); return; }
     const parsed = c.planHarvestValues.safeParse({ laneNumbers: [], finishedLaneNumbers: [], cageCount: cages, estimatedKg: null, productLines: [{ productId, cageCount: cages, kg: null }],
       harvestPlanLineId: plan.lineId, ...(crew.length ? { crew } : {}) });
     if (!parsed.success) { setError(harvestInvalidFieldText(parsed.error)); return; }
@@ -99,11 +103,12 @@ export function HarvestForm({ zoneId, raftId, plan, onClose, onSaved }: {
           </SelectBox>}</dd></div>
           {orders.length > 0 && <div className="sm:col-span-2"><dt className="text-xs text-text-muted">Đơn và khách</dt><dd>{orders.map(order => <span key={order.code} className="block">{order.code}{order.customer?.name ? ` · ${order.customer.name}` : ""}</span>)}</dd></div>}
         </dl>
+        <HarvestRaftProgress raftId={raftId} zoneId={zoneId} />
         <div className="grid gap-2">
-          <UnitInput label="Số lồng thu được" unit="lồng" decimals={2} step={0.5} min={0.01} max={100000} value={cages} onChange={setCages} />
+          <UnitInput label="Số lồng thu được" unit="lồng" decimals={2} step={0.5} min={0.01} max={maxCages ?? 100000} error={cages != null && maxCages != null && cages > maxCages ? `Không thu quá ${fmt(maxCages)} lồng của kế hoạch.` : undefined} value={cages} onChange={setCages} />
           <p className={flowStyles.harvestHint}>{plan.expectedCageCount != null ? `Kế hoạch dự kiến ${fmt(plan.expectedCageCount)} lồng. ` : ""}Thu cả bè. Số kg sẽ cân từng lồng tại cảng.</p>
         </div>
-        <CollapsibleSection title="Nhân viên cùng thu" description="Những người đi thu chuyến này." columns={1}><RecordCrewPicker label="Nhân viên cùng thu" raftId={raftId} zoneId={zoneId} values={crew} onChange={setCrew} /></CollapsibleSection>
+        <HarvestCrewSection planId={plan.planId} raftId={raftId} zoneId={zoneId} values={crew} onPrefill={setCrew} onChange={value => { setCrew(value); setCrewTouched(true); }} />
         <CollapsibleSection title="Ảnh thu hoạch (không bắt buộc, tối đa 3)" defaultOpen={false} columns={1}>
           <PhotoPicker required={false} label="Ảnh chuyến thu hoạch" files={photos} onChange={value => { setPhotos(value); setPhotoError(undefined); }} onBusyChange={setPhotoBusy} error={photoError || farmingFieldError(editor.mutation.failure?.problem, "Photos")} />
         </CollapsibleSection>
