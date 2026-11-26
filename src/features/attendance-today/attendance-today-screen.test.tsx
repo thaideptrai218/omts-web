@@ -39,6 +39,16 @@ describe("office attendance today", () => {
     expect(mocks.read).not.toHaveBeenCalled(); expect(mocks.zones).not.toHaveBeenCalled();
   });
 
+  it("names the rows of a discontinued zone but never offers that zone to pick", async () => {
+    const third = "00000000-0000-4000-8000-0000000000f3";
+    mocks.permissions = [{ ...grant("View"), scope: { kind: "zones", zoneIds: [ids.zone, ids.other, third] } }];
+    mocks.zones.mockResolvedValue(success([{ id: ids.zone, name: "Vùng Đông", statusId: 102 }, { id: ids.other, name: "Vùng Tây", statusId: 101 }, { id: third, name: "Vùng Nam", statusId: 101 }]));
+    mount();
+    expect(await screen.findByRole("region", { name: "Bè B01 · Vùng Đông" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Vùng Đông" })).toBeNull();
+    expect(screen.queryByText("Vùng được cấp")).toBeNull();
+  });
+
   it("shows first-load skeleton then raft and internal groups with one granted zone auto-selected", async () => {
     mount();
     expect(screen.getByRole("status", { name: "Đang tải dữ liệu" })).toBeTruthy();

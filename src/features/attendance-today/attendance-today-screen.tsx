@@ -6,7 +6,7 @@ import { ScreenGuide } from "@/components/ui/screen-guide";
 import { FilterGroup, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
 import { ListStateMessage, ManagementScroller } from "@/components/ui/management-screen/management-table";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { loadInUseZones } from "@/features/zones-api/in-use-zones";
+import { loadOptions } from "@/features/operations/lookups";
 import { businessToday, ErrorNotice, Select, Skeleton, useRemote } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { EmployeeTypeFilter, filterByEmployeeType } from "@/features/employee-api/employee-type-filter";
@@ -39,14 +39,15 @@ function AttendanceTodayBoard({ day, allowed }: { day: string; allowed: Attendan
   const personKind = (row: TodayPerson) => row.source === "staff" ? "Staff" as const : kindOf(row.employeeId);
   const [refreshing, setRefreshing] = useState(false);
   const [dialog, setDialog] = useState<{ group: TodayCrew; step: AttendanceStep }>();
-  const zones = useRemote(useCallback((signal: AbortSignal) => loadInUseZones(signal), []));
+  const zones = useRemote(useCallback((signal: AbortSignal) => loadOptions("zones", signal), []));
   const list = useRemote<TodaySnapshot>(useCallback((signal: AbortSignal) => readAttendanceToday(day, signal)
     .catch(() => ({ status: "error" as const, httpStatus: 0, uncertain: false }))
     .then(result => { if (!signal.aborted) setRefreshing(false); return result; }), [day]));
-  const options = grantedZones(zones.data ?? [], allowed);
+  // Every zone is read so rows of a discontinued zone keep their name; only In Use zones can be picked.
+  const options = grantedZones((zones.data ?? []).filter(zone => zone.statusId !== 102), allowed);
   const zoneId = options.some(zone => zone.id === pickedZone) ? pickedZone : options.length === 1 ? options[0].id : "";
   const actions = useAttendanceTodayActions(day, zoneId, allowed, () => { setRefreshing(true); list.refresh(); }, refreshing);
-  const zoneName = (id: string) => String(options.find(zone => zone.id === id)?.name ?? "Vùng được cấp");
+  const zoneName = (id: string) => String(zones.data?.find(zone => zone.id === id)?.name ?? "Vùng được cấp");
   const people = list.data ? filterByEmployeeType(todayPeople(list.data, day, zoneId, allowed), typeFilter, personKind) : [];
   // Searching finds a whole crew: its buttons always apply to the same full membership that is visible.
   const groups = groupPeople(people.filter(row => !isPreviousOpen(row, day)), zoneName)
