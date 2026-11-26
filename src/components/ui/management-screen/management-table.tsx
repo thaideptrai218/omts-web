@@ -100,8 +100,8 @@ export function Subtabs<T extends string>({ label, tabs, value, onChange, idPref
  * One group of form fields: a bordered card with a title, an optional one-line description, and a chevron that folds it.
  * Long forms are split into these so the user sees what belongs together (see DESIGN_GUIDELINES "Form sections").
  */
-export function CollapsibleSection({ title, description, defaultOpen = true, columns = 2, children }: { title: string; description?: string; defaultOpen?: boolean; columns?: 1 | 2 | 3; children: ReactNode }) {
-  return <details className={styles.section} open={defaultOpen}>
+export function CollapsibleSection({ title, description, defaultOpen = true, columns = 2, onToggle, children }: { title: string; description?: string; defaultOpen?: boolean; columns?: 1 | 2 | 3; onToggle?(open: boolean): void; children: ReactNode }) {
+  return <details className={styles.section} open={defaultOpen} onToggle={onToggle && (event => onToggle(event.currentTarget.open))}>
     <summary><span className={styles.sectionHead}><strong>{title}</strong>{description && <small>{description}</small>}</span><InterfaceIcon name="chevron-down" /></summary>
     <div className={styles.sectionBody} data-columns={columns}>{children}</div>
   </details>;

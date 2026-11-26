@@ -7,6 +7,8 @@ import { createWorkspaceRepository, type ApiRecord } from "@/features/api-worksp
 import { ErrorNotice, Skeleton, useMutation } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import type { UnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
+import { StatusConfirmDialog } from "@/features/farming-management/status-confirm-dialog";
+import { zoneBoundaryRepository } from "@/features/zone-boundary/zone-boundary-repository";
 import { ZoneInfoTab } from "./zone-info-tab";
 import { ZoneLicensesTab } from "./zone-licenses-tab";
 import { ZoneRaftsTab } from "./zone-rafts-tab";
@@ -21,13 +23,15 @@ import { ZoneMapTab } from "./zone-map-tab";
 import type { ZoneTabKey } from "./zone-summary-model";
 
 /** Which tabs and actions the signed-in account may use; each tab appears only when it may be read. */
-export type ZoneAccess = { edit: boolean; rafts: boolean; licenses: boolean; staff: boolean; water: boolean; waterCreate: boolean; raftCreate: boolean; raft: RaftAccess };
+/** `boundary`: may read the licence map and change or clear the boundary of an In Use zone (the Owner, like the backend). */
+export type ZoneAccess = { edit: boolean; boundary: boolean; rafts: boolean; licenses: boolean; staff: boolean; water: boolean; waterCreate: boolean; raftCreate: boolean; raft: RaftAccess };
 type TabKey = ZoneTabKey;
 const repository = createWorkspaceRepository("zones");
 
 export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: string; access: ZoneAccess; guard: UnsavedGuard; zones: ApiRecord[]; onChanged(): void }) {
   const detail = useZoneDetail(id), mutation = useMutation();
   const [openRaft, setOpenRaft] = useState<{ id: string; code: string }>(), [tab, setTab] = useState<TabKey>("info"), [action, setAction] = useState<ZoneStatusAction>(), [reviewRequested, setReviewRequested] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const zone = detail.data;
   const tabs = useMemo(() => ([["info", "Thông tin", true], ["map", "Bản đồ", true], ["rafts", "Bè nuôi", access.rafts], ["licenses", "Giấy phép", access.licenses],
     ["staff", "Nhân viên", access.staff], ["water", "Quan trắc nước", access.water]] as const).filter(entry => entry[2]).map(([key, label]) => ({ key, label })), [access]);
@@ -44,9 +48,16 @@ export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: s
     const record = parseZoneDetail(result);
     if (record) saved(record); else { detail.reload(); onChanged(); }
   }
+  /** Clearing the boundary sends `boundary: null`; the zone keeps its last pin. */
+  async function clearBoundary() {
+    if (!zone || detail.loading || mutation.busy() || mutation.blocked) return;
+    const result = await mutation.run(() => zoneBoundaryRepository.save(id, null, zone.rowVersion));
+    setClearing(false);
+    if (result) saved(result.zone);
+  }
   const busy = detail.loading || mutation.pending || mutation.blocked;
   const content: Record<TabKey, ReactNode> = zone ? {
-    info: <ZoneInfoTab zone={zone} canEdit={access.edit} canSeeLicense={access.licenses} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload} onStatus={() => { mutation.reviewed(); setAction(zone.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
+    info: <ZoneInfoTab zone={zone} canEdit={access.edit} canBoundary={access.boundary && zone.statusId === IN_USE} canSeeLicense={access.licenses} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload} onClearBoundary={() => { mutation.reviewed(); setClearing(true); }} onStatus={() => { mutation.reviewed(); setAction(zone.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
     map: <ZoneMapTab zone={zone} canSeeRafts={access.rafts} onOpenRaft={raft => void guard.leave(() => { setOpenRaft(raft); setTab("rafts"); })} />,
     rafts: <ZoneRaftsTab zoneId={id} zoneLabel={`${zone.code} · ${zone.name}`} canCreate={access.raftCreate && zone.statusId === IN_USE} raftAccess={access.raft} guard={guard} focus={openRaft} />, licenses: <ZoneLicensesTab zoneId={id} zones={coverable} guard={guard} />,
     staff: <ZoneStaffTab zoneId={id} />, water: <ZoneWaterTab zoneId={id} zoneName={zone.name} canCreate={access.waterCreate && zone.statusId === IN_USE} />,
@@ -63,6 +74,7 @@ export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: s
       <header className={styles.header}><h3>{zone.code} · {zone.name}</h3><StatusPill tone={zone.statusId === DISCONTINUED ? "neutral" : "success"}>{zoneStatusLabel(zone.statusId)}</StatusPill></header>
       <Subtabs<TabKey> label="Hồ sơ vùng nuôi" tabs={tabs} value={tab} idPrefix={prefix} onChange={key => { if (key !== tab) void guard.leave(() => setTab(key)); }} />
       <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={`${styles.body} ${local.tabScroll}`}>{content[tab]}</div>
+      {clearing && <StatusConfirmDialog title="Xóa ranh giới?" subject={`${zone.code} · ${zone.name}`} description="Vùng không còn ranh giới theo sơ đồ cấp phép và giữ lại vị trí điểm đã có; bè không bị đổi. Có thể đọc lại sơ đồ để lưu ranh giới mới." confirmLabel="Xác nhận xóa ranh giới" pending={mutation.pending} busy={mutation.busy} onCancel={() => setClearing(false)} onConfirm={() => void clearBoundary()} />}
       {action && <ZoneStatusDialog action={action} zone={zone} pending={mutation.pending} busy={mutation.busy} onCancel={() => setAction(undefined)} onConfirm={() => void confirm()} />}
     </>}
   </section>;
