@@ -31,7 +31,7 @@ export const waterColumns: readonly Column[] = [
 /** Sortable measurement list of the chosen zone; a row opens its record in place, one at a time, through the unsaved-changes guard. */
 export function WaterHistoryTable({ rows, visible, sort, onSort, expandedId, onToggle, canEditIn, guard, onChanged }: {
   rows: readonly ZonedWaterRow[]; visible: readonly string[]; sort: SortState; onSort(next: SortState): void; expandedId?: string; onToggle(id: string): void;
-  /** Whether the account may correct measurements of that zone (a list may hold several zones). */
+  /** Whether the account may void measurements of that zone (a list may hold several zones). */
   canEditIn(zoneId: string): boolean; guard: UnsavedGuard; onChanged(notice: string): void;
 }) {
   const columns = waterColumns.filter(column => visible.includes(column.key));

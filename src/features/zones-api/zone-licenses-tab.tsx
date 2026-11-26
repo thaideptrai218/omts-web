@@ -28,10 +28,12 @@ const StatePill = ({ state, replaced }: { state: string; replaced: boolean }) =>
 export function ZoneLicensesTab({ zoneId, zones, guard: providedGuard }: { zoneId: string; zones: ApiRecord[]; guard?: UnsavedGuard }) {
   const localGuard = useUnsavedGuard(), guard = providedGuard ?? localGuard;
   const repository = useMemo(() => createOperationsRepository("zone-licenses"), []);
-  const [asOf] = useState(businessToday), [opened, setOpened] = useState<string>(), [editor, setEditor] = useState<Editor>(), [serial, setSerial] = useState(0);
-  const overview = useRemote(useCallback((signal: AbortSignal) => repository.read("list", { zoneId, asOf }, licenseOverviewSchema, signal), [repository, zoneId, asOf]));
+  const [opened, setOpened] = useState<string>(), [editor, setEditor] = useState<Editor>(), [serial, setSerial] = useState(0);
+  const overview = useRemote(useCallback((signal: AbortSignal) => repository.read("list", { zoneId, asOf: businessToday() }, licenseOverviewSchema, signal), [repository, zoneId]));
   const open = (mode: Editor["mode"], record: License | null) => { setEditor({ mode, record }); setSerial(value => value + 1); };
   // Reminders look at the newest document of each type only; they are notices, nothing changes from here.
+  // The server answers with the date it judged the state on (today, read at request time).
+  const asOf = overview.data?.asOf ?? "";
   const shown = overview.data ? orderLicenses(overview.data.licenses) : [];
   const reminders = overview.data ? licenseReminders(overview.data.licenses, asOf, licenseTypeLabel) : [];
   const saved = (record: License) => { setEditor(undefined); setOpened(record.id); overview.reload(); };
