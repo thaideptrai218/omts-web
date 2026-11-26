@@ -4,8 +4,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
-import { EmployeeTypeFilter, filterByEmployeeType } from "@/features/employee-api/employee-type-filter";
+import { EmployeeTwoGroupPicker } from "@/features/employee-api/employee-two-group-picker";
 import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { loadOptions } from "./lookups";
@@ -40,7 +39,7 @@ export function AssignmentEditor({
     date: mode === "crew" ? businessToday() : initialDay < businessToday() ? businessToday() : initialDay,
     moveExisting: false,
   });
-  const [employeeIds, setEmployeeIds] = useState<string[]>([]), [typeFilter, setTypeFilter] = useState("");
+  const [employeeIds, setEmployeeIds] = useState<string[]>([]);
   const [error, setError] = useState<string>();
   const [initial] = useState(() => JSON.stringify(values));
   const editor = useOperationEditor(onClose, JSON.stringify(values) !== initial || employeeIds.length > 0);
@@ -196,23 +195,12 @@ export function AssignmentEditor({
             </Select>
           </WorkforceFormSection>
           <WorkforceFormSection number="02" title="Nhân viên">
-            <fieldset className="max-h-64 overflow-auto rounded-control border border-border p-3">
+            <fieldset className="space-y-2">
               <legend>Nhân viên được phân công</legend>
-              <div className="mb-2"><EmployeeTypeFilter name="assignment-employee-type" value={typeFilter} onChange={setTypeFilter} /></div>
-              {filterByEmployeeType(options.data?.employees ?? [], typeFilter, (row) => kindOf(row.id)).map((r) => (
-                <label key={r.id} className="flex gap-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={employeeIds.includes(r.id)}
-                    onChange={(e) =>
-                      setEmployeeIds((ids) => (e.target.checked ? [...ids, r.id] : ids.filter((id) => id !== r.id)))
-                    }
-                  />
-                  <span className="min-w-0">{r.name}<EmployeeTypeBadge type={kindOf(r.id)} className="ml-1.5" /></span>
-                  {r.onLeave && " · Đã duyệt nghỉ ngày này"}
-                </label>
-              ))}
-              {options.data && !options.data.employees.length && <p>Chưa có nhân viên đang làm việc.</p>}
+              {options.data && !options.data.employees.length
+                ? <p>Chưa có nhân viên đang làm việc.</p>
+                : <EmployeeTwoGroupPicker name="assignment-employee" label="Nhân viên được phân công" values={employeeIds} onChange={setEmployeeIds}
+                  people={(options.data?.employees ?? []).map((r) => ({ id: r.id, name: r.name, kind: kindOf(r.id), note: r.onLeave ? <small className="block text-text-muted">Đã duyệt nghỉ ngày này</small> : undefined }))} />}
             </fieldset>
             {mode === "assign" && (
               <label className="flex gap-3">

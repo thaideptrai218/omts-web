@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
+import { EmployeeTwoGroupPicker } from "@/features/employee-api/employee-two-group-picker";
 import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, Note, Select, businessTime } from "./ui";
@@ -62,12 +62,10 @@ export function CrewStartDialog({ rows, today, zoneName, allowed, onClose, onSav
             <option value="">Chọn tổ</option>
             {crews.map((item) => <option key={item.key} value={item.key}>{item.label} · {item.members.length} người</option>)}
           </Select>
-          {group && <fieldset className="max-h-56 overflow-auto rounded-control border border-border p-3">
+          {group && <fieldset className="space-y-2">
             <legend>Thành viên vào làm ({ticked.size}/{group.members.length})</legend>
-            {group.members.map((member) => <label key={member.id} className="flex gap-3 py-1.5">
-              <input type="checkbox" checked={ticked.has(member.employeeId)} onChange={(event) => setTicked((current) => { const next = new Set(current); if (event.target.checked) next.add(member.employeeId); else next.delete(member.employeeId); return next; })} />
-              <span className="min-w-0">{member.employeeName}<EmployeeTypeBadge type={kindOf(member.employeeId)} className="ml-1.5" /> · {member.job}</span>
-            </label>)}
+            <EmployeeTwoGroupPicker name="crew-start-member" label="Thành viên vào làm" values={[...ticked]} onChange={(ids) => setTicked(new Set(ids))}
+              people={group.members.map((member) => ({ id: member.employeeId, name: member.employeeName, kind: kindOf(member.employeeId), note: <small className="block text-text-muted">{member.job}</small> }))} />
           </fieldset>}
           <Field label="Giờ bắt đầu *" type="time" required value={time} onChange={(event) => setTime(event.target.value)} />
           <Note label="Lý do vào làm cả tổ *" required maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} />

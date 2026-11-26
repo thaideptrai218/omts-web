@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), options: vi.fn(), subjectType: "Trader" }));
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mocks.read, write: mocks.write }) }));
 vi.mock("./lookups", () => ({ loadOptions: (...args: unknown[]) => mocks.options(...args) }));
@@ -56,14 +56,17 @@ describe("approved sales/workforce writes and draft safety", () => {
     mocks.options.mockImplementation(async (area) => ({ status: "success", data: area === "zones" ? [{ id: ids.zone, name: "Vùng QA", statusId: 101 }] : [{ id: raftId, code: "B-QA" }] }));
     render(<AssignmentEditor mode="assign" initialDay={businessToday()} onClose={vi.fn()} onSaved={vi.fn()} />);
     fireEvent.change(await screen.findByLabelText("Vùng phân công *"), { target: { value: ids.zone } }); await screen.findByRole("option", { name: "B-QA" });
-    fireEvent.change(screen.getByLabelText("Bè làm việc (bỏ trống nếu làm ở vùng, ví dụ ươm)"), { target: { value: raftId } }); fireEvent.click(screen.getByLabelText("QA staff · Đã duyệt nghỉ ngày này"));
+    fireEvent.change(screen.getByLabelText("Bè làm việc (bỏ trống nếu làm ở vùng, ví dụ ươm)"), { target: { value: raftId } }); fireEvent.click(screen.getByLabelText(/^QA staff/));
     fireEvent.click(screen.getByRole("button", { name: "Tải lại danh mục phân công" })); await waitFor(() => expect(mocks.read).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect((screen.getByLabelText("Bè làm việc (bỏ trống nếu làm ở vùng, ví dụ ươm)") as HTMLSelectElement).value).toBe(raftId)); expect((screen.getByLabelText("QA staff · Đã duyệt nghỉ ngày này") as HTMLInputElement).checked).toBe(true); expect(mocks.write).not.toHaveBeenCalled();
+    await waitFor(() => expect((screen.getByLabelText("Bè làm việc (bỏ trống nếu làm ở vùng, ví dụ ươm)") as HTMLSelectElement).value).toBe(raftId)); expect((screen.getByLabelText(/^QA staff/) as HTMLInputElement).checked).toBe(true); expect(mocks.write).not.toHaveBeenCalled();
   });
-  it("marks each employee as nội bộ or thời vụ in the assignment list and filters by it", async () => {
+  it("lists nội bộ and thời vụ people in two groups, each with its own count and Chọn tất cả", async () => {
     mocks.subjectType = "CooperativeOwner"; mocks.read.mockResolvedValue({ status: "success", data: { jobs: [], employees: [{ id: ids.receipt, name: "An nội bộ", onLeave: false, type: "Staff" }, { id: ids.item, name: "Bình thời vụ", onLeave: false, type: "SeasonalWorker" }] } });
     render(<AssignmentEditor mode="assign" initialDay={businessToday()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(await screen.findByLabelText(/^Bình thời vụs*Thời vụ/)).toBeTruthy(); expect(screen.getByLabelText(/^An nội bộs*Nội bộ/)).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("Thời vụ")); expect(screen.queryByLabelText(/^An nội bộs*Nội bộ/)).toBeNull(); expect(screen.getByLabelText(/^Bình thời vụs*Thời vụ/)).toBeTruthy();
+    const staff = await screen.findByRole("region", { name: "Nội bộ, 1 người" }), seasonal = screen.getByRole("region", { name: "Thời vụ, 1 người" });
+    expect(within(staff).getByLabelText(/^An nội bộ/)).toBeTruthy(); expect(within(staff).queryByLabelText(/^Bình thời vụ/)).toBeNull();
+    expect(within(seasonal).getByLabelText(/^Bình thời vụ/)).toBeTruthy();
+    fireEvent.click(within(seasonal).getByRole("button", { name: "Chọn tất cả" }));
+    expect((within(seasonal).getByLabelText(/^Bình thời vụ/) as HTMLInputElement).checked).toBe(true); expect((within(staff).getByLabelText(/^An nội bộ/) as HTMLInputElement).checked).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
-import { EmployeeTypeFilter, filterByEmployeeType } from "@/features/employee-api/employee-type-filter";
+import { EmployeeTwoGroupPicker } from "@/features/employee-api/employee-two-group-picker";
 import { useEmployeeKinds } from "@/features/employee-api/use-employee-types";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { formatDate } from "@/features/trader-purchases/presentation";
 import { createOperationsRepository } from "./repository";
 import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, businessToday, useMutation, useRemote } from "./ui";
-import { buildStaffingPayload, filterStaffingEmployees } from "./purchase-request-staffing-model";
+import { buildStaffingPayload } from "./purchase-request-staffing-model";
 
 const requests = createOperationsRepository("purchase-requests");
 
@@ -21,15 +21,14 @@ const requests = createOperationsRepository("purchase-requests");
 export function PurchaseRequestStaffingSection({ request, kgPerCage, onSaved }: { request: c.PurchaseRequest; kgPerCage?: number; onSaved(request: c.PurchaseRequest): void }) {
   const sent = request.staffing, mutation = useMutation();
   const [cages, setCages] = useState(String(sent?.cages ?? request.requestedCages)), [pickupDate, setPickupDate] = useState(sent?.pickupDate ?? request.pickupDate);
-  const [typeFilter, setTypeFilter] = useState(""), kindOf = useEmployeeKinds();
-  const [search, setSearch] = useState(""), [selected, setSelected] = useState<string[]>([]), [problem, setProblem] = useState<string>(), [saved, setSaved] = useState(false);
+  const kindOf = useEmployeeKinds();
+  const [selected, setSelected] = useState<string[]>([]), [problem, setProblem] = useState<string>(), [saved, setSaved] = useState(false);
   const day = sent?.workDate ?? pickupDate;
   const chosenRemote = useRemote(useCallback((signal: AbortSignal) => requests.read("staffing", { id: request.id }, c.staffingChosenSchema, signal), [request.id]));
   const employeesRemote = useRemote(useCallback((signal: AbortSignal) => day >= businessToday() ? requests.read("staffing-employees", { id: request.id, day }, c.staffingEmployeesSchema, signal) : Promise.resolve({ status: "success" as const, data: [] }), [request.id, day]));
   const chosen = useMemo(() => chosenRemote.data ?? [], [chosenRemote.data]);
   const chosenIds = useMemo(() => chosen.map((row) => row.employeeId), [chosen]);
-  const options = useMemo(() => filterByEmployeeType(filterStaffingEmployees((employeesRemote.data ?? []).filter((employee) => !chosenIds.includes(employee.id)), search), typeFilter, (employee) => kindOf(employee.id)), [employeesRemote.data, chosenIds, search, typeFilter, kindOf]);
-  const toggle = (id: string) => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  const options = useMemo(() => (employeesRemote.data ?? []).filter((employee) => !chosenIds.includes(employee.id)), [employeesRemote.data, chosenIds]);
 
   async function save() {
     const built = buildStaffingPayload({ cages, pickupDate, selectedIds: selected, chosenIds }, request, businessToday());
@@ -59,13 +58,11 @@ export function PurchaseRequestStaffingSection({ request, kgPerCage, onSaved }: 
         : chosen.length ? <ul className="mt-1 list-disc pl-5 text-sm">{chosen.map((row) => <li key={row.id}>{row.employeeName}<EmployeeTypeBadge type={kindOf(row.employeeId)} className="ml-1.5" /></li>)}</ul>
         : <p className="mt-1 text-sm text-text-muted">Chưa chọn nhân viên nào.</p>}
     </div>
-    <div className="mt-4"><Field label={sent ? "Chọn thêm nhân viên" : "Chọn nhân viên *"} type="search" placeholder="Tìm theo tên" value={search} onChange={(event) => setSearch(event.target.value)} />
-      <EmployeeTypeFilter value={typeFilter} onChange={setTypeFilter} name="staffing-employee-type" />
+    <div className="mt-4"><h4 className="mb-2 text-sm font-medium">{sent ? "Chọn thêm nhân viên" : "Chọn nhân viên *"}</h4>
       {employeesRemote.loading ? <p className="mt-2 text-sm text-text-muted" role="status">Đang tải danh sách nhân viên…</p>
         : employeesRemote.error ? <><ErrorNotice error={employeesRemote.error} /><Button className="mt-2 w-auto" variant="secondary" onClick={employeesRemote.reload}>Tải lại danh sách nhân viên</Button></>
-        : options.length ? <ul className="mt-2 max-h-56 space-y-1 overflow-auto rounded-control border border-border p-2" aria-label="Nhân viên có thể chọn">{options.map((employee) => <li key={employee.id}>
-          <label className={`flex items-start gap-3 text-sm ${employee.available ? "" : "text-text-muted"}`}><input type="checkbox" className="mt-1" disabled={!employee.available || mutation.pending} checked={selected.includes(employee.id)} onChange={() => toggle(employee.id)} />
-            <span>{employee.name}<EmployeeTypeBadge type={kindOf(employee.id)} className="ml-1.5" />{!employee.available && <small className="block">{employee.unavailableReason ?? "Không chọn được"}</small>}</span></label></li>)}</ul>
+        : options.length ? <EmployeeTwoGroupPicker name="staffing-employee" label="Nhân viên có thể chọn" values={selected} onChange={setSelected}
+          people={options.map((employee) => ({ id: employee.id, name: employee.name, disabled: !employee.available || mutation.pending, note: !employee.available ? <small className="block">{employee.unavailableReason ?? "Không chọn được"}</small> : undefined }))} />
         : <p className="mt-2 text-sm text-text-muted">Không có nhân viên nào phù hợp.</p>}
     </div>
     <ErrorNotice error={problem || mutation.error} />

@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), options: vi.fn(), subjectType: "CooperativeOwner", permissions: [] as unknown[], kinds: new Map<string, string>() }));
 // The kind of each employee (nội bộ / thời vụ) comes from the employee list, which this suite does not serve: it is given here.
-vi.mock("@/features/employee-api/use-employee-types", () => ({ useEmployeeKinds: () => (id?: string | null) => id ? mocks.kinds.get(id) : undefined }));
+vi.mock("@/features/employee-api/use-employee-types", () => { const kindOf = (id?: string | null) => id ? mocks.kinds.get(id) : undefined; return { useEmployeeKinds: () => kindOf, useEmployeeFacts: () => ({ kindOf, zonesOf: () => [] }) }; });
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mocks.read, write: mocks.write }) }));
 vi.mock("./lookups", () => ({ loadOptions: (...args: unknown[]) => mocks.options(...args) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType }, permissions: { functionPermissions: mocks.permissions } }) }));
