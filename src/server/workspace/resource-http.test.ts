@@ -47,6 +47,46 @@ describe("workspace BFF routing and authorization", () => {
     expect((await handleResourceRequest(new Request("http://localhost:3002/api/workspace/accounts"), "accounts")).status).toBe(403);
     expect(fetcher).not.toHaveBeenCalled();
   });
+  describe("staff accounts", () => {
+    const id = "0dc8f57e-8402-4d7b-95a0-27a3204d3b35";
+    const row = { id, username: "quanlyvung1", displayName: "Lê Minh Tuấn", phoneNumber: "0900000011", email: null, status: "Deleted", mustChangePassword: false, employeeId: null, pairs: [], rowVersion: "rv", note: "ghi chú", deleted: true };
+    const post = (resource: string, body: unknown) => new Request(`http://localhost:3002/api/workspace/${resource}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    it("forwards the deleted-accounts switch and the unlinked flag, and keeps note and deleted on the row", async () => {
+      configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [row], page: 1, pageSize: 100, total: 1 }));
+      const response = await handleResourceRequest(new Request("http://localhost:3002/api/workspace/accounts?includeDeleted=true&unlinked=true&page=1&pageSize=100"), "accounts");
+      expect(response.status).toBe(200);
+      expect(Object.fromEntries(new URL(String(fetcher.mock.calls[0][0])).searchParams)).toEqual({ includeDeleted: "true", unlinked: "true", page: "1", pageSize: "100" });
+      expect((await response.json()).data.items[0]).toMatchObject({ note: "ghi chú", deleted: true, status: "Deleted" });
+    });
+    it("accepts only the literal value true for those flags, and only for accounts", async () => {
+      configure(); const fetcher = vi.spyOn(globalThis, "fetch");
+      expect((await handleResourceRequest(new Request("http://localhost:3002/api/workspace/accounts?includeDeleted=1"), "accounts")).status).toBe(400);
+      expect((await handleResourceRequest(new Request("http://localhost:3002/api/workspace/zones?includeDeleted=true"), "zones")).status).toBe(400);
+      expect(fetcher).not.toHaveBeenCalled();
+    });
+    it("posts Xóa người dùng to /delete with the reason and row version", async () => {
+      configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(row));
+      const response = await handleResourceRequest(post("accounts", { action: "delete", id, body: { reason: "Nghỉ việc", rowVersion: "rv" } }), "accounts");
+      expect(response.status).toBe(200);
+      const [target, init] = fetcher.mock.calls[0];
+      expect(String(target)).toBe(`http://127.0.0.1:8080/api/accounts/${id}/delete`);
+      expect((init as RequestInit).method).toBe("POST");
+      expect(JSON.parse(String((init as RequestInit).body))).toEqual({ reason: "Nghỉ việc", rowVersion: "rv" });
+    });
+    it("sends the whole edit form with the note to PUT", async () => {
+      configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ...row, status: "Active", deleted: false }));
+      const body = { displayName: "Lê Minh Tuấn", username: "quanlyvung1", phoneNumber: "0900000011", email: null, note: "ghi chú", rowVersion: "rv" };
+      expect((await handleResourceRequest(post("accounts", { action: "update", id, body }), "accounts")).status).toBe(200);
+      expect((fetcher.mock.calls[0][1] as RequestInit).method).toBe("PUT");
+      expect(JSON.parse(String((fetcher.mock.calls[0][1] as RequestInit).body))).toEqual(body);
+    });
+    it("refuses delete for any other resource and without an id", async () => {
+      configure(); const fetcher = vi.spyOn(globalThis, "fetch");
+      expect((await handleResourceRequest(post("zones", { action: "delete", id, body: { reason: "x" } }), "zones")).status).toBe(400);
+      expect((await handleResourceRequest(post("accounts", { action: "delete", body: { reason: "x" } }), "accounts")).status).toBe(400);
+      expect(fetcher).not.toHaveBeenCalled();
+    });
+  });
   it("discards an upstream response if the session was replaced while loading", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 20, total: 0 }));
     gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());

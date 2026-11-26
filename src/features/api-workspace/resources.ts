@@ -48,7 +48,7 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
   accounts: { title: "Tài khoản nhân viên nội bộ", ownerOnly: true, editable: true, creatable: false,
     columns: [["username", "Tên đăng nhập"], ["displayName", "Tên hiển thị"], ["phoneNumber", "Số điện thoại"], ["status", "Trạng thái"]],
     fields: [{ key: "displayName", label: "Tên hiển thị", required: true }, { key: "username", label: "Tên đăng nhập", required: true },
-      { key: "phoneNumber", label: "Số điện thoại", required: true }, { key: "email", label: "Email" }] },
+      { key: "phoneNumber", label: "Số điện thoại", required: true }, { key: "email", label: "Email" }, { key: "note", label: "Ghi chú", type: "textarea" }] },
   roles: { title: "Vai trò và quyền", ownerOnly: true, editable: false,
     columns: [["code", "Mã vai trò"], ["name", "Tên vai trò"]], fields: [] },
 };
@@ -69,7 +69,8 @@ const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), s
 // the Nhân viên screen reads role, zone and employee from the list itself, with no per-row grant request.
 const accountPair = z.object({ id: apiIdSchema, zoneId: apiIdSchema.nullable(), zoneName: nullableText, allZones: z.boolean(), role: text, roleName: text });
 const accountRow = z.object({ id: apiIdSchema, username: text, displayName: text, phoneNumber: nullableText, email: nullableText, status: text,
-  subjectType: text.optional(), mustChangePassword: z.boolean().optional(), employeeId: apiIdSchema.nullish(), pairs: z.array(accountPair).optional(), ...version });
+  subjectType: text.optional(), mustChangePassword: z.boolean().optional(), employeeId: apiIdSchema.nullish(), pairs: z.array(accountPair).optional(),
+  note: nullableText.optional(), deleted: z.boolean().optional(), ...version });
 const listSchemas = { zones: farmingZoneListItemSchema, suppliers: supplierRow, "input-items": itemRow,
   employees: employeeListItemSchema, rafts: raftRow, accounts: accountRow, roles: roleRow, customers: customerRow };
 const detailSchemas = {

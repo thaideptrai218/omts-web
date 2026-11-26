@@ -8,9 +8,9 @@ import { forwardOwnerCredentialPost } from "./account-credential-http";
  */
 export const handleAccountCreate = (request: Request) => forwardOwnerCredentialPost(request, {
   bodySchema: createUserRequestSchema,
-  forward: ({ displayName, username, phoneNumber, email, employeeId, grants }) => ({
+  forward: ({ displayName, username, phoneNumber, email, employeeId, grants, note }) => ({
     path: "/api/accounts",
-    payload: { displayName, username, phoneNumber, email: email || null, employeeId, grants: grants.map(({ zoneId, role }) => ({ zoneId, role })) },
+    payload: { displayName, username, phoneNumber, email: email || null, employeeId, grants: grants.map(({ zoneId, role }) => ({ zoneId, role })), note: note || null },
   }),
   successStatus: 201,
 });

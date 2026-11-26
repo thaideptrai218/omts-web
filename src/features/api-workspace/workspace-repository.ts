@@ -23,7 +23,7 @@ export function createWorkspaceRepository(resource: ResourceKey) {
     proposal(signal?: AbortSignal, zoneId?: string) { return send<{ code: string; seedUnit?: string | null }>(resource, new URLSearchParams({ proposal: "1", ...(zoneId ? { zoneId } : {}) }), undefined, signal); },
     list(query: Record<string, string>, signal?: AbortSignal) { return send<ApiPage>(resource, new URLSearchParams(query), undefined, signal); },
     detail(id: string, signal?: AbortSignal) { return send<ApiRecord>(resource, new URLSearchParams({ id }), undefined, signal); },
-    mutate(action: "create" | "update" | "discontinue" | "reactivate" | "lock" | "unlock", body: Record<string, unknown>, id?: string, zoneId?: string) {
+    mutate(action: "create" | "update" | "discontinue" | "reactivate" | "lock" | "unlock" | "delete", body: Record<string, unknown>, id?: string, zoneId?: string) {
       return send<ApiRecord>(resource, new URLSearchParams(), { action, id, zoneId, body });
     },
   };

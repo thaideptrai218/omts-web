@@ -68,7 +68,7 @@ describe("create user BFF route", () => {
     const response = await handleAccountCreate(post("/api/accounts", createBody({ grants })));
     expect(response.status).toBe(200); expect(await response.text()).not.toContain("never-return");
     expect(String(fetcher.mock.calls[0][0])).toBe("http://127.0.0.1:8080/api/accounts");
-    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ displayName: "Quản lý 2", username: "quanlyvung2", phoneNumber: "0912345678", email: null, employeeId: null, grants });
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ displayName: "Quản lý 2", username: "quanlyvung2", phoneNumber: "0912345678", email: null, employeeId: null, grants, note: null });
   });
   it("does not accept a 200 as a created account", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(backendCredential(), { status: 200 }));

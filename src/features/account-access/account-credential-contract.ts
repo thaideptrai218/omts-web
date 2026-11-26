@@ -14,6 +14,7 @@ export const createUserRequestSchema = z.strictObject({
   email: z.string().trim().max(254).nullable(),
   employeeId: z.guid().nullable(),
   grants: z.array(createUserGrantSchema).max(20),
+  note: z.string().trim().max(500).nullish(),
 });
 export type CreateUserRequest = z.infer<typeof createUserRequestSchema>;
 
