@@ -58,3 +58,23 @@
 .menuPresets { display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:16px; }
 .menuPresets section { display:grid; gap:8px; align-content:start; }
 .menuPresets h4 { font-size:13px; font-weight:650; }
+
+.menuList { display:grid; min-width:200px; gap:2px; }
+.menuRow { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:34px; padding:0 10px; border-radius:6px; font-size:13px; text-align:left; white-space:nowrap; }
+.menuRow:hover { background:var(--omts-color-primary-soft); color:var(--omts-color-primary); }
+.menuRow[aria-pressed="true"] { background:var(--omts-color-primary); color:#fff; }
+.menuRow svg { width:14px; height:14px; }
+.subMenu { display:grid; gap:8px; min-width:220px; }
+.back { display:inline-flex; align-items:center; gap:4px; font-size:13px; font-weight:650; justify-self:start; }
+.back svg { width:14px; height:14px; }
+.yearNav { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; }
+.yearNav button { display:grid; place-items:center; width:26px; height:26px; border-radius:6px; }
+.yearNav button:hover:not(:disabled) { background:var(--omts-color-primary-soft); }
+.yearNav button:disabled { opacity:.35; cursor:not-allowed; }
+.yearNav svg { width:14px; height:14px; }
+.grid { display:grid; grid-template-columns:repeat(3,minmax(72px,1fr)); gap:6px; }
+.weekList { display:grid; gap:4px; max-height:260px; overflow-y:auto; }
+.gridButton { min-height:32px; padding:0 10px; border:1px solid var(--omts-color-border); border-radius:6px; background:var(--omts-color-surface); font-size:13px; white-space:nowrap; }
+.gridButton:hover:not(:disabled) { border-color:var(--omts-color-primary); color:var(--omts-color-primary); }
+.gridButton[aria-pressed="true"], .gridButton[aria-pressed="true"]:hover { background:var(--omts-color-primary); border-color:var(--omts-color-primary); color:#fff; }
+.gridButton:disabled { opacity:.4; cursor:not-allowed; }

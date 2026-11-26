@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WaterChartRaw } from "./contracts";
-import { aggregateWaterChart, defaultChartStart, gapText, periodOf, tableOfPeriods } from "./water-chart-periods";
+import { aggregateWaterChart, gapText, granularityFor, periodOf, tableOfPeriods } from "./water-chart-periods";
 
 const thresholds = { phMin: 7.5, phMax: 8.5, salinityMin: 18, salinityMax: 32, temperatureMin: 15, temperatureMax: 32 };
 const id = "529ec3ce-af8f-42f7-a08f-4bab36ba7e62";
@@ -43,10 +43,23 @@ describe("water chart periods", () => {
     expect(periodOf("2026-09-30", "year")).toMatchObject({ label: "Năm 2026", tick: "2026" });
   });
 
-  it("looks back 12 months, 8 quarters or 5 years when no start is chosen", () => {
-    expect(defaultChartStart("2026-11-27", "month")).toBe("2025-11-27");
-    expect(defaultChartStart("2026-11-27", "quarter")).toBe("2024-11-27");
-    expect(defaultChartStart("2026-11-27", "year")).toBe("2021-11-27");
+  it("groups by day, and by Monday-to-Sunday week", () => {
+    const points = [point("2026-11-02T08:00:00+07:00", 8, 27, 26), point("2026-11-08T23:00:00+07:00", 8.2, 27, 26), point("2026-11-09T01:00:00+07:00", 7.9, 27, 26)];
+    const days = aggregateWaterChart(chart("2026-11-01", "2026-11-03", points), "day");
+    expect(days.periods.map(period => [period.label, period.count])).toEqual([["01/11/2026", 0], ["02/11/2026", 1], ["03/11/2026", 0]]);
+    const weeks = aggregateWaterChart(chart("2026-11-01", "2026-11-12", points), "week");
+    expect(weeks.periods.map(period => [period.label, period.count])).toEqual([["Tuần 26/10 – 01/11/2026", 0], ["Tuần 02/11 – 08/11/2026", 2], ["Tuần 09/11 – 15/11/2026", 1]]);
+    expect(weeks.periods[0].from).toBe("2026-11-01");
+  });
+
+  it("picks the granularity from the length of the range", () => {
+    expect(granularityFor("2026-11-21", "2026-11-27")).toBe("day");
+    expect(granularityFor("2026-10-29", "2026-11-27")).toBe("day");
+    expect(granularityFor("2026-10-01", "2026-11-27")).toBe("week");
+    expect(granularityFor("2026-01-01", "2026-11-27")).toBe("month");
+    expect(granularityFor("2025-11-28", "2026-11-27")).toBe("month");
+    expect(granularityFor("2024-01-01", "2026-11-27")).toBe("quarter");
+    expect(granularityFor("2021-01-01", "2026-11-27")).toBe("year");
   });
 });
 
