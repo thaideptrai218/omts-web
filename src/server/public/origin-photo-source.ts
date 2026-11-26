@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { fileStoragePrefix, storedFileKey } from "../operations/evidence-target";
 
 // Ảnh lô: backend (kho Local) trả đường dẫn tương đối /api/files/local/{khóa}?expires=..&sig=.. thuộc origin của backend,
 // trình duyệt không được biết origin đó. Kho Azure trả URL https tuyệt đối tới máy chủ lưu trữ công khai.
 //  - đường dẫn local (tương đối, hoặc tuyệt đối cùng origin backend) -> đi qua /origin/photo (proxy phía máy chủ);
+//  - link ký sẵn của bucket R2 (OMTS_FILE_STORAGE_ORIGIN) -> cũng đi qua /origin/photo, vì CSP của trang chỉ cho ảnh cùng origin;
 //  - https tuyệt đối khác -> trình duyệt tải thẳng (không đi qua máy chủ web, nên không có SSRF);
 //  - mọi thứ khác (http ngoài backend, javascript:, data:, có user:pass) -> bỏ.
 const KEY_PATTERN = /^[a-z0-9-]{1,64}(?:\/[A-Za-z0-9._-]{1,100}){1,4}$/u;
@@ -46,8 +48,24 @@ function fromLocalPath(pathname: string, search: string): string | null {
   return parsed.success ? proxyHref(parsed.data) : null;
 }
 
+// Ảnh R2: proxy nhận khóa (r) và đúng các tham số X-Amz-* của link ký; host và bucket luôn lấy từ cấu hình máy chủ.
+const AMZ_PARAM = /^X-Amz-[A-Za-z-]{1,32}$/u;
+const AMZ_VALUE = /^[A-Za-z0-9._\/;-]{1,512}$/u;
+const storageKeySchema = z.string().regex(KEY_PATTERN).refine((key) => key.split("/").every((part) => !/^\.+$/u.test(part)));
+
+function fromStorageUrl(url: URL, environment: Readonly<Record<string, unknown>>): string | null {
+  const key = storedFileKey(url, "null", environment);
+  if (!key || !storageKeySchema.safeParse(key).success) return null;
+  const query = new URLSearchParams({ r: key });
+  for (const [name, value] of url.searchParams) {
+    if (!AMZ_VALUE.test(value)) return null;
+    query.append(name, value);
+  }
+  return `${PHOTO_PROXY_PATH}?${query.toString()}`;
+}
+
 /** Đổi URL ảnh của backend thành nguồn an toàn cho thẻ img, hoặc null nếu không dùng được. */
-export function resolvePhotoSource(raw: string, backendOrigin: string): string | null {
+export function resolvePhotoSource(raw: string, backendOrigin: string, environment: Readonly<Record<string, unknown>> = process.env): string | null {
   try {
     if (raw.startsWith("/") && !raw.startsWith("//")) {
       const local = new URL(raw, "http://origin.invalid");
@@ -56,12 +74,23 @@ export function resolvePhotoSource(raw: string, backendOrigin: string): string |
     const url = new URL(raw);
     if (url.username || url.password || url.hash) return null;
     if (url.origin === backendOrigin) return fromLocalPath(url.pathname, url.search);
+    if (url.origin === fileStoragePrefix(environment)?.origin) return fromStorageUrl(url, environment);
     return url.protocol === "https:" ? url.href : null;
   } catch { return null; }
 }
 
 /** Dựng lại URL backend từ tham số proxy đã kiểm tra; luôn cùng origin backend đã cấu hình. */
-export function backendPhotoUrl(searchParams: URLSearchParams, backendOrigin: string): URL | null {
+export function backendPhotoUrl(searchParams: URLSearchParams, backendOrigin: string, environment: Readonly<Record<string, unknown>> = process.env): URL | null {
+  if (searchParams.has("r")) {
+    const storage = fileStoragePrefix(environment);
+    const key = storageKeySchema.safeParse(searchParams.get("r") ?? "");
+    const signed = [...searchParams].filter(([name]) => name !== "r");
+    if (!storage || !key.success || searchParams.getAll("r").length !== 1 || signed.length === 0
+      || signed.some(([name, value]) => !AMZ_PARAM.test(name) || !AMZ_VALUE.test(value))) return null;
+    const target = new URL(`${storage.path}${key.data}`, storage.origin);
+    target.search = new URLSearchParams(signed).toString();
+    return storedFileKey(target, backendOrigin, environment) === key.data ? target : null;
+  }
   if (searchParams.has("c")) {
     const file = cooperativeFileQuerySchema.safeParse({ c: searchParams.get("c") ?? "", f: searchParams.get("f") ?? "" });
     if (!file.success || [...searchParams.keys()].some((name) => name !== "c" && name !== "f") || file.data.f.includes("..")) return null;
