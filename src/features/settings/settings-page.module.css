@@ -8,12 +8,15 @@
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
 .sidebar, .card { border: 1px solid var(--omts-color-border); border-radius: 8px; background: var(--omts-color-surface); min-width: 0; }
 .sidebar { padding: 6px 8px; }
+.filterSlot { min-width: 0; }
+.filterSlot:empty { display: none; }
 /* One behaviour everywhere: the list is as tall as the window (scrolls inside, scrollbar hidden) and stays in view while the page beside it scrolls. */
 @media (min-width: 900px) {
   .layout { align-items: start; }
   .layout > .card { min-height: calc(100dvh - 130px); }
   .sidebar { position: sticky; top: 122px; max-height: calc(100dvh - 170px); overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
   .sidebar::-webkit-scrollbar { display: none; }
+  .filterSlot { position: sticky; top: 122px; height: calc(100dvh - 170px); }
   .layoutCollapsed { grid-template-columns: 52px minmax(0, 1fr) !important; }
   .layoutCollapsed .sidebar { padding: 6px 4px; }
   .layoutCollapsed .sidebar a { justify-content: center; padding-inline: 0; }
@@ -69,7 +72,7 @@
 .empty { padding: 28px 20px; border: 1px solid var(--omts-color-border); border-radius: 8px; background: var(--omts-color-surface); color: var(--omts-color-text-muted); font-size: 14px; }
 /* Below 900px the group list is replaced by the select above the card. */
 @media (max-width: 899px) {
-  .sidebar { display: none; }
+  .sidebar, .filterSlot { display: none; }
 }
 @media (min-width: 900px) {
   .layout { grid-template-columns: 226px minmax(0, 1fr); }

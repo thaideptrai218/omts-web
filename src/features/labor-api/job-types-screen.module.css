@@ -36,7 +36,6 @@
 .rateInput .input { min-width:96px; text-align:left; font-variant-numeric:tabular-nums; }
 .currentTag { margin-left:8px; padding:1px 8px; border-radius:999px; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:11px; font-weight:650; }
 .feedback { flex:none; padding:8px 12px; border-bottom:1px solid var(--omts-color-border); font-size:13px; }
-.railHead { display:flex; align-items:center; justify-content:space-between; font-size:13px; }
 .skeleton { display:grid; gap:8px; padding:12px; }
 .skeleton > div { height:40px; border-radius:6px; background:var(--omts-color-surface-subtle); animation:pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity:.5; } }

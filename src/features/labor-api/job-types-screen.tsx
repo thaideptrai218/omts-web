@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
-import { FilterPills, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
+import { FilterHead, FilterPills, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
 import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, SortableHeader, managementStyles, type SortState } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { StatusPill } from "@/components/ui/management-page";
@@ -61,11 +61,11 @@ export function JobTypesScreen({ helpHref }: { helpHref?: string }) {
     if (rows.length === 1 && page > 1) setPage(page - 1); else remote.reload();
   }
   const filters = <>
-    <div className={styles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => { changed<void>(() => { setSearch(""); setTerm(""); setStatus(""); })(); }}>Đặt lại</button></div>
+    <FilterHead canReset={hasFilter} onReset={() => { changed<void>(() => { setSearch(""); setTerm(""); setStatus(""); })(); }} />
     <FilterPills legend="Trạng thái" name="job-type-status" value={status} options={[[String(IN_USE), "Đang dùng"], ["102", "Ngừng dùng"]]} onChange={changed<string>(setStatus)} />
   </>;
 
-  return <ManagementLayout storageKey="job-types" icon="work" title="Loại công việc & đơn giá" filters={filters} filterLabel="Bộ lọc loại công việc"
+  return <ManagementLayout storageKey="job-types" icon="work" title="Loại công việc & đơn giá" filters={filters} filtersActive={!!status} filterLabel="Bộ lọc loại công việc"
     footer={<ManagementPagination page={remote.data?.page ?? page} pageSize={pageSize} total={remote.data?.total ?? 0} pageSizes={pageSizes} unit="loại công việc" disabled={remote.loading}
       onPage={next => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm loại công việc" placeholder="Theo tên loại công việc" maxLength={200} value={search} onChange={event => { setSearch(event.target.value); setNotice(undefined); }} />}
