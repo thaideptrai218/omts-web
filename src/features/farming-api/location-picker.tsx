@@ -3,9 +3,11 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/features/operations/ui";
+import { placementOf, placementText } from "./boundary-geometry";
 import { describePoint, draftOfPoint, nudgeOfKey, nudgePoint, pointOfDraft, type ContextPin, type PickerPoint } from "./location-picker-model";
 import { LocationPickerOverlay } from "./location-picker-overlay";
 import { useLocationDefault } from "./use-location-default";
+import type { ZoneBoundary } from "./zone-map-contract";
 
 const LocationPickerMap = dynamic(() => import("./location-picker-map"), { ssr: false, loading: () => <Skeleton /> });
 
@@ -13,14 +15,16 @@ const LocationPickerMap = dynamic(() => import("./location-picker-map"), { ssr: 
  * Replaces the two typed coordinate inputs: the point is chosen on a map and written back as the same two draft strings.
  * Click or drag places the marker; arrow keys nudge it (Shift = 10x) while the map area has focus; Enter confirms.
  * A native top-layer dialog keeps the expanded map above any parent modal and traps focus.
+ * With a zone `boundary` the map draws its polygons and the chosen point says live whether it is inside; this never blocks a pick.
  */
-export function LocationPicker({ latitude, longitude, onChange, pins = [], center, error, id }: {
+export function LocationPicker({ latitude, longitude, onChange, pins = [], center, error, id, boundary }: {
   latitude: string; longitude: string; onChange(next: { latitude: string; longitude: string }): void;
-  pins?: readonly ContextPin[]; center?: PickerPoint; error?: string; id: string;
+  pins?: readonly ContextPin[]; center?: PickerPoint; error?: string; id: string; boundary?: ZoneBoundary | null;
 }) {
   const value = pointOfDraft(latitude, longitude);
   const [expanded, setExpanded] = useState(false), [note, setNote] = useState(""), [locating, setLocating] = useState(false);
-  const defaults = useLocationDefault();
+  // The cooperative map only supplies a starting viewport when nothing else does.
+  const defaults = useLocationDefault(!center && !pins.length && !boundary);
   const mapCenter = useRef<PickerPoint | undefined>(undefined), root = useRef<HTMLDivElement>(null), request = useRef(0);
   const opener = useRef<HTMLButtonElement>(null), closer = useRef<HTMLButtonElement>(null), wasExpanded = useRef(false);
   const disabled = () => !!root.current?.closest("fieldset[disabled]");
@@ -59,9 +63,11 @@ export function LocationPicker({ latitude, longitude, onChange, pins = [], cente
   }
 
   const caption = value ? describePoint(value) : "Chưa chọn vị trí";
+  const placement = value ? placementOf(value, boundary) : undefined;
   const content = <div className={expanded ? "flex h-full min-h-0 flex-col gap-2" : "min-w-0"} role="group" aria-label="Vị trí trên bản đồ">
     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-      <p id={`${id}-caption`} className="text-sm font-medium">{caption}</p>
+      <div><p id={`${id}-caption`} className="text-sm font-medium">{caption}</p>
+        {placement && <p id={`${id}-placement`} aria-live="polite" className={`text-xs font-medium ${placement.inside ? "text-success" : "text-warning"}`}>{placementText(placement)}</p>}</div>
       <div className="flex flex-wrap gap-2">
         <Button key="locate" type="button" variant="secondary" className="w-auto" isPending={locating} onClick={locateMe}>Dùng vị trí hiện tại của tôi</Button>
         {value && <Button key="clear" type="button" variant="secondary" className="w-auto" onClick={() => { if (disabled()) return; request.current += 1; setLocating(false); onChange({ latitude: "", longitude: "" }); setNote("Đã xóa vị trí."); }}>Xóa vị trí</Button>}
@@ -71,7 +77,7 @@ export function LocationPicker({ latitude, longitude, onChange, pins = [], cente
     </div>
     {/* tabIndex makes the map area a keyboard target for nudging; the hint is read when it receives focus. */}
     <div tabIndex={0} onKeyDown={onKeyDown} aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`} aria-label="Điểm chọn trên bản đồ" role="group" className={expanded ? "flex min-h-0 flex-1 flex-col rounded-card focus-visible:outline-2 focus-visible:outline-primary" : "rounded-card focus-visible:outline-2 focus-visible:outline-primary"}>
-      {defaults.loading && !value && !pins.length && !center ? <Skeleton /> : <LocationPickerMap value={value} center={center ?? defaults.center} pins={pins} onPick={set} onCenterChange={point => { mapCenter.current = point; }} fill={expanded} />}
+      {defaults.loading && !value && !pins.length && !center ? <Skeleton /> : <LocationPickerMap value={value} center={center ?? defaults.center} pins={pins} boundary={boundary} onPick={set} onCenterChange={point => { mapCenter.current = point; }} fill={expanded} />}
     </div>
     <p id={`${id}-hint`} className="mt-2 text-xs text-text-muted">Nhấp hoặc kéo ghim đỏ để chọn vị trí. Khi bản đồ đang được chọn, phím mũi tên nhích ghim, Shift nhích nhanh hơn, Enter xác nhận.</p>
     <p aria-live="polite" className="text-xs text-text-muted">{note}</p>

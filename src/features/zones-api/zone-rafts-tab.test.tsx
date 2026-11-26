@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 const state = vi.hoisted(() => ({ page: vi.fn(), lookups: vi.fn(), cycles: vi.fn(), push: vi.fn() }));
-vi.mock("next/link", () => ({ default: ({ href, children, onNavigate: _ignored, ...rest }: { href: string; children: ReactNode; onNavigate?: unknown }) => <a href={href} {...rest}>{children}</a> }));
+vi.mock("next/link", () => ({ default: ({ href, children, "aria-label": label }: { href: string; children: ReactNode; "aria-label"?: string }) => <a href={href} aria-label={label}>{children}</a> }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: state.push }) }));
 vi.mock("@/features/rafts-api/raft-page-repository", () => ({ readRaftPage: state.page }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: state.lookups }));
