@@ -9,6 +9,7 @@ import * as c from "./contracts";
 import { displayTime, statusLabel } from "./ui";
 import { againstThreshold } from "./water-history-model";
 import { formatMeasuredValue } from "./water-measurement-shared";
+import { measurementViolationLine } from "./water-violation-text";
 import local from "./water-screen.module.css";
 
 const range = (min: number | null, max: number | null) => min === null && max === null ? "Chưa đặt" : `${min ?? "—"} – ${max ?? "—"}`;
@@ -31,8 +32,9 @@ function ThresholdsUsed({ record }: { record: c.WaterMeasurement }) {
 
 /** "Thông tin": the measurement and the thresholds it was judged with. A recorded measurement is never corrected; the only change is `Hủy bỏ phép đo`. */
 export function WaterMeasurementInfoTab({ record, zoneName, canChange, busy, onVoid }: { record: c.WaterMeasurement; zoneName: string; canChange: boolean; busy: boolean; onVoid(): void }) {
+  const violation = measurementViolationLine(record);
   return <div>
-    {record.violatedValues && <p role="alert" className={local.alertLine}>Vượt ngưỡng: {record.violatedValues}</p>}
+    {violation && <p role="alert" className={local.alertLine}>{violation}</p>}
     <Facts items={[["Thời điểm đo", displayTime(record.measuredAt)], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: record.zoneId, search: record.zoneCode })}>{zoneName || record.zoneName}</Link>], ["Bè đo", <Link key="raft" className={styles.link} href={farmingReferenceHref("raft", { zoneId: record.zoneId, recordId: record.raftId, search: record.raftCode })}>{record.raftCode}</Link>], ["Người ghi", record.measuredBy?.name],
       ["Trạng thái", statusLabel(record.statusCode)], ["Cảnh báo", statusLabel(record.alertState)], ["Lý do hủy", record.voidReason]]} />
     <ThresholdsUsed record={record} />

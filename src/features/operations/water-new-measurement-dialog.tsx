@@ -61,6 +61,7 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
   const mutation = useMutation();
   const [formError, setFormError] = useState<string>();
   const rafts = useRemote(useCallback((signal: AbortSignal) => loadOptions("rafts", signal, { zoneId, statusId: IN_USE_RAFT }), [zoneId]));
+  const limits = useRemote(useCallback((signal: AbortSignal) => repository.read("thresholds", { zoneId }, c.zoneThresholdsSchema, signal), [zoneId]));
   const dirty = !!photo || !!recognition || JSON.stringify(values) !== JSON.stringify(emptyValues);
   const close = async () => {
     const discardMessage = "Bỏ phép đo chưa lưu? Nếu lần gửi trước chưa rõ kết quả, hãy kiểm tra lịch sử trước khi ghi phép đo mới.";
@@ -132,13 +133,12 @@ export function NewMeasurement({ zoneId, zoneName, onClose, onSaved }: NewMeasur
           {recognition && (
             <>
               {recognition.ocr.warning && <p role="status" className="rounded-control bg-primary-soft p-3">{ocrWarning(recognition.ocr.warning.text)}</p>}
-              {recognition.thresholdWarning && <p role="alert" className="rounded-control border border-danger p-3 text-danger">{recognition.thresholdWarning.text}</p>}
               <CollapsibleSection title="Phép đo" description="Đối chiếu thời gian, bè và chỉ số với ảnh máy đo." columns={2}>
               <Select label="Bè đo *" value={values.raftId} required onChange={setField("raftId")}>
                 <option value="">Chọn bè đang sử dụng</option>
                 {(rafts.data ?? []).map((raft) => <option key={raft.id} value={raft.id}>{String(raft.code)}</option>)}
               </Select>
-              <WaterValueFields values={values} onChange={(key, value) => setField(key)({ target: { value } })} />
+              <WaterValueFields values={values} thresholds={limits.data?.thresholds} onChange={(key, value) => setField(key)({ target: { value } })} />
               </CollapsibleSection>
             </>
           )}

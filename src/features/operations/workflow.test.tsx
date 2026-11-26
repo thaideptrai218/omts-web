@@ -13,7 +13,8 @@ import { MeasurementEditor, NewMeasurement } from "./water-screen";
 import { ids, waterFixture } from "./__tests__/fixtures";
 const render = (ui: ReactNode) => baseRender(<ToastProvider>{ui}</ToastProvider>);
 
-beforeEach(() => { vi.clearAllMocks(); vi.spyOn(window, "confirm").mockReturnValue(true); });
+const zoneLimits = { zoneId: ids.zone, zoneCode: "QA01", zoneName: "Vùng QA", zoneStatus: "In Use", thresholds: { phMin: 7.51, phMax: 8.5, salinityMin: 18, salinityMax: 32, temperatureMin: 15, temperatureMax: 32 } };
+beforeEach(() => { vi.clearAllMocks(); repository.read.mockResolvedValue({ status: "success", data: zoneLimits }); vi.spyOn(window, "confirm").mockReturnValue(true); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("tester workflow safeguards", () => {
   it("keeps a chosen measurement photo until explicit discard", async () => {
@@ -58,9 +59,12 @@ describe("tester workflow safeguards", () => {
     expect(screen.getByRole("button", { name: "Lưu phép đo" })).not.toBe(recognizeButton);
     await screen.findByRole("option", { name: "B-QA" });
     fireEvent.change(screen.getByLabelText("Bè đo *"), { target: { value: ids.raft } });
-    fireEvent.change(screen.getByLabelText("pH (0–14) *"), { target: { value: "7.5" } });
-    fireEvent.change(screen.getByLabelText("Độ mặn (‰, 0–50) *"), { target: { value: "25" } });
-    fireEvent.change(screen.getByLabelText("Nhiệt độ (°C, 0–45) *"), { target: { value: "26" } });
+    fireEvent.change(await screen.findByLabelText("pH (ngưỡng vùng 7,51–8,5) *"), { target: { value: "7.5" } });
+    fireEvent.change(screen.getByLabelText("Độ mặn (ngưỡng vùng 18–32 ‰) *"), { target: { value: "25" } });
+    fireEvent.change(screen.getByLabelText("Nhiệt độ (ngưỡng vùng 15–32 °C) *"), { target: { value: "26" } });
+    // 7,5 is below the zone minimum 7,51: a red note shows, and the measurement is still recorded below.
+    expect(screen.getByText("pH 7,5 thấp hơn mức cho phép 7,51. Vẫn có thể lưu.").className).toContain("text-danger");
+    expect(screen.queryByText(/Độ mặn 25/)).toBeNull();
     fireEvent.submit(screen.getByRole("button", { name: "Lưu phép đo" }).closest("form")!);
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(recorded, ocr));
     expect(repository.write.mock.calls[0].slice(0, 2)).toEqual(["record", expect.objectContaining({
