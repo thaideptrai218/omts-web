@@ -19,8 +19,8 @@ export type LinkableAccount = z.infer<typeof linkableAccountsSchema>["items"][nu
 export const issueEmployeeAccountResponseSchema = z.strictObject({
   employee: employeeViewSchema.strict().refine(employee => employee.account !== null && employee.status === "Employed"),
   temporaryPassword: z.string().min(1),
-  // A seasonal worker's account has the fixed initial password of the cooperative: it does not expire and `fixedPassword` is true (never shown in the UI).
-  temporaryPasswordExpiresAt: z.iso.datetime({ offset: true }).nullish(),
+  temporaryPasswordExpiresAt: z.iso.datetime({ offset: true }),
+  // A newer API answer may carry this flag; it is read and ignored (seasonal workers have no account).
   fixedPassword: z.boolean().optional(),
   accountMessageCode: z.literal("MSG-ACCOUNT-23").nullish(),
   // The backend always sends this key on an employee save; for an account it is null. Anything else is not expected here.

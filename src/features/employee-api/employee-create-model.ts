@@ -31,12 +31,11 @@ export function parseEmployeeCreate(values: EmployeeCreateValues, inactiveZoneId
   const issues: EmployeeCreateIssue[] = checked.success ? [] : checked.error.issues.map(issue => ({ path: issue.path.join("."), message: issue.message }));
   const add = (path: string, message: string) => { if (!issues.some(issue => issue.path === path)) issues.push({ path, message }); };
   if (!values.employeeType) add("employeeType", "Chọn loại nhân viên.");
-  // A seasonal worker has no fixed zone (placed by assignment); an official employee needs one. A seasonal worker always gets a login, so the phone number is needed.
+  // A seasonal worker has no fixed zone (placed by assignment) and no login account; an official employee needs a zone.
   const seasonal = values.employeeType === "SeasonalWorker";
-  if (seasonal && !values.phone.trim()) add("phone", "Nhập số điện thoại: nhân viên thời vụ đăng nhập bằng số điện thoại.");
   if (!seasonal && !values.workingZoneIds.length) add("workingZoneIds", "Chọn ít nhất một vùng làm việc.");
   else if (!seasonal && inactiveZoneIds.length) add("workingZoneIds", "Bỏ chọn vùng đã ngừng hoặc chưa có trong danh mục trước khi lưu.");
-  // The login of a seasonal worker is made by the system with the cooperative's default password: no account is requested here.
+  // A seasonal worker has no account: none is requested.
   if (values.createAccount && !seasonal) {
     if (!values.username.trim()) add("username", "Nhập tên đăng nhập.");
     else {

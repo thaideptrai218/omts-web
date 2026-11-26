@@ -25,7 +25,6 @@ export function EmployeeAccountTab({ employee, onSaved, onRefresh, onAccountChan
   const canGrant = employee.status === "Employed" && employee.canMaintain && !employee.hasStaffAccount;
   return <div className="space-y-4">
     <p className="flex flex-wrap items-center gap-2 text-sm"><strong>{employee.fullName}</strong><EmployeeTypeBadge type={employee.employeeType} showLabel /></p>
-    {employee.employeeType === "SeasonalWorker" && <p className="text-sm text-text-muted">Tài khoản thời vụ dùng mật khẩu mặc định của hợp tác xã, họ phải đổi ở lần đăng nhập đầu.</p>}
     {account ? (canReset
       ? <AccountAccessPanel account={account} employeeLabel={`${employee.code} · ${employee.fullName}`} workingZoneIds={employee.workingZones.map(zone => zone.id)} onOpenWork={goToTab("work")} onChanged={() => onAccountChanged?.()} />
       : <dl className="grid gap-4 sm:grid-cols-3">
@@ -33,7 +32,7 @@ export function EmployeeAccountTab({ employee, onSaved, onRefresh, onAccountChan
         <div><dt className="text-sm text-text-muted">Tên hiển thị</dt><dd className="break-words">{account.displayName}</dd></div>
         <div><dt className="text-sm text-text-muted">Tình trạng</dt><dd>{accountLabel(account.status)}</dd></div>
       </dl>)
-      : <>
+      : employee.employeeType === "SeasonalWorker" ? <p className="font-semibold">Nhân viên thời vụ không có tài khoản đăng nhập.</p> : <>
         <p className="font-semibold">Chưa có tài khoản đăng nhập.</p>
         {canGrant && <>
           <p className="text-sm text-text-muted">Cấp tài khoản mới, hoặc liên kết với tài khoản có sẵn chưa gắn nhân viên nào.</p>

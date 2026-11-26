@@ -42,7 +42,7 @@ export function EmployeeCreateBasicFields({ values, setValues, errorProps, field
         <FieldError path="fullName" fieldError={fieldError} />
       </div>
       <div>
-        <Field label={values.createAccount || values.employeeType === "SeasonalWorker" ? "Số điện thoại *" : "Số điện thoại"} required={values.createAccount || values.employeeType === "SeasonalWorker"} {...phoneInputProps} autoComplete="off" {...errorProps("phone")} value={values.phone} onChange={event => set({ phone: phoneInputValue(event.target.value) })} />
+        <Field label={values.createAccount ? "Số điện thoại *" : "Số điện thoại"} required={values.createAccount} {...phoneInputProps} autoComplete="off" {...errorProps("phone")} value={values.phone} onChange={event => set({ phone: phoneInputValue(event.target.value) })} />
         <FieldError path="phone" fieldError={fieldError} />
       </div>
       <div>

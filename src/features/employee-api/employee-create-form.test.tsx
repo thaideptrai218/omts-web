@@ -198,15 +198,12 @@ describe("create employee dialog: nội bộ and thời vụ", () => {
     expect(screen.getByText(/làm ở một vùng cố định/)).toBeTruthy();
     expect(screen.getByRole("group", { name: "Vùng làm việc *" })).toBeTruthy();
   });
-  it("hides the zone picker for a seasonal worker, says they work by assignment, and needs a phone number", () => {
+  it("hides the zone picker for a seasonal worker and says they work by assignment, with the phone number optional", () => {
     render(<EmployeeApiEditor {...props()} />);
-    type("Họ và tên *", "Người thời vụ");
     type("Loại nhân viên *", "SeasonalWorker");
     expect(screen.queryByRole("group", { name: "Vùng làm việc *" })).toBeNull();
     expect(screen.getByText("Thời vụ: làm theo phân công, không cố định vùng.")).toBeTruthy();
-    save();
-    expect(repository.write).not.toHaveBeenCalled();
-    expect(screen.getAllByText(/đăng nhập bằng số điện thoại/).length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Số điện thoại")).toBeTruthy();
   });
   it("sends no zones and no account for a seasonal worker, even when zones were ticked as nội bộ first", async () => {
     repository.write.mockResolvedValue({ status: "success", data: fixture() });
@@ -215,7 +212,7 @@ describe("create employee dialog: nội bộ and thời vụ", () => {
     type("Loại nhân viên *", "Staff");
     fireEvent.click(screen.getByRole("checkbox", { name: /Vùng Đông/ }));
     type("Loại nhân viên *", "SeasonalWorker");
-    type("Số điện thoại *", "0901234567");
+    type("Số điện thoại", "0901234567");
     save();
     await waitFor(() => expect(repository.write).toHaveBeenCalledTimes(1));
     const body = repository.write.mock.calls[0][1];
@@ -234,11 +231,11 @@ describe("create employee dialog: nội bộ and thời vụ", () => {
     expect(repository.write).not.toHaveBeenCalled();
     expect(screen.getByText("Chọn ít nhất một vùng làm việc.")).toBeTruthy();
   });
-  it("tells the account of a seasonal worker is made by the system with the default password, without showing it", () => {
+  it("tells a seasonal worker has no login account and offers no account switch", () => {
     render(<EmployeeApiEditor {...props()} />);
     type("Loại nhân viên *", "SeasonalWorker");
     fireEvent.click(toggle(/Tài khoản đăng nhập/));
-    expect(screen.getByText(/mật khẩu mặc định của hợp tác xã, họ phải đổi ở lần đăng nhập đầu/)).toBeTruthy();
+    expect(screen.getByText("Nhân viên thời vụ không có tài khoản đăng nhập.")).toBeTruthy();
     expect(screen.queryByRole("switch")).toBeNull();
   });
 });

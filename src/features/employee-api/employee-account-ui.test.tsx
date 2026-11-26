@@ -105,6 +105,12 @@ describe("employee account handover", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+  it("says a seasonal worker has no login account and offers no way to issue or link one", () => {
+    render(<EmployeeAccountTab employee={{ ...withoutAccount(), employeeType: "SeasonalWorker" }} onSaved={vi.fn()} />);
+    expect(screen.getByText("Nhân viên thời vụ không có tài khoản đăng nhập.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cấp tài khoản đăng nhập" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Liên kết tài khoản có sẵn" })).toBeNull();
+  });
   it("prefills a suggested username and explains a missing phone with a way to fix it", () => {
     const withoutPhone = { ...withoutAccount(), phoneNumber: "" };
     render(<EmployeeAccountTab employee={withoutPhone} onSaved={vi.fn()} />);
