@@ -115,7 +115,7 @@ function Editor({ kind, start, lookups, itemId }: { kind: StockKind; start: Star
 
   return <EditorFrame title={completed ? `Sửa phiếu nhập ${receipt!.code}` : receipt ? `Phiếu tạm ${receipt.code}` : text.receipt} backHref={LIST}
     source={copy ? `Sao chép từ phiếu ${copy.code}; nhập lại số lượng.${copy.leftEmpty.length ? ` Đã bỏ trống vì không còn sử dụng: ${copy.leftEmpty.join(", ")}.` : ""}` : completed ? "Sửa số lượng, giá hoặc giảm giá: công nợ nhà cung cấp thay đổi đúng bằng phần chênh lệch." : undefined}
-    tools={<><ItemFinder placeholder={`Tìm ${text.noun} theo mã hoặc tên`} items={kindItems.filter((item) => !lines.some((line) => line.item.id === item.id))} onPick={add} />{receipt && access.owner && receipt.statusId !== RECEIPT.cancelled && <Button className="ml-auto w-auto" variant="secondary" onClick={() => setPricing(true)}>Thiết lập giá</Button>}{receipt?.statusId === RECEIPT.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
+    tools={<><ItemFinder placeholder={`Tìm ${text.noun} theo mã hoặc tên`} items={kindItems.filter((item) => !lines.some((line) => line.item.id === item.id))} onPick={add} />{receipt && access.edit && receipt.statusId !== RECEIPT.cancelled && <Button className="ml-auto w-auto" variant="secondary" onClick={() => setPricing(true)}>Thiết lập giá</Button>}{receipt?.statusId === RECEIPT.draft && access.remove && <OverflowMenu actionLabel="Xóa phiếu tạm" onAction={() => void remove()} />}</>}>
     {confirmation.dialog}
     <div className={styles.editorBody}>
       <div className={styles.linesPanel}>

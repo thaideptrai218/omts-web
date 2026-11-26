@@ -26,10 +26,10 @@ Tờ đối chiếu "ai làm màn nào" cho Chủ HTX, Quản lý vùng (QLV) v�
 | Lô giống | Làm | Xem (kèm đơn giá, D2) | Xem + xuất |
 | Xuất dùng vật tư | Làm | Làm | Xem + xuất |
 | Xuất hủy vật tư | Làm | — | Làm |
-| Nhà cung cấp | Làm | Xem | Xem + xuất |
-| Phiếu nhập giống/vật tư (thấy đơn giá) | Làm | Làm | Xem + xuất |
+| Nhà cung cấp (danh sách và chi tiết trong Mua hàng) | Làm | Xem (không thêm/sửa/ngừng/nhập file/xuất; chủ chốt 26/11) | Xem + xuất |
+| Phiếu nhập giống/vật tư (thấy đơn giá), thiết lập giá trên phiếu | Làm | Làm, mọi vùng, kho chung (PURCHASE_RECEIPTS Xem/Tạo/Sửa/Xóa/Xuất) | Xem + xuất |
 | Trả hàng nhập | Làm | Làm | Xem |
-| Thanh toán nhà cung cấp, công nợ NCC | Làm | — | Làm |
+| Thanh toán nhà cung cấp, công nợ NCC | Làm | — (403, không có SUPPLIER_PAYMENTS) | Làm |
 
 ## Nhân sự
 
