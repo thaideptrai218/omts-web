@@ -19,6 +19,8 @@ import { orderHref } from "@/features/sales-orders/order-labels";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { PLAN, type PlanAction, type PlanExecutor, type PlanView } from "./contracts";
 import { PlanExecutorChoice } from "./plan-executor-choice";
+import { ApproxKg } from "@/components/ui/approx-kg";
+import { useKgPerCage } from "@/features/harvest-settings-lookup/use-kg-per-cage";
 import type { PlanAccess } from "./plan-access";
 import { PLANS_PATH, PlanStatus } from "./plan-labels";
 import { executorLabel, planNextStepHint, planTotals } from "./plan-logic";
@@ -49,6 +51,7 @@ export function PlanDetailPanel({ id, access, onChanged }: { id: string; access:
 function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess; onChanged(): void }) {
   const router = useRouter(), confirmation = useActionDialog(), { notify } = useToast();
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false);
+  const { kgPerCage } = useKgPerCage(access.ownerAccountId);
   const [assigning, setAssigning] = useState(false), [executor, setExecutor] = useState<PlanExecutor>("ZoneManager");
   const can = (action: PlanAction) => plan.allowedActions.includes(action);
   const totals = planTotals(plan.lines);
@@ -86,7 +89,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
       <p className="mt-3 text-sm text-text-muted">{executor === "Owner" ? "Kế hoạch sẽ không gửi cho quản lý vùng." : `Quản lý ${plan.zones.length > 1 ? "các vùng" : "vùng"} ${zoneCodes(plan.zones)} sẽ được báo.`} Không đổi được sau khi phân công.</p>
       <div className="mt-5 flex flex-wrap gap-3"><Button className="w-auto" onClick={() => void assign()}>Phân công</Button><Button className="w-auto" variant="secondary" onClick={() => setAssigning(false)}>Quay lại</Button></div>
     </Dialog>}
-    <header className={docStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} />{plan.statusId !== PLAN.draft && <span className={styles.executorTag}>{executorLabel[plan.executor]}</span>}<PlanStaffingChip statusId={plan.statusId} staffing={plan.staffing} /></div></header>
+    <header className={docStyles.head}><div><h3>{plan.code}</h3><PlanStatus statusId={plan.statusId} executor={plan.executor} />{plan.statusId !== PLAN.draft && <span className={styles.executorTag}>{executorLabel[plan.executor]}</span>}<PlanStaffingChip statusId={plan.statusId} staffing={plan.staffing} /></div></header>
     {hint && <p className="text-sm text-text-muted" data-testid="plan-next-step">{hint}</p>}
     <div className={`${docStyles.headFacts} ${styles.planFacts}`}>
       <div><span>Thời gian dự kiến:</span><strong>{viDateTime(plan.plannedAt)}</strong></div>
@@ -94,7 +97,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
       <div><span>Đơn đặt hàng:</span>{plan.orders.length ? <strong className="flex flex-wrap gap-x-2">{plan.orders.map((order) => <Link key={order.id} className={docStyles.link} href={orderHref(order.code)}>{order.code}</Link>)}</strong> : <strong>—</strong>}</div>
       <div><span>Người tạo:</span><strong>{dash(plan.createdBy?.name)}</strong></div>
       {plan.statusId !== PLAN.draft && <div><span>Người thực hiện:</span><strong>{executorLabel[plan.executor]}</strong></div>}
-      <div><span>Giao lúc:</span><strong>{plan.assignedAt ? viDateTime(plan.assignedAt) : "—"}</strong></div>
+      <div><span>{plan.executor === "Owner" ? "Phân công lúc:" : "Giao lúc:"}</span><strong>{plan.assignedAt ? viDateTime(plan.assignedAt) : "—"}</strong></div>
       {plan.statusId === PLAN.cancelled
         ? <><div><span>Hủy lúc:</span><strong>{plan.cancelledAt ? viDateTime(plan.cancelledAt) : "—"}</strong></div>
           <div><span>Lý do hủy:</span><span className={docStyles.danger}>{dash(plan.cancelReason)}</span></div></>
@@ -105,7 +108,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
         <td>{line.zone.code}</td>
         <td><Link className={docStyles.link} href={farmingReferenceHref("raft", { zoneId: line.zone.id, recordId: line.raftId, search: line.raftCode })}>{line.raftCode}</Link>{line.note && <span className={docStyles.sub}>{line.note}</span>}</td>
         <td>{line.expectedProduct ? <><Link className={docStyles.link} href={productHref(line.expectedProduct.code)}>{line.expectedProduct.name} ({line.expectedProduct.code})</Link> <ProductSizeChip size={line.expectedProduct} /></> : "—"}</td>
-        <td className={docStyles.num}>{line.expectedCageCount == null ? "—" : line.expectedCageCount.toLocaleString("vi-VN")}</td>
+        <td className={docStyles.num}>{line.expectedCageCount == null ? "—" : <>{line.expectedCageCount.toLocaleString("vi-VN")}<ApproxKg className="ml-1" cages={line.expectedCageCount} kgPerCage={kgPerCage} /></>}</td>
         <td>{line.lot ? <LotLink className={docStyles.link} code={line.lot.lotCode} /> : "—"}</td>
         <td><PlanLineActions plan={plan} line={line} access={access} onChanged={onChanged} /></td>
       </tr>)}
@@ -114,7 +117,7 @@ function Body({ plan, access, onChanged }: { plan: PlanView; access: PlanAccess;
       <textarea className={docStyles.noteEdit} aria-label="Ghi chú" placeholder="Ghi chú..." readOnly value={plan.note ?? ""} />
       <div className={docStyles.sums}>
         <div><span>Số bè</span><span>{totals.rafts}</span></div>
-        <div><span>Lồng dự kiến</span><span>{totals.cages == null ? "—" : totals.cages.toLocaleString("vi-VN")}</span></div>
+        <div><span>Lồng dự kiến</span><span>{totals.cages == null ? "—" : <>{totals.cages.toLocaleString("vi-VN")}<ApproxKg className="ml-1" cages={totals.cages} kgPerCage={kgPerCage} /></>}</span></div>
         <div><span>Đã thu</span><span>{plan.progress.linesDone}/{plan.progress.lines} bè</span></div>
       </div>
     </div>

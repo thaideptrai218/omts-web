@@ -1,4 +1,5 @@
 "use client";
+import { ApproxKg } from "@/components/ui/approx-kg";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import type { CageSheet } from "./cage-contracts";
 import { sumKg, weighComparison } from "./cage-weighing-math";
@@ -10,7 +11,7 @@ export function CageSheetTotals({ sheet }: { sheet: CageSheet }) {
   const total = sumKg(sheet.cages.map((cage) => cage.kg)), compared = sheet.cages.length ? weighComparison(sheet.estimatedKg, total) : null;
   return <section aria-label="Tổng số cân" className="grid gap-3 rounded-control border border-border bg-surface-subtle p-3 sm:p-4">
     <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-      <p className="text-sm text-text-muted">Đã cân {fmt(sheet.cages.length)}{sheet.harvestedCages > 0 ? ` / ${fmt(sheet.harvestedCages)}` : ""} lồng</p>
+      <p className="text-sm text-text-muted">Đã cân {fmt(sheet.cages.length)}{sheet.harvestedCages > 0 ? ` / ${fmt(sheet.harvestedCages)}` : ""} lồng {!compared && sheet.harvestedCages > 0 && <ApproxKg cages={sheet.harvestedCages} kgPerCage={sheet.estimatedKg / sheet.harvestedCages} />}</p>
       <p className="text-2xl font-semibold tabular-nums" aria-label={`Tổng đã cân ${fmt(total)} kg`}>{fmt(total)} kg</p>
     </div>
     {compared && <p role="status" aria-label="So sánh với số mang lên" className="text-sm">So với số mang lên (≈ {fmt(sheet.estimatedKg)} kg): <strong className="tabular-nums">{signed(compared.difference, " kg")}{compared.percent === null ? "" : ` (${signed(compared.percent, "%")})`}</strong></p>}

@@ -18,6 +18,8 @@ import { viDateTime } from "@/features/purchase-documents/document-parts";
 import { orderHref } from "@/features/sales-orders/order-labels";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { PLAN, type PlanPage, type PlanRow } from "./contracts";
+import { ApproxKg } from "@/components/ui/approx-kg";
+import { useKgPerCage } from "@/features/harvest-settings-lookup/use-kg-per-cage";
 import { usePlanAccess } from "./plan-access";
 import { PlanDetailPanel } from "./plan-detail";
 import { PlanStaffingChip } from "./plan-staffing-chip";
@@ -27,7 +29,7 @@ import styles from "./plans.module.css";
 import { errorText, planRepository } from "./repository";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
-type Column = { key: string; label: string; numeric?: boolean; hidden?: boolean; render(row: PlanRow): ReactNode };
+type Column = { key: string; label: string; numeric?: boolean; hidden?: boolean; render(row: PlanRow, kgPerCage?: number): ReactNode };
 const dash = (value: string | null | undefined) => value || "—";
 const stop = (event: { stopPropagation(): void }) => event.stopPropagation();
 const columns: readonly Column[] = [
@@ -35,11 +37,11 @@ const columns: readonly Column[] = [
   { key: "plannedAt", label: "Thời gian dự kiến", render: (row) => viDateTime(row.plannedAt) },
   { key: "zone", label: "Vùng", render: (row) => dash(row.zones.map((zone) => zone.code).join(", ")) },
   { key: "rafts", label: "Số bè", numeric: true, render: (row) => <span title={row.raftCodes.join(", ")}>{row.raftCodes.length}</span> },
-  { key: "cages", label: "Lồng dự kiến", numeric: true, render: (row) => row.expectedCageCount == null ? "—" : row.expectedCageCount.toLocaleString("vi-VN") },
+  { key: "cages", label: "Lồng dự kiến", numeric: true, render: (row, kgPerCage) => row.expectedCageCount == null ? "—" : <>{row.expectedCageCount.toLocaleString("vi-VN")}<ApproxKg className="ml-1" cages={row.expectedCageCount} kgPerCage={kgPerCage} /></> },
   { key: "done", label: "Đã thu", numeric: true, render: (row) => `${row.progress.linesDone}/${row.progress.lines} bè` },
   { key: "orders", label: "Đơn đặt hàng", render: (row) => row.orders.length ? <span className="flex flex-wrap gap-x-2">{row.orders.map((order) => <Link key={order.id} className={issueStyles.link} href={orderHref(order.code)} onClick={stop}>{order.code}</Link>)}</span> : "—" },
   { key: "createdBy", label: "Người tạo", hidden: true, render: (row) => dash(row.createdBy) },
-  { key: "status", label: "Trạng thái", render: (row) => <><PlanStatus statusId={row.statusId} />{row.statusId !== PLAN.draft && row.executor === "Owner" && <span className={styles.executorTag}>{executorLabel.Owner}</span>}<PlanStaffingChip statusId={row.statusId} staffing={row.staffing} /></> },
+  { key: "status", label: "Trạng thái", render: (row) => <><PlanStatus statusId={row.statusId} executor={row.executor} />{row.statusId !== PLAN.draft && row.executor === "Owner" && <span className={styles.executorTag}>{executorLabel.Owner}</span>}<PlanStaffingChip statusId={row.statusId} staffing={row.staffing} /></> },
 ];
 const defaultStatuses: number[] = [PLAN.draft, PLAN.assigned, PLAN.received, PLAN.harvesting, PLAN.handedOver];
 const emptyFilters = { zone: "" };
@@ -57,6 +59,7 @@ export function PlansScreen(props: { helpHref?: string }) {
 
 function PlansList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
   const access = usePlanAccess(), router = useRouter();
+  const { kgPerCage } = useKgPerCage(access.ownerAccountId);
   const linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [statuses, setStatuses] = useState<number[]>(linkedCode ? [] : defaultStatuses);
   const [time, setTime] = useState<TimeRangeValue>(allTime);
@@ -126,7 +129,7 @@ function PlansList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: st
           {data.items.map((row) => <Fragment key={row.id}>
             <OpenableTableRow data-selected={expanded === row.id || undefined} onOpen={() => toggleRow(row.id)}>
               <td className={listStyles.expandCell}><button type="button" aria-expanded={expanded === row.id} aria-label={`${expanded === row.id ? "Thu gọn" : "Mở"} ${row.code}`} onClick={() => toggleRow(row.id)}><InterfaceIcon name={expanded === row.id ? "chevron-down" : "chevron-right"} /></button></td>
-              {visible.map((column) => <td key={column.key} className={`${column.numeric ? issueStyles.num : ""} ${row.statusId === PLAN.cancelled ? issueStyles.muted : ""}`.trim() || undefined}>{column.render(row)}</td>)}
+              {visible.map((column) => <td key={column.key} className={`${column.numeric ? issueStyles.num : ""} ${row.statusId === PLAN.cancelled ? issueStyles.muted : ""}`.trim() || undefined}>{column.render(row, kgPerCage)}</td>)}
             </OpenableTableRow>
             {expanded === row.id && <DetailRow colSpan={visible.length + 1} className={listStyles.detailCell}><div className={managementStyles.viewWidth}>
               <PlanDetailPanel id={row.id} access={access} onChanged={reload} />

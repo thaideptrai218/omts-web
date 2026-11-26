@@ -22,8 +22,8 @@ import { PLAN, type EligibleRaft, type PlanDraft, type PlanExecutor, type PlanVi
 import { PlanExecutorChoice } from "./plan-executor-choice";
 import { PlanCoverage } from "./plan-coverage";
 import { usePlanAccess, type PlanAccess } from "./plan-access";
-import { PLANS_PATH, planHref, planStatusLabel } from "./plan-labels";
-import { DEFAULT_KG_PER_CAGE, blankFormLine, buildPlanBody, cageCount, cageWeightText, coverage, formLineOf, formOf, planFormProblem, plannedCages, shortageText, type FormLine, type PlanForm } from "./plan-logic";
+import { PLANS_PATH, planHref, planStatusText } from "./plan-labels";
+import { DEFAULT_KG_PER_CAGE, executorLabel, blankFormLine, buildPlanBody, cageCount, cageWeightText, coverage, formLineOf, formOf, planFormProblem, plannedCages, shortageText, type FormLine, type PlanForm } from "./plan-logic";
 import { earlyHarvestWarning, readiness, readinessText } from "./plan-maturity";
 import { useOrderNeeds } from "./plan-order-needs";
 import { PlanOrderPicker } from "./plan-order-picker";
@@ -58,7 +58,7 @@ export function PlanEditorPage({ id, copyFrom, orderIds = [] }: { id?: string; c
   const failure = remote.error ?? rafts.error;
   if (failure || !remote.data || !rafts.data) return <ListStateMessage error={failure ?? "Không tải được dữ liệu."} onRetry={() => { remote.reload(); rafts.reload(); }} retryLabel="Tải lại" />;
   const { plan } = remote.data;
-  if (plan && (!plan.allowedActions.includes("Edit") || plan.statusId === PLAN.completed || plan.statusId === PLAN.cancelled)) return <ListStateMessage>Kế hoạch {plan.code} ở trạng thái {planStatusLabel[plan.statusId]} nên không sửa được.</ListStateMessage>;
+  if (plan && (!plan.allowedActions.includes("Edit") || plan.statusId === PLAN.completed || plan.statusId === PLAN.cancelled)) return <ListStateMessage>Kế hoạch {plan.code} ở trạng thái {planStatusText(plan.statusId, plan.executor)} nên không sửa được.</ListStateMessage>;
   return <Editor access={access} start={remote.data} eligible={rafts.data} />;
 }
 
@@ -168,13 +168,13 @@ function Editor({ access, start, eligible }: { access: PlanAccess; start: Start;
         <div className={purchaseStyles.sideScroll}>
           <SideRow label="Mã kế hoạch"><input aria-label="Mã kế hoạch" maxLength={30} placeholder="Mã tự động" title="Để trống để hệ thống tự cấp mã" value={form.code} disabled={givenOut} onChange={(event) => patch({ code: event.target.value.replace(/\s/g, "") })} /></SideRow>
           <SideRow label="Thời gian dự kiến *"><DatePickerField label="Thời gian dự kiến" withTime value={form.plannedAt} onChange={(plannedAt) => patch({ plannedAt })} /></SideRow>
-          <SideRow label="Trạng thái">{planStatusLabel[plan?.statusId ?? PLAN.draft]}</SideRow>
-          {plan?.assignedAt && <SideRow label="Giao lúc">{viDateTime(plan.assignedAt)}</SideRow>}
+          <SideRow label="Trạng thái">{planStatusText(plan?.statusId ?? PLAN.draft, plan?.executor)}</SideRow>
+          {plan?.assignedAt && <SideRow label={plan.executor === "Owner" ? "Phân công lúc" : "Giao lúc"}>{viDateTime(plan.assignedAt)}</SideRow>}
           <PlanOrderPicker ownPlanId={plan?.id} value={form.orderIds} known={[...(plan?.orders ?? []), ...start.drafts.map((draft) => draft.salesOrder)]} details={orders.byOrder} detailsLoading={orders.loading} disabled={pending} onToggle={(orderId, picked) => patch({ orderIds: picked ? [...form.orderIds, orderId] : form.orderIds.filter((value) => value !== orderId) })} />
           {form.orderIds.length > 0 && <PlanCoverage rows={rows} loading={orders.loading} error={orders.error} onRetry={orders.reload} />}
           <textarea className={purchaseStyles.sideNote} aria-label="Ghi chú" placeholder="Ghi chú" maxLength={1000} value={form.note} onChange={(event) => patch({ note: event.target.value })} />
           {earlyWarnings.length > 0 && <div className={styles.earlyWarning} role="status"><strong>Cảnh báo: thu hoạch sớm hơn dự kiến</strong><ul>{earlyWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
-          {!givenOut && <PlanExecutorChoice value={executor} onChange={setExecutor} disabled={pending} />}
+          {givenOut ? plan && <SideRow label="Người thực hiện">{executorLabel[plan.executor]}</SideRow> : <PlanExecutorChoice value={executor} onChange={setExecutor} disabled={pending} />}
           <ErrorNotice error={error} />
           {!access.owner && <p className={purchaseStyles.sub}>Chỉ Chủ hợp tác xã lập và giao kế hoạch thu hoạch.</p>}
           {plan && <Link className={purchaseStyles.sub} href={planHref(plan.code)}>Xem kế hoạch</Link>}

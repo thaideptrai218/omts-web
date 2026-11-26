@@ -10,6 +10,8 @@ export function usePlanAccess() {
   const owner = identity.subjectType === "CooperativeOwner", staff = identity.subjectType === "Staff", functions = permissions.functionPermissions;
   const can = (fn: string, action: string) => holds(owner, staff, functions, fn, action);
   return {
+    /** The account that may read the cooperative's kg per cage (the Owner's setting), for the approximate kg beside cage counts. */
+    ownerAccountId: owner ? identity.accountId : undefined,
     owner, view: can("HARVEST_PLANS", "View"), create: can("HARVEST_PLANS", "Create"), edit: can("HARVEST_PLANS", "Edit"), remove: can("HARVEST_PLANS", "Delete"),
     /** Recording a lot from a plan line or marking lanes "Không thu". */
     harvest: can("HARVESTS", "Create"), viewHarvests: can("HARVESTS", "View"),
