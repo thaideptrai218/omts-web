@@ -19,7 +19,7 @@ import { ZoneDetailPanel, type ZoneAccess } from "./zone-detail-panel";
 const ID = "00000000-0000-4000-8000-000000000001";
 const zone = (statusId: number) => ({ id: ID, code: "V01", name: "Vùng 1", location: null, area: null, statusId, status: statusId === 101 ? "In Use" : "Discontinued", inUseRaftCount: 0, licenseState: null, latitude: null, longitude: null, rowVersion: "AQ==" });
 const raft = { edit: true, photoEdit: true, cycles: true, costs: true };
-const access = (over: Partial<ZoneAccess> = {}): ZoneAccess => ({ edit: true, rafts: true, licenses: true, staff: true, water: true, waterCreate: true, raft, ...over });
+const access = (over: Partial<ZoneAccess> = {}): ZoneAccess => ({ edit: true, rafts: true, licenses: true, staff: true, water: true, waterCreate: true, raftCreate: true, raft, ...over });
 const guard = { dirty: { current: false }, pending: { current: false }, leave: async (next: () => void) => next(), dialog: null };
 const thresholds = { zoneId: ID, zoneCode: "V01", zoneName: "Vùng 1", zoneStatus: "In Use", thresholds: { phMin: 7, phMax: 8, salinityMin: 10, salinityMax: 30, temperatureMin: 20, temperatureMax: 30 } };
 const open = (over: Partial<ZoneAccess> = {}) => render(<ZoneDetailPanel id={ID} access={access(over)} guard={guard as never} zones={[]} onChanged={vi.fn()} />);

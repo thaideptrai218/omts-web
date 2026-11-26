@@ -21,13 +21,13 @@ import { ZoneMapTab } from "./zone-map-tab";
 import type { ZoneTabKey } from "./zone-summary-model";
 
 /** Which tabs and actions the signed-in account may use; each tab appears only when it may be read. */
-export type ZoneAccess = { edit: boolean; rafts: boolean; licenses: boolean; staff: boolean; water: boolean; waterCreate: boolean; raft: RaftAccess };
+export type ZoneAccess = { edit: boolean; rafts: boolean; licenses: boolean; staff: boolean; water: boolean; waterCreate: boolean; raftCreate: boolean; raft: RaftAccess };
 type TabKey = ZoneTabKey;
 const repository = createWorkspaceRepository("zones");
 
 export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: string; access: ZoneAccess; guard: UnsavedGuard; zones: ApiRecord[]; onChanged(): void }) {
   const detail = useZoneDetail(id), mutation = useMutation();
-  const [openRaft, setOpenRaft] = useState<string>(), [tab, setTab] = useState<TabKey>("info"), [action, setAction] = useState<ZoneStatusAction>(), [reviewRequested, setReviewRequested] = useState(false);
+  const [openRaft, setOpenRaft] = useState<{ id: string; code: string }>(), [tab, setTab] = useState<TabKey>("info"), [action, setAction] = useState<ZoneStatusAction>(), [reviewRequested, setReviewRequested] = useState(false);
   const zone = detail.data;
   const tabs = useMemo(() => ([["info", "Thông tin", true], ["map", "Bản đồ", true], ["rafts", "Bè nuôi", access.rafts], ["licenses", "Giấy phép", access.licenses],
     ["staff", "Nhân viên", access.staff], ["water", "Quan trắc nước", access.water]] as const).filter(entry => entry[2]).map(([key, label]) => ({ key, label })), [access]);
@@ -47,8 +47,8 @@ export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: s
   const busy = detail.loading || mutation.pending || mutation.blocked;
   const content: Record<TabKey, ReactNode> = zone ? {
     info: <ZoneInfoTab zone={zone} canEdit={access.edit} canSeeLicense={access.licenses} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload} onStatus={() => { mutation.reviewed(); setAction(zone.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
-    map: <ZoneMapTab zone={zone} canSeeRafts={access.rafts} onOpenRaft={raftId => void guard.leave(() => { setOpenRaft(raftId); setTab("rafts"); })} />,
-    rafts: <ZoneRaftsTab zoneId={id} raftAccess={access.raft} guard={guard} openId={openRaft} />, licenses: <ZoneLicensesTab zoneId={id} zones={coverable} guard={guard} />,
+    map: <ZoneMapTab zone={zone} canSeeRafts={access.rafts} onOpenRaft={raft => void guard.leave(() => { setOpenRaft(raft); setTab("rafts"); })} />,
+    rafts: <ZoneRaftsTab zoneId={id} zoneLabel={`${zone.code} · ${zone.name}`} canCreate={access.raftCreate && zone.statusId === IN_USE} raftAccess={access.raft} guard={guard} focus={openRaft} />, licenses: <ZoneLicensesTab zoneId={id} zones={coverable} guard={guard} />,
     staff: <ZoneStaffTab zoneId={id} />, water: <ZoneWaterTab zoneId={id} zoneName={zone.name} canCreate={access.waterCreate && zone.statusId === IN_USE} />,
   } : { info: null, map: null, rafts: null, licenses: null, staff: null, water: null };
   return <section id={`zone-preview-${id}`} className={styles.detail} aria-label="Chi tiết vùng nuôi">

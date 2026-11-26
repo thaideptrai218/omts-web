@@ -36,7 +36,7 @@ it("opens a linked raft without applying the child lot search to the raft direct
   render(<CyclesScreen />);
   await screen.findByRole("region", { name: "Chi tiết hành trình của bè" });
   expect((screen.getByRole("searchbox", { name: "Tìm bè nuôi" }) as HTMLInputElement).value).toBe("");
-  expect(state.read).toHaveBeenCalledWith(expect.objectContaining({ action: "progress", cycleId: "00000000-0000-4000-8000-0000000000c1" }), expect.anything(), expect.anything());
+  await waitFor(() => expect(state.read).toHaveBeenCalledWith(expect.objectContaining({ action: "progress", cycleId: "00000000-0000-4000-8000-0000000000c1" }), expect.anything(), expect.anything()));
 });
 
 it("opens the discontinued zone a link names, not the first In Use zone", async () => {

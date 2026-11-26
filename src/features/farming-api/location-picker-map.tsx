@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import type { Map as VietMap, Marker } from "@vietmap/vietmap-gl-js/dist/vietmap-gl";
 import "@vietmap/vietmap-gl-js/dist/vietmap-gl.css";
 import { Button } from "@/components/ui/button";
+import { BOUNDARY_COLOR, BOUNDARY_SOURCE, boundaryLayerSpecs, buildBoundaryLayers } from "./boundary-layers";
 import { apiKey, failure } from "./vietmap-view";
+import type { ZoneBoundary } from "./zone-map-contract";
 import type { ContextPin, PickerPoint } from "./location-picker-model";
 
 /** No point and no context pins yet: show the whole country instead of guessing a place. */
@@ -15,9 +17,9 @@ const mapFailure = (cause: unknown) => failure(cause).replace("Bạn vẫn có t
  * Compact map where a click or a drag places one marker. Context pins (zone, sibling rafts) are plain labels for orientation.
  * `value` is controlled by the parent so keyboard nudging and "current location" move the same marker.
  */
-export default function LocationPickerMap({ value, center, pins, onPick, onCenterChange, fill }: { value?: PickerPoint; center?: PickerPoint; pins: readonly ContextPin[]; onPick(point: PickerPoint): void; onCenterChange(point: PickerPoint): void; fill: boolean }) {
+export default function LocationPickerMap({ value, center, pins, boundary, onPick, onCenterChange, fill }: { value?: PickerPoint; center?: PickerPoint; pins: readonly ContextPin[]; boundary?: ZoneBoundary | null; onPick(point: PickerPoint): void; onCenterChange(point: PickerPoint): void; fill: boolean }) {
   const container = useRef<HTMLDivElement>(null), mapRef = useRef<VietMap>(null), markerRef = useRef<Marker>(null), pickRef = useRef(onPick);
-  const initial = useRef({ value, pins, center });
+  const initial = useRef({ value, pins, center, layers: buildBoundaryLayers([{ code: "", boundary: boundary ?? null }]) });
   const centerRef = useRef(onCenterChange);
   const [attempt, setAttempt] = useState(0), [ready, setReady] = useState(false), [error, setError] = useState<string>();
   useEffect(() => { pickRef.current = onPick; }, [onPick]);
@@ -33,9 +35,9 @@ export default function LocationPickerMap({ value, center, pins, onPick, onCente
       if (disposed || !container.current) return;
       setReady(false); setError(undefined);
       try {
-        const { value: start, pins: around, center: fallback } = initial.current;
-        const first = start ? lngLat(start) : around[0] ? lngLat(around[0]) : fallback ? lngLat(fallback) : COUNTRY_CENTER;
-        map = new sdk.Map({ container: container.current, style: `https://maps.vietmap.vn/maps/styles/hm/style.json?apikey=${encodeURIComponent(key)}`, center: first, zoom: start || around.length || fallback ? 15 : 5, attributionControl: {} });
+        const { value: start, pins: around, center: fallback, layers } = initial.current;
+        const first = start ? lngLat(start) : layers ? layers.positions[0] : around[0] ? lngLat(around[0]) : fallback ? lngLat(fallback) : COUNTRY_CENTER;
+        map = new sdk.Map({ container: container.current, style: `https://maps.vietmap.vn/maps/styles/hm/style.json?apikey=${encodeURIComponent(key)}`, center: first, zoom: start || layers || around.length || fallback ? 15 : 5, attributionControl: {} });
         mapRef.current = map;
         // Arrow keys belong to the accessible picker wrapper, rather than moving the map behind the marker.
         map.keyboard.disable();
@@ -47,6 +49,18 @@ export default function LocationPickerMap({ value, center, pins, onPick, onCente
         map.on("load", () => {
           if (disposed || !map) return;
           loaded = true; clearTimeout(timeout);
+          // The licensed area under the pins: fill, outline and a name per khu. With no chosen point the view fits it.
+          if (layers) {
+            map.addSource(BOUNDARY_SOURCE, { type: "geojson", data: layers.data });
+            for (const spec of boundaryLayerSpecs()) map.addLayer(spec);
+            for (const label of layers.labels) {
+              const element = document.createElement("span");
+              element.textContent = label.text;
+              element.style.cssText = `padding:2px 6px;border-radius:6px;background:white;color:${BOUNDARY_COLOR};font:600 11px system-ui;box-shadow:0 1px 4px #10243a40;pointer-events:none;white-space:nowrap`;
+              pinMarkers.push(new sdk.Marker({ element, anchor: "center" }).setLngLat(label.position).addTo(map));
+            }
+            if (!start) { const bounds = new sdk.LngLatBounds(); for (const position of layers.positions) bounds.extend(position); map.fitBounds(bounds, { padding: 40, maxZoom: 17, duration: 0 }); }
+          }
           for (const pin of around) {
             const label = document.createElement("span");
             label.textContent = pin.label;

@@ -46,9 +46,9 @@ export function RaftFormFields({ draft, setDraft, errors, only, zoneId, selfId, 
   </>;
 }
 
-/** Own component so the zone and raft reads only happen where a map is actually shown. */
+/** Own component so the map read (zone, its rafts and its boundary) only happens where a map is actually shown. */
 function RaftLocationSection({ draft, setDraft, error, zoneId, selfId }: { draft: RaftDraft; setDraft: Dispatch<SetStateAction<RaftDraft>>; error?: string; zoneId: string; selfId?: string }) {
   const context = useRaftLocationPins(zoneId, selfId);
-  return context.loading ? <Skeleton /> : <LocationPicker id="raft-location" latitude={draft.latitude} longitude={draft.longitude} pins={context.pins} error={error}
+  return context.loading ? <Skeleton /> : <LocationPicker id="raft-location" latitude={draft.latitude} longitude={draft.longitude} pins={context.pins} boundary={context.boundary} error={error}
     onChange={next => setDraft(current => ({ ...current, ...next }))} />;
 }

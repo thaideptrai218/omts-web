@@ -68,3 +68,28 @@ it("keeps marker keyboard changes disabled while the parent fieldset is disabled
   fireEvent.keyDown(screen.getByRole("group", { name: "Điểm chọn trên bản đồ" }), { key: "ArrowUp" });
   expect(screen.queryByText("Vĩ độ 21.0713 · Kinh độ 107.4321")).toBeNull();
 });
+
+const area = { type: "FeatureCollection" as const, features: [{ type: "Feature" as const, properties: {},
+  geometry: { type: "Polygon" as const, coordinates: [[[107.43, 21.07], [107.4325, 21.07], [107.4325, 21.0715], [107.43, 21.0715], [107.43, 21.07]]] as [[[number, number], [number, number], [number, number], [number, number], [number, number]]] } }] };
+function BoundedEditor({ boundary }: { boundary?: typeof area | null }) {
+  const [point, setPoint] = useState({ latitude: "21.0712", longitude: "107.4321" });
+  return <LocationPicker id="bounded" {...point} onChange={setPoint} boundary={boundary} />;
+}
+it("says live whether the chosen point is inside the zone boundary and never blocks moving it", () => {
+  render(<BoundedEditor boundary={area} />);
+  expect(screen.getByText("Trong ranh giới")).toBeTruthy();
+  fireEvent.keyDown(screen.getByRole("group", { name: "Điểm chọn trên bản đồ" }), { key: "ArrowRight", shiftKey: true });
+  const hint = screen.getByText(/^Ngoài ranh giới \d+ m$/);
+  const metres = Number(hint.textContent?.match(/\d+/)?.[0]);
+  expect(metres).toBeGreaterThan(55); expect(metres).toBeLessThan(70);
+  expect(screen.getAllByText("Vĩ độ 21.0712 · Kinh độ 107.4331").length).toBeGreaterThan(0);
+  fireEvent.keyDown(screen.getByRole("group", { name: "Điểm chọn trên bản đồ" }), { key: "ArrowLeft", shiftKey: true });
+  expect(screen.getByText("Trong ranh giới")).toBeTruthy();
+});
+it("shows no placement hint without a boundary or without a point", () => {
+  const view = render(<BoundedEditor />);
+  expect(screen.queryByText(/ranh giới/)).toBeNull();
+  view.unmount();
+  render(<Editor empty />);
+  expect(screen.queryByText(/ranh giới/)).toBeNull();
+});

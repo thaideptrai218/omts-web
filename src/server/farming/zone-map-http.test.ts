@@ -34,6 +34,14 @@ describe("zone position read", () => {
     gateway.resolve.mockResolvedValueOnce(resolved()).mockResolvedValueOnce(replacedSession());
     expect((await handleZoneMap(new Request("http://localhost:3002/api/zone-map"))).status).toBe(401);
   });
+  it("passes a valid boundary through and reads a malformed one as none, without failing the zone", async () => {
+    configure();
+    const boundary = { type: "FeatureCollection", features: [{ type: "Feature", properties: { name: "Khu 1", corners: ["K1"] }, geometry: { type: "Polygon", coordinates: [[[107.45, 21], [107.46, 21], [107.46, 21.01], [107.45, 21]]] } }] };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([{ ...fixture()[0], boundary }, { ...fixture()[0], boundary: { type: "Feature" } }, fixture()[0]]));
+    const value = await (await handleZoneMap(new Request("http://localhost:3002/api/zone-map"))).json();
+    expect(value.data[0].boundary.features[0].properties).toEqual({ name: "Khu 1" });
+    expect(value.data[1].boundary).toBeNull(); expect(value.data[2].boundary).toBeNull();
+  });
   it("rejects invalid backend coordinates", async () => {
     configure(); vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([{ ...fixture()[0], latitude: 100 }]));
     expect((await handleZoneMap(new Request("http://localhost:3002/api/zone-map"))).status).toBe(502);

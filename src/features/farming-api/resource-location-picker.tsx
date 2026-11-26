@@ -5,6 +5,7 @@ import { Skeleton, useRemote } from "@/features/operations/ui";
 import { LocationPicker } from "./location-picker";
 import { pinsOf, type ContextPin } from "./location-picker-model";
 import { readZoneMap } from "./zone-map-repository";
+import type { ZoneBoundary } from "./zone-map-contract";
 
 type Props = {
   resource: "zones" | "rafts"; record: ApiRecord | null; values: Record<string, string>;
@@ -25,16 +26,16 @@ function RaftResourceLocationPicker(props: Props) {
       : props.zones.length === 1 ? props.zones[0].id : undefined;
   const zone = remote.data?.find(row => row.id === zoneId || row.rafts.some(raft => raft.id === props.record?.id));
   const pins = zone ? [...pinsOf("zone", [zone]), ...pinsOf("raft", zone.rafts, props.record?.id)] : [];
-  return remote.loading ? <div className="sm:col-span-2"><Skeleton /></div> : <PickerFields {...props} pins={pins} />;
+  return remote.loading ? <div className="sm:col-span-2"><Skeleton /></div> : <PickerFields {...props} pins={pins} boundary={zone?.boundary} />;
 }
 
-function PickerFields({ resource, record, values, setValues, pins }: Props & { pins: ContextPin[] }) {
+function PickerFields({ resource, record, values, setValues, pins, boundary }: Props & { pins: ContextPin[]; boundary?: ZoneBoundary | null }) {
   const target = useRef<HTMLDivElement>(null), [missing, setMissing] = useState(false);
   const noun = resource === "zones" ? "vùng" : "bè";
   // A new raft needs its place on the map (BR-FARM-12); an existing raft saved before this rule can still be edited without one.
   const required = resource === "zones" || !record;
   return <div ref={target} className="relative sm:col-span-2">
-    <LocationPicker id={`api-${resource}-location`} latitude={values.latitude ?? ""} longitude={values.longitude ?? ""} pins={pins}
+    <LocationPicker id={`api-${resource}-location`} latitude={values.latitude ?? ""} longitude={values.longitude ?? ""} pins={pins} boundary={boundary}
       error={missing ? `Chọn vị trí của ${noun} trên bản đồ.` : undefined}
       onChange={next => { setValues(current => ({ ...current, ...next })); setMissing(false); }} />
     {required && <input className="sr-only" aria-label={`Vị trí ${noun} nuôi`} tabIndex={-1} required
