@@ -107,7 +107,7 @@ export function Popover({ anchor, label, onClose, children, placement = "side" }
 const monthOf = (date: Date, offset = 0) => new Date(date.getFullYear(), date.getMonth() + offset, 1);
 
 /** `max` (yyyy-MM-dd): last day that can be picked; later days are shown disabled and the month list stops there (reports never cover the future). */
-function CustomCalendar({ value, max, onApply, onCancel }: { value: TimeRangeValue; max?: string; onApply(from: string, to: string): void; onCancel(): void }) {
+export function CustomCalendar({ value, max, onApply, onCancel }: { value: TimeRangeValue; max?: string; onApply(from: string, to: string): void; onCancel(): void }) {
   const latest = max ? fromQueryDate(max) : undefined;
   const initial = value.kind === "custom" ? { from: fromQueryDate(value.from), to: fromQueryDate(value.to) } : undefined;
   const [draft, setDraft] = useState<DateRange | undefined>(initial);

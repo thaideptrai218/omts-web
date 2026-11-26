@@ -1,176 +1,72 @@
+"use client";
+import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AXIS_TICK, GRID_STROKE, labelInterval } from "@/components/ui/charts/chart-theme";
+import charts from "@/components/ui/charts/charts.module.css";
+import { indicatorRange } from "@/features/zones-api/zone-water-model";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import { DataTable } from "./ui";
-import type { WaterChartData } from "./water-measurement-shared";
-import styles from "./water-screen.module.css";
+import { INDICATORS, boundsOf, chartDomain, chartRows, chartSummary, formatReading, type ChartRow } from "./water-chart-model";
+import type { WaterChartData } from "./water-chart-periods";
+import local from "./water-screen.module.css";
 
-const PERIOD_TABLE_HEADINGS = [
-  "Kỳ",
-  "pH trung bình / thấp nhất / cao nhất",
-  "Lượt đo",
-  "Độ mặn TB / thấp nhất / cao nhất (‰)",
-  "Lượt đo",
-  "Nhiệt độ TB / thấp nhất / cao nhất (°C)",
-  "Lượt đo",
-];
+const LINE = "var(--omts-color-primary)", OUTSIDE = "var(--omts-color-danger)", LIMIT_BAND = "var(--omts-color-surface-subtle)";
+const PLOT = 112, AXIS = 28, Y_WIDTH = 44, MARGIN = { top: 6, right: 12, left: 0, bottom: 0 } as const;
 
-/** Trend summary, pH + salinity + temperature charts and the per-period breakdown table. */
+/** Three small charts one above the other (pH, độ mặn, nhiệt độ) that share the time axis; the readings and the thresholds in force are drawn on each. */
 export function WaterQualityChart({ data }: { data: WaterChartData }) {
-  const readings = data.periods.reduce((sum, period) => sum + period.ph.count + period.salinity.count, 0);
-  const missing = data.periods.filter((period) => period.missing).length;
-
-  return (
-    <>
-      {!readings && (
-        <p className={styles.emptyChart}>
-          Chưa có chỉ số đã xác nhận trong khoảng này. Chọn khoảng thời gian khác hoặc kiểm tra lịch sử bên dưới.
-        </p>
-      )}
-      <div className="my-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-y border-border py-2.5 text-xs">
-        <p className="text-text-muted">{formatVietnameseDate(data.from)} — {formatVietnameseDate(data.to)}</p>
-        <div className="flex flex-wrap gap-x-5 gap-y-1">
-          <span><strong className="tabular-nums text-text">{readings}</strong> lượt ghi nhận chỉ số</span>
-          <span className="text-text-muted">{missing} kỳ thiếu dữ liệu</span>
-          <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-sky-700" /> Trung bình</span>
-          <span className="inline-flex items-center gap-1.5">
-            <i className="h-2 w-2 rounded-full bg-sky-200" /> Khoảng nhỏ nhất–lớn nhất
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <i className="h-0 w-4 border-t border-dashed border-amber-700" /> Ngưỡng
-          </span>
-        </div>
-      </div>
-      <div className={styles.charts}>
-        <IndicatorChart
-          data={data}
-          indicator="ph"
-          title="Độ pH"
-          min={data.thresholds.phMin}
-          max={data.thresholds.phMax}
-        />
-        <IndicatorChart
-          data={data}
-          indicator="salinity"
-          title="Độ mặn (‰)"
-          min={data.thresholds.salinityMin}
-          max={data.thresholds.salinityMax}
-        />
-        <IndicatorChart
-          data={data}
-          indicator="temperature"
-          title="Nhiệt độ (°C)"
-          min={data.thresholds.temperatureMin}
-          max={data.thresholds.temperatureMax}
-        />
-      </div>
-      <details className={styles.periodTable}>
-        <summary>Số liệu chi tiết theo kỳ · {data.periods.length} kỳ</summary>
-        <DataTable headings={PERIOD_TABLE_HEADINGS}>
-          {data.periods.map((period) => (
-            <tr key={period.period}>
-              <td className="whitespace-nowrap">
-                {period.period}
-                {period.missing ? <span className="ml-2 text-xs text-text-muted">Thiếu dữ liệu</span> : ""}
-              </td>
-              <td className="tabular-nums">
-                {period.ph.average ?? "—"} / {period.ph.minimum ?? "—"} / {period.ph.maximum ?? "—"}
-              </td>
-              <td className="tabular-nums">{period.ph.count}</td>
-              <td className="tabular-nums">
-                {period.salinity.average ?? "—"} / {period.salinity.minimum ?? "—"} / {period.salinity.maximum ?? "—"}
-              </td>
-              <td className="tabular-nums">{period.salinity.count}</td>
-              <td className="tabular-nums">
-                {period.temperature.average ?? "—"} / {period.temperature.minimum ?? "—"} / {period.temperature.maximum ?? "—"}
-              </td>
-              <td className="tabular-nums">{period.temperature.count}</td>
-            </tr>
-          ))}
-        </DataTable>
-      </details>
-    </>
-  );
+  const measured = data.periods.some(period => !period.missing);
+  if (!measured) return <p role="status" className={local.emptyChart}>Chưa có lượt đo trong khoảng này.</p>;
+  return <div className={local.charts}>
+    <ul className={charts.legend} aria-label="Chú giải biểu đồ">
+      <li><span className={charts.legendStatic}><i className={`${charts.swatch} ${charts.swatchLine}`} style={{ borderColor: LINE }} />Trung bình</span></li>
+      <li><span className={charts.legendStatic}><i className={charts.swatch} style={{ background: LINE, opacity: 0.25 }} />Thấp nhất đến cao nhất</span></li>
+      <li><span className={charts.legendStatic}><i className={charts.swatch} style={{ background: LIMIT_BAND, border: "1px solid var(--omts-color-border-strong)" }} />Trong ngưỡng của vùng</span></li>
+      <li><span className={charts.legendStatic}><i className={charts.swatch} style={{ background: OUTSIDE, borderRadius: "50%" }} />Có lượt đo vượt ngưỡng</span></li>
+    </ul>
+    {INDICATORS.map((indicator, index) => <IndicatorChart key={indicator.key} data={data} indicator={indicator} last={index === INDICATORS.length - 1} />)}
+  </div>;
 }
 
-type IndicatorChartProps = {
-  data: WaterChartData;
-  indicator: "ph" | "salinity" | "temperature";
-  title: string;
-  min: number | null;
-  max: number | null;
-};
+function IndicatorChart({ data, indicator, last }: { data: WaterChartData; indicator: (typeof INDICATORS)[number]; last: boolean }) {
+  const rows = chartRows(data, indicator.key), bounds = boundsOf(data, indicator.key), domain = chartDomain(rows, bounds);
+  const limits = indicatorRange(data.thresholds, indicator.key), unit = indicator.unit ? ` ${indicator.unit}` : "";
+  const hasLimits = bounds[0] !== null || bounds[1] !== null;
+  return <figure className={local.chartFigure}>
+    <figcaption><strong>{indicator.title}{unit}</strong>{limits && <span>ngưỡng vùng {limits}</span>}</figcaption>
+    <div role="img" aria-label={chartSummary(data, indicator.key)} style={{ height: PLOT + (last ? AXIS : 0) }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <ComposedChart data={rows} syncId="water-trend" margin={MARGIN}>
+          <CartesianGrid vertical={false} stroke={GRID_STROKE} />
+          <XAxis dataKey="tick" hide={!last} height={last ? AXIS : 0} tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: GRID_STROKE }} interval={labelInterval(rows.length)} />
+          <YAxis domain={domain} width={Y_WIDTH} tick={AXIS_TICK} tickLine={false} axisLine={false} tickCount={4} tickFormatter={(value: number) => formatReading(value, 1)} />
+          {hasLimits && <ReferenceArea y1={bounds[0] ?? domain[0]} y2={bounds[1] ?? domain[1]} fill={LIMIT_BAND} fillOpacity={1} stroke="var(--omts-color-border-strong)" strokeOpacity={0.5} strokeDasharray="3 3" ifOverflow="hidden" />}
+          <Area dataKey="band" type="monotone" stroke="none" fill={LINE} fillOpacity={0.22} connectNulls={false} isAnimationActive={false} activeDot={false} />
+          <Line dataKey="average" type="monotone" stroke={LINE} strokeWidth={2} connectNulls={false} isAnimationActive={false}
+            dot={dot} activeDot={{ r: 5, stroke: "var(--omts-color-surface)", strokeWidth: 2 }} />
+          <Tooltip content={<PeriodTooltip unit={unit} />} cursor={{ stroke: "var(--omts-color-border-strong)", strokeDasharray: "3 3" }} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  </figure>;
+}
 
-// SVG geometry: plot area spans x 42..552 and y 25..185 inside a 600x230 viewBox.
-function IndicatorChart({ data, indicator, title, min, max }: IndicatorChartProps) {
-  const top = Math.max(1, ...data.periods.flatMap((period) => [period[indicator].maximum ?? 0]), max ?? 0) * 1.1;
-  const x = (index: number) => 42 + index * 510 / Math.max(1, data.periods.length - 1);
-  const y = (value: number) => 185 - value * 160 / top;
+/** Red for a period that had a reading beyond a threshold, the line colour otherwise; a period without data draws nothing. */
+function dot(props: { cx?: number; cy?: number; index?: number; payload?: ChartRow }) {
+  const { cx, cy, index, payload } = props;
+  if (cx === undefined || cy === undefined || !payload || payload.average === null) return <g key={`gap-${index}`} />;
+  return <circle key={`dot-${index}`} cx={cx} cy={cy} r={3.5} fill={payload.outside ? OUTSIDE : LINE} stroke="var(--omts-color-surface)" strokeWidth={1.5} />;
+}
 
-  // Average line; gaps (missing periods) start a new sub-path instead of bridging.
-  let path = "";
-  let previous = false;
-  data.periods.forEach((period, index) => {
-    const average = period[indicator].average;
-    if (period.missing || average === null) {
-      previous = false;
-      return;
-    }
-    path += `${previous ? " L" : " M"}${x(index)} ${y(average)}`;
-    previous = true;
-  });
-
-  const axisTop = Math.max(1, top);
-  const ticks = [0, 1, 2, 3].map((index) => axisTop * index / 3);
-  const ariaLabel =
-    `${title}: đường trung bình và khoảng nhỏ nhất/lớn nhất; ngưỡng hiện tại ${min ?? "chưa đặt"} đến ${max ?? "chưa đặt"}`;
-
-  return (
-    <figure className="min-w-0 rounded-lg border border-border/80 bg-slate-50/70 px-3 pb-2 pt-3 sm:px-4">
-      <figcaption className="flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold">{title}</span>
-        <span className="text-[11px] tabular-nums text-text-muted">{min ?? "—"}–{max ?? "—"} · ngưỡng</span>
-      </figcaption>
-      <svg className="mt-2 w-full overflow-visible" viewBox="0 0 600 230" role="img" aria-label={ariaLabel}>
-        {ticks.map((tick, index) => (
-          <g key={index}>
-            <line x1="42" y1={y(tick)} x2="552" y2={y(tick)} stroke="#dbe4e8" strokeWidth="1" />
-            <text x="36" y={y(tick) + 4} textAnchor="end" fontSize="10" fill="#64748b">{Number(tick.toFixed(1))}</text>
-          </g>
-        ))}
-        {[min, max].map((bound, index) => bound !== null && (
-          <g key={index}>
-            <line x1="42" x2="552" y1={y(bound)} y2={y(bound)} stroke="#a16207" strokeWidth="1.5" strokeDasharray="5 5" />
-            <text x="556" y={y(bound) + 4} fontSize="10" fill="#854d0e">{bound}</text>
-          </g>
-        ))}
-        {data.periods.map((period, index) => {
-          const { maximum, minimum } = period[indicator];
-          return !period.missing && minimum !== null && maximum !== null && (
-            <line
-              key={period.period}
-              x1={x(index)}
-              x2={x(index)}
-              y1={y(minimum)}
-              y2={y(maximum)}
-              stroke="#7dd3fc"
-              strokeWidth="7"
-              strokeLinecap="round"
-            >
-              <title>{period.period}: {minimum} — {maximum}</title>
-            </line>
-          );
-        })}
-        <path d={path} fill="none" stroke="#075b73" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-        {data.periods.map((period, index) => {
-          const { average } = period[indicator];
-          return !period.missing && average !== null && (
-            <circle key={period.period} cx={x(index)} cy={y(average)} r="4" fill="#075b73" stroke="white" strokeWidth="2">
-              <title>{period.period}: trung bình {average}</title>
-            </circle>
-          );
-        })}
-        <text x="42" y="215" fontSize="12">{data.periods[0]?.period ?? ""}</text>
-        <text x="552" y="215" textAnchor="end" fontSize="12">{data.periods.at(-1)?.period ?? ""}</text>
-      </svg>
-    </figure>
-  );
+function PeriodTooltip({ active, payload, unit }: { active?: boolean; payload?: readonly { payload?: ChartRow }[]; unit: string }) {
+  const row = payload?.[0]?.payload;
+  if (!active || !row) return null;
+  return <div className={charts.tooltip} role="status">
+    <strong>{row.label}</strong>
+    <p className={local.tooltipDates}>{formatVietnameseDate(row.from)} – {formatVietnameseDate(row.to)}</p>
+    {row.count === 0 || row.average === null || row.minimum === null || row.maximum === null ? <p>Không có lượt đo</p> : <ul>
+      <li><span>Trung bình</span><b>{formatReading(row.average)}{unit}</b></li>
+      <li><span>Thấp nhất – cao nhất</span><b>{formatReading(row.minimum)} – {formatReading(row.maximum)}{unit}</b></li>
+      <li><span>Số lượt đo</span><b>{row.count}</b></li>
+    </ul>}
+    {row.outside && <p className={local.tooltipOutside}>Có lượt đo vượt ngưỡng</p>}
+  </div>;
 }

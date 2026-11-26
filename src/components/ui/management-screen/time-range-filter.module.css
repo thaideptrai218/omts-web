@@ -52,3 +52,9 @@
 .timeList button:hover { background:var(--omts-color-primary-soft); color:var(--omts-color-primary); }
 .timeList button[aria-selected="true"] { background:var(--omts-color-primary); color:#fff; font-weight:600; }
 @media (max-width:620px) { .dateTime { flex-direction:column; } .timeColumns { width:auto; padding:10px 0 0; border-left:0; border-top:1px solid var(--omts-color-border); } .timeList { height:140px; } }
+
+.menuButton { flex:none; width:auto; min-width:150px; }
+.menu { display:grid; gap:12px; justify-items:start; }
+.menuPresets { display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:16px; }
+.menuPresets section { display:grid; gap:8px; align-content:start; }
+.menuPresets h4 { font-size:13px; font-weight:650; }

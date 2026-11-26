@@ -39,6 +39,7 @@ Import/Export chỉ xuất hiện khi backend hỗ trợ.
 - Tiết kiệm chiều dọc: trên 5 phương án hoặc danh sách có thể tăng trong tương lai thì dùng **select**; ít và cố định thì dùng **pills xếp ngang**.
 - Lọc khoảng số dùng component riêng: nhãn `Từ`/`Đến` luôn hiện, không dùng placeholder làm nhãn.
 - Ô nhập một ngày dùng bộ chọn thống nhất qua `Field type="date"` (hoặc `DatePickerField`). Giá trị có giờ (backend lưu `DateTimeOffset`: thời gian lập phiếu, thanh toán, cân, đo, hẹn lấy hàng...) dùng `type="datetime-local"` / `withTime`: cùng lịch, thêm chọn Giờ và Phút 24h, nút `Bây giờ`, giá trị `YYYY-MM-DDTHH:mm` giờ Việt Nam. Giá trị chỉ là ngày (`DateOnly`: ngày bắt đầu, ngày sinh, ngày thả giống...) giữ `type="date"`.
+- Màn một vùng không có cột lọc (ví dụ Theo dõi chất lượng nước) bỏ cột lọc: chọn vùng ở hàng công cụ, bộ lọc nằm thành một hàng mỏng trên danh sách, thời gian dùng `TimeRangeMenu` (một nút mở mốc nhanh và "Tùy chỉnh", cùng quy tắc dưới đây).
 - Lọc thời gian không dùng hai ô Từ ngày/Đến ngày. Gồm hai lựa chọn: (1) một ô mở bảng mốc nhanh theo ngày, tuần, tháng, quý, năm và Toàn thời gian; (2) "Tùy chỉnh" mở lịch hai tháng chọn một khoảng, có dòng `Từ ngày – Đến ngày`, nút `Hôm nay`, `Bỏ qua`, `Áp dụng`.
 
 ### 1.4 Đóng/mở cột lọc
