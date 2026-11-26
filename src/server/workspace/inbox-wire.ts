@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { notificationSchema } from "@/features/inbox-api/contracts";
-import { notificationText } from "@/features/inbox-api/notification-text";
+import { neutralNotificationText, notificationText } from "@/features/inbox-api/notification-text";
 
 const legacy = notificationSchema;
 const v2 = z.object({ id: z.guid(), type: z.string().min(1).max(100), title: z.string().max(4096), body: z.string().max(8192).nullable(),
@@ -13,8 +13,8 @@ export function parseInboxItem(raw: unknown) {
   if (!isV2) { const parsed = legacy.safeParse(raw); return parsed.success ? parsed.data : undefined; }
   const parsed = v2.safeParse(raw);
   if (!parsed.success) return undefined;
-  const content = notificationText(parsed.data.messageCode, parsed.data.messageParams, parsed.data);
-  if (!content) return undefined;
+  // Parameters this client cannot read (a newer backend value) fall back to the neutral text instead of the server's English.
+  const content = notificationText(parsed.data.messageCode, parsed.data.messageParams, parsed.data) ?? neutralNotificationText;
   const { id, type, relatedRecordType, relatedRecordCode, createdAt, readAt } = parsed.data;
   return { id, type, ...content, relatedRecordType, relatedRecordCode, createdAt, readAt, isMandatory: parsed.data.mandatory, canOpenRecord: parsed.data.relatedRecordId !== null && ["WaterMeasurement", "FarmingZone", "ZoneComplianceDocument", "Account", "CooperativeCertification", "HarvestLot", "PurchaseReceipt", "SupplierPayment", "HarvestPlan"].includes(parsed.data.relatedRecordType ?? "") };
 }

@@ -12,6 +12,11 @@ it("formats an atomic water alert in Vietnamese and Vietnam time", () => {
   expect(result?.title).toContain("đã hiệu chỉnh"); expect(result?.body).toContain("21/10");
   expect(result?.body).toContain("Độ mặn 12 ‰ thấp"); expect(result?.body).toContain("15–30 ‰"); expect(result?.body).not.toContain("Original");
 });
+it("formats a temperature alert, the third water indicator", () => {
+  const result = notificationText("MSG-WATER-03", { corrected: false, zone_name: "Bãi Dài 2", raft_code: "KV04-B01", measurement_time: "2026-11-25T08:05:00+07:00",
+    values_outside: [{ indicator: "TEMPERATURE", value: 45, unit: "°C", direction: "High", min: 15, max: 32 }] }, fallback);
+  expect(result?.body).toContain("Nhiệt độ 45 °C cao hơn ngưỡng cho phép (15–32 °C)");
+});
 it("formats overdue and expiring/expired licence messages from atomic parameters", () => {
   expect(notificationText("MSG-WATER-06", { zone_name: "A", last_date: "2026-10-01" }, fallback)?.body).toContain("01/10/2026");
   const p = { document_type: "AQUACULTURE_LICENSE", document_number: "GP01", zone_codes: ["KV1", "KV2"], expiry_date: "2026-11-01", days: 0 };
