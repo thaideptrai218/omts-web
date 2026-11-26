@@ -60,3 +60,31 @@ it("shows the missing-choice message under the box instead of a browser bubble, 
   fireEvent.change(select, { target: { value: "a" } });
   expect(screen.queryByRole("alert")).toBeNull();
 });
+
+const many = (count: number, required = false) => <SelectBox aria-label="Vùng" required={required} value="" onChange={() => undefined}>
+  <option value="">Tất cả vùng</option>{Array.from({ length: count }, (_, index) => <option key={index} value={String(index)}>{index === 1 ? "Vùng Đầm Môn" : `Vùng ${index}`}</option>)}</SelectBox>;
+
+it("gives a list of more than 5 choices a search box on its own, and keeps the empty choice while nothing is typed", async () => {
+  const { container } = render(many(6));
+  await userEvent.setup().click(container.querySelector<HTMLElement>(".omts-select-trigger")!);
+  const menu = document.querySelector<HTMLElement>(".omts-select-menu")!;
+  expect(within(menu).getByRole("searchbox", { hidden: true })).toBeTruthy();
+  expect(within(menu).getByText("Tất cả vùng")).toBeTruthy();
+});
+
+it("leaves a short list without a search box", async () => {
+  const { container } = render(many(5));
+  await userEvent.setup().click(container.querySelector<HTMLElement>(".omts-select-trigger")!);
+  expect(document.querySelector(".omts-select-menu input")).toBeNull();
+});
+
+it("moves through the matches with the arrow keys and picks the highlighted one with Enter", async () => {
+  const picked = vi.fn();
+  const { container } = render(<SelectBox aria-label="Vùng" value="" onChange={(event) => picked(event.target.value)}>
+    {Array.from({ length: 7 }, (_, index) => <option key={index} value={String(index + 1)}>{`Vùng ${index + 1}`}</option>)}</SelectBox>);
+  const user = userEvent.setup();
+  await user.click(container.querySelector<HTMLElement>(".omts-select-trigger")!);
+  await user.type(within(document.querySelector<HTMLElement>(".omts-select-menu")!).getByRole("searchbox", { hidden: true }), "vung");
+  await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+  expect(picked).toHaveBeenCalledWith("3");
+});
