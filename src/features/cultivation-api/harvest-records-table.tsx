@@ -3,8 +3,9 @@ import { Fragment } from "react";
 import type { z } from "zod";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { DataTable, displayTime } from "@/features/operations/ui";
-import { CagesWithEstimatedKg, KgWithApproxCages } from "./harvest-quantity-cell";
+import { CagesWithWeighedKg, KgWithApproxCages } from "./harvest-quantity-cell";
 import { HarvestLotPreview } from "./harvest-lot-preview";
+import { PlanRefLink } from "@/features/harvest-plans/plan-ref-link";
 import type { harvestLot } from "./records-contracts";
 import flowStyles from "./cultivation-flow.module.css";
 
@@ -17,7 +18,7 @@ export function HarvestRecordsTable({ rows, selectedLot, zoneId, statusLabel, on
                 responsive
                 headings={[
                   "Mã lô / thời điểm",
-                  "Làn thu hoạch",
+                  "Kế hoạch",
                   "Số lồng thu hoạch",
                   "Đã bán",
                   "Còn để bán",
@@ -45,18 +46,13 @@ export function HarvestRecordsTable({ rows, selectedLot, zoneId, statusLabel, on
                         </span>
                         {(lot.productLines ?? []).map((line) => (
                           <span key={line.productId} className="mt-1 block text-xs text-text-muted">
-                            {line.productName}: {line.cageCount.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} lồng · {line.kg.toLocaleString("vi-VN")} kg
+                            {line.productName}: {line.cageCount.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} lồng{line.weighedKg != null ? ` · cân ${line.weighedKg.toLocaleString("vi-VN")} kg` : ""}
                           </span>
                         ))}
                       </td>
-                      <td data-label="Làn thu hoạch">
-                        {lot.laneNumbers.join(", ")}
-                        <span className="mt-1 block text-xs text-text-muted">
-                          Đã thu hết: {lot.finishedLaneNumbers.join(", ") || "Chưa có"}
-                        </span>
-                      </td>
+                      <td data-label="Kế hoạch">{lot.harvestPlan ? <PlanRefLink code={lot.harvestPlan.code} /> : "—"}</td>
                       <td data-label="Số lồng thu hoạch" className="text-right">
-                        <CagesWithEstimatedKg cages={lot.cageCount} kg={lot.estimatedKg} />
+                        <CagesWithWeighedKg cages={lot.cageCount} weighedKg={lot.weighedKg} />
                       </td>
                       <td data-label="Đã bán" className="text-right">
                         <KgWithApproxCages kg={lot.invoicedKg} kgPerCage={lot.kgPerCage} />

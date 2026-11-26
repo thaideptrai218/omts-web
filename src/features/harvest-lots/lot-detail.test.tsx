@@ -205,14 +205,19 @@ describe("lot detail, buttons by status", () => {
 });
 
 describe("lot detail, tab Thu hoạch", () => {
-  it("shows the trip, the lanes with their share and the reason it went over the plan", async () => {
+  it("shows the trip of a lot recorded from a plan: cages with the weighed kg, the plan and the reason it went over, no lanes", async () => {
     const panel = await open();
+    fireEvent.click(panel.getByRole("tab", { name: "Thu hoạch" }));
+    expect(panel.queryByRole("table", { name: "Làn thu hoạch" })).toBeNull();
+    expect(panel.getByText("Khách thêm đơn")).toBeTruthy();
+    expect(panel.queryByText("50 kg/lồng")).toBeNull();
+    expect(hrefOf(panel, "KHT000003")).toBe("/farming/harvest-plans?code=KHT000003");
+  });
+  it("still lists the lanes with their share for an older lot that has no plan", async () => {
+    const panel = await open({ harvestPlan: null });
     fireEvent.click(panel.getByRole("tab", { name: "Thu hoạch" }));
     const lanes = within(panel.getByRole("table", { name: "Làn thu hoạch" }));
     expect(lanes.getAllByRole("row").slice(1).map((row) => Array.from(row.querySelectorAll("td")).map((cell) => cell.textContent))).toEqual([["Làn 1", "Đã thu hết", "100%"], ["Làn 2", "Đang thu", "40%"]]);
-    expect(panel.getByText("Khách thêm đơn")).toBeTruthy();
-    expect(panel.getByText("50 kg/lồng")).toBeTruthy();
-    expect(hrefOf(panel, "KHT000003")).toBe("/farming/harvest-plans?code=KHT000003");
   });
   it("offers Chỉnh sửa only when the API allows correcting the trip, and opens the form in the row", async () => {
     let panel = await open();

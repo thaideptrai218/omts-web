@@ -16,7 +16,7 @@ it("offers Cân on a lot awaiting weighing and opens the weighing in place", asy
   const sheet = { status: "success", data: { lotId: "122bb318-a72e-49aa-a8d7-a6169f889007", lotCode: "B1-LOT", rowVersion: "v", canEdit: true, products: [], cages: [] } };
   read.mockImplementation(async (action: string) => action === "cages" ? sheet : lot());
   render(<ToastProvider><HarvestLotPreview id="lot" zoneId="z" onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
-  expect(await screen.findByText("Chờ cân")).toBeTruthy();
+  expect((await screen.findAllByText("Chờ cân")).length).toBeGreaterThan(0);
   expect(screen.getByText("Chưa cân")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Cân" }));
   expect(await screen.findByLabelText(/Kg của lồng tiếp theo/)).toBeTruthy();

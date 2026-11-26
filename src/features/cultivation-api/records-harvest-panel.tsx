@@ -7,10 +7,12 @@ import { FilterPills } from "@/components/ui/management-screen/management-layout
 
 import { ErrorNotice, Field, Paging, Skeleton, useRemote } from "@/features/operations/ui";
 import { AssignedPlansBanner } from "@/features/harvest-plans/assigned-plans-banner";
+import { usePlanAccess } from "@/features/harvest-plans/plan-access";
+import { PLANS_PATH } from "@/features/harvest-plans/plan-labels";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { cagesFromKg, formatCages } from "@/shared/format/cage-quantity";
 import { matchesSelection } from "@/shared/presentation/filter-selection";
-import { CagesWithEstimatedKg } from "./harvest-quantity-cell";
+import { CagesWithWeighedKg } from "./harvest-quantity-cell";
 import flowStyles from "./cultivation-flow.module.css";
 import { HarvestLotPreview } from "./harvest-lot-preview";
 import { HarvestRecordsTable } from "./harvest-records-table";
@@ -30,7 +32,7 @@ const everySeededLaneHarvested = (lanes: z.infer<typeof c.harvestLane>[]) => lan
 
 /** Harvest lots of a raft with search/status filters, filtered totals and an inline lot preview. */
 export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: string }) {
-  const allowed = useAllowed("harvest", zoneId);
+  const allowed = useAllowed("harvest", zoneId), plans = usePlanAccess();
 
   const remote = useRemote(
     useMemo(
@@ -60,14 +62,14 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
   const totals = rows.reduce(
     (sum, lot) => ({
       cages: sum.cages + lot.cageCount,
-      estimated: sum.estimated + lot.estimatedKg,
+      weighed: sum.weighed + (lot.weighedKg ?? 0),
       invoiced: sum.invoiced + lot.invoicedKg,
       remaining: sum.remaining + lot.remainingKg,
       // Convert each lot with its own recorded kg/lồng; totals are hidden if any ratio is unavailable.
       invoicedCages: sum.invoicedCages + (cagesFromKg(lot.invoicedKg, lot.kgPerCage) ?? 0),
       remainingCages: sum.remainingCages + (cagesFromKg(lot.remainingKg, lot.kgPerCage) ?? 0),
     }),
-    { cages: 0, estimated: 0, invoiced: 0, remaining: 0, invoicedCages: 0, remainingCages: 0 },
+    { cages: 0, weighed: 0, invoiced: 0, remaining: 0, invoicedCages: 0, remainingCages: 0 },
   );
   return (
     <section className={flowStyles.recordsPanel}>
@@ -93,7 +95,7 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
               {remote.data.cycle
                 ? `Chu kỳ từ ${formatVietnameseDate(remote.data.cycle.startDate)}`
                 : "Bè chưa có chu kỳ đang nuôi"}
-              <span>Thu hoạch được ghi từ kế hoạch thu hoạch của bè.</span>
+              {plans.view ? <Link href={PLANS_PATH}>Thu hoạch theo kế hoạch</Link> : <span>Thu hoạch được ghi từ kế hoạch thu hoạch.</span>}
             </p>
             {remote.data.cycle && <HarvestCycleProductBanner cycle={remote.data.cycle} />}
             <HarvestPlanSummary data={remote.data} />
@@ -134,7 +136,7 @@ export function HarvestPanel({ zoneId, raftId }: { zoneId: string; raftId: strin
                 <div>
                   <dt>Số lồng thu hoạch</dt>
                   <dd>
-                    <CagesWithEstimatedKg cages={totals.cages} kg={totals.estimated} />
+                    <CagesWithWeighedKg cages={totals.cages} weighedKg={rows.some((lot) => lot.weighedKg != null) ? totals.weighed : null} />
                   </dd>
                 </div>
                 {(
