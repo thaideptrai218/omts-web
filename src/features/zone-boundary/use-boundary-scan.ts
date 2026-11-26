@@ -68,10 +68,10 @@ export function useBoundaryScan({ zoneId, onReading }: { zoneId?: string; onRead
       if (own.signal.aborted) return;
       if (started.status !== "success") { fail(failureText(started)); return; }
       let failures = 0;
-      for (let waited = 0; waited < READ_LIMIT_MS;) {
+      const began = Date.now();
+      while (Date.now() - began < READ_LIMIT_MS) {
         await pause(POLL_INTERVAL_MS, own.signal);
-        waited += POLL_INTERVAL_MS;
-        setState({ phase: "reading", elapsedMs: waited, canRetry: false });
+        setState({ phase: "reading", elapsedMs: Date.now() - began, canRetry: false });
         const request = bounded(own.signal, REQUEST_LIMIT_MS);
         const polled = await zoneBoundaryRepository.scanStatus(started.data.scanId, zoneId, request.signal).finally(request.done);
         if (own.signal.aborted) return;

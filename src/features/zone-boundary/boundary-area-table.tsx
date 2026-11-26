@@ -31,7 +31,7 @@ function AreaCard({ area, index, draft, disabled }: { area: AreaDraft; index: nu
       <label className={`${styles.nameRow} block text-xs font-medium text-text-muted`}>Tên khu
         <input className="omts-control mt-1" value={area.name} maxLength={MAX_AREA_NAME} disabled={disabled} onChange={event => draft.renameArea(area.key, event.target.value)} />
       </label>
-      <div className={styles.tableWrap} tabIndex={0} aria-label={`Điểm góc của ${name}`}>
+      <div className={styles.tableWrap} role="group" tabIndex={0} aria-label={`Điểm góc của ${name}`}>
         <table className={styles.table}>
           <thead><tr><th className={styles.label}>Điểm</th><th>X (bắc), m</th><th>Y (đông), m</th><th className={styles.action}><span className="sr-only">Xóa điểm</span></th></tr></thead>
           <tbody>{area.corners.map((corner, row) => {
