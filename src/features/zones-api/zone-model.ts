@@ -71,31 +71,50 @@ export function sortZones(rows: readonly ZoneRow[], key: ZoneSortKey, direction:
   });
 }
 
-export type ZoneDraft = Record<"code" | "name" | "location" | "latitude" | "longitude" | "area", string>;
+export type ZoneDraft = Record<"code" | "name" | "location" | "area", string>;
 export type ZoneField = keyof ZoneDraft;
-export const zoneFields: readonly (readonly [ZoneField, string])[] = [["code", "Mã vùng"], ["name", "Tên vùng"], ["location", "Vị trí"], ["area", "Diện tích (ha)"], ["latitude", "Vĩ độ"], ["longitude", "Kinh độ"]];
-export const emptyZoneDraft: ZoneDraft = { code: "", name: "", location: "", latitude: "", longitude: "", area: "" };
+/** Only the code and the name are required; Địa điểm and Diện tích are optional and may be filled from the licence map. */
+export const zoneFields: readonly (readonly [ZoneField, string])[] = [["code", "Mã vùng"], ["name", "Tên vùng"], ["location", "Địa điểm"], ["area", "Diện tích (ha)"]];
+export const requiredZoneFields: readonly ZoneField[] = ["code", "name"];
+export const emptyZoneDraft: ZoneDraft = { code: "", name: "", location: "", area: "" };
+export const MAX_ZONE_LOCATION = 500, MAX_ZONE_AREA_HA = 1_000_000;
 const text = (value: string | number | null | undefined) => value === null || value === undefined ? "" : String(value);
-export const zoneDraftOf = (zone: ZoneDetail): ZoneDraft => ({ code: zone.code, name: zone.name, location: text(zone.location), latitude: text(zone.latitude), longitude: text(zone.longitude), area: text(zone.area) });
+export const zoneDraftOf = (zone: ZoneDetail): ZoneDraft => ({ code: zone.code, name: zone.name, location: text(zone.location), area: text(zone.area) });
 const toNumber = (value: string) => Number(value.trim().replace(",", "."));
 
-/** Same required fields as before the redesign; numbers additionally keep to the ranges the API returns. */
+/** Code and name are required; a location, when typed, has a length limit and an area, when typed, is a number above 0. The pin is not part of the form: the licence-map boundary sets it. */
 export function validateZoneDraft(draft: ZoneDraft): Partial<Record<ZoneField, string>> {
   const errors: Partial<Record<ZoneField, string>> = {};
-  for (const [key, label] of zoneFields) if (!draft[key].trim()) errors[key] = `Nhập ${label.toLocaleLowerCase("vi")}.`;
-  const range = (key: "latitude" | "longitude" | "area", min: number, max: number) => {
-    if (errors[key]) return;
-    const value = toNumber(draft[key]);
-    if (!Number.isFinite(value) || value < min || value > max) errors[key] = `Nhập số từ ${min} đến ${max}.`;
-  };
-  range("latitude", -90, 90); range("longitude", -180, 180); range("area", 0, 1_000_000);
+  for (const [key, label] of zoneFields) if (requiredZoneFields.includes(key) && !draft[key].trim()) errors[key] = `Nhập ${label.toLocaleLowerCase("vi")}.`;
+  if (draft.location.trim().length > MAX_ZONE_LOCATION) errors.location = `Địa điểm tối đa ${MAX_ZONE_LOCATION} ký tự.`;
+  if (draft.area.trim()) {
+    const value = toNumber(draft.area);
+    if (!Number.isFinite(value) || value <= 0 || value > MAX_ZONE_AREA_HA) errors.area = `Nhập số lớn hơn 0 và không quá ${MAX_ZONE_AREA_HA.toLocaleString("vi-VN")}, hoặc để trống.`;
+  }
   return errors;
 }
+/** An empty location is sent blank and an empty area as null (both mean "none"). An edit never sends the pin: the server keeps it. */
 export function zoneBody(draft: ZoneDraft, rowVersion?: string): Record<string, unknown> {
   const body: Record<string, unknown> = {
-    code: draft.code.trim(), name: draft.name.trim(), location: draft.location.trim(),
-    latitude: toNumber(draft.latitude), longitude: toNumber(draft.longitude), area: toNumber(draft.area),
+    code: draft.code.trim(), name: draft.name.trim(), location: draft.location.trim(), area: draft.area.trim() ? toNumber(draft.area) : null,
   };
   if (rowVersion) body.rowVersion = rowVersion;
   return body;
+}
+
+/** Which fields of the form hold a value that came from reading the licence map (and may therefore be replaced by the next read). */
+export type MapFilled = Record<"location" | "area", boolean>;
+export const noMapFilled: MapFilled = { location: false, area: false };
+/**
+ * Puts what a licence-map read suggests into the form: a field is filled only when it is empty or still holds the value of a previous read,
+ * so a value the user typed is never overwritten. The zone name is never taken from the map. A suggestion the photo did not show (null) changes nothing.
+ */
+export function applyMapPrefill(draft: ZoneDraft, filled: MapFilled, prefill: { areaHa: number | null; location: string | null }): { draft: ZoneDraft; filled: MapFilled } {
+  const next = { draft: { ...draft }, filled: { ...filled } };
+  const suggestions: [keyof MapFilled, string | null][] = [["location", prefill.location], ["area", prefill.areaHa === null ? null : String(prefill.areaHa)]];
+  for (const [field, value] of suggestions) {
+    if (value === null || !value.trim()) continue;
+    if (!draft[field].trim() || filled[field]) { next.draft[field] = value; next.filled[field] = true; }
+  }
+  return next;
 }
