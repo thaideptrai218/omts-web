@@ -1,9 +1,12 @@
 import { toInstant } from "@/features/sales-orders/order-logic";
 import { foldVietnamese } from "@/shared/presentation/fold-text";
-import type { PlanLane, PlanLine, PlanView } from "./contracts";
+import type { PlanExecutor, PlanLane, PlanLine, PlanView } from "./contracts";
 import { PLAN } from "./contracts";
 
 /** Pure rules of the harvest plan: the lane chips, the totals of a plan, the form lines and the body sent to the API. */
+/** The short label of who harvests a plan, shown in the list and the detail. */
+export const executorLabel: Record<PlanExecutor, string> = { ZoneManager: "Quản lý vùng", Owner: "Chủ tự làm" };
+
 export const laneStateLabel: Record<PlanLane["state"], string> = { Planned: "Kế hoạch", Harvested: "Đã thu", Skipped: "Không thu" };
 
 export type LaneChip = { number: number; text: string; state: PlanLane["state"]; lotCode?: string; title?: string };
@@ -24,10 +27,19 @@ export type PlanViewer = "owner" | "zone";
  * One line telling the viewer what comes next on a plan of this status; empty for a plan that is over. The buttons themselves come from `allowedActions`,
  * so this only explains the stage.
  */
-export function planNextStepHint(statusId: number, viewer: PlanViewer): string {
+export function planNextStepHint(statusId: number, viewer: PlanViewer, executor: PlanExecutor = "ZoneManager"): string {
   const owner = viewer === "owner";
+  // The Owner harvests it himself: Đã giao, Đang thu, Hoàn thành; no one receives it and nothing is handed over.
+  if (executor === "Owner") {
+    switch (statusId) {
+      case PLAN.draft: return owner ? "Phiếu tạm: kiểm tra các dòng rồi bấm Phân công." : "";
+      case PLAN.assigned: return "Chủ tự thu hoạch: ghi lô thu hoạch cho từng bè trong kế hoạch.";
+      case PLAN.harvesting: return "Đang thu: khi mọi bè đã có lô hoặc đã bỏ luống, bấm Hoàn thành.";
+      default: return "";
+    }
+  }
   switch (statusId) {
-    case PLAN.draft: return owner ? "Phiếu tạm: kiểm tra các dòng rồi bấm Giao QLV." : "";
+    case PLAN.draft: return owner ? "Phiếu tạm: kiểm tra các dòng rồi bấm Phân công." : "";
     case PLAN.assigned: return owner ? "Đã giao, chờ quản lý vùng nhận kế hoạch." : "Cần nhận: bấm Nhận kế hoạch để bắt đầu thu hoạch.";
     case PLAN.received: return owner ? "Quản lý vùng đã nhận, chờ ghi lô thu hoạch." : "Đã nhận: ghi lô thu hoạch cho từng bè trong kế hoạch.";
     case PLAN.harvesting: return owner ? "Quản lý vùng đang thu hoạch, chờ bàn giao." : "Đang thu: khi mọi bè đã xong, bấm Bàn giao cho chủ.";

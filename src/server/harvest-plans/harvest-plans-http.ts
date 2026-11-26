@@ -71,7 +71,7 @@ const crew = z.array(id).max(100).refine((values) => new Set(values).size === va
 const write = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("plan-create"), body: planBody.omit({ rowVersion: true }) }),
   z.strictObject({ action: z.literal("plan-update"), id, body: planBody.required({ rowVersion: true }) }),
-  z.strictObject({ action: z.literal("plan-assign"), id, body: versioned }),
+  z.strictObject({ action: z.literal("plan-assign"), id, body: z.strictObject({ rowVersion: rowVersion.optional(), executor: z.enum(c.planExecutors).optional() }) }),
   z.strictObject({ action: z.literal("plan-receive"), id, body: versioned }),
   z.strictObject({ action: z.literal("plan-hand-over"), id, body: versioned }),
   z.strictObject({ action: z.literal("plan-finish"), id, body: versioned }),

@@ -163,6 +163,15 @@ describe("harvest plans BFF", () => {
     expect((await handleHarvestPlans(withCages(-1))).status).toBe(400);
   });
 
+  it("sends the executor chosen at the assignment to the API and refuses any other value before it", async () => {
+    setup([["HARVEST_PLANS", "Edit"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(null, { status: 204 }));
+    expect((await handleHarvestPlans(post({ action: "plan-assign", id, body: { rowVersion: "v1", executor: "Owner" } }))).status).toBe(200);
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ rowVersion: "v1", executor: "Owner" });
+    expect((await handleHarvestPlans(post({ action: "plan-assign", id, body: { executor: "Staff" } }))).status).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("answers a command that has no content as done, and passes a rejected call on with its code and the API's own sentence", async () => {
     setup([["HARVEST_PLANS", "Edit"], ["HARVEST_PLANS", "Delete"]]);
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 204 }))

@@ -36,7 +36,8 @@ export const planRepository = {
   assigned: (signal?: AbortSignal) => read("plans-assigned", {}, c.planList, signal),
   create: (body: SaveBody) => json("plan-create", { body }, c.planAnswer),
   update: (id: string, body: SaveBody) => json("plan-update", { id, body }, c.planAnswer),
-  assign: (id: string, rowVersion?: string) => json("plan-assign", { id, body: rowVersion ? { rowVersion } : {} }, c.ack),
+  /** Gives the plan out; `executor` says who harvests it (the API takes the zone manager when it is left out) and cannot change afterwards. */
+  assign: (id: string, rowVersion?: string, executor?: c.PlanExecutor) => json("plan-assign", { id, body: { ...(rowVersion ? { rowVersion } : {}), ...(executor ? { executor } : {}) } }, c.ack),
   /** The Zone Manager takes the plan given to the zone ("Nhận kế hoạch"). */
   receive: (id: string, rowVersion?: string) => json("plan-receive", { id, body: rowVersion ? { rowVersion } : {} }, c.ack),
   /** The Zone Manager hands the plan over to the Owner once every line is done ("Bàn giao cho chủ"). */

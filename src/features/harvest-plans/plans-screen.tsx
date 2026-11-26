@@ -21,6 +21,8 @@ import { PLAN, type PlanPage, type PlanRow } from "./contracts";
 import { usePlanAccess } from "./plan-access";
 import { PlanDetailPanel } from "./plan-detail";
 import { PLANS_PATH, PlanStatus, allPlanStatuses, planStatusLabel } from "./plan-labels";
+import { executorLabel } from "./plan-logic";
+import styles from "./plans.module.css";
 import { errorText, planRepository } from "./repository";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
@@ -36,7 +38,7 @@ const columns: readonly Column[] = [
   { key: "done", label: "Đã thu", numeric: true, render: (row) => `${row.progress.linesDone}/${row.progress.lines} bè` },
   { key: "orders", label: "Đơn đặt hàng", render: (row) => row.orders.length ? <span className="flex flex-wrap gap-x-2">{row.orders.map((order) => <Link key={order.id} className={issueStyles.link} href={orderHref(order.code)} onClick={stop}>{order.code}</Link>)}</span> : "—" },
   { key: "createdBy", label: "Người tạo", hidden: true, render: (row) => dash(row.createdBy) },
-  { key: "status", label: "Trạng thái", render: (row) => <PlanStatus statusId={row.statusId} /> },
+  { key: "status", label: "Trạng thái", render: (row) => <><PlanStatus statusId={row.statusId} />{row.statusId !== PLAN.draft && row.executor === "Owner" && <span className={styles.executorTag}>{executorLabel.Owner}</span>}</> },
 ];
 const defaultStatuses: number[] = [PLAN.draft, PLAN.assigned, PLAN.received, PLAN.harvesting, PLAN.handedOver];
 const emptyFilters = { zone: "" };

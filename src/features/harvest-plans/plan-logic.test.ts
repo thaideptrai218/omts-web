@@ -152,4 +152,12 @@ describe("next step hint per status", () => {
     expect(planNextStepHint(PLAN.completed, "owner")).toBe("");
     expect(planNextStepHint(PLAN.cancelled, "zone")).toBe("");
   });
+
+  it("explains the Owner flow (no receiving, no hand over) when the Owner is the executor", () => {
+    expect(planNextStepHint(PLAN.draft, "owner", "Owner")).toContain("Phân công");
+    expect(planNextStepHint(PLAN.assigned, "owner", "Owner")).toContain("ghi lô thu hoạch");
+    expect(planNextStepHint(PLAN.harvesting, "owner", "Owner")).toContain("bấm Hoàn thành");
+    expect(planNextStepHint(PLAN.completed, "owner", "Owner")).toBe("");
+    expect(planNextStepHint(PLAN.assigned, "owner", "ZoneManager")).toContain("chờ quản lý vùng nhận");
+  });
 });
