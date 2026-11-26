@@ -43,7 +43,7 @@ export function ZoneRaftsTab({ zoneId, zoneLabel, canCreate, raftAccess, guard, 
   const remote = useRemote(useCallback((signal: AbortSignal) => readRaftPage({ zoneId, statusId, search: term, page, pageSize }, signal), [zoneId, statusId, term, page, pageSize]));
   useEffect(() => {
     if (!focus || !remote.data) return;
-    const timer = setTimeout(() => document.getElementById(`zone-raft-row-${focus.id}`)?.scrollIntoView({ block: "nearest" }), 0);
+    const timer = setTimeout(() => document.getElementById(`zone-raft-row-${focus.id}`)?.scrollIntoView?.({ block: "nearest" }), 0);
     return () => clearTimeout(timer);
   }, [focus, remote.data]);
   const showCycles = raftAccess.cycles;

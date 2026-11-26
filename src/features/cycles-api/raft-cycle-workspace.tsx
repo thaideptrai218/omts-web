@@ -63,7 +63,7 @@ function ZoneRaftList({ storageKey, icon, title, helpHref, actions, renderDetail
   if (!linkPlaced && list.data) { setLinkPlaced(true); const index = rows.findIndex(row => raftId ? row.raftId === raftId : row.raftId === recordId || row.cycle?.id === recordId); if (index >= 0) { setPage(Math.floor(index / pageSize) + 1); setExpanded(rows[index].raftId); } }
   useEffect(() => {
     if (!raftId || !list.data) return;
-    const timer = setTimeout(() => document.getElementById(`cycle-row-${raftId}`)?.scrollIntoView({ block: "nearest" }), 0);
+    const timer = setTimeout(() => document.getElementById(`cycle-row-${raftId}`)?.scrollIntoView?.({ block: "nearest" }), 0);
     return () => clearTimeout(timer);
   }, [raftId, list.data]);
 

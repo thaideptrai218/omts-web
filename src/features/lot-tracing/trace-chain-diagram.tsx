@@ -26,7 +26,7 @@ export function chainLinks(trace: LotTrace): Link[] {
 
 /** Sơ đồ chuỗi đầu trang: Lô giống → Bè/Chu kỳ → Thu hoạch → Cân tại cảng → Hóa đơn → Khách. Bấm một mắt xích để cuộn tới khối chứa nó. */
 export function TraceChainDiagram({ trace }: { trace: LotTrace }) {
-  const goTo = (target: string) => document.getElementById(target)?.scrollIntoView({ block: "start" });
+  const goTo = (target: string) => document.getElementById(target)?.scrollIntoView?.({ block: "start" });
   return (
     <section className={s.card} aria-labelledby="chain-title">
       <div className={s.cardHead}><h2 id="chain-title">Chuỗi truy xuất</h2><span className={s.muted}>Lô giống → Bè/Chu kỳ → Thu hoạch → Cân tại cảng → Hóa đơn → Khách</span></div>

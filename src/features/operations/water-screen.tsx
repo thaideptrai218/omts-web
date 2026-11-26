@@ -99,7 +99,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
 
   useEffect(() => {
     if (!linkedId || !loaded) return;
-    const timer = setTimeout(() => document.getElementById(`water-row-${linkedId}`)?.scrollIntoView({ block: "nearest" }), 0);
+    const timer = setTimeout(() => document.getElementById(`water-row-${linkedId}`)?.scrollIntoView?.({ block: "nearest" }), 0);
     return () => clearTimeout(timer);
   }, [linkedId, loaded]);
 

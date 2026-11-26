@@ -58,7 +58,7 @@ function ZoneDirectory({ helpHref }: { helpHref?: string }) {
   if (!linkPlaced && list.data) { setLinkPlaced(true); const index = rows.findIndex(row => row.id === linkedId); if (index >= 0) setPage(Math.floor(index / pageSize) + 1); }
   useEffect(() => {
     if (!linkedId || !list.data) return;
-    const timer = setTimeout(() => document.getElementById(`zone-row-${linkedId}`)?.scrollIntoView({ block: "nearest" }), 0);
+    const timer = setTimeout(() => document.getElementById(`zone-row-${linkedId}`)?.scrollIntoView?.({ block: "nearest" }), 0);
     return () => clearTimeout(timer);
   }, [linkedId, list.data]);
 
