@@ -1,42 +1,16 @@
 /* Theo dõi chất lượng nước: pieces specific to this screen; the table, in-place detail and footer come from the shared farming-management styles. */
-.strip { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; border-bottom:1px solid var(--omts-color-border); font-size:12px; color:var(--omts-color-text-muted); }
+.strip { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px 10px; font-size:12px; color:var(--omts-color-text-muted); }
 .strip > span { color:var(--omts-color-text-muted); }
-.strip > button:last-child { margin-left:auto; }
-.stripButton { display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:12px; font-weight:600; color:var(--omts-color-text); }
-.stripButton svg { width:14px; height:14px; }
-.stripButton[aria-expanded="true"] { border-color:var(--omts-color-primary); background:var(--omts-color-primary-soft); color:var(--omts-color-primary); }
-.panel { padding:10px 16px 14px; border-bottom:1px solid var(--omts-color-border); background:var(--omts-color-surface); }
-.panelHead { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin-bottom:6px; font-size:12px; color:var(--omts-color-text-muted); }
-.panelHead label { display:inline-flex; align-items:center; gap:8px; }
-.panelHead select, .panelHead :global(.omts-select-trigger) { height:28px; padding:0 6px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:12px; color:var(--omts-color-text); }
 .emptyChart { padding:10px 12px; border:1px dashed var(--omts-color-border); border-radius:6px; font-size:13px; color:var(--omts-color-text-muted); }
-.periodTable { margin-top:12px; font-size:13px; }
-.periodTable summary { cursor:pointer; min-height:32px; font-weight:600; color:var(--omts-color-text-muted); }
 .check { display:flex; align-items:center; gap:8px; min-height:28px; margin-top:10px; font-size:13px; }
 .hint { margin-bottom:10px; font-size:13px; color:var(--omts-color-text-muted); }
-.railHint { font-size:12px; line-height:1.5; color:var(--omts-color-text-muted); }
 .thresholdGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 16px; }
 .thresholdTable { margin-top:14px; }
 .outside { color:var(--omts-color-danger); font-weight:600; }
 .alertLine { margin-bottom:10px; padding:8px 10px; border:1px solid var(--omts-color-danger); border-radius:6px; font-size:13px; color:var(--omts-color-danger); }
-.overview { padding:16px; }
 @media (min-width:1100px) { .thresholdGrid { grid-auto-flow:column; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(2,auto); } }
-@media (max-width:900px) { .strip > button:last-child { margin-left:0; } }
 
 /* Biểu đồ xu hướng: ba biểu đồ nhỏ xếp dọc dùng chung trục thời gian. */
-.panelHead h2 { margin:0; font-size:14px; font-weight:650; color:var(--omts-color-text); }
-.panelTools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.segmented { display:inline-flex; border:1px solid var(--omts-color-border-strong); border-radius:6px; overflow:hidden; }
-.segmented button { height:28px; padding:0 12px; background:var(--omts-color-surface); font-size:12px; font-weight:600; color:var(--omts-color-text); }
-.segmented button + button { border-left:1px solid var(--omts-color-border-strong); }
-.segmented button[aria-pressed="true"] { background:var(--omts-color-primary); color:#fff; }
-.segmented button:focus-visible { outline:2px solid var(--omts-color-primary); outline-offset:-2px; }
-.charts { display:grid; gap:6px; }
-.chartFigure { margin:0; min-width:0; }
-.chartFigure figcaption { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; font-size:12px; color:var(--omts-color-text-muted); }
-.chartFigure figcaption strong { font-size:13px; color:var(--omts-color-text); }
-.tooltipDates { margin:0 0 4px; font-size:11px; color:var(--omts-color-text-muted); }
-.tooltipOutside { margin:4px 0 0; font-weight:600; color:var(--omts-color-danger); }
 .gapLine { margin:6px 0; font-size:12px; color:var(--omts-color-text-muted); }
 .periodScroll { overflow-x:auto; }
 .periodScroll table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -52,3 +26,35 @@
 .stripLink { font-size:12px; font-weight:600; color:var(--omts-color-primary); }
 .toolSelect, .toolSelect :global(.omts-select-trigger) { min-width:170px; }
 .toolSelect :global(.omts-select-trigger) { height:30px; padding:0 8px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:13px; }
+
+/* Màn một vùng: các thẻ riêng cách nhau 12px; hàng dưới là thẻ phép đo (rộng) và thẻ ngưỡng cảnh báo (hẹp). */
+.board { display:grid; gap:12px; align-content:start; padding:12px; background:var(--omts-color-canvas); min-height:100%; }
+.card { min-width:0; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); overflow:hidden; }
+.cardHead { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; padding:10px 12px; }
+.cardHead h2, .blockHead h2 { margin:0; font-size:14px; font-weight:650; color:var(--omts-color-text); }
+.count { margin-left:6px; font-size:12px; font-weight:400; color:var(--omts-color-text-muted); }
+.cardFooter { display:flex; justify-content:flex-end; padding:8px 12px; border-top:1px solid var(--omts-color-border); }
+.kpiBlock { display:grid; gap:8px; min-width:0; }
+.blockHead { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; }
+.kpiRow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.kpiCard { min-width:0; padding:10px 12px 8px; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-surface); }
+.kpiCard h3 { margin:0; font-size:12px; font-weight:500; color:var(--omts-color-text-muted); }
+.kpiValue { display:flex; align-items:baseline; gap:8px; margin:2px 0 0; }
+.kpiValue strong { font-size:26px; line-height:1.15; font-weight:700; font-variant-numeric:tabular-nums; color:var(--omts-color-text); }
+.kpiValue strong.kpiOutside, .kpiOutside { color:var(--omts-color-danger); }
+.kpiFlag { font-size:12px; font-weight:600; color:var(--omts-color-danger); }
+.kpiSub { margin:0 0 4px; font-size:12px; color:var(--omts-color-text-muted); }
+.kpiSpark { margin:0 -4px; }
+.sparkTooltip { padding:4px 8px; border:1px solid var(--omts-color-border-strong); border-radius:6px; background:var(--omts-color-surface); font-size:12px; white-space:nowrap; box-shadow:var(--omts-shadow-card); }
+.lower { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:12px; align-items:start; }
+.thresholdRows { display:grid; margin:0; padding:0 12px 10px; }
+.thresholdRows > div { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-top:1px solid var(--omts-color-border); font-size:13px; }
+.thresholdRows > div:first-child { border-top:0; }
+.thresholdRows dt { color:var(--omts-color-text-muted); }
+.thresholdRows dd { margin:0; font-weight:600; font-variant-numeric:tabular-nums; }
+@media (max-width:900px) { .lower { grid-template-columns:minmax(0,1fr); } .thresholdCard { order:-1; } }
+@media (max-width:640px) { .kpiRow { grid-template-columns:minmax(0,1fr); } }
+.periodTable summary { cursor:pointer; min-height:36px; display:flex; align-items:center; padding:0 12px; font-size:13px; font-weight:650; color:var(--omts-color-text); }
+.periodTable[open] summary { border-bottom:1px solid var(--omts-color-border); }
+.periodTable .gapLine, .periodTable .periodScroll { margin-left:12px; margin-right:12px; }
+.periodTable .periodScroll { margin-bottom:10px; }

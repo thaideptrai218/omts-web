@@ -19,14 +19,16 @@ export function periodOutside(period: WaterChartPeriod, key: WaterIndicatorKey, 
 }
 
 /** One point of an indicator's chart; `band` is [lowest, highest] and stays null for a period without measurements, so the line breaks there. */
-export type ChartRow = { key: string; tick: string; label: string; from: string; to: string; count: number; average: number | null; minimum: number | null; maximum: number | null; band: [number, number] | null; outside: boolean };
+export type ChartRow = { key: string; tick: string; label: string; from: string; to: string; count: number; average: number | null; minimum: number | null; maximum: number | null; band: [number, number] | null; outside: boolean; isolated: boolean };
 
 export function chartRows(data: WaterChartData, key: WaterIndicatorKey): ChartRow[] {
-  const bounds = boundsOf(data, key);
-  return data.periods.map(period => {
+  const bounds = boundsOf(data, key), has = (index: number) => !!data.periods[index] && !data.periods[index].missing;
+  return data.periods.map((period, index) => {
     const { average, minimum, maximum } = period[key];
     return { key: period.key, tick: period.tick, label: period.label, from: period.from, to: period.to, count: period.count, average, minimum, maximum,
-      band: minimum === null || maximum === null ? null : [minimum, maximum], outside: !period.missing && periodOutside(period, key, bounds) };
+      band: minimum === null || maximum === null ? null : [minimum, maximum], outside: !period.missing && periodOutside(period, key, bounds),
+      // A lone period between two gaps has no line to belong to, so the sparkline marks it with a dot.
+      isolated: has(index) && !has(index - 1) && !has(index + 1) };
   });
 }
 
@@ -39,17 +41,29 @@ export function chartDomain(rows: readonly ChartRow[], [min, max]: [number | nul
   return [Math.max(0, floor(low - pad)), ceil(high + pad)];
 }
 
-/** The text a screen reader gets in place of the drawing. */
-export function chartSummary(data: WaterChartData, key: WaterIndicatorKey): string {
-  const indicator = INDICATORS.find(item => item.key === key)!, unit = indicator.unit ? ` ${indicator.unit}` : "";
-  const measured = data.periods.filter(period => !period.missing);
-  if (!measured.length) return `${indicator.title}: chưa có lượt đo trong khoảng này.`;
+export type Kpi = {
+  /** Average of the newest period that has measurements, and the name of that period. */
+  latest: number | null; latestLabel: string; rangeAverage: number | null; limits: string | undefined;
+  /** The latest average itself is beyond a threshold. */
+  latestOutside: boolean; outsidePeriods: number;
+};
+
+const beyond = (value: number, [min, max]: [number | null, number | null]) => (min !== null && value < min) || (max !== null && value > max);
+
+/** The numbers of one KPI card: the latest period average, the average of the whole chosen range and how the periods sit against the thresholds. */
+export function kpiOf(data: WaterChartData, key: WaterIndicatorKey): Kpi {
+  const bounds = boundsOf(data, key), measured = data.periods.filter(period => !period.missing), newest = measured.at(-1);
   const total = measured.reduce((sum, period) => sum + period.count, 0);
-  const average = measured.reduce((sum, period) => sum + (period[key].average ?? 0) * period.count, 0) / total;
-  const low = Math.min(...measured.map(period => period[key].minimum ?? Infinity)), high = Math.max(...measured.map(period => period[key].maximum ?? -Infinity));
-  const limits = indicatorRange(data.thresholds, key);
-  const bounds = boundsOf(data, key), outside = measured.filter(period => periodOutside(period, key, bounds)).length;
-  return `${indicator.title}: trung bình ${formatReading(average)}${unit}, thấp nhất ${formatReading(low)}${unit}, cao nhất ${formatReading(high)}${unit}`
-    + `, từ ${measured[0].label} đến ${measured[measured.length - 1].label}`
-    + (limits ? `; ngưỡng vùng ${limits}` : "") + (outside ? `; ${outside} kỳ có lượt đo vượt ngưỡng` : "") + ".";
+  const latest = newest?.[key].average ?? null;
+  return { latest, latestLabel: newest?.label ?? "", limits: indicatorRange(data.thresholds, key),
+    rangeAverage: total ? measured.reduce((sum, period) => sum + (period[key].average ?? 0) * period.count, 0) / total : null,
+    latestOutside: latest !== null && beyond(latest, bounds), outsidePeriods: measured.filter(period => periodOutside(period, key, bounds)).length };
+}
+
+/** The text a screen reader gets for a card: "pH: trung bình kỳ mới nhất 8,2, ngưỡng 7,51 đến 8,5, 1 kỳ vượt ngưỡng." */
+export function kpiSummary(data: WaterChartData, key: WaterIndicatorKey): string {
+  const indicator = INDICATORS.find(item => item.key === key)!, kpi = kpiOf(data, key), unit = indicator.unit ? ` ${indicator.unit}` : "";
+  if (kpi.latest === null) return `${indicator.title}: chưa có lượt đo trong khoảng này.`;
+  return `${indicator.title}: trung bình kỳ mới nhất ${formatReading(kpi.latest)}${unit}`
+    + (kpi.limits ? `, ngưỡng ${kpi.limits.replace("–", " đến ")}` : "") + (kpi.outsidePeriods ? `, ${kpi.outsidePeriods} kỳ vượt ngưỡng` : "") + ".";
 }

@@ -20,8 +20,9 @@ beforeEach(() => {
   mocks.options.mockResolvedValue({ status: "success", data: [] });
   const history = { status: "success", data: { items: [], total: 0, page: 1, pageSize: 100 } };
   // Tổng quan vùng nước (mảng rỗng) khác hợp đồng lịch sử đo; các lần đọc khác giữ nguyên.
-  const chart = { status: "success", data: { zoneId: record.zone.id, from: "2025-11-27", to: "2026-11-27", thresholds: {}, points: [] } };
-  mocks.read.mockImplementation((action: string) => Promise.resolve(action === "zones-overview" ? { status: "success", data: [] } : action === "chart" ? chart : history));
+  const chart = { status: "success", data: { zoneId: record.zone.id, from: "2025-11-27", to: "2026-11-27", thresholds: { phMin: null, phMax: null, salinityMin: null, salinityMax: null, temperatureMin: null, temperatureMax: null }, points: [] } };
+  const limits = { status: "success", data: { zoneId: record.zone.id, zoneCode: "QA01", zoneName: "Vùng QA", zoneStatus: "In Use", thresholds: chart.data.thresholds } };
+  mocks.read.mockImplementation((action: string) => Promise.resolve(action === "zones-overview" ? { status: "success", data: [] } : action === "chart" ? chart : action === "thresholds" ? limits : history));
 });
 afterEach(cleanup);
 

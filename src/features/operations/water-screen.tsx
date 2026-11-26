@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,7 @@ import { emptyWaterFilters, filterWater, noWaterHistory, raftsOf, readAllWaterHi
 import { WaterHistoryTable, waterColumns } from "./water-history-table";
 import { NewMeasurement as NewMeasurementDialog } from "./water-new-measurement-dialog";
 import { waterRepository as repository } from "./water-measurement-shared";
-import { WaterThresholdPanel } from "./water-threshold-panel";
+import { WaterThresholdCard } from "./water-threshold-card";
 import local from "./water-screen.module.css";
 
 // Re-exported so existing imports from "./water-screen" keep working (the inbox record dialog opens a measurement in a modal).
@@ -79,7 +78,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
   }
   const [sort, setSort] = useState<SortState>({ key: "time", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   const [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
-  const [thresholdsOpen, setThresholdsOpen] = useState(false), [revision, setRevision] = useState(0);
+  const [revision, setRevision] = useState(0);
   const [adding, setAdding] = useState(false);
   const guard = useUnsavedGuard(), exporting = useMutation();
   useEffect(() => { if (exporting.error) notify({ tone: "danger", title: "Chưa xuất được phép đo.", description: exporting.error }); }, [exporting.error, notify]);
@@ -116,7 +115,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
     : !loaded ? <ListSkeleton />
     : !shown.length ? <ListStateMessage>{hasFilter ? "Không có phép đo phù hợp bộ lọc." : "Chưa có phép đo trong khoảng thời gian này."}</ListStateMessage>
     : <WaterHistoryTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} canEditIn={id => !frozen(id) && operationAllowed("water", identity, functions, "Edit", id)} guard={guard} onChanged={changed}
-      onToggle={id => void guard.leave(() => { setThresholdsOpen(false); setExpanded(open => open === id ? undefined : id); })} />;
+      onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))} />;
   const noZone = zones.error && !zones.data ? <ListStateMessage error={zones.error} onRetry={zones.reload} retryLabel="Tải lại danh sách vùng" />
     : settled && !offered.length ? <ListStateMessage>Chưa có vùng nào bạn được phép xem chất lượng nước.</ListStateMessage> : <ListSkeleton />;
 
@@ -127,7 +126,6 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
         onChange={event => change(() => { setChoice(event.target.value); setFilters(previous => ({ ...previous, raftId: "" })); })}>
         {offered.map(row => <option key={row.id} value={row.id}>{String(row.name)}{row.statusId === 102 ? " (ngừng sử dụng)" : ""}</option>)}
       </SelectBox>
-      {canCreate && <Button key="add" className="w-auto" onClick={() => setAdding(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm phép đo</Button>}
       {canExport && <Button key="export" className="w-auto" variant="secondary" isPending={exporting.pending} onClick={() => void exporting.run(() => repository.download({ zoneId, from: time.from, to: time.to, status: filters.status || "All" }), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}
       {zoneId && <ColumnPicker columns={waterColumns} visible={visible} onChange={keys => storeColumns(keys.join(","))} />}<HelpLink helpHref={helpHref} />
     </>}
@@ -136,18 +134,22 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
     {adding && zoneId && <NewMeasurementDialog zoneId={zoneId} zoneName={zone.name} onClose={() => setAdding(false)}
       onSaved={() => { setAdding(false); history.reload(); setRevision(value => value + 1); }} />}
     <ManagementScroller busy={history.loading}>
-      {!zoneId ? noZone : <>
+      {!zoneId ? noZone : <div className={local.board}>
         <WaterChartSection key={`${zoneId}:${revision}`} zoneId={zoneId} />
-        <WaterFilterStrip time={time} filters={filters} rafts={raftsOf(loaded?.items ?? [])} canReset={canReset} thresholdsOpen={thresholdsOpen}
-          note={loaded?.truncated ? `Chỉ hiển thị ${loaded.items.length} phép đo mới nhất; hãy thu hẹp khoảng thời gian.` : undefined}
-          onTime={next => change(() => setTime(next))} onFilter={setFilter} onReset={reset} onThresholds={() => void guard.leave(() => { setExpanded(undefined); setThresholdsOpen(open => !open); })} />
-        {/* Ngưỡng chỉ xem ở đây; Chủ HTX sửa trong Cài đặt > Ngưỡng cảnh báo nước. */}
-        {thresholdsOpen && <section className={local.panel} aria-label="Ngưỡng cảnh báo">
-          {identity.subjectType === "CooperativeOwner" && <Link className="text-sm font-semibold text-primary underline" href="/settings?section=water-thresholds">Sửa ngưỡng trong Thiết lập</Link>}
-          <WaterThresholdPanel key={zoneId} zoneId={zoneId} owner={false} dirtyRef={guard.dirty} onSaved={() => undefined} />
-        </section>}
-        {list}
-      </>}
+        <div className={local.lower}>
+          <section aria-label="Lịch sử đo" className={`${local.card} ${local.measurements}`}>
+            <div className={local.cardHead}>
+              <h2>Phép đo <span className={local.count}>{loaded ? `${rows.length} phép đo` : ""}</span></h2>
+              {canCreate && <Button key="add" className="w-auto" onClick={() => setAdding(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Thêm phép đo</Button>}
+            </div>
+            <WaterFilterStrip time={time} filters={filters} rafts={raftsOf(loaded?.items ?? [])} canReset={canReset}
+              note={loaded?.truncated ? `Chỉ hiển thị ${loaded.items.length} phép đo mới nhất; hãy thu hẹp khoảng thời gian.` : undefined}
+              onTime={next => change(() => setTime(next))} onFilter={setFilter} onReset={reset} />
+            {list}
+          </section>
+          <WaterThresholdCard key={zoneId} zoneId={zoneId} canEdit={identity.subjectType === "CooperativeOwner"} />
+        </div>
+      </div>}
     </ManagementScroller>
   </ManagementLayout>;
 }
