@@ -8,7 +8,7 @@ const ids = { product: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", line: "0f1c0a8e-3
 const state = vi.hoisted(() => ({ upload: vi.fn(), all: vi.fn(), push: vi.fn(), subjectType: "CooperativeOwner", permissions: [] as unknown[] }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: state.push }) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: state.subjectType }, permissions: { functionPermissions: state.permissions } }) }));
-vi.mock("./records-shared", async (original) => ({ ...(await original<typeof import("./records-shared")>()), harvestRepo: { upload: state.upload, read: vi.fn(), write: vi.fn() } }));
+vi.mock("./records-shared", async (original) => ({ ...(await original<typeof import("./records-shared")>()), harvestRepo: { upload: state.upload, read: vi.fn(async () => ({ status: "error", httpStatus: 404, uncertain: false })), write: vi.fn() } }));
 vi.mock("@/features/products/repository", async (original) => ({ ...(await original<typeof import("@/features/products/repository")>()), productRepository: { all: state.all } }));
 vi.mock("./record-crew-picker", () => ({ RecordCrewPicker: () => null }));
 // jsdom cannot decode images; the picker only needs the file back.
@@ -117,3 +117,15 @@ it("photos are optional: the section is collapsed, titled optional with the 3 ma
   expect(state.upload.mock.calls[0][1]).toHaveLength(0);
   expect(screen.queryByText(/cần từ 1 đến 3/)).toBeNull();
 });
+
+it("refuses more cages than the plan line expects", async () => {
+  const user = userEvent.setup();
+  render(<ToastProvider><HarvestForm zoneId={ids.zone} raftId={ids.raft} plan={plan} onClose={() => {}} onSaved={() => {}} /></ToastProvider>);
+  const cages = screen.getByLabelText("Số lồng thu được");
+  await user.clear(cages);
+  await user.type(cages, "7");
+  expect(screen.getByText("Không thu quá 6 lồng của kế hoạch.")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  expect(state.upload).not.toHaveBeenCalled();
+});
+

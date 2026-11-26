@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import { ListStateMessage, Subtabs } from "@/components/ui/management-screen/management-table";
+import { HarvestRaftProgress } from "@/features/cultivation-api/harvest-raft-progress-bar";
 import { HarvestLotDetail } from "@/features/cultivation-api/harvest-detail";
 import { RecordHistoryList } from "@/features/history/record-history";
 import { Skeleton, useRemote } from "@/features/operations/ui";
@@ -30,6 +31,7 @@ export function LotDetailPanel({ id, zoneId, startWeighing = false, onChanged, o
   if (mode === "edit") return <HarvestLotDetail id={lot.id} zoneId={zoneId} onClose={() => setMode("view")} onSaved={done} />;
   if (mode === "weigh") return <LotWeighForm lot={lot} zoneId={zoneId} onClose={() => setMode("view")} onSaved={done} />;
   return <section className={listStyles.detail} aria-label={`Chi tiết ${lot.lotCode}`}>
+    <div className="mb-3"><HarvestRaftProgress raftId={lot.raftId} zoneId={zoneId} /></div>
     <Subtabs<Tab> label="Nội dung lô thu hoạch" tabs={tabs} value={tab} onChange={setTab} />
     <div className={listStyles.tabBody} key={lot.rowVersion}>
       {tab === "info" && <><LotInfoTab lot={lot} /><LotInfoActions lot={lot} zoneId={zoneId} onMode={setMode} onRemoved={onRemoved} /></>}
