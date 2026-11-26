@@ -10,7 +10,7 @@ const group = (n: number, label: string, over: Partial<YieldGroup> = {}): YieldG
 
 describe("kỳ và bộ lọc", () => {
   it("includes historical linked records while leaving an ordinary report in the current month", () => {
-    expect(toQuery(linkedYieldFilters("2026-11-11", { recordId: id(1) }), 2)).toMatchObject({ from: "2021-11-12", to: "2026-11-11" });
+    expect(toQuery(linkedYieldFilters("2026-11-11", { recordId: id(1) }))).toMatchObject({ from: "2021-11-12", to: "2026-11-11" });
     expect(linkedYieldFilters("2026-11-11", { cycleId: id(2), from: "2026-02-01", to: "2026-03-01" })).toMatchObject({ from: "2026-02-01", to: "2026-03-01" });
     expect(linkedYieldFilters("2026-11-11", {})).toEqual(defaultFilters("2026-11-11"));
   });
@@ -24,11 +24,12 @@ describe("kỳ và bộ lọc", () => {
     expect(filterProblem({ ...f, from: "" })).toMatch(/đủ ngày/);
     expect(filterProblem({ ...f, from: "2026-11-01" })).toMatch(/trước hoặc bằng/);
   });
-  it("toQuery: groupBy chữ thường; chọn hết hoặc không chọn vùng thì bỏ zoneIds", () => {
+  it("toQuery: groupBy chữ thường; không chọn vùng thì bỏ zoneIds, chọn vùng nào gửi vùng đó", () => {
     const f = { ...defaultFilters("2026-10-28"), groupBy: "Cycle" as const };
-    expect(toQuery(f, 3)).toMatchObject({ groupBy: "cycle", zoneIds: undefined });
-    expect(toQuery({ ...f, zoneIds: [id(1), id(2)] }, 3).zoneIds).toBe(`${id(1)},${id(2)}`);
-    expect(toQuery({ ...f, zoneIds: [id(1), id(2)] }, 2).zoneIds).toBeUndefined();
+    expect(toQuery(f)).toMatchObject({ groupBy: "cycle", zoneIds: undefined });
+    expect(toQuery({ ...f, zoneIds: [id(1), id(2)] }).zoneIds).toBe(`${id(1)},${id(2)}`);
+    // Picking every offered zone still sends them: a discontinued zone is not offered and must not come back with the rest.
+    expect(toQuery({ ...f, zoneIds: [id(1), id(2), id(3)] }).zoneIds).toBe(`${id(1)},${id(2)},${id(3)}`);
   });
 });
 

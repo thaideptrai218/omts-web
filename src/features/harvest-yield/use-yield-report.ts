@@ -40,9 +40,9 @@ export function useYieldReport(linked: LinkedScope & Parameters<typeof linkedYie
     .map((zone) => ({ id: zone.id, label: String(zone.name ?? zone.code ?? zone.id) })), [zones.data, workspace.identity, workspace.permissions.functionPermissions]);
 
   const zoneKey = applied.zoneIds.join(","), zoneIds = useMemo(() => zoneKey ? zoneKey.split(",") : [], [zoneKey]);
-  const exportQuery = useMemo(() => toQuery(applied, zoneOptions.length), [applied, zoneOptions.length]);
+  const exportQuery = useMemo(() => toQuery(applied), [applied]);
   // Cách gộp không nằm trong truy vấn đọc: đổi cách gộp không làm tải lại.
-  const readQuery = useMemo(() => toQuery({ from: applied.from, to: applied.to, groupBy: "Cycle", zoneIds }, zoneOptions.length), [applied.from, applied.to, zoneIds, zoneOptions.length]);
+  const readQuery = useMemo(() => toQuery({ from: applied.from, to: applied.to, groupBy: "Cycle", zoneIds }), [applied.from, applied.to, zoneIds]);
   const report = useRemote(useCallback((signal: AbortSignal) => repo.read("list", readQuery, harvestYieldReport, signal), [readQuery]));
 
   const range = useMemo(() => previousRange(readQuery.from ?? "", readQuery.to ?? ""), [readQuery]);
