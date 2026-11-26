@@ -47,7 +47,7 @@ export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: s
     info: <ZoneInfoTab zone={zone} canEdit={access.edit} canSeeLicense={access.licenses} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload} onStatus={() => { mutation.reviewed(); setAction(zone.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
     map: <ZoneMapTab zone={zone} canSeeRafts={access.rafts} onOpenRaft={raftId => void guard.leave(() => { setOpenRaft(raftId); setTab("rafts"); })} />,
     rafts: <ZoneRaftsTab zoneId={id} raftAccess={access.raft} guard={guard} openId={openRaft} />, licenses: <ZoneLicensesTab zoneId={id} zones={zones} guard={guard} />,
-    staff: <ZoneStaffTab zoneId={id} />, water: <ZoneWaterTab zoneId={id} />,
+    staff: <ZoneStaffTab zoneId={id} />, water: <ZoneWaterTab zoneId={id} zoneName={zone.name} canCreate={access.waterCreate && zone.statusId === IN_USE} />,
   } : { info: null, map: null, rafts: null, licenses: null, staff: null, water: null };
   return <section id={`zone-preview-${id}`} className={styles.detail} aria-label="Chi tiết vùng nuôi">
     {detail.loading && !zone && <Skeleton />}

@@ -20,4 +20,3 @@ export function expiryText(expiryDate: string | null, today: string): string {
 }
 
 export const indicatorLabel = (indicator: string) => ({ ph: "pH", salinity: "độ mặn", temperature: "nhiệt độ" }[indicator.toLowerCase()] ?? indicator);
-export const rangeText = (min: number | null, max: number | null) => min === null && max === null ? "Chưa đặt" : `${min ?? "—"} – ${max ?? "—"}`;

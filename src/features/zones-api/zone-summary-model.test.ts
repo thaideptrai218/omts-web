@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysUntil, expiryText, indicatorLabel, rangeText } from "./zone-summary-model";
+import { daysUntil, expiryText, indicatorLabel } from "./zone-summary-model";
 
 describe("zone summary figures", () => {
   it("counts days to licence expiry across month ends", () => {
@@ -9,10 +9,8 @@ describe("zone summary figures", () => {
     expect(expiryText("2026-11-01", "2026-11-11")).toBe("Quá hạn 10 ngày");
     expect(expiryText(null, "2026-11-11")).toBe("Không thời hạn");
   });
-  it("labels indicators and threshold ranges", () => {
+  it("labels indicators", () => {
     expect(indicatorLabel("Salinity")).toBe("độ mặn");
     expect(indicatorLabel("oxygen")).toBe("oxygen");
-    expect(rangeText(7.5, 8.5)).toBe("7.5 – 8.5");
-    expect(rangeText(null, null)).toBe("Chưa đặt");
   });
 });
