@@ -6,7 +6,6 @@ import { formatOriginDate, mapHref, safeWebHref, telHref } from "./origin-format
 import { OriginPageView } from "./origin-page-view";
 import { OriginStatePanel } from "./origin-state-panel";
 
-const langHrefs = { vi: "/origin/T", en: "/origin/T?lang=en" };
 const cooperative = { fullName: "HTX Nuôi trồng Thủy sản Trung Nam", shortName: "HTX Trung Nam", phoneNumber: "0258 3812 345", website: "javascript:alert(1)", certifications: [{ name: "VietGAP", state: "Valid", expiryDate: "2027-01-31" }] };
 const published = {
   lotCode: "B03-20261026", products: ["Hàu sữa"], originState: "Published",
@@ -20,7 +19,7 @@ const withdrawn = { lotCode: "B05-20261024", products: ["Hàu múp"], originStat
 const page = (over: Record<string, unknown> = {}) => provenancePageSchema.parse({
   language: "vi", status: "Ok", invoice: { code: "HD000124", date: "2026-10-28" }, cooperative, lots: [published, withdrawn], ...over,
 });
-const html = (p = page()) => renderToStaticMarkup(<OriginPageView page={p} langHrefs={langHrefs} />);
+const html = (p = page()) => renderToStaticMarkup(<OriginPageView page={p} />);
 
 describe("OriginPageView", () => {
   it("shows invoice, lots, state as text and journey from the API data only", () => {
@@ -44,7 +43,8 @@ describe("OriginPageView", () => {
     expect(out).toContain('id="noi-dung"');
     expect(out).toContain('href="#noi-dung"');
     expect(out).toContain("<main");
-    expect(out).toContain('aria-current="true"');
+    expect(out).toContain('aria-selected="true"');
+    expect(out).not.toContain("English");
   });
 
   it("drops unsafe website links but keeps the phone as a tel link", () => {
@@ -64,17 +64,11 @@ describe("OriginPageView", () => {
     const out = html(page({ status: "NoLots", lots: [], message: "Hóa đơn này không có thông tin nguồn gốc để hiển thị." }));
     expect(out).toContain("Chưa có thông tin nguồn gốc để hiển thị");
   });
-
-  it("renders English labels when the API answers in English", () => {
-    const out = html(page({ language: "en" }));
-    expect(out).toContain("Harvest lots on this invoice");
-    expect(out).toContain("Withdrawn");
-  });
 });
 
 describe("OriginStatePanel", () => {
   const panel = (problem: Parameters<typeof OriginStatePanel>[0]["problem"], extra = {}) =>
-    renderToStaticMarkup(<OriginStatePanel problem={problem} language="vi" copy={originCopy("vi")} retryHref="/origin/T" {...extra} />);
+    renderToStaticMarkup(<OriginStatePanel problem={problem} copy={originCopy()} retryHref="/origin/T" {...extra} />);
   it("offers retry for transient problems only", () => {
     expect(panel("unavailable")).toContain("Thử lại");
     expect(panel("rate-limited")).toContain("Thử lại");

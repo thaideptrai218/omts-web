@@ -1,56 +1,65 @@
-/** Nội dung tĩnh của trang giới thiệu OMTS (tiếng Việt). Không chứa số liệu thật: chỉ mô tả chức năng của hệ thống. */
+/** Nội dung tĩnh của trang giới thiệu (tiếng Việt) và ảnh mặc định khi chủ hợp tác xã chưa đăng ảnh của mình. */
+import { samplePhotos } from "@/features/origin-page/origin-sample";
+import type { JourneyStep } from "@/features/public-site/journey-line";
 
 export const navLinks = [
-  { href: "#quy-trinh", label: "Quy trình" },
-  { href: "#truy-xuat", label: "Truy xuất" },
-  { href: "#vai-tro", label: "Vai trò" },
-  { href: "#tinh-nang", label: "Tính năng" },
+  { href: "#san-pham", label: "Sản phẩm" },
+  { href: "#xem-mau", label: "Truy xuất" },
+  { href: "#hanh-trinh", label: "Hành trình" },
+  { href: "#chung-nhan", label: "Chứng nhận" },
+  { href: "#bao-chi", label: "Báo chí" },
 ] as const;
 
-export type FlowStep = { step: string; title: string; text: string; icon: "raft" | "harvest" | "sale" | "qr" };
-export const flowSteps: readonly FlowStep[] = [
-  { step: "01", title: "Nuôi trồng", icon: "raft", text: "Quản lý vùng, bè, làn nuôi; ghi đợt thả giống, vật tư đã dùng, nhật ký ảnh và chất lượng nước theo ngày." },
-  { step: "02", title: "Thu hoạch", icon: "harvest", text: "Tạo lô thu hoạch theo bè, cân kg, chụp ảnh và đóng lô khi đã bán hết. Mỗi lô có mã riêng, không trùng." },
-  { step: "03", title: "Bán hàng", icon: "sale", text: "Lập hóa đơn từ các lô, nhận tiền mặt hoặc VietQR, ghi nợ có kiểm soát và gửi hóa đơn cho khách." },
-  { step: "04", title: "Truy xuất", icon: "qr", text: "Hóa đơn có mã QR dẫn tới trang nguồn gốc công khai: vùng nuôi, ngày thả giống, nhật ký và ngày thu hoạch." },
-];
-
-export type RoleCard = { role: string; text: string; points: readonly string[] };
-export const roles: readonly RoleCard[] = [
-  { role: "Chủ hợp tác xã", text: "Nắm toàn cảnh và quyết định các việc quan trọng.", points: ["Bảng điều khiển và việc chờ xử lý", "Phân quyền theo vùng và chức năng", "Duyệt giá, nợ và yêu cầu của thương lái"] },
-  { role: "Quản lý vùng nuôi", text: "Điều hành vùng được giao từ bè đến hóa đơn.", points: ["Chu kỳ nuôi, thả giống, thu hoạch", "Lập hóa đơn bán và phiếu nhập hàng", "Phân công và chấm công nhân viên"] },
-  { role: "Kế toán", text: "Theo dõi tiền vào, tiền ra và đối chiếu công nợ.", points: ["Công nợ nhà cung cấp và khách hàng", "Bảng lương, thanh toán lương", "Báo cáo hiệu quả bán hàng, xuất Excel"] },
-  { role: "Nhân viên thời vụ", text: "Xem việc được giao, vào ca và ra ca.", points: ["Công việc và ca làm của tôi", "Phản hồi lời mời đi mua hàng", "Gửi đơn xin nghỉ"] },
-  { role: "Thương lái", text: "Gửi yêu cầu mua và theo dõi thanh toán.", points: ["Yêu cầu mua theo ngày lấy hàng", "Hóa đơn, công nợ và sao kê", "Mã QR kiểm tra nguồn gốc"] },
-  { role: "Người mua hàng", text: "Quét mã QR trên hóa đơn, không cần tài khoản.", points: ["Xem vùng nuôi và ngày thu hoạch", "Xem nhật ký nuôi đã công bố", "Biết lô còn hiệu lực hay đã thu hồi"] },
-];
-
-export type Feature = { title: string; text: string; size?: "wide" };
-export const features: readonly Feature[] = [
-  { title: "Dữ liệu một nguồn, nhiều vùng", text: "Mỗi nhân viên chỉ thấy và thao tác đúng vùng mình được giao; quyền kiểm tra ở cả giao diện lẫn máy chủ.", size: "wide" },
-  { title: "Không bán trùng, không mất dấu", text: "Mỗi hóa đơn gắn với từng lô thu hoạch; trả hàng và sửa dữ liệu đều để lại lịch sử." },
-  { title: "Công nợ rõ ràng", text: "Sao kê theo khách hàng và nhà cung cấp, xác nhận thanh toán, hoàn tiền thừa, xuất Excel." },
-  { title: "Dùng được ngoài bến", text: "Giao diện co giãn từ điện thoại đến máy tính, chữ lớn, nút bấm đủ rộng cho tay ướt." },
-  { title: "Thông báo đúng việc", text: "Yêu cầu mua, lời mời ca làm, thanh toán chờ xác nhận được đưa lên hộp thư ngay khi phát sinh.", size: "wide" },
-];
-
-export const sampleTrace = {
-  lot: "B03-20261026",
-  zone: "Vùng VP01 · Vân Đồn, Quảng Ninh",
-  rows: [
-    ["Thả giống", "Ngày thả và nguồn giống được ghi lại"],
-    ["Nhật ký nuôi", "Có ảnh theo từng đợt kiểm tra"],
-    ["Chất lượng nước", "Đo và đối chiếu ngưỡng theo ngày"],
-    ["Thu hoạch", "Cân tại bè, ghi người phụ trách"],
-  ],
-} as const;
+export type LandingImage = { url: string; caption: string };
 
 /**
- * Ảnh thực tế của HTX Trung Nam (để trống cho tới khi có ảnh thuộc quyền sử dụng của nhóm).
- * Cách thêm: chép ảnh vào `public/landing/` (JPG/WebP, cạnh dài 1600–2000 px), rồi thêm một mục như
- * { src: "/landing/be-hau-binh-minh.jpg", alt: "Mô tả ảnh cho người dùng đọc màn hình", caption: "Chú thích ngắn" }.
- * Ảnh đầu tiên được hiển thị lớn nhất. Khi mảng có ảnh, mục "Hình ảnh thực tế" tự xuất hiện trên trang.
- * Chỉ dùng ảnh do nhóm hoặc HTX tự chụp, hoặc ảnh có giấy phép cho phép dùng lại.
+ * Ảnh mặc định, đều từ Wikimedia Commons (nguồn ở /landing/nguon-anh.txt); chủ hợp tác xã đăng ảnh ở Cài đặt,
+ * Trang giới thiệu thì thay thế. Mọi ảnh đều ghi nguồn; ảnh báo chí
+ * mặc định là ảnh chụp bản tin VTV1 do hợp tác xã cung cấp.
  */
-export type LandingPhoto = { src: string; alt: string; caption: string };
-export const landingPhotos: readonly LandingPhoto[] = [];
+export const defaultImages = {
+  background: "/landing/mau/nen-lang-be.webp",
+  press: [{ url: "/landing/mau/ban-tin-vtv1.webp", caption: "Bản tin Thời sự VTV1 tại Quảng Ninh. Nguồn: VTV1" }] as LandingImage[],
+  backgroundCredit: "Ảnh nền: Christophe95, CC BY-SA 4.0",
+  gallery: [
+    { url: samplePhotos.floats, caption: "Khu nuôi hàu bè. Ảnh: Southern Vietnam, CC BY-SA 4.0" },
+    { url: samplePhotos.harvest, caption: "Hàu sau thu hoạch. Ảnh: H. Zell, CC BY-SA 3.0" },
+    { url: samplePhotos.ropes, caption: "Giàn bè trên vịnh. Ảnh: Christophe95, CC BY-SA 4.0" },
+    { url: "/landing/mau/vinh-bai-tu-long.webp", caption: "Vịnh Bái Tử Long. Ảnh: AnhTuan Le, phạm vi công cộng" },
+  ] as LandingImage[],
+  product: samplePhotos.harvest,
+};
+
+export const journey: readonly JourneyStep[] = [
+  { key: "uom", icon: "nursery", badge: "Ngày 1", title: "Ươm giống", detail: "Ghi lô giống, nguồn gốc và người phụ trách." },
+  { key: "tha", icon: "seeding", badge: "Ngày 31", title: "Thả giống", detail: "Ghi ngày thả, loại giống, bè và làn nuôi." },
+  { key: "cham", icon: "care", badge: "Ngày 32 đến 244", title: "Chăm sóc", detail: "Ghi nhật ký, ảnh, vật tư và chất lượng nước." },
+  { key: "thu", icon: "harvest", badge: "Ngày 245", title: "Thu hoạch", detail: "Cân tại bè, mỗi lô có một mã riêng." },
+  { key: "ban", icon: "sale", badge: "Ngày 246", title: "Bán hàng", detail: "Hóa đơn có mã QR dẫn về đúng lô đã bán." },
+];
+
+/** Đúng những gì trang truy xuất công khai hiển thị; sửa trang đó thì sửa cả danh sách này. */
+export const shownOnTrace = [
+  "Tên sản phẩm, giới thiệu sản phẩm và mã lô",
+  "Vùng nuôi, bè và vị trí trên bản đồ",
+  "Ngày thả giống, loại giống, ngày thu hoạch và số ngày nuôi",
+  "Ảnh thu hoạch và ảnh bè nuôi",
+  "Thông tin hợp tác xã và các chứng nhận",
+] as const;
+
+export const hiddenOnTrace = ["Giá bán", "Số lượng", "Thông tin người mua"] as const;
+
+export const scanSteps = [
+  { title: "Tìm mã trên hóa đơn", text: "Mã QR nằm trên hóa đơn hoặc trong tin nhắn hợp tác xã gửi." },
+  { title: "Mở máy ảnh điện thoại", text: "Hướng máy ảnh vào mã. Không phải cài thêm ứng dụng." },
+  { title: "Xem nguồn gốc", text: "Trang mở ngay, không cần tài khoản hay đăng nhập." },
+] as const;
+
+/** Lô minh họa trên thẻ đầu trang, dùng khi chưa chọn hóa đơn mẫu. */
+export const sampleTrace = {
+  product: "Hàu Thái Bình Dương",
+  description: "Hàu sữa nuôi tại Vân Đồn, Quảng Ninh.",
+  photo: "/landing/mau/ro-hau.webp",
+  lot: "B03-20261026",
+  facts: [["Thả giống", "26/03/2026"], ["Thu hoạch", "26/10/2026"], ["Số ngày nuôi", "214 ngày"], ["Bè", "B03"], ["Vùng nuôi", "Vân Đồn"]],
+} as const;

@@ -1,0 +1,16 @@
+.sun { transform-origin: 1040px 104px; animation: glow 6s ease-in-out infinite alternate; }
+.raft { animation: bob 5s ease-in-out infinite alternate; }
+.rope { animation: sway 4.2s ease-in-out infinite alternate; }
+.swellFar { animation: drift 22s linear infinite; }
+.swellNear { animation: drift 14s linear infinite reverse; }
+.ripples { animation: ripple 4s ease-in-out infinite alternate; }
+.fish { animation: swim 28s linear infinite; }
+
+@keyframes glow { to { transform: scale(1.12); } }
+@keyframes bob { from { transform: translateY(-2px); } to { transform: translateY(4px); } }
+@keyframes sway { from { transform: rotate(-2.2deg); } to { transform: rotate(2.2deg); } }
+@keyframes drift { to { transform: translateX(600px); } }
+@keyframes ripple { from { transform: translateX(-14px); } to { transform: translateX(14px); } }
+@keyframes swim { from { transform: translateX(-80px); } to { transform: translateX(1280px); } }
+
+@media (prefers-reduced-motion: reduce) { .sun, .raft, .rope, .swellFar, .swellNear, .ripples, .fish { animation: none; } .fish { display: none; } }

@@ -21,15 +21,15 @@ const okBody = { language: "vi", status: "Ok", invoice: { code: "HD-1", date: "2
 describe("fetchProvenancePage", () => {
   it("never calls the backend for a malformed token", async () => {
     const fetcher = vi.fn();
-    expect(await fetchProvenancePage("../admin", "vi", env, fetcher)).toEqual({ status: "invalid-token" });
+    expect(await fetchProvenancePage("../admin", env, fetcher)).toEqual({ status: "invalid-token" });
     expect(fetcher).not.toHaveBeenCalled();
   });
 
   it("calls the public endpoint safely and sanitises photos", async () => {
     const fetcher = vi.fn().mockResolvedValue(json(okBody));
-    const result = await fetchProvenancePage(TOKEN, "en", env, fetcher);
+    const result = await fetchProvenancePage(TOKEN, env, fetcher);
     const [url, init] = fetcher.mock.calls[0] as [URL, RequestInit];
-    expect(url.href).toBe(`http://127.0.0.1:5280/api/public/provenance/${TOKEN}?lang=en`);
+    expect(url.href).toBe(`http://127.0.0.1:5280/api/public/provenance/${TOKEN}`);
     expect(init).toMatchObject({ method: "GET", redirect: "error", cache: "no-store", credentials: "omit" });
     expect(init.headers).toEqual({ Accept: "application/json" });
     expect(init.signal).toBeInstanceOf(AbortSignal);
@@ -39,25 +39,19 @@ describe("fetchProvenancePage", () => {
     expect(JSON.stringify(result.page)).not.toContain("extraInternalField");
   });
 
-  it("falls back to Vietnamese for an unknown language", async () => {
-    const fetcher = vi.fn().mockResolvedValue(json(okBody));
-    await fetchProvenancePage(TOKEN, "fr", env, fetcher);
-    expect((fetcher.mock.calls[0] as [URL])[0].searchParams.get("lang")).toBe("vi");
-  });
-
   it("maps 404 to not-found with the backend message", async () => {
     const fetcher = vi.fn().mockResolvedValue(json({ status: 404, detail: "Không tìm thấy hóa đơn của mã QR này." }, 404, "application/problem+json"));
-    expect(await fetchProvenancePage(TOKEN, "vi", env, fetcher)).toEqual({ status: "not-found", message: "Không tìm thấy hóa đơn của mã QR này." });
+    expect(await fetchProvenancePage(TOKEN, env, fetcher)).toEqual({ status: "not-found", message: "Không tìm thấy hóa đơn của mã QR này." });
   });
 
   it("maps 404 without a readable body to not-found without message", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response("<html>", { status: 404 }));
-    expect(await fetchProvenancePage(TOKEN, "vi", env, fetcher)).toEqual({ status: "not-found", message: null });
+    expect(await fetchProvenancePage(TOKEN, env, fetcher)).toEqual({ status: "not-found", message: null });
   });
 
   it("maps 429 to rate-limited", async () => {
     const fetcher = vi.fn().mockResolvedValue(json({ status: 429 }, 429, "application/problem+json"));
-    expect(await fetchProvenancePage(TOKEN, "vi", env, fetcher)).toEqual({ status: "rate-limited" });
+    expect(await fetchProvenancePage(TOKEN, env, fetcher)).toEqual({ status: "rate-limited" });
   });
 
   it.each([
@@ -70,13 +64,13 @@ describe("fetchProvenancePage", () => {
     ["redirect", () => { throw new TypeError("redirect"); }],
   ])("maps %s to unavailable", async (_name, make) => {
     const fetcher = vi.fn().mockImplementation(async () => make());
-    expect(await fetchProvenancePage(TOKEN, "vi", env, fetcher)).toEqual({ status: "unavailable" });
+    expect(await fetchProvenancePage(TOKEN, env, fetcher)).toEqual({ status: "unavailable" });
   });
 
   it("is unavailable on mock or invalid configuration without any request", async () => {
     const fetcher = vi.fn();
-    expect(await fetchProvenancePage(TOKEN, "vi", { NODE_ENV: "test", OMTS_DATA_SOURCE: "mock" }, fetcher)).toEqual({ status: "unavailable" });
-    expect(await fetchProvenancePage(TOKEN, "vi", { NODE_ENV: "test" }, fetcher)).toEqual({ status: "unavailable" });
+    expect(await fetchProvenancePage(TOKEN, { NODE_ENV: "test", OMTS_DATA_SOURCE: "mock" }, fetcher)).toEqual({ status: "unavailable" });
+    expect(await fetchProvenancePage(TOKEN, { NODE_ENV: "test" }, fetcher)).toEqual({ status: "unavailable" });
     expect(fetcher).not.toHaveBeenCalled();
   });
 });

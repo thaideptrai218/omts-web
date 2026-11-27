@@ -1,64 +1,22 @@
-/* Trang giới thiệu OMTS. Bảng màu: mực biển đêm, giấy vỏ hàu, một màu cam phao duy nhất.
-   Góc vuông, đường kẻ mảnh, chữ hoa cô đọng: giống tem lô hàng hơn là trang quảng cáo phần mềm. */
-.page {
-  --ink: #10243a; --ink-2: #0c1c2e; --bone: #f5f7fa; --bone-2: #edf3f5;
-  --fire: #3cc6cf; --fire-ink: #086f78;
-  --mute-d: #9fb2bd; --mute-l: #526674;
-  --line-d: rgb(245 247 250 / .16); --line-l: rgb(16 36 58 / .2);
-  --display: var(--font-app-sans), system-ui, sans-serif;
-  --mono: var(--font-geist-mono), ui-monospace, Consolas, monospace;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  background: var(--bone); color: var(--ink); line-height: 1.6;
-  font-family: var(--font-app-sans), system-ui, sans-serif;
+/* Màn hình đầu: ảnh nền phủ lớp tối để chữ trắng đạt tương phản; màu lấy từ public-site.module.css. */
+.hero { position: relative; isolation: isolate; background: var(--sea-deep); color: #fff; overflow: hidden; }
+.background { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: center 65%; animation: zoom 24s ease-out both; }
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(100deg, rgb(3 30 36 / .9) 0%, rgb(3 30 36 / .68) 48%, rgb(3 30 36 / .3) 100%); }
+.heroGrid { display: grid; gap: 2.5rem; align-items: center; padding-block: 3rem; }
+.heroText { min-width: 0; }
+.credit { margin: 0; padding: 0 1rem .625rem; text-align: right; font-size: .75rem; color: #d6ecea; }
+.eyebrow { margin: 0; color: #a8ece0; font-weight: 700; }
+.h1 { margin: .75rem 0 0; font-size: clamp(2.25rem, 7vw, 4rem); line-height: 1.12; letter-spacing: -.025em; font-weight: 800; text-shadow: 0 2px 18px rgb(0 0 0 / .35); }
+.lead { margin: 1.25rem 0 0; max-width: 32rem; font-size: 1.1875rem; color: #e2f2f0; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.75rem; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.5rem; border-radius: 999px; font-weight: 700; text-decoration: none; }
+.primary { background: var(--sand); color: var(--ink); }
+.primary:hover { background: #ffd27a; }
+.secondary { border: 1.5px solid #fff; color: #fff; }
+.secondary:hover { background: rgb(255 255 255 / .16); }
+
+
+@keyframes zoom { from { transform: scale(1.09); } to { transform: scale(1); } }
+@media (min-width: 56rem) {
+  .heroGrid { grid-template-columns: 1.25fr 1fr; padding-block: 5rem; gap: 4rem; min-height: 34rem; }
 }
-.wrap { width: min(100% - 2rem, 80rem); margin-inline: auto; }
-.skip { position: absolute; left: 1rem; top: -4rem; z-index: 100; background: var(--bone); color: var(--ink); padding: .75rem 1rem; }
-.skip:focus { top: 1rem; }
-.page :focus-visible { outline: 3px solid var(--fire); outline-offset: 3px; }
-
-/* Thanh điều hướng */
-.header { position: sticky; top: 0; z-index: 50; background: rgb(16 36 58 / .94); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-d); color: var(--bone); }
-.bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 4.25rem; }
-.nav { display: none; gap: 2rem; }
-.nav a { font-family: var(--mono); font-size: .75rem; letter-spacing: .14em; color: var(--mute-d); text-decoration: none; padding-block: .5rem; border-bottom: 1px solid transparent; transition: color .2s, border-color .2s; }
-.nav a:hover { color: var(--bone); border-color: var(--fire); }
-.actions { display: flex; gap: .5rem; align-items: center; }
-.btn.hideSm { display: none; }
-
-/* Nút: góc vuông, chữ đậm */
-.btn { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: .625rem; min-height: 2.75rem; padding: 0 1.375rem; font-weight: 700; font-size: .9375rem; letter-spacing: .02em; text-decoration: none; cursor: pointer; border: 1.5px solid transparent; border-radius: var(--omts-radius-control, .375rem); transition: background-color .2s, color .2s, border-color .2s, transform .15s; touch-action: manipulation; }
-.btn:active { transform: translateY(1px); }
-.btn svg { transition: transform .25s var(--ease); }
-.btn:hover svg { transform: translateX(4px); }
-.btnLg { min-height: 3.5rem; padding: 0 2rem; font-size: 1.0625rem; }
-.btnFire { background: var(--fire-ink); color: #fff; }
-.btnFire:hover { background: #075961; }
-.btnLine { border-color: rgb(245 247 250 / .45); color: var(--bone); }
-.btnLine:hover { border-color: var(--fire); color: var(--fire); }
-.btnInk { background: var(--ink); color: var(--bone); }
-.btnInk:hover { background: var(--bone); color: var(--ink); }
-.btnInkLine { border-color: var(--ink); color: var(--ink); }
-.btnInkLine:hover { background: var(--ink); color: var(--bone); }
-
-/* Tiêu đề dùng chung cho các khối */
-.kicker { display: inline-flex; align-items: center; gap: .75rem; font-family: var(--mono); font-size: .75rem; letter-spacing: .16em; color: var(--fire-ink); }
-.kicker::before { content: ""; width: .625rem; height: .625rem; background: currentColor; }
-.h2 { font-family: var(--display); font-weight: 700; font-size: clamp(2rem, 4.6vw, 3.75rem); line-height: 1.08; letter-spacing: -.025em; margin: 1rem 0 1.25rem; text-wrap: balance; }
-.sub { max-width: 40rem; font-size: 1.0625rem; color: var(--mute-l); margin: 0; }
-
-/* Hiện dần khi cuộn tới (CSS thuần; trình duyệt không hỗ trợ thì nội dung hiện sẵn) */
-@keyframes reveal { from { opacity: 0; translate: 0 2.25rem; } to { opacity: 1; translate: 0 0; } }
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .reveal { animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 40%; }
-  }
-}
-
-/* Chân trang */
-.footer { background: var(--ink); color: var(--mute-d); padding-block: 2.5rem; font-size: .9375rem; border-top: 1px solid var(--line-d); }
-.footRow { display: flex; flex-wrap: wrap; gap: 1rem 2rem; justify-content: space-between; align-items: center; }
-.footer a { color: var(--bone); }
-
-@media (min-width: 640px) { .btn.hideSm { display: inline-flex; } }
-@media (min-width: 900px) { .nav { display: flex; } }
-@media (prefers-reduced-motion: reduce) { .btn, .btn svg, .nav a { transition: none; } }

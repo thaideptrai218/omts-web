@@ -1,0 +1,29 @@
+.section { padding-block: clamp(3rem, 7vw, 5.5rem); scroll-margin-top: 4rem; }
+.white { background: var(--paper); }
+.head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1.25rem; }
+.headActions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.products { margin-top: 2rem; display: grid; gap: 1.25rem; }
+
+.photo { position: relative; margin: 0; aspect-ratio: 3 / 2; border-radius: 1.25rem; overflow: hidden; background: var(--sea-deep); }
+.photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .9s ease; }
+.photo:hover img { transform: scale(1.05); }
+.photo figcaption { position: absolute; left: .75rem; right: .75rem; bottom: .75rem; width: fit-content; padding: .375rem .875rem; border-radius: .875rem; background: rgb(255 255 255 / .94); color: var(--ink); font-weight: 700; font-size: .875rem; }
+.mosaic, .row { margin-top: 2rem; display: grid; gap: .875rem; }
+
+.certs { list-style: none; margin: 2rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+.certs li { display: grid; align-content: start; justify-items: start; gap: .375rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: 1.25rem; background: var(--foam); }
+.certs strong { font-size: 1.0625rem; line-height: 1.4; }
+.certs li > span { color: var(--ink-soft); font-size: .9375rem; }
+.certs li > span:last-child { color: var(--sea-deep); }
+.certImage { display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: .75rem; overflow: hidden; background: #fff; }
+.certImage img { width: 100%; height: 100%; object-fit: contain; }
+
+@media (min-width: 48rem) {
+  .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 13rem; grid-auto-flow: dense; }
+  .mosaic .photo { aspect-ratio: auto; }
+  .mosaic .photo:first-child { grid-row: span 2; grid-column: span 2; }
+  /* 3 ảnh: hai ảnh bên phải rộng đủ hai cột; 4 ảnh: ảnh cuối lấp ô còn lại. */
+  .mosaic .photo:nth-child(2):nth-last-child(2), .mosaic .photo:nth-child(3):last-child, .mosaic .photo:nth-child(4):last-child { grid-column: span 2; }
+  .row { grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { .photo img, .photo:hover img { transition: none; transform: none; } }

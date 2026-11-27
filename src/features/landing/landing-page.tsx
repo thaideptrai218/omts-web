@@ -1,48 +1,58 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/brand-mark";
-import { LandingCtaSection, LandingFeaturesSection, LandingFlowSection, LandingRolesSection } from "./landing-content-sections";
-import { LandingGallery } from "./landing-gallery";
+import { CooperativeName } from "@/components/brand/cooperative-name-context";
+import { PublicFrame } from "@/features/public-site/public-frame";
+import { SeaScene } from "@/features/public-site/sea-scene";
+import site from "@/features/public-site/public-site.module.css";
+import type { LandingData } from "@/server/public/landing-page-fetch";
+import { defaultImages, navLinks, type LandingImage } from "./landing-content";
+import { LandingJourneySection, LandingTraceSection } from "./landing-content-sections";
+import type { TraceExample } from "./landing-example";
 import { LandingHero } from "./landing-hero";
-import { LandingMarquee } from "./landing-marquee";
-import { navLinks } from "./landing-content";
-import { LandingTraceSection } from "./landing-trace-section";
-import s from "./landing.module.css";
+import { LandingPressSection } from "./landing-press-section";
+import { LandingCertificationsSection, LandingProductsSection, LandingTraceGallerySection } from "./landing-showcase-sections";
+import sections from "./landing-sections.module.css";
 
-/** Trang giới thiệu công khai tại "/". Máy chủ render hoàn toàn, không cần phiên đăng nhập. */
-export function LandingPage() {
+type Props = { data: LandingData | null; example: TraceExample; signedIn?: boolean };
+
+function imagesOf(data: LandingData | null, section: "Background" | "Press" | "Gallery", fallback: LandingImage[]): LandingImage[] {
+  const own = data?.photos.filter((photo) => photo.section === section).map((photo) => ({ url: photo.url, caption: photo.caption ?? "" })) ?? [];
+  return own.length ? own : fallback;
+}
+
+/** Trang giới thiệu công khai tại "/". Ảnh do chủ hợp tác xã đăng; chưa đăng thì dùng ảnh mặc định. */
+export function LandingPage({ data, example, signedIn = false }: Props) {
+  const entry = signedIn ? { href: "/dashboard", label: "Vào hệ thống" } : { href: "/login", label: "Đăng nhập" };
+  const press = imagesOf(data, "Press", defaultImages.press);
+  // Không có bài báo nào thì bỏ cả liên kết tới mục đó.
+  const links = navLinks.filter((l) => press.length || l.href !== "#bao-chi").map((l) => <a key={l.href} href={l.href}>{l.label}</a>);
+  const background = imagesOf(data, "Background", [{ url: defaultImages.background, caption: defaultImages.backgroundCredit }])[0];
   return (
-    <div className={s.page}>
-      <a className={s.skip} href="#noi-dung">Bỏ qua điều hướng</a>
-      <header className={s.header}>
-        <div className={`${s.wrap} ${s.bar}`}>
-          <Link href="/" aria-label="Về đầu trang"><BrandMark tone="inverse" compact /></Link>
-          <nav className={s.nav} aria-label="Điều hướng trang giới thiệu">
-            {navLinks.map((l) => <a key={l.href} href={l.href}>{l.label}</a>)}
-          </nav>
-          <div className={s.actions}>
-            <Link className={`${s.btn} ${s.btnFire}`} href="/login">Đăng nhập</Link>
-          </div>
-        </div>
-      </header>
-
-      <main id="noi-dung">
-        <LandingHero />
-        <LandingMarquee />
-        <LandingFlowSection />
-        <LandingTraceSection />
-        <LandingGallery />
-        <LandingRolesSection />
-        <LandingFeaturesSection />
-        <LandingCtaSection />
-      </main>
-
-      <footer className={s.footer}>
-        <div className={`${s.wrap} ${s.footRow}`}>
-          <BrandMark tone="inverse" compact />
-          <span>Hệ thống quản lý nuôi hàu và truy xuất nguồn gốc · Vân Đồn, Quảng Ninh</span>
-          <Link href="/login">Đăng nhập</Link>
-        </div>
-      </footer>
-    </div>
+    <PublicFrame
+      skipLabel="Bỏ qua, đến nội dung chính"
+      headerLabel="Đầu trang giới thiệu"
+      brand={<Link href="/" className={site.brand} aria-label="Về đầu trang"><BrandMark compact /></Link>}
+      nav={links}
+      action={<Link className={site.button} href={entry.href}>{entry.label}</Link>}
+      footer={(
+        <>
+          <p>
+            <strong><CooperativeName /></strong>
+            {data?.cooperative.officeAddress ?? "Vân Đồn, Quảng Ninh"}
+            {data?.cooperative.phoneNumber ? ` · Điện thoại ${data.cooperative.phoneNumber}` : ""}
+          </p>
+          <nav className={site.footLinks} aria-label="Cuối trang">{links}<a href="/landing/nguon-anh.txt">Nguồn ảnh</a><Link href={entry.href}>{entry.label}</Link></nav>
+        </>
+      )}
+    >
+      <LandingHero background={background.url} credit={background.caption} example={example} entry={entry} />
+      <LandingProductsSection products={data?.products ?? []} />
+      <LandingTraceGallerySection images={imagesOf(data, "Gallery", defaultImages.gallery)} exampleHref={example.href} />
+      <LandingJourneySection />
+      <LandingTraceSection />
+      <LandingCertificationsSection certifications={data?.cooperative.certifications ?? []} />
+      <LandingPressSection images={press} />
+      <div className={sections.sea} aria-hidden="true"><SeaScene className={sections.scene} /></div>
+    </PublicFrame>
   );
 }

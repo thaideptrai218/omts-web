@@ -4,7 +4,7 @@ import { readBoundedBody } from "./origin-bounded-body";
 import { originClientHeaders } from "./origin-client-headers";
 import { problemSchema, provenancePageSchema, type ProvenancePage } from "./origin-page-schema";
 import { resolvePhotoSource } from "./origin-photo-source";
-import { parseOriginLanguage, parseQrToken } from "./origin-qr-token";
+import { parseQrToken } from "./origin-qr-token";
 
 const MAX_PAGE_BYTES = 1_048_576;
 
@@ -30,6 +30,7 @@ function withSafePhotos(page: ProvenancePage, origin: string, environment: Reado
     lots: page.lots.map((lot) => lot.origin
       ? { ...lot, origin: { ...lot.origin, harvestPhotoUrls: safe(lot.origin.harvestPhotoUrls), raftPhotoUrls: safe(lot.origin.raftPhotoUrls) } }
       : lot),
+    productDetails: page.productDetails?.map((product) => ({ ...product, photoUrls: safe(product.photoUrls) })),
   };
 }
 
@@ -52,20 +53,17 @@ async function readNotFoundMessage(response: Response): Promise<string | null> {
  */
 export async function fetchProvenancePage(
   rawToken: unknown,
-  rawLanguage?: unknown,
   environment: Readonly<Record<string, unknown>> = process.env,
   fetcher: typeof fetch = fetch,
   requestHeaders?: Headers,
 ): Promise<OriginFetchResult> {
   const token = parseQrToken(rawToken);
   if (!token) return { status: "invalid-token" };
-  const language = parseOriginLanguage(rawLanguage);
   const parsedConfig = parseServerBackendConfig(environment);
   if (parsedConfig.status !== "valid" || parsedConfig.config.source !== "api") return { status: "unavailable" };
   const { origin, timeoutMs } = parsedConfig.config;
   try {
     const url = new URL(`/api/public/provenance/${token}`, origin);
-    url.searchParams.set("lang", language);
     if (url.origin !== origin) return { status: "unavailable" };
     const response = await fetcher(url, {
       // Chuyển IP khách (kèm secret của BFF) để giới hạn lượt tính theo từng khách, không dồn mọi khách vào một bucket.
