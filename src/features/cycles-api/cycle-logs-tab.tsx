@@ -2,6 +2,7 @@
 import { Fragment, useCallback, useState, type RefObject } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { ListStateMessage } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { useToast } from "@/components/ui/toast-provider";
@@ -50,7 +51,7 @@ export function CycleLogsTab({ cycleId, startDate, zoneId, openCycle, canCreate,
           </section></td></tr>}
         </Fragment>)}</tbody></table>}
     <TabFooter left={<Button key="reload-logs" type="button" className="w-auto" variant="ghost" disabled={mutation.pending || editor !== undefined} onClick={remote.reload}>Tải lại nhật ký</Button>}
-      right={openCycle && canCreate ? <Button key="write-log" type="button" className="w-auto" disabled={editor !== undefined} onClick={() => setEditor(null)}>Ghi nhật ký chăm sóc</Button> : undefined} />
+      right={openCycle && canCreate ? <Button key="write-log" type="button" className="w-auto" disabled={editor !== undefined} onClick={() => setEditor(null)}><InterfaceIcon name="add" className="size-4" />Ghi nhật ký chăm sóc</Button> : undefined} />
     {editor === null && <LogEditor key="create-log" cycleId={cycleId} startDate={startDate} dirtyRef={dirtyRef} record={null} onClose={() => setEditor(undefined)} onSaved={saved} />}
   </>;
 }

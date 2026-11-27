@@ -25,7 +25,8 @@ const StatePill = ({ state, replaced }: { state: string; replaced: boolean }) =>
   <StatusPill tone={replaced ? "neutral" : stateTone[state as keyof typeof stateTone] ?? "neutral"}>{replaced ? "Đã thay thế" : stateLabel(state)}</StatusPill>;
 
 /** "Giấy phép": every legal document of the zone, in force first then replaced; state is as of today. A row opens its details in place. */
-export function ZoneLicensesTab({ zoneId, zones, guard: providedGuard }: { zoneId: string; zones: ApiRecord[]; guard?: UnsavedGuard }) {
+/** `canDelete`: the Owner on a zone in use; the detail still hides "Xóa" for a document that replaced another or was replaced. */
+export function ZoneLicensesTab({ zoneId, zones, guard: providedGuard, canDelete = false }: { zoneId: string; zones: ApiRecord[]; guard?: UnsavedGuard; canDelete?: boolean }) {
   const localGuard = useUnsavedGuard(), guard = providedGuard ?? localGuard;
   const repository = useMemo(() => createOperationsRepository("zone-licenses"), []);
   const [opened, setOpened] = useState<string>(), [editor, setEditor] = useState<Editor>(), [serial, setSerial] = useState(0);
@@ -48,7 +49,7 @@ export function ZoneLicensesTab({ zoneId, zones, guard: providedGuard }: { zoneI
             <td data-label="Số" className={local.nowrap}>{row.documentId ? <button type="button" className={managementStyles.linkButton} aria-expanded={opened === row.documentId} onClick={() => void guard.leave(() => { setOpened(current => current === row.documentId ? undefined : row.documentId!); setEditor(undefined); })}>{row.documentNumber ?? "Xem giấy tờ"}</button> : "—"}</td>
             <td data-label="Hiệu lực từ" className={local.nowrap}>{day(row.effectiveDate)}</td><td data-label="Hết hạn" className={local.nowrap}>{day(row.expiryDate)}</td>
             <td data-label="Tình trạng" className={local.nowrap}><StatePill state={row.state} replaced={row.isReplaced} /></td></tr>
-          {row.documentId && opened === row.documentId && <tr><td colSpan={5}><ZoneLicenseDetail key={serial} id={row.documentId} asOf={asOf} canEdit editor={editor?.mode === "update" && editor.record?.id === row.documentId ? <LicenseEditor key={serial} {...editor} zoneId={zoneId} zones={zones} dirtyRef={guard.dirty} onClose={() => setEditor(undefined)} onMode={() => {}} onNavigate={saved} onSaved={saved} /> : undefined} onOpen={setOpened} onEdit={record => open("update", record)} onReplace={record => open("replace", record)} /></td></tr>}
+          {row.documentId && opened === row.documentId && <tr><td colSpan={5}><ZoneLicenseDetail key={serial} id={row.documentId} asOf={asOf} canEdit canDelete={canDelete} onDeleted={() => { setOpened(undefined); overview.reload(); }} editor={editor?.mode === "update" && editor.record?.id === row.documentId ? <LicenseEditor key={serial} {...editor} zoneId={zoneId} zones={zones} dirtyRef={guard.dirty} onClose={() => setEditor(undefined)} onMode={() => {}} onNavigate={saved} onSaved={saved} /> : undefined} onOpen={setOpened} onEdit={record => open("update", record)} onReplace={record => open("replace", record)} /></td></tr>}
         </Fragment>)}</DataTable></>}
     <TabFooter right={<Button key="add" type="button" className="w-auto" disabled={!overview.data} onClick={() => void guard.leave(() => open("create", null))}><InterfaceIcon name="add" className="size-4" />Thêm giấy tờ</Button>} />
     {editor && editor.mode !== "update" && <LicenseEditor key={serial} {...editor} zoneId={zoneId} zones={zones} dirtyRef={guard.dirty} onClose={() => setEditor(undefined)} onMode={mode => { if (mode !== "view") open(mode, editor.record); }} onNavigate={saved} onSaved={saved} />}

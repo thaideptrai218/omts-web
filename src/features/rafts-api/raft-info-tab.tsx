@@ -11,27 +11,28 @@ import styles from "@/features/farming-management/farming-management.module.css"
 import { RaftFormFields } from "./raft-form-fields";
 import { RaftConditionNoteCard } from "./raft-condition-note";
 import { useRaftLaneLock } from "./use-raft-lane-lock";
-import { RaftLaneDiagram } from "./raft-lane-diagram";
-import { geometryOf } from "./raft-geometry";
-import { mergeLiveLanes, type LiveLane } from "./raft-live-model";
+import { RaftCurrentState } from "./raft-current-state-group";
 import { formatRaftSize } from "./raft-size";
 import { useCoordinateWarnings } from "@/features/farming-api/use-coordinate-warnings";
-import { DISCONTINUED, parseRaftDetail, raftBody, raftDraftOf, raftStatusLabel, validateRaftDraft, type RaftDetail, type RaftDraft, type RaftField } from "./raft-model";
+import { DISCONTINUED, parseRaftDetail, raftBody, raftDraftOf, validateRaftDraft, type RaftDetail, type RaftDraft, type RaftField } from "./raft-model";
 
 const repository = createWorkspaceRepository("rafts");
-/** "Thông tin": read-only facts, or the same grid as inputs with `Bỏ qua` / `Lưu` in the footer. */
-export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, liveLanes, onSaved, onReload, onStatus }: {
-  raft: RaftDetail; zoneId: string; zoneLabel: string; canEdit: boolean; busy: boolean; dirtyRef: RefObject<boolean>; liveLanes?: readonly LiveLane[];
-  onSaved(raft: RaftDetail): void; onReload(): void; onStatus(): void;
+/**
+ * "Thông tin": the "Hiện trạng" line from the raft record, then the facts, or the same grid as inputs with `Bỏ qua` / `Lưu` in the footer.
+ * `onOpenCycles` (when the account may read cycles) makes the open cycle in "Hiện trạng" a link to the "Chu kỳ nuôi" tab.
+ */
+export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, onSaved, onReload, onStatus, onOpenCycles }: {
+  raft: RaftDetail; zoneId: string; zoneLabel: string; canEdit: boolean; busy: boolean; dirtyRef: RefObject<boolean>;
+  onSaved(raft: RaftDetail): void; onReload(): void; onStatus(): void; onOpenCycles?(): void;
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState<RaftDraft>(() => raftDraftOf(raft));
   const [errors, setErrors] = useState<Partial<Record<RaftField, string>>>({}), [reloaded, setReloaded] = useState(false);
-  const [laneDirty, setLaneDirty] = useState(false), [lanePending, setLanePending] = useState(false);
   const mutation = useMutation(), warnCoordinates = useCoordinateWarnings();
-  const laneLock = useRaftLaneLock(raft.id), laneCountLocked = laneLock.reason;
-  const dirty = laneDirty || lanePending || editing && JSON.stringify(draft) !== JSON.stringify(raftDraftOf(raft));
+  // The lane count is locked while a cycle is open: the record says so; only a backend that does not send it makes editing read the cycle history.
+  const laneLock = useRaftLaneLock(raft.id, raft.currentCycle === undefined ? undefined : raft.currentCycle !== null, editing), laneCountLocked = laneLock.reason;
+  const dirty = editing && JSON.stringify(draft) !== JSON.stringify(raftDraftOf(raft));
   useEffect(() => { dirtyRef.current = dirty; return () => { dirtyRef.current = false; }; }, [dirty, dirtyRef]);
-  const discontinued = raft.statusId === DISCONTINUED, locked = busy || mutation.pending || lanePending || laneDirty;
+  const discontinued = raft.statusId === DISCONTINUED, locked = busy || mutation.pending;
 
   function begin() { setDraft(raftDraftOf(raft)); setErrors({}); setReloaded(false); mutation.reviewed(); setEditing(true); }
   function cancel() { if (mutation.busy()) return; setEditing(false); setErrors({}); mutation.reviewed(); }
@@ -49,13 +50,13 @@ export function RaftInfoTab({ raft, zoneId, zoneLabel, canEdit, busy, dirtyRef, 
   }
   return <form noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
     <fieldset disabled={locked || mutation.blocked} className="min-w-0 border-0 p-0">
+      {!editing && <RaftCurrentState cycle={raft.currentCycle} onOpenCycles={onOpenCycles} />}
       {editing ? <RaftFormFields draft={draft} setDraft={setDraft} errors={errors} zoneId={zoneId} selfId={raft.id} laneCountLocked={laneCountLocked} lanes={raft.lanes} canEditLaneLengths={raft.lanes.some(lane => lane.lineLengthM !== undefined)} /> : <Facts items={[
-        ["Mã bè", raft.code], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId })}>{zoneLabel}</Link>], ["Kích thước", formatRaftSize(raft.lengthM && raft.widthM ? `${raft.lengthM} m x ${raft.widthM} m` : raft.size)], ["Số làn đang dùng", `${raft.laneCount ?? raft.lanes.filter(lane => lane.statusId !== 2002).length} làn`], ["Trạng thái", raftStatusLabel(raft.statusId)],
-        ["Vị trí", raft.location], ["Vĩ độ", raft.latitude], ["Kinh độ", raft.longitude],
+        ["Mã bè", raft.code], ["Vùng nuôi", <Link key="zone" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId })}>{zoneLabel}</Link>], ["Kích thước", formatRaftSize(raft.lengthM && raft.widthM ? `${raft.lengthM} m x ${raft.widthM} m` : raft.size)], ["Số làn", `${raft.laneCount ?? raft.lanes.filter(lane => lane.statusId !== 2002).length} làn`],
+        ["Vị trí", raft.location], ["Trên bản đồ", raft.latitude != null && raft.longitude != null ? <Link key="map" className={styles.link} href={farmingReferenceHref("zone", { recordId: zoneId, tab: "map" })}>Xem trên bản đồ</Link> : "Chưa đặt vị trí trên bản đồ"],
       ]} />}
       {!editing && <RaftConditionNoteCard value={raft.conditionNotes} />}
     </fieldset>
-    {!editing && <RaftLaneDiagram lanes={mergeLiveLanes(raft.lanes, liveLanes)} length={geometryOf(raft).length} harvestScope={{ raftId: raft.id, zoneId, rowVersion: raft.rowVersion, onChanged: onReload, onDirty: setLaneDirty, onPending: setLanePending }} />}
     {editing && laneLock.failed && <Button key="retry-cycle" type="button" variant="secondary" className="w-auto" onClick={laneLock.reload}>Kiểm tra lại chu kỳ</Button>}
     <ErrorNotice error={mutation.error} />
     {mutation.blocked && <div role="alert" className={styles.alert}><p>Chưa xác nhận được kết quả lưu. Hãy tải hồ sơ mới để đối chiếu; nội dung đang nhập vẫn được giữ.</p><div>

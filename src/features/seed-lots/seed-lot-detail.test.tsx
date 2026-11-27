@@ -68,7 +68,7 @@ it("keeps the Ươm action on Ươm, hangs a finished batch from its row, and ha
   await mount();
   tab("Ươm");
   expect(screen.getByRole("button", { name: "Ươm" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Treo lên bè" }).getAttribute("href")).toBe(`/farming/cycles?nurseryBatch=${ids.nursery}`);
+  expect(screen.getByRole("link", { name: "Treo lên bè" }).getAttribute("href")).toBe(`/farming/rafts?nurseryBatch=${ids.nursery}`);
   tab("Treo");
   expect(screen.queryByRole("button", { name: /^(Ươm|Treo|Trả hàng)$/ })).toBeNull();
   tab("Trả hàng");

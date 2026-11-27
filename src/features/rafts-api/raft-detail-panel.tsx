@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/management-page";
 import { Subtabs } from "@/components/ui/management-screen/management-table";
 import { createWorkspaceRepository } from "@/features/api-workspace/workspace-repository";
-import { RaftMaterialCosts } from "@/features/farming-api/raft-screen";
+import type { CycleAccess } from "@/features/cycles-api/cycle-plan-tab";
 import { StatusConfirmDialog } from "@/features/farming-management/status-confirm-dialog";
 import { useStickyRemote } from "@/features/farming-management/use-sticky-remote";
 import type { UnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
@@ -12,25 +12,32 @@ import { ErrorNotice, Skeleton, useMutation } from "@/features/operations/ui";
 import styles from "@/features/farming-management/farming-management.module.css";
 import { RaftCyclesTab } from "./raft-cycles-tab";
 import { RaftInfoTab } from "./raft-info-tab";
-import { RaftLiveHeader } from "./raft-live-header";
+import { RaftLogsTab } from "./raft-logs-tab";
+import { RaftMaterialsTab } from "./raft-materials-tab";
 import { RaftPhotoTab } from "./raft-photo-tab";
-import { useRaftLive } from "./use-raft-live";
 import { DISCONTINUED, IN_USE, parseRaftDetail, raftStatusLabel, readRaftDetail, type RaftDetail } from "./raft-model";
 
-/** Tabs and actions the signed-in account may use for a raft of the chosen zone. */
-export type RaftAccess = { edit: boolean; photoEdit: boolean; cycles: boolean; costs: boolean; logs?: boolean; water?: boolean };
-type TabKey = "info" | "photo" | "costs" | "cycles";
+/** Tabs and actions the signed-in account may use for a raft of the chosen zone. `cycle` carries the cycle and care-log rights; `materialCreate` is the right to record material use. */
+export type RaftAccess = { edit: boolean; photoEdit: boolean; cycles: boolean; costs: boolean; logs?: boolean; cycle?: CycleAccess; materialCreate?: boolean };
+export type RaftTabKey = "info" | "cycles" | "logs" | "materials" | "lanes";
+const tabKeys: readonly RaftTabKey[] = ["info", "cycles", "logs", "materials", "lanes"];
+/** Tab names of the screens that merged into this one (the old cycle screen and the former cost and photo tabs) still open the right tab. */
+const legacyTabs: Record<string, RaftTabKey> = { journey: "cycles", progress: "cycles", plan: "cycles", history: "cycles", summary: "cycles", costs: "materials", photo: "lanes" };
+export const raftTabOf = (value?: string | null): RaftTabKey | undefined => tabKeys.find(key => key === value) ?? (value ? legacyTabs[value] : undefined);
 const repository = createWorkspaceRepository("rafts");
 
-export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, onChanged }: { id: string; zoneId: string; zoneLabel: string; access: RaftAccess; guard: UnsavedGuard; onChanged(): void }) {
+/**
+ * The opened raft. Opening it reads only the raft record; every tab reads its own data when it is first opened ("Hiện trạng" in "Thông tin" comes from the record itself).
+ * `initialTab` is the tab a link asked for (`?tab=`).
+ */
+export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, initialTab, onChanged }: { id: string; zoneId: string; zoneLabel: string; access: RaftAccess; guard: UnsavedGuard; initialTab?: string; onChanged(notice?: string): void }) {
   const detail = useStickyRemote(useCallback((signal: AbortSignal) => readRaftDetail(id, signal), [id])), mutation = useMutation();
-  // Current state (cycle, lane states and progress, seed, photos, water) is read live beside the record, so the lane board never shows only what was entered at creation.
-  const live = useRaftLive(id, zoneId, access);
-  const reloadAll = () => { detail.reload(); live.reload(); };
-  const [tab, setTab] = useState<TabKey>("info"), [action, setAction] = useState<"discontinue" | "reactivate">(), [reviewRequested, setReviewRequested] = useState(false);
-  const raft = detail.data, prefix = `raft-${id}`;
-  const tabs = useMemo(() => ([["info", "Thông tin", true], ["photo", "Ảnh và làn", true], ["costs", "Chi phí vật tư", access.costs], ["cycles", "Chu kỳ nuôi", access.cycles]] as const)
+  const tabs = useMemo(() => ([["info", "Thông tin", true], ["cycles", "Chu kỳ nuôi", access.cycles], ["logs", "Nhật ký", !!access.logs], ["materials", "Vật tư", access.costs || !!access.materialCreate], ["lanes", "Làn & ảnh", true]] as const)
     .filter(entry => entry[2]).map(([key, label]) => ({ key, label })), [access]);
+  const [picked, setTab] = useState<RaftTabKey | undefined>(() => raftTabOf(initialTab)), [action, setAction] = useState<"discontinue" | "reactivate">(), [reviewRequested, setReviewRequested] = useState(false);
+  // A linked tab the account may not read falls back to "Thông tin".
+  const tab = tabs.some(entry => entry.key === picked) ? picked! : "info";
+  const raft = detail.data, prefix = `raft-${id}`;
   function saved(record: RaftDetail) { detail.replace(record); onChanged(); }
   async function confirm() {
     if (!raft || !action || detail.loading || mutation.busy() || mutation.blocked) return;
@@ -40,11 +47,18 @@ export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, onChange
     const record = parseRaftDetail(result);
     if (record) saved(record); else { detail.reload(); onChanged(); }
   }
+  // A cycle started, edited or closed changes what the record says about the open cycle, so the record is read again.
+  const cycleChanged = (notice: string) => { detail.reload(); onChanged(notice); };
   const busy = detail.loading || mutation.pending || mutation.blocked, stopping = action === "discontinue";
-  const content: Record<TabKey, ReactNode> = raft ? {
-    info: <RaftInfoTab raft={raft} zoneId={zoneId} zoneLabel={zoneLabel} canEdit={access.edit} busy={busy} dirtyRef={guard.dirty} liveLanes={live.progress.data?.lanes} onSaved={saved} onReload={reloadAll} onStatus={() => { mutation.reviewed(); setAction(raft.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
-    photo: <RaftPhotoTab raftId={id} canEdit={access.photoEdit} dirtyRef={guard.dirty} pendingRef={guard.pending} live={live} />, costs: <RaftMaterialCosts raftId={id} zoneId={zoneId} />, cycles: <RaftCyclesTab raftId={id} zoneId={zoneId} />,
-  } : { info: null, photo: null, costs: null, cycles: null };
+  const show = (key: RaftTabKey) => void guard.leave(() => setTab(key));
+  const content: Record<RaftTabKey, ReactNode> = raft ? {
+    info: <RaftInfoTab raft={raft} zoneId={zoneId} zoneLabel={zoneLabel} canEdit={access.edit} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload}
+      onOpenCycles={access.cycles ? () => show("cycles") : undefined} onStatus={() => { mutation.reviewed(); setAction(raft.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
+    cycles: <RaftCyclesTab raft={raft} zoneId={zoneId} zoneLabel={zoneLabel} access={access.cycle} guard={guard} onChanged={cycleChanged} onOpenLogs={() => setTab("logs")} />,
+    logs: <RaftLogsTab raft={raft} zoneId={zoneId} access={access} guard={guard} />,
+    materials: <RaftMaterialsTab raft={raft} zoneId={zoneId} access={access} />,
+    lanes: <RaftPhotoTab raftId={id} zoneId={zoneId} canEdit={access.photoEdit} access={{ cycles: access.cycles, logs: access.logs }} dirtyRef={guard.dirty} pendingRef={guard.pending} />,
+  } : { info: null, cycles: null, logs: null, materials: null, lanes: null };
   return <section id={`raft-preview-${id}`} className={styles.detail} aria-label="Chi tiết bè nuôi">
     {detail.loading && !raft && <Skeleton />}
     <ErrorNotice error={detail.error || mutation.error} />
@@ -55,8 +69,7 @@ export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, onChange
     </div></div>}
     {raft && <>
       <header className={styles.header}><h3>Bè {raft.code}</h3><StatusPill tone={raft.statusId === DISCONTINUED ? "neutral" : "success"}>{raftStatusLabel(raft.statusId)}</StatusPill></header>
-      <RaftLiveHeader raftId={id} zoneId={zoneId} live={live} access={access} />
-      <Subtabs<TabKey> label="Hồ sơ bè nuôi" tabs={tabs} value={tab} idPrefix={prefix} onChange={key => { if (key !== tab) void guard.leave(() => setTab(key)); }} />
+      <Subtabs<RaftTabKey> label="Hồ sơ bè nuôi" tabs={tabs} value={tab} idPrefix={prefix} onChange={key => { if (key !== tab) show(key); }} />
       <div role="tabpanel" id={`${prefix}-panel-${tab}`} aria-labelledby={`${prefix}-tab-${tab}`} tabIndex={0} className={styles.body}>{content[tab]}</div>
       {action && <StatusConfirmDialog title={stopping ? "Ngừng sử dụng bè?" : "Sử dụng lại bè?"} subject={`Bè ${raft.code} · ${zoneLabel}`}
         description={stopping ? "Hồ sơ và lịch sử vẫn được giữ." : "Bè xuất hiện trở lại trong các danh mục đang sử dụng."}

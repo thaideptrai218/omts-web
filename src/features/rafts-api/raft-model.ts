@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { geometryOf, laneOverrides, raftGeometryFields, raftGeometryRequest, raftLaneFields, retainedLaneNumbers } from "./raft-geometry";
 import { composeRaftSize } from "./raft-size";
+import { raftCurrentCycleSchema, raftLaneSummarySchema } from "./raft-current-state";
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
 import { createWorkspaceRepository, type WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { loadOptions } from "@/features/operations/lookups";
@@ -10,8 +11,12 @@ export const IN_USE = 101, DISCONTINUED = 102;
 export const raftStatusLabel = (statusId: number) => statusId === IN_USE ? "Đang sử dụng" : "Ngừng sử dụng";
 export const laneStatusLabel = (statusId: number) => statusId === 2001 ? "Đang sử dụng" : statusId === 2002 ? "Ngừng hoạt động" : "Không xác định";
 const text = z.string(), nullableText = text.nullable();
-const raftRowSchema = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, statusId: z.number().int(), status: text, laneCount: z.number().int().optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
+const raftRowSchema = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, statusId: z.number().int(), status: text, laneCount: z.number().int().optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional(),
+  /** Lanes by state: lets the list say "6/10 làn đang nuôi" without a read per raft. Absent until the backend sends it. */
+  laneSummary: raftLaneSummarySchema.nullish() });
 const raftDetailSchema = raftRowSchema.extend({ location: nullableText, size: nullableText, conditionNotes: nullableText, rowVersion: text.min(1),
+  /** The open cycle (null: none); absent until the backend sends it. */
+  currentCycle: raftCurrentCycleSchema.nullish(),
   lanes: z.array(z.object({ id: apiIdSchema, laneNumber: z.number().int(), statusId: z.number().int(), status: text, ...raftLaneFields })) });
 export type RaftRow = z.infer<typeof raftRowSchema>;
 export type RaftDetail = z.infer<typeof raftDetailSchema>;

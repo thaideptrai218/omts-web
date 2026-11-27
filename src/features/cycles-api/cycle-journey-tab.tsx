@@ -21,8 +21,9 @@ const linkAction = "inline-flex min-h-[30px] items-center rounded-control border
 /**
  * The cycle as a progress dashboard. "overview" (tab Tổng hợp): the figures at a glance, then nursery, plan, seeding and harvest steps with plan-vs-actual bars,
  * plus the optional care and material activities. "summary" (tab Tổng kết): the closing step with its figures, the assessment and "Kết thúc chu kỳ".
+ * "all": both in one list (the raft's "Chu kỳ nuôi" tab), with the closing step last.
  */
-export function CycleJourneyTab({ part, row, zoneId, access, onJump, onChanged }: { part: "overview" | "summary"; row: CycleRow; zoneId: string; access: CycleAccess; onJump(tab: "plan" | "logs"): void; onChanged(notice: string): void }) {
+export function CycleJourneyTab({ part, row, zoneId, access, onJump, onChanged }: { part: "overview" | "summary" | "all"; row: CycleRow; zoneId: string; access: CycleAccess; onJump(tab: "plan" | "logs"): void; onChanged(notice: string): void }) {
   const cycleId = row.cycle?.id ?? "";
   const progress = useRemote(useCallback((signal: AbortSignal) => cycleId ? readCycles({ action: "progress", raftId: row.raftId, cycleId }, cycleProgress, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [row.raftId, cycleId]));
   const summary = useRemote(useCallback((signal: AbortSignal) => cycleId ? readCycleSummary(cycleId, signal) : Promise.resolve({ status: "success" as const, data: undefined }), [cycleId]));
@@ -34,7 +35,7 @@ export function CycleJourneyTab({ part, row, zoneId, access, onJump, onChanged }
   const canRecord = access.view && !cycle.closeDate;
   const steps = buildJourney({ cycle, lanes: progress.data!.lanes, figures, today: businessToday(), canClose: access.edit && cycle.canEdit, canEditPlan: access.edit && cycle.canEdit, canLog: access.logsCreate, canRecord });
   const allMain = steps.filter(step => step.key !== "care");
-  const overview = part === "overview", mainSteps = allMain.filter(step => (step.key === "summary") !== overview);
+  const overview = part !== "summary", mainSteps = part === "all" ? allMain : allMain.filter(step => (step.key === "summary") !== overview);
   const care = steps.find(step => step.key === "care")!;
   const current = currentStep(allMain);
   const act = (action: JourneyAction) => action.close ? setClosing(true) : action.tab ? onJump(action.tab) : undefined;

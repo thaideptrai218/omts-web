@@ -8,7 +8,7 @@ Nguồn: `operationModules` trong `features/operations/permissions.ts`.
 | `seeding` | Thả giống | `CULTIVATION_CYCLES` | `cultivation-api/records-screen` |
 | `material-usages` | Sử dụng vật tư | `CULTIVATION_CYCLES` | như trên |
 | `harvest` | Thu hoạch | `HARVESTS` | như trên |
-| `cultivation-cycles` | Chu kỳ nuôi | `CULTIVATION_CYCLES` (nav trỏ `/farming/cycles`) | `cultivation-api/screen` |
+| `cultivation-cycles` | Chu kỳ nuôi | `CULTIVATION_CYCLES` (không có menu riêng; chu kỳ nằm trong tab "Chu kỳ nuôi" của Bè nuôi, `/farming/cycles` chuyển hướng sang đó) | `cultivation-api/screen` |
 | `purchase-receipts` | Phiếu nhập vật tư | `PURCHASE_RECEIPTS` | `operations/receipt-screen` hoặc `purchasing-v2` |
 | `supplier-payments` | Thanh toán nhà cung cấp | `SUPPLIER_PAYMENTS` (chỉ grant all-zones) | `operations/payment-screen` hoặc v2 |
 | `water` | Theo dõi chất lượng nước | `WATER_MEASUREMENTS` | `operations/water-screen` |

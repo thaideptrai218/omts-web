@@ -27,7 +27,7 @@ import { SalesInvoiceScreen } from "@/features/sales-invoices/invoice-screen";
 import { ProductsScreen } from "@/features/sales-api/products-screen";
 import { WorkforceScreen } from "./workforce-screen";
 import { MyWorkScreen } from "./my-work-screen";
-import { CyclesScreen } from "@/features/cycles-api/cycles-screen";
+import { CyclesRedirect } from "@/features/cycles-api/cycles-redirect";
 import { CultivationRecordsScreen } from "@/features/cultivation-api/records-screen";
 import { JobTypesScreen } from "@/features/labor-api/job-types-screen";
 import { PaymentsV2Screen } from "@/features/purchasing-v2/screens";
@@ -46,7 +46,7 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "seed-lots") return <ScreenRedirect to={SEED_LOTS_PATH} />;
   if (area === "supplier-payments") return <PaymentsV2Screen />;
   if (area === "job-types") return <JobTypesScreen />;
-  if (area === "cultivation-cycles") return <CyclesScreen />;
+  if (area === "cultivation-cycles") return <Suspense><CyclesRedirect /></Suspense>;
   if (area === "seeding" || area === "material-usages" || area === "harvest") return <CultivationRecordsScreen area={area} />;
   // Only a trader reads the plain list here; the catalogue for everyone else is /sales/products.
   if (area === "sales-products") return context.identity.subjectType === "Trader" ? <ProductsScreen /> : <ScreenRedirect to="/sales/products" />;

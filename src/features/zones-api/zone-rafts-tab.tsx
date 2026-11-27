@@ -70,7 +70,7 @@ export function ZoneRaftsTab({ zoneId, zoneLabel, canCreate, raftAccess, guard, 
             <td data-label="Số làn" className={local.number}>{raft.laneCount == null ? "—" : `${raft.laneCount} làn`}</td>
             <td data-label="Trạng thái" className={local.nowrap}><StatusPill tone={raft.statusId === IN_USE ? "success" : "neutral"}>{raft.statusId === IN_USE ? "Đang sử dụng" : "Ngừng sử dụng"}</StatusPill></td>
             {showCycles && <td data-label="Chu kỳ hiện tại" className={local.nowrap}>{cycle
-              ? <Link className={managementStyles.linkButton} href={farmingReferenceHref("cycle", { zoneId, raftId: raft.id, cycleId: cycle.id })}>{`Đang nuôi từ ${formatVietnameseDate(cycle.startDate)}`}</Link>
+              ? <Link className={managementStyles.linkButton} href={farmingReferenceHref("cycle", { zoneId, raftId: raft.id, search: raft.code })}>{`Đang nuôi từ ${formatVietnameseDate(cycle.startDate)}`}</Link>
               : "Chưa có chu kỳ"}</td>}
           </tr>;
         })}</DataTable>

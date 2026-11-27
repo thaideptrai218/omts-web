@@ -17,13 +17,15 @@ function setup(subjectType: "CooperativeOwner" | "Trader") {
   return render(<ApiWorkspaceShell context={context}><h1>Nội dung</h1></ApiWorkspaceShell>);
 }
 describe("shared API navigation shell", () => {
-  it("places the only cycle link under cultivation and uses the seasonal employee label", () => {
+  it("has no cycle menu entry (the cycles live in the raft screen), keeps the raft and seeding links under cultivation, and uses the seasonal employee label", () => {
     const view = setup("CooperativeOwner");
     const nav = within(view.container).getByRole("navigation", { name: "Chức năng" });
     const cultivation = within(nav).getByText("Nuôi trồng", { exact: true }).closest("details")!;
     fireEvent.click(cultivation.querySelector("summary")!);
-    expect(within(cultivation).getByRole("link", { name: "Hành trình" }).getAttribute("href")).toBe("/farming/cycles");
-    expect(nav.querySelectorAll('a[href="/farming/cycles"]')).toHaveLength(1);
+    expect(within(cultivation).queryByRole("link", { name: "Hành trình" })).toBeNull();
+    expect(nav.querySelector('a[href="/farming/cycles"]')).toBeNull();
+    expect(within(cultivation).getByRole("link", { name: "Bè nuôi" }).getAttribute("href")).toBe("/workspace/rafts");
+    expect(within(cultivation).getByRole("link", { name: "Bắt đầu chu kỳ nuôi" }).getAttribute("href")).toBe("/operations/seeding");
     const personnel = within(nav).getByText("Nhân sự", { exact: true }).closest("details")!;
     fireEvent.click(personnel.querySelector("summary")!);
     expect(within(personnel).getByRole("link", { name: "Nhân viên" }).getAttribute("href")).toBe("/workspace/employees");

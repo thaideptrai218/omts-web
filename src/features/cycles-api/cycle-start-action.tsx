@@ -7,7 +7,7 @@ import { CycleStartDialog } from "./cycle-start-dialog";
 import { canStartCycle, type CycleRow } from "./cycle-model";
 
 /**
- * "Bắt đầu chu kỳ nuôi" for the raft opened on the Hành trình screen. `button` is the header action of a raft whose last cycle is closed;
+ * "Bắt đầu chu kỳ nuôi" for the raft opened on its "Chu kỳ nuôi" tab (or on the Thả giống screen). `button` is the header action of a raft whose last cycle is closed;
  * `empty` is the empty state of a raft that never had one ("Bè này chưa có chu kỳ nuôi" + the button). The button is hidden for a raft
  * that is not in use, already has an open cycle, or when the account may not create cycles.
  */

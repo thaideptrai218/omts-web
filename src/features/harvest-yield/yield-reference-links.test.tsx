@@ -13,5 +13,5 @@ it("opens the referenced lot and keeps links to its exact raft, zone and cycle",
   expect(screen.getByRole("link", { name: /Mở thu hoạch/ }).getAttribute("href")).toBe("/operations/harvest?zoneId=zone&raftId=raft&recordId=lot&search=LO001");
   expect(screen.getByRole("link", { name: "Bè 01" }).getAttribute("href")).toBe("/farming/rafts?zoneId=zone&recordId=raft&search=B01");
   expect(screen.getByRole("link", { name: "V01" }).getAttribute("href")).toBe("/farming/zones?recordId=zone&search=V01");
-  expect(screen.getByRole("link", { name: /Chu kỳ/ }).getAttribute("href")).toBe("/farming/cycles?zoneId=zone&raftId=raft&cycleId=cycle");
+  expect(screen.getByRole("link", { name: /Chu kỳ/ }).getAttribute("href")).toBe("/farming/rafts?zoneId=zone&recordId=raft&tab=cycles");
 });

@@ -29,7 +29,7 @@ describe("nursery detail V2", () => {
     expect(inventory.textContent).toContain("Hao hụt (ước tính)100 mảnh · 10%");
     expect(screen.getByRole("list", { name: "Các bè dùng giống" }).textContent).toContain("Đã thả 400 mảnh");
     expect(screen.getByRole("link", { name: "B1-06" }).getAttribute("href")).toContain("/farming/rafts?");
-    expect(screen.getByRole("link", { name: "Hành trình" }).getAttribute("href")).toContain("cycleId=c");
+    expect(screen.getByRole("link", { name: "Hành trình" }).getAttribute("href")).toContain("tab=cycles");
     expect(screen.getByRole("link", { name: "Thả giống" }).getAttribute("href")).toContain("/operations/seeding?");
     expect(screen.queryByRole("tab", { name: /chuyển|phân bổ/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Xóa đợt ươm" })).toBeNull();

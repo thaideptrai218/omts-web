@@ -45,7 +45,7 @@ describe("lot detail, tab Thông tin", () => {
     expect(panel.getByText("17/11/2026 09:00 · Cân viên")).toBeTruthy();
     expect(hrefOf(panel, "DEMO-01")).toContain("/farming/zones");
     expect(hrefOf(panel, "B1")).toContain("/farming/rafts");
-    expect(hrefOf(panel, "Hành trình chu kỳ")).toBe(`/farming/cycles?zoneId=${ids.zone}&raftId=${ids.raft}&cycleId=${ids.cycle}&tab=journey`);
+    expect(hrefOf(panel, "Hành trình chu kỳ")).toBe(`/farming/rafts?zoneId=${ids.zone}&recordId=${ids.raft}&tab=cycles`);
     expect(hrefOf(panel, "G-2026-01")).toBe("/operations/purchase-receipts?code=PN000004");
     const nursery = new URL(hrefOf(panel, "NU000002")!, "http://x");
     expect(nursery.pathname).toBe("/farming/nursery");

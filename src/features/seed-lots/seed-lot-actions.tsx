@@ -15,10 +15,10 @@ import type { SeedLotRow } from "./contracts";
  * Seed is always nursed before it is hung on a raft, so a seed lot has no Treo: a finished nursery batch of the lot is hung by starting a cycle from it (`cycleFromBatchHref`).
  */
 export type SeedLotAction = "nurse" | "return";
-export const NURSERY_PATH = "/farming/nursery", CYCLES_PATH = "/farming/cycles";
+export const NURSERY_PATH = "/farming/nursery", RAFTS_PATH = "/farming/rafts";
 export const nurseHref = (lotId: string) => `${NURSERY_PATH}?lot=${encodeURIComponent(lotId)}`;
-/** The cycles screen with the start of a cycle prefilled with this finished nursery batch: the raft is picked there. */
-export const cycleFromBatchHref = (batchId: string) => `${CYCLES_PATH}?nurseryBatch=${encodeURIComponent(batchId)}`;
+/** The raft screen with the start of a cycle prefilled with this finished nursery batch: the raft is picked there, on its "Chu kỳ nuôi" tab. */
+export const cycleFromBatchHref = (batchId: string) => `${RAFTS_PATH}?nurseryBatch=${encodeURIComponent(batchId)}`;
 export const returnLotHref = (lot: Pick<SeedLotRow, "id" | "receiptId">) => `${kindText.Seed.returnsPath}/new?receipt=${encodeURIComponent(lot.receiptId)}&line=${encodeURIComponent(lot.id)}`;
 const hrefOf = (action: SeedLotAction, lot: SeedLotRow) => action === "nurse" ? nurseHref(lot.id) : returnLotHref(lot);
 

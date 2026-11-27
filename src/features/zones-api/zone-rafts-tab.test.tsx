@@ -37,7 +37,7 @@ it("lists the rafts in one server-paged call with the open cycle, and reads neit
   expect(lastQuery()).toEqual({ zoneId: ZONE, statusId: "", search: "", page: 1, pageSize: 10 });
   expect(state.lookups).not.toHaveBeenCalled(); expect(state.cycles).not.toHaveBeenCalled();
   const first = within(screen.getByText("B02").closest("tr") as HTMLElement), second = within(screen.getByText("B01").closest("tr") as HTMLElement);
-  expect(first.getByRole("link", { name: "Đang nuôi từ 01/11/2026" }).getAttribute("href")).toContain(`cycleId=${CYCLE}`);
+  expect(first.getByRole("link", { name: "Đang nuôi từ 01/11/2026" }).getAttribute("href")).toContain("tab=cycles");
   expect(first.getByText("Đang sử dụng")).toBeTruthy();
   expect(second.getByText("Chưa có chu kỳ")).toBeTruthy(); expect(second.getByText("Ngừng sử dụng")).toBeTruthy(); expect(second.getAllByText("—")).toHaveLength(2);
 });

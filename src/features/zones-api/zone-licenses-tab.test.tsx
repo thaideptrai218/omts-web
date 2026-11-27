@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 const state = vi.hoisted(() => ({ read: vi.fn() }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => ({ read: state.read }) }));
 vi.mock("@/features/farming-api/license-editor", () => ({ LicenseEditor: ({ mode }: { mode: string }) => <p>Biểu mẫu {mode}</p> }));
-vi.mock("./zone-license-detail", () => ({ ZoneLicenseDetail: ({ id }: { id: string }) => <p>Chi tiết {id}</p> }));
+vi.mock("./zone-license-detail", () => ({ ZoneLicenseDetail: ({ id, canDelete, onDeleted }: { id: string; canDelete?: boolean; onDeleted?(): void }) => <><p>Chi tiết {id} · {canDelete ? "có xóa" : "không xóa"}</p><button type="button" onClick={onDeleted}>Giả lập xóa</button></> }));
 import { ZoneLicensesTab } from "./zone-licenses-tab";
 
 const ZONE = "529ec3ce-af8f-42f7-a08f-4bab36ba7e63";
@@ -20,7 +20,7 @@ beforeEach(() => {
   ]));
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
-const renderTab = () => render(<ZoneLicensesTab zoneId={ZONE} zones={[]} />);
+const renderTab = (canDelete?: boolean) => render(<ZoneLicensesTab zoneId={ZONE} zones={[]} canDelete={canDelete} />);
 
 it("has neither the as-of date field nor the replaced-documents switch, and always reads the state as of today", async () => {
   renderTab();
@@ -49,7 +49,25 @@ it("keeps the expiry reminder, the inline details and the add button", async () 
   renderTab();
   expect(await screen.findByLabelText("Nhắc hạn giấy phép")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "GP-OLD" }));
-  expect(await screen.findByText("Chi tiết old")).toBeTruthy();
+  expect(await screen.findByText(/Chi tiết old/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Thêm giấy tờ/ }));
   expect(await screen.findByText("Biểu mẫu create")).toBeTruthy();
+});
+
+it("passes the delete right to the opened document and, once it is deleted, closes it and reads the list again", async () => {
+  renderTab(true);
+  await screen.findByText("GP-NEW");
+  fireEvent.click(screen.getByRole("button", { name: "GP-NEW" }));
+  expect(await screen.findByText("Chi tiết new · có xóa")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Giả lập xóa" }));
+  await screen.findByText("GP-NEW");
+  expect(screen.queryByText(/Chi tiết new/)).toBeNull();
+  expect(state.read).toHaveBeenCalledTimes(2);
+});
+
+it("does not offer the delete right unless the screen grants it", async () => {
+  renderTab();
+  await screen.findByText("GP-NEW");
+  fireEvent.click(screen.getByRole("button", { name: "GP-NEW" }));
+  expect(await screen.findByText("Chi tiết new · không xóa")).toBeTruthy();
 });

@@ -9,6 +9,7 @@ import { FilterGroup, FilterPills, HelpLink, ManagementLayout } from "@/componen
 import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, type SortState } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { cycleAccessFor } from "@/features/cycles-api/cycle-access";
 import { resourceAllowed } from "@/features/api-workspace/resources";
 import { ListSkeleton, RailHead } from "@/features/farming-management/detail-parts";
 import { useStickyRemote } from "@/features/farming-management/use-sticky-remote";
@@ -24,7 +25,6 @@ import type { RaftAccess } from "./raft-detail-panel";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { emptyRaftFilters, filterRafts, readRaftsOfZones, readZoneRafts, sortRafts, type RaftFilters, type RaftSortKey, type ZonedRaftRow } from "./raft-model";
 import { RaftTable, raftColumns } from "./raft-table";
-import { useRaftListLive } from "./use-raft-list-live";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALL_ZONES = "__all";
@@ -55,7 +55,7 @@ function RaftDirectory({ helpHref, linkedZoneId }: { helpHref?: string; linkedZo
   if (!resourceAllowed("rafts", identity, permissions.functionPermissions)) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
   if (zones.error && !zones.data) return <ListStateMessage error={zones.error} onRetry={zones.reload} retryLabel="Tải lại danh mục vùng" />;
   if (!zones.data) return <ListSkeleton />;
-  return <RaftWorkspace key={`${zoneId}:${params.get("recordId") ?? ""}:${params.get("search") ?? ""}`} zones={offered} zoneId={zoneId} onZone={setChoice} all={all} onAll={setPickedAll} helpHref={helpHref} />;
+  return <RaftWorkspace key={`${zoneId}:${params.get("recordId") ?? ""}:${params.get("search") ?? ""}:${params.get("tab") ?? ""}`} zones={offered} zoneId={zoneId} onZone={setChoice} all={all} onAll={setPickedAll} helpHref={helpHref} />;
 }
 
 function RaftWorkspace({ zones: offered, zoneId, onZone, all, onAll, helpHref }: { zones: readonly ZoneRow[]; zoneId: string; onZone(id: string): void; all: boolean; onAll(all: boolean): void; helpHref?: string }) {
@@ -69,11 +69,13 @@ function RaftWorkspace({ zones: offered, zoneId, onZone, all, onAll, helpHref }:
   const canCreate = !showAll && !!zoneId && !frozenZone(zoneId) && resourceAllowed("rafts", identity, functions, "Create");
   const accessIn = (zone: string): RaftAccess => ({ edit: !frozenZone(zone) && resourceAllowed("rafts", identity, functions, "Edit"), photoEdit: owner && !frozenZone(zone),
     cycles: operationAllowed("cultivation-cycles", identity, functions, "View", zone), costs: operationAllowed("purchase-receipts", identity, functions, "View", zone),
-    logs: operationAllowed("cultivation-cycles", identity, functions, "LogsView", zone), water: operationAllowed("water", identity, functions, "View", zone) });
-  const access = accessIn(zoneId);
+    logs: operationAllowed("cultivation-cycles", identity, functions, "LogsView", zone), cycle: cycleAccessFor(identity, functions, zone, frozenZone(zone)),
+    materialCreate: !frozenZone(zone) && operationAllowed("material-usages", identity, functions, "Create", zone) });
   const recordId =params.get("recordId") ?? "", linkedId = UUID.test(recordId) ? recordId : undefined;
   const [filters, setFilters] = useState<RaftFilters>({ ...emptyRaftFilters, search: params.get("search") ?? "" }), [sort, setSort] = useState<SortState>({ key: "code", direction: "asc" });
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId);
+  // A link names its raft by id (`recordId`) or by code (`search`, opened when exactly one raft has that code); `tab` is the tab to open it on.
+  const codeLink = !linkedId ? (params.get("search") ?? "").trim().toLowerCase() : "";
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [expanded, setExpanded] = useState(linkedId), [linkPlaced, setLinkPlaced] = useState(!linkedId && !codeLink), [linkTarget, setLinkTarget] = useState(linkedId);
   const [creating, setCreating] = useState(params.get("create") === "1" && canCreate);
   const guard = useUnsavedGuard(), { notify } = useToast();
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-rafts-v2", raftColumns.filter(column => column.key !== "latitude" && column.key !== "longitude").map(column => column.key).join(","));
@@ -88,16 +90,19 @@ function RaftWorkspace({ zones: offered, zoneId, onZone, all, onAll, helpHref }:
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `zones` is keyed by `zonesKey`
   }, [showAll, zonesKey, zoneId]));
   const rows = useMemo(() => sortRafts(filterRafts(list.data ?? [], filters), sort.key as RaftSortKey, sort.direction), [list.data, filters, sort]);
-  if (!linkPlaced && list.data) { setLinkPlaced(true); const index = rows.findIndex(row => row.id === linkedId); if (index >= 0) setPage(Math.floor(index / pageSize) + 1); }
+  if (!linkPlaced && list.data) {
+    setLinkPlaced(true);
+    const sameCode = codeLink ? rows.filter(row => row.code.toLowerCase() === codeLink) : [], target = linkedId ?? (sameCode.length === 1 ? sameCode[0].id : undefined);
+    const index = target ? rows.findIndex(row => row.id === target) : -1;
+    if (target && index >= 0) { setPage(Math.floor(index / pageSize) + 1); setExpanded(target); setLinkTarget(target); }
+  }
   useEffect(() => {
-    if (!linkedId || !list.data) return;
-    const timer = setTimeout(() => document.getElementById(`raft-row-${linkedId}`)?.scrollIntoView?.({ block: "nearest" }), 0);
+    if (!linkTarget || !list.data) return;
+    const timer = setTimeout(() => document.getElementById(`raft-row-${linkTarget}`)?.scrollIntoView?.({ block: "nearest" }), 0);
     return () => clearTimeout(timer);
-  }, [linkedId, list.data]);
+  }, [linkTarget, list.data]);
 
   const current = Math.min(page, Math.max(1, Math.ceil(rows.length / pageSize))), shown = rows.slice((current - 1) * pageSize, current * pageSize);
-  const liveEnabled = (showAll ? zones.some(zone => accessIn(zone.id).cycles) : access.cycles) && visible.some(key => key === "live" || key === "cycle");
-  const live = useRaftListLive(shown.map(row => row.id), liveEnabled, list.data);
   const change = (apply: () => void) => void guard.leave(() => { apply(); setPage(1); setExpanded(undefined); });
   const setFilter = <K extends keyof RaftFilters>(key: K, value: RaftFilters[K]) => change(() => setFilters(previous => ({ ...previous, [key]: value })));
   const hasFilter = !!(filters.search || filters.statusId);
@@ -118,12 +123,14 @@ function RaftWorkspace({ zones: offered, zoneId, onZone, all, onAll, helpHref }:
     footer={<ManagementPagination page={current} pageSize={pageSize} total={rows.length} unit="bè" disabled={list.loading && !list.data} onPage={next => void guard.leave(() => { setPage(next); setExpanded(undefined); })} onPageSize={size => change(() => setPageSize(size))} />}>
     {guard.dialog}
     <ManagementScroller busy={list.loading}>
+      {params.get("nurseryBatch") && <p role="status" className={styles.hint}>Mở bè cần treo giống, vào tab Chu kỳ nuôi và bấm Bắt đầu chu kỳ nuôi: đợt ươm đã chọn được điền sẵn.</p>}
       {!zoneId ? <ListStateMessage>Chưa có vùng nuôi nào để xem bè.</ListStateMessage>
         : list.error && !list.data ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại" />
         : !list.data ? <ListSkeleton />
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có bè phù hợp bộ lọc." : "Vùng này chưa có bè nuôi."}</ListStateMessage>
-        : <RaftTable rows={shown} live={live} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} scopeOf={row => ({ zoneId: row.zoneId, zoneLabel: row.zoneLabel, access: accessIn(row.zoneId) })} liveEnabled={liveEnabled} guard={guard}
-          onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))} onChanged={() => { list.reload(); notify({ tone: "success", title: "Đã cập nhật bè nuôi." }); }} />}
+        : <RaftTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} scopeOf={row => ({ zoneId: row.zoneId, zoneLabel: row.zoneLabel, access: accessIn(row.zoneId) })} guard={guard}
+          initialTabOf={linkTarget} initialTab={params.get("tab") ?? undefined}
+          onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))} onChanged={notice => { list.reload(); notify({ tone: "success", title: notice ?? "Đã cập nhật bè nuôi." }); }} />}
     </ManagementScroller>
     {creating && <RaftCreateDialog zoneId={zoneId} zoneLabel={zoneLabel} onClose={() => setCreating(false)} onCreated={() => { setCreating(false); notify({ tone: "success", title: "Đã thêm bè nuôi." }); list.reload(); }} />}
   </ManagementLayout>;

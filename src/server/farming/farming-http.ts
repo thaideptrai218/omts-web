@@ -75,11 +75,14 @@ export async function handleFarmingRequest(request: Request, area: FarmingArea):
       // The photo command documents a 201 without a JSON shape. Still perform the session recheck below.
       const problemCopy = !upstream.ok && (plan.problem || plan.action.startsWith("lane-")) ? upstream.clone() : undefined;
       if (plan.action === "lane-photo" && upstream.status === 201) void upstream.body?.cancel().catch(() => undefined);
+      const empty = plan.noContent && upstream.status === 204;
+      if (empty) void upstream.body?.cancel().catch(() => undefined);
       const result = plan.action === "lane-photo" && upstream.status === 201
-        ? { status: "success" as const, httpStatus: 201, data: { done: true } } : await readBackendResponse(upstream, "profileRead");
+        ? { status: "success" as const, httpStatus: 201, data: { done: true } }
+        : empty ? { status: "success" as const, httpStatus: 204, data: { done: true } } : await readBackendResponse(upstream, "profileRead");
       if (result.status === "http-error") return json({ status: "rejected", code: result.code, ...(problemCopy ? { problem: await readFarmingProblem(problemCopy) } : {}) }, result.httpStatus);
       // Starting a licence-map read is accepted (202) and polled afterwards.
-      if (result.status !== "success" || !(plan.upload === "scan-photo" ? [202] : [200, 201]).includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
+      if (result.status !== "success" || !(plan.upload === "scan-photo" ? [202] : plan.noContent ? [204] : [200, 201]).includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
       const parsed = plan.schema.safeParse(result.data);
       if (!parsed.success) return json({ status: "invalid-response" }, 502);
       const record = (plan.unwrap ? (parsed.data as Record<string, unknown>)[plan.unwrap] : parsed.data) as Record<string, unknown>;

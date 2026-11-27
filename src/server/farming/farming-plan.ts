@@ -5,9 +5,9 @@ import { planLaneIncidents } from "./lane-incidents-plan";
 import { planLaneProgress } from "./lane-progress-plan";
 import { planZoneBoundary } from "./zone-boundary-plan";
 export type FarmingArea = "zone-licenses" | "raft-details" | "zone-boundary";
-const querySchema = z.strictObject({ action: z.enum(["list", "detail", "file", "create", "update", "replace", "photo", "upload-photo", "delete-photo"]),
-  id: z.guid().optional(), zoneId: z.guid().optional(), asOf: z.iso.date().optional(), photoId: z.guid().optional() });
-export type FarmingPlan = { action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE"; schema: z.ZodType; file?: string; photoId?: string; unwrap?: "raft"; upload?: "license" | "photo" | "incident-photo" | "lane-damage" | "scan-photo"; ownerOnly: boolean; jsonBody?: z.ZodType; jsonMaxBytes?: number; problem?: boolean; uploadBody?: z.ZodType; zoneId?: string; incidentId?: string; photoIndex?: number };
+const querySchema = z.strictObject({ action: z.enum(["list", "detail", "file", "create", "update", "replace", "delete", "photo", "upload-photo", "delete-photo"]),
+  id: z.guid().optional(), zoneId: z.guid().optional(), asOf: z.iso.date().optional(), photoId: z.guid().optional(), rowVersion: z.string().regex(/^[A-Za-z0-9+/=_-]{1,100}$/).optional() });
+export type FarmingPlan = { action: string; path: string; method: "GET" | "POST" | "PUT" | "DELETE"; schema: z.ZodType; file?: string; photoId?: string; unwrap?: "raft"; upload?: "license" | "photo" | "incident-photo" | "lane-damage" | "scan-photo"; ownerOnly: boolean; jsonBody?: z.ZodType; jsonMaxBytes?: number; problem?: boolean; /** The backend answers 204 with no body: the browser gets `{ done: true }`. */ noContent?: boolean; uploadBody?: z.ZodType; zoneId?: string; incidentId?: string; photoIndex?: number };
 export function planFarming(area: FarmingArea, method: string, query: URLSearchParams): FarmingPlan | undefined {
   if (area === "zone-boundary") return planZoneBoundary(method, query);
   if (query.get("action") === "lane-progress") return planLaneProgress(area, method, query);
@@ -15,7 +15,7 @@ export function planFarming(area: FarmingArea, method: string, query: URLSearchP
   if ([...query.keys()].length !== new Set(query.keys()).size) return;
   const parsed = querySchema.safeParse(Object.fromEntries(query));
   if (!parsed.success) return;
-  const { action, id, zoneId, asOf, photoId } = parsed.data;
+  const { action, id, zoneId, asOf, photoId, rowVersion } = parsed.data;
   const make = (path: string, schema: z.ZodType, verb: FarmingPlan["method"] = "GET"): FarmingPlan => ({ action, path, schema, method: verb, ownerOnly: area === "zone-licenses" || verb !== "GET" });
   if (area === "zone-licenses" && !photoId) {
     const suffix = asOf ? `?asOf=${asOf}` : "";
@@ -23,6 +23,9 @@ export function planFarming(area: FarmingArea, method: string, query: URLSearchP
     if (method === "GET" && ["detail", "file"].includes(action) && id && !zoneId) return { ...make(`/api/zone-licenses/${id}${suffix}`, licenseSchema), ...(action === "file" ? { file: "fileUrl" } : {}) };
     if (method === "POST" && !asOf && !zoneId && ["create", "update", "replace"].includes(action) && (action === "create" ? !id : !!id))
       return { ...make(`/api/zone-licenses${id ? `/${id}` : ""}${action === "replace" ? "/replace" : ""}`, licenseSchema, action === "update" ? "PUT" : "POST"), upload: "license" };
+    // The browser POSTs (CSRF-guarded); the BFF sends DELETE with the row version the backend checks (409 when the document replaced or was replaced, MSG06 when stale).
+    if (method === "POST" && action === "delete" && id && rowVersion && !asOf && !zoneId)
+      return { ...make(`/api/zone-licenses/${id}?rowVersion=${encodeURIComponent(rowVersion)}`, z.object({ done: z.literal(true) }), "DELETE"), noContent: true, problem: true };
   }
   if (area === "raft-details" && id && !zoneId && !asOf) {
     if (method === "GET" && action === "detail" && !photoId) return make(`/api/rafts/${id}`, raftSchema);

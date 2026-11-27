@@ -42,7 +42,7 @@ it("groups Nuôi trồng into four titled columns and moves the report and traci
   expect(columns).toEqual([
     ["Cơ sở", ["Vùng nuôi", "Bè nuôi"]],
     ["Ươm và chu kỳ nuôi", ["Ươm giống", "Bắt đầu chu kỳ nuôi"]],
-    ["Theo dõi", ["Hành trình", "Chất lượng nước"]],
+    ["Theo dõi", ["Chất lượng nước"]],
     ["Thu hoạch", ["Kế hoạch thu hoạch", "Lô thu hoạch"]],
   ]);
   for (const href of ["/operations/harvest", "/operations/material-usages", "/farming/seed-lots", "/operations/harvest-yield", "/operations/lot-tracing"]) expect(farming.querySelector(`a[href="${href}"]`)).toBeNull();
