@@ -1,4 +1,5 @@
 "use client";
+import { cageUnitOf } from "@/features/products/product-helpers";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -105,7 +106,7 @@ function Editor({ access, start, products, people }: { access: OrderAccess; star
 
   const update = (lineKey: string, patch: Partial<EditorLine>) => { setLines((current) => current.map((line) => line.key === lineKey ? { ...line, ...patch } : line)); setError(undefined); };
   function add(option: ItemOption) {
-    const product = products.find((row) => row.id === option.id), unit = product && baseUnit(product);
+    const product = products.find((row) => row.id === option.id), unit = product && (cageUnitOf(product.units) ?? baseUnit(product));
     if (!product || !unit) return;
     const price = defaultPrice(unit, product.unitPrice);
     setLines((current) => [...current, { key: crypto.randomUUID(), ...detailOf(product), productId: product.id, productCode: product.code, productName: product.name, units: unitsOf(product), unitId: unit.unitId, quantity: "1", unitPrice: price, listPrice: price, note: "", delivered: 0 }]);

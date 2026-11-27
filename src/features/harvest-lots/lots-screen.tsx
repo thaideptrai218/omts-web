@@ -22,6 +22,7 @@ import { productRepository } from "@/features/products/repository";
 import { IN_USE, type ProductRow } from "@/features/products/contracts";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
+import { ApproxKg } from "@/components/ui/approx-kg";
 import { closeReasons, lotStatusIds, type LotListQuery, type LotPage, type LotRow, type LotTotals } from "./contracts";
 import { LotDetailPanel } from "./lot-detail";
 import { LotStatus, closeReasonLabel, lotStatusLabel } from "./lot-labels";
@@ -36,7 +37,7 @@ const columns: readonly Column[] = [
   { key: "harvestedAt", label: "Thời gian thu", sort: "harvestedAt", render: (row) => viDateTime(row.harvestedAt) },
   { key: "place", label: "Vùng / bè", render: (row) => `${row.zoneCode} / ${row.raftCode}` },
   { key: "products", label: "Sản phẩm", render: (row) => <span title={row.products.map((product) => `${product.name} (${product.code})`).join(", ")}>{row.products.length ? row.products.map((product) => product.name).join(", ") : "—"}</span> },
-  { key: "cages", label: "Lồng", numeric: true, render: (row) => fmt(row.cageCount), total: (totals) => fmt(totals.cageCount) },
+  { key: "cages", label: "Lồng", numeric: true, render: (row) => <>{fmt(row.cageCount)}<ApproxKg className="ml-1" cages={row.cageCount} kgPerCage={row.estimatedKg / row.cageCount} /></>, total: (totals) => <>{fmt(totals.cageCount)}<ApproxKg className="ml-1" cages={totals.cageCount} kgPerCage={totals.estimatedKg / totals.cageCount} /></> },
   { key: "weighed", label: "Kg cân", numeric: true, render: (row) => row.weighedKg == null ? <span className="text-text-muted">Chờ cân</span> : fmt(row.weighedKg), total: (totals) => fmt(totals.weighedKg) },
   { key: "sold", label: "Đã bán", numeric: true, render: (row) => fmt(row.figures.soldKg), total: (totals) => fmt(totals.soldKg) },
   { key: "remaining", label: "Còn lại", sort: "remainingKg", numeric: true, render: (row) => fmt(row.figures.remainingKg), total: (totals) => fmt(totals.remainingKg) },

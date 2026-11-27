@@ -55,12 +55,13 @@ function UserAccountsContent({ selfId }: { selfId: string }) {
     <ScreenGuide id="user-accounts-screen-v1" steps={[
       { title: "Tìm tài khoản", text: "Gõ tên đăng nhập, tên, số điện thoại hoặc email.", target: 'input[aria-label="Tìm tài khoản"]' },
       { title: "Tạo tài khoản", text: "Bấm Tạo tài khoản, nhập thông tin và chọn vai trò theo vùng. Mật khẩu tạm hiện một lần sau khi lưu.", target: "text:Tạo tài khoản" },
-      { title: "Lọc danh sách", text: "Lọc theo vai trò, vùng, trạng thái hoặc có gắn nhân viên.", target: 'aside[aria-label="Bộ lọc tài khoản"]' },
+      { title: "Lọc danh sách", text: "Bấm Lọc để lọc theo vai trò, vùng, trạng thái hoặc có gắn nhân viên.", target: 'button[data-filter-toggle], aside[aria-label="Bộ lọc tài khoản"]' },
       { title: "Mở một tài khoản", text: "Bấm vào tên để sửa thông tin, đổi vai trò và vùng, đặt lại mật khẩu, khóa hoặc xóa.", target: 'button[aria-label^="Mở tài khoản"]' },
       { title: "Chọn cột hiển thị", text: "Thêm hoặc bớt cột như Email, Ghi chú.", target: 'button[aria-label="Chọn trường hiển thị"]' },
     ]} />
     <ManagementLayout storageKey="user-accounts" icon="id-card" title="Tài khoản người dùng" filterLabel="Bộ lọc tài khoản"
       filters={<UserAccountsFilters filters={filters} setFilters={(next) => change(() => setFilters(next))} zones={data.zones} onReset={reset} />}
+      filtersActive={hasUserFilters({ ...filters, search: "" })}
       search={<input type="search" aria-label="Tìm tài khoản" placeholder="Theo tên đăng nhập, tên, điện thoại hoặc email" maxLength={200} value={filters.search} onChange={(event) => { const search = event.target.value; change(() => setFilters((now) => ({ ...now, search }))); }} />}
       actions={<>
         <Button className="w-auto" onClick={() => setCreating(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Tạo tài khoản</Button>

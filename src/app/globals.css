@@ -303,6 +303,7 @@ input.omts-check:focus-visible { outline: 2px solid var(--omts-brand, var(--omts
   padding: 6px 10px; border-radius: 5px; font-size: 13px; line-height: 18px; color: var(--omts-color-text, #182f47); text-align: left;
 }
 .omts-select-menu button:hover:not(:disabled) { background: var(--omts-brand-soft, var(--omts-color-primary-soft, #edf3fc)); }
+.omts-select-menu button[data-active] { background: var(--omts-brand-soft, var(--omts-color-primary-soft, #edf3fc)); }
 .omts-select-menu button[data-selected] { color: var(--omts-brand, var(--omts-color-primary)); font-weight: 600; }
 .omts-select-menu button:disabled { color: #a3b0c0; cursor: not-allowed; }
 .omts-select-menu svg { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }

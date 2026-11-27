@@ -178,3 +178,12 @@ it("compares the weighed kg with the estimate of the cages brought up", () => {
   expect(weighComparison(200, 190)).toEqual({ difference: -10, percent: -5 });
   expect(weighComparison(0, 10)).toEqual({ difference: 10, percent: null });
 });
+
+it("stops adding cages once every harvested cage is weighed, and says so", async () => {
+  repo.cages.mockResolvedValue(ok(sheet({ harvestedCages: 2, cages: [cage(1, 10), cage(2, 11)], needsCompleting: true })));
+  mount();
+  const input = await next();
+  expect(input.disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "Thêm lồng" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText(/Đã cân đủ 2\/2 lồng/)).toBeTruthy();
+});

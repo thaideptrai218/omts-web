@@ -3,7 +3,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
-import { FilterPills, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
+import { FilterHead, FilterPills, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
 import { ListStateMessage, ManagementPagination, ManagementScroller, SortableHeader, Subtabs, managementStyles, type SortState } from "@/components/ui/management-screen/management-table";
 import { StatusPill } from "@/components/ui/management-page";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
@@ -86,11 +86,11 @@ function CertificationList({ helpHref }: { helpHref?: string }) {
   const toggle = (id: string) => setExpanded((value) => value === id ? undefined : id);
 
   const rail = <>
-    <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!validity} onClick={() => changed<string>(setValidity)("")}>Đặt lại</button></div>
+    <FilterHead canReset={!!validity} onReset={() => changed<string>(setValidity)("")} />
     <FilterPills legend="Hiệu lực" name="certification-validity" value={validity} options={(Object.keys(stateLabel) as State[]).map((key) => [key, stateLabel[key]] as const)} onChange={changed<string>(setValidity)} />
   </>;
 
-  return <ManagementLayout storageKey="certifications" icon="document" title="Chứng nhận HTX" filters={rail} filterLabel="Bộ lọc chứng nhận"
+  return <ManagementLayout storageKey="certifications" icon="document" title="Chứng nhận HTX" filters={rail} filtersActive={!!validity} filterLabel="Bộ lọc chứng nhận"
     footer={<ManagementPagination page={current} pageSize={pageSize} total={shown.length} unit="chứng nhận" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm chứng nhận" placeholder="Theo tên, số hoặc đơn vị cấp" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>

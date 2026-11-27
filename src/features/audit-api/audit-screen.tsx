@@ -1,7 +1,7 @@
 "use client";
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
-import { FilterGroup, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
+import { FilterGroup, FilterHead, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
 import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, Subtabs, managementStyles } from "@/components/ui/management-screen/management-table";
 import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
 import { presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
@@ -103,7 +103,7 @@ function AuditList({ helpHref }: { helpHref?: string }) {
   const toggle = (id: string) => setExpanded((value) => value === id ? undefined : id);
 
   const rail = <>
-    <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(defaultTime()); })()}>Đặt lại</button></div>
+    <FilterHead canReset={hasFilter} onReset={() => changed<void>(() => { setFilters(emptyFilters); setTime(defaultTime()); })()} />
     <TimeRangeFilter legend="Thời gian thao tác" value={time} onChange={changed<TimeRangeValue>(setTime)} />
     <FilterGroup legend="Loại bản ghi"><SelectBox aria-label="Loại bản ghi" searchable className={railSelect} value={filters.recordType} onChange={(event) => setFilter("recordType")(event.target.value)}>
       <option value="">Tất cả loại</option>{recordTypeOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</SelectBox></FilterGroup>
@@ -113,7 +113,7 @@ function AuditList({ helpHref }: { helpHref?: string }) {
       <option value="">Tất cả</option><option value="system">Hệ thống</option>{actors.map((actor) => <option key={actor.value} value={actor.value}>{actor.label}</option>)}</SelectBox></FilterGroup>
   </>;
 
-  return <ManagementLayout storageKey="audit" icon="security" title="Nhật ký thao tác" filters={rail} filterLabel="Bộ lọc nhật ký thao tác"
+  return <ManagementLayout storageKey="audit" icon="security" title="Nhật ký thao tác" filters={rail} filtersActive={hasFilter} filterLabel="Bộ lọc nhật ký thao tác"
     footer={<ManagementPagination page={data?.page.page ?? page} pageSize={pageSize} total={data?.page.total ?? 0} unit="thao tác" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm theo mã bản ghi" placeholder="Theo mã bản ghi" maxLength={100} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>

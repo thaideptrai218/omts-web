@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { nurseryDetail, nurseryHistory, nurseryList, nurseryLots, nurserySaved } from "./nursery-response-schemas";
+import { nurseryDetail, nurseryHistory, nurseryList, nurseryLots, nurserySaved, responsiblePeople } from "./nursery-response-schemas";
 
 const guid = z.guid();
 const quantity = z.number().finite().nonnegative().refine(value => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6, "Chỉ nhập tối đa 2 chữ số thập phân.");
@@ -9,16 +9,16 @@ const reason = z.string().trim().min(1).max(1000);
 const rowVersion = z.string().min(1).max(200);
 // `crew`: the employees who did the nursery work (optional, max 100); `replaceCrew` on an edit sets exactly that list (none = clear).
 const crew = z.array(guid).max(100).refine(ids => new Set(ids).size === ids.length);
-export const createValues = z.strictObject({ seedLotId: guid, quantity: positive, startDate: z.iso.date(), note: z.string().max(1000).optional(), crew: crew.optional() });
+export const createValues = z.strictObject({ seedLotId: guid, quantity: positive, startDate: z.iso.date(), note: z.string().max(1000).optional(), crew: crew.optional(), responsibleAccountId: guid.optional() });
 export const updateValues = z.strictObject({ quantity: positive.optional(), startDate: z.iso.date().optional(), note: z.string().max(1000).optional(), rowVersion,
-  keepPhotoIds: z.array(guid).max(3).optional(), crew: crew.optional(), replaceCrew: z.boolean().optional() });
+  keepPhotoIds: z.array(guid).max(3).optional(), crew: crew.optional(), replaceCrew: z.boolean().optional(), responsibleAccountId: guid.optional() });
 // V2: completing a nursery only records survivors, date and photos; no raft allocation.
 // The Cooperative Owner may complete while employees are not checked out yet (MSG-LABOR-37), with a reason.
 export const completeValues = z.strictObject({ survivors: quantity, completedOn: z.iso.date().optional(), rowVersion, ownerApproved: z.boolean().optional(), approvalReason: z.string().trim().min(1).max(1000).optional() });
 const cancelValues = z.strictObject({ reason, rowVersion });
 const survivorsValues = z.strictObject({ survivors: quantity, reason, rowVersion });
 const closeValues = z.strictObject({ reason: z.string().trim().max(1000).optional(), rowVersion });
-const querySchema = z.strictObject({ action: z.enum(["list", "detail", "seed-lots", "history", "create", "update", "cancel", "complete", "survivors", "close", "photo"]),
+const querySchema = z.strictObject({ action: z.enum(["list", "detail", "seed-lots", "history", "create", "update", "cancel", "complete", "survivors", "close", "photo", "responsible-people"]),
   id: guid.optional(), zoneId: guid.optional(), status: z.enum(["all", "nursing", "completed", "closed", "cancelled"]).optional(),
   from: z.iso.date().optional(), to: z.iso.date().optional(), search: z.string().max(200).optional(),
   page: z.coerce.number().int().positive().max(100000).optional(), pageSize: z.coerce.number().int().positive().max(100).optional(),
@@ -42,6 +42,7 @@ export function planNursery(method: string, query: URLSearchParams): NurseryPlan
   if (Object.values(filters).some(value => value !== undefined)) return;
   if (method === "GET" && action === "seed-lots" && zoneId && !id && !stage && !photoId) return { ...base, path: `${basePath}/seed-lots?zoneId=${zoneId}`, schema: nurseryLots };
   if (method === "POST" && action === "create" && zoneId && !id && !stage && !photoId) return { ...base, method: "POST", permission: "Create", path: `/api/zones/${zoneId}/nursery-batches`, schema: nurserySaved, validator: createValues, multipart: true };
+  if (method === "GET" && action === "responsible-people" && zoneId && !id && !stage && !photoId) return { ...base, path: `/api/zones/${zoneId}/responsible-people`, schema: responsiblePeople };
   if (!id || !zoneId) return;
   if (method === "GET" && action === "photo" && photoId && stage) return { ...base, path: `${basePath}/${id}`, schema: nurseryDetail, stage, photoId };
   if (stage || photoId) return;

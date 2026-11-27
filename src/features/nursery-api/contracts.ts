@@ -21,7 +21,7 @@ function rowObject() { return z.object(nurseryRowFields); }
 export const nurseryRowSchema = rowObject().transform(normalizeInventory);
 export const nurseryUsageSchema = z.object({ cycleId: text, cycleCode: text.nullish(), raftId: text, raftCode: text,
   seeded: number.nullish().transform(value => value ?? 0), lastSeedingOn: text.nullish() });
-export const nurseryDetailSchema = z.object({ ...nurseryRowFields, seedLot: seedLotSchema, seedLotOnHand: nullableNumber,
+export const nurseryDetailSchema = z.object({ responsibleAccountId: z.string().nullish(), responsibleName: z.string().nullish(), ...nurseryRowFields, seedLot: seedLotSchema, seedLotOnHand: nullableNumber,
   note: text.nullish(), completedOn: text.nullish(), issueId: text.nullish(), issueCode: text.nullish(), cancelReason: text.nullish(), closeReason: text.nullish(),
   recordedByName: text.nullish(), startPhotos: z.array(photo).default([]), completionPhotos: z.array(photo).default([]),
   usage: z.array(nurseryUsageSchema).nullish().transform(value => value ?? []), crew: z.array(crewMember).optional(), crewAssignment: crewAssignmentResult, crewRelease: crewReleaseResult,

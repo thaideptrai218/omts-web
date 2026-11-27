@@ -1,6 +1,8 @@
 "use client";
 import { SelectBox } from "@/components/ui/select-box";
 import { MoneyInput as SharedMoneyInput } from "@/components/form/money-input";
+import { groupNumberText, ungroupNumberText } from "@/components/form/grouped-number-text";
+import { useGroupedNumberEditing } from "@/components/form/use-grouped-number-editing";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -35,13 +37,15 @@ export function usePurchaseAccess() {
 export const vnLocal = (iso: string) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)).replace(" ", "T");
 export const nowLocal = () => vnLocal(new Date().toISOString());
 
-/** Quantity box with − and + steps of one; typing stays free (decimals allowed). */
+/** Quantity box with − and + steps of one; typing stays free (decimals allowed). Shows vi-VN grouping ("90.000,5"); `value`/`onChange` stay ungrouped ("90000.5"). */
 export function QuantityStepper({ value, onChange, label, max, invalid }: { value: string; onChange(value: string): void; label: string; max?: number; invalid?: boolean }) {
   const current = Number(value.replace(",", ".")) || 0;
   const step = (delta: number) => { const next = Math.max(0, current + delta); onChange(next ? String(max !== undefined ? Math.min(max, next) : next) : ""); };
+  const node = useRef<HTMLInputElement>(null), shown = groupNumberText(value.replace(".", ","), 3);
+  const grouped = useGroupedNumberEditing(node, shown, 3, (next) => onChange(ungroupNumberText(next.replace(/[^\d.,]/g, ""))));
   return <div className={styles.stepper}>
     <button type="button" aria-label={`Giảm ${label}`} tabIndex={-1} disabled={current <= 0} onClick={() => step(-1)}>−</button>
-    <input aria-label={label} aria-invalid={invalid || undefined} inputMode="decimal" value={value} onChange={(event) => onChange(event.target.value.replace(/[^\d.,]/g, ""))} />
+    <input ref={node} aria-label={label} aria-invalid={invalid || undefined} inputMode="decimal" value={shown} onChange={grouped.onChange} onKeyDown={grouped.onKeyDown} />
     <button type="button" aria-label={`Tăng ${label}`} tabIndex={-1} disabled={max !== undefined && current >= max} onClick={() => step(1)}>+</button>
   </div>;
 }

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { ApproxKg } from "@/components/ui/approx-kg";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { MoneyInput, QuantityStepper, fmt } from "@/features/purchase-documents/document-parts";
 import purchaseStyles from "@/features/purchase-documents/purchases.module.css";
@@ -8,6 +9,7 @@ import { UnitCell } from "@/features/purchase-documents/unit-cell";
 import { productHref } from "@/features/products/product-helpers";
 import { ProductSizeChip } from "@/features/products/product-size";
 import type { LotForSale } from "@/features/sales-invoices/contracts";
+import { kgPerCageOfUnit } from "@/shared/format/approx-kg";
 import { InvoiceLotSelect } from "./invoice-lot-select";
 import { countsInKg, fillFromLot, isActive, lineMoney, lotOptions, withQuantity, type EditorLine } from "./invoice-editor-logic";
 
@@ -43,15 +45,16 @@ export function InvoiceEditorLines({ lines, lots, notWholeLots, onChange, onRemo
     <th className={purchaseStyles.num}>SL lần này</th><th>Lô thu hoạch</th><th className={purchaseStyles.num}>Kg cân</th><th className={purchaseStyles.num}>Đơn giá</th><th className={purchaseStyles.num}>Thành tiền</th>
   </tr></thead><tbody>{lines.map((line, index) => {
     const position = index + 1, kg = countsInKg(line), outside = line.orderLineId === null && line.lineId === null, left = lotLeft(line);
-    const whole = !!line.lotId && !notWholeLots.has(line.lotId);
+    const kgPerCage = kgPerCageOfUnit({ name: line.unitName, factor: line.factor }), whole = !!line.lotId && !notWholeLots.has(line.lotId);
     return <tr key={line.key}>
       <td className={purchaseStyles.narrow}><button type="button" className={purchaseStyles.remove} aria-label={`Bỏ dòng ${position}`} title="Bỏ dòng" onClick={() => onRemove(line.key)}><InterfaceIcon name="trash" /></button></td>
       <td className={purchaseStyles.narrow}>{position}</td>
       <td>{line.productCode ? <Link className={purchaseStyles.code} href={productHref(line.productCode)} target="_blank">{line.productCode}</Link> : "—"}</td>
       <td>{line.productName}<ProductSizeChip size={line} />{outside && <span className={purchaseStyles.sub}>Thêm ngoài đơn đặt hàng</span>}</td>
       <td><UnitCell line={unitCellLine(line)} index={index} locked={!outside} onPick={(unitId) => onPickUnit(line.key, unitId)} /></td>
-      {progress && <><td className={purchaseStyles.num}>{line.ordered === null ? "—" : fmt(line.ordered)}</td><td className={purchaseStyles.num}>{line.delivered === null ? "—" : fmt(line.delivered)}</td></>}
+      {progress && <><td className={purchaseStyles.num}>{line.ordered === null ? "—" : fmt(line.ordered)}{line.ordered !== null && <span className={purchaseStyles.sub}><ApproxKg cages={line.ordered} kgPerCage={kgPerCage} /></span>}</td><td className={purchaseStyles.num}>{line.delivered === null ? "—" : fmt(line.delivered)}</td></>}
       <td className={purchaseStyles.num}><QuantityStepper label={`số lượng dòng ${position}`} max={left ?? undefined} value={kg ? line.kg : line.quantity} onChange={(value) => onChange(line.key, (current) => withQuantity(current, capped(value, left)))} />
+        {!kg && <span className={purchaseStyles.sub}><ApproxKg cages={Number(line.quantity.replace(",", "."))} kgPerCage={kgPerCage} /></span>}
         {left !== null && <span className={purchaseStyles.cap} title="Còn trên lô (ước theo số cân khi thu), quy ra đơn vị của dòng">
           <label><input type="checkbox" aria-label={`Bán hết lô dòng ${position}`} checked={whole} onChange={(event) => {
             onWholeLot(line.lotId, event.target.checked);

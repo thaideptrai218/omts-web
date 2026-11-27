@@ -1,4 +1,6 @@
 "use client";
+import { ApproxKg } from "@/components/ui/approx-kg";
+import { kgPerCageOfUnit } from "@/shared/format/approx-kg";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
@@ -79,7 +81,7 @@ function InfoTab({ order }: { order: OrderView }) {
         {shown.map((line) => <tr key={line.id}>
           <td><Link className={styles.link} href={productHref(line.productCode)}>{line.productCode}</Link></td>
           <td>{line.productName}<ProductSizeChip size={line} />{line.note && <span className={styles.sub}> {line.note}</span>}{line.quantity > line.deliveredQuantity && availability(line.productId) && <span className={styles.sub}> · {availability(line.productId)}</span>}</td>
-          <td>{line.unitName}</td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.deliveredQuantity)}</td>
+          <td>{line.unitName}</td><td className={styles.num}>{fmt(line.quantity)}<ApproxKg cages={line.quantity} kgPerCage={kgPerCageOfUnit({ name: line.unitName, factor: line.factor })} className={styles.sub} /></td><td className={styles.num}>{fmt(line.deliveredQuantity)}</td>
           <td className={styles.num}>{fmt(line.unitPrice)}{line.unitPrice !== line.listPrice && <span className={styles.sub}> niêm yết {fmt(line.listPrice)}</span>}</td>
           <td className={styles.num}><strong>{fmt(line.amount)}</strong></td></tr>)}
         {!shown.length && <tr><td colSpan={7} className={styles.empty}>Không có dòng hàng phù hợp.</td></tr>}

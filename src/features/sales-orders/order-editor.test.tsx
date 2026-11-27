@@ -56,7 +56,7 @@ it("prefills customer, line, pickup and source from a purchase request and sends
   const user = userEvent.setup();
   render(<ToastProvider><OrderEditorPage requestId={ids.request} /></ToastProvider>);
   expect(await screen.findByText("Thương lái An")).toBeTruthy();
-  expect((screen.getByLabelText("số lượng dòng 1") as HTMLInputElement).value).toBe("120.5");
+  expect((screen.getByLabelText("số lượng dòng 1") as HTMLInputElement).value).toBe("120,5");
   expect((screen.getByLabelText("Nguồn đặt") as HTMLSelectElement).disabled).toBe(true);
   await user.click(screen.getByRole("button", { name: "Đặt hàng" }));
   await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));
@@ -68,7 +68,7 @@ it("prefills customer, line, pickup and source from a purchase request and sends
   await waitFor(() => expect(state.push).toHaveBeenCalledWith("/sales/orders?code=DH000001"));
 });
 
-it("switches the unit of a line to its list price and asks the Owner's question again with the flag set", async () => {
+it("defaults a new line to the cage unit with the approximate kg, at its list price, and asks the Owner's question again with the flag set", async () => {
   state.context.identity.subjectType = "Staff";
   state.context.permissions.functionPermissions = [{ functionCode: "SALES_ORDERS", action: "Create" }];
   state.create.mockResolvedValueOnce({ status: "error", httpStatus: 409, code: "MSG-SALE-10", confirmation: { field: "lines[0].priceDecidedByOwner", lineNumber: 1 } });
@@ -78,7 +78,9 @@ it("switches the unit of a line to its list price and asks the Owner's question 
   await user.click(await screen.findByRole("button", { name: /Khách lẻ/ }));
   await user.type(screen.getByLabelText("Tìm hàng hóa theo mã hoặc tên"), "Hàu");
   await user.click(await screen.findByRole("button", { name: /Hàu sữa/ }));
-  await user.selectOptions(screen.getByLabelText("Đơn vị tính dòng 1"), ids.cage);
+  expect((screen.getByLabelText("Đơn vị tính dòng 1") as HTMLSelectElement).value).toBe(ids.cage);
+  expect(screen.getByText(/≈ 15 kg/)).toBeTruthy();
+  expect(screen.getByText(/\(ước tính\)/)).toBeTruthy();
   expect((screen.getByLabelText("Đơn giá dòng 1") as HTMLInputElement).value).toBe("850.000");
   expect((screen.getByLabelText("Nguồn đặt") as HTMLSelectElement).value).toBe("AtPort");
   await user.click(screen.getByRole("button", { name: "Đặt hàng" }));

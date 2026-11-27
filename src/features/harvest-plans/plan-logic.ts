@@ -178,8 +178,8 @@ export function buildPlanBody(form: PlanForm) {
 }
 
 /** What the harvest form needs of a plan line: the raft, what the line expects (to start the cages from) and the orders the plan serves, with their customers. */
-export const harvestPlanFor = (plan: Pick<PlanView, "code"> & Partial<Pick<PlanView, "orders">>, line: PlanLine) => ({
-  orders: plan.orders ?? [],
+export const harvestPlanFor = (plan: Pick<PlanView, "code"> & Partial<Pick<PlanView, "orders" | "id">>, line: PlanLine) => ({
+  orders: plan.orders ?? [], planId: plan.id,
   lineId: line.id, planCode: plan.code, raftId: line.raftId, raftCode: line.raftCode,
   expectedProductId: line.expectedProduct?.id, expectedCageCount: line.expectedCageCount ?? undefined, expectedHarvestDate: line.expectedHarvestDate ?? undefined,
 });
