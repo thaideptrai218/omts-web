@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { vatRateField } from "./vat-rate";
+import { legacyVatField } from "./vat-rate";
 
 /**
  * Shapes of the Vật tư & Giống module of the backend (items, units, groups, settings, movements, seed lots, issues), as the BFF at
@@ -21,8 +21,8 @@ export const itemRow = z.object({
   productLocked: z.boolean().nullish(),
   // "Thời gian trưởng thành" of a seed item: days from seeding until the oysters can be harvested.
   maturityDays: count.nullish(),
-  // "VAT mua vào": always KCT for a seed; an API without the field yet sends none (shown as "—").
-  purchaseVatRate: vatRateField,
+  // "VAT mua vào": always KCT for a seed. The rate of the catalogue (id, name, percent; null percent = KCT); an API without the catalogue sends the old code in `purchaseVatRate`, and one without either sends none (shown as "—").
+  purchaseVatRateId: z.string().nullish().catch(null), purchaseVatRateName: opt, purchaseVatPercent: numOpt.catch(null), purchaseVatRate: legacyVatField,
   minQuantity: numOpt, maxQuantity: numOpt, costPrice: numOpt, lastPurchasePrice: numOpt, onHand: num, stockValue: num, isUsed: z.boolean().nullish(),
   statusId: count, status: text, createdAt: text, createdBy: opt, rowVersion: text,
 });

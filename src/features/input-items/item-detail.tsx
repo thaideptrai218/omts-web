@@ -14,7 +14,7 @@ import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { DISCONTINUED, typeLabel, type ItemView, type UnitView } from "./contracts";
 import { baseUnitOf, inUnitPrice, inUnitQuantity } from "./item-helpers";
-import { vatRateLabel } from "./vat-rate";
+import { itemVatName, vatRateLabel } from "./vat-rate";
 import { ItemLotsTab } from "./item-lots-tab";
 import { ItemMovementsTab } from "./item-movements-tab";
 import { kindOfGroup, kindText } from "./stock-kind";
@@ -52,7 +52,7 @@ function InfoTab(props: TabProps) {
   const quantity = (value: number | null | undefined) => value == null ? "—" : `${fmt(value)} ${base?.name ?? ""}`;
   const inUnit = props.unit;
   // A seed is always KCT; an API without the field sends none, which shows as "—".
-  const vatText = record.group === "Seed" ? "KCT" : vatRateLabel(record.purchaseVatRate);
+  const vatText = record.group === "Seed" ? "KCT" : vatRateLabel(itemVatName(record));
   const unitQuantity = (value: number | null | undefined) => value == null || !inUnit ? "—" : `${fmt(inUnitQuantity(value, inUnit.factor))} ${inUnit.name}`;
   const unitPrice = (value: number | null | undefined) => value == null || !inUnit ? null : `${fmt(inUnitPrice(value, inUnit.factor))} / ${inUnit.name}`;
   // With a unit picked on the list only that unit shows (its code, cost and quantity); otherwise the whole unit list.

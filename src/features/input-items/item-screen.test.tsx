@@ -9,7 +9,12 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.linked ? { code: state.linked } : {}), useRouter: () => ({ push: vi.fn() }) }));
-vi.mock("@/features/purchase-documents/repository", () => ({ usePurchaseLookups: () => ({ suppliers: [], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }) }));
+const vat = vi.hoisted(() => {
+  const rate = (id: string, name: string, percent: number | null, patch: object = {}) => ({ id, name, percent, isExempt: percent === null, isSystem: percent === null, isDefault: false, active: true, sortOrder: 0, itemCount: 0, rowVersion: "v", ...patch });
+  return { catalogue: { legacy: false, rates: [rate("rate-kct", "KCT", null), rate("rate-5", "5%", 5), rate("rate-8", "8%", 8), rate("rate-10", "10%", 10, { isDefault: true })] } };
+});
+vi.mock("@/features/vat-rates/use-vat-catalogue", () => ({ useVatCatalogue: () => ({ catalogue: vat.catalogue, loading: false }) }));
+vi.mock("@/features/purchase-documents/repository", () => ({ usePurchaseLookups: () => ({ vatCatalogue: vat.catalogue, suppliers: [], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }) }));
 vi.mock("./repository", async (original) => ({
   ...(await original<typeof import("./repository")>()),
   inputRepository: { list: state.list, setPurchaseVat: state.setVat, detail: state.detail, movements: state.movements, seedLots: state.seedLots, groups: state.groups, units: vi.fn(), nextCode: vi.fn(), save: vi.fn(), exportList: vi.fn(), exportMovements: vi.fn(), template: vi.fn(), import: vi.fn() },
@@ -124,22 +129,22 @@ it("offers the seed lots tab only for a seed item", async () => {
   await waitFor(() => expect(state.seedLots).toHaveBeenCalledWith(id(1), expect.anything()));
 });
 
-const seedRow = { ...row, id: id(9), code: "GG000001", name: "Hàu giống 3 cm", group: "Seed", purchaseVatRate: "KCT" };
+const seedRow = { ...row, id: id(9), code: "GG000001", name: "Hàu giống 3 cm", group: "Seed", purchaseVatRateId: "rate-kct", purchaseVatRateName: "KCT", purchaseVatPercent: null };
 
 it("shows the VAT mua vào of each item, KCT for a seed and a dash when the API sends none, and filters the list by it", async () => {
-  state.list.mockResolvedValue(page({ items: [{ ...row, purchaseVatRate: "8" }, seedRow, { ...row, id: id(8), code: "VT000002", name: "Dây thừng" }], total: 3 }));
+  state.list.mockResolvedValue(page({ items: [{ ...row, purchaseVatRateId: "rate-8", purchaseVatRateName: "8%", purchaseVatPercent: 8 }, seedRow, { ...row, id: id(8), code: "VT000002", name: "Dây thừng" }], total: 3 }));
   const user = userEvent.setup();
   render(<ToastProvider><ItemScreen /></ToastProvider>);
   await screen.findByText("Phao nhựa");
   expect(within(screen.getByText("Phao nhựa").closest("tr")!).getByText("8%")).toBeTruthy();
   expect(within(screen.getByText("Hàu giống 3 cm").closest("tr")!).getByText("KCT")).toBeTruthy();
   expect(within(screen.getByText("Dây thừng").closest("tr")!).getByText("—")).toBeTruthy();
-  await user.click(screen.getByRole("radio", { name: "10%" }));
-  await waitFor(() => expect(state.list.mock.calls.at(-1)![0]).toMatchObject({ purchaseVatRate: "10" }));
+  await user.selectOptions(screen.getByLabelText("VAT mua vào"), "rate-10");
+  await waitFor(() => expect(state.list.mock.calls.at(-1)![0]).toMatchObject({ purchaseVatRateId: "rate-10" }));
 });
 
 it("changes the VAT mua vào of the ticked items at once, leaves a seed unticked, and tells it with a toast", async () => {
-  state.list.mockResolvedValue(page({ items: [{ ...row, purchaseVatRate: "10" }, seedRow, { ...row, id: id(8), code: "VT000002", name: "Dây thừng", purchaseVatRate: "10" }], total: 3 }));
+  state.list.mockResolvedValue(page({ items: [{ ...row, purchaseVatRateId: "rate-10", purchaseVatRateName: "10%", purchaseVatPercent: 10 }, seedRow, { ...row, id: id(8), code: "VT000002", name: "Dây thừng", purchaseVatRateId: "rate-10", purchaseVatRateName: "10%", purchaseVatPercent: 10 }], total: 3 }));
   state.setVat.mockResolvedValue({ status: "success", data: { updated: 2 } });
   const user = userEvent.setup();
   render(<ToastProvider><ItemScreen /></ToastProvider>);
@@ -150,9 +155,9 @@ it("changes the VAT mua vào of the ticked items at once, leaves a seed unticked
   expect(within(screen.getByRole("region", { name: "Thao tác hàng loạt" })).getByText("Đã chọn 2")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Đổi VAT mua vào" }));
   const dialog = await screen.findByRole("dialog");
-  await user.selectOptions(within(dialog).getByLabelText("VAT mua vào"), "8");
+  await user.selectOptions(within(dialog).getByLabelText("VAT mua vào"), "rate-8");
   await user.click(within(dialog).getByRole("button", { name: "Thay đổi" }));
-  await waitFor(() => expect(state.setVat).toHaveBeenCalledWith([id(1), id(8)], "8"));
+  await waitFor(() => expect(state.setVat).toHaveBeenCalledWith([id(1), id(8)], "rate-8", vat.catalogue));
   expect(await screen.findByText("Đã đổi VAT mua vào của 2 vật tư thành 8%.")).toBeTruthy();
   await waitFor(() => expect(screen.queryByRole("region", { name: "Thao tác hàng loạt" })).toBeNull());
 });

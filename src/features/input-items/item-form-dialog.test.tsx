@@ -4,6 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const repo = vi.hoisted(() => ({ save: vi.fn(), products: vi.fn(), groups: vi.fn(), units: vi.fn(), nextCode: vi.fn(), saveGroup: vi.fn(), saveUnit: vi.fn(), addPhoto: vi.fn(), removePhoto: vi.fn() }));
+const vat = vi.hoisted(() => {
+  const rate = (id: string, name: string, percent: number | null, patch: object = {}) => ({ id, name, percent, isExempt: percent === null, isSystem: percent === null, isDefault: false, active: true, sortOrder: 0, itemCount: 0, rowVersion: "v", ...patch });
+  const current = { catalogue: { legacy: false, rates: [] as unknown[] } };
+  const reset = () => { current.catalogue = { legacy: false, rates: [rate("rate-kct", "KCT", null), rate("rate-5", "5%", 5), rate("rate-7", "7%", 7, { active: false }), rate("rate-8", "8%", 8), rate("rate-10", "10%", 10, { isDefault: true })] }; };
+  reset();
+  return { current, reset };
+});
+vi.mock("@/features/vat-rates/use-vat-catalogue", () => ({ useVatCatalogue: () => ({ catalogue: vat.current.catalogue, loading: false }) }));
 vi.mock("./repository", async (original) => ({ ...(await original<typeof import("./repository")>()), inputRepository: repo }));
 import { ItemFormDialog } from "./item-form-dialog";
 import { ToastProvider } from "@/components/ui/toast-provider";
@@ -13,6 +21,7 @@ const unit = (n: number, name: string) => ({ id: id(n), name, itemCount: 0, isUs
 const saved = { id: id(1), code: "VT000001", name: "Phao nhựa", group: "Material", unit: "cái", units: [], onHand: 0, stockValue: 0, statusId: 101, status: "In Use", createdAt: "2026-11-10T00:00:00+07:00", rowVersion: "v1" };
 
 beforeEach(() => {
+  vat.reset();
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
   Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } });
   repo.groups.mockResolvedValue({ status: "success", data: [] });
@@ -120,24 +129,51 @@ it("keeps the loại hàu bán ra of a seed not yet used as a select", async () 
   expect(screen.queryByText("Giống đã dùng nên không đổi được loại hàu bán ra")).toBeNull();
 });
 
-it("starts a new supply item at 10% VAT mua vào, sends the rate picked, and keeps the seed form free of it", async () => {
+it("starts a new supply item at the default VAT mua vào of the catalogue, offers its active rates, sends the rate picked, and keeps the seed form free of it", async () => {
   repo.products.mockResolvedValue({ status: "success", data: [{ id: id(7), name: "Hàu béo" }] });
   const { user } = await open();
   const rate = screen.getByLabelText("VAT mua vào (%)") as HTMLSelectElement;
-  expect(rate.value).toBe("10");
-  expect(within(rate).getAllByRole("option").map((option) => option.textContent)).toEqual(["KCT", "0", "5", "8", "10"]);
+  expect(rate.value).toBe("rate-10");
+  expect(within(rate).getAllByRole("option").map((option) => option.textContent)).toEqual(["KCT", "5%", "8%", "10%"]);
   await user.type(screen.getByLabelText("Tên hàng *"), "Phao nhựa");
   await user.selectOptions(screen.getByLabelText("Đơn vị cơ bản"), id(3));
-  await user.selectOptions(rate, "8");
+  await user.selectOptions(rate, "rate-8");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(repo.save).toHaveBeenCalled());
-  expect(repo.save.mock.calls[0][0]).toMatchObject({ group: "Material", purchaseVatRate: "8" });
+  expect(repo.save.mock.calls[0][0]).toMatchObject({ group: "Material", purchaseVatRateId: "rate-8" });
   await user.selectOptions(screen.getByLabelText("Loại hàng"), "Seed");
   expect(screen.queryByLabelText("VAT mua vào (%)")).toBeNull();
 });
 
 it("opens a supply item saved at KCT with KCT", async () => {
-  const record = { ...saved, purchaseVatRate: "KCT", units: [{ id: id(2), unitId: id(3), name: "cái", factor: 1, code: "VT000001-C", isBase: true, isUsed: false }], rowVersion: "v1", photos: [], hasMovements: false, openingQuantity: null } as never;
+  const record = { ...saved, purchaseVatRateId: "rate-kct", purchaseVatRateName: "KCT", purchaseVatPercent: null, units: [{ id: id(2), unitId: id(3), name: "cái", factor: 1, code: "VT000001-C", isBase: true, isUsed: false }], rowVersion: "v1", photos: [], hasMovements: false, openingQuantity: null } as never;
   await open({ record });
-  expect((screen.getByLabelText("VAT mua vào (%)") as HTMLSelectElement).value).toBe("KCT");
+  expect((screen.getByLabelText("VAT mua vào (%)") as HTMLSelectElement).value).toBe("rate-kct");
+});
+
+it("still shows the name of a rate that was switched off on an item that has it, and saves the item without sending that rate", async () => {
+  const record = { ...saved, purchaseVatRateId: "rate-7", purchaseVatRateName: "7%", purchaseVatPercent: 7, units: [{ id: id(2), unitId: id(3), name: "cái", factor: 1, code: "VT000001-C", isBase: true, isUsed: false }], rowVersion: "v1", photos: [], hasMovements: false, openingQuantity: null } as never;
+  const { user } = await open({ record });
+  const rate = screen.getByLabelText("VAT mua vào (%)") as HTMLSelectElement;
+  expect(rate.value).toBe("rate-7");
+  expect(within(rate).getAllByRole("option").map((option) => option.textContent)).toEqual(["KCT", "5%", "8%", "10%", "7%"]);
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await waitFor(() => expect(repo.save).toHaveBeenCalled());
+  expect(repo.save.mock.calls[0][0]).not.toHaveProperty("purchaseVatRateId");
+});
+
+it("works against an API without the catalogue: the old five rates, 10% first, saved under the old field", async () => {
+  const { legacyVatCatalogue } = await import("./vat-rate");
+  vat.current.catalogue = legacyVatCatalogue as never;
+  const { user } = await open();
+  const rate = screen.getByLabelText("VAT mua vào (%)") as HTMLSelectElement;
+  expect(rate.value).toBe("10");
+  expect(within(rate).getAllByRole("option").map((option) => option.textContent)).toEqual(["KCT", "0%", "5%", "8%", "10%"]);
+  await user.type(screen.getByLabelText("Tên hàng *"), "Phao nhựa");
+  await user.selectOptions(screen.getByLabelText("Đơn vị cơ bản"), id(3));
+  await user.selectOptions(rate, "5");
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await waitFor(() => expect(repo.save).toHaveBeenCalled());
+  expect(repo.save.mock.calls[0][0]).toMatchObject({ purchaseVatRate: "5" });
+  expect(repo.save.mock.calls[0][0]).not.toHaveProperty("purchaseVatRateId");
 });
