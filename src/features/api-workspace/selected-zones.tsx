@@ -14,13 +14,15 @@ export type SelectedZones = Readonly<{
   allSelected: boolean;
   label: string;
   selectAll(): void;
+  /** Narrows the header to exactly this zone (a screen filter that picks one zone writes it here, so header and screen never disagree). */
+  selectOnly(zoneId: string): void;
   toggle(zoneId: string): void;
   reload(): void;
 }>;
 
 const noop = () => {};
 // Outside the provider (mock runtime, isolated screens) nothing is narrowed.
-const unscoped: SelectedZones = { status: "idle", zones: [], selectedIds: [], allSelected: true, label: "Tất cả vùng nuôi", selectAll: noop, toggle: noop, reload: noop };
+const unscoped: SelectedZones = { status: "idle", zones: [], selectedIds: [], allSelected: true, label: "Tất cả vùng nuôi", selectAll: noop, selectOnly: noop, toggle: noop, reload: noop };
 const SelectedZonesContext = createContext<SelectedZones>(unscoped);
 
 /** The In Use zones the signed-in account may see and the subset chosen in the header; the choice is remembered per browser. */
@@ -41,6 +43,8 @@ export function SelectedZonesProvider({ accountId, enabled, children }: Readonly
       status: !enabled ? "idle" : remote.error ? "error" : remote.data ? "ready" : "loading",
       zones, ...selection, label: zoneSelectionLabel(zones, selection),
       selectAll: () => save({ kind: "all" }),
+      // A zone the header does not list (discontinued, or not visible) is ignored; one zone out of one is "all".
+      selectOnly: (zoneId) => { if (zones.some(zone => zone.id === zoneId)) save(zones.length === 1 ? { kind: "all" } : { kind: "ids", ids: [zoneId] }); },
       toggle: (zoneId) => save(toggleZoneSelection(zones, selection, zoneId)),
       reload: remote.reload,
     };
