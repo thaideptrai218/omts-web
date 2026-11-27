@@ -15,13 +15,25 @@ describe("employee GET requests and wire query", () => {
   });
 
   it("preserves Unicode, phone prefix and metacharacters through one URL round-trip", () => {
-    const query = { search: "  Nguyễn +84900000000 & statusId=402 / %20  ", statusId: 401, zoneId: workingZoneId, page: 2, pageSize: 100 };
+    const query = { search: "  Nguyễn +84900000000 & statusId=402 / %20  ", statusId: 401, zoneIds: [workingZoneId], page: 2, pageSize: 100 };
     const result = prepareEmployeeReadRequest({ endpoint: "employeeList", query });
     if (result.status !== "prepared") throw new Error("Expected GET");
     const url = new URL(result.request.path, "https://backend.example.test");
     expect(url.searchParams.getAll("search")).toEqual([query.search]);
     expect(url.searchParams.getAll("statusId")).toEqual(["401"]);
     expect(parseEmployeeListSearchParams(url.searchParams)).toEqual({ status: "parsed", query });
+  });
+
+  it("reads zoneIds as one comma list, drops repeats and sends one repeated zoneIds to the backend", () => {
+    const other = "7c1d0a8e-3d3a-4f6b-9e57-2a3c7f1d0b0a";
+    const parsed = parseEmployeeListSearchParams(new URLSearchParams({ zoneIds: `${workingZoneId},${other},${workingZoneId}` }));
+    expect(parsed).toMatchObject({ status: "parsed", query: { zoneIds: [workingZoneId, other] } });
+    if (parsed.status !== "parsed") throw new Error("Expected a parsed query");
+    const prepared = prepareEmployeeReadRequest({ endpoint: "employeeList", query: parsed.query });
+    if (prepared.status !== "prepared") throw new Error("Expected GET");
+    expect(new URL(prepared.request.path, "https://backend.example.test").searchParams.getAll("zoneIds")).toEqual([workingZoneId, other]);
+    const many = Array.from({ length: 51 }, (_, index) => `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`).join(",");
+    expect(parseEmployeeListSearchParams(new URLSearchParams({ zoneIds: many }))).toEqual({ status: "invalid-input" });
   });
 
   it("keeps omitted status/all separate from employed/left and preserves empty search", () => {
@@ -36,7 +48,7 @@ describe("employee GET requests and wire query", () => {
   it.each([
     "page=0", "page=-1", "page=1.5", "page=1junk", "page=", "page=2147483648", "page=1e2",
     "pageSize=101", "pageSize=0", "statusId=301", "statusId=Employed", "statusId=",
-    "zoneId=mock-zone", "zoneId=", "url=https://other.example.test", "__proto__=x",
+    "zoneId=mock-zone", "zoneIds=mock-zone", "zoneIds=", `zoneIds=${workingZoneId},mock-zone`, `zoneIds=${workingZoneId}&zoneIds=${workingZoneId}`, `zoneId=${workingZoneId}`, "url=https://other.example.test", "__proto__=x",
     "page=1&page=2", "search=An&search=Binh", "zoneId=x&zoneId=y",
   ])("rejects incompatible or ambiguous query: %s", (query) => {
     expect(parseEmployeeListSearchParams(new URLSearchParams(query))).toEqual({ status: "invalid-input" });

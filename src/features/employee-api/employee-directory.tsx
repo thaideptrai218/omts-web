@@ -7,6 +7,7 @@ import { HelpLink, ManagementLayout } from "@/components/ui/management-screen/ma
 import { BulkBar, ColumnPicker, ListStateMessage, ManagementScroller, type SortState } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { ScreenGuide, type GuideStep } from "@/components/ui/screen-guide";
+import { ALL_ZONES, useZoneFilter } from "@/features/api-workspace/zone-filter";
 import { useLinkedZone } from "@/features/farming-management/use-linked-zone";
 import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { createOperationsRepository } from "@/features/operations/repository";
@@ -39,7 +40,9 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   // A link from another screen (for example a zone's staff tab) opens one employee: ?recordId=<id>&search=<name>.
   const params = useSearchParams(), linkedSearch = params?.get("search") ?? "", linkedId = params?.get("recordId") ?? undefined;
   const [search, setSearch] = useState(linkedSearch), [term, setTerm] = useState(linkedSearch.trim());
-  const [statusId, setStatusId] = useState(linkedId ? "" : "401"), [zoneId, setZoneId] = useState(params?.get("zoneId") ?? "");
+  const [statusId, setStatusId] = useState(linkedId ? "" : "401");
+  // The zone filter is the header selection. A link to a zone the header does not list (a discontinued one) is read-only: it filters by that zone until the rail is set back to the header.
+  const zoneFilter = useZoneFilter(), [linkCleared, setLinkCleared] = useState(false);
   const [employeeType, setEmployeeType] = useState(""), [jobTypeId, setJobTypeId] = useState("");
   // Simple account filter (Owner only): ?account=has|none. Role, zones and the account itself are managed on the Tài khoản người dùng screen.
   const accountParam = params?.get("account") ?? "";
@@ -71,27 +74,31 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
     const timer = setTimeout(() => { setTerm(search.trim()); setPage(1); setSelected(new Set()); }, 300);
     return () => clearTimeout(timer);
   }, [search]);
+  const linkedZone = useLinkedZone(linkCleared ? "" : params?.get("zoneId") ?? "", id => !zoneFilter.zones.length || zoneFilter.zones.some(zone => zone.id === id));
+  const zoneIds = linkedZone.zone?.id ?? zoneFilter.apiZoneIds ?? "";
+  // A zone change made in the header (not only in the rail) starts the list again at page 1 (state adjusted while rendering).
+  const [seenZones, setSeenZones] = useState(zoneIds);
+  if (seenZones !== zoneIds) { setSeenZones(zoneIds); setPage(1); setSelected(new Set()); }
   const order = { sortBy: sort?.key, sortDir: sort?.direction };
   const list = useEmployeeDirectoryList(useCallback((signal: AbortSignal) => {
     const read = (query: Record<string, string | undefined>, signal: AbortSignal) => repository.read("list", query, employeePageSchema, signal);
-    const base = { zoneId, employeeType, jobTypeId, sortBy: sort?.key, sortDir: sort?.direction };
+    const base = { zoneIds, employeeType, jobTypeId, sortBy: sort?.key, sortDir: sort?.direction };
     if (filterNeedsAccounts(accountFilter)) return readWithAccountFilter(index => readSelectionPages(read, { ...base, search: "", page: String(index), pageSize: "100" }, { statusId }, signal), accountFilter, term, page, pageSize);
     // The backend searches name, code and phone only; a typed login name is matched web-side on top of it.
     return searchWithAccountNames(term, pageSize,
       () => readSelectionPages(read, { ...base, search: term, page: String(page), pageSize: String(pageSize) }, { statusId }, signal),
       accountPage => readSelectionPages(read, { ...base, search: "", page: String(accountPage), pageSize: "100" }, { statusId }, signal));
-  }, [repository, term, statusId, zoneId, employeeType, jobTypeId, accountFilter, sort, page, pageSize]));
+  }, [repository, term, statusId, zoneIds, employeeType, jobTypeId, accountFilter, sort, page, pageSize]));
   const zones = useRemote(useCallback((signal: AbortSignal) => loadInUseZones(signal), []));
   const jobTypes = useRemote(useCallback((signal: AbortSignal) => repository.read("job-types", {}, jobTypeOptionsSchema, signal), [repository]));
   // A link to a discontinued zone filters by that zone and shows it as one extra option; editors still get In Use zones only.
-  const linkedZone = useLinkedZone(zoneId, id => !zones.data || zones.data.some(zone => zone.id === id));
   const lookupsReady = !!zones.data && !!jobTypes.data && !zones.loading && !jobTypes.loading;
   // Export of the current filters and sort (no paging) or of the ticked rows only (ids replace the filters).
   // The server knows nothing of the account filter, so with it on the rows are read here and exported by id: the file holds what the list shows.
   const exportAll = useEmployeeFileAction(async () => {
-    if (!filterNeedsAccounts(accountFilter)) return employeeFileRepository.exportFile({ search: term, statusId, zoneId, employeeType, jobTypeId, ...order });
+    if (!filterNeedsAccounts(accountFilter)) return employeeFileRepository.exportFile({ search: term, statusId, zoneIds, employeeType, jobTypeId, ...order });
     const read = (query: Record<string, string | undefined>, signal: AbortSignal) => repository.read("list", query, employeePageSchema, signal);
-    const signal = AbortSignal.timeout(60_000), base = { zoneId, employeeType, jobTypeId, sortBy: sort?.key, sortDir: sort?.direction };
+    const signal = AbortSignal.timeout(60_000), base = { zoneIds, employeeType, jobTypeId, sortBy: sort?.key, sortDir: sort?.direction };
     const matched = await readWithAccountFilter(index => readSelectionPages(read, { ...base, search: "", page: String(index), pageSize: "100" }, { statusId }, signal), accountFilter, term, 1, 5000);
     if (matched.status !== "success") return matched;
     if (!matched.data.items.length) return { status: "error" as const, httpStatus: 400, uncertain: false };
@@ -103,12 +110,12 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
   const duplicateNote = (employee: Employee) => employee.duplicateIdNumber ? ` Cảnh báo: số CCCD này trùng với ${employee.duplicateIdNumber.fullName} (${employee.duplicateIdNumber.code}).` : "";
   function saved(employee: Employee, note?: string) { refresh(); setNotice(`Đã cập nhật hồ sơ nhân viên.${note ? ` ${note}` : ""}${duplicateNote(employee)}`); }
   function retry() { refresh(); zones.reload(); }
-  const hasFilters = !!search || !!zoneId || statusId !== "401" || !!employeeType || !!jobTypeId || !!accountFilter;
-  const resetFilters = () => { setSearch(""); setTerm(""); setStatusId("401"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setAccountFilter(""); };
+  const hasFilters = !!search || !!linkedZone.zone || statusId !== "401" || !!employeeType || !!jobTypeId || !!accountFilter;
+  const resetFilters = () => { setSearch(""); setTerm(""); setStatusId("401"); setLinkCleared(true); setEmployeeType(""); setJobTypeId(""); setAccountFilter(""); };
   /** An account was created from a profile: the username column follows. */
   const accountChanged = () => list.reload();
   const filters = <EmployeeDirectoryFilters employeeType={employeeType} setEmployeeType={value => filter(() => setEmployeeType(value))} statusId={statusId} setStatusId={value => filter(() => setStatusId(value))}
-    zoneId={zoneId} setZoneId={value => filter(() => setZoneId(value))} zones={linkedZone.zone ? [...(zones.data ?? []), linkedZone.zone] : zones.data ?? []} jobTypeId={jobTypeId} setJobTypeId={value => filter(() => setJobTypeId(value))} jobTypes={jobTypes.data ?? []}
+    zoneFilter={zoneFilter} onZoneChange={filter} pinnedZone={linkedZone.zone} onClearPinnedZone={() => filter(() => setLinkCleared(true))} jobTypeId={jobTypeId} setJobTypeId={value => filter(() => setJobTypeId(value))} jobTypes={jobTypes.data ?? []}
     hasFilters={hasFilters} onReset={() => filter(resetFilters)}
     accountFilter={access.manage ? accountFilter : undefined} setAccountFilter={value => filter(() => setAccountFilter(value))} />;
   const selection = { selected, onToggle: (id: string, on: boolean) => setSelected(current => { const next = new Set(current); if (on) next.add(id); else next.delete(id); return next; }),
@@ -143,7 +150,7 @@ export function EmployeeDirectory({ readOnly = false, access = { manage: true, p
           sort={sort ?? { key: "", direction: "asc" }} onSort={next => filter(() => setSort(next))} selection={readOnly ? undefined : selection} />}
     </ManagementScroller>
     {creating && <EmployeeApiEditor key={serial} record={null} zones={zones.data ?? []} jobTypes={jobTypes.data ?? []} lookupsReady={lookupsReady} onClose={() => setCreating(false)} onAdopt={() => {}} onSaved={employee => {
-      setCreating(false); setSearch(employee.fullName); setTerm(employee.fullName); setStatusId(employee.status === "Employed" ? "401" : "402"); setZoneId(""); setEmployeeType(""); setJobTypeId(""); setPage(1); setSelected(new Set()); refresh(); setNotice(`Đã lưu hồ sơ nhân viên.${duplicateNote(employee)}`);
+      setCreating(false); setSearch(employee.fullName); setTerm(employee.fullName); setStatusId(employee.status === "Employed" ? "401" : "402"); setLinkCleared(true); zoneFilter.set(ALL_ZONES); setEmployeeType(""); setJobTypeId(""); setPage(1); setSelected(new Set()); refresh(); setNotice(`Đã lưu hồ sơ nhân viên.${duplicateNote(employee)}`);
     }} />}
     {importing && <EmployeeImportDialog onClose={() => setImporting(false)} onImported={count => { setNotice(`Đã nhập ${count} nhân viên.`); setPage(1); setSelected(new Set()); refresh(); }} />}
   </ManagementLayout></>;

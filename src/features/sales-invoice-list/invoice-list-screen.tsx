@@ -10,7 +10,7 @@ import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-fi
 import { allTime, presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
-import { SelectBox } from "@/components/ui/select-box";
+import { ZoneFilterField, useZoneFilter } from "@/features/api-workspace/zone-filter";
 import { customerHref } from "@/features/customers/customer-links";
 import { ErrorNotice, businessToday, operationError, useMutation } from "@/features/operations/ui";
 import { fmt, viDate, viDateTime } from "@/features/purchase-documents/document-parts";
@@ -62,13 +62,13 @@ export function SalesInvoiceListScreen(props: { helpHref?: string }) {
  * starts it again: the search box shows the code, the longest period is searched and the invoice with exactly that code opens.
  */
 function InvoiceList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
-  const access = useInvoiceAccess(), exportFile = useMutation(), [today] = useState(businessToday), linkPending = useRef(linkedCode);
+  const access = useInvoiceAccess(), zone = useZoneFilter(), zoneIds = zone.apiZoneIds, exportFile = useMutation(), [today] = useState(businessToday), linkPending = useRef(linkedCode);
   const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>(emptyFilters), [time, setTime] = useState<TimeRangeValue>(() => linkedCode ? allTime : presetValue("thisMonth"));
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(pageSizes[0]), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SearchResult>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const [stored, store] = useStoredValue("omts-columns-sales-invoice-list", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
-  const problem = timeProblem(time), query = useMemo(() => toQuery({ search, time, filters }, today), [search, time, filters, today]);
+  const problem = timeProblem(time), query = useMemo(() => toQuery({ search, time, filters, zoneIds }, today), [search, time, filters, zoneIds, today]);
 
   useEffect(() => {
     if (!access.view || problem) return;
@@ -87,11 +87,14 @@ function InvoiceList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
     return () => { clearTimeout(timer); controller.abort(); };
   }, [access.view, problem, query, page, pageSize, refresh]);
 
+  // The zone is the header selection: a change made in the header starts the list again at page 1 as well (state adjusted while rendering).
+  const [seenZones, setSeenZones] = useState(zoneIds);
+  if (seenZones !== zoneIds) { setSeenZones(zoneIds); setPage(1); setExpanded(undefined); }
   function changed<T>(apply: (value: T) => void) { return (value: T) => { apply(value); setPage(1); setExpanded(undefined); }; }
   const setFilter = <K extends keyof Filters>(key: K) => changed<Filters[K]>((value) => setFilters((current) => ({ ...current, [key]: value })));
   const reload = () => setRefresh((value) => value + 1);
   const defaultTime = linkedCode ? allTime : presetValue("thisMonth");
-  const hasFilter = JSON.stringify(filters) !== JSON.stringify(emptyFilters) || time.from !== defaultTime.from || time.to !== defaultTime.to;
+  const hasFilter = JSON.stringify(filters) !== JSON.stringify(emptyFilters) || !!zoneIds || time.from !== defaultTime.from || time.to !== defaultTime.to;
   const open = (id: string) => setExpanded((value) => value === id ? undefined : id);
   if (!access.view) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
 
@@ -99,8 +102,7 @@ function InvoiceList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
     <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(presetValue("thisMonth")); })()}>Đặt lại</button></div>
     <FilterPills legend="Trạng thái" name="invoice-status" value={filters.status} options={[[String(INVOICE.completed), "Hoàn thành"], [String(INVOICE.cancelled), "Đã hủy"]]} onChange={(value) => setFilter("status")(value as Filters["status"])} />
     <TimeRangeFilter legend="Thời gian" value={time} onChange={changed<TimeRangeValue>(setTime)} />
-    <FilterGroup legend="Vùng"><SelectBox aria-label="Vùng" className={styles.railSelect} value={filters.zoneId} onChange={(event) => setFilter("zoneId")(event.target.value)}>
-      <option value="">Tất cả vùng của tôi</option>{access.zoneOptions.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}</SelectBox></FilterGroup>
+    <ZoneFilterField filter={zone} className={styles.railSelect} />
     <FilterGroup legend="Khách hàng"><RailFinder label="Tìm khách hàng" placeholder="Tên hoặc số điện thoại" icon="user" value={filters.customer} search={searchCustomers} onChange={setFilter("customer")} /></FilterGroup>
     <FilterGroup legend="Lô thu hoạch"><RailFinder label="Tìm lô thu hoạch" placeholder="Mã lô, ví dụ B03" icon="product" minLength={2} value={filters.lot} search={searchLots} onChange={setFilter("lot")} /></FilterGroup>
     <FilterPills legend="Tình trạng thu tiền" name="invoice-paid" value={filters.paid} options={[["true", "Đã trả đủ"], ["false", "Còn nợ"]]} onChange={(value) => setFilter("paid")(value as Filters["paid"])} />

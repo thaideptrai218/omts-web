@@ -1,7 +1,7 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { useScopedZones } from "@/features/api-workspace/selected-zones";
+import { useScopedZones, useSelectedZones } from "@/features/api-workspace/selected-zones";
 import { DISCONTINUED, readInUseZones, type ZoneRow } from "@/features/zones-api/zone-model";
 import { useLinkedZone } from "./use-linked-zone";
 import { useStickyRemote } from "./use-sticky-remote";
@@ -21,7 +21,9 @@ export function useZoneChoice(allowed?: (zone: ZoneRow) => boolean) {
   const [selection, setSelection] = useState({ linkedZone, choice: linkedZone });
   // Same-route links can change zone without remounting this hook.
   const choice = selection.linkedZone === linkedZone ? selection.choice : linkedZone;
-  const setChoice = (next: string) => setSelection({ linkedZone, choice: next });
+  // Two-way with the header: picking a zone here narrows the header to it, so every screen follows (a zone the header does not list is ignored there).
+  const header = useSelectedZones();
+  const setChoice = (next: string) => { setSelection({ linkedZone, choice: next }); header.selectOnly(next); };
   const remote = useStickyRemote(readInUseZones);
   const inUse = (remote.data ?? []).filter(zone => !allowed || allowed(zone));
   const scoped = useScopedZones(inUse, choice, linkedZone);

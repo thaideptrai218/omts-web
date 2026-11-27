@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { detail, ids, listResult, sent } from "./invoice-list-test-fixtures";
+import { HeaderZones, chooseHeaderZones, headerZoneIds } from "@/test/header-zones";
 
 const { read, write, download, workspace, zones, push, orderDetail, notify, customers } = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), download: vi.fn(), workspace: vi.fn(), zones: vi.fn(), push: vi.fn(), orderDetail: vi.fn(), notify: vi.fn(), customers: vi.fn() }));
 vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify }) }));
@@ -10,6 +11,7 @@ vi.mock("@/features/sales-orders/repository", () => ({ orderRepository: { detail
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => ({ read, write, download }) }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: workspace }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: zones }));
+vi.mock("@/features/zones-api/in-use-zones", async () => (await import("@/test/header-zone-rows")).inUseZonesMock);
 vi.mock("@/features/customers/repository", async (original) => ({ ...(await original<typeof import("@/features/customers/repository")>()), customerRepository: { list: customers } }));
 import { SalesInvoiceListScreen } from "./invoice-list-screen";
 
@@ -25,7 +27,7 @@ const openRow = async () => { render(<SalesInvoiceListScreen />); fireEvent.clic
 beforeEach(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
   Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } });
-  workspace.mockReturnValue(owner); zones.mockResolvedValue({ status: "success", data: [{ id: ids.zone, code: "VP01", name: "Vùng nuôi 1" }] });
+  chooseHeaderZones([]); workspace.mockReturnValue(owner); zones.mockResolvedValue({ status: "success", data: [{ id: ids.zone, code: "VP01", name: "Vùng nuôi 1" }] });
   download.mockResolvedValue({ status: "success", data: true });
   orderDetail.mockResolvedValue({ status: "error", httpStatus: 403, uncertain: false });
   customers.mockResolvedValue({ status: "success", data: { items: [{ id: ids.customer, code: "KH000001", name: "Nguyễn Văn Hùng", phoneNumber: "0912345678" }], page: 1, pageSize: 8, total: 1 } });
@@ -98,6 +100,18 @@ describe("SalesInvoiceListScreen", () => {
     expect(screen.queryByRole("button", { name: "Gửi lại" })).toBeNull(); expect(screen.queryByRole("button", { name: "Tạo phiếu trả hàng bán" })).toBeNull(); expect(screen.getByRole("button", { name: "In" })).toBeTruthy();
   });
 
+  it("follows the header zones for the list and the file, and the rail widens the header", async () => {
+    chooseHeaderZones([headerZoneIds[0], headerZoneIds[2]]); serve(); render(<HeaderZones><SalesInvoiceListScreen /></HeaderZones>);
+    await waitFor(() => expect(read.mock.calls.at(-1)![1]).toMatchObject({ zoneIds: `${headerZoneIds[0]},${headerZoneIds[2]}`, page: "1" }));
+    const select = await screen.findByLabelText("Vùng nuôi", { selector: "select" }) as HTMLSelectElement;
+    expect(select.selectedOptions[0].textContent).toBe("2 vùng đã chọn");
+    await screen.findByRole("button", { name: rowButton });
+    fireEvent.click(screen.getByRole("button", { name: "Xuất file" }));
+    await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
+    expect(download.mock.calls[0][0]).toMatchObject({ zoneIds: `${headerZoneIds[0]},${headerZoneIds[2]}` });
+    fireEvent.change(select, { target: { value: "" } });
+    await waitFor(() => expect(read.mock.calls.at(-1)![1].zoneIds).toBeUndefined());
+  });
   it("exports the list with the applied filters", async () => {
     serve(); render(<SalesInvoiceListScreen />); await screen.findByRole("button", { name: rowButton });
     fireEvent.click(screen.getByRole("button", { name: "Xuất file" }));

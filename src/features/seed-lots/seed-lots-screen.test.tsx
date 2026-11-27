@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.linked ? { code: state.linked } : {}), useRouter: () => ({ push: state.push }) }));
 vi.mock("./repository", () => ({ seedLotRepository: { list: state.list, exportList: state.exportList, detail: state.detail } }));
-vi.mock("@/features/input-issues/issue-access", () => ({ useZoneOptions: () => ({ zones: [{ id: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11", code: "V01", name: "Vùng 1", inUse: true }], loading: false }) }));
+vi.mock("@/features/zones-api/in-use-zones", async () => (await import("@/test/header-zone-rows")).inUseZonesMock);
 vi.mock("@/features/purchase-documents/repository", async (original) => ({
   ...(await original<typeof import("@/features/purchase-documents/repository")>()),
   usePurchaseLookups: () => ({ suppliers: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08", code: "NCC000001", name: "Trại giống Vân Đồn", phone: "" }], rafts: [], receivers: [], loading: false, refresh: vi.fn(),
@@ -18,6 +18,7 @@ vi.mock("@/features/purchase-documents/repository", async (original) => ({
 import { SeedLotsScreen } from "./seed-lots-screen";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { ids, seedLotDetailFixture, seedLotRowFixture } from "./seed-lot-test-fixtures";
+import { HeaderZones, chooseHeaderZones, headerZoneIds } from "@/test/header-zones";
 
 const totals = { receivedQty: 1000, returnedQty: 100, nursingQty: 0, nurseryLossQty: 0, seededQty: 400, remainingQty: 500 };
 const page = (items: unknown[] = [seedLotRowFixture()], patch: object = {}) => ({ status: "success", data: { items, page: 1, pageSize: 15, total: items.length, totals, ...patch } });
@@ -25,13 +26,13 @@ const owner = () => { state.context.identity.subjectType = "CooperativeOwner"; }
 const grant = (...pairs: [string, string][]) => { state.context.permissions.functionPermissions = pairs.map(([functionCode, action]) => ({ functionCode, action, dataScope: "AssignedZone", scope: { kind: "all-zones" } })); };
 
 beforeEach(() => {
-  try { window.localStorage.clear(); } catch { /* storage may be unavailable */ }
+  chooseHeaderZones([]);
   state.linked = ""; state.context.identity.subjectType = "Staff"; state.context.permissions.functionPermissions = [];
   state.list.mockResolvedValue(page());
   state.detail.mockResolvedValue({ status: "success", data: seedLotDetailFixture() });
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
-const mount = () => render(<ToastProvider><SeedLotsScreen /></ToastProvider>);
+const mount = () => render(<ToastProvider><HeaderZones><SeedLotsScreen /></HeaderZones></ToastProvider>);
 
 it("shows nothing and calls nothing to an account that may not read the receipts", async () => {
   mount();
@@ -72,8 +73,6 @@ it("sends every filter to the server, fixes nothing but what the user picks, and
   fireEvent.change(screen.getByLabelText("Giống"), { target: { value: ids.item } });
   await waitFor(() => expect(last()).toMatchObject({ itemId: ids.item }));
   expect(screen.getByLabelText("Giống").querySelectorAll("option")).toHaveLength(2);
-  fireEvent.change(screen.getByLabelText("Vùng"), { target: { value: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11" } });
-  await waitFor(() => expect(last()).toMatchObject({ zoneId: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11" }));
   fireEvent.change(screen.getByLabelText("Tìm lô giống"), { target: { value: "PN0000" } });
   await waitFor(() => expect(last()).toMatchObject({ search: "PN0000" }));
   expect(last()).toMatchObject({ supplierId: ids.supplier, itemId: ids.item });
@@ -126,4 +125,25 @@ it("exports the filtered list only to an account that may export", async () => {
   mount();
   await screen.findByText("PN000004-1");
   expect(screen.queryByRole("button", { name: /Xuất file/ })).toBeNull();
+});
+
+// The zone filter is the header zone chip: the rail shows what the header holds and writing it narrows the header, so several zones travel as one comma list.
+it("follows the header zones both ways and sends them as one comma list", async () => {
+  owner(); mount();
+  await screen.findByText("PN000004-1");
+  const last = () => state.list.mock.calls.at(-1)![0], zone = () => screen.getByLabelText("Vùng") as HTMLSelectElement;
+  expect(zone().selectedOptions[0].textContent).toBe("Tất cả vùng nuôi");
+  expect(last().zoneIds).toBeUndefined();
+  fireEvent.change(zone(), { target: { value: headerZoneIds[1] } });
+  await waitFor(() => expect(last()).toMatchObject({ zoneIds: headerZoneIds[1], page: "1" }));
+  expect(JSON.parse(localStorage.getItem("omts.selected-zones.v1.header-zones-test")!)).toEqual({ kind: "ids", ids: [headerZoneIds[1]] });
+  fireEvent.change(zone(), { target: { value: "" } });
+  await waitFor(() => expect(last().zoneIds).toBeUndefined());
+});
+
+it("opens on a header subset: the rail says how many zones are chosen and the list asks for exactly those", async () => {
+  owner(); chooseHeaderZones([headerZoneIds[0], headerZoneIds[2]]); mount();
+  await screen.findByText("PN000004-1");
+  await waitFor(() => expect(state.list.mock.calls.at(-1)![0].zoneIds).toBe(`${headerZoneIds[0]},${headerZoneIds[2]}`));
+  expect((screen.getByLabelText("Vùng") as HTMLSelectElement).selectedOptions[0].textContent).toBe("2 vùng đã chọn");
 });

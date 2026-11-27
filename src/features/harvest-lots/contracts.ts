@@ -39,7 +39,7 @@ export type LotPage = z.infer<typeof lotPage>;
 export type LotMovement = z.infer<typeof lotMovement>;
 
 /** Filters of the list, as the query of the BFF carries them (every value is text; an empty one is left out). */
-export type LotListQuery = Partial<Record<"from" | "to" | "zoneId" | "raftId" | "productId" | "statusId" | "weighed" | "closeReason" | "hasPlan" | "search" | "sort" | "desc" | "page" | "pageSize", string>>;
+export type LotListQuery = Partial<Record<"from" | "to" | "zoneId" | "zoneIds" | "raftId" | "productId" | "statusId" | "weighed" | "closeReason" | "hasPlan" | "search" | "sort" | "desc" | "page" | "pageSize", string>>;
 
 const decimals = (places: number) => (value: number) => Math.abs(value * 10 ** places - Math.round(value * 10 ** places)) < 1e-6;
 /** One weighed kg: more than 0, at most 3 decimals. */

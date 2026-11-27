@@ -11,6 +11,7 @@ import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-fi
 import { allTime, presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
+import { useZoneFilter, ZoneFilterField, type ZoneFilter } from "@/features/api-workspace/zone-filter";
 import { listCollectors } from "@/features/cash-book/repository";
 import { ErrorNotice, useMutation, useRemote } from "@/features/operations/ui";
 import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
@@ -20,7 +21,7 @@ import { ISSUE, type IssuePage, type IssueRow, type IssueKind } from "@/features
 import { issueRepository, errorText, type ListQuery } from "@/features/input-items/repository";
 import { IssueDetailPanel } from "./issue-detail";
 import { IssueStatus, IssueTypeDialog } from "./issue-dialogs";
-import { kindInfo, useIssueAccess, useIssueTypes, useReceivers, useZoneOptions, type IssueAccess } from "./issue-access";
+import { kindInfo, useIssueAccess, useIssueTypes, useReceivers, type IssueAccess } from "./issue-access";
 import styles from "./input-issues.module.css";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
@@ -39,6 +40,7 @@ const columns: readonly Column[] = [
   { key: "notes", label: "Ghi chú", hidden: true, render: (row) => dash(row.notes) },
   { key: "status", label: "Trạng thái", sort: "status", render: (row) => <IssueStatus statusId={row.statusId} /> },
 ];
+/** `zone` is the zone the raft and the receiver were chosen under: the Bè and Người nhận filters need exactly one zone of the header and no longer apply when it changes. */
 const emptyFilters = { status: "", zone: "", raft: "", type: "", createdById: "", receiver: "" };
 type Filters = typeof emptyFilters;
 const statuses: readonly (readonly [string, string])[] = [["Draft", "Phiếu tạm"], ["Completed", "Hoàn thành"], ["Cancelled", "Đã hủy"]];
@@ -64,14 +66,19 @@ function IssuesList({ kind, helpHref, linkedCode }: { kind: IssueKind; helpHref?
   const defaults = useMemo(() => offered.filter((column) => !column.hidden).map((column) => column.key).join(","), [offered]);
   const [stored, store] = useStoredValue(`omts-columns-input-issues-${kind.toLowerCase()}`, defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = offered.filter((column) => keys.includes(column.key)); return shown.length ? shown : offered; }, [stored, offered]);
+  // A use issue belongs to a zone, so its zone filter is the header zone chip (two-way); a disposal has no zone.
+  const zoneFilter = useZoneFilter(), zoneId = use ? zoneFilter.singleZoneId ?? "" : "", zoneIds = use ? zoneFilter.apiZoneIds : undefined;
+  const raftId = zoneId && filters.zone === zoneId ? filters.raft : "", receiverId = zoneId && filters.zone === zoneId ? filters.receiver : "";
+  const [shownZones, setShownZones] = useState(zoneIds);
+  if (shownZones !== zoneIds) { setShownZones(zoneIds); setPage(1); setExpanded(undefined); }
   const canPeople = access.can("CASH_BOOK", "View");
   const creators = useRemote(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<{ id: string; name: string }[] | undefined>> => canPeople ? listCollectors(signal) : { status: "success", data: undefined }, [canPeople]));
 
   const query = useMemo<ListQuery>(() => {
-    const values: Record<string, string> = { search: search.trim(), kind, status: filters.status, from: time.from, to: time.to, zoneId: filters.zone, raftId: filters.raft, issueTypeId: filters.type,
-      createdById: filters.createdById, receiverId: filters.receiver, sortBy: sort.key, sortDir: sort.direction };
+    const values: Record<string, string> = { search: search.trim(), kind, status: filters.status, from: time.from, to: time.to, zoneIds: zoneIds ?? "", raftId, issueTypeId: filters.type,
+      createdById: filters.createdById, receiverId, sortBy: sort.key, sortDir: sort.direction };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ""));
-  }, [search, kind, filters, time, sort]);
+  }, [search, kind, filters.status, filters.type, filters.createdById, raftId, receiverId, zoneIds, time, sort]);
 
   useEffect(() => {
     if (!access.view) return;
@@ -93,10 +100,10 @@ function IssuesList({ kind, helpHref, linkedCode }: { kind: IssueKind; helpHref?
 
   function changed<T>(apply: (value: T) => void) { return (value: T) => { apply(value); setPage(1); setExpanded(undefined); }; }
   const setFilter = (key: keyof Filters) => changed<string>((value) => setFilters((current) => ({ ...current, [key]: value })));
-  const setZone = changed<string>((zone) => setFilters((current) => ({ ...current, zone, raft: "", receiver: "" })));
+  const setScoped = (key: "raft" | "receiver") => changed<string>((value) => setFilters((current) => ({ ...(current.zone === zoneId ? current : { ...current, raft: "", receiver: "" }), zone: zoneId, [key]: value })));
   const reload = () => setRefresh((value) => value + 1);
   const defaultTime = linkedCode ? allTime : presetValue("thisMonth");
-  const hasFilter = Object.values(filters).some((value) => value !== "") || time.kind !== defaultTime.kind || time.from !== defaultTime.from || time.to !== defaultTime.to;
+  const hasFilter = !!(filters.status || filters.type || filters.createdById || raftId || receiverId) || time.kind !== defaultTime.kind || time.from !== defaultTime.from || time.to !== defaultTime.to;
   const toggle = (id: string) => setExpanded((value) => value === id ? undefined : id);
   if (!access.view) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
 
@@ -106,7 +113,7 @@ function IssuesList({ kind, helpHref, linkedCode }: { kind: IssueKind; helpHref?
     <TimeRangeFilter legend="Thời gian" value={time} onChange={changed<TimeRangeValue>(setTime)} />
     {creators.data && <FilterGroup legend="Người tạo"><SelectBox aria-label="Người tạo" className={railSelect} value={filters.createdById} onChange={(event) => setFilter("createdById")(event.target.value)}>
       <option value="">Tất cả</option>{creators.data.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</SelectBox></FilterGroup>}
-    {use && <UseFilters filters={filters} access={access} onZone={setZone} onFilter={setFilter} />}
+    {use && <UseFilters zoneFilter={zoneFilter} zoneId={zoneId} filters={{ ...filters, raft: raftId, receiver: receiverId }} access={access} onFilter={setFilter} onScoped={setScoped} />}
   </>;
   const summary = data?.summary;
 
@@ -144,18 +151,17 @@ function IssuesList({ kind, helpHref, linkedCode }: { kind: IssueKind; helpHref?
 }
 
 /** The filters only a use issue has: where it went, what for and who took it. */
-function UseFilters({ filters, access, onZone, onFilter }: { filters: Filters; access: IssueAccess; onZone(value: string): void; onFilter(key: keyof Filters): (value: string) => void }) {
-  const { zones } = useZoneOptions(), types = useIssueTypes(), lookups = usePurchaseLookups(), receivers = useReceivers(filters.zone), [creating, setCreating] = useState(false);
-  const rafts = lookups.rafts.filter((raft) => !filters.zone || raft.zoneId === filters.zone);
+function UseFilters({ zoneFilter, zoneId, filters, access, onFilter, onScoped }: { zoneFilter: ZoneFilter; zoneId: string; filters: Filters; access: IssueAccess; onFilter(key: keyof Filters): (value: string) => void; onScoped(key: "raft" | "receiver"): (value: string) => void }) {
+  const types = useIssueTypes(), lookups = usePurchaseLookups(), receivers = useReceivers(zoneId), [creating, setCreating] = useState(false);
+  const rafts = lookups.rafts.filter((raft) => raft.zoneId === zoneId);
   return <>
-    <FilterGroup legend="Vùng"><SelectBox aria-label="Vùng" className={railSelect} value={filters.zone} onChange={(event) => onZone(event.target.value)}>
-      <option value="">Tất cả vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</SelectBox></FilterGroup>
-    <FilterGroup legend="Bè"><SelectBox aria-label="Bè" className={railSelect} value={filters.raft} onChange={(event) => onFilter("raft")(event.target.value)}>
-      <option value="">Tất cả bè</option>{rafts.map((raft) => <option key={raft.id} value={raft.id}>{raft.code}</option>)}</SelectBox></FilterGroup>
+    <ZoneFilterField filter={zoneFilter} legend="Vùng" className={railSelect} />
+    <FilterGroup legend="Bè"><SelectBox aria-label="Bè" className={railSelect} disabled={!zoneId} value={filters.raft} onChange={(event) => onScoped("raft")(event.target.value)}>
+      <option value="">{zoneId ? "Tất cả bè" : "Chọn một vùng để lọc theo bè"}</option>{rafts.map((raft) => <option key={raft.id} value={raft.id}>{raft.code}</option>)}</SelectBox></FilterGroup>
     <FilterGroup legend="Loại xuất"><SelectBox aria-label="Loại xuất" className={railSelect} value={filters.type} onChange={(event) => onFilter("type")(event.target.value)}>
       <option value="">Tất cả loại xuất</option>{types.types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</SelectBox>
       {access.owner && <button type="button" className={managementStyles.linkButton} onClick={() => setCreating(true)}>+ Tạo mới</button>}</FilterGroup>
-    {filters.zone && <FilterGroup legend="Người nhận"><SelectBox aria-label="Người nhận" className={railSelect} value={filters.receiver} onChange={(event) => onFilter("receiver")(event.target.value)}>
+    {zoneId && <FilterGroup legend="Người nhận"><SelectBox aria-label="Người nhận" className={railSelect} value={filters.receiver} onChange={(event) => onScoped("receiver")(event.target.value)}>
       <option value="">Tất cả</option>{receivers.receivers.map((person) => <option key={person.id} value={person.id}>{person.fullName}</option>)}</SelectBox></FilterGroup>}
     {creating && <IssueTypeDialog onClose={() => setCreating(false)} onSaved={() => { setCreating(false); types.reload(); }} />}
   </>;

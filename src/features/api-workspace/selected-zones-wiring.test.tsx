@@ -18,14 +18,13 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-it("restricts the raft screen's zone select to the header selection and starts on all selected zones", async () => {
+it("shows the header subset in the raft screen's zone filter and reads only those zones", async () => {
   localStorage.setItem("omts.selected-zones.v1.acc-1", JSON.stringify({ kind: "ids", ids: [zoneId(2), zoneId(3)] }));
   render(<SelectedZonesProvider accountId="acc-1" enabled><ApiResourceScreen resource="rafts" /></SelectedZonesProvider>);
+  // The rail mirrors the header: it names the subset and still offers every zone, since picking one narrows the header to it.
   await screen.findByRole("option", { name: "Z2 · Minh Châu" });
-  expect(screen.queryByRole("option", { name: "Z1 · Ngọc Vừng" })).toBeNull();
-  expect(screen.getByRole("option", { name: "Z3 · Quan Lạn" })).toBeTruthy();
   const select = screen.getByRole("combobox", { name: "Vùng nuôi" }) as HTMLSelectElement;
-  expect(select.selectedOptions[0]?.textContent).toBe("Tất cả vùng đã chọn");
+  expect(select.selectedOptions[0]?.textContent).toBe("2 vùng đã chọn");
   await vi.waitFor(() => {
     expect(state.list).toHaveBeenCalledWith("rafts", expect.objectContaining({ zoneId: zoneId(2) }));
     expect(state.list).toHaveBeenCalledWith("rafts", expect.objectContaining({ zoneId: zoneId(3) }));
@@ -36,9 +35,9 @@ it("restricts the raft screen's zone select to the header selection and starts o
 it("keeps every zone when no narrowing selection exists", async () => {
   render(<SelectedZonesProvider accountId="acc-1" enabled><ApiResourceScreen resource="rafts" /></SelectedZonesProvider>);
   await screen.findByRole("option", { name: "Z1 · Ngọc Vừng" });
-  // Every zone plus "Tất cả vùng đã chọn".
+  // Every zone plus "Tất cả vùng nuôi".
   expect(within(screen.getByRole("combobox", { name: "Vùng nuôi" })).getAllByRole("option").map(option => option.textContent))
-    .toEqual(["Tất cả vùng đã chọn", "Z1 · Ngọc Vừng", "Z2 · Minh Châu", "Z3 · Quan Lạn"]);
+    .toEqual(["Tất cả vùng nuôi", "Z1 · Ngọc Vừng", "Z2 · Minh Châu", "Z3 · Quan Lạn"]);
 });
 
 it("lists In Use zones only in the header and the raft zone select, with no discontinued suffix", async () => {

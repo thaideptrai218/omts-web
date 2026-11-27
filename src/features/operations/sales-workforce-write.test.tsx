@@ -4,11 +4,13 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 const mocks = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), options: vi.fn(), subjectType: "Trader" }));
 vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mocks.read, write: mocks.write }) }));
 vi.mock("./lookups", () => ({ loadOptions: (...args: unknown[]) => mocks.options(...args) }));
+vi.mock("@/features/zones-api/in-use-zones", async () => (await import("@/test/header-zone-rows")).inUseZonesMock);
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subjectType }, permissions: { functionPermissions: [] } }) }));
 import { LeaveEditor, MyWorkScreen } from "./my-work-screen";
 import { AssignmentEditor, WorkforceScreen } from "./workforce-screen";
 import { ids } from "./__tests__/fixtures";
 import { businessToday } from "./ui";
+import { HeaderZones, chooseHeaderZones, headerZoneIds } from "@/test/header-zones";
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
   Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } });
@@ -22,16 +24,21 @@ describe("approved sales/workforce writes and draft safety", () => {
     mocks.subjectType = "CooperativeOwner";
     mocks.options.mockResolvedValue({ status: "success", data: [{ id: ids.item, name: "Vùng Đông" }, { id: ids.receipt, name: "Vùng Tây" }] });
     mocks.read.mockResolvedValue({ status: "success", data: [
-      { id: "a", employeeId: "e1", employeeName: "Nhân viên An", zoneId: ids.item, raftCode: "BE01", job: "Thu hoạch", date: businessToday(), checkedInAt: null, checkedOutAt: null },
-      { id: "b", employeeId: "e2", employeeName: "Nhân viên Bình", zoneId: ids.receipt, raftCode: "BE02", job: "Đo nước", date: businessToday(), checkedInAt: null, checkedOutAt: null },
+      { id: "a", employeeId: "e1", employeeName: "Nhân viên An", zoneId: headerZoneIds[0], raftCode: "BE01", job: "Thu hoạch", date: businessToday(), checkedInAt: null, checkedOutAt: null },
+      { id: "b", employeeId: "e2", employeeName: "Nhân viên Bình", zoneId: headerZoneIds[1], raftCode: "BE02", job: "Đo nước", date: businessToday(), checkedInAt: null, checkedOutAt: null },
     ] });
-    render(<WorkforceScreen />);
+    chooseHeaderZones([]);
+    render(<HeaderZones><WorkforceScreen /></HeaderZones>);
     await screen.findByText("Nhân viên Bình");
-    fireEvent.change(screen.getByLabelText("Vùng làm việc"), { target: { value: ids.item } });
+    fireEvent.change(await screen.findByLabelText("Vùng làm việc"), { target: { value: headerZoneIds[0] } });
     expect(screen.queryByText("Nhân viên Bình")).toBeNull();
     fireEvent.change(screen.getByLabelText("Tìm nhân viên, bè hoặc công việc"), { target: { value: "không khớp" } });
     expect(screen.queryByText("Nhân viên An")).toBeNull();
+    // "Đặt lại" clears the rail's own filters; the zone is the header choice, so it is changed there (or through the rail select).
     fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
+    expect(screen.getByText("Nhân viên An")).toBeTruthy();
+    expect(screen.queryByText("Nhân viên Bình")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Vùng làm việc"), { target: { value: "" } });
     expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
     expect(screen.getByRole("button", { name: `Ngày làm việc: ${businessToday().split("-").reverse().join("/")}` })).toBeTruthy();
     expect(mocks.write).not.toHaveBeenCalled();

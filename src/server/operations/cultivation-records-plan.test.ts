@@ -141,3 +141,22 @@ describe("seeding complete: confirm an empty seeding", () => {
     expect(post("seeding", { action: "complete", id: cycle, zoneId: zone, body: { rowVersion: "AAAA", ownerApproved: true, extra: 1 } })).toBeUndefined();
   });
 });
+
+describe("harvest lot list over several zones", () => {
+  const zones = ["529ec3ce-af8f-42f7-a08f-4bab36ba7e71", "529ec3ce-af8f-42f7-a08f-4bab36ba7e72"];
+  const read = (query: Record<string, string>) => cultivationRecordsPlan("harvest", "GET", new URLSearchParams(query));
+  it("expands the comma list into repeated zoneIds for the list and the file, and leaves the single zone empty so the permission check covers any zone", () => {
+    for (const action of ["lots", "export"]) {
+      const plan = read({ action, zoneIds: zones.join(","), statusId: "2901" });
+      expect(plan?.zoneId).toBeUndefined();
+      const url = new URL(plan!.path, "http://api");
+      expect(url.searchParams.getAll("zoneIds")).toEqual(zones);
+      expect(url.searchParams.get("statusId")).toBe("2901");
+    }
+  });
+  it("keeps zoneId working, and refuses both together and a bad list", () => {
+    expect(read({ action: "lots", zoneId: zone })).toMatchObject({ zoneId: zone });
+    expect(read({ action: "lots", zoneId: zone, zoneIds: zones[0] })).toBeUndefined();
+    expect(read({ action: "lots", zoneIds: `${zones[0]},x` })).toBeUndefined();
+  });
+});

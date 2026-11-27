@@ -17,7 +17,7 @@ const estimateTitle = "Số ước tính: sống sót đếm bằng mắt khi ho
 type Column = { key: string; label: string; title?: string; sort?: string; defaultHidden?: boolean; render(row: NurseryRow): ReactNode };
 export const nurseryColumns: readonly Column[] = [
   { key: "code", label: "Mã đợt ươm", sort: "code", render: row => <strong className={styles.name}>{row.code}</strong> },
-  // The list is already filtered to one zone, so the zone is optional here instead of repeating on every row.
+  // Hidden while one zone is listed (it would repeat on every row); the screen shows it by itself whenever several zones are listed.
   { key: "zone", label: "Vùng ươm", defaultHidden: true, render: row => `${row.zoneCode} · ${row.zoneName}` },
   // The lot opens on the Lô giống screen by its code (PN000028-1), not on this list.
   { key: "lot", label: "Lô giống", render: row => <>{row.seedLotCode ? <Link className="whitespace-nowrap text-primary underline" href={seedLotsHref(row.seedLotCode)}>{row.seedLotCode}</Link> : "—"}{row.itemName && <small className="block truncate text-xs text-text-muted" title={row.itemName}>{row.itemName}</small>}</> },

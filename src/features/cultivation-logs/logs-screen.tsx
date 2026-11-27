@@ -12,7 +12,7 @@ import { useStoredValue } from "@/components/ui/management-screen/use-stored-val
 import { useToast } from "@/components/ui/toast-provider";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
-import { useScopedZones } from "@/features/api-workspace/selected-zones";
+import { useZoneFilter, ZoneFilterField } from "@/features/api-workspace/zone-filter";
 import { LogCard } from "@/features/cycles-api/log-card";
 import { logTypes } from "@/features/cycles-api/log-contracts";
 import { useUnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
@@ -43,13 +43,15 @@ function LogsList({ helpHref, linkedZone, linkedRaft }: { helpHref?: string; lin
   const functions = permissions.functionPermissions;
   const view = operationAllowed("cultivation-cycles", identity, functions, "LogsView");
   const canCreate = operationAllowed("cultivation-cycles", identity, functions, "LogsCreate");
-  const [search, setSearch] = useState(""), [zone, setZone] = useState(linkedZone), [raft, setRaft] = useState(linkedZone ? linkedRaft : ""), [type, setType] = useState(""), [time, setTime] = useState<TimeRangeValue>(allTime);
+  const [search, setSearch] = useState(""), [raftChoice, setRaftChoice] = useState({ id: linkedZone ? linkedRaft : "", zone: linkedZone }), [type, setType] = useState(""), [time, setTime] = useState<TimeRangeValue>(allTime);
   const [sort, setSort] = useState<SortState>({ key: "visitDate", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(20), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<LogPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [viewing, setViewing] = useState<LogPageItem>(), [creating, setCreating] = useState(false);
-  // The zone choice follows the zone picker of the header: with a narrowed selection only those zones are offered and one of them is always chosen.
-  const { zones } = useZoneOptions(view), scoped = useScopedZones(zones, zone, linkedZone);
-  const zoneId = scoped.narrowed ? scoped.zoneId : zone;
+  // The zone filter is the header zone chip (two-way); the Bè filter needs exactly one zone, and a raft chosen under another zone no longer applies.
+  const { zones } = useZoneOptions(view), filter = useZoneFilter(), zoneId = filter.singleZoneId ?? "";
+  const raft = zoneId && raftChoice.zone === zoneId ? raftChoice.id : "";
+  const [shownZones, setShownZones] = useState(filter.apiZoneIds);
+  if (shownZones !== filter.apiZoneIds) { setShownZones(filter.apiZoneIds); setPage(1); }
   const rafts = useRemote(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<{ id: string; code: string }[]>> => {
     if (!zoneId) return { status: "success", data: [] };
     const result = await loadOptions("rafts", signal, { zoneId });
@@ -57,7 +59,7 @@ function LogsList({ helpHref, linkedZone, linkedRaft }: { helpHref?: string; lin
   }, [zoneId]));
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-cultivation-logs", logColumns.map(column => column.key).join(","));
   const visible = logColumns.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);
-  const query = useMemo<LogPageQuery>(() => ({ search: search.trim(), zoneId, raftId: zoneId ? raft : "", logType: type, from: time.from, to: time.to, sortBy: sort.key, sortDir: sort.direction }), [search, zoneId, raft, type, time, sort]);
+  const query = useMemo<LogPageQuery>(() => ({ search: search.trim(), zoneIds: filter.apiZoneIds ?? "", raftId: raft, logType: type, from: time.from, to: time.to, sortBy: sort.key, sortDir: sort.direction }), [search, filter.apiZoneIds, raft, type, time, sort]);
 
   useEffect(() => {
     if (!view) return;
@@ -78,16 +80,15 @@ function LogsList({ helpHref, linkedZone, linkedRaft }: { helpHref?: string; lin
 
   const changed = <T,>(apply: (value: T) => void) => (value: T) => { apply(value); setPage(1); };
   const reload = () => setRefresh(value => value + 1);
-  const hasFilter = !!(zone || raft || type) || time.kind !== allTime.kind || time.from !== allTime.from || time.to !== allTime.to;
+  const hasFilter = !!(raft || type) || time.kind !== allTime.kind || time.from !== allTime.from || time.to !== allTime.to;
   if (!view) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
   const createZones = zones.filter(item => operationAllowed("cultivation-cycles", identity, functions, "LogsCreate", item.id));
 
   const rail = <>
-    <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setZone(""); setRaft(""); setType(""); setTime(allTime); })()}>Đặt lại</button></div>
-    <FilterGroup legend="Vùng nuôi"><SelectBox aria-label="Vùng nuôi" className={railSelect} value={zoneId} onChange={event => changed<string>(value => { setZone(value); setRaft(""); })(event.target.value)}>
-      {!scoped.narrowed && <option value="">Tất cả vùng</option>}{scoped.zones.map(item => <option key={item.id} value={item.id}>{item.code || item.name}</option>)}</SelectBox></FilterGroup>
-    <FilterGroup legend="Bè"><SelectBox aria-label="Bè" className={railSelect} disabled={!zoneId} value={raft} onChange={event => changed<string>(setRaft)(event.target.value)}>
-      <option value="">{zoneId ? "Tất cả bè" : "Chọn vùng trước"}</option>{(rafts.data ?? []).map(item => <option key={item.id} value={item.id}>{item.code}</option>)}</SelectBox></FilterGroup>
+    <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setRaftChoice({ id: "", zone: "" }); setType(""); setTime(allTime); })()}>Đặt lại</button></div>
+    <ZoneFilterField filter={filter} className={railSelect} beforeChange={apply => void guard.leave(apply)} />
+    <FilterGroup legend="Bè"><SelectBox aria-label="Bè" className={railSelect} disabled={!zoneId} value={raft} title={zoneId ? undefined : "Chọn một vùng để lọc theo bè"} onChange={event => changed<string>(id => setRaftChoice({ id, zone: zoneId }))(event.target.value)}>
+      <option value="">{zoneId ? "Tất cả bè" : "Chọn một vùng để lọc theo bè"}</option>{(rafts.data ?? []).map(item => <option key={item.id} value={item.id}>{item.code}</option>)}</SelectBox></FilterGroup>
     <FilterGroup legend="Loại nhật ký"><SelectBox aria-label="Loại nhật ký" className={railSelect} value={type} onChange={event => changed<string>(setType)(event.target.value)}>
       <option value="">Tất cả loại</option>{logTypes.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</SelectBox></FilterGroup>
     <TimeRangeFilter legend="Ngày chăm sóc" value={time} onChange={changed<TimeRangeValue>(setTime)} />

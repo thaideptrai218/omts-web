@@ -1,6 +1,6 @@
 "use client";
 import { EmployeeTypeFilter } from "@/features/employee-api/employee-type-filter";
-import { SelectBox } from "@/components/ui/select-box";
+import { ZoneFilterField } from "@/features/api-workspace/zone-filter";
 import { FilterGroup, FilterPills } from "@/components/ui/management-screen/management-layout";
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
 import { managementStyles } from "@/components/ui/management-screen/management-table";
@@ -20,7 +20,7 @@ const figures: readonly (readonly [string, (rows: Assignment[]) => number])[] = 
 
 /** Filter column: working day with day stepping, zone (only zones the user may see) and attendance status, plus the day's figures. */
 export function WorkforceFilterRail({ board }: { board: WorkforceBoard }) {
-  const { rows, scopedRows, day, zoneId } = board;
+  const { rows, scopedRows, day } = board;
   const busy = rows.loading || !!rows.error;
   return <>
     <div className={styles.railHead}>
@@ -41,12 +41,7 @@ export function WorkforceFilterRail({ board }: { board: WorkforceBoard }) {
       </div>
     </FilterGroup>
     {/* The internal-staff tab reads by day only: the zone choice and the assignment list reload do nothing there, so they are hidden. */}
-    {board.mode !== "staff" && <FilterGroup legend="Vùng làm việc">
-      <SelectBox className={styles.select} aria-label="Vùng làm việc" value={zoneId} onChange={(event) => board.setZoneId(event.target.value)}>
-        <option value="">Tất cả vùng được cấp</option>
-        {board.zoneOptions.map((id) => <option key={id} value={id}>{board.zoneName(id)}</option>)}
-      </SelectBox>
-    </FilterGroup>}
+    {board.mode !== "staff" && <ZoneFilterField filter={board.zoneFilter} legend="Vùng làm việc" className={styles.select} />}
     <EmployeeTypeFilter value={board.typeFilter} onChange={board.setTypeFilter} name="workforce-employee-type" />
     <FilterPills legend="Trạng thái chấm công" name="workforce-status" value={board.status} options={Object.entries(attendanceLabel)} onChange={board.setStatus} />
     {board.mode !== "staff" && <button type="button" className={`${managementStyles.linkButton} ${styles.reload}`} disabled={rows.loading || board.editor.pending} onClick={rows.reload}>Làm mới danh sách</button>}

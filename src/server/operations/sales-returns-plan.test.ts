@@ -15,10 +15,12 @@ const view = {
 
 describe("sales return reads", () => {
   it("lists with every filter the API knows, paging defaults and the View permission scoped to the zone filter", () => {
-    const plan = get(`action=list&from=2026-11-01&to=2026-11-17&customerId=${id(5)}&zoneId=${id(6)}&statusId=4102&search=%20TL0%20&sort=value&sortDir=asc`);
-    expect(plan).toMatchObject({ area: "sales-returns", method: "GET", permission: "View", zoneId: id(6) });
+    const plan = get(`action=list&from=2026-11-01&to=2026-11-17&customerId=${id(5)}&zoneIds=${id(6)}%2C${id(7)}&statusId=4102&search=%20TL0%20&sort=value&sortDir=asc`);
+    expect(plan).toMatchObject({ area: "sales-returns", method: "GET", permission: "View" });
+    expect(plan?.zoneId).toBeUndefined();
     expect(url(plan).pathname).toBe("/api/sales-returns");
-    expect(Object.fromEntries(url(plan).searchParams)).toEqual({ from: "2026-11-01", to: "2026-11-17", customerId: id(5), zoneId: id(6), statusId: "4102", search: "TL0", sort: "value", sortDir: "asc", page: "1", pageSize: "10" });
+    expect(url(plan).searchParams.getAll("zoneIds")).toEqual([id(6), id(7)]);
+    expect(Object.fromEntries(url(plan).searchParams)).toEqual({ from: "2026-11-01", to: "2026-11-17", customerId: id(5), zoneIds: id(7), statusId: "4102", search: "TL0", sort: "value", sortDir: "asc", page: "1", pageSize: "10" });
   });
   it("lists the whole cooperative without a zone", () => {
     const plan = get("action=list&page=3&pageSize=50");
@@ -36,13 +38,14 @@ describe("sales return reads", () => {
     expect(plan.schema.safeParse({ ...page, items: [{ ...row, salesOrder: undefined, customer: null, zoneCode: undefined }] }).success).toBe(true);
   });
   it("exports the same filters as a file without paging", () => {
-    const plan = get(`action=export&zoneId=${id(6)}&statusId=4101&sort=code&sortDir=desc`);
-    expect(plan).toMatchObject({ file: "export", permission: "View", zoneId: id(6) });
+    const plan = get(`action=export&zoneIds=${id(6)}&statusId=4101&sort=code&sortDir=desc`);
+    expect(plan).toMatchObject({ file: "export", permission: "View" });
+    expect(url(plan).searchParams.getAll("zoneIds")).toEqual([id(6)]);
     expect(url(plan).pathname).toBe("/api/sales-returns/export");
     expect(url(plan).searchParams.has("page")).toBe(false);
     expect(get("action=export&page=1")).toBeUndefined();
   });
-  it.each(["statusId=4100", "sort=customer", "sortDir=up", "zoneId=abc", "from=17/11/2026", "from=2026-11-18&to=2026-11-17", "page=0", "pageSize=500", "search=", "extra=1", `id=${id(1)}`])("refuses the list query %s", (extra) => {
+  it.each(["statusId=4100", "sort=customer", "sortDir=up", "zoneIds=abc", `zoneIds=${id(6)},abc`, `zoneId=${id(6)}`, "from=17/11/2026", "from=2026-11-18&to=2026-11-17", "page=0", "pageSize=500", "search=", "extra=1", `id=${id(1)}`])("refuses the list query %s", (extra) => {
     expect(get(`action=list&${extra}`)).toBeUndefined();
   });
   it("refuses a repeated name, an unknown action and a body on a read", () => {

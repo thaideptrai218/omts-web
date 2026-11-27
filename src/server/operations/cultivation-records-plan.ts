@@ -9,10 +9,11 @@ import { cageSheet } from "@/features/harvest-lots/cage-contracts";
 import * as lots from "@/features/harvest-lots/contracts";
 import type { OperationArea } from "@/features/operations/permissions";
 import type { OperationPlan } from "./operation-plan";
+import { idList } from "./sales-report-plan";
 
 /** The filters of the Lô thu hoạch list, as the web names them; the API takes the same names. Dates are yyyy-MM-dd (the harvest date). */
 const lotFilters = {
-  from: z.iso.date().optional(), to: z.iso.date().optional(), zoneId: z.guid().optional(), raftId: z.guid().optional(), productId: z.guid().optional(),
+  from: z.iso.date().optional(), to: z.iso.date().optional(), zoneId: z.guid().optional(), zoneIds: idList.optional(), raftId: z.guid().optional(), productId: z.guid().optional(),
   statusId: z.enum(["2901", "2902", "2903", "2904"]).optional(), weighed: z.enum(["true", "false"]).optional(), closeReason: z.enum(lots.closeReasons).optional(),
   hasPlan: z.enum(["true", "false"]).optional(), search: z.string().trim().min(1).max(100).optional(), sort: z.enum(["code", "harvestedAt", "remainingKg"]).optional(), desc: z.enum(["true", "false"]).optional(),
 };
@@ -46,11 +47,13 @@ export function cultivationRecordsPlan(area: OperationArea, method: string, quer
   if (area === "harvest" && method === "GET" && ["lots", "export"].includes(query.get("action") ?? "")) {
     // Every lot the caller may see (Owner: all zones; Zone Manager: their zones), and the file with the same filters and no paging.
     const q = (query.get("action") === "export" ? lotExport : lotList).safeParse(Object.fromEntries(query));
-    if (!q.success || q.data.from && q.data.to && q.data.from > q.data.to) return;
-    const { action, ...filters } = q.data;
+    if (!q.success || q.data.from && q.data.to && q.data.from > q.data.to || q.data.zoneId && q.data.zoneIds) return;
+    const { action, zoneIds, ...filters } = q.data;
     const params = new URLSearchParams();
     // The backend names the direction sortDir (asc|desc); the screen keeps a desc flag like the other lists.
     for (const [name, value] of Object.entries(filters)) if (value !== undefined) params.set(name === "desc" ? "sortDir" : name, name === "desc" ? (value === "false" ? "asc" : "desc") : String(value));
+    // Several zones of the header: the backend intersects them with the zones the caller may read, so no single zone is checked here (zoneId stays undefined).
+    for (const zone of zoneIds ?? []) params.append("zoneIds", zone);
     const path = `/api/harvest-lots${action === "export" ? "/export" : ""}${params.size ? `?${params}` : ""}`;
     return action === "export"
       ? { area, action, method: "GET", zoneId: q.data.zoneId, permission: "View", path, schema: z.strictObject({}), file: "export" }

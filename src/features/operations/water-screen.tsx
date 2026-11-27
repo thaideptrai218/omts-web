@@ -10,7 +10,7 @@ import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScrolle
 import { allTime, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
-import { useScopedZones } from "@/features/api-workspace/selected-zones";
+import { useScopedZones, useSelectedZones } from "@/features/api-workspace/selected-zones";
 import { ListSkeleton } from "@/features/farming-management/detail-parts";
 import { useStickyRemote } from "@/features/farming-management/use-sticky-remote";
 import { useUnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
@@ -51,7 +51,7 @@ function LinkedWaterWorkspace(props: { initialZoneId: string; helpHref?: string 
 
 function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; helpHref?: string }) {
   const { identity, permissions } = useApiWorkspace();
-  const { notify } = useToast();
+  const { notify } = useToast(), header = useSelectedZones();
   const functions = permissions.functionPermissions, params = useSearchParams();
   const linkedId = UUID.test(params?.get("recordId") ?? "") ? params?.get("recordId") ?? undefined : undefined, linkedZone = params?.get("zoneId") ?? "";
   const zones = useRemote(loadZones);
@@ -123,7 +123,7 @@ function WaterWorkspace({ initialZoneId, helpHref }: { initialZoneId: string; he
     search={<input type="search" aria-label="Tìm phép đo" placeholder="Theo bè hoặc người ghi" maxLength={200} value={filters.search} disabled={!zoneId} onChange={event => setFilter("search", event.target.value)} />}
     actions={<>
       <SelectBox aria-label="Vùng nuôi" className={local.toolSelect} value={zoneId} disabled={!offered.length}
-        onChange={event => change(() => { setChoice(event.target.value); setFilters(previous => ({ ...previous, raftId: "" })); })}>
+        onChange={event => change(() => { setChoice(event.target.value); header.selectOnly(event.target.value); setFilters(previous => ({ ...previous, raftId: "" })); })}>
         {offered.map(row => <option key={row.id} value={row.id}>{String(row.name)}{row.statusId === 102 ? " (ngừng sử dụng)" : ""}</option>)}
       </SelectBox>
       {canExport && <Button key="export" className="w-auto" variant="secondary" isPending={exporting.pending} onClick={() => void exporting.run(() => repository.download({ zoneId, from: time.from, to: time.to, status: filters.status || "All" }), true)}><InterfaceIcon name="download" className="mr-1 size-4" />Xuất file</Button>}

@@ -9,4 +9,4 @@ export type LogPage = z.infer<typeof logPageSchema>;
 /** The columns the backend sorts the list by (`sortBy`); `sortDir` is asc or desc. */
 export const logSortKeys = ["visitDate", "zone", "raft", "logType", "recordedBy", "recordedAt"] as const;
 export type LogSortKey = typeof logSortKeys[number];
-export type LogPageQuery = Partial<Record<"zoneId" | "raftId" | "logType" | "from" | "to" | "search" | "sortBy" | "sortDir" | "page" | "pageSize", string>>;
+export type LogPageQuery = Partial<Record<"zoneId" | "zoneIds" | "raftId" | "logType" | "from" | "to" | "search" | "sortBy" | "sortDir" | "page" | "pageSize", string>>;

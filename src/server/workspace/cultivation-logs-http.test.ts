@@ -50,3 +50,19 @@ describe("care log page BFF", () => {
     expect((await handleCultivationLogs(get("action=page"))).status).toBe(502); expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("care log page over several zones", () => {
+  const second = "5a92b32d-2901-4560-9237-350be750cb11";
+  it("sends the comma list of the browser to the backend as repeated zoneIds, however many zones fit in one list", async () => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [item], page: 1, pageSize: 20, total: 1 }));
+    expect((await handleCultivationLogs(get(`action=page&zoneIds=${zone},${second}&logType=REPAIR`))).status).toBe(200);
+    const url = new URL(fetcher.mock.calls[0][0].toString());
+    expect(url.searchParams.getAll("zoneIds")).toEqual([zone, second]);
+    expect(url.searchParams.get("logType")).toBe("REPAIR");
+    expect(url.searchParams.has("zoneId")).toBe(false);
+  });
+  it.each([`action=page&zoneIds=${zone}&zoneId=${zone}`, "action=page&zoneIds=nope", `action=page&zoneIds=${zone}&zoneIds=${zone}`])("refuses %s before any call", async query => {
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch");
+    expect((await handleCultivationLogs(get(query))).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
+  });
+});

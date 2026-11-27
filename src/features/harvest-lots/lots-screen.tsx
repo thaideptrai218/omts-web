@@ -14,7 +14,7 @@ import type { WorkspaceResult } from "@/features/api-workspace/workspace-reposit
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import { PlanRefLink } from "@/features/harvest-plans/plan-ref-link";
 import issueStyles from "@/features/input-issues/input-issues.module.css";
-import { useZoneOptions } from "@/features/input-issues/issue-access";
+import { useZoneFilter, ZoneFilterField } from "@/features/api-workspace/zone-filter";
 import { loadOptions } from "@/features/operations/lookups";
 import { operationAllowed } from "@/features/operations/permissions";
 import { ErrorNotice, operationError, useMutation, useRemote } from "@/features/operations/ui";
@@ -48,7 +48,7 @@ const columns: readonly Column[] = [
   { key: "status", label: "Trạng thái", render: (row) => <LotStatus statusId={row.statusId} status={row.status} /> },
 ];
 const defaults = columns.filter((column) => !column.hidden).map((column) => column.key).join(",");
-const emptyFilters = { status: "", zone: "", raft: "", product: "", weighed: "", closeReason: "", hasPlan: "" };
+const emptyFilters = { status: "", product: "", weighed: "", closeReason: "", hasPlan: "" };
 type Filters = typeof emptyFilters;
 const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]";
 
@@ -65,27 +65,30 @@ function LotsList({ helpHref, linkedCode, linkedZone, linkedRaft, weighLinked }:
   const { identity, permissions } = useApiWorkspace(), exportFile = useMutation();
   const view = operationAllowed("harvest", identity, permissions.functionPermissions, "View");
   const linkPending = useRef(linkedCode);
-  const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>({ ...emptyFilters, zone: linkedZone, raft: linkedZone ? linkedRaft : "" }), [time, setTime] = useState<TimeRangeValue>(allTime);
+  const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState<Filters>(emptyFilters), [raftChoice, setRaftChoice] = useState({ id: linkedZone ? linkedRaft : "", zone: linkedZone }), [time, setTime] = useState<TimeRangeValue>(allTime);
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<LotPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const [stored, store] = useStoredValue("omts-columns-harvest-lots", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
-  const { zones } = useZoneOptions(view);
+  // The zone filter is the header zone chip (two-way); the Bè filter needs exactly one zone, and a raft chosen under another zone no longer applies.
+  const zoneFilter = useZoneFilter(), zoneId = zoneFilter.singleZoneId ?? "", raftId = zoneId && raftChoice.zone === zoneId ? raftChoice.id : "";
+  const [shownZones, setShownZones] = useState(zoneFilter.apiZoneIds);
+  if (shownZones !== zoneFilter.apiZoneIds) { setShownZones(zoneFilter.apiZoneIds); setPage(1); setExpanded(undefined); }
   const rafts = useRemote(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<{ id: string; code: string }[]>> => {
-    if (!filters.zone) return { status: "success", data: [] };
-    const result = await loadOptions("rafts", signal, { zoneId: filters.zone });
+    if (!zoneId) return { status: "success", data: [] };
+    const result = await loadOptions("rafts", signal, { zoneId });
     return result.status === "success" ? { status: "success", data: result.data.map((row) => ({ id: row.id, code: String(row.code ?? "") })) } : result;
-  }, [filters.zone]));
+  }, [zoneId]));
   const products = useRemote(useCallback(async (signal: AbortSignal): Promise<WorkspaceResult<ProductRow[]>> => view ? productRepository.all({}, signal) : { status: "success", data: [] }, [view]));
 
   // The filters as the list and the file take them; the file has no paging.
   const query = useMemo<LotListQuery>(() => {
     const values: LotListQuery = {
-      search: search.trim(), statusId: filters.status, from: time.from, to: time.to, zoneId: filters.zone, raftId: filters.raft, productId: filters.product, weighed: filters.weighed,
+      search: search.trim(), statusId: filters.status, from: time.from, to: time.to, zoneIds: zoneFilter.apiZoneIds ?? "", raftId, productId: filters.product, weighed: filters.weighed,
       closeReason: filters.closeReason, hasPlan: filters.hasPlan, sort: sort.key, desc: String(sort.direction === "desc"),
     };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== "")) as LotListQuery;
-  }, [search, filters, time, sort]);
+  }, [search, filters, time, sort, zoneFilter.apiZoneIds, raftId]);
 
   useEffect(() => {
     if (!view) return;
@@ -107,20 +110,18 @@ function LotsList({ helpHref, linkedCode, linkedZone, linkedRaft, weighLinked }:
 
   function changed<T>(apply: (value: T) => void) { return (value: T) => { apply(value); setPage(1); setExpanded(undefined); }; }
   const setFilter = (key: keyof Filters) => changed<string>((value) => setFilters((current) => ({ ...current, [key]: value })));
-  const setZone = changed<string>((zone) => setFilters((current) => ({ ...current, zone, raft: "" })));
   const reload = () => setRefresh((value) => value + 1);
-  const hasFilter = Object.values(filters).some((value) => value !== "") || time.kind !== allTime.kind || time.from !== allTime.from || time.to !== allTime.to;
+  const hasFilter = !!raftId || Object.values(filters).some((value) => value !== "") || time.kind !== allTime.kind || time.from !== allTime.from || time.to !== allTime.to;
   const toggle = (id: string) => setExpanded((value) => value === id ? undefined : id);
   if (!view) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
 
   const rail = <>
-    <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(allTime); })()}>Đặt lại</button></div>
+    <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setFilters(emptyFilters); setRaftChoice({ id: "", zone: "" }); setTime(allTime); })()}>Đặt lại</button></div>
     <FilterPills legend="Trạng thái" name="lot-status" value={filters.status} options={lotStatusIds.map((id) => [String(id), lotStatusLabel[id]] as const)} onChange={setFilter("status")} />
     <TimeRangeFilter legend="Ngày thu hoạch" value={time} onChange={changed<TimeRangeValue>(setTime)} />
-    <FilterGroup legend="Vùng"><SelectBox aria-label="Vùng" className={railSelect} value={filters.zone} onChange={(event) => setZone(event.target.value)}>
-      <option value="">Tất cả vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</SelectBox></FilterGroup>
-    <FilterGroup legend="Bè"><SelectBox aria-label="Bè" className={railSelect} disabled={!filters.zone} value={filters.raft} onChange={(event) => setFilter("raft")(event.target.value)}>
-      <option value="">{filters.zone ? "Tất cả bè" : "Chọn vùng trước"}</option>{(rafts.data ?? []).map((raft) => <option key={raft.id} value={raft.id}>{raft.code}</option>)}</SelectBox></FilterGroup>
+    <ZoneFilterField filter={zoneFilter} legend="Vùng" className={railSelect} />
+    <FilterGroup legend="Bè"><SelectBox aria-label="Bè" className={railSelect} disabled={!zoneId} value={raftId} onChange={(event) => changed<string>((id) => setRaftChoice({ id, zone: zoneId }))(event.target.value)}>
+      <option value="">{zoneId ? "Tất cả bè" : "Chọn một vùng để lọc theo bè"}</option>{(rafts.data ?? []).map((raft) => <option key={raft.id} value={raft.id}>{raft.code}</option>)}</SelectBox></FilterGroup>
     <FilterGroup legend="Sản phẩm"><SelectBox aria-label="Sản phẩm" className={railSelect} value={filters.product} onChange={(event) => setFilter("product")(event.target.value)}>
       <option value="">Tất cả sản phẩm</option>{(products.data ?? []).filter((product) => product.statusId === IN_USE || product.id === filters.product).map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</SelectBox></FilterGroup>
     <FilterPills legend="Cân" name="lot-weighed" value={filters.weighed} options={[["true", "Đã cân"], ["false", "Chưa cân"]]} onChange={setFilter("weighed")} />
