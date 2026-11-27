@@ -1,0 +1,11 @@
+.infoBody { display:flex; gap:20px; align-items:flex-start; }
+.infoBody > :last-child { flex:1 1 auto; min-width:0; }
+.gallery { display:grid; gap:8px; justify-items:start; flex:0 0 auto; width:200px; }
+.photoMain { display:grid; place-items:center; width:200px; height:200px; overflow:hidden; border:1px solid var(--omts-color-border); border-radius:8px; background:var(--omts-color-primary-soft); color:var(--omts-color-primary); font-size:13px; text-align:center; padding:0; }
+.photoMain img { width:100%; height:100%; object-fit:cover; }
+.thumbs { display:flex; gap:4px; }
+.thumbs button { width:40px; height:40px; overflow:hidden; border:1px solid var(--omts-color-border); border-radius:5px; padding:0; }
+.thumbs button[aria-current="true"] { border-color:var(--omts-color-primary); box-shadow:0 0 0 1px var(--omts-color-primary); }
+.thumbs img { width:100%; height:100%; object-fit:cover; }
+.tools { display:flex; flex-wrap:wrap; gap:4px; }
+@media (max-width: 900px) { .infoBody { flex-direction:column; } .gallery { width:100%; } .photoMain { width:100%; max-width:320px; } }

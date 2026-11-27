@@ -5,24 +5,27 @@ import { ListStateMessage } from "@/components/ui/management-screen/management-t
 import type { JourneyAction } from "@/features/cycles-api/cycle-journey-model";
 import { openCrewOf } from "@/features/cultivation-api/record-crew-attendance";
 import { CompleteSeeding } from "@/features/cultivation-api/records-complete-seeding-dialog";
-import { HarvestPanel } from "@/features/cultivation-api/records-harvest-panel";
-import { seedingList } from "@/features/cultivation-api/records-contracts";
+import { HarvestLaneForm } from "@/features/cultivation-api/records-harvest-lane-form";
+import { harvestList, seedingList } from "@/features/cultivation-api/records-contracts";
 import { SeedingForm } from "@/features/cultivation-api/records-seeding-form";
-import { seedRepo, useAllowed } from "@/features/cultivation-api/records-shared";
+import { harvestRepo, seedRepo, useAllowed } from "@/features/cultivation-api/records-shared";
 import { Skeleton, useRemote } from "@/features/operations/ui";
 
 type Scope = { zoneId: string; raftId: string; cycleId: string; cycleStartDate?: string };
 /**
  * A step of the journey that records something, opened where the user is: Ghi nhận thả giống and Hoàn tất thả giống use the forms of the Thả giống screen
- * (with its list read for the figures they need), Thu hoạch opens that raft's harvest panel in a window. `onDone` tells the tab to read the cycle again.
+ * (with its list read for the figures they need), Thu hoạch opens the harvest form with lane selection (pick the lanes of the raft, then record the trip). `onDone` tells the tab to read the cycle again.
  */
 export function JourneyRecordDialog({ action, onClose, onDone, ...scope }: Scope & { action: JourneyAction; onClose(): void; onDone(): void }) {
-  return action.screen === "harvest" ? <HarvestDialog zoneId={scope.zoneId} raftId={scope.raftId} onClose={onDone} />
+  return action.screen === "harvest" ? <HarvestDialog zoneId={scope.zoneId} raftId={scope.raftId} onClose={onClose} onDone={onDone} />
     : <SeedingDialog {...scope} complete={action.key === "journey-seeding-complete"} onClose={onClose} onDone={onDone} />;
 }
 
-function HarvestDialog({ zoneId, raftId, onClose }: { zoneId: string; raftId: string; onClose(): void }) {
-  return <Dialog open size="xl" title="Thu hoạch" onOpenChange={open => { if (!open) onClose(); }}><HarvestPanel zoneId={zoneId} raftId={raftId} /></Dialog>;
+function HarvestDialog({ zoneId, raftId, onClose, onDone }: { zoneId: string; raftId: string; onClose(): void; onDone(): void }) {
+  const remote = useRemote(useMemo(() => (signal: AbortSignal) => harvestRepo.read("list", { id: raftId, zoneId }, harvestList, signal), [raftId, zoneId]));
+  if (remote.loading) return <Dialog open title="Thu hoạch" onOpenChange={open => { if (!open) onClose(); }}><Skeleton /></Dialog>;
+  if (remote.error || !remote.data) return <Dialog open title="Thu hoạch" onOpenChange={open => { if (!open) onClose(); }}><ListStateMessage error={remote.error ?? "Không tải được thu hoạch."} onRetry={remote.reload} retryLabel="Tải lại" /></Dialog>;
+  return <HarvestLaneForm zoneId={zoneId} raftId={raftId} data={remote.data} onClose={onClose} onSaved={onDone} />;
 }
 
 function SeedingDialog({ zoneId, raftId, cycleId, cycleStartDate, complete, onClose, onDone }: Scope & { complete: boolean; onClose(): void; onDone(): void }) {

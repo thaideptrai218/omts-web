@@ -37,3 +37,17 @@ export function RecordHistory({ kind, id, zoneId }: { kind: HistoryKind; id: str
     {open && <div className="mt-2"><RecordHistoryList kind={kind} id={id} zoneId={zoneId} /></div>}
   </section>;
 }
+
+/**
+ * "Xem lịch sử" of a record that was changed after it was made: the history is read when the card opens and the section appears only when it holds more than the
+ * creation entry (a record never edited or removed has nothing to show); an unreadable history hides it too.
+ */
+export function EditedRecordHistory({ kind, id, zoneId }: { kind: HistoryKind; id: string; zoneId: string }) {
+  const remote = useRemote(useCallback((signal: AbortSignal) => readRecordHistory(kind, id, zoneId, signal), [kind, id, zoneId]));
+  const [open, setOpen] = useState(false);
+  if (!remote.data || remote.data.length <= 1) return null;
+  return <section aria-label="Lịch sử" className="mt-3 border-t border-border pt-2">
+    <button type="button" className="text-xs font-semibold underline" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? "Ẩn lịch sử" : "Xem lịch sử"}</button>
+    {open && <div className="mt-2"><HistoryEntries entries={remote.data} /></div>}
+  </section>;
+}

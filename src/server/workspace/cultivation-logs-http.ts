@@ -31,7 +31,7 @@ export async function handleCultivationLogs(request: Request) {
         const upload = await readOperationUpload(request, false, { optionalFile: action === "correct" });
         const input = logInput.safeParse(upload?.payload);
         if (!upload || !input.success || upload.files.some(f => !["image/jpeg","image/png"].includes(f.type))) return json({ status: "invalid-input" }, 400);
-        const form = new FormData(); form.set("visitDate", input.data.visitDate); if (input.data.notes) form.set("notes", input.data.notes);
+        const form = new FormData(); form.set("visitDate", input.data.visitDate); if (input.data.logType) form.set("logType", input.data.logType); if (input.data.notes) form.set("notes", input.data.notes);
         if (action === "correct") { if (!input.data.reason?.trim()) return json({ status: "invalid-input" }, 400); form.set("reason", input.data.reason); for (const key of input.data.keepPhotoKeys ?? []) form.append("keepPhotoKeys", key); }
         for (const file of upload.files) form.append("photos", file, file.name); body = form;
       }

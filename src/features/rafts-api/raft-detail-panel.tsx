@@ -52,7 +52,7 @@ export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, initialT
   const busy = detail.loading || mutation.pending || mutation.blocked, stopping = action === "discontinue";
   const show = (key: RaftTabKey) => void guard.leave(() => setTab(key));
   const content: Record<RaftTabKey, ReactNode> = raft ? {
-    info: <RaftInfoTab raft={raft} zoneId={zoneId} zoneLabel={zoneLabel} canEdit={access.edit} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload}
+    info: <RaftInfoTab raft={raft} zoneId={zoneId} zoneLabel={zoneLabel} canEdit={access.edit} canEditPhotos={access.photoEdit} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload}
       onOpenCycles={access.cycles ? () => show("cycles") : undefined} onStatus={() => { mutation.reviewed(); setAction(raft.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
     cycles: <RaftCyclesTab raft={raft} zoneId={zoneId} zoneLabel={zoneLabel} access={access.cycle} guard={guard} onChanged={cycleChanged} onOpenLogs={() => setTab("logs")} />,
     logs: <RaftLogsTab raft={raft} zoneId={zoneId} access={access} guard={guard} />,
