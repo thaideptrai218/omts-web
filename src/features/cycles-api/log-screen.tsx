@@ -3,11 +3,14 @@ import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { ImageFileInput } from "@/components/form/image-file-input";
 import { Dialog } from "@/components/ui/dialog";
+import { PhotoThumbnails, useFilePreviews } from "@/components/form/photo-thumbnails";
+import { CollapsibleSection } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Field, Note, businessToday, useMutation } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import type { CultivationLog } from "./log-contracts";
 import { logRequest, logSavedSchema } from "./log-repository";
+import { logPhotoSrc } from "./log-photo-src";
 /** A care log may carry several photos; the limit is the one the form always had. */
 const MAX_PHOTOS = 10;
 export function photoHref(raw: string) { try { const url = new URL(raw, window.location.origin); return ["https:", "http:"].includes(url.protocol) ? url.href : undefined; } catch { return undefined; } }
@@ -16,10 +19,10 @@ export function photoHref(raw: string) { try { const url = new URL(raw, window.l
 function EditorFrame({ record, pending, close, children }: { record: CultivationLog | null; pending: boolean; close(): void; children: ReactNode }) {
   return record ? <section aria-label="Sửa nhật ký chăm sóc">{children}</section> : <Dialog open title="Ghi nhật ký chăm sóc" dismissible={!pending} onOpenChange={open => { if (!open) close(); }}>{children}</Dialog>;
 }
-export function LogEditor({ cycleId, startDate, record, onClose, onSaved, dirtyRef }: { cycleId: string; startDate?: string; record: CultivationLog | null; dirtyRef?: RefObject<boolean>; onClose(): void; onSaved(): void }) {
+export function LogEditor({ cycleId, startDate, zoneId, record, onClose, onSaved, dirtyRef }: { cycleId: string; startDate?: string; /** Lets the photos already on a log show as thumbnails. */ zoneId?: string; record: CultivationLog | null; dirtyRef?: RefObject<boolean>; onClose(): void; onSaved(): void }) {
   const [date, setDate] = useState(record?.visitDate ?? businessToday()), [notes, setNotes] = useState(record?.notes ?? ""), [reason, setReason] = useState("");
   const [files, setFiles] = useState<File[]>([]), [keep, setKeep] = useState(record?.photos.map(photo => photo.key) ?? []), [error, setError] = useState<string>();
-  const mutation = useMutation(), confirmation = useActionDialog();
+  const mutation = useMutation(), confirmation = useActionDialog(), previews = useFilePreviews(files);
   const dirty = date !== (record?.visitDate ?? businessToday()) || notes !== (record?.notes ?? "") || !!reason || !!files.length || keep.length !== (record?.photos.length ?? 0);
   useEffect(() => { if (dirtyRef) dirtyRef.current = dirty; return () => { if (dirtyRef) dirtyRef.current = false; }; }, [dirty, dirtyRef]);
   const close = async () => { if (!mutation.busy() && (!dirty || await confirmation.confirm("Bỏ các thay đổi nhật ký chưa lưu?"))) onClose(); };
@@ -37,16 +40,22 @@ export function LogEditor({ cycleId, startDate, record, onClose, onSaved, dirtyR
     {confirmation.dialog}<ErrorNotice error={error || mutation.error} />
     <form className="space-y-4" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset className="space-y-4" disabled={mutation.pending || mutation.blocked}>
-        <Field label="Ngày chăm sóc" type="date" required min={startDate} max={businessToday()} value={date} onChange={e => setDate(e.target.value)} />
-        <Note label="Nội dung chăm sóc" value={notes} onChange={e => setNotes(e.target.value)} />
-        {record && <><Note label="Lý do sửa" required value={reason} onChange={e => setReason(e.target.value)} />
-          <div className="space-y-2">{record.photos.map((photo, index) => <label key={photo.key} className="flex items-center gap-2"><input className="omts-check" type="checkbox" checked={keep.includes(photo.key)} onChange={e => setKeep(current => e.target.checked ? [...current, photo.key] : current.filter(key => key !== photo.key))} />Giữ ảnh {index + 1}</label>)}</div></>}
-        <ImageFileInput label="Ảnh chăm sóc" multiple accept="image/jpeg,image/png" onChange={e => {
-          const next = Array.from(e.target.files ?? []);
-          if (next.length + keep.length > MAX_PHOTOS || next.some(file => file.size < 1 || file.size > 10 * 1024 * 1024 || !["image/jpeg", "image/png"].includes(file.type))) { setError(`Chọn tối đa ${MAX_PHOTOS} ảnh JPEG/PNG, mỗi ảnh không quá 10 MB.`); e.target.value = ""; setFiles([]); }
-          else { setError(undefined); setFiles(next); }
-        }} />
-        {files.map((file, index) => <p key={index} className="break-words text-xs">{file.name}</p>)}
+        <CollapsibleSection title="Thông tin nhật ký" description="Ngày chăm sóc và nội dung." columns={1}>
+          <Field label="Ngày chăm sóc" type="date" required min={startDate} max={businessToday()} value={date} onChange={e => setDate(e.target.value)} />
+          <Note label="Nội dung chăm sóc" value={notes} onChange={e => setNotes(e.target.value)} />
+          {record && <Note label="Lý do sửa" required value={reason} onChange={e => setReason(e.target.value)} />}
+        </CollapsibleSection>
+        <CollapsibleSection title="Ảnh chăm sóc" description={`Từ 1 đến ${MAX_PHOTOS} ảnh JPEG/PNG, mỗi ảnh tối đa 10 MB.`} columns={1}>
+          {record && <PhotoThumbnails items={record.photos.filter(photo => keep.includes(photo.key)).map(photo => ({ key: photo.key, src: zoneId ? logPhotoSrc(record.id, zoneId, record.photos.indexOf(photo)) : "", label: `Ảnh ${record.photos.indexOf(photo) + 1}` }))}
+            onRemove={key => setKeep(current => current.filter(item => item !== key))} />}
+          <PhotoThumbnails items={previews} onRemove={key => setFiles(current => current.filter((file, index) => `new-${index}-${file.name}` !== key))} />
+          <ImageFileInput label="Thêm ảnh" multiple accept="image/jpeg,image/png" onChange={e => {
+            const next = [...files, ...Array.from(e.target.files ?? [])];
+            e.target.value = "";
+            if (next.length + keep.length > MAX_PHOTOS || next.some(file => file.size < 1 || file.size > 10 * 1024 * 1024 || !["image/jpeg", "image/png"].includes(file.type))) setError(`Chọn tối đa ${MAX_PHOTOS} ảnh JPEG/PNG, mỗi ảnh không quá 10 MB.`);
+            else { setError(undefined); setFiles(next); }
+          }} />
+        </CollapsibleSection>
       </fieldset>
       {mutation.blocked && <p role="alert">Chưa xác định được kết quả. Bản nháp được giữ; hãy đối chiếu nhật ký đã lưu trước khi lập lượt mới.</p>}
       <div className="flex justify-end gap-3"><Button key="discard-log" className="w-auto" type="button" variant="secondary" disabled={mutation.pending} onClick={() => void close()}>Bỏ qua</Button><Button key="save-log" className="w-auto" type="submit" isPending={mutation.pending} disabled={mutation.blocked}>Lưu</Button></div>

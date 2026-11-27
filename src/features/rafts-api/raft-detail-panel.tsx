@@ -14,7 +14,7 @@ import { RaftCyclesTab } from "./raft-cycles-tab";
 import { RaftInfoTab } from "./raft-info-tab";
 import { RaftLogsTab } from "./raft-logs-tab";
 import { RaftMaterialsTab } from "./raft-materials-tab";
-import { RaftPhotoTab } from "./raft-photo-tab";
+import { RaftLanesTab } from "./raft-lanes-tab";
 import { DISCONTINUED, IN_USE, parseRaftDetail, raftStatusLabel, readRaftDetail, type RaftDetail } from "./raft-model";
 
 /** Tabs and actions the signed-in account may use for a raft of the chosen zone. `cycle` carries the cycle and care-log rights; `materialCreate` is the right to record material use. */
@@ -30,9 +30,9 @@ const repository = createWorkspaceRepository("rafts");
  * The opened raft. Opening it reads only the raft record; every tab reads its own data when it is first opened ("Hiện trạng" in "Thông tin" comes from the record itself).
  * `initialTab` is the tab a link asked for (`?tab=`).
  */
-export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, initialTab, onChanged }: { id: string; zoneId: string; zoneLabel: string; access: RaftAccess; guard: UnsavedGuard; initialTab?: string; onChanged(notice?: string): void }) {
+export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, initialTab, onChanged }: { id: string; zoneId: string; zoneLabel: string; access: RaftAccess; guard: UnsavedGuard; initialTab?: string; /** `notice` is the toast text; an empty one reloads the list without a toast (the form that saved already said so). */ onChanged(notice?: string): void }) {
   const detail = useStickyRemote(useCallback((signal: AbortSignal) => readRaftDetail(id, signal), [id])), mutation = useMutation();
-  const tabs = useMemo(() => ([["info", "Thông tin", true], ["cycles", "Chu kỳ nuôi", access.cycles], ["logs", "Nhật ký", !!access.logs], ["materials", "Vật tư", access.costs || !!access.materialCreate], ["lanes", "Làn & ảnh", true]] as const)
+  const tabs = useMemo(() => ([["info", "Thông tin", true], ["cycles", "Chu kỳ nuôi", access.cycles], ["logs", "Nhật ký", !!access.logs], ["materials", "Vật tư", access.costs || !!access.materialCreate], ["lanes", "Làn", true]] as const)
     .filter(entry => entry[2]).map(([key, label]) => ({ key, label })), [access]);
   const [picked, setTab] = useState<RaftTabKey | undefined>(() => raftTabOf(initialTab)), [action, setAction] = useState<"discontinue" | "reactivate">(), [reviewRequested, setReviewRequested] = useState(false);
   // A linked tab the account may not read falls back to "Thông tin".
@@ -57,7 +57,7 @@ export function RaftDetailPanel({ id, zoneId, zoneLabel, access, guard, initialT
     cycles: <RaftCyclesTab raft={raft} zoneId={zoneId} zoneLabel={zoneLabel} access={access.cycle} guard={guard} onChanged={cycleChanged} onOpenLogs={() => setTab("logs")} />,
     logs: <RaftLogsTab raft={raft} zoneId={zoneId} access={access} guard={guard} />,
     materials: <RaftMaterialsTab raft={raft} zoneId={zoneId} access={access} />,
-    lanes: <RaftPhotoTab raftId={id} zoneId={zoneId} canEdit={access.photoEdit} access={{ cycles: access.cycles, logs: access.logs }} dirtyRef={guard.dirty} pendingRef={guard.pending} />,
+    lanes: <RaftLanesTab raft={raft} zoneId={zoneId} canReadCycles={access.cycles} dirtyRef={guard.dirty} pendingRef={guard.pending} onReload={detail.reload} />,
   } : { info: null, cycles: null, logs: null, materials: null, lanes: null };
   return <section id={`raft-preview-${id}`} className={styles.detail} aria-label="Chi tiết bè nuôi">
     {detail.loading && !raft && <Skeleton />}
