@@ -31,12 +31,56 @@ describe("Nhật ký chăm sóc screen", () => {
   it("lists the logs as a table with the raft code as a link to the raft's Nhật ký tab, by code", async () => {
     show();
     const row = (await screen.findByRole("button", { name: "Xem nhật ký B1-01 ngày 21/11/2026" })).closest("tr")!;
-    expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Ngày chăm sóc", "Vùng · Bè", "Loại", "Nội dung", "Ảnh", "Người ghi", "Thời gian ghi"]);
+    expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Ngày chăm sóc", "Vùng nuôi", "Bè", "Loại", "Nội dung", "Ảnh", "Người ghi", "Thời gian ghi"]);
     expect(within(row).getByText("Vệ sinh bè/lồng")).toBeTruthy();
     expect(within(row).getByText("21/11/2026 09:15")).toBeTruthy();
     expect(within(row).getByRole("link", { name: "B1-01" }).getAttribute("href")).toBe(`/farming/rafts?zoneId=${zoneA}&search=B1-01&tab=logs`);
     expect(lastQuery()).toMatchObject({ page: "1", pageSize: "20" });
     expect(lastQuery().zoneId).toBe("");
+    expect(lastQuery()).toMatchObject({ sortBy: "visitDate", sortDir: "desc" });
+  });
+  it("keeps zone and raft in their own nowrap cells that end in an ellipsis, so they cannot run into each other", async () => {
+    show();
+    const row = (await screen.findByRole("button", { name: "Xem nhật ký B1-01 ngày 21/11/2026" })).closest("tr")!;
+    const zoneCell = within(row).getByText("KV01 · Vùng A"), raftLink = within(row).getByRole("link", { name: "B1-01" });
+    expect(zoneCell.closest("td")).not.toBe(raftLink.closest("td"));
+    expect(zoneCell.className).toMatch(/truncated/);
+    expect(zoneCell.getAttribute("title")).toBe("KV01 · Vùng A");
+    expect(raftLink.className).toMatch(/truncated/);
+    expect(within(row).getByText("Vệ sinh lưới bè phía đông").className).toMatch(/truncated/);
+    expect(document.querySelectorAll("col")).toHaveLength(8);
+  });
+  it("sorts on the server from the column headers: ascending first, then descending, another column ascending, back to page 1", async () => {
+    show();
+    await screen.findByRole("button", { name: "Xem nhật ký B1-01 ngày 21/11/2026" });
+    const header = (label: string) => screen.getByRole("columnheader", { name: new RegExp(`^${label}`) });
+    expect(header("Ngày chăm sóc").getAttribute("aria-sort")).toBe("descending");
+    for (const label of ["Nội dung", "Ảnh"]) expect(within(header(label)).queryByRole("button")).toBeNull();
+    fireEvent.click(within(header("Ngày chăm sóc")).getByRole("button"));
+    await waitFor(() => expect(lastQuery()).toMatchObject({ sortBy: "visitDate", sortDir: "asc" }));
+    fireEvent.click(within(header("Ngày chăm sóc")).getByRole("button"));
+    await waitFor(() => expect(lastQuery()).toMatchObject({ sortBy: "visitDate", sortDir: "desc" }));
+    const sorts: [string, string][] = [["Vùng nuôi", "zone"], ["Bè", "raft"], ["Loại", "logType"], ["Người ghi", "recordedBy"], ["Thời gian ghi", "recordedAt"]];
+    for (const [label, key] of sorts) {
+      fireEvent.click(within(header(label)).getByRole("button"));
+      await waitFor(() => expect(lastQuery()).toMatchObject({ sortBy: key, sortDir: "asc", page: "1" }));
+    }
+    expect(header("Thời gian ghi").getAttribute("aria-sort")).toBe("ascending");
+  });
+  it("lets the user choose the visible columns with the column picker and remembers the choice", async () => {
+    window.localStorage.removeItem("omts-columns-cultivation-logs");
+    show();
+    await screen.findByRole("button", { name: "Xem nhật ký B1-01 ngày 21/11/2026" });
+    fireEvent.click(screen.getByRole("button", { name: "Chọn trường hiển thị" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Người ghi" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Ảnh" }));
+    expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Ngày chăm sóc", "Vùng nuôi", "Bè", "Loại", "Nội dung", "Thời gian ghi"]);
+    expect(window.localStorage.getItem("omts-columns-cultivation-logs")).toBe("visitDate,zone,raft,logType,notes,recordedAt");
+    cleanup();
+    show();
+    await screen.findByRole("button", { name: "Xem nhật ký B1-01 ngày 21/11/2026" });
+    expect(screen.queryByRole("columnheader", { name: "Người ghi" })).toBeNull();
+    window.localStorage.removeItem("omts-columns-cultivation-logs");
   });
   it("sends the filters and the search to the server and starts again from the first page", async () => {
     show();

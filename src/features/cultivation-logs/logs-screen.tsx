@@ -1,42 +1,35 @@
 "use client";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { FilterGroup, HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
-import { ListStateMessage, ManagementPagination, ManagementScroller, managementStyles } from "@/components/ui/management-screen/management-table";
+import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, managementStyles, type SortState } from "@/components/ui/management-screen/management-table";
 import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-filter";
 import { allTime, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
-import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { SelectBox } from "@/components/ui/select-box";
+import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { useToast } from "@/components/ui/toast-provider";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { useScopedZones } from "@/features/api-workspace/selected-zones";
 import { LogCard } from "@/features/cycles-api/log-card";
-import { logTypeLabel, logTypes } from "@/features/cycles-api/log-contracts";
-import { logPhotoSrc } from "@/features/cycles-api/log-photo-src";
-import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
+import { logTypes } from "@/features/cycles-api/log-contracts";
 import { useUnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
 import { useZoneOptions } from "@/features/input-issues/issue-access";
 import { loadOptions } from "@/features/operations/lookups";
 import { operationAllowed } from "@/features/operations/permissions";
 import { operationError, useRemote } from "@/features/operations/ui";
-import { viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
-import { formatVietnameseDate } from "@/shared/format/date-only";
 import { LogCreateDialog } from "./log-create-dialog";
 import type { LogPage, LogPageItem, LogPageQuery } from "./log-page-contract";
 import { readLogPage } from "./log-page-repository";
+import { LogsTable, logColumns } from "./logs-table";
 
 const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]";
-const stop = (event: { stopPropagation(): void }) => event.stopPropagation();
-const when = (value: string) => Number.isNaN(Date.parse(value)) ? "—" : viDateTime(value);
 
 /**
- * Nhật ký chăm sóc: the care logs of every raft the account may read, newest visit first, server-paged. The filters (zone, raft, type, visit dates) and the search
+ * Nhật ký chăm sóc: the care logs of every raft the account may read, newest visit first unless a header sorts it (on the server, over every log), server-paged. The filters (zone, raft, type, visit dates) and the search
  * (raft code or text) go to the backend. A row opens the log as a card, the raft code opens the raft on its Nhật ký tab (by code), "+ Ghi nhật ký" picks zone and raft first.
  * `?zoneId=&raftId=` preselect the filters.
  */
@@ -51,7 +44,7 @@ function LogsList({ helpHref, linkedZone, linkedRaft }: { helpHref?: string; lin
   const view = operationAllowed("cultivation-cycles", identity, functions, "LogsView");
   const canCreate = operationAllowed("cultivation-cycles", identity, functions, "LogsCreate");
   const [search, setSearch] = useState(""), [zone, setZone] = useState(linkedZone), [raft, setRaft] = useState(linkedZone ? linkedRaft : ""), [type, setType] = useState(""), [time, setTime] = useState<TimeRangeValue>(allTime);
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(20), [refresh, setRefresh] = useState(0);
+  const [sort, setSort] = useState<SortState>({ key: "visitDate", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(20), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<LogPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
   const [viewing, setViewing] = useState<LogPageItem>(), [creating, setCreating] = useState(false);
   // The zone choice follows the zone picker of the header: with a narrowed selection only those zones are offered and one of them is always chosen.
@@ -62,7 +55,9 @@ function LogsList({ helpHref, linkedZone, linkedRaft }: { helpHref?: string; lin
     const result = await loadOptions("rafts", signal, { zoneId });
     return result.status === "success" ? { status: "success", data: result.data.map(row => ({ id: row.id, code: String(row.code ?? "") })) } : result;
   }, [zoneId]));
-  const query = useMemo<LogPageQuery>(() => ({ search: search.trim(), zoneId, raftId: zoneId ? raft : "", logType: type, from: time.from, to: time.to }), [search, zoneId, raft, type, time]);
+  const [storedColumns, storeColumns] = useStoredValue("omts-columns-cultivation-logs", logColumns.map(column => column.key).join(","));
+  const visible = logColumns.filter(column => storedColumns.split(",").includes(column.key)).map(column => column.key);
+  const query = useMemo<LogPageQuery>(() => ({ search: search.trim(), zoneId, raftId: zoneId ? raft : "", logType: type, from: time.from, to: time.to, sortBy: sort.key, sortDir: sort.direction }), [search, zoneId, raft, type, time, sort]);
 
   useEffect(() => {
     if (!view) return;
@@ -103,23 +98,14 @@ function LogsList({ helpHref, linkedZone, linkedRaft }: { helpHref?: string; lin
     search={<input type="search" aria-label="Tìm nhật ký" placeholder="Theo mã bè hoặc nội dung" maxLength={100} value={search} onChange={event => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
       {canCreate && <Button className="w-auto" onClick={() => void guard.leave(() => setCreating(true))}><InterfaceIcon name="add" className="mr-1 size-4" />Ghi nhật ký</Button>}
-      <HelpLink helpHref={helpHref} />
+      <ColumnPicker columns={logColumns} visible={visible} onChange={keys => storeColumns(keys.join(","))} /><HelpLink helpHref={helpHref} />
     </>}>
     {guard.dialog}
     <ManagementScroller busy={loading}>
       {error ? <ListStateMessage error={error} onRetry={reload} retryLabel="Tải lại" />
         : !data ? <div role="status" aria-label="Đang tải danh sách" className={listStyles.skeleton}>{[1, 2, 3, 4, 5].map(key => <div key={key} />)}</div>
         : !data.items.length ? <ListStateMessage>{search || hasFilter ? "Không có nhật ký phù hợp bộ lọc." : "Chưa có nhật ký chăm sóc nào."}</ListStateMessage>
-        : <table className={listStyles.table}><thead><tr>
-          <th scope="col">Ngày chăm sóc</th><th scope="col">Vùng · Bè</th><th scope="col">Loại</th><th scope="col">Nội dung</th><th scope="col">Ảnh</th><th scope="col">Người ghi</th><th scope="col">Thời gian ghi</th>
-        </tr></thead><tbody>{data.items.map(log => <OpenableTableRow key={log.id} onOpen={() => setViewing(log)}>
-          <td><button type="button" className={managementStyles.linkButton} aria-label={`Xem nhật ký ${log.raftCode} ngày ${formatVietnameseDate(log.visitDate)}`} onClick={event => { stop(event); setViewing(log); }}>{formatVietnameseDate(log.visitDate)}</button></td>
-          <td className="whitespace-nowrap">{log.zoneCode || log.zoneName || "—"} · <Link className={managementStyles.linkButton} href={farmingReferenceHref("raft", { zoneId: log.zoneId, search: log.raftCode, tab: "logs" })} onClick={stop}>{log.raftCode}</Link></td>
-          <td className="whitespace-nowrap">{logTypeLabel(log.logType)}</td>
-          <td className="max-w-xs truncate" title={log.notes ?? undefined}>{log.notes ?? "—"}</td>
-          <td>{log.photos.length ? <span className="inline-flex items-center gap-2"><Image src={logPhotoSrc(log.id, log.zoneId, 0)} alt="" width={32} height={32} unoptimized className="size-8 rounded object-cover" />{log.photos.length}</span> : "—"}</td>
-          <td>{log.recordedByName ?? "—"}</td><td className="whitespace-nowrap">{when(log.recordedAt)}</td>
-        </OpenableTableRow>)}</tbody></table>}
+        : <LogsTable items={data.items} visible={visible} sort={sort} onSort={changed<SortState>(setSort)} onOpen={setViewing} />}
     </ManagementScroller>
     {viewing && <LogCard log={viewing} cycleId={viewing.cycleId} zoneId={viewing.zoneId} canEdit={operationAllowed("cultivation-cycles", identity, functions, "LogsEdit", viewing.zoneId)} guard={guard}
       onClose={() => setViewing(undefined)} onChanged={reload} />}
