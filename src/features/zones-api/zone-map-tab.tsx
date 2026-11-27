@@ -46,7 +46,8 @@ export function ZoneMapTab({ zone, canSeeRafts, onOpenRaft }: { zone: ZoneDetail
   if (remote.error || !remote.data) return <ListStateMessage error={remote.error ?? "Không tải được bản đồ vùng."} onRetry={remote.reload} retryLabel="Tải lại" />;
   const rafts = mapZone?.rafts ?? [], placed = rafts.filter(hasPoint).length;
   const outside = rafts.filter(raft => raft.latitude !== null && raft.longitude !== null && isOutsideBoundary({ latitude: raft.latitude, longitude: raft.longitude }, mapZone?.boundary)).length;
-  const where = mapZone?.boundary ? `${mapZone.boundary.features.length} khu theo sơ đồ cấp phép` : mapZone && hasPoint(mapZone) ? `${mapZone.latitude}, ${mapZone.longitude}` : "chưa có ranh giới hoặc tọa độ";
+  const areas = mapZone?.boundary?.features.length ?? 0;
+  const where = mapZone?.boundary ? (areas === 1 ? "ranh giới theo sơ đồ cấp phép" : `ranh giới theo sơ đồ cấp phép, ${areas} vùng`) : mapZone && hasPoint(mapZone) ? `${mapZone.latitude}, ${mapZone.longitude}` : "chưa có ranh giới hoặc tọa độ";
   const pick = (value: MapSelection) => setSelection(value);
   const toolbar = <div className={styles.mapBar}>
     <span>{`Vùng ${zone.code}: ${where}`}{canSeeRafts ? ` · ${placed}/${rafts.length} bè có tọa độ` : ""}{outside > 0 ? ` · ${outside} bè ngoài ranh giới` : ""}</span>

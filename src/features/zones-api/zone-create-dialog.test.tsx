@@ -152,7 +152,7 @@ describe("saving with a boundary", () => {
     await open();
     type("Tên vùng *", "Vùng A");
     await readMap();
-    fireEvent.change(screen.getByLabelText("Y của điểm K2, Khu 1"), { target: { value: "abc" } });
+    fireEvent.change(screen.getByLabelText("Y của điểm K2, Vùng 1"), { target: { value: "abc" } });
     await press("Lưu");
     expect(workspace.mutate).not.toHaveBeenCalled();
     expect(screen.getAllByRole("alert").map(alert => alert.textContent).join(" ")).toContain("Sơ đồ cấp phép còn chỗ cần sửa");
@@ -193,7 +193,7 @@ describe("saving with a boundary", () => {
     await readMap();
     await press("Lưu");
     const before = JSON.stringify(boundaryApi.save.mock.calls[0][1]);
-    fireEvent.change(screen.getByLabelText("X của điểm K1, Khu 1"), { target: { value: "2315870.00" } });
+    fireEvent.change(screen.getByLabelText("X của điểm K1, Vùng 1"), { target: { value: "2315870.00" } });
     await press("Thử lại");
     expect(JSON.stringify(boundaryApi.save.mock.calls[1][1])).not.toBe(before);
     expect(workspace.mutate).toHaveBeenCalledTimes(1);

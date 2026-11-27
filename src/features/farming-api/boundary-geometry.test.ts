@@ -77,7 +77,7 @@ describe("boundary layers", () => {
   it("builds a polygon and a name label per khu, with a fallback name only when the zone has several", () => {
     const layers = buildBoundaryLayers([{ code: "Z1", boundary: parseZoneBoundary(boundary(square(107.45, 21, 0.01, "Khu A"), square(107.5, 21)))! }]);
     expect(layers?.data.features).toHaveLength(2);
-    expect(layers?.labels.map(label => label.text)).toEqual(["Khu A", "Khu 2"]);
+    expect(layers?.labels.map(label => label.text)).toEqual(["Khu A", "Vùng 2"]);
     expect(layers?.positions).toHaveLength(10);
     expect(layers?.labels[0].position[0]).toBeCloseTo(107.455, 5);
     expect(layers?.labels[0].position[1]).toBeCloseTo(21.005, 5);

@@ -27,14 +27,14 @@ export function ringCentre(ring: readonly BoundaryPosition[]): BoundaryPosition 
 
 /**
  * Polygons of the zones that have a boundary, one feature per khu. The label is the khu name; an unnamed khu of a zone with several is
- * "Khu n", and the zone code leads the label when more than one zone is drawn. Undefined when no zone has a boundary (the map draws nothing).
+ * "Vùng n", and the zone code leads the label when more than one zone is drawn. Undefined when no zone has a boundary (the map draws nothing).
  */
 export function buildBoundaryLayers(zones: readonly { code: string; boundary: ZoneBoundary | null }[]): BoundaryLayers | undefined {
   const drawn = zones.filter(zone => boundaryRings(zone.boundary).length);
   if (!drawn.length) return undefined;
   const layers: BoundaryLayers = { data: { type: "FeatureCollection", features: [] }, labels: [], positions: [] };
   for (const zone of drawn) zone.boundary!.features.forEach((feature, index, all) => {
-    const ring = feature.geometry.coordinates[0], name = feature.properties.name ?? (all.length > 1 ? `Khu ${index + 1}` : "");
+    const ring = feature.geometry.coordinates[0], name = feature.properties.name ?? (all.length > 1 ? `Vùng ${index + 1}` : "");
     const text = [drawn.length > 1 ? zone.code : "", name].filter(Boolean).join(" · ");
     layers.data.features.push({ type: "Feature", properties: { zoneCode: zone.code, name }, geometry: { type: "Polygon", coordinates: [ring] } });
     layers.positions.push(...ring);

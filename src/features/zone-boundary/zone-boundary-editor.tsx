@@ -67,8 +67,8 @@ export function ZoneBoundaryEditor({ zoneId, initialBoundary, disabled = false, 
     {draft.review.warnings.length > 0 && <ul role="status" aria-label="Nên kiểm tra lại" className={`${styles.issues} ${styles.warning}`}>{draft.review.warnings.map((issue, index) => <li key={index}>{issue.message}</li>)}</ul>}
     <BoundaryAreaTable draft={draft} disabled={disabled} />
     <div className={styles.toolbar}>
-      <p className={styles.summary}>{draft.areas.length > 0 ? <><strong>{draft.areas.length} khu</strong>, {corners} điểm góc</> : "Chưa có khu nào. Chọn ảnh sơ đồ hoặc thêm khu bằng tay."}</p>
-      <button type="button" className={styles.linkButton} disabled={disabled || !draft.canAddArea} onClick={draft.addArea}><InterfaceIcon name="add" className="size-4" />Thêm khu</button>
+      <p className={styles.summary}>{draft.areas.length > 0 ? <><strong>{draft.areas.length} vùng</strong>, {corners} điểm góc</> : "Chưa có vùng nào. Chọn ảnh sơ đồ hoặc thêm vùng bằng tay."}</p>
+      <button type="button" className={styles.linkButton} disabled={disabled || !draft.canAddArea} onClick={draft.addArea}><InterfaceIcon name="add" className="size-4" />Thêm vùng</button>
     </div>
     {preview && draft.boundary && !blocked && preview({ boundary: draft.boundary })}
   </div>;

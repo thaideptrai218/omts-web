@@ -87,7 +87,7 @@ export function draftsOf(boundary: ZoneBoundary | null | undefined, centralMerid
     const ring = feature.geometry.coordinates[0] ?? [];
     const open = ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1] ? ring.slice(0, -1) : ring;
     const labels = feature.properties?.corners ?? [];
-    return areaDraft(feature.properties?.name ?? `Khu ${index + 1}`, open.map(([longitude, latitude], corner) => {
+    return areaDraft(feature.properties?.name ?? `Vùng ${index + 1}`, open.map(([longitude, latitude], corner) => {
       const grid = vn2000ToGrid(wgs84ToVn2000({ latitude, longitude }), centralMeridian);
       return cornerDraft(labels[corner] ?? "", grid.x, grid.y);
     }));
@@ -191,7 +191,7 @@ export function selfIntersects(points: Coordinates[]): boolean {
 export type BoundaryIssue = { message: string; areaKey?: string; cornerKey?: string };
 export type BoundaryReview = { blocking: BoundaryIssue[]; warnings: BoundaryIssue[] };
 
-const areaLabel = (area: AreaDraft) => area.name.trim() || "Khu chưa đặt tên";
+const areaLabel = (area: AreaDraft) => area.name.trim() || "Vùng chưa đặt tên";
 const ha = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 
 /**
@@ -201,10 +201,10 @@ const ha = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDig
  */
 export function reviewBoundary(areas: readonly AreaDraft[], centralMeridian: number): BoundaryReview {
   const blocking: BoundaryIssue[] = [], warnings: BoundaryIssue[] = [];
-  if (areas.length > MAX_AREAS) blocking.push({ message: `Một vùng có tối đa ${MAX_AREAS} khu. Bỏ bớt các khu không thuộc vùng này.` });
+  if (areas.length > MAX_AREAS) blocking.push({ message: `Ranh giới có tối đa ${MAX_AREAS} vùng. Bỏ bớt các vùng không thuộc vùng nuôi này.` });
   for (const area of areas) {
     const name = areaLabel(area), areaKey = area.key;
-    if (area.name.trim().length > MAX_AREA_NAME) blocking.push({ areaKey, message: `${name}: tên khu tối đa ${MAX_AREA_NAME} ký tự.` });
+    if (area.name.trim().length > MAX_AREA_NAME) blocking.push({ areaKey, message: `${name}: tên vùng tối đa ${MAX_AREA_NAME} ký tự.` });
     let usable = 0;
     const seen = new Map<string, string>();
     for (const [index, corner] of area.corners.entries()) {

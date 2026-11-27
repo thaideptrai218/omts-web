@@ -40,7 +40,7 @@ export function useBoundaryDraft(initial?: ZoneBoundary | null) {
       if (inRange(reading.centralMeridian)) { setMeridian(reading.centralMeridian); setMeridianInput(meridianText(reading.centralMeridian)); }
       change(current => mergeAreas(current, reading.areas));
     },
-    addArea: () => change(current => [...current, areaDraft(`Khu ${current.length + 1}`, [emptyCorner(), emptyCorner(), emptyCorner()])]),
+    addArea: () => change(current => [...current, areaDraft(`Vùng ${current.length + 1}`, [emptyCorner(), emptyCorner(), emptyCorner()])]),
     removeArea: (areaKey: string) => change(current => current.filter(area => area.key !== areaKey)),
     renameArea: (areaKey: string, name: string) => updateArea(areaKey, area => ({ ...area, name })),
     addCorner: (areaKey: string) => updateArea(areaKey, area => ({ ...area, corners: [...area.corners, emptyCorner()] })),

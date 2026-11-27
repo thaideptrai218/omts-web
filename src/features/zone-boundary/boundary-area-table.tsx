@@ -7,7 +7,7 @@ import type { BoundaryDraft } from "./use-boundary-draft";
 import styles from "./zone-boundary.module.css";
 
 const ha = (value: number | null) => value === null ? "—" : `${value.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} ha`;
-const nameOf = (area: AreaDraft) => area.name.trim() || "Khu chưa đặt tên";
+const nameOf = (area: AreaDraft) => area.name.trim() || "Vùng chưa đặt tên";
 
 /** One khu: name, the written area against the area of its corners, and its corner rows (Điểm, X, Y). */
 function AreaCard({ area, index, draft, disabled }: { area: AreaDraft; index: number; draft: BoundaryDraft; disabled: boolean }) {
@@ -28,7 +28,7 @@ function AreaCard({ area, index, draft, disabled }: { area: AreaDraft; index: nu
       <InterfaceIcon name="chevron-down" />
     </summary>
     <div className={styles.cardBody}>
-      <label className={`${styles.nameRow} block text-xs font-medium text-text-muted`}>Tên khu
+      <label className={`${styles.nameRow} block text-xs font-medium text-text-muted`}>Tên vùng
         <input className="omts-control mt-1" value={area.name} maxLength={MAX_AREA_NAME} disabled={disabled} onChange={event => draft.renameArea(area.key, event.target.value)} />
       </label>
       <div className={styles.tableWrap} role="group" tabIndex={0} aria-label={`Điểm góc của ${name}`}>
