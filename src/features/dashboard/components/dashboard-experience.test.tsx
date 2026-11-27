@@ -97,7 +97,7 @@ describe("dashboard shell and data boundaries", () => {
     service.load.mockRejectedValueOnce(new Error("fixture unavailable"));
     render(<DashboardExperience />);
     await screen.findByRole("alert");
-    expect(screen.getByRole("link", { name: /Nhân viên/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Danh sách nhân viên/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
     await screen.findByRole("group", {
       name: "2 tài khoản hoạt động, 1 tài khoản đã khóa",

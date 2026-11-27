@@ -35,7 +35,7 @@ const shortcuts: readonly {
   },
   {
     href: "/employees",
-    label: "Nhân viên thời vụ",
+    label: "Danh sách nhân viên",
     description: "Tra cứu và cập nhật hồ sơ",
     icon: "employee",
     permission: "cooperative.employees.manage",
