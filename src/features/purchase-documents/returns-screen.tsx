@@ -18,6 +18,8 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { ErrorNotice, Skeleton, useMutation, useRemote } from "@/features/operations/ui";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { kindText, receiptHref, type StockKind } from "@/features/input-items/stock-kind";
+import { vatRateLabel } from "@/features/input-items/vat-rate";
+import { KctVatRow } from "./kct-vat-row";
 import { errorText, fmt, methodLabel, usePurchaseAccess, viDate, viDateTime } from "./document-parts";
 import { cancelReturn, download, getReturn, listReturns, removeReturn, usePurchaseLookups } from "./repository";
 import { RETURN, goodsTotal, returnStatusLabel, type Page, type ReturnQuery, type ReturnRow } from "./types";
@@ -145,10 +147,10 @@ function ReturnDetail({ kind, id, owner, canEdit, canRemove, onChanged }: { kind
         {item.refund && <div><dt>Phiếu NCC trả tiền</dt><dd>{item.refund.code} · {methodLabel[item.refund.method]}</dd></div>}
         {item.cancelReason && <div><dt>Lý do hủy</dt><dd className={styles.danger}>{item.cancelReason}</dd></div>}
       </dl>
-      <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>#</th><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Giá trả</th><th className={styles.num}>Thành tiền</th></tr></thead>
-        <tbody>{item.lines.map((line, index) => <tr key={line.id}><td>{index + 1}</td><td>{line.item.code}</td><td>{line.item.name}</td><td>{line.item.unit}</td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}>{fmt(Math.round(line.quantity * line.unitPrice))}</td></tr>)}</tbody></table></div>
+      <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>#</th><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Giá trả</th><th className={styles.num}>VAT (%)</th><th className={styles.num}>Thành tiền</th></tr></thead>
+        <tbody>{item.lines.map((line, index) => <tr key={line.id}><td>{index + 1}</td><td>{line.item.code}</td><td>{line.item.name}</td><td>{line.item.unit}</td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}>{vatRateLabel(line.vatRate)}</td><td className={styles.num}>{fmt(Math.round(line.quantity * line.unitPrice))}</td></tr>)}</tbody></table></div>
       <div className={styles.foot}><p className={styles.noteBox}>{item.reason || "Chưa nhập lý do trả hàng."}</p>
-        <div className={styles.sums}><div><span>Tổng tiền hàng</span><span>{fmt(goodsTotal(item.lines))}</span></div><div><span>Giảm giá</span><span>{fmt(item.discount)}</span></div><div className={styles.strong}><span>NCC cần trả</span><span>{fmt(item.netValue)}</span></div><div><span>Tiền NCC đã trả</span><span>{fmt(item.refund?.amount ?? 0)}</span></div></div></div>
+        <div className={styles.sums}><div><span>Tổng tiền hàng</span><span>{fmt(goodsTotal(item.lines))}</span></div><div><span>Giảm giá</span><span>{fmt(item.discount)}</span></div>{item.kind === "Seed" ? <KctVatRow layout="sum" label="Thuế GTGT hoàn lại" /> : <div><span>Thuế GTGT hoàn lại</span><span>{fmt(item.vatRefund)}</span></div>}<div className={styles.strong}><span>NCC cần trả</span><span>{fmt(item.netValue)}</span></div><div><span>Tiền NCC đã trả</span><span>{fmt(item.refund?.amount ?? 0)}</span></div></div></div>
       <ErrorNotice error={error} />
       {((draft && (canRemove || canEdit)) || (recorded && (owner || canEdit))) && <footer className={listStyles.tabFooter}>
         <div>{draft && canRemove && <Button className="w-auto" variant="ghost" onClick={() => void remove()}><InterfaceIcon name="lock" className="size-4" />Xóa phiếu tạm</Button>}{recorded && owner && <Button className="w-auto" variant="ghost" onClick={() => void cancel()}><InterfaceIcon name="lock" className="size-4" />Hủy phiếu trả</Button>}</div>

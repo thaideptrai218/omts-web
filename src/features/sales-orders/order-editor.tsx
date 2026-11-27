@@ -1,4 +1,5 @@
 "use client";
+import { KctVatRow } from "@/features/purchase-documents/kct-vat-row";
 import { cageUnitOf } from "@/features/products/product-helpers";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -173,6 +174,7 @@ function Editor({ access, start, products, people }: { access: OrderAccess; star
           <div className={purchaseStyles.divider} />
           <SideRow label={`Tổng tiền hàng (${lines.length})`}>{fmt(totals.subtotal)}</SideRow>
           <SideRow label="Giảm giá"><DiscountInput label="Giảm giá đơn" base={totals.subtotal} value={discount} invalid={discount > totals.subtotal} onChange={setDiscount} /></SideRow>
+          <KctVatRow layout="side" />
           <SideRow label="Khách cần trả" strong>{fmt(totals.total)}</SideRow>
           {order && advanced > 0 && <SideRow label="Khách đã ứng">{fmt(advanced)}</SideRow>}
           {waitingQr.map((row) => <SideRow key={row.paymentId} label={row.paymentCode}><button type="button" className={purchaseStyles.refundLink} onClick={() => setReprint(row.paymentId)}><InterfaceIcon name="payment" />Hiện mã QR</button></SideRow>)}

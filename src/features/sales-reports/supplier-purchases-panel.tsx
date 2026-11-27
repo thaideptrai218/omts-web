@@ -44,22 +44,23 @@ export function SupplierPurchasesPanel({ report, params, groupBy, view, onView, 
     ]),
     { key: "receipts", header: "Số phiếu nhập", numeric: true, cell: (group) => count(group.receiptCount), total: count(totals.receiptCount) },
     { key: "returns", header: "Số phiếu trả", numeric: true, cell: (group) => count(group.returnCount), total: count(totals.returnCount) },
-    { key: "received", header: "Giá trị nhập", numeric: true, cell: (group) => vnd(group.receivedValue), total: vnd(totals.receivedValue) },
+    { key: "received", header: "Tiền hàng", numeric: true, cell: (group) => vnd(group.receivedValue), total: vnd(totals.receivedValue) },
+    { key: "vat", header: "Thuế GTGT", numeric: true, cell: (group) => vnd(group.vatAmount ?? 0), total: vnd(totals.vatAmount ?? 0) },
     { key: "returned", header: "Giá trị trả", numeric: true, cell: (group) => vnd(group.returnedValue), total: vnd(totals.returnedValue) },
-    { key: "net", header: "Nhập thuần", numeric: true, cell: (group) => vnd(group.netValue), total: vnd(totals.netValue) },
+    { key: "net", header: "Tổng trả NCC", numeric: true, cell: (group) => vnd(group.netValue), total: vnd(totals.netValue) },
   ], [bySupplier, totals, open?.key]);
-  const chartTitle = `Top ${TOP_N} ${subject} theo giá trị nhập thuần`;
+  const chartTitle = `Top ${TOP_N} ${subject} theo tổng trả NCC`;
   return (
     <>
-      <p className={s.period}>{formatVietnameseDate(report.from)} – {formatVietnameseDate(report.to)} · phiếu nhập đã hoàn tất, chưa tính thuế · không chia theo vùng</p>
+      <p className={s.period}>{formatVietnameseDate(report.from)} – {formatVietnameseDate(report.to)} · phiếu nhập đã hoàn tất, tổng trả NCC đã gồm thuế GTGT · không chia theo vùng</p>
       <ReportTiles label="Tổng hợp toàn kỳ" tiles={[
-        { label: "Số phiếu nhập", value: count(totals.receiptCount) }, { label: "Giá trị nhập", value: vnd(totals.receivedValue) },
-        { label: "Giá trị trả", value: vnd(totals.returnedValue), hint: `${count(totals.returnCount)} phiếu trả` }, { label: "Nhập thuần", value: vnd(totals.netValue) },
+        { label: "Số phiếu nhập", value: count(totals.receiptCount) }, { label: "Tiền hàng", value: vnd(totals.receivedValue) }, { label: "Thuế GTGT", value: vnd(totals.vatAmount ?? 0) },
+        { label: "Giá trị trả", value: vnd(totals.returnedValue), hint: `${count(totals.returnCount)} phiếu trả` }, { label: "Tổng trả NCC", value: vnd(totals.netValue) },
       ]} />
       <ReportCard title={view === "chart" ? chartTitle : `Hàng nhập theo ${subject}`} actions={<ReportViewToggle view={view} onChange={onView} />}>
         {!shown.length ? <ListStateMessage>Không có {subject} nào khớp từ khóa tìm kiếm.</ListStateMessage>
           : view === "chart"
-            ? <BarChart points={top.map((group) => ({ label: nameOf(group), values: [group.netValue] }))} series={[{ name: "Nhập thuần" }]} valueFormat={vnd} axisFormat={formatMoneyShort} ariaLabel={`${chartTitle}, ${top.length} dòng`} />
+            ? <BarChart points={top.map((group) => ({ label: nameOf(group), values: [group.netValue] }))} series={[{ name: "Tổng trả NCC" }]} valueFormat={vnd} axisFormat={formatMoneyShort} ariaLabel={`${chartTitle}, ${top.length} dòng`} />
             : <ReportTable caption={`Hàng nhập theo ${subject}`} columns={columns} rows={shown} rowKey={(group) => group.key} selectedKey={open?.key} />}
       </ReportCard>
       {view === "table" && open && <PurchaseDocumentsCard label={open.label} data={documents.data} loading={documents.loading} error={documents.error} onRetry={documents.reload} />}

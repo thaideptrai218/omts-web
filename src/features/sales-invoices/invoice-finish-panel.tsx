@@ -1,4 +1,5 @@
 "use client";
+import { KctVatRow } from "@/features/purchase-documents/kct-vat-row";
 import { useCallback, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function InvoiceFinishPanel({ invoice, change, subtracted, onDone, doneLa
           <p className={s.muted}>Tổng {money(invoice.total)} · {invoice.customer?.name ?? "Khách lẻ"}</p></div>
       </div>
       <dl className={s.sums}>
+        <KctVatRow layout="list" valueClassName={s.num} />
         {change > 0 && <div className={s.callout}><dt>Trả lại khách</dt><dd className={s.num}>{money(change)}</dd></div>}
         {subtracted > 0 && <div><dt>Đã trừ vào công nợ</dt><dd className={s.num}>{money(subtracted)}</dd></div>}
       </dl>

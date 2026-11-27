@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { vatRateField } from "./vat-rate";
 
 /**
  * Shapes of the Vật tư & Giống module of the backend (items, units, groups, settings, movements, seed lots, issues), as the BFF at
@@ -20,6 +21,8 @@ export const itemRow = z.object({
   productLocked: z.boolean().nullish(),
   // "Thời gian trưởng thành" of a seed item: days from seeding until the oysters can be harvested.
   maturityDays: count.nullish(),
+  // "VAT mua vào": always KCT for a seed; an API without the field yet sends none (shown as "—").
+  purchaseVatRate: vatRateField,
   minQuantity: numOpt, maxQuantity: numOpt, costPrice: numOpt, lastPurchasePrice: numOpt, onHand: num, stockValue: num, isUsed: z.boolean().nullish(),
   statusId: count, status: text, createdAt: text, createdBy: opt, rowVersion: text,
 });
@@ -28,6 +31,7 @@ export const itemView = itemRow.extend({ photos: z.array(z.object({ id, url: tex
 export const itemList = z.array(itemRow);
 export const importResult = z.object({ imported: count, errors: z.array(z.object({ row: count, fields: z.array(text), message: text })) });
 export const nextCode = z.object({ code: text });
+export const purchaseVatUpdated = z.object({ updated: count });
 /**
  * GET /api/products relayed by the input-items BFF (the Owner's item form): tolerant of the shape (bare array or `items`) and of the "in use" flag
  * (`inUse`, or `statusId` 101; a product with neither is kept). Keeps the products in use, sorted by name: the choices of "Loại hàu bán ra".
@@ -114,7 +118,7 @@ export const fieldNames: Record<string, string> = {
   Code: "Mã", Name: "Tên", Group: "Loại hàng", "Item group": "Nhóm hàng", Unit: "Đơn vị tính", Units: "Đơn vị tính", "Unit code": "Mã đơn vị", Photos: "Ảnh",
   "Min quantity": "Định mức tối thiểu", "Max quantity": "Định mức tối đa", "Cost price": "Giá vốn", "Opening quantity": "Còn lại ban đầu", Description: "Mô tả", Notes: "Ghi chú",
   Zone: "Vùng", Raft: "Bè", "Issue type": "Loại xuất", Receiver: "Người nhận", "Issued at": "Thời gian", Reason: "Lý do", Lines: "Hàng xuất", "Disposal fields": "Vùng, bè, loại xuất, người nhận",
-  Ids: "Thứ tự", Parent: "Nhóm cha",
+  Ids: "Thứ tự", Parent: "Nhóm cha", "Purchase VAT rate": "VAT mua vào", "Item ids": "Vật tư",
   "Unit price": "Giá bán", Category: "Nhóm sản phẩm", "Min kg": "Định mức tối thiểu", "Max kg": "Định mức tối đa", Factor: "Quy đổi", "Disposed at": "Thời gian",
   "Product lines": "Sản phẩm thu hoạch", Product: "Loại hàu bán ra", Kind: "Loại phiếu", "Seed lot": "Lô giống",
   Advance: "Khách thanh toán", "Advance amount": "Số tiền khách thanh toán", "Advance method": "Phương thức thanh toán", "Cash account": "Tài khoản nhận", "Bank reference": "Mã giao dịch ngân hàng",

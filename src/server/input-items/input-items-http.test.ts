@@ -69,3 +69,42 @@ describe("issue list over several zones", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+describe("input VAT on the items door", () => {
+  const post = (body: unknown) => new Request("https://web.example.test/api/input-items", { method: "POST", headers: { Origin: "https://web.example.test", "X-OMTS-Request": "web", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  it("forwards the VAT filter of the list and refuses a rate the API does not know", async () => {
+    setup([["PURCHASE_RECEIPTS", "View"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 20, total: 0, summary: { stockValue: 0 } }));
+    expect((await handleInputItems(get("action=items&purchaseVatRate=8"))).status).toBe(200);
+    expect(String(fetcher.mock.calls[0][0])).toContain("purchaseVatRate=8");
+    expect((await handleInputItems(get("action=items&purchaseVatRate=12"))).status).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends the bulk change of the rate to its own endpoint for the Owner and nothing else", async () => {
+    setup([], "CooperativeOwner");
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ updated: 2 }));
+    const response = await handleInputItems(post({ action: "item-purchase-vat-rate", body: { itemIds: [id, "122bb318-a72e-49aa-a8d7-a6169f889008"], purchaseVatRate: "8" } }));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({ updated: 2 });
+    expect(String(fetcher.mock.calls[0][0])).toContain("/api/farming-input-items/purchase-vat-rate");
+    expect(fetcher.mock.calls[0][1]?.method).toBe("POST");
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ itemIds: [id, "122bb318-a72e-49aa-a8d7-a6169f889008"], purchaseVatRate: "8" });
+    expect((await handleInputItems(post({ action: "item-purchase-vat-rate", body: { itemIds: [], purchaseVatRate: "8" } }))).status).toBe(400);
+    expect((await handleInputItems(post({ action: "item-purchase-vat-rate", body: { itemIds: [id], purchaseVatRate: "12" } }))).status).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    setup([["PURCHASE_RECEIPTS", "View"]]);
+    expect((await handleInputItems(post({ action: "item-purchase-vat-rate", body: { itemIds: [id], purchaseVatRate: "8" } }))).status).toBe(403);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes the rate of an item save through and keeps the body strict", async () => {
+    setup([], "CooperativeOwner");
+    const row = { id, code: "VT000001", name: "Phao", group: "Material", unit: "cái", units: [], onHand: 0, stockValue: 0, statusId: 101, status: "InUse", createdAt: "2026-11-28T00:00:00+07:00", rowVersion: "v", purchaseVatRate: "10" };
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(row));
+    const body = { name: "Phao", group: "Material", purchaseVatRate: "10" };
+    expect((await handleInputItems(post({ action: "item-create", body }))).status).toBe(200);
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body)).purchaseVatRate).toBe("10");
+    expect((await handleInputItems(post({ action: "item-create", body: { ...body, purchaseVatRate: "15" } }))).status).toBe(400);
+  });
+});

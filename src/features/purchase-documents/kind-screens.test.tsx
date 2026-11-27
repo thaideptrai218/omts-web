@@ -26,9 +26,9 @@ const returnRow = (patch: object = {}) => ({ id: id(2), code: "TH000001", return
   statusId: 1901, status: "Recorded", recordedBy: { id: id(9), name: "Chủ" }, value: 10, discount: 0, netValue: 10, itemCount: 1, refunded: 0, createdAt: "2026-11-12T08:00:00+07:00", returnedAt: "2026-11-12T08:00:00+07:00", kind: "Seed", ...patch });
 const seedReceipt = (lotState: string | null, patch: Partial<Receipt> = {}): Receipt => ({
   id: id(1), code: "PN000004", kind: "Seed", seedState: lotState as never, date: "2026-11-10", receivedAt: "2026-11-10T08:00:00+07:00", receivedBy: null, completedAt: null, rowVersion: "v1", supplier: { id: id(8), code: "NCC000001", name: "Trại giống", phone: "" }, zone: null,
-  recordedBy: "Chủ", statusId: 1702, discount: 0, payable: 100, paid: 0, notes: null, cancelReason: null,
+  recordedBy: "Chủ", statusId: 1702, discount: 0, payable: 100, paid: 0, notes: null, vatTotal: 0, cancelReason: null,
   lines: [{ id: id(3), item: { id: id(4), code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", units: [] }, itemUnitId: null, unitFactor: 1, quantity: 100, unitPrice: 1, raft: null, supplierLotCode: null, seedLotCode: "PN000004-1",
-    seedLot: lotState ? { state: lotState as never, remainingQty: 40 } : null, seeded: 60, returned: 0, returnable: 40, discount: 0, netUnitPrice: 1 }],
+    seedLot: lotState ? { state: lotState as never, remainingQty: 40 } : null, seeded: 60, returned: 0, returnable: 40, discount: 0, netUnitPrice: 1, vatRate: "KCT", vatAmount: 0 }],
   returns: [{ id: id(2), code: "TH000001", date: "2026-11-12", returnedAt: null, reason: "Hỏng", value: 10, statusId: 1901 }], ...patch,
 });
 

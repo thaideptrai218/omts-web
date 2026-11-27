@@ -14,6 +14,7 @@ import { fmt, viDateTime } from "@/features/purchase-documents/document-parts";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { DISCONTINUED, typeLabel, type ItemView, type UnitView } from "./contracts";
 import { baseUnitOf, inUnitPrice, inUnitQuantity } from "./item-helpers";
+import { vatRateLabel } from "./vat-rate";
 import { ItemLotsTab } from "./item-lots-tab";
 import { ItemMovementsTab } from "./item-movements-tab";
 import { kindOfGroup, kindText } from "./stock-kind";
@@ -50,19 +51,21 @@ function InfoTab(props: TabProps) {
   const initials = record.name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join("").toUpperCase();
   const quantity = (value: number | null | undefined) => value == null ? "—" : `${fmt(value)} ${base?.name ?? ""}`;
   const inUnit = props.unit;
+  // A seed is always KCT; an API without the field sends none, which shows as "—".
+  const vatText = record.group === "Seed" ? "KCT" : vatRateLabel(record.purchaseVatRate);
   const unitQuantity = (value: number | null | undefined) => value == null || !inUnit ? "—" : `${fmt(inUnitQuantity(value, inUnit.factor))} ${inUnit.name}`;
   const unitPrice = (value: number | null | undefined) => value == null || !inUnit ? null : `${fmt(inUnitPrice(value, inUnit.factor))} / ${inUnit.name}`;
   // With a unit picked on the list only that unit shows (its code, cost and quantity); otherwise the whole unit list.
   const facts: [string, ReactNode][] = inUnit ? [
     ["Mã hàng", inUnit.code], ["Tên hàng", record.name], ["Loại hàng", typeLabel(record.group)], ["Nhóm hàng", record.itemGroupName], ["Đơn vị tính", inUnit.name],
-    ["Giá vốn", unitPrice(record.costPrice)], ["Giá nhập cuối", unitPrice(record.lastPurchasePrice)],
+    ["Giá vốn (gồm VAT)", unitPrice(record.costPrice)], ["Giá nhập cuối", unitPrice(record.lastPurchasePrice)], ["VAT mua vào", vatText],
     ["Còn lại", unitQuantity(record.onHand)], ["Giá trị còn lại", fmt(record.stockValue)], ["Định mức tối thiểu", unitQuantity(record.minQuantity)], ["Định mức tối đa", unitQuantity(record.maxQuantity)],
     ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
   ] : [
     ["Mã hàng", record.code], ["Tên hàng", record.name], ["Loại hàng", typeLabel(record.group)], ["Nhóm hàng", record.itemGroupName],
     ...(record.group === "Seed" ? [["Loại hàu bán ra", record.product?.code ? <Link key="product" className={styles.link} href={productHref(record.product.code)}>{record.product.name}</Link> : record.product?.name ?? record.productName] as [string, ReactNode]] : []),
     ["Đơn vị tính", <span key="units" className={styles.unitList}>{record.units.map((unit) => <span key={unit.id}>{unit.name} <small>· {unit.code}</small></span>)}</span>],
-    ["Giá vốn", record.costPrice == null ? null : `${fmt(record.costPrice)} / ${base?.name ?? ""}`], ["Giá nhập cuối", record.lastPurchasePrice == null ? null : `${fmt(record.lastPurchasePrice)} / ${base?.name ?? ""}`],
+    ["Giá vốn (gồm VAT)", record.costPrice == null ? null : `${fmt(record.costPrice)} / ${base?.name ?? ""}`], ["Giá nhập cuối", record.lastPurchasePrice == null ? null : `${fmt(record.lastPurchasePrice)} / ${base?.name ?? ""}`], ["VAT mua vào", vatText],
     ["Còn lại", quantity(record.onHand)], ["Giá trị còn lại", fmt(record.stockValue)], ["Định mức tối thiểu", quantity(record.minQuantity)], ["Định mức tối đa", quantity(record.maxQuantity)],
     ["Người tạo", record.createdBy], ["Ngày tạo", viDateTime(record.createdAt)],
   ];
