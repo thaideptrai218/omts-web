@@ -166,7 +166,7 @@ it("returns the phao at the rate of its receipt line: VAT hoàn lại 10.000 and
   expect(state.saveReturn.mock.calls[0][0].lines[0]).toMatchObject({ receiptLineId: lineId(1), quantity: 1, unitPrice: 100000 });
 });
 
-it("shows no VAT column on a standalone return and a zero Thuế GTGT hoàn lại", async () => {
+it("starts a standalone return with no VAT column and nothing to refund (its lines later take the item VAT mua vào)", async () => {
   wrap(<ReturnEditorPage kind="Supply" />);
   await screen.findByLabelText("Tìm vật tư trả theo mã hoặc tên");
   expect(screen.queryByRole("columnheader", { name: "VAT (%)" })).toBeNull();

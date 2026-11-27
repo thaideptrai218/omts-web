@@ -78,8 +78,11 @@ function Editor({ kind, lineId, record, receipt, lookups }: { kind: StockKind; l
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false), [refunding, setRefunding] = useState(false), [addingSupplier, setAddingSupplier] = useState(false);
   const receiptLines = receipt?.lines.filter((line) => limit(line) > 0 || linked[line.id]) ?? [];
   const lines = receipt ? receiptLines.filter((line) => linked[line.id] > 0).map((line) => ({ receiptLineId: line.id, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: linked[line.id], unitPrice: prices[line.id] ?? line.netUnitPrice })) : free.map((line) => ({ receiptLineId: null, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: line.quantity, unitPrice: line.unitPrice }));
-  // The VAT paid back with the goods: the value of each returned line x the rate of the receipt line it comes from (a seed is KCT, a standalone return has no rate).
-  const total = goodsTotal(lines), vatRefund = receipt ? sumOf(receiptLines.filter((line) => linked[line.id] > 0).map((line) => vatOf(Math.round(linked[line.id] * (prices[line.id] ?? line.netUnitPrice)), line.item.group === "Seed" ? "KCT" : line.vatRate))) : 0, due = total - discount + vatRefund, paid = refund?.amount ?? 0, overLimit = receiptLines.some((line) => (linked[line.id] ?? 0) > limit(line) + 1e-9);
+  // The VAT paid back with the goods: the value of each returned line x the rate of the receipt line it comes from. A standalone return has no receipt line,
+  // so it takes the item's VAT mua vào (the stock cost of the item already includes it), as the backend does; a seed is always KCT.
+  const freeRate = (line: FreeLine) => line.item.group === "Seed" ? "KCT" : kindItems.find((item) => item.id === line.item.id)?.purchaseVatRate ?? line.item.purchaseVatRate;
+  const total = goodsTotal(lines), vatRefund = receipt ? sumOf(receiptLines.filter((line) => linked[line.id] > 0).map((line) => vatOf(Math.round(linked[line.id] * (prices[line.id] ?? line.netUnitPrice)), line.item.group === "Seed" ? "KCT" : line.vatRate)))
+    : sumOf(free.map((line) => vatOf(Math.round(line.quantity * line.unitPrice), freeRate(line)))), due = total - discount + vatRefund, paid = refund?.amount ?? 0, overLimit = receiptLines.some((line) => (linked[line.id] ?? 0) > limit(line) + 1e-9);
   const suppliers = record && !lookups.suppliers.some((row) => row.id === record.supplier.id) ? [record.supplier, ...lookups.suppliers] : lookups.suppliers;
   const updateFree = (key: string, patch: Partial<FreeLine>) => setFree((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
 
