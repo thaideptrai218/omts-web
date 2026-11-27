@@ -1,5 +1,5 @@
-/** Least important first: these go when the pane is too narrow for every chosen column (name, username and status never do). */
-export const columnDropOrder = ["code", "lastDay", "jobs", "hours", "zones", "debt", "type", "phone"] as const;
+/** Least important first: the optional columns go when the pane is too narrow for every chosen column; the default columns stay and the list scrolls sideways. */
+export const columnDropOrder = ["address", "startDate", "lastDay", "username", "birthday", "gender"] as const;
 
 /** Width of the longest login name in the loaded rows (about 7px a character plus cell padding), within a sensible range. */
 export function usernameColumnWidth(usernames: readonly string[]) {

@@ -4,8 +4,6 @@ import { EmployeeDirectory } from "./employee-directory";
 import { employeeViewerAccess } from "./employee-viewer-access";
 import { PermissionDeniedNotice } from "./permission-denied-notice";
 
-// The editor lives in its own module; keep exporting it from here for existing importers.
-export { EmployeeApiEditor } from "./employee-editor";
 
 /**
  * Employee management is the Cooperative Owner's. A Zone Manager opens the same list read-only on working information;

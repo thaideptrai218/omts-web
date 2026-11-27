@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 
 const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), query: "" }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(repository.query) }));
+vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify: vi.fn() }) }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
 const loadOptions = vi.hoisted(() => vi.fn());
 vi.mock("@/features/operations/lookups", () => ({ loadOptions }));
@@ -26,8 +27,8 @@ afterEach(cleanup);
 it("shows the username of each login and no role column: roles are managed on the Tài khoản người dùng screen", async () => {
   render(<EmployeeDirectory />);
   await screen.findByText(withLogin().fullName);
-  const table = within(screen.getByRole("table"));
-  expect(table.getAllByRole("button", { name: /Mở tài khoản đăng nhập @fixture\.an/ }).length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("button", { name: "Chọn trường hiển thị" })); fireEvent.click(screen.getByRole("checkbox", { name: "Tài khoản đăng nhập" }));
+  expect(within(screen.getByRole("table")).getByText("@fixture.an")).toBeTruthy();
   expect(screen.queryByRole("columnheader", { name: "Vai trò và vùng" })).toBeNull();
   expect(loadOptions).not.toHaveBeenCalledWith("accounts", expect.anything());
 });
@@ -52,7 +53,7 @@ it("offers no role, zone or unlinked-account filters any more", async () => {
 });
 
 it("gives a viewer who is not the Owner no account filter", async () => {
-  render(<EmployeeDirectory readOnly access={{ manage: false, payroll: false }} />);
+  render(<EmployeeDirectory readOnly access={{ read: true, manage: false, payroll: false, salary: false, salaryEdit: false }} />);
   await screen.findByText(withLogin().fullName);
   expect(screen.queryByLabelText("Chưa có tài khoản")).toBeNull();
 });

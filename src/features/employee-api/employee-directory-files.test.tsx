@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 const repository = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));
 const files = vi.hoisted(() => ({ exportFile: vi.fn(), template: vi.fn(), importFile: vi.fn() }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
+vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify: vi.fn() }) }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: async () => ({ status: "success", data: [{ id: "zone-one", code: "V01", name: "Vùng Đông", statusId: 101 }] }) }));
 vi.mock("./employee-file-repository", () => ({ employeeFileRepository: files }));
@@ -26,34 +27,27 @@ beforeEach(() => {
 afterEach(cleanup);
 const load = async () => { render(<EmployeeDirectory />); await screen.findByText(first().fullName); };
 
-it("lists the toolbar in design order and shows the code column first after the chevron", async () => {
+it("lists the toolbar in design order and shows photo and code before the name", async () => {
   await load();
-  const toolbar = ["Thêm nhân viên", "Import file", "Xuất file", "Chọn trường hiển thị"].map(name => screen.getByRole("button", { name }));
+  const toolbar = ["Nhân viên", "Import file", "Xuất file", "Chọn trường hiển thị"].map(name => screen.getByRole("button", { name }));
   toolbar.slice(1).forEach((button, index) => expect(toolbar[index].compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy());
-  expect((screen.getByRole("searchbox", { name: "Tìm nhân viên" }) as HTMLInputElement).placeholder).toBe("Theo mã, tên, số điện thoại hoặc tên tài khoản");
+  expect((screen.getByRole("searchbox", { name: "Tìm nhân viên" }) as HTMLInputElement).placeholder).toBe("Tìm theo mã, tên nhân viên");
   const headers = screen.getAllByRole("columnheader").map(cell => cell.textContent);
-  expect(headers.slice(0, 3)).toEqual(["", "Mở dòng", "Họ và tên"]);
-  // The login name replaces the code by default; the code stays in the picker, optional and remembered. Status is the last column.
-  expect(headers[3]).toBe("Tên đăng nhập"); expect(headers.at(-1)).toBe("Tình trạng");
-  expect(screen.queryByRole("columnheader", { name: "Mã nhân viên" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Chọn trường hiển thị" })); fireEvent.click(screen.getByRole("checkbox", { name: "Mã nhân viên" }));
-  expect(screen.getByRole("columnheader", { name: "Mã nhân viên" })).toBeTruthy(); expect(localStorage.getItem("omts-columns-employees-v4")).toContain("code");
+  expect(headers.slice(0, 5)).toEqual(["", "Mở dòng", "Ảnh", "Mã nhân viên", "Tên nhân viên"]);
+  expect(headers.at(-1)).toBe("Tình trạng");
   expect(screen.getByText("NV000001")).toBeTruthy();
 });
 
-it("puts Loại nhân viên first in the filter column and sends it, with the job type, to the server", async () => {
+it("puts Tình trạng first in the filter column and sends the type to the server", async () => {
   await load();
   const rail = screen.getByRole("group", { name: "Loại nhân viên" });
   const legends = [...document.querySelectorAll("legend")].map(legend => legend.textContent);
-  expect(legends.slice(0, 4)).toEqual(["Loại nhân viên", "Tình trạng làm việc", "Vùng làm việc", "Loại công việc"]);
+  expect(legends.slice(0, 3)).toEqual(["Tình trạng", "Loại nhân viên", "Vùng làm việc"]);
   fireEvent.click(within(rail).getByRole("radio", { name: "Thời vụ" }));
   await waitFor(() => expect(latestQuery()).toMatchObject({ employeeType: "SeasonalWorker", statusId: "401", page: "1" }));
-  fireEvent.change(screen.getByRole("combobox", { name: "Loại công việc" }), { target: { value: jobId } });
-  await waitFor(() => expect(latestQuery()).toMatchObject({ employeeType: "SeasonalWorker", jobTypeId: jobId }));
   fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
   // Empty values are dropped by the repository, so "cleared" means falsy here.
   await waitFor(() => expect(latestQuery().employeeType).toBeFalsy());
-  expect(latestQuery().jobTypeId).toBeFalsy();
 });
 
 it("sorts on the server by header, flips the direction, and leaves the default order alone until a header is used", async () => {
@@ -64,11 +58,10 @@ it("sorts on the server by header, flips the direction, and leaves the default o
   expect(screen.getByRole("columnheader", { name: "Số điện thoại" }).getAttribute("aria-sort")).toBe("ascending");
   fireEvent.click(screen.getByRole("button", { name: "Số điện thoại" }));
   await waitFor(() => expect(latestQuery()).toMatchObject({ sortBy: "phone", sortDir: "desc" }));
-  fireEvent.click(screen.getByRole("button", { name: "Chọn trường hiển thị" })); fireEvent.click(screen.getByRole("checkbox", { name: "Mã nhân viên" }));
   fireEvent.click(screen.getByRole("button", { name: "Mã nhân viên" }));
   await waitFor(() => expect(latestQuery()).toMatchObject({ sortBy: "code", sortDir: "asc" }));
   expect(screen.queryByRole("button", { name: "Tên đăng nhập" })).toBeNull();
-  for (const name of ["Họ và tên", "Loại nhân viên", "Tình trạng"]) expect(screen.getByRole("button", { name })).toBeTruthy();
+  for (const name of ["Tên nhân viên", "Loại", "Tình trạng"]) expect(screen.getByRole("button", { name })).toBeTruthy();
 });
 
 it("selecting a row never opens it; the bulk bar exports only the ticked rows with their order", async () => {
@@ -92,7 +85,7 @@ it("select-all takes the visible page and the selection resets on filter, search
   fireEvent.click(screen.getByRole("radio", { name: "Nội bộ" }));
   await waitFor(() => expect(count()).toBe(""));
   fireEvent.click(all()); expect(count()).toContain("Đã chọn 2");
-  fireEvent.click(screen.getByRole("button", { name: "Họ và tên" }));
+  fireEvent.click(screen.getByRole("button", { name: "Tên nhân viên" }));
   await waitFor(() => expect(count()).toBe(""));
   fireEvent.click(all()); await waitFor(() => expect(all()).toBeTruthy());
   await waitFor(() => expect((screen.getByRole("button", { name: "Trang sau" }) as HTMLButtonElement).disabled).toBe(false));
@@ -109,13 +102,12 @@ it("Xuất file exports the current filters and order, shows a pending state, an
   await load();
   fireEvent.click(screen.getByRole("radio", { name: "Thời vụ" }));
   await waitFor(() => expect(latestQuery()).toMatchObject({ employeeType: "SeasonalWorker" }));
-  fireEvent.click(screen.getByRole("button", { name: "Chọn trường hiển thị" })); fireEvent.click(screen.getByRole("checkbox", { name: "Mã nhân viên" }));
   fireEvent.click(screen.getByRole("button", { name: "Mã nhân viên" }));
   await waitFor(() => expect(latestQuery()).toMatchObject({ sortBy: "code" }));
   const button = screen.getByRole("button", { name: "Xuất file" });
   fireEvent.click(button); fireEvent.click(button);
   expect(files.exportFile).toHaveBeenCalledTimes(1);
-  expect(files.exportFile).toHaveBeenCalledWith({ search: "", statusId: "401", zoneId: "", employeeType: "SeasonalWorker", jobTypeId: "", sortBy: "code", sortDir: "asc" });
+  expect(files.exportFile).toHaveBeenCalledWith({ search: "", statusId: "401", zoneId: "", employeeType: "SeasonalWorker", sortBy: "code", sortDir: "asc" });
   expect(button.getAttribute("aria-busy")).toBe("true");
   finish({ status: "success", data: true });
   await waitFor(() => expect(button.getAttribute("aria-busy")).toBeNull());
@@ -141,7 +133,6 @@ it("Import file opens the dialog; a successful import refreshes the list and kee
   fireEvent.change(within(dialog).getByLabelText("Chọn file"), { target: { files: [new File([new Uint8Array(4)], "nv.xlsx")] } });
   fireEvent.click(within(dialog).getByRole("button", { name: "Nhập file" }));
   await waitFor(() => expect(listCalls()).toBeGreaterThan(before));
-  expect(screen.getAllByText("Đã nhập 2 nhân viên.").length).toBeGreaterThan(0);
   fireEvent.click(within(dialog).getByRole("button", { name: "Đóng" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
