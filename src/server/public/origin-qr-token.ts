@@ -11,11 +11,3 @@ export function parseQrToken(value: unknown): QrToken | null {
   return parsed.success ? (parsed.data as QrToken) : null;
 }
 
-const languageSchema = z.enum(["vi", "en"]);
-export type OriginLanguage = z.infer<typeof languageSchema>;
-
-/** Chỉ nhận "en" hoặc "vi"; mọi giá trị khác (kể cả mảng) rơi về tiếng Việt. */
-export function parseOriginLanguage(value: unknown): OriginLanguage {
-  const parsed = languageSchema.safeParse(value);
-  return parsed.success ? parsed.data : "vi";
-}

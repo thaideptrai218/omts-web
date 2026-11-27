@@ -2,14 +2,14 @@ import type { ReactNode } from "react";
 import type { OriginCopy } from "./origin-copy";
 import { AlertIcon, QrIcon } from "./origin-icons";
 import { OriginPageShell } from "./origin-page-shell";
-import type { OriginLanguage } from "@/server/public/origin-qr-token";
 import { encodeQrMatrix } from "@/features/sales-invoices/qr-code-matrix";
 import { qrSvgPath } from "@/features/sales-invoices/qr-code-image";
+import site from "@/features/public-site/public-site.module.css";
 import s from "./origin-base.module.css";
 
 export type OriginProblem = "invalid-token" | "not-found" | "rate-limited" | "unavailable";
 
-type Props = { problem: OriginProblem; language: OriginLanguage; copy: OriginCopy; retryHref?: string; backendMessage?: string | null; pageUrl?: string | null; children?: ReactNode };
+type Props = { problem: OriginProblem; copy: OriginCopy; retryHref?: string; backendMessage?: string | null; pageUrl?: string | null; children?: ReactNode };
 
 function textOf(problem: OriginProblem, copy: OriginCopy, backendMessage?: string | null) {
   switch (problem) {
@@ -28,7 +28,7 @@ function PhoneQr({ url, copy }: { url: string; copy: OriginCopy }) {
   const size = matrix.length + 8;
   return (
     <details className={s.phoneQr}>
-      <summary className={s.retry}>{copy.phoneQrAction}</summary>
+      <summary className={site.button}>{copy.phoneQrAction}</summary>
       <svg role="img" aria-label={copy.phoneQrLabel} viewBox={`0 0 ${size} ${size}`} shapeRendering="crispEdges" width={220} height={220} xmlns="http://www.w3.org/2000/svg">
         <rect width={size} height={size} fill="#fff" /><path d={qrSvgPath(matrix)} fill="#000" />
       </svg>
@@ -37,16 +37,16 @@ function PhoneQr({ url, copy }: { url: string; copy: OriginCopy }) {
   );
 }
 
-export function OriginStatePanel({ problem, language, copy, retryHref, backendMessage, pageUrl }: Props) {
+export function OriginStatePanel({ problem, copy, retryHref, backendMessage, pageUrl }: Props) {
   const text = textOf(problem, copy, backendMessage);
   const Icon = problem === "invalid-token" || problem === "not-found" ? QrIcon : AlertIcon;
   return (
-    <OriginPageShell language={language} copy={copy} langHrefs={null}>
+    <OriginPageShell copy={copy}>
       <section className={s.statePanel} aria-labelledby="origin-state-title">
         <span className={s.stateIcon}><Icon size={28} /></span>
         <h1 id="origin-state-title" className={s.stateTitle}>{text.title}</h1>
         <p className={s.stateBody} role={text.retry ? "alert" : undefined}>{text.body}</p>
-        {text.retry && retryHref ? <a className={s.retry} href={retryHref}>{copy.retry}</a> : null}
+        {text.retry && retryHref ? <a className={site.button} href={retryHref}>{copy.retry}</a> : null}
         {problem === "rate-limited" && pageUrl ? <PhoneQr url={pageUrl} copy={copy} /> : null}
       </section>
     </OriginPageShell>

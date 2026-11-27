@@ -1,0 +1,14 @@
+.press { background: #07262e; color: #fff; padding-block: clamp(3rem, 7vw, 5.5rem); scroll-margin-top: 4rem; }
+.lead { display: grid; gap: 2rem; align-items: center; }
+.words { min-width: 0; }
+.words h2 { margin: 0; font-size: clamp(1.625rem, 4vw, 2.5rem); font-weight: 800; line-height: 1.2; }
+.name { margin: .75rem 0 0; color: #b9d8d6; }
+.headline { margin: 1.5rem 0 0; padding-top: 1.25rem; border-top: 3px solid var(--sand); font-size: 1.375rem; font-weight: 700; line-height: 1.4; }
+.open { display: inline-flex; align-items: center; min-height: 2.75rem; margin-top: 1rem; color: var(--sand); font-weight: 700; text-underline-offset: 4px; }
+.screen { margin: 0; min-width: 0; padding: .625rem; border-radius: 1.25rem; background: #020f13; box-shadow: 0 30px 70px -30px #000; }
+.screen img { display: block; width: 100%; height: auto; border-radius: .75rem; }
+.more { list-style: none; margin: 2.5rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+.more a { display: grid; gap: .5rem; color: #fff; text-decoration: none; }
+.more img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: .875rem; }
+.more span { font-size: .9375rem; font-weight: 600; }
+@media (min-width: 56rem) { .lead { grid-template-columns: 1fr 1.7fr; gap: 3.5rem; } }

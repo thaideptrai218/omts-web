@@ -1,0 +1,26 @@
+/* Đường hành trình dọc. Mặc định đã tô đủ; nơi hỗ trợ cuộn-điều-khiển thì tô dần theo vị trí cuộn. Chữ luôn hiện. */
+.line { list-style: none; margin: 0; padding: 0; display: grid; }
+.step { position: relative; display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 1rem; padding-bottom: 2rem; }
+.step:last-child { padding-bottom: 0; }
+.step:not(:last-child)::before, .step:not(:last-child)::after { content: ""; position: absolute; left: calc(1.5rem - 1.5px); top: 3rem; bottom: 0; width: 3px; border-radius: 3px; }
+.step::before { background: #cfe3df; }
+.step::after { background: var(--sea); transform-origin: top; }
+.mark { position: relative; z-index: 1; display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: var(--sea-deep); color: #fff; box-shadow: 0 0 0 5px #dff2ee; }
+.body { display: grid; align-content: start; gap: .125rem; padding-top: .25rem; min-width: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.title { font-size: 1.125rem; line-height: 1.4; }
+.badge { padding: .0625rem .625rem; border-radius: 999px; background: var(--sand-soft); color: var(--amber-ink); font-size: .8125rem; font-weight: 700; }
+.date { color: var(--sea); font-weight: 700; font-variant-numeric: tabular-nums; }
+.detail { color: var(--ink-soft); }
+
+@supports (animation-timeline: view()) {
+  .step { view-timeline: --step block; }
+  .step::after { animation: fill linear both; animation-timeline: --step; animation-range: entry 90% cover 55%; }
+  .mark { animation: light linear both; animation-timeline: --step; animation-range: entry 40% entry 100%; }
+  .body { animation: slide linear both; animation-timeline: --step; animation-range: entry 0% entry 100%; }
+}
+@keyframes fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes light { from { background: #a9c9c5; box-shadow: 0 0 0 0 #dff2ee; transform: scale(.82); } to { background: var(--sea-deep); box-shadow: 0 0 0 5px #dff2ee; transform: scale(1); } }
+@keyframes slide { from { transform: translateX(1.25rem); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .step::after, .mark, .body { animation: none; } }
+@media print { .step::after, .mark, .body { animation: none; } }

@@ -63,10 +63,10 @@ export function originNotFoundResponse(cooperativeName: string | null): Response
   const name = escapeHtml(cooperativeName ?? "Hợp tác xã");
   const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer"><title>Không tìm thấy nguồn gốc | ${name}</title>
-<style>body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#f4f1ea;color:#10243a;min-height:100vh;display:flex;flex-direction:column}
-header{background:#fff;border-bottom:1px solid #d9d4c6;padding:.85rem 1rem;font-weight:700}main{flex:1;display:grid;place-items:center;padding:1.5rem 1rem}
-section{background:#fff;border:1px solid #d9d4c6;border-radius:1rem;padding:1.75rem;max-width:34rem}h1{margin:0 0 .75rem;font-size:1.4rem}p{margin:0;line-height:1.65}
-footer{padding:1rem;text-align:center;color:#51606e;font-size:.9rem}</style></head><body>
+<style>body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#eef6f4;color:#0c2b33;min-height:100vh;display:flex;flex-direction:column}
+header{background:#fff;border-bottom:1px solid #d5e4e1;padding:.85rem 1rem;font-weight:700}main{flex:1;display:grid;place-items:center;padding:1.5rem 1rem}
+section{background:#fff;border:1px solid #d5e4e1;border-radius:1rem;padding:1.75rem;max-width:34rem}h1{margin:0 0 .75rem;font-size:1.4rem}p{margin:0;line-height:1.65}
+footer{padding:1.5rem 1rem;text-align:center;background:#07434b;color:#d6ecea;font-size:.9rem}</style></head><body>
 <header>${name}</header>
 <main id="noi-dung"><section aria-labelledby="t"><h1 id="t">Không tìm thấy thông tin nguồn gốc</h1>
 <p>Mã QR này không đúng hoặc không còn dùng được. Vui lòng quét lại mã QR trên hóa đơn, hoặc mở đường link trong tin nhắn hóa đơn. Nếu vẫn không xem được, hãy liên hệ ${name} để được hỗ trợ.</p></section></main>

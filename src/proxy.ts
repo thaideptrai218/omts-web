@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { readAccessTokenClaims } from "@/server/auth/access-token-claims";
 import { sessionCookieNames, type SessionCookieNames } from "@/server/auth/session-cookie-names";
+import { PHOTO_PROXY_PATH } from "@/server/public/origin-photo-source";
 import { originNotFoundResponse, probeOriginToken, readCooperativeNameForNotFound } from "@/server/public/origin-token-probe";
 import {
   AUTH_REJECTION_BEFORE_EXECUTION, AUTH_REJECTION_HEADER, AUTH_REJECTION_RELOAD_REQUIRED, DISPLAYED_ACCOUNT_HEADER,
@@ -66,7 +67,8 @@ function guardPage(request: NextRequest, names: SessionCookieNames, secure: bool
 // Trang nguồn gốc công khai: mã QR sai hoặc không có hóa đơn trả HTTP 404 thật (trang đã stream thì không đổi được mã).
 async function guardOrigin(request: NextRequest): Promise<NextResponse | Response> {
   const segments = request.nextUrl.pathname.split("/").filter(Boolean);
-  if (segments.length !== 2) return NextResponse.next();
+  // "/origin/photo" là route ảnh, không phải mã QR.
+  if (segments.length !== 2 || `/${segments.join("/")}` === PHOTO_PROXY_PATH) return NextResponse.next();
   if (await probeOriginToken(segments[1], request.headers) === "pass") return NextResponse.next();
   return originNotFoundResponse(await readCooperativeNameForNotFound());
 }

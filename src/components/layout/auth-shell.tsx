@@ -2,12 +2,13 @@
 import { OysterMoodProvider } from "@/components/brand/oyster-mood";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { CooperativeName } from "@/components/brand/cooperative-name-context";
+import Link from "next/link";
 import styles from "./auth-shell.module.css";
 
 export function AuthShell({ children }: Readonly<{ children: React.ReactNode }>) {
   return <OysterMoodProvider><main className={styles.shell}>
     <div className={styles.entry}>
-      <header className={styles.brand}><BrandMark compact /><span><CooperativeName /></span></header>
+      <header><Link href="/" className={styles.brand} title="Trang giới thiệu"><BrandMark compact /><span><CooperativeName /></span></Link></header>
       <div className={styles.form}>{children}</div>
       <footer className={styles.footer}><span><CooperativeName /></span><span>Quản lý nuôi hàu & truy xuất nguồn gốc</span></footer>
     </div>
