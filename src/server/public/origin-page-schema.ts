@@ -40,7 +40,7 @@ const originSchema = z.object({
     longitude: z.number().min(-180).max(180),
     source: z.enum(["Raft", "Zone"]),
   }).nullish(),
-  seedings: z.array(z.object({ seedingDate: isoDate, seedItemName: shortText })).max(100),
+  seedings: z.array(z.object({ seedingDate: isoDate, seedItemName: shortText, supplierName: shortText.nullish() })).max(100),
   daysOfFarming: z.number().int().min(0).max(5000).nullish(),
   harvestPhotoUrls: z.array(url).max(50),
   raftPhotoUrls: z.array(url).max(50),

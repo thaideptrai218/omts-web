@@ -33,6 +33,7 @@ const vi = {
   openMap: "Xem trên bản đồ",
   journey: "Hành trình của lô",
   seededStep: "Thả giống",
+  seedSupplier: "Nhà cung cấp",
   harvestStep: "Thu hoạch",
   soldStep: "Bán theo hóa đơn",
   harvestPhotos: "Ảnh thu hoạch",

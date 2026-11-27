@@ -4,6 +4,14 @@
 .journeyNote { margin: 1rem 0 0; color: var(--ink-soft); font-size: .875rem; }
 .journeyCard { background: var(--paper); border: 1px solid var(--line); border-radius: 1.25rem; padding: 1.5rem; box-shadow: var(--shadow); }
 
+.seedGrid { display: grid; gap: 2rem; align-items: center; }
+.seedCard { margin: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 1.25rem; padding: .5rem 1.5rem; box-shadow: var(--shadow); }
+.seedCard > div { display: grid; grid-template-columns: minmax(8rem, 2fr) 3fr; gap: 1rem; padding-block: .875rem; }
+.seedCard > div + div { border-top: 1px solid var(--line); }
+.seedCard dt { color: var(--ink-soft); }
+.seedCard dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+@media (min-width: 56rem) { .seedGrid { grid-template-columns: 1fr 1.2fr; gap: 3.5rem; } }
+
 .scanSteps { list-style: none; margin: 2rem 0 0; padding: 0; display: grid; gap: 1.25rem; }
 .scanSteps li { display: grid; grid-template-columns: 2.5rem 1fr; column-gap: .875rem; align-content: start; }
 .scanSteps span { grid-row: span 2; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--sand); color: var(--ink); font-weight: 800; }
