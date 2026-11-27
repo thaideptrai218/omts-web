@@ -10,6 +10,8 @@ export const jobTypeOptionsSchema = z.array(z.object({ id: apiIdSchema, name: ap
 /** Backend stores the enum name; "Other" is offered as "Khác". */
 export const employeeGenderSchema = z.enum(["Male", "Female", "Other"]);
 export const employeeStatusSchema = z.enum(["Employed", "Left"]);
+/** How an employee is paid: one amount a month, or by the hour at the rate of the job type. */
+export const salaryTypeSchema = z.enum(["FixedMonthly", "Hourly"]);
 const accountStatusSchema = z.enum(["Active", "Locked"]);
 
 const workingZoneSchema = z.object({
@@ -49,6 +51,19 @@ export const employeeListItemSchema = z.object({
   // Only in the list, and only for callers with PAYROLL View (Owner, Accountant): paid hours this month and the wage still owed on finalized sheets.
   monthHours: z.number().nullish(),
   outstandingWage: z.number().nullish(),
+  // A temporary read address of the photo; null without one.
+  photoUrl: z.string().nullish(),
+  // The salary type in force: null when none is set, and always null for a caller without payroll access.
+  salaryType: salaryTypeSchema.nullish(),
+  // Columns of the list that only a caller who maintains the employee gets; absent while the backend does not send them in the list.
+  idNumber: z.string().nullish(),
+  notes: z.string().nullish(),
+  birthday: employeeDateOnlySchema.nullish(),
+  gender: employeeGenderSchema.nullish(),
+  address: z.string().nullish(),
+  area: z.string().nullish(),
+  ward: z.string().nullish(),
+  startDate: employeeDateOnlySchema.nullish(),
 });
 
 export const employeePageSchema = z.object({
@@ -69,8 +84,11 @@ export const employeeViewSchema = employeeListItemSchema.extend({
   idNumber: z.string().nullish(),
   startDate: employeeDateOnlySchema.nullish(),
   address: z.string().nullish(),
+  // `area` is the province name and `ward` the ward name; the codes come from the administrative units list.
   area: z.string().nullish(),
   ward: z.string().nullish(),
+  provinceCode: z.number().int().nullish(),
+  wardCode: z.number().int().nullish(),
   otherInformation: z.string().nullish(),
   notes: z.string().nullish(),
   bankAccount: bankAccountSchema.nullish(),

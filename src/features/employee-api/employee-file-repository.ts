@@ -1,6 +1,7 @@
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { suggestedFileName } from "@/features/operations/repository";
+import { employeeViewSchema, type Employee } from "./contracts";
 import { employeeFileMime, employeeImportResultSchema, type EmployeeImportResult } from "./employee-file-contract";
 
 const endpoint = "/api/operations/employees";
@@ -44,7 +45,21 @@ async function upload(file: File): Promise<WorkspaceResult<EmployeeImportResult>
   } catch { return { status: "error", httpStatus: 0, uncertain: true }; }
 }
 
+/** Multipart upload of the photo of one employee (JPEG or PNG, at most 2 MB); the answer is the employee with its new photo address. */
+async function uploadPhoto(id: string, file: File): Promise<WorkspaceResult<Employee>> {
+  try {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    const response = await bffFetch(`${endpoint}?${new URLSearchParams({ action: "photo", id })}`, { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error", headers: { "X-OMTS-Request": "web" }, body: form, signal: AbortSignal.timeout(60_000) });
+    const value = await response.json();
+    const parsed = employeeViewSchema.safeParse(value.data);
+    if (response.ok && value.status === "success" && parsed.success) return { status: "success", data: parsed.data };
+    return { status: "error", httpStatus: response.status, code: typeof value.code === "string" ? value.code : undefined, uncertain: response.status === 401 || response.status >= 500 || response.ok };
+  } catch { return { status: "error", httpStatus: 0, uncertain: true }; }
+}
+
 export const employeeFileRepository = {
+  setPhoto: uploadPhoto,
   exportFile: (values: FileQuery, ids: readonly string[] = []) => download("export", values, ids, "employees.xlsx"),
   template: () => download("import-template", {}, [], "employees-import-template.xlsx"),
   importFile: upload,

@@ -6,8 +6,9 @@ import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
 import { readBackendResponse } from "../backend/backend-response";
 import { sameEmployeeSession } from "./employee-session";
-import { planEmployeeApi, planEmployeeImport } from "./employee-api-plan";
-import { employeeFileName, isEmployeeImportUpload, readEmployeeImportUpload, readEmployeeWorkbook } from "./employee-file-http";
+import { readHrProblem } from "../backend/hr-problem-copy";
+import { planEmployeeApi, planEmployeeImport, planEmployeePhoto, type Plan } from "./employee-api-plan";
+import { employeeFileName, isEmployeeUpload, readEmployeeImportUpload, readEmployeePhotoUpload, readEmployeeWorkbook } from "./employee-file-http";
 
 const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "X-Content-Type-Options": "nosniff" };
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
@@ -16,15 +17,16 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
   if (gateway.mode === "mock") return json({ status: "disabled" }, 404);
   if (config.status !== "valid" || config.config.source !== "api") return json({ status: "unavailable" }, 503);
   try {
-    let input: unknown, upload: FormData | undefined;
+    let input: unknown, upload: FormData | undefined, uploadPlan: Plan | undefined;
     const query = new URL(request.url).searchParams;
     if (request.method === "POST") {
       const guard = createCsrfGuard(process.env);
       if (guard.status !== "available") return json({ status: "unavailable" }, 503);
-      if (isEmployeeImportUpload(request)) {
-        // The query is checked before the body is consumed; the Owner check below still runs before the backend is called.
-        if (!planEmployeeImport(query)) return json({ status: "invalid-input", code: "MSG01" }, 400);
-        const read = await readEmployeeImportUpload(request, guard.guard);
+      if (isEmployeeUpload(request)) {
+        // The query is checked before the body is consumed; the permission check below still runs before the backend is called.
+        uploadPlan = query.get("action") === "photo" ? planEmployeePhoto(query) : planEmployeeImport(query);
+        if (!uploadPlan) return json({ status: "invalid-input", code: "MSG01" }, 400);
+        const read = uploadPlan.file === "photo" ? await readEmployeePhotoUpload(request, guard.guard) : await readEmployeeImportUpload(request, guard.guard);
         if (read.status === "rejected") return json({ status: "rejected" }, read.httpStatus);
         if (read.status === "invalid") return json({ status: "invalid-input", code: "MSG01" }, 400);
         upload = read.form;
@@ -34,7 +36,7 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
         input = check.body.readForValidation();
       }
     }
-    const plan = upload ? planEmployeeImport(query) : planEmployeeApi(request.method, query, input);
+    const plan = upload ? uploadPlan : planEmployeeApi(request.method, query, input);
     if (!plan) return json({ status: "invalid-input", code: "MSG01" }, 400);
     const initial = await gateway.resolve(request.headers.get("cookie"));
     if (initial.status !== "resolved") return json({ status: "session-expired" }, initial.status === "unavailable" ? 503 : 401);
@@ -42,7 +44,9 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
     if (context.status !== "ready") return json({ status: "unavailable" }, 503);
     // Chủ hợp tác xã làm mọi việc; Kế toán chỉ đọc danh sách, hồ sơ và loại công việc (backend vẫn ẩn dữ liệu cá nhân của họ).
     const readOnlyViewer = ["list", "detail", "job-types"].includes(plan.action) && canReadEmployees(context.context.identity, context.context.permissions.functionPermissions);
-    if (context.context.identity.subjectType !== "CooperativeOwner" && !readOnlyViewer) return json({ status: "forbidden", code: "MSG02" }, 403);
+    // The salary setup belongs to whoever holds the pay rules (the Accountant); the backend checks the same permission.
+    const payRuleViewer = !!plan.payRule && context.context.identity.subjectType === "Staff" && context.context.permissions.functionPermissions.some(entry => entry.functionCode === "PAY_RULES" && entry.action === plan.payRule);
+    if (context.context.identity.subjectType !== "CooperativeOwner" && !readOnlyViewer && !payRuleViewer) return json({ status: "forbidden", code: "MSG02" }, 403);
     const controller = new AbortController(), abort = () => controller.abort();
     request.signal.addEventListener("abort", abort, { once: true });
     // Files take longer than a JSON call: a workbook is built or parsed row by row.
@@ -53,6 +57,8 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
       const response = await fetch(new URL(plan.path, config.config.origin), { method: plan.method, cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal,
         headers: { Accept: plan.file === "export" || plan.file === "template" ? employeeFileMime : "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}`, ...(plan.body ? { "Content-Type": "application/json" } : {}) },
         body: upload ?? (plan.body ? JSON.stringify(plan.body) : undefined) });
+      // The pay rules answer with the date and period of their message (MSG-LABOR-04), so a failed salary call has its body read once more.
+      const failedCopy = response.ok || !plan.payRule ? undefined : response.clone();
       let bytes: Uint8Array | undefined;
       const download = (plan.file === "export" || plan.file === "template") && response.ok;
       if (download) {
@@ -68,12 +74,15 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
         return new Response(bytes as BodyInit, { headers: { ...headers, "Content-Type": employeeFileMime, "Content-Disposition": `attachment; filename="${name}"`, "Content-Security-Policy": "sandbox; default-src 'none'" } });
       }
       if (!result) return json({ status: "unavailable" }, 503);
-      if (result.status === "http-error") return json({ status: "rejected", code: result.code, ...(result.employeeProblem ? { employeeProblem: result.employeeProblem } : {}) }, result.httpStatus);
+      if (result.status === "http-error") {
+        const hrProblem = await readHrProblem(failedCopy);
+        return json({ status: "rejected", code: result.code, ...(result.employeeProblem ? { employeeProblem: result.employeeProblem } : {}), ...(hrProblem ? { hrProblem } : {}) }, result.httpStatus);
+      }
       if (result.status !== "success" || ![200, 201].includes(result.httpStatus)) return json({ status: "invalid-response" }, 502);
       const parsed = plan.schema.safeParse(result.data);
       if (!parsed.success) return json({ status: "invalid-response" }, 502);
       const data = parsed.data as Record<string, unknown>, employee = (data.employee ?? data) as Record<string, unknown>;
-      if (plan.id && plan.action !== "end-preview" && employee.id !== plan.id) return json({ status: "invalid-response" }, 502);
+      if (plan.id && plan.action !== "end-preview" && employee[plan.idKey ?? "id"] !== plan.id) return json({ status: "invalid-response" }, 502);
       if ("employee" in data) { delete data.message; delete data.messageCode; }
       // Receipts (issue-account, create with account) keep the credential fields; everything else returns the bare employee.
       // A create or update answers with the bare employee; the duplicate ID number warning travels inside it so the screen can show it.

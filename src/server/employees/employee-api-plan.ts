@@ -6,9 +6,16 @@ import { parseEmployeeExportSearchParams, parseEmployeeListSearchParams } from "
 import { issueEmployeeAccountRequestSchema, issueEmployeeAccountSavedSchema, linkEmployeeAccountRequestSchema, linkableAccountsSchema } from "@/features/employee-api/employee-account-contract";
 import { createEmployeeRequestSchema, employeeCreatedWithAccountSchema } from "@/features/employee-api/employee-create-contract";
 import { employeeImportResultSchema } from "@/features/employee-api/employee-file-contract";
-export type Plan = { path: string; method: "GET" | "POST" | "PUT"; action: string; schema: z.ZodType; body?: unknown; id?: string; receipt?: boolean; file?: "export" | "template" | "import" };
+import { employeeSalarySchema, saveSalaryRequestSchema } from "@/features/employee-api/employee-salary-contract";
+export type Plan = {
+  path: string; method: "GET" | "POST" | "PUT" | "DELETE"; action: string; schema: z.ZodType; body?: unknown; id?: string; receipt?: boolean; file?: "export" | "template" | "import" | "photo";
+  /** The salary setup is Accountant territory too: this is the PAY_RULES action a non-Owner needs. */
+  payRule?: "View" | "Edit";
+  /** Key that carries the employee id in the answer when it is not `id` (the salary view says `employeeId`). */
+  idKey?: "employeeId";
+};
 const id = z.guid();
-const mutation = z.strictObject({ action: z.enum(["create", "update", "end-employment", "resume", "issue-account", "link-account"]), id: id.optional(), body: z.unknown() });
+const mutation = z.strictObject({ action: z.enum(["create", "update", "end-employment", "resume", "issue-account", "link-account", "remove-photo", "save-salary"]), id: id.optional(), body: z.unknown() });
 
 /** The export answers with a workbook, never JSON; `ids` may repeat (ids=a&ids=b), every other key may not. */
 function planExport(query: URLSearchParams): Plan | undefined {
@@ -44,12 +51,13 @@ export function planEmployeeApi(method: string, query: URLSearchParams, input?: 
     if (action === "linkable-accounts") {
       const search = query.get("search") ?? "";
       if (query.size > 2 || (query.size === 2 && !query.has("search")) || search.length > 100) return;
-      const params = new URLSearchParams({ unlinked: "true", statusId: "301", pageSize: "20" });
+      const params = new URLSearchParams({ unlinked: "true", statusId: "301", pageSize: "100" });
       if (search.trim()) params.set("search", search.trim());
       return { action, path: `/api/accounts?${params}`, method, schema: linkableAccountsSchema };
     }
     const parsed = id.safeParse(query.get("id"));
     if (action === "detail" && parsed.success && query.size === 2) return { action, id: parsed.data, path: `/api/employees/${parsed.data}`, method, schema: c.employeeViewSchema };
+    if (action === "salary" && parsed.success && query.size === 2) return { action, id: parsed.data, path: `/api/employees/${parsed.data}/salary`, method, schema: employeeSalarySchema, payRule: "View", idKey: "employeeId" };
     return;
   }
   if (method !== "POST" || query.size) return;
@@ -72,8 +80,18 @@ export function planEmployeeApi(method: string, query: URLSearchParams, input?: 
   if (action === "issue-account") return make(issueEmployeeAccountRequestSchema, issueEmployeeAccountSavedSchema, "POST", "/account");
   if (action === "link-account") return make(linkEmployeeAccountRequestSchema, employeeSavedSchema, "POST", "/account/link");
   if (action === "update") return make(c.updateProfileInputSchema, employeeSavedSchema, "PUT");
+  if (action === "save-salary") { const plan = make(saveSalaryRequestSchema, employeeSalarySchema, "POST", "/salary"); return plan && { ...plan, payRule: "Edit", idKey: "employeeId" }; }
+  // The photo is removed with no body; the only other photo call is the multipart upload (see planEmployeePhoto).
+  if (action === "remove-photo") return body === undefined || (body && typeof body === "object" && !Object.keys(body).length) ? { action, id: employeeId, path: `${path}/photo`, method: "DELETE", schema: c.employeeViewSchema } : undefined;
   if (action === "end-employment") return make(c.endEmploymentSchema, c.employmentChangedSchema, "POST", "/end-employment");
   if (action === "resume") return make(c.resumeEmployeeSchema, c.employmentChangedSchema, "POST", "/resume");
+}
+
+/** Upload of the photo of one employee: the HTTP layer reads the multipart body; only the endpoint is planned here. */
+export function planEmployeePhoto(query: URLSearchParams): Plan | undefined {
+  const parsed = z.strictObject({ action: z.literal("photo"), id }).safeParse(Object.fromEntries(query));
+  if (!parsed.success || query.size !== 2) return;
+  return { action: "photo", file: "photo", id: parsed.data.id, path: `/api/employees/${parsed.data.id}/photo`, method: "PUT", schema: c.employeeViewSchema };
 }
 
 /** Upload of the import file: the HTTP layer reads the multipart body; only the endpoint is planned here. */

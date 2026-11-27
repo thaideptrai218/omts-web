@@ -2,6 +2,9 @@ import { z } from "zod";
 
 /** Limits of the import file; the BFF and the dialog both enforce them before the backend sees the file. */
 export const employeeImportMaxBytes = 2 * 1024 * 1024;
+/** A photo is a JPEG or PNG of at most 2 MB, like the backend rule. */
+export const employeePhotoMaxBytes = 2 * 1024 * 1024;
+export const employeePhotoTypes = ["image/jpeg", "image/png"];
 export const employeeFileMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 /**
