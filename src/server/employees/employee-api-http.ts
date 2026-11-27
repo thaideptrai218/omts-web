@@ -6,6 +6,9 @@ import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
 import { readBackendResponse } from "../backend/backend-response";
 import { sameEmployeeSession } from "./employee-session";
+import { localFileTarget } from "../operations/evidence-target";
+import { readBoundedBytes } from "../operations/bounded-body";
+import { rewriteEmployeePhotos } from "./employee-photo-url";
 import { readHrProblem } from "../backend/hr-problem-copy";
 import { planEmployeeApi, planEmployeeImport, planEmployeePhoto, type Plan } from "./employee-api-plan";
 import { employeeFileName, isEmployeeUpload, readEmployeeImportUpload, readEmployeePhotoUpload, readEmployeeWorkbook } from "./employee-file-http";
@@ -43,7 +46,7 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
     const context = await gateway.application(request.headers.get("cookie"));
     if (context.status !== "ready") return json({ status: "unavailable" }, 503);
     // Chủ hợp tác xã làm mọi việc; Kế toán chỉ đọc danh sách, hồ sơ và loại công việc (backend vẫn ẩn dữ liệu cá nhân của họ).
-    const readOnlyViewer = ["list", "detail", "job-types"].includes(plan.action) && canReadEmployees(context.context.identity, context.context.permissions.functionPermissions);
+    const readOnlyViewer = ["list", "detail", "job-types", "photo"].includes(plan.action) && request.method === "GET" && canReadEmployees(context.context.identity, context.context.permissions.functionPermissions);
     // The salary setup belongs to whoever holds the pay rules (the Accountant); the backend checks the same permission.
     const payRuleViewer = !!plan.payRule && context.context.identity.subjectType === "Staff" && context.context.permissions.functionPermissions.some(entry => entry.functionCode === "PAY_RULES" && entry.action === plan.payRule);
     if (context.context.identity.subjectType !== "CooperativeOwner" && !readOnlyViewer && !payRuleViewer) return json({ status: "forbidden", code: "MSG02" }, 403);
@@ -83,11 +86,23 @@ export async function handleEmployeeApi(request: Request): Promise<Response> {
       if (!parsed.success) return json({ status: "invalid-response" }, 502);
       const data = parsed.data as Record<string, unknown>, employee = (data.employee ?? data) as Record<string, unknown>;
       if (plan.id && plan.action !== "end-preview" && employee[plan.idKey ?? "id"] !== plan.id) return json({ status: "invalid-response" }, 502);
+      if (plan.file === "photo-view") {
+        // The photo is read from the employee the caller may see; only a stored image of the backend is fetched, and the session is checked again before the bytes leave.
+        const target = localFileTarget(employee.photoUrl, config.config.origin);
+        if (!target) return json({ status: "not-found" }, 404);
+        const file = await fetch(target, { cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal });
+        const type = file.headers.get("content-type")?.split(";")[0];
+        if (!file.ok || (type !== "image/jpeg" && type !== "image/png")) return json({ status: "unavailable" }, 503);
+        const image = await readBoundedBytes(file.body, controller.signal, 3 * 1024 * 1024, budget);
+        const after = await gateway.resolve(request.headers.get("cookie"));
+        if (after.status !== "resolved" || !sameEmployeeSession(initial.session, after.session)) return json({ status: "session-expired" }, 401);
+        return new Response(image as BodyInit, { headers: { ...headers, "Cache-Control": "private, max-age=300", "Content-Type": type, "Content-Disposition": `inline; filename="employee.${type === "image/png" ? "png" : "jpg"}"`, "Content-Security-Policy": "sandbox; default-src 'none'" } });
+      }
       if ("employee" in data) { delete data.message; delete data.messageCode; }
       // Receipts (issue-account, create with account) keep the credential fields; everything else returns the bare employee.
       // A create or update answers with the bare employee; the duplicate ID number warning travels inside it so the screen can show it.
       const bare = data.duplicateIdNumber ? { ...employee, duplicateIdNumber: data.duplicateIdNumber } : employee;
-      return json({ status: "success", data: "employee" in data && !plan.receipt && !["end-employment", "resume", "issue-account"].includes(plan.action) ? bare : data });
+      return json({ status: "success", data: rewriteEmployeePhotos("employee" in data && !plan.receipt && !["end-employment", "resume", "issue-account"].includes(plan.action) ? bare : data, config.config.origin) });
     } finally { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); }
   } catch { return json({ status: "unavailable" }, 503); }
 }

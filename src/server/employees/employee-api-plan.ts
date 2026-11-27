@@ -8,7 +8,7 @@ import { createEmployeeRequestSchema, employeeCreatedWithAccountSchema } from "@
 import { employeeImportResultSchema } from "@/features/employee-api/employee-file-contract";
 import { employeeSalarySchema, saveSalaryRequestSchema } from "@/features/employee-api/employee-salary-contract";
 export type Plan = {
-  path: string; method: "GET" | "POST" | "PUT" | "DELETE"; action: string; schema: z.ZodType; body?: unknown; id?: string; receipt?: boolean; file?: "export" | "template" | "import" | "photo";
+  path: string; method: "GET" | "POST" | "PUT" | "DELETE"; action: string; schema: z.ZodType; body?: unknown; id?: string; receipt?: boolean; file?: "export" | "template" | "import" | "photo" | "photo-view";
   /** The salary setup is Accountant territory too: this is the PAY_RULES action a non-Owner needs. */
   payRule?: "View" | "Edit";
   /** Key that carries the employee id in the answer when it is not `id` (the salary view says `employeeId`). */
@@ -57,6 +57,8 @@ export function planEmployeeApi(method: string, query: URLSearchParams, input?: 
     }
     const parsed = id.safeParse(query.get("id"));
     if (action === "detail" && parsed.success && query.size === 2) return { action, id: parsed.data, path: `/api/employees/${parsed.data}`, method, schema: c.employeeViewSchema };
+    // The photo of one employee, served through the BFF; `v` only busts the browser cache when the photo is replaced.
+    if (action === "photo" && parsed.success && (query.size === 2 || query.size === 3 && /^[0-9a-f]{10}$/.test(query.get("v") ?? ""))) return { action, id: parsed.data, path: `/api/employees/${parsed.data}`, method, schema: c.employeeViewSchema, file: "photo-view" };
     if (action === "salary" && parsed.success && query.size === 2) return { action, id: parsed.data, path: `/api/employees/${parsed.data}/salary`, method, schema: employeeSalarySchema, payRule: "View", idKey: "employeeId" };
     return;
   }

@@ -21,7 +21,8 @@ const upload = (bytes: Uint8Array, query = `action=photo&id=${id}`) => {
 };
 const png = () => { const bytes = new Uint8Array(32); bytes.set([0x89, 0x50, 0x4e, 0x47]); return bytes; };
 const salary = { employeeId: id, employeeType: "Staff", current: { type: "FixedMonthly", monthlyAmount: 9_000_000, effectiveFrom: "2026-11-01", enteredAt: "2026-11-01T01:00:00+00:00" }, currentType: "FixedMonthly", history: [], rowVersion: "AQID" };
-const view = () => ({ ...employeeDetailFixture(), id, photoUrl: "/api/files/local/employee-photos/a.png" });
+const signed = "/api/files/local/employee-photos/2026/11/a.png?expires=1795781504&sig=abc";
+const view = () => ({ ...employeeDetailFixture(), id, photoUrl: signed });
 
 describe("employee photo and salary plans", () => {
   it("plans the salary read and save, and a body-less photo removal", () => {
@@ -46,7 +47,7 @@ describe("employee photo upload (BFF)", () => {
   it("forwards a PNG under a fixed name as a PUT and returns the bare employee", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(view()));
     const response = await handleEmployeeApi(upload(png()));
-    expect(response.status).toBe(200); expect((await response.json()).data.photoUrl).toContain("employee-photos");
+    expect(response.status).toBe(200); expect((await response.json()).data.photoUrl).toMatch(/^\/api\/operations\/employees\?action=photo&id=.+&v=[0-9a-f]{10}$/);
     const [url, init] = fetcher.mock.calls[0];
     expect(String(url)).toBe(`http://127.0.0.1:8080/api/employees/${id}/photo`); expect(init!.method).toBe("PUT");
     expect(((init!.body as FormData).get("file") as File).name).toBe("photo.png");
@@ -98,5 +99,27 @@ describe("employee salary setup (BFF)", () => {
     const result = await response.json();
     expect(response.status).toBe(409); expect(result).toMatchObject({ status: "rejected", code: "MSG-LABOR-04", hrProblem: { parameters: { period: "10/2026" } } });
     expect(JSON.stringify(result)).not.toContain("secret");
+  });
+});
+
+describe("employee photo through the BFF", () => {
+  it("rewrites every photo address of a list page to the BFF address and never lets a signed address out", async () => {
+    configure(); vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ items: [{ ...view(), photoUrl: signed }, { ...view(), id: "b669dc43-c9dc-4df8-930b-ab9de6d978e3", photoUrl: null }], page: 1, pageSize: 10, total: 2 }));
+    const text = await (await handleEmployeeApi(get("action=list"))).text(), items = JSON.parse(text).data.items;
+    expect(items[0].photoUrl).toMatch(/^\/api\/operations\/employees\?action=photo&id=122bb318-[0-9a-f-]+&v=[0-9a-f]{10}$/); expect(items[1].photoUrl).toBeNull();
+    expect(text).not.toContain("sig=abc");
+  });
+  it("serves the stored image of an employee the caller may see, inline and sandboxed, and nothing else", async () => {
+    configure("Staff", [{ functionCode: "LABOR_WORKERS", action: "View" }]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async input => String(input).includes("/api/files/local/") ? new Response(png(), { headers: { "content-type": "image/png" } }) : Response.json(view()));
+    const response = await handleEmployeeApi(get(`action=photo&id=${id}&v=0123456789`));
+    expect(response.status).toBe(200); expect(response.headers.get("content-type")).toBe("image/png"); expect(response.headers.get("content-security-policy")).toContain("sandbox");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(png());
+    expect(String(fetcher.mock.calls[1][0])).toBe(`http://127.0.0.1:8080${signed}`);
+    fetcher.mockImplementation(async input => String(input).includes("/api/files/local/") ? new Response("<html>", { headers: { "content-type": "text/html" } }) : Response.json(view()));
+    expect((await handleEmployeeApi(get(`action=photo&id=${id}`))).status).toBe(503);
+    fetcher.mockImplementation(async () => Response.json({ ...view(), photoUrl: "https://evil.test/x.png" }));
+    expect((await handleEmployeeApi(get(`action=photo&id=${id}`))).status).toBe(404);
+    expect((await handleEmployeeApi(get(`action=photo&id=${id}&v=bad`))).status).toBe(400);
   });
 });
