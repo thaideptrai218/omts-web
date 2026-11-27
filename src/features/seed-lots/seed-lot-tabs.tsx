@@ -12,7 +12,7 @@ import { cycleFromBatchHref, SeedLotFooter, useCanStartCycle } from "./seed-lot-
 import { HistoryOrderToggle, sortHistory, useHistoryOrder } from "@/features/history/history-order";
 import { seedLotTimeline } from "./seed-lot-timeline";
 
-/** A nursery batch that is finished (Đã ươm xong): its pieces wait in the pool to be hung. */
+/** A nursery batch that is finished (Chờ thả): its pieces wait in the pool to be hung. */
 const NURSERY_DONE = 4002;
 
 const when = (value: string | null | undefined) => value ? value.length > 10 ? viDateTime(value) : viDate(value) : "—";
@@ -28,7 +28,7 @@ export function SeedLotNurseryTab({ lot }: { lot: SeedLotDetail }) {
           <td><Link className={styles.link} href={farmingReferenceHref("nursery", { code: batch.code })}>{batch.code}</Link></td><td>{when(batch.startDate)}</td><td>{nurseryStatus(batch.statusId)}</td>
           <td className={styles.num}>{fmt(batch.quantityIn)}</td><td className={styles.num}>{fmt(batch.survivors)}</td>
           {/* A finished batch is hung on a raft by starting a cycle from it. */}
-          <td>{batch.statusId === NURSERY_DONE && mayStart && <Link className={styles.link} href={cycleFromBatchHref(batch.id)}>Treo lên bè</Link>}</td></tr>)}</tbody></table></div>}
+          <td>{batch.statusId === NURSERY_DONE && mayStart && <Link className={styles.link} href={cycleFromBatchHref(batch.id)}>Thả giống</Link>}</td></tr>)}</tbody></table></div>}
     <SeedLotFooter lot={lot} show={["nurse"]} />
   </>;
 }
@@ -37,7 +37,7 @@ export function SeedLotNurseryTab({ lot }: { lot: SeedLotDetail }) {
 export function SeedLotSeedingTab({ lot }: { lot: SeedLotDetail }) {
   const empty = !lot.seedings.length && !lot.cycles.length && !lot.harvestLots.length;
   return <>
-    {empty && <p className={styles.empty}>Lô chưa được treo. Giống phải ươm trước: treo lên bè từ đợt ươm đã xong ở tab Ươm.</p>}
+    {empty && <p className={styles.empty}>Lô chưa được thả giống. Giống phải ươm trước: thả giống từ đợt ươm đang Chờ thả ở tab Ươm.</p>}
     {lot.seedings.length > 0 && <div className={styles.innerScroll}><table className={styles.inner} aria-label="Lần thả giống của lô"><thead><tr><th>Ngày thả</th><th>Bè</th><th>Vùng</th><th className={styles.num}>Số lượng ({lot.unitName})</th></tr></thead>
       <tbody>{lot.seedings.map((seeding) => <tr key={seeding.id}><td>{when(seeding.seededAt)}</td>
         <td>{seeding.raftCode ? <Link className={styles.link} href={farmingReferenceHref("seeding", { search: seeding.raftCode })}>{seeding.raftCode}</Link> : "—"}</td>

@@ -24,7 +24,7 @@ describe("nursery history presentation", () => {
   });
   it("shows Vietnamese statuses, localized numbers and missing values", () => {
     expect(nurseryHistoryValue({ field: "Status" }, "Nursing")).toBe("Đang ươm");
-    expect(nurseryHistoryValue({ field: "Status" }, "Completed")).toBe("Đã ươm xong");
+    expect(nurseryHistoryValue({ field: "Status" }, "Completed")).toBe("Chờ thả");
     expect(nurseryHistoryValue({ field: "Status" }, "Closed")).toBe("Đã đóng");
     expect(nurseryHistoryValue({ field: "quantity" }, 95000.5)).toBe("95.000,5");
     expect(nurseryHistoryValue({ field: "quantity" }, null)).toBe("—");

@@ -60,7 +60,7 @@ describe("Bắt đầu chu kỳ nuôi", () => {
   it("says nothing is ready when no batch finished in the zone and points to the nursery screen", async () => {
     mocks.available.mockResolvedValue({ status: "success", data: [] });
     mount();
-    expect(await screen.findByText("Chưa có đợt ươm nào đã ươm xong trong vùng này")).toBeTruthy();
+    expect(await screen.findByText("Chưa có đợt ươm nào đang Chờ thả trong vùng này")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Mở màn Ươm giống" }).getAttribute("href")).toBe("/farming/nursery");
     expect((screen.getByRole("button", { name: "Tiếp tục" }) as HTMLButtonElement).disabled).toBe(true);
   });

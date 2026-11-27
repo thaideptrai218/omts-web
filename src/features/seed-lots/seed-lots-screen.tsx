@@ -44,7 +44,7 @@ export const columns: readonly Column[] = [
   { key: "returned", label: "Trả", hidden: true, numeric: true, total: "returnedQty", render: (row) => figure(row, "returnedQty") },
   { key: "nursing", label: "Đang ươm", hidden: true, numeric: true, total: "nursingQty", render: (row) => figure(row, "nursingQty") },
   { key: "loss", label: "Hao hụt", hidden: true, numeric: true, total: "nurseryLossQty", render: (row) => figure(row, "nurseryLossQty") },
-  { key: "seeded", label: "Đã treo", hidden: true, numeric: true, total: "seededQty", render: (row) => figure(row, "seededQty") },
+  { key: "seeded", label: "Đã thả", hidden: true, numeric: true, total: "seededQty", render: (row) => figure(row, "seededQty") },
   { key: "remaining", label: "Còn", sort: "remaining", numeric: true, total: "remainingQty", render: (row) => figure(row, "remainingQty") },
   { key: "progress", label: "Tiến độ sử dụng", render: (row) => <SeedLotProgressCell lot={row} /> },
   { key: "harvested", label: "Thu hoạch (kg)", numeric: true, render: (row) => kgText(row, row.harvestedKg) },

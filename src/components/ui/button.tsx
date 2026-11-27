@@ -20,6 +20,11 @@ const variantStyles: Record<ButtonVariant, string> = {
     "border-border-strong/50 bg-surface text-text hover:border-primary/50 hover:bg-surface-subtle",
 };
 
+/** The classes of a button, also for a link that must look like one (a navigation that is the main action of a footer). */
+export function buttonClassName(variant: ButtonVariant = "primary", className = "") {
+  return `inline-flex min-h-11 lg:min-h-0 ${className.includes("w-auto") ? "" : "w-full"} items-center justify-center gap-2 rounded-control border px-3 py-2 lg:py-1 text-[13px] leading-5 font-medium transition-[background-color,border-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantStyles[variant]} ${className}`;
+}
+
 export function Button({
   children,
   className = "",
@@ -34,7 +39,7 @@ export function Button({
     <button
       {...buttonProps}
       aria-busy={isPending || undefined}
-      className={`inline-flex min-h-11 lg:min-h-0 ${className.includes("w-auto") ? "" : "w-full"} items-center justify-center gap-2 rounded-control border px-3 py-2 lg:py-1 text-[13px] leading-5 font-medium transition-[background-color,border-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantStyles[variant]} ${className}`}
+      className={buttonClassName(variant, className)}
       disabled={disabled || isPending}
       type={type}
     >

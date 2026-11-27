@@ -4,9 +4,9 @@ import { StatusPill } from "@/components/ui/management-page";
 import { seedLotsHref } from "@/features/input-items/stock-kind";
 import { finalSeedLotStates, type SeedLotState } from "./contracts";
 
-/** The state of a seed lot, as the API works it out from the quantities. Chưa dùng → Đang ươm → Đang treo dở → Đã treo hết; the other finals end it too. */
+/** The state of a seed lot, as the API works it out from the quantities. Chưa dùng → Đang ươm → Đang thả dở → Đã thả hết; the other finals end it too. */
 export const seedLotStateLabel: Record<SeedLotState, string> = {
-  Unused: "Chưa dùng", Nursing: "Đang ươm", PartlySeeded: "Đang treo dở", FullySeeded: "Đã treo hết", FullyReturned: "Đã trả hết", FullyLost: "Hao hụt hết", UsedUp: "Đã dùng hết",
+  Unused: "Chưa dùng", Nursing: "Đang ươm", PartlySeeded: "Đang thả dở", FullySeeded: "Đã thả hết", FullyReturned: "Đã trả hết", FullyLost: "Hao hụt hết", UsedUp: "Đã dùng hết",
 };
 export const isFinalSeedLotState = (state: SeedLotState) => finalSeedLotStates.includes(state);
 /** A lot seeded out is the good ending (green), a lot lost is the bad one (red); every other state is plain. */

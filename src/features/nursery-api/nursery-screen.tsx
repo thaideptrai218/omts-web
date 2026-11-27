@@ -51,11 +51,17 @@ function NurseryDirectory({ zones, initialZone, initialLot }: { zones: readonly 
   const rows = list.data?.items ?? [];
   if (!linkPlaced && list.data) { setLinkPlaced(true); setExpanded(rows.find(row => row.code === code)?.id); }
   const change = (action: () => void) => void guard.leave(() => { action(); setPage(1); setExpanded(undefined); });
-  function saved(batch: NurseryDetail, action = batch.statusId === 4003 ? "Đã hủy đợt ươm" : batch.statusId === 4004 ? "Đã đóng đợt ươm" : "Đã cập nhật đợt ươm") { setCreating(false); setCompleting(undefined); setDetailVersion(value => value + 1); list.reload(); notify({ tone: "success", title: `${action} ${batch.code}.` }); }
+  /**
+   * After a save the rows refresh quietly (no skeleton, so the open row stays open); the open detail is rebuilt (and read again) only when a dialog of this screen saved it. A save made inside the detail already put the
+   * answered batch in place, so reading it again would only cost another round of detail queries.
+   */
+  function saved(batch: NurseryDetail, action = batch.statusId === 4003 ? "Đã hủy đợt ươm" : batch.statusId === 4004 ? "Đã đóng đợt ươm" : "Đã cập nhật đợt ươm", reloadDetail = true) {
+    setCreating(false); setCompleting(undefined); if (reloadDetail) setDetailVersion(value => value + 1); list.refresh(); notify({ tone: "success", title: `${action} ${batch.code}.` });
+  }
   const createZones = zones.filter(zone => zone.statusId === 101 && operationAllowed("cultivation-cycles", identity, permissions.functionPermissions, "Create", zone.id));
   const filters = <>
     <FilterGroup legend="Vùng ươm"><SelectBox aria-label="Vùng ươm" className="omts-control" value={zoneId} onChange={event => change(() => setZoneId(event.target.value))}>{!zones.length && <option value="">Không có vùng được xem</option>}{zones.map(zone => <option key={zone.id} value={zone.id}>{zoneOptionLabel(zone)}</option>)}</SelectBox></FilterGroup>
-    <FilterPills legend="Trạng thái" name="nursery-status" value={status} onChange={value => change(() => setStatus(value))} options={[["nursing", "Đang ươm"], ["completed", "Đã ươm xong"], ["closed", "Đã đóng"], ["cancelled", "Đã hủy"]]} />
+    <FilterPills legend="Trạng thái" name="nursery-status" value={status} onChange={value => change(() => setStatus(value))} options={[["nursing", "Đang ươm"], ["completed", "Chờ thả"], ["closed", "Đã đóng"], ["cancelled", "Đã hủy"]]} />
     <TimeRangeFilter legend="Ngày bắt đầu ươm" value={time} onChange={value => change(() => setTime(value))} />
   </>;
   return <ManagementLayout storageKey="nursery" icon="product" title="Ươm giống" filters={filters} search={<input type="search" aria-label="Tìm đợt ươm" placeholder="Theo mã, lô giống, nhà cung cấp" maxLength={200} value={search} onChange={event => change(() => setSearch(event.target.value))} />}
@@ -64,7 +70,7 @@ function NurseryDirectory({ zones, initialZone, initialLot }: { zones: readonly 
     {guard.dialog}
     <ManagementScroller busy={list.loading}>
       {list.loading ? <ListSkeleton /> : list.error ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại đợt ươm" /> : !rows.length ? <ListStateMessage>{search || status || time.from ? "Không có đợt ươm phù hợp bộ lọc." : "Chưa có đợt ươm giống nào."}</ListStateMessage>
-        : <NurseryTable rows={rows} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expanded={expanded} onToggle={id => void guard.leave(() => setExpanded(value => value === id ? undefined : id))} detail={row => <NurseryDetailPanel key={`${row.id}:${detailVersion}`} id={row.id} zoneId={row.zoneId} guard={guard} onChanged={saved} onComplete={batch => setCompleting({ batch, mode: "complete" })} onCorrect={batch => setCompleting({ batch, mode: "survivors" })} />} />}
+        : <NurseryTable rows={rows} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expanded={expanded} onToggle={id => void guard.leave(() => setExpanded(value => value === id ? undefined : id))} detail={row => <NurseryDetailPanel key={`${row.id}:${detailVersion}`} id={row.id} zoneId={row.zoneId} guard={guard} onChanged={batch => saved(batch, undefined, false)} onComplete={batch => setCompleting({ batch, mode: "complete" })} onCorrect={batch => setCompleting({ batch, mode: "survivors" })} />} />}
     </ManagementScroller>
     {creating && createZones.length > 0 && zones.find(zone => zone.id === zoneId)?.statusId !== DISCONTINUED && <NurseryStartDialog zones={createZones} initialZone={zoneId} initialLotId={initialLot} onClose={() => setCreating(false)} onSaved={batch => saved(batch, "Đã bắt đầu ươm giống, đợt")} />}
     {completing && <NurseryCompleteDialog batch={completing.batch} mode={completing.mode} onClose={() => setCompleting(undefined)} onSaved={batch => saved(batch, completing.mode === "complete" ? "Đã hoàn tất ươm, đợt" : "Đã sửa số sống sót (ước tính), đợt")} />}

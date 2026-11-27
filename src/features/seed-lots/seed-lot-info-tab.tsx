@@ -13,7 +13,7 @@ import { SeedLotSummary } from "./seed-lot-progress";
 export const quantityRows = (lot: SeedLotDetail) => [
   { key: "received", label: "Nhập", value: lot.receivedQty }, { key: "returned", label: "Đã trả nhà cung cấp", value: lot.returnedQty },
   { key: "nursing", label: "Đang ươm", value: lot.nursingQty }, { key: "loss", label: "Hao hụt khi ươm", value: lot.nurseryLossQty },
-  { key: "seeded", label: "Đã treo", value: lot.seededQty }, { key: "issued", label: "Xuất khác", value: lot.issuedOtherQty },
+  { key: "seeded", label: "Đã thả", value: lot.seededQty }, { key: "issued", label: "Xuất khác", value: lot.issuedOtherQty },
   { key: "remaining", label: "Còn lại", value: lot.remainingQty },
 ] as const;
 
@@ -40,7 +40,7 @@ export function SeedLotInfoTab({ lot }: { lot: SeedLotDetail }) {
       <p className={styles.noteBox}>Số liệu thu hoạch và đã bán tính từ các chu kỳ nuôi của lô{lot.figuresEstimated ? "; ước tính vì chu kỳ dùng nhiều lô hoặc lô thu hoạch chưa cân" : ""}.</p>
       <div className={styles.sums}>
         <div><span>Nhập</span><span>{fmt(lot.receivedQty)} {lot.unitName}</span></div>
-        <div><span>Đã treo</span><span>{fmt(lot.seededQty)} {lot.unitName}</span></div>
+        <div><span>Đã thả</span><span>{fmt(lot.seededQty)} {lot.unitName}</span></div>
         <div className={styles.strong}><span>Còn lại</span><span>{fmt(lot.remainingQty)} {lot.unitName}</span></div>
       </div>
     </div>

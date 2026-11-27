@@ -54,7 +54,7 @@ it("lists the lots with every column of the plan, the totals, links by code and 
   expect(within(line).getByRole("link", { name: "Hàu giống 3 cm" }).getAttribute("href")).toBe("/inputs/seeds?code=GG000001");
   expect(within(line).getByRole("link", { name: "Hàu sữa" }).getAttribute("href")).toBe("/sales/products?code=SP000001");
   expect(within(line).getByText("10/11/2026 08:00")).toBeTruthy();
-  expect(within(line).queryByText("Đang treo dở")).toBeNull();
+  expect(within(line).queryByText("Đang thả dở")).toBeNull();
   expect(screen.queryByRole("columnheader", { name: /^Trạng thái/ })).toBeNull();
   expect(within(line).getByRole("img", { name: /^Số nhập 1\.000 mảnh: .*Đã thả 400.*Còn kho 500.*Trả NCC 100/ })).toBeTruthy();
   expect(within(line).getByText("195,5 (ước tính)")).toBeTruthy();

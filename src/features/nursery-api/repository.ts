@@ -5,7 +5,7 @@ import type { WorkspaceResult } from "@/features/api-workspace/workspace-reposit
 const fields: Record<string, string> = { Photos: "Ảnh", Survivors: "Số sống sót (ước tính)", Quantity: "Số mảnh", "Seed lot": "Lô giống", "Start date": "Ngày bắt đầu", "Completed on": "Ngày hoàn tất", Zone: "Vùng nuôi", Note: "Ghi chú", Reason: "Lý do" };
 const reasons: Record<string, string> = {
   NURSERY_NOT_NURSING: "Đợt không còn ở trạng thái Đang ươm. Hãy tải lại để đối chiếu.",
-  NURSERY_NOT_COMPLETED: "Chỉ sửa số sống sót hoặc đóng đợt khi đã ươm xong. Hãy tải lại đợt ươm.",
+  NURSERY_NOT_COMPLETED: "Chỉ sửa số sống sót hoặc đóng đợt khi đợt đang Chờ thả. Hãy tải lại đợt ươm.",
   NURSERY_SURVIVORS_BELOW_SEEDED: "Số sống sót (ước tính) không được nhỏ hơn tổng đã thả.",
   NURSERY_ALREADY_CLOSED: "Đợt ươm đã đóng. Hãy tải lại để đối chiếu.",
   NURSERY_NOTHING_TO_CLOSE: "Kho ươm đã hết mảnh nên đợt tự đóng khi thả hết, không cần đóng tay. Hãy tải lại để đối chiếu.",
