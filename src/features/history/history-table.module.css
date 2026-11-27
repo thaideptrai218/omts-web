@@ -1,0 +1,18 @@
+/* The history of a record as a table, in the style of the Nhập – xuất subtab of Vật tư (DESIGN_GUIDELINES 1.6, 1.7). */
+.body { min-width: 0; }
+.scroll { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { padding: 7px 10px; background: var(--omts-color-primary-soft); font-size: 12px; font-weight: 650; text-align: left; white-space: nowrap; }
+.table td { padding: 7px 10px; border-bottom: 1px solid var(--omts-color-border); vertical-align: top; }
+.time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.action { font-weight: 600; }
+.muted { display: block; font-size: 12px; color: var(--omts-color-text-muted); }
+.changes { min-width: 220px; }
+.line { overflow-wrap: anywhere; }
+.line + .line { margin-top: 2px; }
+.more { margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--omts-color-primary); }
+.more:hover { text-decoration: underline; }
+.sort { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-weight: 650; }
+.sort:hover { text-decoration: underline; }
+.reason { min-width: 120px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.empty { padding: 20px; text-align: center; font-size: 13px; color: var(--omts-color-text-muted); }
