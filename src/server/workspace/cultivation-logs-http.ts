@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
-import { cultivationLog, logInput } from "@/features/cycles-api/log-contracts";
+import { cultivationLog, logInput, logTypes } from "@/features/cycles-api/log-contracts";
+import { logPageSchema } from "@/features/cultivation-logs/log-page-contract";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -9,6 +10,7 @@ import { readBackendResponse } from "../backend/backend-response";
 import { readOperationUpload } from "../operations/bounded-body";
 export async function handleCultivationLogs(request: Request) {
   const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "private, no-store", Vary: "Cookie" } });
+  if (new URL(request.url).searchParams.get("action") === "page") return handleLogPage(request, json);
   const query = new URL(request.url).searchParams, q = z.strictObject({ action: z.enum(["list", "create", "correct", "remove"]), id: z.guid() }).safeParse(Object.fromEntries(query));
   if (!q.success || query.size !== 2 || (request.method === "GET") !== (q.data.action === "list") || !["GET","POST"].includes(request.method)) return json({ status: "invalid-input" }, 400);
   const gateway = getSessionGateway(), backend = parseServerBackendConfig(process.env);
@@ -50,5 +52,30 @@ export async function handleCultivationLogs(request: Request) {
     const logs = Array.isArray(parsed.data) ? parsed.data : [parsed.data.log];
     if (logs.some(log => action === "list" || action === "create" ? log.cycleId !== id : log.id !== id)) return json({ status: "invalid-response" }, 502);
     return json({ status: "success", data: parsed.data });
+  } catch { return json({ status: "unavailable" }, 503); }
+}
+
+const pageQuery = z.strictObject({ action: z.literal("page"), zoneId: z.guid().optional(), raftId: z.guid().optional(), logType: z.enum(logTypes.map(([code]) => code)).optional(),
+  from: z.iso.date().optional(), to: z.iso.date().optional(), search: z.string().trim().max(100).optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "20", "50", "100"]).optional() });
+/** The Nhật ký screen: one server-paged page of the care logs of every zone the account may read, newest visit first, with the filters of the screen. */
+async function handleLogPage(request: Request, json: (data: unknown, status?: number) => Response) {
+  const query = new URL(request.url).searchParams, q = pageQuery.safeParse(Object.fromEntries(query));
+  if (!q.success || request.method !== "GET" || query.size !== [...new Set(query.keys())].length || (q.data.from && q.data.to && q.data.from > q.data.to)) return json({ status: "invalid-input" }, 400);
+  const gateway = getSessionGateway(), backend = parseServerBackendConfig(process.env);
+  if (gateway.mode !== "api" || backend.status !== "valid" || backend.config.source !== "api") return json({ status: "unavailable" }, 503);
+  try {
+    const initial = await gateway.resolve(request.headers.get("cookie")); if (initial.status !== "resolved") return json({ status: "session-expired" }, 401);
+    const application = await gateway.application(request.headers.get("cookie")); if (application.status !== "ready") return json({ status: "unavailable" }, 503);
+    if (application.context.identity.subjectType !== "CooperativeOwner" && !application.context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_LOGS" && p.action === "View")) return json({ status: "forbidden", code: "MSG02" }, 403);
+    const params = new URLSearchParams(); for (const [key, value] of Object.entries(q.data)) if (key !== "action" && value) params.set(key, value);
+    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(Math.max(30_000, backend.config.timeoutMs))]);
+    const response = await fetch(new URL(`/api/cultivation-logs${params.size ? `?${params}` : ""}`, backend.config.origin), { method: "GET", headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` }, cache: "no-store", credentials: "omit", redirect: "error", signal });
+    const result = await readBackendResponse(response, "profileRead");
+    const current = await gateway.resolve(request.headers.get("cookie")); if (current.status !== "resolved" || !sameEmployeeSession(initial.session, current.session)) return json({ status: "session-expired" }, 401);
+    if (signal.aborted) return json({ status: "unavailable" }, 503);
+    if (result.status === "http-error") return json({ status: "rejected", code: result.code }, result.httpStatus);
+    if (result.status !== "success") return json({ status: "unavailable" }, 503);
+    const parsed = logPageSchema.safeParse(result.data);
+    return parsed.success ? json({ status: "success", data: parsed.data }) : json({ status: "invalid-response" }, 502);
   } catch { return json({ status: "unavailable" }, 503); }
 }
