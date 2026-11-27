@@ -11,7 +11,8 @@ export const historyEntry = z.object({
   at: z.string(), action: z.string().max(100), byName: z.string().nullish(), byRole: z.string().nullish(),
   reason: z.string().nullish(), note: z.string().nullish(), changes: z.array(historyChange).default([]),
 });
-export const historyList = z.array(historyEntry);
+// The backend answers `{ recordType, recordId, recordCode, entries: [...] }`; a bare array is still accepted.
+export const historyList = z.union([z.array(historyEntry), z.object({ entries: z.array(historyEntry) }).transform(value => value.entries)]);
 export type HistoryEntry = z.infer<typeof historyEntry>;
 export type HistoryChange = z.infer<typeof historyChange>;
 
