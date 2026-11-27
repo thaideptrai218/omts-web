@@ -6,7 +6,7 @@ import { LandingExampleCard } from "./landing-example-card";
 import s from "./landing.module.css";
 
 /** Màn hình đầu: ảnh nền vùng nuôi, câu hỏi của người mua và thẻ nguồn gốc bấm vào xem được ngay. */
-export function LandingHero({ background, example, entry }: { background: string; example: TraceExample; entry: { href: string; label: string } }) {
+export function LandingHero({ background, credit, example, entry }: { background: string; credit: string; example: TraceExample; entry: { href: string; label: string } }) {
   return (
     <section className={s.hero} aria-labelledby="hero-title">
       {/* eslint-disable-next-line @next/next/no-img-element -- ảnh nền có thể là ảnh chủ HTX đăng, đi qua proxy ảnh công khai */}
@@ -23,6 +23,7 @@ export function LandingHero({ background, example, entry }: { background: string
         </div>
         <LandingExampleCard example={example} />
       </div>
+      {credit ? <p className={s.credit}>{credit}</p> : null}
     </section>
   );
 }

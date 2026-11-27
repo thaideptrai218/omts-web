@@ -14,16 +14,18 @@ export type LandingImage = { url: string; caption: string };
 
 /**
  * Ảnh mặc định, đều từ Wikimedia Commons (nguồn ở /landing/nguon-anh.txt); chủ hợp tác xã đăng ảnh ở Cài đặt,
- * Trang giới thiệu thì thay thế. Báo chí không có ảnh mặc định: chỉ hiện bài thật do chủ hợp tác xã đăng.
+ * Trang giới thiệu thì thay thế. Mọi ảnh đều ghi nguồn; ảnh báo chí
+ * mặc định là ảnh chụp bản tin VTV1 do hợp tác xã cung cấp.
  */
 export const defaultImages = {
   background: "/landing/mau/nen-lang-be.webp",
-  press: [] as LandingImage[],
+  press: [{ url: "/landing/mau/ban-tin-vtv1.webp", caption: "Bản tin Thời sự VTV1 tại Quảng Ninh. Nguồn: VTV1" }] as LandingImage[],
+  backgroundCredit: "Ảnh nền: Christophe95, CC BY-SA 4.0",
   gallery: [
-    { url: samplePhotos.floats, caption: "Khu nuôi hàu bè (ảnh minh họa)" },
-    { url: samplePhotos.harvest, caption: "Hàu sau thu hoạch (ảnh minh họa)" },
-    { url: samplePhotos.ropes, caption: "Giàn bè trên vịnh (ảnh minh họa)" },
-    { url: "/landing/mau/vinh-bai-tu-long.webp", caption: "Vịnh Bái Tử Long, Quảng Ninh" },
+    { url: samplePhotos.floats, caption: "Khu nuôi hàu bè. Ảnh: Southern Vietnam, CC BY-SA 4.0" },
+    { url: samplePhotos.harvest, caption: "Hàu sau thu hoạch. Ảnh: H. Zell, CC BY-SA 3.0" },
+    { url: samplePhotos.ropes, caption: "Giàn bè trên vịnh. Ảnh: Christophe95, CC BY-SA 4.0" },
+    { url: "/landing/mau/vinh-bai-tu-long.webp", caption: "Vịnh Bái Tử Long. Ảnh: AnhTuan Le, phạm vi công cộng" },
   ] as LandingImage[],
   product: samplePhotos.harvest,
 };

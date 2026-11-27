@@ -26,7 +26,7 @@ export function LandingPage({ data, example, signedIn = false }: Props) {
   const press = imagesOf(data, "Press", defaultImages.press);
   // Không có bài báo nào thì bỏ cả liên kết tới mục đó.
   const links = navLinks.filter((l) => press.length || l.href !== "#bao-chi").map((l) => <a key={l.href} href={l.href}>{l.label}</a>);
-  const background = imagesOf(data, "Background", [{ url: defaultImages.background, caption: "" }])[0].url;
+  const background = imagesOf(data, "Background", [{ url: defaultImages.background, caption: defaultImages.backgroundCredit }])[0];
   return (
     <PublicFrame
       skipLabel="Bỏ qua, đến nội dung chính"
@@ -45,7 +45,7 @@ export function LandingPage({ data, example, signedIn = false }: Props) {
         </>
       )}
     >
-      <LandingHero background={background} example={example} entry={entry} />
+      <LandingHero background={background.url} credit={background.caption} example={example} entry={entry} />
       <LandingProductsSection products={data?.products ?? []} />
       <LandingTraceGallerySection images={imagesOf(data, "Gallery", defaultImages.gallery)} exampleHref={example.href} />
       <LandingJourneySection />

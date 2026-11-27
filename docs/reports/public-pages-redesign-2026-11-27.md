@@ -48,4 +48,4 @@
 
 ## Trước khi đẩy mã
 
-Kho mã công khai nên ảnh chưa rõ quyền (ảnh chủ dự án đưa, gồm ảnh mang dấu công ty khác và ảnh bản tin truyền hình) không đưa vào git. Mã chỉ kèm ảnh Wikimedia Commons; các ảnh kia được đăng vào kho ảnh trên máy qua Cài đặt, Trang giới thiệu. Mục báo chí không có ảnh mặc định. Những dòng ở trên nói về ảnh trong `public/landing/mau/` đã được thay bằng mục này.
+Kho mã công khai nên ảnh chưa rõ quyền (ảnh chủ dự án đưa, gồm ảnh mang dấu công ty khác và ảnh bản tin truyền hình) không đưa vào git. Mã chỉ kèm ảnh Wikimedia Commons; các ảnh kia được đăng vào kho ảnh trên máy qua Cài đặt, Trang giới thiệu. Riêng ảnh chụp bản tin VTV1 được chủ dự án quyết định giữ trong mã, có ghi nguồn. Ảnh Wikimedia Commons ghi tên tác giả ngay trên trang. Những dòng ở trên nói về ảnh trong `public/landing/mau/` đã được thay bằng mục này.
