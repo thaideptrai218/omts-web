@@ -2,8 +2,8 @@ import { fromQueryDate, isAllTime, presetValue, type TimeRangeValue } from "@/co
 
 /** Bộ lọc của danh sách hóa đơn bán (SALE-09) và các phép tính thuần: quy ra tham số truy vấn của BFF. Kỳ xem do bộ lọc thời gian dùng chung giữ (`TimeRangeValue`). */
 export type Picked = { id: string; title: string; sub?: string };
-export type Filters = { zoneId: string; customer: Picked | null; lot: Picked | null; status: "" | "3501" | "3502"; paid: "" | "true" | "false"; cashMine: boolean };
-export const emptyFilters: Filters = { zoneId: "", customer: null, lot: null, status: "", paid: "", cashMine: false };
+export type Filters = { customer: Picked | null; lot: Picked | null; status: "" | "3501" | "3502"; paid: "" | "true" | "false"; cashMine: boolean };
+export const emptyFilters: Filters = { customer: null, lot: null, status: "", paid: "", cashMine: false };
 
 /** Backend chỉ nhận một kỳ tối đa 5 năm: "Toàn thời gian" lấy 5 năm gần nhất (29/02 lùi về 28/02). */
 const fiveYearsBefore = (today: string) => `${Number(today.slice(0, 4)) - 5}${today.slice(4).replace("-02-29", "-02-28")}`;
@@ -25,11 +25,11 @@ export function periodRange(time: TimeRangeValue, today: string): { from: string
   return { from: time.from, to: time.to };
 }
 
-/** Tham số truy vấn gửi BFF; ô tìm theo mã hóa đơn đi vào `code`. */
-export function toQuery(input: { search: string; time: TimeRangeValue; filters: Filters }, today: string): Record<string, string | undefined> {
+/** Tham số truy vấn gửi BFF; ô tìm theo mã hóa đơn đi vào `code`; `zoneIds` là các vùng đang chọn ở thanh trên (rỗng = mọi vùng được xem). */
+export function toQuery(input: { search: string; time: TimeRangeValue; filters: Filters; zoneIds?: string }, today: string): Record<string, string | undefined> {
   const { search, time, filters: f } = input, { from, to } = periodRange(time, today);
   return {
-    from, to, zoneId: f.zoneId || undefined, customerId: f.customer?.id, harvestLotId: f.lot?.id,
+    from, to, zoneIds: input.zoneIds || undefined, customerId: f.customer?.id, harvestLotId: f.lot?.id,
     statusId: f.status || undefined, paid: f.paid || undefined, code: search.trim() || undefined, cashCollectedByMe: f.cashMine ? "true" : undefined,
   };
 }

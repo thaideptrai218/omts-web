@@ -6,6 +6,7 @@ import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-fi
 import type { TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { SelectBox } from "@/components/ui/select-box";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { useSelectedZones } from "@/features/api-workspace/selected-zones";
 import { loadInUseZones } from "@/features/zones-api/in-use-zones";
 import { operationAllowed, type OperationArea } from "@/features/operations/permissions";
 import { useRemote } from "@/features/operations/ui";
@@ -36,9 +37,10 @@ type RailProps = Readonly<{
   children?: ReactNode;
 }>;
 
-/** Cột lọc trái dùng chung: kỳ, vùng nuôi (nhiều vùng), tiêu chí riêng, "Xem báo cáo" và "Đặt lại". Đổi ô nào cũng chỉ sửa bản nháp. */
+/** Cột lọc trái dùng chung: kỳ, vùng nuôi (nhiều vùng; `zoneIds` là vùng đang chọn ở thanh trên và `onZones` ghi ngược lên đó), tiêu chí riêng, "Xem báo cáo" và "Đặt lại". Đổi ô nào cũng chỉ sửa bản nháp. */
 export function ReportFilterRail({ time, onTime, lead, zoneIds, onZones, zones, problem, busy, onApply, onReset, showZones = true, children }: RailProps) {
-  const label = (id: string) => zones.options.find((zone) => zone.id === id)?.label ?? id;
+  const header = useSelectedZones();
+  const label = (id: string) => zones.options.find((zone) => zone.id === id)?.label ?? header.zones.find((zone) => zone.id === id)?.name ?? id;
   return (
     <form className={s.form} onSubmit={(event) => { event.preventDefault(); onApply(); }}>
       <div className={s.railHead}><strong>Bộ lọc</strong><button type="button" className={s.linkButton} disabled={busy} onClick={onReset}>Đặt lại</button></div>

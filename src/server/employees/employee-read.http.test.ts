@@ -16,7 +16,7 @@ function get(path = "/fixture") {
 describe("employee GET with disposable Node HTTP peers, not .NET", () => {
   it("sends the exact list/detail targets, raw query values and server bearer", async () => {
     const received: Array<{ path: string; method?: string; bearer?: string; cookie?: string; body: string; contentType?: string }> = [];
-    const query = { search: "Nguyễn +84900000000 & statusId=402 / %20", statusId: 401, zoneId: workingZoneId, page: 2, pageSize: 20 };
+    const query = { search: "Nguyễn +84900000000 & statusId=402 / %20", statusId: 401, zoneIds: [workingZoneId], page: 2, pageSize: 20 };
     await withHttpFixture(async (incoming, response) => {
       const url = new URL(incoming.url!, "http://fixture.test");
       received.push({ path: incoming.url!, method: incoming.method, bearer: incoming.headers.authorization,

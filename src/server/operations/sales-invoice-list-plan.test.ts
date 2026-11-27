@@ -8,9 +8,10 @@ const url = (p: { path: string } | undefined) => new URL(p!.path, "http://x");
 
 describe("kế hoạch BFF cho danh sách hóa đơn bán", () => {
   it("danh sách: View, truyền đúng bộ lọc và phân trang mặc định", () => {
-    const p = plan("GET", q(`action=list&from=2026-11-01&to=2026-11-09&zoneId=${id(1)}&customerId=${id(2)}&harvestLotId=${id(3)}&statusId=3501&paid=false&code=HD01&cashCollectedByMe=true`));
-    expect(p).toMatchObject({ area: "sales-invoice-list", method: "GET", permission: "View", zoneId: id(1) });
+    const p = plan("GET", q(`action=list&from=2026-11-01&to=2026-11-09&zoneIds=${id(1)}%2C${id(6)}&customerId=${id(2)}&harvestLotId=${id(3)}&statusId=3501&paid=false&code=HD01&cashCollectedByMe=true`));
+    expect(p).toMatchObject({ area: "sales-invoice-list", method: "GET", permission: "View" });
     const u = url(p);
+    expect(u.searchParams.getAll("zoneIds")).toEqual([id(1), id(6)]);
     expect(u.pathname).toBe("/api/sales-invoices");
     expect(Object.fromEntries(u.searchParams)).toMatchObject({ from: "2026-11-01", to: "2026-11-09", statusId: "3501", paid: "false", code: "HD01", cashCollectedByMe: "true", page: "1", pageSize: "10" });
   });
@@ -36,7 +37,7 @@ describe("kế hoạch BFF cho danh sách hóa đơn bán", () => {
     expect(plan("GET", q("action=lots"))).toBeUndefined();
   });
   it("chặn tham số lạ, ngày sai, khoảng ngược, GUID sai, trạng thái lạ, lặp khóa, thân GET", () => {
-    for (const bad of ["action=list&raftId=" + id(1), "action=list&from=2026-13-01", "action=list&from=2026-11-09&to=2026-11-01", "action=list&zoneId=abc", "action=list&statusId=3503",
+    for (const bad of ["action=list&raftId=" + id(1), "action=list&from=2026-13-01", "action=list&from=2026-11-09&to=2026-11-01", "action=list&zoneId=abc", "action=list&zoneIds=abc", `action=list&zoneIds=${id(1)}&zoneIds=${id(2)}`, `action=export&zoneIds=${id(1)},x`, "action=list&statusId=3503",
       "action=list&paid=yes", "action=list&pageSize=500", "action=list&page=0", "action=list&lotCode=x", "action=delete", "", "action=list&page=1&page=2", `action=list&id=${id(1)}`, "action=list&cashCollectedByMe=false"]) {
       expect(plan("GET", q(bad)), bad).toBeUndefined();
     }

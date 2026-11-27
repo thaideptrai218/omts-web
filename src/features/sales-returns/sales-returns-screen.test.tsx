@@ -11,9 +11,10 @@ vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(s
 vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify: state.notify }) }));
 vi.mock("./repository", () => ({ returnRepository: { list: state.list, exportList: state.exportList, detail: state.detail, cancel: state.cancel, preview: vi.fn(), create: vi.fn() } }));
 vi.mock("@/features/customers/repository", async (original) => ({ ...(await original<typeof import("@/features/customers/repository")>()), customerRepository: { list: state.customers } }));
-vi.mock("@/features/input-issues/issue-access", () => ({ useZoneOptions: () => ({ zones: [{ id: "7c1d0a8e-3d3a-4f6b-9e57-2a3c7f1d0b0a", code: "V01", name: "Vùng 1", inUse: true }], loading: false }) }));
+vi.mock("@/features/zones-api/in-use-zones", async () => (await import("@/test/header-zone-rows")).inUseZonesMock);
 import { SalesReturnsScreen } from "./sales-returns-screen";
 import { ids, page, view } from "./return-test-fixtures";
+import { HeaderZones, chooseHeaderZones, headerZoneIds } from "@/test/header-zones";
 
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
@@ -22,6 +23,7 @@ beforeAll(() => {
 afterAll(() => { Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"); Reflect.deleteProperty(HTMLDialogElement.prototype, "close"); });
 beforeEach(() => {
   try { window.localStorage.clear(); } catch { /* storage may be unavailable */ }
+  chooseHeaderZones([]);
   state.linked = ""; state.context.identity.subjectType = "CooperativeOwner"; state.context.permissions.functionPermissions = [];
   state.list.mockResolvedValue({ status: "success", data: page() });
   state.detail.mockResolvedValue({ status: "success", data: view() });
@@ -29,7 +31,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-const mount = () => render(<SalesReturnsScreen />);
+const mount = () => render(<HeaderZones><SalesReturnsScreen /></HeaderZones>);
 const openRow = async () => { mount(); fireEvent.click(await screen.findByRole("button", { name: "Mở TL000001" })); return within(await screen.findByRole("region", { name: "Chi tiết TL000001" })); };
 const last = () => state.list.mock.calls.at(-1)![0];
 const staffWith = (...grants: [string, string][]) => { state.context.identity.subjectType = "Staff"; state.context.permissions.functionPermissions = grants.map(([functionCode, action]) => ({ functionCode, action, dataScope: "AssignedZone", scope: { kind: "all-zones" } })); };
@@ -70,8 +72,8 @@ describe("the list Trả hàng bán", () => {
     mount(); await screen.findByText("TL000001");
     fireEvent.click(screen.getByLabelText("Đã hủy"));
     await waitFor(() => expect(last()).toMatchObject({ statusId: "4102", page: "1" }));
-    fireEvent.change(screen.getByLabelText("Vùng", { selector: "select" }), { target: { value: ids.zone } });
-    await waitFor(() => expect(last()).toMatchObject({ zoneId: ids.zone }));
+    fireEvent.change(await screen.findByLabelText("Vùng nuôi", { selector: "select" }), { target: { value: headerZoneIds[1] } });
+    await waitFor(() => expect(last()).toMatchObject({ zoneIds: headerZoneIds[1] }));
     fireEvent.change(screen.getByLabelText("Tìm phiếu trả hàng"), { target: { value: "HD000123" } });
     await waitFor(() => expect(last()).toMatchObject({ search: "HD000123" }));
     fireEvent.change(screen.getByLabelText("Tìm khách hàng"), { target: { value: "Trần" } });
@@ -79,7 +81,16 @@ describe("the list Trả hàng bán", () => {
     await waitFor(() => expect(last()).toMatchObject({ customerId: ids.customer }));
     fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
     await waitFor(() => expect(last().statusId).toBeUndefined());
-    expect(last().customerId).toBeUndefined(); expect(last().zoneId).toBeUndefined();
+    expect(last().customerId).toBeUndefined(); expect(last().zoneIds).toBe(headerZoneIds[1]);
+  });
+  it("follows the header zones: a subset is sent as zoneIds, the rail says so, and choosing a zone in the rail narrows the header", async () => {
+    chooseHeaderZones([headerZoneIds[0], headerZoneIds[2]]); mount();
+    await waitFor(() => expect(last()).toMatchObject({ zoneIds: `${headerZoneIds[0]},${headerZoneIds[2]}`, page: "1" }));
+    const select = await screen.findByLabelText("Vùng nuôi", { selector: "select" }) as HTMLSelectElement;
+    expect(select.selectedOptions[0].textContent).toBe("2 vùng đã chọn");
+    fireEvent.change(select, { target: { value: "" } });
+    await waitFor(() => expect(last().zoneIds).toBeUndefined());
+    expect(JSON.parse(localStorage.getItem("omts.selected-zones.v1.header-zones-test")!)).toEqual({ kind: "all" });
   });
   it("sorts on the server by the header that was clicked", async () => {
     mount(); await screen.findByText("TL000001");

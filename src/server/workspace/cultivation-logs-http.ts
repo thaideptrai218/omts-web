@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { cultivationLog, logInput, logTypes } from "@/features/cycles-api/log-contracts";
 import { logPageSchema, logSortKeys } from "@/features/cultivation-logs/log-page-contract";
+import { idList } from "../operations/sales-report-plan";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -58,19 +59,21 @@ export async function handleCultivationLogs(request: Request) {
   } catch { return json({ status: "unavailable" }, 503); }
 }
 
-const pageQuery = z.strictObject({ action: z.literal("page"), zoneId: z.guid().optional(), raftId: z.guid().optional(), logType: z.enum(logTypes.map(([code]) => code)).optional(),
+const pageQuery = z.strictObject({ action: z.literal("page"), zoneId: z.guid().optional(), zoneIds: idList.optional(), raftId: z.guid().optional(), logType: z.enum(logTypes.map(([code]) => code)).optional(),
   from: z.iso.date().optional(), to: z.iso.date().optional(), search: z.string().trim().max(100).optional(), sortBy: z.enum(logSortKeys).optional(), sortDir: z.enum(["asc", "desc"]).optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "20", "50", "100"]).optional() });
 /** The Nhật ký screen: one server-paged page of the care logs of every zone the account may read, newest visit first unless `sortBy` (a column of the list) and `sortDir` say otherwise, with the filters of the screen. */
 async function handleLogPage(request: Request, json: (data: unknown, status?: number) => Response) {
   const query = new URL(request.url).searchParams, q = pageQuery.safeParse(Object.fromEntries(query));
-  if (!q.success || request.method !== "GET" || query.size !== [...new Set(query.keys())].length || (q.data.from && q.data.to && q.data.from > q.data.to)) return json({ status: "invalid-input" }, 400);
+  if (!q.success || request.method !== "GET" || query.size !== [...new Set(query.keys())].length || (q.data.from && q.data.to && q.data.from > q.data.to) || (q.data.zoneId && q.data.zoneIds)) return json({ status: "invalid-input" }, 400);
   const gateway = getSessionGateway(), backend = parseServerBackendConfig(process.env);
   if (gateway.mode !== "api" || backend.status !== "valid" || backend.config.source !== "api") return json({ status: "unavailable" }, 503);
   try {
     const initial = await gateway.resolve(request.headers.get("cookie")); if (initial.status !== "resolved") return json({ status: "session-expired" }, 401);
     const application = await gateway.application(request.headers.get("cookie")); if (application.status !== "ready") return json({ status: "unavailable" }, 503);
     if (application.context.identity.subjectType !== "CooperativeOwner" && !application.context.permissions.functionPermissions.some(p => p.functionCode === "CULTIVATION_LOGS" && p.action === "View")) return json({ status: "forbidden", code: "MSG02" }, 403);
-    const params = new URLSearchParams(); for (const [key, value] of Object.entries(q.data)) if (key !== "action" && value) params.set(key, value);
+    const { zoneIds, ...rest } = q.data, params = new URLSearchParams(); for (const [key, value] of Object.entries(rest)) if (key !== "action" && value) params.set(key, value);
+    // Several zones of the header: the backend intersects them with the zones the caller may read.
+    for (const zone of zoneIds ?? []) params.append("zoneIds", zone);
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(Math.max(30_000, backend.config.timeoutMs))]);
     const response = await fetch(new URL(`/api/cultivation-logs${params.size ? `?${params}` : ""}`, backend.config.origin), { method: "GET", headers: { Accept: "application/json", Authorization: `Bearer ${initial.session.readAccessTokenForBackend()}` }, cache: "no-store", credentials: "omit", redirect: "error", signal });
     const result = await readBackendResponse(response, "profileRead");

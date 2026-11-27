@@ -101,3 +101,19 @@ describe("who may read the seed lots", () => {
     expect(operationAllowed("seed-lots", { subjectType: "Trader" }, [grant("PURCHASE_RECEIPTS", "View")], "View")).toBe(false);
   });
 });
+
+describe("seed lot list over several zones", () => {
+  const zones = ["529ec3ce-af8f-42f7-a08f-4bab36ba7e71", "529ec3ce-af8f-42f7-a08f-4bab36ba7e72"];
+  it("expands the comma list of the browser into repeated zoneIds for the list and the file, with no single zone to check", () => {
+    for (const action of ["list", "export"] as const) {
+      const plan = get({ action, zoneIds: zones.join(",") });
+      expect(plan?.zoneId).toBeUndefined();
+      expect(new URL(plan!.path, "http://api").searchParams.getAll("zoneIds")).toEqual(zones);
+    }
+  });
+  it("refuses zoneIds together with zoneId, a bad id, and a detail read", () => {
+    expect(get({ action: "list", zoneIds: zones.join(","), zoneId: zone })).toBeUndefined();
+    expect(get({ action: "list", zoneIds: "nope" })).toBeUndefined();
+    expect(get({ action: "detail", id: line, zoneIds: zones[0] })).toBeUndefined();
+  });
+});

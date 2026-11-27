@@ -11,6 +11,7 @@ import { MyWorkScreen } from "./my-work-screen";
 import { ids } from "./__tests__/fixtures";
 import { businessToday } from "./ui";
 import { WorkforceScreen } from "./workforce-screen";
+import { HeaderZones, chooseHeaderZones } from "@/test/header-zones";
 
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
@@ -76,6 +77,22 @@ describe("workforce day board in the management design", () => {
     expect(mocks.write.mock.calls[0][3]).toBe("a");
   });
 
+  it("shows only the rows of the zones chosen in the header, and the rail filter widens the header", async () => {
+    const third = "00000000-0000-4000-8000-0000000000ff";
+    mocks.options.mockResolvedValue({ status: "success", data: [{ id: ids.zone, name: "Vùng Đông", statusId: 101 }, { id: ids.otherZone, name: "Vùng Tây", statusId: 101 }, { id: third, name: "Vùng Nam", statusId: 101 }] });
+    mocks.read.mockResolvedValue({ status: "success", data: [row("a", "Nhân viên An"), row("b", "Nhân viên Bình", { zoneId: ids.otherZone }), row("c", "Nhân viên Cường", { zoneId: third })] });
+    chooseHeaderZones([ids.zone, ids.otherZone]);
+    render(<HeaderZones><WorkforceScreen /></HeaderZones>);
+    await screen.findByText("Nhân viên An");
+    expect(screen.getByText("Nhân viên Bình")).toBeTruthy(); expect(screen.queryByText("Nhân viên Cường")).toBeNull();
+    const select = screen.getByRole("combobox", { name: "Vùng làm việc" }) as HTMLSelectElement;
+    expect(select.selectedOptions[0].textContent).toBe("2 vùng đã chọn");
+    fireEvent.change(select, { target: { value: ids.otherZone } });
+    await waitFor(() => expect(screen.queryByText("Nhân viên An")).toBeNull());
+    expect(screen.getByText("Nhân viên Bình")).toBeTruthy();
+    fireEvent.change(screen.getByRole("combobox", { name: "Vùng làm việc" }), { target: { value: "" } });
+    expect(await screen.findByText("Nhân viên Cường")).toBeTruthy();
+  });
   it("lets a zone-level assignment with no raft be checked in and out", async () => {
     mocks.read.mockResolvedValue({ status: "success", data: [row("z", "Nhân viên Zin", { raftId: null, raftCode: null })] });
     render(<WorkforceScreen />);

@@ -46,4 +46,4 @@ export type SeedLotPage = z.infer<typeof seedLotPage>;
 export type SeedLotDetail = z.infer<typeof seedLotDetail>;
 
 /** Filters of the list, as the query of the BFF carries them (every value is text; an empty one is left out). */
-export type SeedLotListQuery = Partial<Record<"from" | "to" | "supplierId" | "itemId" | "zoneId" | "search" | "sort" | "sortDir" | "page" | "pageSize", string>>;
+export type SeedLotListQuery = Partial<Record<"from" | "to" | "supplierId" | "itemId" | "zoneId" | "zoneIds" | "search" | "sort" | "sortDir" | "page" | "pageSize", string>>;

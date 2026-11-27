@@ -5,26 +5,27 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { ToastProvider } from "@/components/ui/toast-provider";
 
 const mocks = vi.hoisted(() => ({ page: vi.fn(), params: "", cycles: vi.fn(), log: vi.fn(), subject: "CooperativeOwner" as string, functions: [] as { functionCode: string; action: string }[] }));
-const zoneA = "00000000-0000-4000-8000-000000000001", zoneB = "00000000-0000-4000-8000-000000000002", raftA = "00000000-0000-4000-8000-0000000000a1", cycleA = "00000000-0000-4000-8000-0000000000c1", logId = "00000000-0000-4000-8000-0000000000d1";
+const zoneA = "00000000-0000-4000-8000-000000000001", zoneB = "00000000-0000-4000-8000-000000000002", zoneC = "00000000-0000-4000-8000-000000000003", raftA = "00000000-0000-4000-8000-0000000000a1", cycleA = "00000000-0000-4000-8000-0000000000c1", logId = "00000000-0000-4000-8000-0000000000d1";
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(mocks.params) }));
 vi.mock("./log-page-repository", () => ({ readLogPage: mocks.page }));
 vi.mock("@/features/cycles-api/repository", () => ({ readCycles: mocks.cycles }));
 vi.mock("@/features/cycles-api/log-repository", async original => ({ ...(await original<typeof import("@/features/cycles-api/log-repository")>()), logRequest: mocks.log }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: mocks.subject }, permissions: { functionPermissions: mocks.functions } }) }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: async (kind: string, _signal: AbortSignal, query?: { zoneId?: string }) => ({ status: "success", data: kind === "zones"
-  ? [{ id: zoneA, code: "KV01", name: "Vùng A", statusId: 101, status: "In Use" }, { id: zoneB, code: "KV02", name: "Vùng B", statusId: 101, status: "In Use" }]
+  ? [{ id: zoneA, code: "KV01", name: "Vùng A", statusId: 101, status: "In Use" }, { id: zoneB, code: "KV02", name: "Vùng B", statusId: 101, status: "In Use" }, { id: zoneC, code: "KV03", name: "Vùng C", statusId: 101, status: "In Use" }]
   : query?.zoneId === zoneA ? [{ id: raftA, code: "B1-01" }] : [] }) }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
 vi.mock("@/features/history/record-history", () => ({ EditedRecordHistory: () => <p>Xem lịch sử</p>, RecordHistory: () => null }));
 import { LogsScreen } from "./logs-screen";
+import { HeaderZones, chooseHeaderZones } from "@/test/header-zones";
 
 const item = (patch: object = {}) => ({ id: logId, cycleId: cycleA, raftId: raftA, raftCode: "B1-01", zoneId: zoneA, zoneCode: "KV01", zoneName: "Vùng A", visitDate: "2026-11-21", logType: "CLEANING", notes: "Vệ sinh lưới bè phía đông",
   photos: [{ key: "k1", sortOrder: 1, url: "x" }], recordedByAccountId: "00000000-0000-4000-8000-0000000000e1", recordedByName: "Minh", recordedAt: "2026-11-21T02:15:00+00:00", canCorrect: true, rowVersion: "A", ...patch });
 const answer = (items: object[] = [item()]) => ({ status: "success", data: { items, page: 1, pageSize: 20, total: items.length } });
 const lastQuery = () => mocks.page.mock.calls.at(-1)![0] as Record<string, string>;
-const show = () => render(<ToastProvider><LogsScreen /></ToastProvider>);
+const show = () => render(<ToastProvider><HeaderZones><LogsScreen /></HeaderZones></ToastProvider>);
 
-beforeEach(() => { mocks.params = ""; mocks.subject = "CooperativeOwner"; mocks.functions = []; mocks.page.mockResolvedValue(answer()); mocks.log.mockResolvedValue({ status: "success", data: [] }); });
+beforeEach(() => { chooseHeaderZones([]); mocks.params = ""; mocks.subject = "CooperativeOwner"; mocks.functions = []; mocks.page.mockResolvedValue(answer()); mocks.log.mockResolvedValue({ status: "success", data: [] }); });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("Nhật ký chăm sóc screen", () => {
@@ -36,7 +37,7 @@ describe("Nhật ký chăm sóc screen", () => {
     expect(within(row).getByText("21/11/2026 09:15")).toBeTruthy();
     expect(within(row).getByRole("link", { name: "B1-01" }).getAttribute("href")).toBe(`/farming/rafts?zoneId=${zoneA}&search=B1-01&tab=logs`);
     expect(lastQuery()).toMatchObject({ page: "1", pageSize: "20" });
-    expect(lastQuery().zoneId).toBe("");
+    expect(lastQuery().zoneIds).toBe("");
     expect(lastQuery()).toMatchObject({ sortBy: "visitDate", sortDir: "desc" });
   });
   it("keeps zone and raft in their own nowrap cells that end in an ellipsis, so they cannot run into each other", async () => {
@@ -86,12 +87,12 @@ describe("Nhật ký chăm sóc screen", () => {
     show();
     await screen.findByRole("button", { name: "Xem nhật ký B1-01 ngày 21/11/2026" });
     fireEvent.change(screen.getByLabelText("Vùng nuôi"), { target: { value: zoneA } });
-    await waitFor(() => expect(lastQuery().zoneId).toBe(zoneA));
+    await waitFor(() => expect(lastQuery().zoneIds).toBe(zoneA));
     await waitFor(() => expect(within(screen.getByLabelText("Bè")).getByRole("option", { name: "B1-01" })).toBeTruthy());
     fireEvent.change(screen.getByLabelText("Bè"), { target: { value: raftA } });
     fireEvent.change(screen.getByLabelText("Loại nhật ký"), { target: { value: "REPAIR" } });
     fireEvent.change(screen.getByLabelText("Tìm nhật ký"), { target: { value: " lưới " } });
-    await waitFor(() => expect(lastQuery()).toMatchObject({ zoneId: zoneA, raftId: raftA, logType: "REPAIR", search: "lưới", page: "1" }));
+    await waitFor(() => expect(lastQuery()).toMatchObject({ zoneIds: zoneA, raftId: raftA, logType: "REPAIR", search: "lưới", page: "1" }));
   });
   it("sends the visit dates of the time filter", async () => {
     show();
@@ -104,8 +105,44 @@ describe("Nhật ký chăm sóc screen", () => {
   it("preselects the zone and raft of a link", async () => {
     mocks.params = new URLSearchParams({ zoneId: zoneA, raftId: raftA }).toString();
     show();
-    await waitFor(() => expect(mocks.page).toHaveBeenCalled());
-    expect(lastQuery()).toMatchObject({ zoneId: zoneA, raftId: raftA });
+    // The link narrows the header to its zone once; the raft of the link stays chosen under that zone.
+    await waitFor(() => expect(lastQuery()).toMatchObject({ zoneIds: zoneA, raftId: raftA }));
+    expect(JSON.parse(localStorage.getItem("omts.selected-zones.v1.header-zones-test")!)).toEqual({ kind: "ids", ids: [zoneA] });
+  });
+  it("follows the header zones both ways: the rail shows the header state and picking a zone narrows the header", async () => {
+    show();
+    await screen.findByRole("button", { name: "Xem nhật ký B1-01 ngày 21/11/2026" });
+    const zone = () => screen.getByLabelText("Vùng nuôi") as HTMLSelectElement;
+    expect(zone().selectedOptions[0].textContent).toBe("Tất cả vùng nuôi");
+    fireEvent.change(zone(), { target: { value: zoneB } });
+    await waitFor(() => expect(lastQuery().zoneIds).toBe(zoneB));
+    expect(JSON.parse(localStorage.getItem("omts.selected-zones.v1.header-zones-test")!)).toEqual({ kind: "ids", ids: [zoneB] });
+    expect(zone().value).toBe(zoneB);
+    fireEvent.change(zone(), { target: { value: "" } });
+    await waitFor(() => expect(lastQuery().zoneIds).toBe(""));
+  });
+  it("lets the Bè filter work only while exactly one zone is chosen, and says why otherwise", async () => {
+    show();
+    await screen.findByRole("button", { name: "Xem nhật ký B1-01 ngày 21/11/2026" });
+    const raft = () => screen.getByLabelText("Bè") as HTMLSelectElement;
+    expect(raft().disabled).toBe(true);
+    expect(within(raft()).getByRole("option", { name: "Chọn một vùng để lọc theo bè" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Vùng nuôi"), { target: { value: zoneA } });
+    await waitFor(() => expect(raft().disabled).toBe(false));
+    await waitFor(() => expect(within(raft()).getByRole("option", { name: "B1-01" })).toBeTruthy());
+    fireEvent.change(raft(), { target: { value: raftA } });
+    await waitFor(() => expect(lastQuery()).toMatchObject({ zoneIds: zoneA, raftId: raftA }));
+    // Another zone: the raft belonged to the first one, so it no longer applies.
+    fireEvent.change(screen.getByLabelText("Vùng nuôi"), { target: { value: zoneB } });
+    await waitFor(() => expect(lastQuery()).toMatchObject({ zoneIds: zoneB, raftId: "" }));
+  });
+  it("sends a header subset as one comma list and starts again from the first page", async () => {
+    chooseHeaderZones([zoneA, zoneB]);
+    show();
+    await waitFor(() => expect(lastQuery().zoneIds).toBe(`${zoneA},${zoneB}`));
+    expect((screen.getByLabelText("Vùng nuôi") as HTMLSelectElement).selectedOptions[0].textContent).toBe("2 vùng đã chọn");
+    expect((screen.getByLabelText("Bè") as HTMLSelectElement).disabled).toBe(true);
+    expect(lastQuery().page).toBe("1");
   });
   it("opens the log card from a row, with the type, photos, history only when edited, and Sửa / Gỡ for a log that can be corrected", async () => {
     show();

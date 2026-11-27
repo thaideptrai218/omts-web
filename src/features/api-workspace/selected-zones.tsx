@@ -16,13 +16,15 @@ export type SelectedZones = Readonly<{
   selectAll(): void;
   /** Narrows the header to exactly this zone (a screen filter that picks one zone writes it here, so header and screen never disagree). */
   selectOnly(zoneId: string): void;
+  /** Narrows the header to these zones (a report link `?zones=a,b`); unknown ids are dropped, none left or every zone = all. */
+  selectMany(zoneIds: readonly string[]): void;
   toggle(zoneId: string): void;
   reload(): void;
 }>;
 
 const noop = () => {};
 // Outside the provider (mock runtime, isolated screens) nothing is narrowed.
-const unscoped: SelectedZones = { status: "idle", zones: [], selectedIds: [], allSelected: true, label: "Tất cả vùng nuôi", selectAll: noop, selectOnly: noop, toggle: noop, reload: noop };
+const unscoped: SelectedZones = { status: "idle", zones: [], selectedIds: [], allSelected: true, label: "Tất cả vùng nuôi", selectAll: noop, selectOnly: noop, selectMany: noop, toggle: noop, reload: noop };
 const SelectedZonesContext = createContext<SelectedZones>(unscoped);
 
 /** The In Use zones the signed-in account may see and the subset chosen in the header; the choice is remembered per browser. */
@@ -33,7 +35,7 @@ export function SelectedZonesProvider({ accountId, enabled, children }: Readonly
   }, [enabled]);
   const remote = useRemote(loader);
   const [override, setOverride] = useState<StoredZoneSelection>();
-  const zones = useMemo<readonly ZoneOption[]>(() => remote.data?.map((row) => ({ id: row.id, name: String(row.name ?? row.code ?? "") })) ?? [], [remote.data]);
+  const zones = useMemo<readonly ZoneOption[]>(() => remote.data?.map((row) => ({ id: row.id, name: String(row.name ?? row.code ?? ""), ...(row.code ? { code: String(row.code) } : {}) })) ?? [], [remote.data]);
   const persisted = useMemo(() => remote.data ? readStoredZoneSelection(accountId) : undefined, [remote.data, accountId]);
   const stored = override ?? persisted;
   const selection = useMemo(() => resolveZoneSelection(zones, stored), [zones, stored]);
@@ -43,6 +45,7 @@ export function SelectedZonesProvider({ accountId, enabled, children }: Readonly
       status: !enabled ? "idle" : remote.error ? "error" : remote.data ? "ready" : "loading",
       zones, ...selection, label: zoneSelectionLabel(zones, selection),
       selectAll: () => save({ kind: "all" }),
+      selectMany: (zoneIds) => { const ids = zones.map(zone => zone.id).filter(id => zoneIds.includes(id)); save(!ids.length || ids.length === zones.length ? { kind: "all" } : { kind: "ids", ids }); },
       // A zone the header does not list (discontinued, or not visible) is ignored; one zone out of one is "all".
       selectOnly: (zoneId) => { if (zones.some(zone => zone.id === zoneId)) save(zones.length === 1 ? { kind: "all" } : { kind: "ids", ids: [zoneId] }); },
       toggle: (zoneId) => save(toggleZoneSelection(zones, selection, zoneId)),

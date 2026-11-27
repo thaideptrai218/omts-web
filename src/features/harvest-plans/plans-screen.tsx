@@ -10,9 +10,8 @@ import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-fi
 import { allTime, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
-import { SelectBox } from "@/components/ui/select-box";
 import issueStyles from "@/features/input-issues/input-issues.module.css";
-import { useZoneOptions } from "@/features/input-issues/issue-access";
+import { useZoneFilter, ZoneFilterField } from "@/features/api-workspace/zone-filter";
 import type { ListQuery } from "@/features/input-items/repository";
 import { viDateTime } from "@/features/purchase-documents/document-parts";
 import { orderHref } from "@/features/sales-orders/order-labels";
@@ -41,7 +40,6 @@ const columns: readonly Column[] = [
   { key: "status", label: "Trạng thái", render: (row) => <><PlanStatus statusId={row.statusId} />{row.statusId !== PLAN.draft && row.executor === "Owner" && <span className={styles.executorTag}>{executorLabel.Owner}</span>}</> },
 ];
 const defaultStatuses: number[] = [PLAN.draft, PLAN.assigned, PLAN.received, PLAN.harvesting, PLAN.handedOver];
-const emptyFilters = { zone: "" };
 const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]";
 const sameStatuses = (a: readonly number[], b: readonly number[]) => a.length === b.length && a.every((value) => b.includes(value));
 
@@ -57,19 +55,21 @@ export function PlansScreen(props: { helpHref?: string }) {
 function PlansList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: string }) {
   const access = usePlanAccess(), router = useRouter();
   const linkPending = useRef(linkedCode);
-  const [search, setSearch] = useState(linkedCode), [filters, setFilters] = useState(emptyFilters), [statuses, setStatuses] = useState<number[]>(linkedCode ? [] : defaultStatuses);
+  const [search, setSearch] = useState(linkedCode), [statuses, setStatuses] = useState<number[]>(linkedCode ? [] : defaultStatuses);
   const [time, setTime] = useState<TimeRangeValue>(allTime);
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<PlanPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const defaults = useMemo(() => columns.filter((column) => !column.hidden).map((column) => column.key).join(","), []);
   const [stored, store] = useStoredValue("omts-columns-harvest-plans", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
-  const { zones } = useZoneOptions(access.view);
+  // The zone filter is the header zone chip (two-way); a header change starts the list again from its first page.
+  const zoneFilter = useZoneFilter(), [shownZones, setShownZones] = useState(zoneFilter.apiZoneIds);
+  if (shownZones !== zoneFilter.apiZoneIds) { setShownZones(zoneFilter.apiZoneIds); setPage(1); setExpanded(undefined); }
 
   const query = useMemo<ListQuery>(() => {
-    const values: Record<string, string> = { search: search.trim(), statusIds: statuses.join(","), from: time.from, to: time.to, zoneId: filters.zone };
+    const values: Record<string, string> = { search: search.trim(), statusIds: statuses.join(","), from: time.from, to: time.to, zoneIds: zoneFilter.apiZoneIds ?? "" };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ""));
-  }, [search, statuses, time, filters]);
+  }, [search, statuses, time, zoneFilter.apiZoneIds]);
 
   useEffect(() => {
     if (!access.view) return;
@@ -90,20 +90,18 @@ function PlansList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: st
   }, [access.view, query, page, pageSize, refresh]);
 
   function changed<T>(apply: (value: T) => void) { return (value: T) => { apply(value); setPage(1); setExpanded(undefined); }; }
-  const setZoneFilter = changed<string>((value) => setFilters({ zone: value }));
   const toggleStatus = changed<number>((value) => setStatuses((current) => current.includes(value) ? current.filter((status) => status !== value) : [...current, value]));
   const reload = () => setRefresh((value) => value + 1);
-  const hasFilter = filters.zone !== "" || time.kind !== allTime.kind || time.from !== allTime.from || time.to !== allTime.to || !sameStatuses(statuses, linkedCode ? [] : defaultStatuses);
+  const hasFilter = time.kind !== allTime.kind || time.from !== allTime.from || time.to !== allTime.to || !sameStatuses(statuses, linkedCode ? [] : defaultStatuses);
   const toggleRow = (id: string) => setExpanded((value) => value === id ? undefined : id);
   if (!access.view) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
 
   const rail = <>
-    <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setFilters(emptyFilters); setStatuses(defaultStatuses); setTime(allTime); })()}>Đặt lại</button></div>
+    <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setStatuses(defaultStatuses); setTime(allTime); })()}>Đặt lại</button></div>
     <FilterGroup legend="Trạng thái"><div className={managementStyles.pills}>{allPlanStatuses.map((status) =>
       <label key={status} className={managementStyles.pill}><input type="checkbox" className="sr-only" checked={statuses.includes(status)} onChange={() => toggleStatus(status)} />{planStatusLabel[status]}</label>)}</div></FilterGroup>
     <TimeRangeFilter legend="Thời gian dự kiến" value={time} onChange={changed<TimeRangeValue>(setTime)} />
-    <FilterGroup legend="Vùng"><SelectBox aria-label="Vùng" className={railSelect} value={filters.zone} onChange={(event) => setZoneFilter(event.target.value)}>
-      <option value="">Tất cả vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</SelectBox></FilterGroup>
+    <ZoneFilterField filter={zoneFilter} legend="Vùng" className={railSelect} />
   </>;
 
   return <ManagementLayout storageKey="harvest-plans" icon="raft" title="Kế hoạch thu hoạch" filters={rail} filterLabel="Bộ lọc kế hoạch thu hoạch"

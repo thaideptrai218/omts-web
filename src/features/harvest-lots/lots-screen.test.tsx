@@ -11,11 +11,12 @@ vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(s
 vi.mock("./repository", () => ({ lotRepository: { list: state.list, exportList: state.exportList, detail: state.detail, movements: state.movements, weigh: vi.fn(), reopen: vi.fn(), close: vi.fn(), remove: vi.fn() } }));
 vi.mock("@/features/operations/lookups", () => ({ loadOptions: vi.fn(async () => ({ status: "success", data: [{ id: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a22", code: "B1" }] })) }));
 vi.mock("@/features/products/repository", () => ({ productRepository: { all: vi.fn(async () => ({ status: "success", data: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01", code: "SP1", name: "Hàu sữa", statusId: 101 }] })) } }));
-vi.mock("@/features/input-issues/issue-access", () => ({ useZoneOptions: () => ({ zones: [{ id: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11", code: "DEMO-01", name: "Vùng 1", inUse: true }], loading: false }) }));
+vi.mock("@/features/zones-api/in-use-zones", async () => (await import("@/test/header-zone-rows")).inUseZonesMock);
 vi.mock("@/features/history/history-repository", () => ({ readRecordHistory: vi.fn(async () => ({ status: "success", data: [] })) }));
 import { LotsScreen } from "./lots-screen";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { lotDetail } from "./lot-test-fixtures";
+import { HeaderZones, chooseHeaderZones, headerZoneIds } from "@/test/header-zones";
 
 const zone = "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a11", lot = "122bb318-a72e-49aa-a8d7-a6169f889007";
 const row = {
@@ -29,14 +30,14 @@ const detail = lotDetail();
 const owner = () => { state.context.identity.subjectType = "CooperativeOwner"; };
 
 beforeEach(() => {
-  try { window.localStorage.clear(); } catch { /* storage may be unavailable */ }
+  chooseHeaderZones([]);
   state.linked = ""; state.context.identity.subjectType = "Staff"; state.context.permissions.functionPermissions = [];
   state.list.mockResolvedValue(page());
   state.detail.mockResolvedValue({ status: "success", data: detail });
   state.movements.mockResolvedValue({ status: "success", data: [{ id: lot, occurredAt: "2026-11-17T10:00:00+07:00", kind: "LotClose", quantityKg: -3, productName: "Hàu sữa", productCode: "SP1" }] });
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
-const mount = () => render(<ToastProvider><LotsScreen /></ToastProvider>);
+const mount = () => render(<ToastProvider><HeaderZones><LotsScreen /></HeaderZones></ToastProvider>);
 
 it("shows nothing and calls nothing to an account that may not read harvest records", async () => {
   mount();
@@ -73,8 +74,8 @@ it("sends every filter to the server and returns to page 1", async () => {
   await waitFor(() => expect(last()).toMatchObject({ closeReason: "Spoiled" }));
   fireEvent.click(screen.getByLabelText("Không có KHT"));
   await waitFor(() => expect(last()).toMatchObject({ hasPlan: "false" }));
-  fireEvent.change(screen.getByLabelText("Vùng", { selector: "select" }), { target: { value: zone } });
-  await waitFor(() => expect(last()).toMatchObject({ zoneId: zone }));
+  fireEvent.change(screen.getByLabelText("Vùng", { selector: "select" }), { target: { value: headerZoneIds[0] } });
+  await waitFor(() => expect(last()).toMatchObject({ zoneIds: headerZoneIds[0] }));
   await waitFor(() => expect(screen.getByLabelText("Bè", { selector: "select" }).querySelector('option[value="5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a22"]')).toBeTruthy());
   fireEvent.change(screen.getByLabelText("Bè", { selector: "select" }), { target: { value: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a22" } });
   await waitFor(() => expect(last()).toMatchObject({ raftId: "5b0e2f6e-6c5b-4c75-a0a3-0c7a1e3e1a22" }));
@@ -83,9 +84,10 @@ it("sends every filter to the server and returns to page 1", async () => {
   await waitFor(() => expect(last()).toMatchObject({ productId: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b01" }));
   fireEvent.change(screen.getByLabelText("Tìm lô thu hoạch"), { target: { value: "KHT000003" } });
   await waitFor(() => expect(last()).toMatchObject({ search: "KHT000003" }));
-  // Changing the zone clears the raft.
+  // Choosing every zone again leaves no single zone, so the raft no longer applies and its filter is off.
   fireEvent.change(screen.getByLabelText("Vùng", { selector: "select" }), { target: { value: "" } });
   await waitFor(() => expect(last().raftId).toBeUndefined());
+  expect((screen.getByLabelText("Bè", { selector: "select" }) as HTMLSelectElement).disabled).toBe(true);
 });
 
 it("sorts on the server by the header that was clicked", async () => {
@@ -144,4 +146,25 @@ it("says so when no lot matches, and offers a retry when the read fails instead 
   await screen.findByRole("alert");
   expect(screen.queryByText(/Chưa có lô thu hoạch/)).toBeNull();
   expect(screen.getByRole("button", { name: "Tải lại" })).toBeTruthy();
+});
+
+// The zone filter is the header zone chip, so several zones travel as one comma list and the Bè filter waits for exactly one zone.
+it("opens on a header subset: sends exactly those zones as one list and keeps the Bè filter off with the reason", async () => {
+  owner(); chooseHeaderZones([headerZoneIds[0], headerZoneIds[1]]); mount();
+  await screen.findByText("LTH000007");
+  await waitFor(() => expect(state.list.mock.calls.at(-1)![0].zoneIds).toBe(`${headerZoneIds[0]},${headerZoneIds[1]}`));
+  expect((screen.getByLabelText("Vùng", { selector: "select" }) as HTMLSelectElement).selectedOptions[0].textContent).toBe("2 vùng đã chọn");
+  const raft = screen.getByLabelText("Bè", { selector: "select" }) as HTMLSelectElement;
+  expect(raft.disabled).toBe(true);
+  expect(raft.selectedOptions[0].textContent).toBe("Chọn một vùng để lọc theo bè");
+});
+
+it("narrows the header when a zone is picked, and sends the same zones with the file", async () => {
+  owner(); state.exportList.mockResolvedValue({ status: "success", data: true }); mount();
+  await screen.findByText("LTH000007");
+  fireEvent.change(screen.getByLabelText("Vùng", { selector: "select" }), { target: { value: headerZoneIds[2] } });
+  await waitFor(() => expect(state.list.mock.calls.at(-1)![0]).toMatchObject({ zoneIds: headerZoneIds[2], page: "1" }));
+  expect(JSON.parse(localStorage.getItem("omts.selected-zones.v1.header-zones-test")!)).toEqual({ kind: "ids", ids: [headerZoneIds[2]] });
+  fireEvent.click(screen.getByRole("button", { name: /Xuất file/ }));
+  await waitFor(() => expect(state.exportList).toHaveBeenCalledWith(expect.objectContaining({ zoneIds: headerZoneIds[2] })));
 });

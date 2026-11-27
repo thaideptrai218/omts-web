@@ -9,22 +9,22 @@ import { laborCostByRaft, raftCycleCosts } from "./labor-costs-contracts";
 
 const AREA = "labor-costs";
 
-/** Điều kiện xem: khoảng ngày (tối đa 1 năm) và một vùng; `zoneId` rỗng = mọi vùng. */
-export type LaborCostRange = Readonly<{ from: string; to: string; zoneId: string }>;
+/** Điều kiện xem: khoảng ngày (tối đa 1 năm) và các vùng đang chọn ở thanh trên (id cách nhau bằng dấu phẩy); `zoneIds` rỗng = mọi vùng. */
+export type LaborCostRange = Readonly<{ from: string; to: string; zoneIds: string }>;
 
 /**
  * Đọc chi phí nhân công theo bè trong khoảng ngày (`GET /api/labor-costs/rafts`); trả dữ liệu, trạng thái tải/lỗi, quyền xem/xuất
- * và `exportFile(format)` tải PDF hoặc Excel đúng khoảng ngày và vùng đang xem.
+ * và `exportFile(format)` tải PDF hoặc Excel đúng khoảng ngày và các vùng đang xem.
  */
 export function useLaborCosts(range: LaborCostRange) {
   const workspace = useApiWorkspace(), exporter = useMutation();
   const repo = useMemo(() => createOperationsRepository(AREA), []);
-  const { from, to, zoneId } = range;
-  const costs = useRemote(useCallback((signal: AbortSignal) => repo.read("rafts", { from, to, zoneId: zoneId || undefined }, laborCostByRaft, signal), [repo, from, to, zoneId]));
+  const { from, to, zoneIds } = range;
+  const costs = useRemote(useCallback((signal: AbortSignal) => repo.read("rafts", { from, to, zoneIds: zoneIds || undefined }, laborCostByRaft, signal), [repo, from, to, zoneIds]));
   const allowed = (action: string) => operationAllowed(AREA, workspace.identity, workspace.permissions.functionPermissions, action);
   return {
     costs, canView: allowed("View"), canExport: allowed("Export"), exporting: exporter.pending, exportError: exporter.error,
-    exportFile: (format: ExportFormat) => { void exporter.run(() => repo.download({ from, to, zoneId: zoneId || undefined, format }), true); },
+    exportFile: (format: ExportFormat) => { void exporter.run(() => repo.download({ from, to, zoneIds: zoneIds || undefined, format }), true); },
   };
 }
 

@@ -5,9 +5,10 @@
  * SCR-REPORT-03 "Vấn đề sau bán". Layout shell: no fetch, no mock data.
  */
 import { useState } from "react";
+import { ZoneFilterField, useZoneFilter } from "@/features/api-workspace/zone-filter";
 import { ChartFrame } from "./chart-frame";
 import { FrameSection, FrameTable, FrameTiles } from "./frame-parts";
-import { AllOptionSelect, ChecklistFilter, PeriodFilter, RadioFilter, type FilterOption } from "./report-filter-parts";
+import { AllOptionSelect, PeriodFilter, RadioFilter, type FilterOption } from "./report-filter-parts";
 import { ReportScreenShell } from "./report-screen-shell";
 import s from "./report-frame.module.css";
 
@@ -33,7 +34,7 @@ const COLUMN_GROUPS = [
 const DETAIL_HEADINGS = ["Ngày", "Loại", "Hóa đơn", "Khách hàng", "Ghi chú hoặc lý do", "Số tiền (₫)"];
 
 export function AfterSalesIssuesScreen() {
-  const [groupBy, setGroupBy] = useState("customer");
+  const [groupBy, setGroupBy] = useState("customer"), zoneFilter = useZoneFilter({ followLink: false });
   const group = GROUP_OPTIONS.find((option) => option.value === groupBy)?.label ?? "Nhóm";
   const lower = group.toLocaleLowerCase("vi");
   return (
@@ -43,10 +44,10 @@ export function AfterSalesIssuesScreen() {
       icon="inbox"
       filters={
         <>
-          {/* TODO(api): filter values feed the report query; zone and customer options come from the backend lists. */}
+          {/* TODO(api): filter values feed the report query; the customer options come from the backend list; the zone filter is the header selection. */}
           <PeriodFilter />
           <RadioFilter legend="Nhóm theo" name="after-sales-group" options={GROUP_OPTIONS} value={groupBy} onChange={setGroupBy} />
-          <ChecklistFilter legend="Vùng nuôi" />
+          <ZoneFilterField filter={zoneFilter} />
           <AllOptionSelect label="Khách hàng" allLabel="Tất cả khách hàng" />
         </>
       }

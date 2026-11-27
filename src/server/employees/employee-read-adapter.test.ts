@@ -17,10 +17,10 @@ describe("unmounted employee read adapter", () => {
       .mockResolvedValueOnce({ status: "success", httpStatus: 200, data: employeeDetailFixture() })
       .mockResolvedValueOnce({ status: "success", httpStatus: 200, data: [] });
     const adapter = createEmployeeReadAdapter(environment, { resolve, backend: transport });
-    const input = request(`?page=2&statusId=401&zoneId=${workingZoneId}`, { headers: { Cookie: "browser-marker", Authorization: "Bearer ignored" } });
+    const input = request(`?page=2&statusId=401&zoneIds=${workingZoneId}`, { headers: { Cookie: "browser-marker", Authorization: "Bearer ignored" } });
     expect(await adapter.list(input)).toMatchObject({ status: "loaded", page: { page: 2 } });
     expect(transport.request.mock.calls[0][0]).toEqual({ endpoint: "employeeList", accessToken: accessCanary,
-      query: { page: 2, pageSize: 20, statusId: 401, zoneId: workingZoneId } });
+      query: { page: 2, pageSize: 20, statusId: 401, zoneIds: [workingZoneId] } });
     expect(await adapter.detail(request(), employeeId)).toMatchObject({ status: "loaded", employee: { id: employeeId } });
     expect(transport.request.mock.calls[1][0]).toEqual({ endpoint: "employeeRead", employeeId, accessToken: accessCanary });
     expect(resolve).toHaveBeenCalledTimes(4);

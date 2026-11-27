@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/harvest-plans/contracts";
 import { problemExtras } from "@/features/input-items/contracts";
+import { idList } from "../operations/sales-report-plan";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -28,7 +29,7 @@ const harvests = (action: string): Access => ({ any: [["HARVESTS", action]] });
 /** Choosing the crew of a plan line gives its employees work assignments, so it needs the right to create them (the API checks the zone and the status of the plan). */
 const assignments = (action: string): Access => ({ any: [["WORK_ASSIGNMENTS", action]] });
 
-const listFilters = ["search", "zoneId", "from", "to", "salesOrderId"] as const;
+const listFilters = ["search", "zoneId", "zoneIds", "from", "to", "salesOrderId"] as const;
 const paging = ["page", "pageSize"] as const;
 const guidFilters = ["zoneId", "salesOrderId"];
 const dateFilters = ["from", "to"];
@@ -37,11 +38,12 @@ const codePattern = /^[A-Za-z0-9._-]{1,30}$/;
 
 type Query = Record<string, string>;
 type Plan = { path: string; method: "GET" | "POST" | "PUT"; access: Access; schema: z.ZodType; body?: unknown; expectedId?: string };
-/** The listed names are forwarded as they are; `statusIds` is a comma list on the web side and repeats as a parameter for the API. */
+/** The listed names are forwarded as they are; `statusIds` and `zoneIds` are comma lists on the web side and repeat as a parameter for the API. */
 function forward(query: Query, names: readonly string[]) {
   const params = new URLSearchParams();
-  for (const name of names) if (query[name]) params.append(name, query[name]);
+  for (const name of names) if (query[name] && name !== "zoneIds") params.append(name, query[name]);
   if (query.statusIds) for (const value of query.statusIds.split(",")) params.append("statusIds", value);
+  if (query.zoneIds && names.includes("zoneIds")) for (const value of idList.parse(query.zoneIds)) params.append("zoneIds", value);
   return params.size ? `?${params}` : "";
 }
 const guid = (value: string | undefined) => id.safeParse(value).success ? value! : undefined;
@@ -96,7 +98,8 @@ function planWrite(p: z.infer<typeof write>): Plan {
   }
 }
 
-const readQuery = z.record(z.string().max(60), z.string().max(200));
+// `zoneIds` is a comma list of up to 50 ids (idList checks it); every other value stays short.
+const readQuery = z.record(z.string().max(60), z.string().max(50 * 37)).refine((values) => Object.entries(values).every(([name, value]) => name === "zoneIds" || value.length <= 200));
 
 /** The allow-listed part of a problem answer that tells the form what to fix; nothing else of it reaches the browser. */
 const projectProblem = (data: unknown) => problemExtras.safeParse(data).data;
@@ -125,6 +128,8 @@ export async function handleHarvestPlans(request: Request) {
       if (action === "plan-by-code" && !codePattern.test(rest.code ?? "")) return invalid(json);
       for (const name of guidFilters) if (rest[name] && !guid(rest[name])) return invalid(json);
       for (const name of dateFilters) if (rest[name] && !z.iso.date().safeParse(rest[name]).success) return invalid(json);
+      // Several zones of the header; the backend intersects them with the zones the caller may read.
+      if (rest.zoneIds && (!idList.safeParse(rest.zoneIds).success || rest.zoneId)) return invalid(json);
       if (rest.statusIds && !rest.statusIds.split(",").every((value) => statusIds.has(value))) return invalid(json);
       plan = reads[action](rest, ref);
     } else if (request.method === "POST") {

@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { HeaderZones, chooseHeaderZones, headerZoneIds } from "@/test/header-zones";
 import { SalesPerformanceScreen } from "./sales-performance-screen";
 
 const workspace = vi.hoisted(() => ({ identity: { subjectType: "CooperativeOwner" }, permissions: { functionPermissions: [] } }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => workspace }));
 vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify: vi.fn() }) }));
-vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+const nav = vi.hoisted(() => ({ search: "" }));
+vi.mock("@/features/zones-api/in-use-zones", async () => (await import("@/test/header-zone-rows")).inUseZonesMock);
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(nav.search), useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 const ids = { zone: "11111111-1111-4111-8111-111111111111", customer: "22222222-2222-4222-8222-222222222222" };
 const figures = { invoiceCount: 2, invoicedKg: 50, revenue: 1_000_000, priceCuts: 50_000, salesReturns: 0, netRevenue: 950_000, soldKg: 50, netMoneyReceived: null, receivable: null, owedBack: null, netDebt: null };
@@ -18,6 +21,7 @@ const fetchSpy = vi.fn();
 const respond = (data: unknown) => Promise.resolve(new Response(JSON.stringify({ status: "success", data }), { status: 200, headers: { "Content-Type": "application/json" } }));
 beforeAll(() => { vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} }); });
 beforeEach(() => {
+  nav.search = ""; chooseHeaderZones([]);
   vi.stubGlobal("fetch", fetchSpy);
   fetchSpy.mockImplementation((url: string) => {
     if (url.includes("/api/operations/sales-report")) return respond(report);
@@ -49,4 +53,28 @@ it("tells a user without the right that the report is not available, without cal
   expect(screen.getByRole("alert").textContent).toContain("chưa có quyền");
   expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("action=report"))).toBe(false);
   workspace.identity = { subjectType: "CooperativeOwner" };
+});
+
+const reportCalls = () => fetchSpy.mock.calls.map(([url]) => new URL(String(url), "http://x")).filter((url) => url.pathname.endsWith("/sales-report") && url.searchParams.get("action") === "report");
+const lastZones = () => reportCalls().at(-1)?.searchParams.get("zoneIds");
+
+it("starts on the zones chosen in the header and writes pill changes back to it", async () => {
+  chooseHeaderZones([headerZoneIds[0], headerZoneIds[1]]);
+  render(<HeaderZones><SalesPerformanceScreen /></HeaderZones>);
+  await waitFor(() => expect(lastZones()).toBe(`${headerZoneIds[0]},${headerZoneIds[1]}`));
+  fireEvent.click(await screen.findByRole("button", { name: "Bỏ lọc vùng Minh Châu" }));
+  await waitFor(() => expect(lastZones()).toBe(headerZoneIds[0]));
+  expect(JSON.parse(localStorage.getItem("omts.selected-zones.v1.header-zones-test")!)).toEqual({ kind: "ids", ids: [headerZoneIds[0]] });
+  fireEvent.click(screen.getByRole("button", { name: "Bỏ lọc vùng Ngọc Vừng" }));
+  await waitFor(() => expect(lastZones()).toBeNull());
+  expect(JSON.parse(localStorage.getItem("omts.selected-zones.v1.header-zones-test")!)).toEqual({ kind: "all" });
+});
+
+it("lets a link with ?zones narrow the header once", async () => {
+  nav.search = `zones=${headerZoneIds[2]}`;
+  render(<HeaderZones><SalesPerformanceScreen /></HeaderZones>);
+  await waitFor(() => expect(lastZones()).toBe(headerZoneIds[2]));
+  expect(JSON.parse(localStorage.getItem("omts.selected-zones.v1.header-zones-test")!)).toEqual({ kind: "ids", ids: [headerZoneIds[2]] });
+  fireEvent.click(await screen.findByRole("button", { name: "Bỏ lọc vùng Quan Lạn" }));
+  await waitFor(() => expect(lastZones()).toBeNull());
 });

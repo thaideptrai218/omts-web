@@ -40,7 +40,8 @@ export function useZoneFilter({ followLink = true }: { followLink?: boolean } = 
     applied.current = linked;
     if (!(header.selectedIds.length === 1 && header.selectedIds[0] === linked)) header.selectOnly(linked);
   }, [linked, header]);
-  const ready = header.status === "ready" || header.status === "idle";
+  // A header that failed to load narrows nothing: the screen goes on with every zone instead of waiting.
+  const ready = header.status !== "loading";
   const singleZoneId = header.selectedIds.length === 1 ? header.selectedIds[0] : undefined;
   const value = header.allSelected ? (header.zones.length === 1 ? header.zones[0].id : ALL_ZONES) : singleZoneId ?? SEVERAL_ZONES;
   return {
@@ -63,7 +64,7 @@ export function ZoneFilterField({ filter, legend = "Vùng nuôi", className, bef
     <SelectBox aria-label={legend} className={className ?? "omts-control"} value={filter.value} onChange={event => change(event.target.value)}>
       <option value={ALL_ZONES}>Tất cả vùng nuôi</option>
       {filter.value === SEVERAL_ZONES && <option value={SEVERAL_ZONES}>{filter.selectedIds.length} vùng đã chọn</option>}
-      {filter.zones.map(zone => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
+      {filter.zones.map(zone => <option key={zone.id} value={zone.id}>{zone.code ? `${zone.code} · ${zone.name}` : zone.name}</option>)}
     </SelectBox>
   </FilterGroup>;
 }

@@ -9,6 +9,7 @@ import { parseServerBackendConfig } from "../config/backend-config";
 import { readBackendResponse } from "../backend/backend-response";
 import { sameEmployeeSession } from "../employees/employee-session";
 import { readBoundedBytes } from "../operations/bounded-body";
+import { idList } from "../operations/sales-report-plan";
 
 /**
  * The browser's door to the Sản phẩm module: the product catalogue (api/products), its groups (api/product-categories), the movements, harvest lots
@@ -31,14 +32,16 @@ const pickerRead: Access = { any: pickerReaders };
 const disposalAccess = (action: string): Access => ({ any: [["PRODUCT_DISPOSALS", action]] });
 
 const productFilters = ["search", "categoryId", "stock", "status", "sortBy", "sortDir"] as const;
-const disposalFilters = ["search", "status", "from", "to", "zoneId", "productId", "createdById", "sortBy", "sortDir"] as const;
+const disposalFilters = ["search", "status", "from", "to", "zoneId", "zoneIds", "productId", "createdById", "sortBy", "sortDir"] as const;
 const paging = ["page", "pageSize"] as const;
 
 type Query = Record<string, string>;
 type Plan = { path: string; method: "GET" | "POST" | "PUT" | "DELETE"; access: Access; schema: z.ZodType; body?: unknown; file?: string; noContent?: boolean; expectedId?: string };
 const forward = (query: Query, names: readonly string[]) => {
   const params = new URLSearchParams();
-  for (const name of names) if (query[name]) params.append(name, query[name]);
+  for (const name of names) if (query[name] && name !== "zoneIds") params.append(name, query[name]);
+  // Several zones of the header repeat as a parameter for the API, which intersects them with the zones the caller may read.
+  if (query.zoneIds && names.includes("zoneIds")) for (const value of idList.parse(query.zoneIds)) params.append("zoneIds", value);
   return params.size ? `?${params}` : "";
 };
 const guid = (value: string | undefined) => id.safeParse(value).success ? value! : undefined;
@@ -119,7 +122,8 @@ function planWrite(p: z.infer<typeof write>): Plan {
   }
 }
 
-const readQuery = z.record(z.string().max(60), z.string().max(200));
+// `zoneIds` is a comma list of up to 50 ids (idList checks it); every other value stays short.
+const readQuery = z.record(z.string().max(60), z.string().max(50 * 37)).refine((values) => Object.entries(values).every(([name, value]) => name === "zoneIds" || value.length <= 200));
 
 /** The allow-listed part of a problem answer that tells the form what to fix; nothing else of it reaches the browser. */
 const projectProblem = (data: unknown) => problemExtras.safeParse(data).data;
@@ -144,6 +148,7 @@ export async function handleProducts(request: Request) {
       const ref = { id: guid(refId) };
       if (refId && !ref.id || needsId.has(action) && !ref.id) return json({ status: "invalid-input", code: "MSG01" }, 400);
       for (const name of ["categoryId", "zoneId", "productId", "createdById", "unitId"]) if (rest[name] && !guid(rest[name])) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      if (rest.zoneIds && (!idList.safeParse(rest.zoneIds).success || rest.zoneId)) return json({ status: "invalid-input", code: "MSG01" }, 400);
       plan = reads[action](rest, ref);
     } else if (request.method === "POST") {
       const csrf = createCsrfGuard(process.env);

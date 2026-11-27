@@ -4,13 +4,14 @@ import { useSearchParams } from "next/navigation";
 import { boundedRange, customRange } from "@/components/ui/management-screen/time-range-limits";
 import { fromQueryDate, presetValue, type TimePreset, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { businessToday } from "@/features/operations/ui";
+import { useHeaderReportZones } from "./use-header-report-zones";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_ZONES = 50;
 const MAX_EXTRA_LENGTH = 64;
 
-/** Giá trị bộ lọc của một báo cáo: kỳ, vùng (rỗng = tất cả vùng được phép) và các tiêu chí riêng của từng báo cáo (`extra`). */
+/** Giá trị bộ lọc của một báo cáo: kỳ, vùng (lấy từ vùng đang chọn ở thanh trên; rỗng = tất cả vùng được phép) và các tiêu chí riêng của từng báo cáo (`extra`). */
 export type ReportFilterValues<E extends Record<string, string>> = Readonly<{ time: TimeRangeValue; zoneIds: readonly string[]; extra: E }>;
 
 export type ReportFilterOptions<E extends Record<string, string>> = Readonly<{
@@ -49,27 +50,32 @@ function writeParams<E extends Record<string, string>>(values: ReportFilterValue
   for (const key of ["from", "to", "zones", ...Object.keys(defaults)]) params.delete(key);
   if (values.time.from) params.set("from", values.time.from);
   if (values.time.to) params.set("to", values.time.to);
-  if (values.zoneIds.length) params.set("zones", values.zoneIds.join(","));
   for (const [key, value] of Object.entries(values.extra)) if (value && value !== defaults[key]) params.set(key, value);
   return params;
 }
 
 /**
  * Bộ lọc báo cáo kiểu "nháp -> Áp dụng": người dùng chỉnh `draft`, chỉ khi bấm "Xem báo cáo" (`apply`) thì `applied` đổi và màn gọi API.
- * `applied` được ghi lên query string (from, to, zones và các tiêu chí riêng) để F5 hoặc gửi link vẫn giữ bộ lọc; giá trị lạ trên URL bị bỏ.
- * `query` là from/to đầy đủ (Toàn thời gian = 5 năm gần nhất) để gửi cho API; `zoneIds` rỗng nghĩa là mọi vùng được phép.
+ * `applied` được ghi lên query string (from, to và các tiêu chí riêng) để F5 hoặc gửi link vẫn giữ bộ lọc; giá trị lạ trên URL bị bỏ.
+ * `query` là from/to đầy đủ (Toàn thời gian = 5 năm gần nhất) để gửi cho API.
+ * Vùng không nằm trong nháp: `zoneIds` của `draft` và `applied` luôn là vùng đang chọn ở thanh trên (rỗng = mọi vùng được phép), đổi ở cột lọc ghi ngược lên thanh trên và báo cáo tải lại ngay;
+ * link có `?zones=a,b` thu hẹp thanh trên một lần khi mở màn.
  */
 export function useReportFilters<E extends Record<string, string>>(defaults: E, options: ReportFilterOptions<E> = {}) {
   const params = useSearchParams();
   const [initial] = useState(() => readParams(params, defaults, options));
-  const [draft, setDraft] = useState<ReportFilterValues<E>>(initial);
-  const [applied, setApplied] = useState<ReportFilterValues<E>>(initial);
+  const [draftState, setDraft] = useState<ReportFilterValues<E>>(initial);
+  const [appliedState, setApplied] = useState<ReportFilterValues<E>>(initial);
+  const { zoneIds, setZoneIds } = useHeaderReportZones(initial.zoneIds);
+  const draft = useMemo(() => ({ ...draftState, zoneIds }), [draftState, zoneIds]);
+  const applied = useMemo(() => ({ ...appliedState, zoneIds }), [appliedState, zoneIds]);
   const problem = draft.time.from && draft.time.to && draft.time.from > draft.time.to ? "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc." : null;
   const query = useMemo(() => boundedRange(applied.time, businessToday(), 5), [applied.time]);
 
-  const change = useCallback((patch: Partial<ReportFilterValues<E>> | { extra: Partial<E> }) => setDraft((current) => ({
-    ...current, ...patch, extra: "extra" in patch ? { ...current.extra, ...patch.extra } : current.extra,
-  }) as ReportFilterValues<E>), []);
+  const change = useCallback((patch: Partial<ReportFilterValues<E>> | { extra: Partial<E> }) => {
+    if ("zoneIds" in patch && patch.zoneIds) setZoneIds(patch.zoneIds);
+    setDraft((current) => ({ ...current, ...patch, zoneIds: current.zoneIds, extra: "extra" in patch ? { ...current.extra, ...patch.extra } : current.extra }) as ReportFilterValues<E>);
+  }, [setZoneIds]);
   const commit = useCallback((next: ReportFilterValues<E>) => {
     setApplied(next);
     const qs = writeParams(next, defaults).toString();
@@ -77,9 +83,9 @@ export function useReportFilters<E extends Record<string, string>>(defaults: E, 
   }, [defaults]);
   return {
     draft, applied, problem, query, change,
-    apply: () => { if (!problem) commit(draft); },
+    apply: () => { if (!problem) commit(draftState); },
     /** Áp dụng ngay một thay đổi không cần chờ (ví dụ cách gộp) cho cả bản nháp lẫn bản đã áp dụng. */
-    applyNow: (extra: Partial<E>) => { setDraft((current) => ({ ...current, extra: { ...current.extra, ...extra } })); commit({ ...applied, extra: { ...applied.extra, ...extra } }); },
+    applyNow: (extra: Partial<E>) => { setDraft((current) => ({ ...current, extra: { ...current.extra, ...extra } })); commit({ ...appliedState, extra: { ...appliedState.extra, ...extra } }); },
     reset: () => { const fresh: ReportFilterValues<E> = { time: presetValue(options.defaultPreset ?? "thisMonth"), zoneIds: [], extra: defaults }; setDraft(fresh); commit(fresh); },
   };
 }

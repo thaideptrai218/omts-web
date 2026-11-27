@@ -10,7 +10,7 @@ import { allTime, presetValue, type TimeRangeValue } from "@/components/ui/manag
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { SelectBox } from "@/components/ui/select-box";
-import { useZoneOptions } from "@/features/input-issues/issue-access";
+import { useZoneFilter, ZoneFilterField } from "@/features/api-workspace/zone-filter";
 import issueStyles from "@/features/input-issues/input-issues.module.css";
 import type { ListQuery } from "@/features/input-items/repository";
 import { ErrorNotice, useMutation, useRemote } from "@/features/operations/ui";
@@ -35,7 +35,7 @@ const columns: readonly Column[] = [
   { key: "notes", label: "Ghi chú", hidden: true, render: (row) => dash(row.notes) },
   { key: "status", label: "Trạng thái", sort: "status", render: (row) => <DisposalStatus statusId={row.statusId} /> },
 ];
-const emptyFilters = { status: "", zone: "", product: "" };
+const emptyFilters = { status: "", product: "" };
 type Filters = typeof emptyFilters;
 const statuses: readonly (readonly [string, string])[] = [["Draft", "Phiếu tạm"], ["Completed", "Hoàn thành"], ["Cancelled", "Đã hủy"]];
 const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]";
@@ -59,13 +59,15 @@ function DisposalsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode
   const defaults = useMemo(() => columns.filter((column) => !column.hidden).map((column) => column.key).join(","), []);
   const [stored, store] = useStoredValue("omts-columns-product-disposals", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
-  const { zones } = useZoneOptions();
+  // The zone filter is the header zone chip (two-way); a header change starts the list again from its first page.
+  const zoneFilter = useZoneFilter(), [shownZones, setShownZones] = useState(zoneFilter.apiZoneIds);
+  if (shownZones !== zoneFilter.apiZoneIds) { setShownZones(zoneFilter.apiZoneIds); setPage(1); setExpanded(undefined); }
   const products = useRemote<ProductRow[]>(useCallback((signal: AbortSignal) => access.view ? productRepository.all({}, signal) : Promise.resolve({ status: "success" as const, data: [] }), [access.view]));
 
   const query = useMemo<ListQuery>(() => {
-    const values: Record<string, string> = { search: search.trim(), status: filters.status, from: time.from, to: time.to, zoneId: filters.zone, productId: filters.product, sortBy: sort.key, sortDir: sort.direction };
+    const values: Record<string, string> = { search: search.trim(), status: filters.status, from: time.from, to: time.to, zoneIds: zoneFilter.apiZoneIds ?? "", productId: filters.product, sortBy: sort.key, sortDir: sort.direction };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ""));
-  }, [search, filters, time, sort]);
+  }, [search, filters, time, sort, zoneFilter.apiZoneIds]);
 
   useEffect(() => {
     if (!access.view) return;
@@ -97,8 +99,7 @@ function DisposalsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode
     <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(presetValue("thisMonth")); })()}>Đặt lại</button></div>
     <FilterPills legend="Trạng thái" name="disposal-status" value={filters.status} options={statuses} onChange={setFilter("status")} />
     <TimeRangeFilter legend="Thời gian" value={time} onChange={changed<TimeRangeValue>(setTime)} />
-    <FilterGroup legend="Vùng"><SelectBox aria-label="Vùng" className={railSelect} value={filters.zone} onChange={(event) => setFilter("zone")(event.target.value)}>
-      <option value="">Tất cả vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</SelectBox></FilterGroup>
+    <ZoneFilterField filter={zoneFilter} legend="Vùng" className={railSelect} />
     {!!products.data?.length && <FilterGroup legend="Sản phẩm"><SelectBox aria-label="Sản phẩm" className={railSelect} value={filters.product} onChange={(event) => setFilter("product")(event.target.value)}>
       <option value="">Tất cả sản phẩm</option>{products.data.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</SelectBox></FilterGroup>}
   </>;
