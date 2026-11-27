@@ -22,12 +22,12 @@ describe("nursery v2 read contracts", () => {
       usage: [{ raftId: "r", raftCode: "BE01", cycleId: "c", seeded: 300, extra: true }] });
     expect(result.statusId).toBe(4004);
     expect(result.usage[0]).toMatchObject({ raftCode: "BE01", seeded: 300 });
-    expect(nurseryStatus(4002)).toBe("Đã ươm xong");
+    expect(nurseryStatus(4002)).toBe("Chờ thả");
     expect(nurseryStatus(4004)).toBe("Đã đóng");
     expect(nurseryStatusTone(4004)).not.toBe("danger");
     expect(nurseryStatusText({ statusId: 4004, closeLossPieces: 0 })).toBe("Đã đóng (tự động khi thả hết)");
     expect(nurseryStatusText({ statusId: 4004, closeLossPieces: 500 })).toBe("Đã đóng");
-    expect(nurseryStatusText({ statusId: 4002, closeLossPieces: 0 })).toBe("Đã ươm xong");
+    expect(nurseryStatusText({ statusId: 4002, closeLossPieces: 0 })).toBe("Chờ thả");
   });
   it("retains required record identity and finite quantity validation", () => {
     expect(nurseryRowSchema.safeParse({ ...row, id: undefined }).success).toBe(false);

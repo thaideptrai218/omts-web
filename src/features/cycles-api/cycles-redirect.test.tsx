@@ -14,7 +14,7 @@ describe("/farming/cycles forwards to the raft screen", () => {
     expect(cycleRedirectTarget(new URLSearchParams({ zoneId: zone, raftId: raft, cycleId: cycle, tab: "journey" }))).toBe(`/farming/rafts?zoneId=${zone}&recordId=${raft}&tab=cycles`);
     expect(cycleRedirectTarget(new URLSearchParams({ zoneId: zone, raftId: raft, cycleId: cycle }))).toBe(`/farming/rafts?zoneId=${zone}&recordId=${raft}&tab=cycles`);
   });
-  it("keeps a raft code search, the care log tab and the nursery batch of Treo lên bè", () => {
+  it("keeps a raft code search, the care log tab and the nursery batch of Thả giống", () => {
     expect(cycleRedirectTarget(new URLSearchParams({ search: "B1-01", tab: "logs" }))).toBe("/farming/rafts?search=B1-01&tab=logs");
     expect(cycleRedirectTarget(new URLSearchParams({ nurseryBatch: "b 1" }))).toBe("/farming/rafts?tab=cycles&nurseryBatch=b%201");
     expect(cycleRedirectTarget(new URLSearchParams())).toBe("/farming/rafts?tab=cycles");

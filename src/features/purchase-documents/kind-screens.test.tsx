@@ -73,7 +73,7 @@ it("shows the state of the seed lot of each line of a seed receipt, linked to L�
   fireEvent.click(await screen.findByRole("button", { name: "Mở PN000004" }));
   const panel = await screen.findByRole("region", { name: "Chi tiết PN000004" });
   expect(within(panel).getByRole("link", { name: "PN000004-1" }).getAttribute("href")).toBe("/farming/seed-lots?code=PN000004-1");
-  expect(within(panel).getAllByText("Đang treo dở")).toHaveLength(2);
+  expect(within(panel).getAllByText("Đang thả dở")).toHaveLength(2);
   expect(within(panel).getByText(/còn 40/)).toBeTruthy();
   expect(within(panel).getByRole("link", { name: "GG000001" }).getAttribute("href")).toBe("/inputs/seeds?code=GG000001");
   expect(within(panel).getByRole("button", { name: "Trả giống nhập" })).toBeTruthy();
@@ -84,7 +84,7 @@ it("shows no lot state on a line whose API sends none", async () => {
   wrap(<PurchaseReceiptsScreen kind="Seed" />);
   fireEvent.click(await screen.findByRole("button", { name: "Mở PN000004" }));
   const panel = await screen.findByRole("region", { name: "Chi tiết PN000004" });
-  expect(within(panel).queryByText("Đang treo dở")).toBeNull();
+  expect(within(panel).queryByText("Đang thả dở")).toBeNull();
   expect(within(panel).queryByText("Chưa dùng")).toBeNull();
 });
 

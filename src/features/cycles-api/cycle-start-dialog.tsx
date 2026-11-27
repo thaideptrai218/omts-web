@@ -19,7 +19,7 @@ const started = z.object({ cycle: z.object({ id: z.guid() }) });
 /**
  * "Bắt đầu chu kỳ nuôi" (NURSERY MODEL V2): a cycle is created by hand on an empty raft in use from ONE finished nursery batch,
  * with the planned total yield and the start date. Step 1 collects them, step 2 reviews before the multipart submit.
- * `onStarted` receives the id of the new cycle so the screen can open it. `initialBatchId` (Lô giống "Treo lên bè") starts with that batch chosen.
+ * `onStarted` receives the id of the new cycle so the screen can open it. `initialBatchId` (Lô giống or Ươm giống "Thả giống") starts with that batch chosen.
  */
 export function CycleStartDialog({ raftId, raftCode, zoneId, zoneLabel, initialBatchId, onClose, onStarted }: { raftId: string; raftCode: string; zoneId: string; zoneLabel: string; initialBatchId?: string; onClose(): void; onStarted(cycleId: string | undefined): void }) {
   const batches = useRemote(useCallback((signal: AbortSignal) => readAvailableNurseryBatches(zoneId, signal), [zoneId]));

@@ -26,11 +26,17 @@ describe("nursery detail V2", () => {
     const inventory = screen.getByRole("region", { name: "Kho ươm" });
     expect(inventory.textContent).toContain("Đã thả400 mảnh");
     expect(inventory.textContent).toContain("Còn lại500 mảnh");
-    expect(inventory.textContent).toContain("Hao hụt (ước tính)100 mảnh · 10%");
+    expect(inventory.textContent).toContain("Đã thả 400 mảnh / 900 mảnh (44,4%)");
+    expect(inventory.textContent).toContain("Hao hụt*: 100 mảnh · 10%");
     expect(screen.getByRole("list", { name: "Các bè dùng giống" }).textContent).toContain("Đã thả 400 mảnh");
     expect(screen.getByRole("link", { name: "B1-06" }).getAttribute("href")).toContain("/farming/rafts?");
     expect(screen.getByRole("link", { name: "Hành trình" }).getAttribute("href")).toContain("tab=cycles");
-    expect(screen.getByRole("link", { name: "Thả giống" }).getAttribute("href")).toContain("/operations/seeding?");
+    expect(screen.getByRole("link", { name: "Lần thả giống" }).getAttribute("href")).toContain("/operations/seeding?");
+    // The next step of a batch waiting in the pool: start a cycle on a raft with this batch chosen.
+    expect(screen.getByRole("link", { name: "Thả giống" }).getAttribute("href")).toBe("/farming/rafts?nurseryBatch=n");
+    // The lot opens on the Lô giống screen by its code, and "Còn trong kho" names what is still in stock.
+    expect(screen.getByRole("link", { name: "PN1-1" }).getAttribute("href")).toBe("/farming/seed-lots?code=PN1-1");
+    expect(screen.getByText("Còn trong kho (chưa ươm)")).toBeTruthy();
     expect(screen.queryByRole("tab", { name: /chuyển|phân bổ/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Xóa đợt ươm" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Hoàn tất ươm" })).toBeNull();
@@ -42,6 +48,7 @@ describe("nursery detail V2", () => {
     expect(regions.indexOf("Kho ươm")).toBeLessThan(regions.indexOf("Thông tin đợt ươm"));
     expect(screen.queryByText("Phiếu xuất dùng")).toBeNull();
     expect(screen.queryByText("Ghi chú")).toBeNull();
+    expect(screen.queryByText("Người phụ trách")).toBeNull();
     expect(screen.queryByText("Mã đợt ươm")).toBeNull();
   });
   it.each([0, 500])("keeps survivor correction and only offers closing when inventory remains: %s", async remaining => {
@@ -54,8 +61,8 @@ describe("nursery detail V2", () => {
     expect(await screen.findByText("Đã đóng")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Sửa số sống sót|Đóng đợt ươm|Chỉnh sửa|Hoàn tất ươm|Xóa đợt ươm/ })).toBeNull();
     const inventory = within(screen.getByRole("region", { name: "Kho ươm" }));
-    expect(inventory.getByText("600 mảnh · 60%")).toBeTruthy();
-    expect(inventory.getByText("Hao hụt khi đóng (ước tính)")).toBeTruthy();
+    expect(inventory.getByText(/Hao hụt\*: 600 mảnh · 60%/).textContent).toContain("gồm 500 mảnh ghi hao hụt khi đóng đợt");
+    expect(screen.queryByRole("link", { name: "Thả giống" })).toBeNull();
   });
   it("only offers edit, completion and deletion while nursing", async () => {
     mount({ ...batch, statusId: 4001, canEdit: true, canComplete: true });

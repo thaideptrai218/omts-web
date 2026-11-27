@@ -8,7 +8,7 @@ import { SeedLotHistoryTab, SeedLotNurseryTab, SeedLotReturnsTab, SeedLotSeeding
 import { seedLotRepository } from "./repository";
 
 type Tab = "info" | "nursery" | "seeding" | "returns" | "history";
-const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "nursery" as const, label: "Ươm" }, { key: "seeding" as const, label: "Treo" }, { key: "returns" as const, label: "Trả hàng" }, { key: "history" as const, label: "Lịch sử" }];
+const tabs = [{ key: "info" as const, label: "Thông tin" }, { key: "nursery" as const, label: "Ươm" }, { key: "seeding" as const, label: "Thả giống" }, { key: "returns" as const, label: "Trả hàng" }, { key: "history" as const, label: "Lịch sử" }];
 
 /**
  * The row opened under the list, laid out like the harvest lot row: five tabs (the lot, its nursery batches, its seedings with the cycles and harvest lots, its returns and issues, its history),

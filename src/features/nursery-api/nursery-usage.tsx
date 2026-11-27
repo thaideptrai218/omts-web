@@ -5,8 +5,8 @@ import { formatVietnameseDate } from "@/shared/format/date-only";
 import { quantityText, type NurseryDetail } from "./contracts";
 
 export function NurseryUsage({ batch }: { batch: NurseryDetail }) {
-  return <section aria-label="Đang dùng cho các bè" className="mt-4 border-t border-border pt-3">
-    <h4 className="mb-2 text-sm font-semibold">Đang dùng cho các bè</h4>
+  return <section aria-label="Đã thả cho các bè" className="mt-4 border-t border-border pt-3">
+    <h4 className="mb-2 text-sm font-semibold">Đã thả cho các bè</h4>
     {!batch.usage.length ? <p className="text-sm text-text-muted">Chưa có bè lấy giống từ đợt ươm này.</p>
       : <ul aria-label="Các bè dùng giống" className="divide-y divide-border text-sm">{batch.usage.map(row => {
         const reference = { zoneId: batch.zoneId, raftId: row.raftId, cycleId: row.cycleId };
@@ -17,7 +17,7 @@ export function NurseryUsage({ batch }: { batch: NurseryDetail }) {
           </p>
           <div className="flex shrink-0 gap-3 text-xs text-primary underline">
             <Link href={cycleJourneyLink(reference)!}>Hành trình{row.cycleCode ? ` ${row.cycleCode}` : ""}</Link>
-            <Link href={farmingStepLink("seeding", reference)}>Thả giống</Link>
+            <Link href={farmingStepLink("seeding", reference)}>Lần thả giống</Link>
           </div>
         </li>;
       })}</ul>}

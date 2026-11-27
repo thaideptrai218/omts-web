@@ -123,7 +123,7 @@ function RaftWorkspace({ zones: offered, zoneId, onZone, all, onAll, helpHref }:
     footer={<ManagementPagination page={current} pageSize={pageSize} total={rows.length} unit="bè" disabled={list.loading && !list.data} onPage={next => void guard.leave(() => { setPage(next); setExpanded(undefined); })} onPageSize={size => change(() => setPageSize(size))} />}>
     {guard.dialog}
     <ManagementScroller busy={list.loading}>
-      {params.get("nurseryBatch") && <p role="status" className={styles.hint}>Mở bè cần treo giống, vào tab Chu kỳ nuôi và bấm Bắt đầu chu kỳ nuôi: đợt ươm đã chọn được điền sẵn.</p>}
+      {params.get("nurseryBatch") && <p role="status" className={styles.hint}>Mở bè cần thả giống, vào tab Chu kỳ nuôi và bấm Bắt đầu chu kỳ nuôi: đợt ươm đã chọn được điền sẵn.</p>}
       {!zoneId ? <ListStateMessage>Chưa có vùng nuôi nào để xem bè.</ListStateMessage>
         : list.error && !list.data ? <ListStateMessage error={list.error} onRetry={list.reload} retryLabel="Tải lại" />
         : !list.data ? <ListSkeleton />

@@ -1,8 +1,11 @@
 "use client";
 import { useZoneActionBlocked } from "@/features/farming-management/read-only-zones";
 import Link from "next/link";
+import { InterfaceIcon } from "@/components/ui/interface-icon";
+import { seedLotsHref } from "@/features/input-items/stock-kind";
+import { cycleFromBatchHref } from "@/features/seed-lots/seed-lot-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClassName } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/management-page";
 import { Subtabs } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
@@ -52,6 +55,8 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
   const edit = batch?.statusId === 4001 && batch.canEdit && can("Edit"), complete = batch?.statusId === 4001 && batch.canComplete && can("Create");
   const correct = batch?.statusId === 4002 && can("Edit");
   const close = batch?.statusId === 4002 && batch.remaining > 0 && can("Edit");
+  // "Thả giống" is the next step of a batch waiting in the pool: it starts a cycle on a raft with this batch chosen.
+  const seed = batch?.statusId === 4002 && batch.remaining > 0 && can("Create");
   const busy = detail.loading || mutation.pending || mutation.blocked;
   // Employees of this batch not checked out yet lock "Hoàn tất ươm" (only the Owner may still complete, with a reason).
   const isOwner = useIsCooperativeOwner(), crewOpen = batch ? openCrewOf(batch.crew) : undefined;
@@ -85,21 +90,27 @@ export function NurseryDetailPanel({ id, zoneId, onChanged, onComplete, onCorrec
           {/* Flat rows: label left, value right; they wrap into columns by the width the pane has. */}
           <section aria-label="Thông tin đợt ươm" className="mt-4"><h4 className="mb-1 text-sm font-semibold">Lô giống và ghi nhận</h4>
           <Facts flat items={[
-            ["Lô giống", batch.seedLot.receiptCode ? <Link className="underline" href={farmingReferenceHref("purchaseReceipt", { code: batch.seedLot.receiptCode })}>{batch.seedLot.code}</Link> : batch.seedLot.code],
+            ["Lô giống", <Link key="lot" className="underline" href={seedLotsHref(batch.seedLot.code)}>{batch.seedLot.code}</Link>],
             ["Tên giống", batch.seedLot.itemName], ["Nhà cung cấp", batch.seedLot.supplierName],
-            ["Tồn kho hiện tại của lô", quantityText(batch.seedLotOnHand, batch.seedLot.unit)], ["Người ghi nhận", batch.recordedByName], ["Người phụ trách", batch.responsibleName ?? "—"],
+            // What the lot still holds in stock, outside every nursery batch (pieces in a batch already left the stock).
+            ["Còn trong kho (chưa ươm)", quantityText(batch.seedLotOnHand, batch.seedLot.unit)],
+            ...(batch.seedLot.receiptCode ? [["Phiếu nhập", <Link key="receipt" className="underline" href={farmingReferenceHref("purchaseReceipt", { code: batch.seedLot.receiptCode })}>{batch.seedLot.receiptCode}</Link>]] as const : []),
+            ["Người ghi nhận", batch.recordedByName],
+            ...(batch.responsibleName ? [["Người phụ trách", batch.responsibleName]] as const : []),
+            ...(batch.crew && !batch.crew.length ? [["Nhân viên ươm", <span key="crew" className="text-text-muted">Chưa ghi nhận</span>]] as const : []),
             ...(batch.issueCode ? [["Phiếu xuất dùng", <Link key="issue" className="underline" href={issueLink(batch.issueCode)!}>{batch.issueCode}</Link>]] as const : []),
             ...(batch.completedOn ? [["Ngày hoàn tất", formatVietnameseDate(batch.completedOn)]] as const : []),
             ...(batch.closedOn ? [["Ngày đóng đợt ươm", formatVietnameseDate(batch.closedOn)]] as const : []),
             ...(batch.closeReason ? [["Lý do đóng", nurseryDisplayText(batch.closeReason)]] as const : []),
             ...(batch.note ? [["Ghi chú", nurseryDisplayText(batch.note)]] as const : []), ...(batch.cancelReason ? [["Lý do hủy", nurseryDisplayText(batch.cancelReason)]] as const : [])]} />
           </section>
-          <RecordCrewDetail label="Nhân viên ươm" crew={batch.crew} />
-          <NurseryUsage batch={batch} />
-          <TabFooter left={edit && <Button key="cancel-nursery" type="button" variant="secondary" className="w-auto border-danger text-danger" disabled={busy} onClick={() => void cancel()}>Xóa đợt ươm</Button>}
+          {!!batch.crew?.length && <RecordCrewDetail label="Nhân viên ươm" crew={batch.crew} />}
+          {batch.usage.length > 0 && <NurseryUsage batch={batch} />}
+          <TabFooter left={edit && <Button key="cancel-nursery" type="button" variant="ghost" className="w-auto text-danger" disabled={busy} onClick={() => void cancel()}><InterfaceIcon name="trash" className="size-4" />Xóa đợt ươm</Button>}
             right={<>{edit && <Button key="edit-nursery" type="button" variant="secondary" className="w-auto" disabled={busy} onClick={() => setEditing(true)}>Chỉnh sửa</Button>}
-              {correct && <Button key="correct-nursery" type="button" variant="secondary" className="w-auto" disabled={busy} onClick={() => onCorrect(batch)}>Sửa số sống sót (ước tính)</Button>}
+              {correct && <Button key="correct-nursery" type="button" variant="secondary" className="w-auto" disabled={busy} onClick={() => onCorrect(batch)}>Sửa số sống sót</Button>}
               {close && <Button key="close-nursery" type="button" variant="secondary" className="w-auto" disabled={busy} onClick={() => setClosing(true)}>Đóng đợt ươm</Button>}
+              {seed && !busy && <Link key="seed-from-nursery" className={buttonClassName("primary", "w-auto")} href={cycleFromBatchHref(batch.id)}>Thả giống</Link>}
               {complete && <Button key="complete-nursery" type="button" className="w-auto" disabled={busy || !!crewOpen && !isOwner} title={crewOpen && !isOwner ? `Còn ${crewOpen.length} nhân viên chưa điểm danh ra về` : undefined} onClick={() => onComplete(batch)}>Hoàn tất ươm</Button>}</>} />
         </>)}
         {tab === "photos" && <NurseryPhotoGallery batch={batch} />}
