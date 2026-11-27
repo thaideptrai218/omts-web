@@ -1,0 +1,7 @@
+/* Thiết lập → Thuế GTGT: the table reuses the cash-book settings table; this holds what it does not have. */
+.form { display:grid; gap:12px; }
+.note { margin-top:12px; font-size:12px; color:var(--omts-color-text-muted); }
+.confirm { margin-top:12px; padding:8px 10px; border:1px solid var(--omts-color-border); border-radius:6px; background:var(--omts-color-primary-soft); font-size:13px; }
+.num { white-space:nowrap; }
+.rowAction { margin-left:12px; }
+.rowAction:first-child { margin-left:0; }

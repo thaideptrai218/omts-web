@@ -12,7 +12,7 @@ import { PersonPicker } from "@/components/ui/management-screen/person-picker";
 import { ListStateMessage, Subtabs, managementStyles } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { itemHref as itemLink, kindText, returnHref, seedLotsHref } from "@/features/input-items/stock-kind";
-import { vatRateLabel } from "@/features/input-items/vat-rate";
+import { keepLegacyVat, vatRateLabel } from "@/features/input-items/vat-rate";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { SeedLotStateBadge, combinedSeedLotState } from "@/features/seed-lots/seed-lot-state";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
@@ -87,7 +87,7 @@ export function InfoTab({ receipt, header, editable, onHeader, headTools }: { re
           <td>{line.item.id ? <Link className={styles.link} href={itemHref(line.item.code, line.item.group)}>{line.item.code}</Link> : line.item.code}</td>
           <td>{line.item.name} <span className={styles.sub}>{line.item.unit}{line.seedLotCode ? <> · Lô giống <Link className={styles.link} href={seedLotsHref(line.seedLotCode)}>{line.seedLotCode}</Link></> : ""}{line.seedLot ? <> · <SeedLotStateBadge state={line.seedLot.state} />{line.seedLot.remainingQty > 0 ? ` còn ${fmt(line.seedLot.remainingQty)}` : ""}</> : ""}{line.supplierLotCode ? ` · Lô NCC ${line.supplierLotCode}` : ""}</span></td>
           <td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}>{line.discount ? fmt(line.discount) : ""}</td>
-          <td className={styles.num}>{fmt((line.unitPrice ?? 0) - line.discount)}</td><td className={styles.num}>{vatRateLabel(line.vatRate)}</td><td className={styles.num}><strong>{fmt(lineAmount(line))}</strong></td></tr>)}
+          <td className={styles.num}>{fmt((line.unitPrice ?? 0) - line.discount)}</td><td className={styles.num}>{vatRateLabel(line.vatRateName)}</td><td className={styles.num}><strong>{fmt(lineAmount(line))}</strong></td></tr>)}
         {!shown.length && <tr><td colSpan={8} className={styles.empty}>Không có dòng hàng phù hợp.</td></tr>}
       </tbody></table></div>
     <div className={styles.foot}>
@@ -140,7 +140,9 @@ function Actions({ receipt, access, header, onChanged, onSaved }: { receipt: Rec
     if (!header) return;
     setPending(true); setError(undefined);
     const result = await saveReceipt({ id: receipt.id, rowVersion: receipt.rowVersion, code: receipt.code, receivedAt: header.receivedAt, receivedById: header.receivedById, supplierId: receipt.supplier.id, discount: receipt.discount, notes: header.notes,
-      lines: receipt.lines.map((line) => ({ lineId: line.id, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "", vatRate: line.item.group === "Seed" ? null : line.vatRate })) }, false);
+      lines: receipt.lines.map((line) => ({ lineId: line.id, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "",
+        // The stored rate of a line is kept by leaving it out; an API without the rate catalogue needs it sent back.
+        vat: line.item.group === "Seed" ? {} : keepLegacyVat(line.vatRateId) })) }, false);
     setPending(false);
     if (result.status === "success") { notify({ tone: "success", title: `Đã lưu phiếu ${receipt.code}.` }); onSaved(); } else setError(errorText(result));
   }

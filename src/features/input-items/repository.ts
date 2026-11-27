@@ -5,7 +5,7 @@ import { bffFetch } from "@/features/auth/api/bff-fetch";
 import { invoiceConfirmationSchema, type InvoiceConfirmation } from "@/features/sales-invoices/confirmation-problem";
 import { messageCatalog } from "@/shared/messages/message-catalog";
 import * as c from "./contracts";
-import type { VatRate } from "./vat-rate";
+import { vatWire, type VatCatalogue } from "./vat-rate";
 
 /** A failed call, with the part of the problem that tells what to fix (field names, existing record, the API's own words). */
 /** `confirmation` is a question of the API (409) the user answers by sending the same request again with the named flag. */
@@ -88,7 +88,7 @@ export const inputRepository = {
   setStatus: (action: "discontinue" | "resume", id: string) => json(`item-${action}`, { id }, c.itemView),
   remove: (id: string) => json("item-delete", { id }, c.removedItem),
   /** Changes the "VAT mua vào" of the items at once (Vật tư and Khác only; a seed is always KCT). */
-  setPurchaseVat: (itemIds: readonly string[], purchaseVatRate: VatRate) => json("item-purchase-vat-rate", { body: { itemIds, purchaseVatRate } }, c.purchaseVatUpdated),
+  setPurchaseVat: (itemIds: readonly string[], vatRateId: string, catalogue: VatCatalogue) => json("item-purchase-vat-rate", { body: { itemIds, ...vatWire(catalogue, vatRateId, "vatRateId", "purchaseVatRate") } }, c.purchaseVatUpdated),
   addPhoto: (id: string, file: File) => upload("photo", file, c.itemView, id),
   removePhoto: (id: string, photoId: string) => json("item-photo-remove", { id, photoId }, c.itemView),
   import: (file: File) => upload("import", file, c.importResult),

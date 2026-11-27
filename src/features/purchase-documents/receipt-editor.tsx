@@ -12,7 +12,7 @@ import { ListStateMessage } from "@/components/ui/management-screen/management-t
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { kindOfGroup, kindText, type StockKind } from "@/features/input-items/stock-kind";
-import { receiptVat, sumOf, type VatRate } from "@/features/input-items/vat-rate";
+import { findVatRate, receiptVat, sumOf, vatWire, type VatCatalogue } from "@/features/input-items/vat-rate";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { EditorFrame, ItemFinder, MoneyInput, OverflowMenu, QuantityStepper, QuickSupplierDialog, SideRow, SupplierPicker, errorText, fmt, nowLocal, usePurchaseAccess, vnLocal } from "./document-parts";
 import { itemHref } from "./receipt-detail";
@@ -29,8 +29,9 @@ import styles from "./purchases.module.css";
  * below it and the line cannot be removed. `itemUnitId` is the unit the quantity and price are typed in.
  */
 type Line = { key: string; lineId: string | null; item: ItemOption; itemUnitId: string | null; unitName: string; unitFactor: number; quantity: string; unitPrice: number | null; discount: number; supplierLotCode: string; floor: number;
-  /** VAT (%) of the line: the item's rate to start with, editable for the supplier's invoice; null on a seed line and on a line made before input VAT. */
-  vatRate: VatRate | null };
+  /** The rate of the line: the item's rate to start with, editable for the supplier's invoice; none on a seed line and on a line made before input VAT. `vatPercent` null is KCT.
+   * `vatTouched` is set when the user picked a rate, so a line of a completed receipt that was left alone keeps the rate it took when it was made. */
+  vatRateId: string | null; vatRateName: string | null; vatPercent: number | null; vatTouched: boolean };
 type Start = { receipt?: Receipt; copy?: { code: string; leftEmpty: string[]; supplierId: string; discount: number; notes: string; lines: { itemId: string; unitPrice: number | null; discount: number }[] } };
 const quantityOf = (value: string) => { const parsed = Number(value.replace(",", ".")); return value && parsed > 0 ? parsed : null; };
 /** The price a line of the item suggests in a unit of `factor` base units, to the dong; null when the item has no price yet. */
@@ -38,7 +39,17 @@ const suggestedPrice = (item: ItemOption, factor: number) => item.basePrice == n
 /** A new line of an item starts in its base unit at the suggested price, which the user may change. */
 const newLine = (item: ItemOption, patch: Partial<Line> = {}): Line => {
   const base = baseUnitOf(item), factor = base?.factor ?? 1;
-  return { key: crypto.randomUUID(), lineId: null, item, itemUnitId: base?.id ?? null, unitName: base?.name ?? item.unit, unitFactor: factor, quantity: "1", unitPrice: suggestedPrice(item, factor), discount: 0, supplierLotCode: "", floor: 0, vatRate: item.group === "Seed" ? null : item.purchaseVatRate ?? null, ...patch };
+  return { key: crypto.randomUUID(), lineId: null, item, itemUnitId: base?.id ?? null, unitName: base?.name ?? item.unit, unitFactor: factor, quantity: "1", unitPrice: suggestedPrice(item, factor), discount: 0, supplierLotCode: "", floor: 0, ...(item.group === "Seed" ? noVat : { vatRateId: item.purchaseVatRateId ?? null, vatRateName: item.purchaseVatRateName ?? null, vatPercent: item.purchaseVatPercent ?? null }), vatTouched: false, ...patch };
+};
+const noVat = { vatRateId: null, vatRateName: null, vatPercent: null };
+/**
+ * The rate of a line for the API. A seed line sends none (always KCT). A line of a completed receipt that the user left alone and whose rate is switched off sends none,
+ * which keeps the rate it took when it was made; every other line sends its rate.
+ */
+const vatOnWire = (line: Line, catalogue: VatCatalogue, completed: boolean) => {
+  if (line.item.group === "Seed") return {};
+  if (completed && line.lineId && !line.vatTouched && !findVatRate(catalogue, line.vatRateId)?.active) return {};
+  return vatWire(catalogue, line.vatRateId, "vatRateId", "vatRate");
 };
 const belowFloor = (line: Line) => (quantityOf(line.quantity) ?? 0) * line.unitFactor < line.floor - 1e-9;
 
@@ -75,7 +86,7 @@ function Editor({ kind, start, lookups, itemId }: { kind: StockKind; start: Star
   const kindItems = useMemo(() => lookups.items.filter((item) => kindOfGroup(item.group) === kind), [lookups.items, kind]);
   const { receipt, copy } = start, completed = receipt?.statusId === RECEIPT.completed;
   const [pricing, setPricing] = useState(false);
-  const [lines, setLines] = useState<Line[]>(() => receipt ? receipt.lines.map((line) => ({ key: line.id, lineId: line.id, item: lookups.items.find((row) => row.id === line.item.id) ?? line.item, itemUnitId: line.itemUnitId, unitName: line.item.unit, unitFactor: line.unitFactor, quantity: line.quantity == null ? "" : String(line.quantity), unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "", floor: line.seeded + line.returned, vatRate: line.vatRate }))
+  const [lines, setLines] = useState<Line[]>(() => receipt ? receipt.lines.map((line) => ({ key: line.id, lineId: line.id, item: lookups.items.find((row) => row.id === line.item.id) ?? line.item, itemUnitId: line.itemUnitId, unitName: line.item.unit, unitFactor: line.unitFactor, quantity: line.quantity == null ? "" : String(line.quantity), unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "", floor: line.seeded + line.returned, vatRateId: line.vatRateId, vatRateName: line.vatRateName, vatPercent: line.vatPercent, vatTouched: false }))
     : copy ? copy.lines.flatMap((line) => { const item = kindItems.find((row) => row.id === line.itemId); return item ? [newLine(item, { quantity: "", unitPrice: line.unitPrice, discount: line.discount })] : []; })
     : (() => { const item = itemId ? kindItems.find((row) => row.id === itemId) : undefined; return item ? [newLine(item)] : []; })());
   const [receivedAt, setReceivedAt] = useState(receipt ? vnLocal(receipt.receivedAt) : nowLocal()), [receivedById, setReceivedById] = useState(receipt?.receivedBy?.id ?? "");
@@ -84,7 +95,7 @@ function Editor({ kind, start, lookups, itemId }: { kind: StockKind; start: Star
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false), [addingSupplier, setAddingSupplier] = useState(false);
   const priced = lines.map((line) => ({ quantity: quantityOf(line.quantity), unitPrice: line.unitPrice, discount: line.discount }));
   // Input VAT of each line: (line amount less its share of the receipt discount) x its rate, to the dong; a seed is KCT.
-  const total = goodsTotal(priced), vatTotal = sumOf(receiptVat(lines.map((line, index) => ({ amount: lineAmount(priced[index]), rate: line.item.group === "Seed" ? "KCT" : line.vatRate })), discount)), payable = total - discount + vatTotal;
+  const total = goodsTotal(priced), vatTotal = sumOf(receiptVat(lines.map((line, index) => ({ amount: lineAmount(priced[index]), percent: line.item.group === "Seed" ? null : line.vatPercent })), discount)), payable = total - discount + vatTotal;
   const suppliers = receipt && !lookups.suppliers.some((row) => row.id === receipt.supplier.id) ? [receipt.supplier, ...lookups.suppliers] : lookups.suppliers;
   const receivers = receipt?.receivedBy && !lookups.receivers.some((row) => row.id === receipt.receivedBy!.id) ? [receipt.receivedBy, ...lookups.receivers] : lookups.receivers;
   const update = (key: string, patch: Partial<Line>) => setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
@@ -109,7 +120,7 @@ function Editor({ kind, start, lookups, itemId }: { kind: StockKind; start: Star
     } else if (complete && !(await confirmation.confirm(`Hoàn thành phiếu nhập? Công nợ tăng ${fmt(payable)} đ cho nhà cung cấp.`))) return;
     setPending(true); setError(undefined);
     const result = await saveReceipt({ kind: receipt ? undefined : kind, id: receipt?.id, rowVersion: receipt?.rowVersion, code, receivedAt, receivedById, supplierId, discount, notes,
-      lines: lines.map((line) => ({ lineId: completed ? line.lineId : null, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: quantityOf(line.quantity), unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.item.group === "Seed" ? line.supplierLotCode : "", vatRate: line.item.group === "Seed" ? null : line.vatRate })) }, complete);
+      lines: lines.map((line) => ({ lineId: completed ? line.lineId : null, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: quantityOf(line.quantity), unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.item.group === "Seed" ? line.supplierLotCode : "", vat: vatOnWire(line, lookups.vatCatalogue, completed) })) }, complete);
     setPending(false);
     if (result.status === "success") { notify({ tone: "success", title: `Đã lưu phiếu nhập ${result.data.code}.` }); router.push(`${LIST}?code=${result.data.code}`); } else setError(errorText(result));
   }
@@ -135,7 +146,7 @@ function Editor({ kind, start, lookups, itemId }: { kind: StockKind; start: Star
             <td className={styles.num}><QuantityStepper label={`số lượng dòng ${index + 1}`} value={line.quantity} invalid={belowFloor(line)} onChange={(quantity) => update(line.key, { quantity })} />{line.floor > 0 && <span className={styles.cap}>tối thiểu {fmt(line.floor / line.unitFactor)}</span>}</td>
             <td><MoneyInput label={`Đơn giá dòng ${index + 1}`} className={styles.cellInput} value={line.unitPrice} onChange={(unitPrice) => update(line.key, { unitPrice })} /></td>
             <td><DiscountInput compact label={`Giảm giá dòng ${index + 1}`} base={line.unitPrice ?? 0} invalid={line.unitPrice != null && line.discount > line.unitPrice} value={line.discount} onChange={(value) => update(line.key, { discount: value })} /></td>
-            {kind === "Supply" && <td><VatRateCell label={`VAT dòng ${index + 1}`} value={line.vatRate} onChange={(vatRate) => update(line.key, { vatRate })} /></td>}
+            {kind === "Supply" && <td><VatRateCell label={`VAT dòng ${index + 1}`} catalogue={lookups.vatCatalogue} current={{ id: line.vatRateId, name: line.vatRateName }} onChange={(rate) => update(line.key, { vatRateId: rate.id, vatRateName: rate.name, vatPercent: rate.percent, vatTouched: true })} /></td>}
             <td className={styles.amount}>{fmt(lineAmount(priced[index]))}</td>
           </tr>)}</tbody></table>
         {!lines.length && <div className={styles.emptyLines}><InterfaceIcon name="material" /><strong>Chưa có hàng trong phiếu</strong><span>Tìm {text.noun} theo mã hoặc tên ở ô phía trên để thêm dòng.</span></div>}

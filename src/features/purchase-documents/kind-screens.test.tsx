@@ -12,7 +12,7 @@ vi.mock("./repository", async (original) => ({
   ...(await original<typeof import("./repository")>()),
   listReceipts: state.listReceipts, listReturns: state.listReturns, getReceipt: state.getReceipt, getReturn: state.getReturn,
   getReceiptPayments: vi.fn(async () => ({ status: "success", data: [] })), download: vi.fn(), removeReceipts: vi.fn(),
-  usePurchaseLookups: () => ({ suppliers: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08", code: "NCC000001", name: "Trại giống", phone: "" }], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }),
+  usePurchaseLookups: () => ({ vatCatalogue: { rates: [], legacy: false }, suppliers: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08", code: "NCC000001", name: "Trại giống", phone: "" }], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }),
 }));
 import { PurchaseReceiptsScreen } from "./receipts-screen";
 import { PurchaseReturnsScreen } from "./returns-screen";
@@ -28,7 +28,7 @@ const seedReceipt = (lotState: string | null, patch: Partial<Receipt> = {}): Rec
   id: id(1), code: "PN000004", kind: "Seed", seedState: lotState as never, date: "2026-11-10", receivedAt: "2026-11-10T08:00:00+07:00", receivedBy: null, completedAt: null, rowVersion: "v1", supplier: { id: id(8), code: "NCC000001", name: "Trại giống", phone: "" }, zone: null,
   recordedBy: "Chủ", statusId: 1702, discount: 0, payable: 100, paid: 0, notes: null, vatTotal: 0, cancelReason: null,
   lines: [{ id: id(3), item: { id: id(4), code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", units: [] }, itemUnitId: null, unitFactor: 1, quantity: 100, unitPrice: 1, raft: null, supplierLotCode: null, seedLotCode: "PN000004-1",
-    seedLot: lotState ? { state: lotState as never, remainingQty: 40 } : null, seeded: 60, returned: 0, returnable: 40, discount: 0, netUnitPrice: 1, vatRate: "KCT", vatAmount: 0 }],
+    seedLot: lotState ? { state: lotState as never, remainingQty: 40 } : null, seeded: 60, returned: 0, returnable: 40, discount: 0, netUnitPrice: 1, vatRateId: "KCT", vatRateName: "KCT", vatPercent: null, vatAmount: 0 }],
   returns: [{ id: id(2), code: "TH000001", date: "2026-11-12", returnedAt: null, reason: "Hỏng", value: 10, statusId: 1901 }], ...patch,
 });
 

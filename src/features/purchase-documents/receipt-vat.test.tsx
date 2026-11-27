@@ -4,22 +4,26 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   context: { identity: { subjectType: "CooperativeOwner", username: "chu" }, permissions: { functionPermissions: [] as { functionCode: string; action: string }[] } },
-  getReceipt: vi.fn(), getReturn: vi.fn(), saveReceipt: vi.fn(), saveReturn: vi.fn(), push: vi.fn(), replace: vi.fn(),
+  legacy: false, getReceipt: vi.fn(), getReturn: vi.fn(), saveReceipt: vi.fn(), saveReturn: vi.fn(), push: vi.fn(), replace: vi.fn(),
 }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: state.push, replace: state.replace }) }));
-vi.mock("./repository", async (original) => ({
+vi.mock("./repository", async (original) => {
+  const { legacyVatCatalogue } = await import("@/features/input-items/vat-rate");
+  return {
   ...(await original<typeof import("./repository")>()),
   getReceipt: state.getReceipt, getReturn: state.getReturn, saveReceipt: state.saveReceipt, saveReturn: state.saveReturn, getReceiptCopy: vi.fn(), removeReceipts: vi.fn(), removeReturn: vi.fn(),
   usePurchaseLookups: () => ({
+    vatCatalogue: { ...legacyVatCatalogue, legacy: state.legacy },
     suppliers: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08", code: "NCC000001", name: "Trại giống", phone: "" }], rafts: [], receivers: [], loading: false, refresh: vi.fn(),
     items: [
-      { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b04", code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", purchaseVatRate: "KCT", basePrice: 1000, units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b11", name: "mảnh", factor: 1, code: "GG-M", isBase: true }] },
-      { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b05", code: "VT000001", name: "Phao nhựa", unit: "cái", group: "Material", purchaseVatRate: "10", basePrice: 100000, units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b12", name: "cái", factor: 1, code: "VT-C", isBase: true }] },
-      { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b06", code: "VT000002", name: "Dây thừng", unit: "cuộn", group: "Other", purchaseVatRate: null, basePrice: 50000, units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b13", name: "cuộn", factor: 1, code: "VT-D", isBase: true }] },
+      { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b04", code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", purchaseVatRateId: "KCT", purchaseVatRateName: "KCT", purchaseVatPercent: null, basePrice: 1000, units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b11", name: "mảnh", factor: 1, code: "GG-M", isBase: true }] },
+      { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b05", code: "VT000001", name: "Phao nhựa", unit: "cái", group: "Material", purchaseVatRateId: "10", purchaseVatRateName: "10%", purchaseVatPercent: 10, basePrice: 100000, units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b12", name: "cái", factor: 1, code: "VT-C", isBase: true }] },
+      { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b06", code: "VT000002", name: "Dây thừng", unit: "cuộn", group: "Other", purchaseVatRateId: null, basePrice: 50000, units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b13", name: "cuộn", factor: 1, code: "VT-D", isBase: true }] },
     ],
   }),
-}));
+  };
+});
 import { ReceiptEditorPage } from "./receipt-editor";
 import { ReturnEditorPage } from "./return-editor";
 import { InfoTab } from "./receipt-detail";
@@ -30,7 +34,7 @@ import type { PurchaseReturn, Receipt, ReceiptLine } from "./types";
 const id = (n: number) => `0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b0${n}`;
 const lineId = (n: number) => `0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d1b0${n}`;
 const phao = { id: id(5), code: "VT000001", name: "Phao nhựa", unit: "cái", group: "Material" as const, units: [] };
-const line = (patch: Partial<ReceiptLine> = {}): ReceiptLine => ({ id: lineId(1), item: phao, itemUnitId: null, unitFactor: 1, quantity: 1, unitPrice: 100000, raft: null, supplierLotCode: null, seedLotCode: null, seedLot: null, seeded: 0, returned: 0, returnable: 1, discount: 0, netUnitPrice: 100000, vatRate: "10", vatAmount: 10000, ...patch });
+const line = (patch: Partial<ReceiptLine> = {}): ReceiptLine => ({ id: lineId(1), item: phao, itemUnitId: null, unitFactor: 1, quantity: 1, unitPrice: 100000, raft: null, supplierLotCode: null, seedLotCode: null, seedLot: null, seeded: 0, returned: 0, returnable: 1, discount: 0, netUnitPrice: 100000, vatRateId: "10", vatRateName: "10%", vatPercent: 10, vatAmount: 10000, ...patch });
 const receipt = (patch: Partial<Receipt> = {}): Receipt => ({
   id: id(1), code: "PN000007", kind: "Supply", seedState: null, date: "2026-11-28", receivedAt: "2026-11-28T08:00:00+07:00", receivedBy: null, completedAt: "2026-11-28T08:00:00+07:00", rowVersion: "v1",
   supplier: { id: id(8), code: "NCC000001", name: "Trại giống", phone: "" }, zone: null, recordedBy: "Chủ", statusId: 1702, discount: 0, payable: 110000, paid: 0, notes: null, vatTotal: 10000, cancelReason: null,
@@ -40,7 +44,11 @@ const wrap = (node: React.ReactNode) => render(<ToastProvider>{node}</ToastProvi
 /** The text of an aside or totals row by its label: "Cần trả nhà cung cấp110.000". */
 const rowText = (label: string) => screen.getByText(label).parentElement!.textContent;
 
-beforeEach(() => { state.context.identity.subjectType = "CooperativeOwner"; });
+beforeEach(() => {
+  state.context.identity.subjectType = "CooperativeOwner"; state.legacy = false;
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } });
+});
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 function pickSupplier() {
@@ -90,7 +98,7 @@ it("follows the rate changed on the line, and sends it with the save", async () 
   pickSupplier();
   fireEvent.click(screen.getByRole("button", { name: "Lưu tạm" }));
   await waitFor(() => expect(state.saveReceipt).toHaveBeenCalled());
-  expect(state.saveReceipt.mock.calls[0][0].lines[0]).toMatchObject({ itemId: id(5), vatRate: "5" });
+  expect(state.saveReceipt.mock.calls[0][0].lines[0]).toMatchObject({ itemId: id(5), vat: { vatRateId: "5" } });
 });
 
 it("leaves a line of an item with no rate without one (shown as a dash, VAT 0) until a rate is picked", async () => {
@@ -118,7 +126,7 @@ it("shows a seed receipt with no VAT column and the row Thuế GTGT: KCT, the to
   state.saveReceipt.mockResolvedValue({ status: "success", data: receipt({ kind: "Seed" }) });
   fireEvent.click(screen.getByRole("button", { name: "Lưu tạm" }));
   await waitFor(() => expect(state.saveReceipt).toHaveBeenCalled());
-  expect(state.saveReceipt.mock.calls[0][0].lines[0].vatRate).toBeNull();
+  expect(state.saveReceipt.mock.calls[0][0].lines[0].vat).toEqual({});
 });
 
 it("edits a completed receipt with the rate of its lines and tells the change of debt including VAT", async () => {
@@ -132,7 +140,7 @@ it("edits a completed receipt with the rate of its lines and tells the change of
 });
 
 it("shows the VAT of each line of a receipt, a dash for a line made before input VAT, and the VAT total above what is owed", () => {
-  const old = line({ id: lineId(2), vatRate: null, vatAmount: 0, item: { ...phao, id: id(6), code: "VT000002", name: "Dây thừng" } });
+  const old = line({ id: lineId(2), vatRateId: null, vatRateName: null, vatPercent: null, vatAmount: 0, item: { ...phao, id: id(6), code: "VT000002", name: "Dây thừng" } });
   render(<InfoTab receipt={receipt({ lines: [line(), old], vatTotal: 10000, payable: 110000 + 100000 })} editable={false} onHeader={() => undefined} header={{ receivedById: "", receivedAt: "2026-11-28T08:00", notes: "" }} />);
   expect(screen.getByRole("columnheader", { name: "VAT (%)" })).toBeTruthy();
   expect(within(screen.getByText("Phao nhựa").closest("tr")!).getByText("10%")).toBeTruthy();
@@ -141,7 +149,7 @@ it("shows the VAT of each line of a receipt, a dash for a line made before input
 });
 
 it("shows Thuế GTGT: KCT on the totals of a seed receipt", () => {
-  render(<InfoTab receipt={receipt({ kind: "Seed", vatTotal: 0, payable: 100000, lines: [line({ vatRate: "KCT", vatAmount: 0 })] })} editable={false} onHeader={() => undefined} header={{ receivedById: "", receivedAt: "2026-11-28T08:00", notes: "" }} />);
+  render(<InfoTab receipt={receipt({ kind: "Seed", vatTotal: 0, payable: 100000, lines: [line({ vatRateId: "KCT", vatRateName: "KCT", vatPercent: null, vatAmount: 0 })] })} editable={false} onHeader={() => undefined} header={{ receivedById: "", receivedAt: "2026-11-28T08:00", notes: "" }} />);
   expect(rowText("Thuế GTGT")).toContain("KCT");
 });
 
@@ -174,7 +182,7 @@ it("starts a standalone return with no VAT column and nothing to refund (its lin
 });
 
 it("shows Thuế GTGT hoàn lại: KCT on the return of a seed", async () => {
-  state.getReceipt.mockResolvedValue({ status: "success", data: receipt({ kind: "Seed", lines: [line({ item: { ...phao, group: "Seed" }, vatRate: "KCT", vatAmount: 0 })] }) });
+  state.getReceipt.mockResolvedValue({ status: "success", data: receipt({ kind: "Seed", lines: [line({ item: { ...phao, group: "Seed" }, vatRateId: "KCT", vatRateName: "KCT", vatPercent: null, vatAmount: 0 })] }) });
   wrap(<ReturnEditorPage kind="Seed" receiptId={id(1)} />);
   await screen.findByLabelText("số lượng trả dòng 1");
   expect(rowText("Thuế GTGT hoàn lại")).toContain("KCT");
@@ -187,4 +195,37 @@ it("reads a receipt and a return from an API without input VAT: no rate, no amou
   expect(parsed.vatTotal).toBeUndefined();
   expect(parsed.lines[0].vatRate ?? null).toBeNull();
   expect(receiptView.parse({ ...base, lines: [{ ...row, vatRate: "KCT", vatAmount: 0 }], vatTotal: 0 }).lines[0].vatRate).toBe("KCT");
+  const rated = receiptView.parse({ ...base, lines: [{ ...row, vatRateId: id(2), vatRateName: "8%", vatPercent: 8, vatAmount: 8 }], vatTotal: 8 }).lines[0];
+  expect([rated.vatRateId, rated.vatRateName, rated.vatPercent]).toEqual([id(2), "8%", 8]);
+});
+
+it("keeps a line whose rate is no longer offered: its name shows, its percent still counts, and an untouched line sends no rate so the API keeps the snapshot", async () => {
+  const old = line({ vatRateId: "gone", vatRateName: "12%", vatPercent: 12, vatAmount: 12000 });
+  state.getReceipt.mockResolvedValue({ status: "success", data: receipt({ lines: [old], payable: 112000, vatTotal: 12000 }) });
+  state.saveReceipt.mockResolvedValue({ status: "success", data: receipt() });
+  wrap(<ReceiptEditorPage kind="Supply" id={id(1)} />);
+  const select = (await screen.findByLabelText("VAT dòng 1")) as HTMLSelectElement;
+  expect(select.value).toBe("gone");
+  expect(within(select).getAllByRole("option").map((option) => option.textContent)).toContain("12%");
+  expect(rowText("Thuế GTGT")).toContain("12.000");
+  fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+  await waitFor(() => expect(state.saveReceipt).toHaveBeenCalled());
+  expect(state.saveReceipt.mock.calls[0][0].lines[0].vat).toEqual({});
+});
+
+it("sends the rate the user picked by id, and by the old field against an API without the catalogue", async () => {
+  state.saveReceipt.mockResolvedValue({ status: "success", data: receipt() });
+  for (const legacy of [false, true]) {
+    state.legacy = legacy;
+    state.saveReceipt.mockClear();
+    const view = wrap(<ReceiptEditorPage kind="Supply" />);
+    await addPhao();
+    fireEvent.change(screen.getByLabelText("VAT dòng 1"), { target: { value: "8" } });
+    pickSupplier();
+    fireEvent.click(screen.getByRole("button", { name: "Lưu tạm" }));
+    await waitFor(() => expect(state.saveReceipt).toHaveBeenCalled());
+    expect(state.saveReceipt.mock.calls[0][0].lines[0].vat).toEqual(legacy ? { vatRate: "8" } : { vatRateId: "8" });
+    view.unmount();
+  }
 });

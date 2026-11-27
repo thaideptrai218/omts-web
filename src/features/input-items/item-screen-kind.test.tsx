@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: state.push }) }));
-vi.mock("@/features/purchase-documents/repository", () => ({ usePurchaseLookups: () => ({ suppliers: [], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }) }));
+vi.mock("@/features/purchase-documents/repository", () => ({ usePurchaseLookups: () => ({ vatCatalogue: { rates: [], legacy: false }, suppliers: [], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }) }));
 vi.mock("./item-form-dialog", () => ({ ItemFormDialog: (props: { group?: string; kind?: string }) => <div role="dialog" aria-label="form">{`${props.kind}:${props.group}`}</div> }));
 vi.mock("./repository", async (original) => ({
   ...(await original<typeof import("./repository")>()),

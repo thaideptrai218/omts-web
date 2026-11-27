@@ -27,7 +27,7 @@ import { productHref } from "@/features/products/product-helpers";
 import Link from "next/link";
 import { ItemImportDialog } from "./item-import-dialog";
 import { ItemVatDialog } from "./item-vat-dialog";
-import { vatRateLabel, vatRateLabelChoices, type VatRate } from "./vat-rate";
+import { itemVatName, vatChoices, vatRateLabel } from "./vat-rate";
 import { errorText, inputRepository, type ListQuery } from "./repository";
 import styles from "./input-items.module.css";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
@@ -51,7 +51,7 @@ const columns: readonly Column[] = [
   { key: "product", label: "Loại hàu bán ra", render: (row) => row.group !== "Seed" ? "" : row.product?.code ? <Link className={styles.link} href={productHref(row.product.code)} onClick={(event) => event.stopPropagation()}>{row.product.name}</Link> : dash(row.product?.name ?? row.productName) },
   { key: "cost", label: "Giá vốn", sort: "costPrice", numeric: true, render: (row, unitId) => perUnit(row.costPrice, chosenUnit(row, unitId).factor, "price") },
   // A seed is always KCT; an API without the field sends none, which shows as "—".
-  { key: "vat", label: "VAT mua vào", render: (row) => row.group === "Seed" ? "KCT" : vatRateLabel(row.purchaseVatRate) },
+  { key: "vat", label: "VAT mua vào", render: (row) => row.group === "Seed" ? "KCT" : vatRateLabel(itemVatName(row)) },
   { key: "last", label: "Giá nhập cuối", sort: "lastPurchasePrice", numeric: true, defaultHidden: true, render: (row, unitId) => perUnit(row.lastPurchasePrice, chosenUnit(row, unitId).factor, "price") },
   { key: "onHand", label: "Còn lại", sort: "onHand", numeric: true, render: (row, unitId) => <span className={row.onHand < 0 ? styles.neg : undefined}>{perUnit(row.onHand, chosenUnit(row, unitId).factor, "quantity")}</span> },
   { key: "value", label: "Giá trị còn lại", sort: "stockValue", numeric: true, render: (row) => fmt(row.stockValue) },
@@ -61,7 +61,7 @@ const columns: readonly Column[] = [
   { key: "createdAt", label: "Ngày tạo", sort: "createdAt", defaultHidden: true, render: (row) => viDateTime(row.createdAt) },
   { key: "status", label: "Trạng thái", sort: "status", render: (row) => <StatusPill tone={row.statusId === DISCONTINUED ? "neutral" : "success"}>{row.statusId === DISCONTINUED ? "Ngừng sử dụng" : "Đang sử dụng"}</StatusPill> },
 ];
-const emptyFilters = { group: "", itemGroupId: "", stock: "", supplierId: "", purchaseVatRate: "", status: "InUse" };
+const emptyFilters = { group: "", itemGroupId: "", stock: "", supplierId: "", vatRateId: "", status: "InUse" };
 /** The types a screen offers: all three, or those of its kind (Giống is Seed alone; Vật tư is Material and Other). */
 const typesOf = (kind: StockKind | undefined) => kind ? itemTypes.filter(([key]) => (kindGroups[kind] as readonly string[]).includes(key)) : itemTypes;
 const stocks = [["InStock", "Còn hàng"], ["OutOfStock", "Hết hàng"], ["BelowMin", "Dưới định mức"], ["AboveMax", "Vượt định mức"]] as const;
@@ -113,7 +113,7 @@ function ItemList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCod
   const [expanded, setExpanded] = useState<string>(), [units, setUnits] = useState<Record<string, string>>({}), [selected, setSelected] = useState<ReadonlySet<string>>(new Set()), [changingVat, setChangingVat] = useState(false);
   const [editor, setEditor] = useState<{ record: ItemView | null; copy: boolean; group?: ItemType }>(), [importing, setImporting] = useState(false), { notify } = useToast(), exportFile = useMutation();
   const groups = useRemote<InputGroup[]>(useCallback((signal: AbortSignal) => canView ? inputRepository.groups(signal) : Promise.resolve({ status: "success" as const, data: [] }), [canView]));
-  const lookups = usePurchaseLookups();
+  const lookups = usePurchaseLookups(), vatLegacy = lookups.vatCatalogue.legacy;
 
   // The product a seed grows into only exists on the Giống screen, and the VAT of a seed is always KCT (nothing to show, filter or change there).
   const screenColumns = useMemo(() => kind === "Supply" ? columns.filter((column) => column.key !== "product") : kind === "Seed" ? columns.filter((column) => column.key !== "vat") : columns, [kind]);
@@ -123,10 +123,10 @@ function ItemList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCod
   const types = typesOf(kind), text = kind ? kindText[kind] : undefined;
 
   const query = useMemo<ListQuery>(() => {
-    const values: Record<string, string> = { search: search.trim(), kind: kind ?? "", group: kind === "Seed" ? "Seed" : filters.group, itemGroupId: filters.itemGroupId, stock: filters.stock, supplierId: filters.supplierId, purchaseVatRate: filters.purchaseVatRate, status: filters.status,
+    const values: Record<string, string> = { search: search.trim(), kind: kind ?? "", group: kind === "Seed" ? "Seed" : filters.group, itemGroupId: filters.itemGroupId, stock: filters.stock, supplierId: filters.supplierId, ...(filters.vatRateId ? { [vatLegacy ? "purchaseVatRate" : "purchaseVatRateId"]: filters.vatRateId } : {}), status: filters.status,
       createdFrom: created.from, createdTo: created.to, sortBy: sort.key, sortDir: sort.direction };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ""));
-  }, [search, filters, created, sort, kind]);
+  }, [search, filters, created, sort, kind, vatLegacy]);
 
   useEffect(() => {
     if (!canView) return;
@@ -163,7 +163,8 @@ function ItemList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCod
     {!!groups.data?.length && <FilterGroup legend="Nhóm hàng"><SelectBox aria-label="Nhóm hàng" className={styles.railSelect} value={filters.itemGroupId} onChange={(event) => setFilter("itemGroupId")(event.target.value)}>
       <option value="">Tất cả nhóm hàng</option>{groupTree(groups.data).map((group) => <option key={group.id} value={group.id}>{groupLabel(group)} ({group.itemCount})</option>)}</SelectBox></FilterGroup>}
     <FilterPills legend="Còn lại" name="item-stock" value={filters.stock} options={stocks} onChange={setFilter("stock")} />
-    {kind !== "Seed" && <FilterPills legend="VAT mua vào" name="item-vat" value={filters.purchaseVatRate} options={vatRateLabelChoices} onChange={setFilter("purchaseVatRate")} />}
+    {kind !== "Seed" && lookups.vatCatalogue.rates.length > 0 && <FilterGroup legend="VAT mua vào"><SelectBox aria-label="VAT mua vào" className={styles.railSelect} value={filters.vatRateId} onChange={(event) => setFilter("vatRateId")(event.target.value)}>
+      <option value="">Tất cả mức thuế</option>{vatChoices(lookups.vatCatalogue).map((choice) => <option key={choice.id} value={choice.id}>{choice.name}</option>)}</SelectBox></FilterGroup>}
     {supplierOptions.length > 0 && <FilterGroup legend="Nhà cung cấp"><SelectBox aria-label="Nhà cung cấp" className={styles.railSelect} value={filters.supplierId} onChange={(event) => setFilter("supplierId")(event.target.value)}>
       <option value="">Tất cả nhà cung cấp</option>{supplierOptions.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</SelectBox></FilterGroup>}
     <TimeRangeFilter legend="Ngày tạo" value={created} onChange={changed<TimeRangeValue>(setCreated)} />
@@ -222,7 +223,7 @@ function ItemList({ helpHref, linkedCode, kind }: { helpHref?: string; linkedCod
       if (!edited) setExpanded(undefined);
       reload();
     }} />}
-    {changingVat && <ItemVatDialog itemIds={[...selected]} onClose={() => setChangingVat(false)} onDone={(updated, rate: VatRate) => { setChangingVat(false); setSelected(new Set()); notify({ tone: "success", title: `Đã đổi VAT mua vào của ${updated} vật tư thành ${vatRateLabel(rate)}.` }); reload(); }} />}
+    {changingVat && <ItemVatDialog itemIds={[...selected]} onClose={() => setChangingVat(false)} onDone={(updated, rateName) => { setChangingVat(false); setSelected(new Set()); notify({ tone: "success", title: `Đã đổi VAT mua vào của ${updated} vật tư thành ${rateName}.` }); reload(); }} />}
     {importing && <ItemImportDialog onClose={() => setImporting(false)} onImported={(count) => { notify({ tone: "success", title: `Đã nhập ${count} mặt hàng.` }); reload(); }} />}
   </ManagementLayout>;
 }

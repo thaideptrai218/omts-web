@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams()
 vi.mock("./repository", async (original) => ({
   ...(await original<typeof import("./repository")>()),
   getReceipt: state.getReceipt, getReturn: state.getReturn, saveReceipt: state.saveReceipt, saveReturn: state.saveReturn, getReceiptCopy: vi.fn(), removeReceipts: vi.fn(), removeReturn: vi.fn(),
-  usePurchaseLookups: () => ({
+  usePurchaseLookups: () => ({ vatCatalogue: { rates: [], legacy: false },
     suppliers: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08", code: "NCC000001", name: "Trại giống", phone: "" }], rafts: [], receivers: [], loading: false, refresh: vi.fn(),
     items: [
       { id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b04", code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", units: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b11", name: "mảnh", factor: 1, code: "GG-M", isBase: true }] },
@@ -31,8 +31,8 @@ const receipt = (patch: Partial<Receipt> = {}): Receipt => ({
   id: id(1), code: "PN000004", kind: "Seed", seedState: null, date: "2026-11-10", receivedAt: "2026-11-10T08:00:00+07:00", receivedBy: null, completedAt: "2026-11-10T08:00:00+07:00", rowVersion: "v1",
   supplier: { id: id(8), code: "NCC000001", name: "Trại giống", phone: "" }, zone: null, recordedBy: "Chủ", statusId: 1702, discount: 0, payable: 200, paid: 0, notes: null, vatTotal: 0, cancelReason: null,
   lines: [
-    { id: lineId(1), item: { id: id(4), code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", units: [] }, itemUnitId: null, unitFactor: 1, quantity: 100, unitPrice: 1, raft: null, supplierLotCode: null, seedLotCode: "PN000004-1", seedLot: null, seeded: 60, returned: 0, returnable: 40, discount: 0, netUnitPrice: 1, vatRate: "KCT", vatAmount: 0 },
-    { id: lineId(2), item: { id: id(5), code: "GG000002", name: "Hàu giống 5 cm", unit: "mảnh", group: "Seed", units: [] }, itemUnitId: null, unitFactor: 1, quantity: 50, unitPrice: 2, raft: null, supplierLotCode: null, seedLotCode: "PN000004-2", seedLot: null, seeded: 0, returned: 0, returnable: 50, discount: 0, netUnitPrice: 2, vatRate: "KCT", vatAmount: 0 },
+    { id: lineId(1), item: { id: id(4), code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", units: [] }, itemUnitId: null, unitFactor: 1, quantity: 100, unitPrice: 1, raft: null, supplierLotCode: null, seedLotCode: "PN000004-1", seedLot: null, seeded: 60, returned: 0, returnable: 40, discount: 0, netUnitPrice: 1, vatRateId: "KCT", vatRateName: "KCT", vatPercent: null, vatAmount: 0 },
+    { id: lineId(2), item: { id: id(5), code: "GG000002", name: "Hàu giống 5 cm", unit: "mảnh", group: "Seed", units: [] }, itemUnitId: null, unitFactor: 1, quantity: 50, unitPrice: 2, raft: null, supplierLotCode: null, seedLotCode: "PN000004-2", seedLot: null, seeded: 0, returned: 0, returnable: 50, discount: 0, netUnitPrice: 2, vatRateId: "KCT", vatRateName: "KCT", vatPercent: null, vatAmount: 0 },
   ],
   returns: [], ...patch,
 });
