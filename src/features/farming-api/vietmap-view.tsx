@@ -11,6 +11,17 @@ export type MapSelection = { kind: "zones" | "rafts"; id: string; zoneId: string
 function coordinate(point: { latitude: number | null; longitude: number | null }): [number, number] | undefined {
   return typeof point.latitude === "number" && typeof point.longitude === "number" && Number.isFinite(point.latitude) && Number.isFinite(point.longitude) && Math.abs(point.latitude) <= 90 && Math.abs(point.longitude) <= 180 ? [point.longitude, point.latitude] : undefined;
 }
+/**
+ * A missing or failed tile (Vietmap answers 404 for vector tiles past its deepest zoom and outside its coverage) only leaves a gap
+ * in the map; it must not replace the whole map with an error. Only style, access and quota failures are shown.
+ */
+export function isTileFailure(cause: unknown) {
+  const event = cause as { tile?: unknown; sourceId?: unknown; source?: unknown; error?: { status?: number; url?: string } } | undefined;
+  if (!event || typeof event !== "object") return false;
+  const status = event.error?.status;
+  if (status === 401 || status === 403 || status === 423 || status === 429) return false;
+  return event.tile !== undefined || event.sourceId !== undefined || event.source !== undefined || /\/tiles\//.test(event.error?.url ?? "");
+}
 export function failure(cause: unknown) {
   const event = cause as { status?: number; error?: { status?: number } } | undefined;
   const status = event?.status ?? event?.error?.status;
@@ -47,7 +58,7 @@ export default function VietMapView({ zones, onSelect, fill }: { zones: MapZone[
       try {
         map = new sdk.Map({ container: container.current, style: `https://maps.vietmap.vn/maps/styles/hm/style.json?apikey=${encodeURIComponent(key)}`, center: points[0]?.position ?? layers!.positions[0], zoom: 15, attributionControl: {} });
         map.addControl(new sdk.NavigationControl(), "top-right");
-        map.on("error", cause => { if (!disposed) setError(failure(cause)); });
+        map.on("error", cause => { if (!disposed && !isTileFailure(cause)) setError(failure(cause)); });
         map.on("load", () => {
           if (disposed || !map) return;
           loaded = true; clearTimeout(timeout);

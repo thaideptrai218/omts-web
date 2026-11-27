@@ -4,7 +4,7 @@ import type { Map as VietMap, Marker } from "@vietmap/vietmap-gl-js/dist/vietmap
 import "@vietmap/vietmap-gl-js/dist/vietmap-gl.css";
 import { Button } from "@/components/ui/button";
 import { BOUNDARY_COLOR, BOUNDARY_SOURCE, boundaryLayerSpecs, buildBoundaryLayers } from "./boundary-layers";
-import { apiKey, failure } from "./vietmap-view";
+import { apiKey, failure, isTileFailure } from "./vietmap-view";
 import type { ZoneBoundary } from "./zone-map-contract";
 import type { ContextPin, PickerPoint } from "./location-picker-model";
 
@@ -43,7 +43,7 @@ export default function LocationPickerMap({ value, center, pins, boundary, onPic
         map.keyboard.disable();
         map.getCanvas().setAttribute("tabindex", "-1");
         map.addControl(new sdk.NavigationControl(), "top-right");
-        map.on("error", cause => { if (!disposed) setError(mapFailure(cause)); });
+        map.on("error", cause => { if (!disposed && !isTileFailure(cause)) setError(mapFailure(cause)); });
         map.on("click", event => { const point = event.lngLat.wrap(); pickRef.current({ latitude: point.lat, longitude: point.lng }); });
         map.on("moveend", () => { if (map) { const point = map.getCenter().wrap(); centerRef.current({ latitude: point.lat, longitude: point.lng }); } });
         map.on("load", () => {
