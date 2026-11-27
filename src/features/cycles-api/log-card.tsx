@@ -21,7 +21,7 @@ import { LogEditor } from "./log-screen";
 const fmtDateTime = (value?: string | null) => value && !Number.isNaN(Date.parse(value)) ? viDateTime(value) : "—";
 
 /** One log as a card: its facts, photos (click to enlarge), history and, while the backend allows it, "Sửa" (in the same card) and "Gỡ nhật ký". */
-export function LogCard({ log, cycleId, startDate, zoneId, canEdit, guard, onClose, onChanged }: { log: CultivationLog; cycleId: string; startDate?: string; zoneId: string; canEdit: boolean; guard: UnsavedGuard; onClose(): void; onChanged(): void }) {
+export function LogCard({ log, cycleId, startDate, zoneId, canEdit, guard, onClose, onChanged }: { log: CultivationLog; cycleId?: string | null; startDate?: string; zoneId: string; canEdit: boolean; guard: UnsavedGuard; onClose(): void; onChanged(): void }) {
   const [editing, setEditing] = useState(false), mutation = useMutation(), confirmation = useActionDialog(), { notify } = useToast();
   const title = `Nhật ký ngày ${formatVietnameseDate(log.visitDate)}`, allowed = log.canCorrect && canEdit;
   async function remove() {

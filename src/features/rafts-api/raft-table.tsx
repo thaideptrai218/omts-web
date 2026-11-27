@@ -19,7 +19,7 @@ export const raftColumns: readonly Column[] = [
   { key: "zone", label: "Vùng nuôi", weight: 16, render: row => <span className={styles.truncated} title={row.zoneLabel}>{row.zoneLabel}</span> },
   { key: "lanes", label: "Số làn", weight: 8, sort: "lanes", numeric: true, render: row => row.laneCount ?? "—" },
   { key: "live", label: "Tình trạng làn", weight: 36, render: (row, cycles) => <LaneLiveCell summary={row.laneSummary} enabled={cycles} /> },
-  { key: "cycle", label: "Chu kỳ nuôi", weight: 22, render: (row, cycles) => <CycleLiveCell summary={row.laneSummary} enabled={cycles} /> },
+  { key: "cycle", label: "Chu kỳ nuôi", weight: 22, render: (row, cycles) => <CycleLiveCell summary={row.laneSummary} hasOpenCycle={!!row.currentCycle} enabled={cycles} /> },
   { key: "latitude", label: "Vĩ độ", weight: 14, numeric: true, render: row => coordinate(row.latitude) },
   { key: "longitude", label: "Kinh độ", weight: 14, numeric: true, render: row => coordinate(row.longitude) },
   { key: "status", label: "Trạng thái", weight: 18, sort: "status", render: row => <StatusPill tone={row.statusId === IN_USE ? "success" : "neutral"}>{raftStatusLabel(row.statusId)}</StatusPill> },

@@ -89,7 +89,7 @@ export function MaterialForm({
           zoneId,
         ),
       )
-    ) { notify({ tone: "success", title: record ? `Đã cập nhật sử dụng vật tư ${record.itemCode}.` : "Đã ghi nhận sử dụng vật tư.", action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } }); onSaved(); }
+    ) { notify({ tone: "success", title: record ? `Đã cập nhật sử dụng vật tư ${record.itemCode}.` : "Đã ghi nhận sử dụng vật tư.", ...(cycleId ? { action: { label: "Bước tiếp theo →", href: farmingStepLink("harvest", { zoneId, raftId, cycleId }) } } : {}) }); onSaved(); }
   }
   return (
     <EditorFrame

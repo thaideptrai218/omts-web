@@ -53,7 +53,7 @@ beforeEach(() => {
   mocks.cycles.mockImplementation(async (query: { action: string }) => query.action === "history" ? { status: "success", data: [summary({})] } : { status: "success", data: [] });
   mocks.ops.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? materials : { ...record(), zone: { id: zone, code: "QA01", name: "Vùng QA" }, photos: [{ id: "5a92b32d-2901-4560-9237-350be750cb70", sortOrder: 1, url: "/api/operations/raft-details?action=photo&id=x&photoId=y" }] } }));
   mocks.costs.mockResolvedValue({ status: "success", data: { materialCost: 500000, rafts: [costsOf] } });
-  mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [] : {} }));
+  mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "raft-list" ? [] : {} }));
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
@@ -78,7 +78,7 @@ describe("raft detail loads lazily", () => {
     expect(readsOf("history")).toHaveLength(1);
     expect(mocks.log).not.toHaveBeenCalled(); expect(mocks.costs).not.toHaveBeenCalled(); expect(mocks.ops).not.toHaveBeenCalled();
     fireEvent.click(tab("Nhật ký"));
-    await waitFor(() => expect(mocks.log).toHaveBeenCalledWith("list", cycle, expect.anything(), undefined, undefined, expect.anything()));
+    await waitFor(() => expect(mocks.log).toHaveBeenCalledWith("raft-list", raft, expect.anything(), undefined, undefined, expect.anything()));
     expect(mocks.costs).not.toHaveBeenCalled();
     fireEvent.click(tab("Vật tư"));
     await waitFor(() => expect(mocks.costs).toHaveBeenCalledWith(raft, expect.anything()));
@@ -195,7 +195,7 @@ describe("Chu kỳ nuôi tab", () => {
 
 describe("Nhật ký tab", () => {
   it("lists the care logs of the open cycle as a table, the care date being the link, and offers + Ghi nhật ký", async () => {
-    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [log({})] : {} }));
+    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "raft-list" ? [log({})] : {} }));
     mount({ currentCycle });
     fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
     const row = (await screen.findByRole("button", { name: "Xem nhật ký ngày 21/11/2026" })).closest("tr")!;
@@ -204,12 +204,12 @@ describe("Nhật ký tab", () => {
     expect(within(row).getByText("Minh")).toBeTruthy();
     expect(within(row).getByText(/Vệ sinh lưới/)).toBeTruthy();
     expect(within(row).getByText("2")).toBeTruthy();
-    expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Nhật ký", "Loại", "Thời gian ghi", "Người ghi", "Nội dung", "Ảnh"]);
+    expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Nhật ký", "Chu kỳ", "Loại", "Thời gian ghi", "Người ghi", "Nội dung", "Ảnh"]);
     expect(screen.getByRole("button", { name: "Ghi nhật ký" })).toBeTruthy();
     expect(readsOf("history")).toHaveLength(0);
   });
   it("opens a log as a card with its photos and the actions the backend allows, and removes it with a reason", async () => {
-    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [log({})] : { removed: true } }));
+    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "raft-list" ? [log({})] : { removed: true } }));
     mount({ currentCycle });
     fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
     fireEvent.click(await screen.findByRole("button", { name: "Xem nhật ký ngày 21/11/2026" }));
@@ -223,7 +223,7 @@ describe("Nhật ký tab", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Nhật ký ngày 21/11/2026" })).toBeNull());
   });
   it("filters the log table by type, shows a log without a type as Khác, and shows the type in the card", async () => {
-    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [log({}), log({ id: "5a92b32d-2901-4560-9237-350be750cb62", visitDate: "2026-11-22", logType: undefined, recordedAt: "2026-11-22T02:15:00+00:00" })] : {} }));
+    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "raft-list" ? [log({}), log({ id: "5a92b32d-2901-4560-9237-350be750cb62", visitDate: "2026-11-22", logType: undefined, recordedAt: "2026-11-22T02:15:00+00:00" })] : {} }));
     mount({ currentCycle });
     fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
     await screen.findByRole("button", { name: "Xem nhật ký ngày 22/11/2026" });
@@ -237,7 +237,7 @@ describe("Nhật ký tab", () => {
     fireEvent.change(screen.getByLabelText("Lọc theo loại nhật ký"), { target: { value: "DISEASE" } });
   });
   it("creates a log with the chosen type", async () => {
-    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [] : { log: log({}) } }));
+    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "raft-list" ? [] : { log: log({}) } }));
     mount({ currentCycle });
     fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
     fireEvent.click(await screen.findByRole("button", { name: "Ghi nhật ký" }));
@@ -245,12 +245,12 @@ describe("Nhật ký tab", () => {
     fireEvent.change(within(form).getByLabelText("Loại nhật ký *"), { target: { value: "REPAIR" } });
     fireEvent.change(within(form).getByLabelText("Thêm ảnh", { selector: "input" }), { target: { files: [new File(["a"], "a.png", { type: "image/png" })] } });
     fireEvent.click(within(form).getByRole("button", { name: "Lưu" }));
-    await waitFor(() => expect(mocks.log.mock.calls.some(call => call[0] === "create")).toBe(true));
-    const call = mocks.log.mock.calls.find(item => item[0] === "create")!;
-    expect(call[1]).toBe(cycle); expect(call[3]).toMatchObject({ logType: "REPAIR" });
+    await waitFor(() => expect(mocks.log.mock.calls.some(call => call[0] === "raft-create")).toBe(true));
+    const call = mocks.log.mock.calls.find(item => item[0] === "raft-create")!;
+    expect(call[1]).toBe(raft); expect(call[3]).toMatchObject({ logType: "REPAIR" });
   });
   it("hides Sửa and Gỡ for a log the backend no longer lets this account correct", async () => {
-    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [log({ canCorrect: false })] : {} }));
+    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "raft-list" ? [log({ canCorrect: false })] : {} }));
     mount({ currentCycle });
     fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
     fireEvent.click(await screen.findByRole("button", { name: "Xem nhật ký ngày 21/11/2026" }));
@@ -271,17 +271,16 @@ describe("Nhật ký tab", () => {
     expect(within(form).queryByRole("button", { name: "Phóng to a.png" })).toBeNull();
     expect(within(form).getByRole("button", { name: "Phóng to b.png" })).toBeTruthy();
   });
-  it("shows an empty state, without reads, when no cycle is open", async () => {
-    mount({ currentCycle: null });
+  it("lists and writes logs on a raft with no open cycle, marking a log outside every cycle", async () => {
+    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "raft-list" ? [log({ cycleId: null, cycleStartDate: null }), log({ id: "5a92b32d-2901-4560-9237-350be750cb63", visitDate: "2026-11-20", cycleStartDate: "2026-09-02" })] : {} }));
+    mount({ currentCycle: null, statusId: 102 });
     fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
-    expect(await screen.findByText(/chưa có chu kỳ đang mở nên chưa có nhật ký/)).toBeTruthy();
-    expect(mocks.log).not.toHaveBeenCalled();
-  });
-  it("finds the open cycle in the cycle history while the backend does not send it on the raft", async () => {
-    mount();
-    fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
-    await waitFor(() => expect(mocks.log).toHaveBeenCalledWith("list", cycle, expect.anything(), undefined, undefined, expect.anything()));
-    expect(readsOf("history")).toHaveLength(1);
+    const rows = await screen.findAllByRole("row");
+    expect(within(rows[1]).getByText("Không thuộc chu kỳ")).toBeTruthy();
+    expect(within(rows[2]).getByText("Từ 02/09/2026")).toBeTruthy();
+    // A raft stopped for repair still gets logs.
+    expect(screen.getByRole("button", { name: "Ghi nhật ký" })).toBeTruthy();
+    expect(mocks.log).toHaveBeenCalledWith("raft-list", raft, expect.anything(), undefined, undefined, expect.anything());
   });
 });
 
@@ -319,21 +318,19 @@ describe("Vật tư tab", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Sửa VT02" }));
     expect(await screen.findByText(new RegExp(`bè ${raft} · chu kỳ ${cycle} · sửa`))).toBeTruthy();
   });
-  it("offers no Dùng vật tư without an open cycle, without the Create right or for a raft not in use", async () => {
+  it("offers Dùng vật tư on a raft with no cycle and on one stopped for repair, never without the Create right", async () => {
     mount({ currentCycle: null });
     fireEvent.click(await screen.findByRole("tab", { name: "Vật tư" }));
-    expect(await screen.findByText(/chưa ghi nhận được sử dụng vật tư/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Dùng vật tư" })).toBeNull();
+    expect(await screen.findByRole("button", { name: "Dùng vật tư" })).toBeTruthy();
     cleanup();
     mount({ currentCycle }, { ...access, materialCreate: false });
     fireEvent.click(await screen.findByRole("tab", { name: "Vật tư" }));
     await waitFor(() => expect(mocks.costs).toHaveBeenCalled());
     expect(screen.queryByRole("button", { name: "Dùng vật tư" })).toBeNull();
     cleanup();
-    mount({ currentCycle, statusId: 102 });
+    mount({ currentCycle: null, statusId: 102 });
     fireEvent.click(await screen.findByRole("tab", { name: "Vật tư" }));
-    await waitFor(() => expect(mocks.costs).toHaveBeenCalled());
-    expect(screen.queryByRole("button", { name: "Dùng vật tư" })).toBeNull();
+    expect(await screen.findByRole("button", { name: "Dùng vật tư" })).toBeTruthy();
   });
 });
 

@@ -13,7 +13,9 @@ export const laneStatusLabel = (statusId: number) => statusId === 2001 ? "Đang 
 const text = z.string(), nullableText = text.nullable();
 const raftRowSchema = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, statusId: z.number().int(), status: text, laneCount: z.number().int().optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional(),
   /** Lanes by state: lets the list say "6/10 làn đang nuôi" without a read per raft. Absent until the backend sends it. */
-  laneSummary: raftLaneSummarySchema.nullish() });
+  laneSummary: raftLaneSummarySchema.nullish(),
+  /** The Open cycle of the raft (null when none): tells "Chưa có chu kỳ" from "Chờ thả giống" in the list. */
+  currentCycle: z.object({ id: apiIdSchema, startDate: z.string() }).nullish() });
 const raftDetailSchema = raftRowSchema.extend({ location: nullableText, size: nullableText, conditionNotes: nullableText, rowVersion: text.min(1),
   /** The open cycle (null: none); absent until the backend sends it. */
   currentCycle: raftCurrentCycleSchema.nullish(),
