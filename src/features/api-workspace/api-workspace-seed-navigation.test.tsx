@@ -41,8 +41,8 @@ it("groups Nuôi trồng into four titled columns and moves the report and traci
   const columns = [...farming.querySelectorAll("section")].map((section) => [section.querySelector("h3")!.textContent, hrefs(section).map(([label]) => label)]);
   expect(columns).toEqual([
     ["Cơ sở", ["Vùng nuôi", "Bè nuôi"]],
-    ["Ươm và chu kỳ nuôi", ["Ươm giống", "Bắt đầu chu kỳ nuôi"]],
-    ["Theo dõi", ["Chất lượng nước"]],
+    ["Ươm và chu kỳ nuôi", ["Ươm giống"]],
+    ["Theo dõi", ["Chất lượng nước", "Nhật ký"]],
     ["Thu hoạch", ["Kế hoạch thu hoạch", "Lô thu hoạch"]],
   ]);
   for (const href of ["/operations/harvest", "/operations/material-usages", "/farming/seed-lots", "/operations/harvest-yield", "/operations/lot-tracing"]) expect(farming.querySelector(`a[href="${href}"]`)).toBeNull();

@@ -13,7 +13,7 @@ vi.mock("@/features/purchase-documents/repository", () => ({ getRaftCosts: mocks
 vi.mock("@/features/cycles-api/log-repository", async original => ({ ...(await original<typeof import("@/features/cycles-api/log-repository")>()), logRequest: mocks.log }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => ({ identity: { subjectType: "CooperativeOwner" }, permissions: { functionPermissions: [] } }) }));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({ title, children }: { title: string; children: ReactNode }) => <div role="dialog" aria-label={title}>{children}</div> }));
-vi.mock("@/features/history/record-history", () => ({ RecordHistory: () => null }));
+vi.mock("@/features/history/record-history", () => ({ RecordHistory: () => null, EditedRecordHistory: ({ id }: { id: string }) => <p>Xem lịch sử {id}</p> }));
 vi.mock("@/features/cycles-api/cycle-journey-tab", () => ({ CycleJourneyTab: ({ part, row, onRecord }: { part: string; row: { cycle?: { id: string } | null }; onRecord?(action: unknown): void }) => <section aria-label="Hành trình chu kỳ">{part} {row.cycle?.id}
   <button type="button" onClick={() => onRecord?.({ key: "journey-seeding-record", label: "Ghi nhận thả giống", screen: "seeding" })}>Ghi nhận thả giống</button></section> }));
 vi.mock("./raft-journey-record", () => ({ JourneyRecordDialog: ({ action, cycleId, zoneId, onDone, onClose }: { action: { key: string }; cycleId: string; zoneId: string; onDone(): void; onClose(): void }) =>
@@ -37,7 +37,7 @@ const usage = (patch: object) => ({ id: "5a92b32d-2901-4560-9237-350be750cb40", 
 const materials = { raftId: raft, raftCode: "QA-RAFT", canRecord: true, groups: [{ cycle: null, locked: false, repairs: [{ usageDate: "2026-11-20", repairReason: "Thay phao", records: [usage({}), usage({ id: "5a92b32d-2901-4560-9237-350be750cb42", itemCode: "VT02", itemName: "Dây neo", quantity: 2, unit: "sợi" })] }] }] };
 const costsOf = { materialCost: 500000, unpricedCount: 0, raft: { id: raft, code: "QA-RAFT" }, usages: [{ usageId: "5a92b32d-2901-4560-9237-350be750cb40", date: "2026-11-20", itemCode: "VT01", itemName: "Phao nhựa", unit: "cái", quantity: 4, unitPrice: 100000, amount: 400000, unpriced: false },
   { usageId: "5a92b32d-2901-4560-9237-350be750cb42", date: "2026-11-20", itemCode: "VT02", itemName: "Dây neo", unit: "sợi", quantity: 2, unitPrice: 50000, amount: 100000, unpriced: false }] };
-const log = (patch: object) => ({ id: "5a92b32d-2901-4560-9237-350be750cb60", cycleId: cycle, raftId: raft, raftCode: "QA-RAFT", visitDate: "2026-11-21", notes: "Vệ sinh lưới, kiểm tra phao neo và dây buộc các làn phía đông", photos: [{ key: "k1", sortOrder: 1, url: "x" }, { key: "k2", sortOrder: 2, url: "y" }],
+const log = (patch: object) => ({ id: "5a92b32d-2901-4560-9237-350be750cb60", cycleId: cycle, raftId: raft, raftCode: "QA-RAFT", visitDate: "2026-11-21", logType: "CLEANING", notes: "Vệ sinh lưới, kiểm tra phao neo và dây buộc các làn phía đông", photos: [{ key: "k1", sortOrder: 1, url: "x" }, { key: "k2", sortOrder: 2, url: "y" }],
   recordedByAccountId: "5a92b32d-2901-4560-9237-350be750cb61", recordedByName: "Minh", recordedAt: "2026-11-21T02:15:00+00:00", canCorrect: true, rowVersion: "A", ...patch });
 const guard = { dirty: { current: false }, pending: { current: false }, leave: async (apply: () => void) => apply(), dialog: null } as never;
 const onChanged = vi.fn();
@@ -51,24 +51,28 @@ const readsOf = (action: string) => mocks.cycles.mock.calls.filter(([query]) => 
 beforeEach(() => {
   mocks.params = "";
   mocks.cycles.mockImplementation(async (query: { action: string }) => query.action === "history" ? { status: "success", data: [summary({})] } : { status: "success", data: [] });
-  mocks.ops.mockResolvedValue({ status: "success", data: materials });
+  mocks.ops.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? materials : { ...record(), zone: { id: zone, code: "QA01", name: "Vùng QA" }, photos: [{ id: "5a92b32d-2901-4560-9237-350be750cb70", sortOrder: 1, url: "/api/operations/raft-details?action=photo&id=x&photoId=y" }] } }));
   mocks.costs.mockResolvedValue({ status: "success", data: { materialCost: 500000, rafts: [costsOf] } });
   mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [] : {} }));
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("raft detail loads lazily", () => {
-  it("makes exactly one read when a raft opens, and shows Hiện trạng from the record without water", async () => {
+  it("reads only the raft record and the photos of Thông tin when a raft opens, and shows Hiện trạng from the record without water", async () => {
     mount({ currentCycle });
     expect((await screen.findByLabelText("Hiện trạng")).textContent).toContain("Chu kỳ đang mở từ 12/11/2026 · 15 ngày nuôi · Giống: Hàu giống A · 6/10 làn đang nuôi · 4 chưa thả");
     expect(screen.queryByText(/pH|Đo nước|nước/)).toBeNull();
     expect(mocks.detail).toHaveBeenCalledTimes(1);
-    for (const other of [mocks.cycles, mocks.ops, mocks.costs, mocks.log]) expect(other).not.toHaveBeenCalled();
+    for (const other of [mocks.cycles, mocks.costs, mocks.log]) expect(other).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.ops).toHaveBeenCalledTimes(1));
+    expect(mocks.ops).toHaveBeenCalledWith("detail", { id: raft }, expect.anything(), expect.anything());
     expect(screen.getAllByRole("tab").map(item => item.textContent)).toEqual(["Thông tin", "Chu kỳ nuôi", "Nhật ký", "Vật tư", "Làn"]);
   });
   it("reads each tab's data only when the tab is first opened", async () => {
     mount({ currentCycle });
     await screen.findByLabelText("Hiện trạng");
+    await waitFor(() => expect(mocks.ops).toHaveBeenCalledTimes(1));
+    mocks.ops.mockClear();
     fireEvent.click(tab("Chu kỳ nuôi"));
     await screen.findByLabelText("Hành trình chu kỳ");
     expect(readsOf("history")).toHaveLength(1);
@@ -196,10 +200,11 @@ describe("Nhật ký tab", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
     const row = (await screen.findByRole("button", { name: "Xem nhật ký ngày 21/11/2026" })).closest("tr")!;
     expect(within(row).getByText("21/11/2026 09:15")).toBeTruthy();
+    expect(within(row).getByText("Vệ sinh bè/lồng")).toBeTruthy();
     expect(within(row).getByText("Minh")).toBeTruthy();
     expect(within(row).getByText(/Vệ sinh lưới/)).toBeTruthy();
     expect(within(row).getByText("2")).toBeTruthy();
-    expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Nhật ký", "Thời gian ghi", "Người ghi", "Nội dung", "Ảnh"]);
+    expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Nhật ký", "Loại", "Thời gian ghi", "Người ghi", "Nội dung", "Ảnh"]);
     expect(screen.getByRole("button", { name: "Ghi nhật ký" })).toBeTruthy();
     expect(readsOf("history")).toHaveLength(0);
   });
@@ -217,6 +222,33 @@ describe("Nhật ký tab", () => {
     await waitFor(() => expect(mocks.log).toHaveBeenCalledWith("remove", log({}).id, expect.anything(), { reason: "Ghi nhầm" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Nhật ký ngày 21/11/2026" })).toBeNull());
   });
+  it("filters the log table by type, shows a log without a type as Khác, and shows the type in the card", async () => {
+    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [log({}), log({ id: "5a92b32d-2901-4560-9237-350be750cb62", visitDate: "2026-11-22", logType: undefined, recordedAt: "2026-11-22T02:15:00+00:00" })] : {} }));
+    mount({ currentCycle });
+    fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
+    await screen.findByRole("button", { name: "Xem nhật ký ngày 22/11/2026" });
+    expect(within(screen.getByRole("button", { name: "Xem nhật ký ngày 22/11/2026" }).closest("tr")!).getByText("Khác")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Lọc theo loại nhật ký"), { target: { value: "CLEANING" } });
+    expect(screen.queryByRole("button", { name: "Xem nhật ký ngày 22/11/2026" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Xem nhật ký ngày 21/11/2026" }));
+    const card = await screen.findByRole("dialog", { name: "Nhật ký ngày 21/11/2026" });
+    expect(within(card).getByText("Vệ sinh bè/lồng")).toBeTruthy();
+    expect(within(card).getByText(/Xem lịch sử/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Lọc theo loại nhật ký"), { target: { value: "DISEASE" } });
+  });
+  it("creates a log with the chosen type", async () => {
+    mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [] : { log: log({}) } }));
+    mount({ currentCycle });
+    fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ghi nhật ký" }));
+    const form = await screen.findByRole("dialog", { name: "Ghi nhật ký chăm sóc" });
+    fireEvent.change(within(form).getByLabelText("Loại nhật ký *"), { target: { value: "REPAIR" } });
+    fireEvent.change(within(form).getByLabelText("Thêm ảnh", { selector: "input" }), { target: { files: [new File(["a"], "a.png", { type: "image/png" })] } });
+    fireEvent.click(within(form).getByRole("button", { name: "Lưu" }));
+    await waitFor(() => expect(mocks.log.mock.calls.some(call => call[0] === "create")).toBe(true));
+    const call = mocks.log.mock.calls.find(item => item[0] === "create")!;
+    expect(call[1]).toBe(cycle); expect(call[3]).toMatchObject({ logType: "REPAIR" });
+  });
   it("hides Sửa and Gỡ for a log the backend no longer lets this account correct", async () => {
     mocks.log.mockImplementation(async (action: string) => ({ status: "success", data: action === "list" ? [log({ canCorrect: false })] : {} }));
     mount({ currentCycle });
@@ -230,6 +262,7 @@ describe("Nhật ký tab", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Nhật ký" }));
     fireEvent.click(await screen.findByRole("button", { name: "Ghi nhật ký" }));
     const form = await screen.findByRole("dialog", { name: "Ghi nhật ký chăm sóc" });
+    expect((within(form).getByLabelText("Loại nhật ký *") as HTMLSelectElement).value).toBe("OTHER");
     expect(within(form).getByText("Thông tin nhật ký")).toBeTruthy(); expect(within(form).getByText("Ảnh chăm sóc")).toBeTruthy();
     const input = within(form).getByLabelText("Thêm ảnh", { selector: "input" });
     fireEvent.change(input, { target: { files: [new File(["a"], "a.png", { type: "image/png" }), new File(["b"], "b.png", { type: "image/png" })] } });
@@ -311,7 +344,7 @@ describe("Làn tab", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Làn" }));
     expect((await screen.findByLabelText("Các làn của bè")).textContent).toContain("1 làn tiến độ");
     expect(screen.queryByText(/Thêm ảnh|Ảnh bè|Nhật ký chăm sóc/)).toBeNull();
-    expect(mocks.log).not.toHaveBeenCalled(); expect(mocks.ops).not.toHaveBeenCalled();
+    expect(mocks.log).not.toHaveBeenCalled(); expect(mocks.ops.mock.calls.every(call => call[0] === "detail")).toBe(true);
   });
   it("skips the progress read for an account that may not read cycles", async () => {
     mount({ currentCycle }, { ...access, cycles: false });

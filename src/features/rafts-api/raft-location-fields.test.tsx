@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/ui/toast-provider";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { raftFixture } from "@/features/farming-api/fixtures";
@@ -42,8 +43,8 @@ it("edits an existing raft location in place and saves the same numeric request 
   const raft = raftFixture(), onSaved = vi.fn();
   context.mockReturnValue({ loading: false, pins: [] });
   mutate.mockResolvedValue({ status: "success", data: { ...raft, latitude: 21.0712, longitude: 107.4321 } });
-  const { container } = render(<RaftInfoTab raft={raft} zoneId={raft.zone.id} zoneLabel="Vùng 1" canEdit busy={false} dirtyRef={{ current: false }}
-    onSaved={onSaved} onReload={vi.fn()} onStatus={vi.fn()} />);
+  const { container } = render(<ToastProvider><RaftInfoTab raft={raft} zoneId={raft.zone.id} zoneLabel="Vùng 1" canEdit busy={false} dirtyRef={{ current: false }}
+    onSaved={onSaved} onReload={vi.fn()} onStatus={vi.fn()} /></ToastProvider>);
   fireEvent.click(screen.getByRole("button", { name: "Chỉnh sửa" }));
   expect(context).toHaveBeenCalledWith(raft.zone.id, raft.id);
   expect(screen.getByText("Vĩ độ 21 · Kinh độ 107")).toBeTruthy();

@@ -4,13 +4,34 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 const repo = vi.hoisted(() => ({ readRecordHistory: vi.fn() }));
 vi.mock("./history-repository", () => repo);
-import { RecordHistory } from "./record-history";
+import { EditedRecordHistory, RecordHistory } from "./record-history";
 import { historyActionLabel, historyChangeText, historyList, historyValue } from "./history-contracts";
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const id = "00000000-0000-4000-8000-000000000001";
 const entries = [{ at: "2026-11-12T08:30:00+07:00", byName: "Nguyễn An", byRole: "Chủ HTX", action: "HarvestLot.Corrected", reason: "Nhập nhầm số lồng", note: "Đã cân lại",
   changes: [{ field: "cageCount", label: "Số lồng", from: 4, to: 5 }, { field: "estimatedKg", label: "Kg ước tính (kg)", from: 200, to: 250.5 }] }];
+
+describe("history of an edited record", () => {
+  const created = { at: "2026-11-10T08:00:00+07:00", byName: "Lan", byRole: null, action: "CultivationLog.Created", reason: null, note: null, changes: [] };
+  it("stays hidden for a record with only its creation entry, or when the history cannot be read", async () => {
+    repo.readRecordHistory.mockResolvedValue({ status: "success", data: historyList.parse([created]) });
+    const view = render(<EditedRecordHistory kind="care-log" id={id} zoneId={id} />);
+    await vi.waitFor(() => expect(repo.readRecordHistory).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("Xem lịch sử")).toBeNull();
+    view.unmount();
+    repo.readRecordHistory.mockResolvedValue({ status: "error", httpStatus: 404, uncertain: false });
+    render(<EditedRecordHistory kind="care-log" id={id} zoneId={id} />);
+    await vi.waitFor(() => expect(repo.readRecordHistory).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("Xem lịch sử")).toBeNull();
+  });
+  it("appears once the record was edited and shows the entries on request", async () => {
+    repo.readRecordHistory.mockResolvedValue({ status: "success", data: historyList.parse([created, ...entries]) });
+    render(<EditedRecordHistory kind="care-log" id={id} zoneId={id} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Xem lịch sử" }));
+    expect(await screen.findByText("Số lồng: 4 → 5")).toBeTruthy();
+  });
+});
 
 describe("record history", () => {
   it("loads only when opened and shows who, when, action, reason, note and the changed fields with labels", async () => {

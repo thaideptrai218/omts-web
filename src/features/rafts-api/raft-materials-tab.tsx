@@ -11,7 +11,7 @@ import { MaterialForm } from "@/features/cultivation-api/records-material-form";
 import { materialRepo, useAllowed } from "@/features/cultivation-api/records-shared";
 import { Facts, TabFooter } from "@/features/farming-management/detail-parts";
 import { farmingReferenceHref } from "@/features/farming-management/farming-reference-href";
-import { RecordHistory } from "@/features/history/record-history";
+import { EditedRecordHistory } from "@/features/history/record-history";
 import { Skeleton, money, useRemote } from "@/features/operations/ui";
 import { getRaftCosts } from "@/features/purchase-documents/repository";
 import styles from "@/features/farming-management/farming-management.module.css";
@@ -84,7 +84,7 @@ function UsageCard({ doc, zoneId, raftId, cycleId, amountOf, allowed, onClose, o
         <td><Link className={styles.link} href={farmingReferenceHref("inputItem", { code: line.itemCode })}>{line.itemCode}</Link> · {line.itemName}</td>
         <td className="whitespace-nowrap">{line.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 3 })} {line.unit}</td><td className="whitespace-nowrap">{amountOf(line)}</td>
         <td>{line.canEdit && allowed("Edit") && <Button type="button" variant="ghost" className="w-auto" aria-label={`Sửa ${line.itemCode}`} onClick={() => setEditing(line)}><InterfaceIcon name="pencil" className="size-4" />Sửa</Button>}</td></tr>)}</tbody></table>
-    {doc.lines.length === 1 && <RecordHistory kind="material-usages" id={doc.lines[0].id} zoneId={zoneId} />}
+    {doc.lines.map(line => <EditedRecordHistory key={line.id} kind="material-usages" id={line.id} zoneId={zoneId} />)}
     {editing && <MaterialForm zoneId={zoneId} raftId={raftId} cycleId={cycleId} record={editing} allowed={allowed} onClose={() => setEditing(undefined)} onSaved={() => { setEditing(undefined); onClose(); onChanged(); }} />}
   </Dialog>;
 }

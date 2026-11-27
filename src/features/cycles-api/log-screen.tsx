@@ -6,9 +6,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { PhotoThumbnails, useFilePreviews } from "@/components/form/photo-thumbnails";
 import { CollapsibleSection } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
-import { ErrorNotice, Field, Note, businessToday, useMutation } from "@/features/operations/ui";
+import { ErrorNotice, Field, Note, Select, businessToday, useMutation } from "@/features/operations/ui";
 import { formatVietnameseDate } from "@/shared/format/date-only";
-import type { CultivationLog } from "./log-contracts";
+import { DEFAULT_LOG_TYPE, logTypes, type CultivationLog } from "./log-contracts";
 import { logRequest, logSavedSchema } from "./log-repository";
 import { logPhotoSrc } from "./log-photo-src";
 /** A care log may carry several photos; the limit is the one the form always had. */
@@ -21,9 +21,9 @@ function EditorFrame({ record, pending, close, children }: { record: Cultivation
 }
 export function LogEditor({ cycleId, startDate, zoneId, record, onClose, onSaved, dirtyRef }: { cycleId: string; startDate?: string; /** Lets the photos already on a log show as thumbnails. */ zoneId?: string; record: CultivationLog | null; dirtyRef?: RefObject<boolean>; onClose(): void; onSaved(): void }) {
   const [date, setDate] = useState(record?.visitDate ?? businessToday()), [notes, setNotes] = useState(record?.notes ?? ""), [reason, setReason] = useState("");
-  const [files, setFiles] = useState<File[]>([]), [keep, setKeep] = useState(record?.photos.map(photo => photo.key) ?? []), [error, setError] = useState<string>();
+  const [logType, setLogType] = useState<string>(record?.logType || DEFAULT_LOG_TYPE), [files, setFiles] = useState<File[]>([]), [keep, setKeep] = useState(record?.photos.map(photo => photo.key) ?? []), [error, setError] = useState<string>();
   const mutation = useMutation(), confirmation = useActionDialog(), previews = useFilePreviews(files);
-  const dirty = date !== (record?.visitDate ?? businessToday()) || notes !== (record?.notes ?? "") || !!reason || !!files.length || keep.length !== (record?.photos.length ?? 0);
+  const dirty = date !== (record?.visitDate ?? businessToday()) || logType !== (record?.logType || DEFAULT_LOG_TYPE) || notes !== (record?.notes ?? "") || !!reason || !!files.length || keep.length !== (record?.photos.length ?? 0);
   useEffect(() => { if (dirtyRef) dirtyRef.current = dirty; return () => { if (dirtyRef) dirtyRef.current = false; }; }, [dirty, dirtyRef]);
   const close = async () => { if (!mutation.busy() && (!dirty || await confirmation.confirm("Bỏ các thay đổi nhật ký chưa lưu?"))) onClose(); };
   async function save() {
@@ -33,15 +33,16 @@ export function LogEditor({ cycleId, startDate, zoneId, record, onClose, onSaved
     if (record && !reason.trim()) { setError("Nhập lý do sửa nhật ký."); return; }
     if (keep.length + files.length < 1 || keep.length + files.length > MAX_PHOTOS) { setError(`Nhật ký cần từ 1 đến ${MAX_PHOTOS} ảnh.`); return; }
     setError(undefined);
-    const saved = await mutation.run(() => logRequest(record ? "correct" : "create", record?.id ?? cycleId, logSavedSchema, { visitDate: date, notes: notes || null, ...(record ? { reason, keepPhotoKeys: keep } : {}) }, files));
+    const saved = await mutation.run(() => logRequest(record ? "correct" : "create", record?.id ?? cycleId, logSavedSchema, { visitDate: date, logType, notes: notes || null, ...(record ? { reason, keepPhotoKeys: keep } : {}) }, files));
     if (saved) onSaved();
   }
   return <EditorFrame record={record} pending={mutation.pending} close={() => void close()}>
-    {confirmation.dialog}<ErrorNotice error={error || mutation.error} />
+    {confirmation.dialog}<ErrorNotice error={error || (mutation.failure?.status === "error" && mutation.failure.code === "MSG-GEN-01" ? "Loại nhật ký hoặc nội dung chưa hợp lệ. Hãy kiểm tra lại các trường đã nhập." : mutation.error)} />
     <form className="space-y-4" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset className="space-y-4" disabled={mutation.pending || mutation.blocked}>
         <CollapsibleSection title="Thông tin nhật ký" description="Ngày chăm sóc và nội dung." columns={1}>
           <Field label="Ngày chăm sóc" type="date" required min={startDate} max={businessToday()} value={date} onChange={e => setDate(e.target.value)} />
+          <Select label="Loại nhật ký *" required value={logType} onChange={e => setLogType(e.target.value)}>{logTypes.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</Select>
           <Note label="Nội dung chăm sóc" value={notes} onChange={e => setNotes(e.target.value)} />
           {record && <Note label="Lý do sửa" required value={reason} onChange={e => setReason(e.target.value)} />}
         </CollapsibleSection>

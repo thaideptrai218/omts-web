@@ -15,21 +15,21 @@ vi.mock("./lane-incident-form", () => ({ LaneIncidentForm: ({ onStateChange }: {
   useEffect(() => () => onStateChange?.({ dirty: false, pending: false }), [onStateChange]);
   return <div aria-label="Bản nháp sự cố"><button type="button" onClick={() => setPending(true)}>Bắt đầu lưu</button><button type="button" onClick={() => setPending(false)}>Kết thúc lưu</button></div>;
 } }));
-import { RaftPhotoTab } from "./raft-photo-tab";
+import { RaftLanesTab } from "./raft-lanes-tab";
+import type { RaftDetail } from "./raft-model";
 import { useUnsavedGuard } from "@/features/farming-management/use-unsaved-guard";
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
-function Frame() {
+function Frame({ raft }: { raft: RaftDetail }) {
   const guard = useUnsavedGuard(), [closed, setClosed] = useState(false);
   const [id] = useState("30000000-0000-4000-8000-000000000001");
-  return <ToastProvider>{guard.dialog}{!closed && <RaftPhotoTab raftId={id} canEdit dirtyRef={guard.dirty} pendingRef={guard.pending} />}<button type="button" onClick={() => void guard.leave(() => setClosed(true))}>Đổi tab</button></ToastProvider>;
+  return <ToastProvider>{guard.dialog}{!closed && <RaftLanesTab raft={{ ...raft, id }} zoneId="30000000-0000-4000-8000-0000000000aa" canReadCycles={false} dirtyRef={guard.dirty} pendingRef={guard.pending} onReload={() => undefined} />}<button type="button" onClick={() => void guard.leave(() => setClosed(true))}>Đổi tab</button></ToastProvider>;
 }
 it("keeps the incident mounted during pending saves and confirms draft discard before switching row or tab", async () => {
   const raft = raftFixture();
   const lanes = [1, 2].map(n => ({ ...raft.lanes[0], id: `40000000-0000-4000-8000-00000000000${n}`, laneNumber: n, isDamaged: false }));
-  state.read.mockResolvedValue({ status: "success", data: { ...raft, photos: [], lanes } });
   state.history.mockResolvedValue({ status: "success", data: { incidents: [] } });
   state.cycle.mockResolvedValue({ status: "success", data: { lanes: [], cycle: null } });
-  render(<Frame />);
+  render(<Frame raft={{ ...raft, photos: [], lanes } as unknown as RaftDetail} />);
   fireEvent.click(await screen.findByRole("button", { name: /Làn 1/ }));
   // jsdom never opens a native popover, so the lane detail popover is display:none and only reachable with hidden roles.
   fireEvent.click(await screen.findByRole("button", { name: "Báo hỏng", hidden: true }));

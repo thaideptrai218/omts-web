@@ -135,8 +135,9 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
           const cycles = operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions);
           const columns = [
             { title: "Cơ sở", items: rows.map((key) => link(`/workspace/${key}`, resources[key].title, resourceIcons[key])) },
-            { title: "Ươm và chu kỳ nuôi", items: [cycles && link("/farming/nursery", "Ươm giống", "product"), operationAllowed("seeding", context.identity, context.permissions.functionPermissions) && link(modulePath("seeding"), "Bắt đầu chu kỳ nuôi", operationIcons.seeding)].filter(Boolean) },
-            { title: "Theo dõi", items: modules.map((entry) => link(modulePath(entry.key), entry.key === "water" ? "Chất lượng nước" : entry.title, operationIcons[entry.key])) },
+            { title: "Ươm và chu kỳ nuôi", items: [cycles && link("/farming/nursery", "Ươm giống", "product")].filter(Boolean) },
+            // Cycles start from the raft screen, so there is no "Bắt đầu chu kỳ nuôi" entry; the care logs of every raft have their own screen next to the water quality.
+            { title: "Theo dõi", items: [...modules.map((entry) => link(modulePath(entry.key), entry.key === "water" ? "Chất lượng nước" : entry.title, operationIcons[entry.key])), operationAllowed("cultivation-cycles", context.identity, context.permissions.functionPermissions, "LogsView") && link("/farming/logs", "Nhật ký", "document")].filter(Boolean) },
             { title: "Thu hoạch", items: harvestLinks.map((item) => link(...item)) },
           ].filter((column) => column.items.length);
           return columns.length ? <NavigationGroup key={group.label} label={group.label} compact={compact} columns>{columns.map((column) => <NavigationSection key={column.title} title={column.title}>{column.items}</NavigationSection>)}</NavigationGroup> : null;
