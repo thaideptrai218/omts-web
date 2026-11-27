@@ -83,6 +83,10 @@ describe("VAT rates BFF", () => {
     const refused = await handleVatRates(post({ action: "deactivate", id, body: { rowVersion: "v" } }));
     expect(refused.status).toBe(409);
     expect((await refused.json()).problem).toMatchObject({ message: "Không tắt được mức mặc định." });
+    // The API's problem answer carries its sentence in `detail` (with a reasonCode): the dialog still shows that sentence.
+    fetcher.mockResolvedValue(Response.json({ code: "MSG-GEN-09", detail: "Mức thuế hệ thống KCT không sửa được.", reasonCode: "VAT_RATE_SYSTEM" }, { status: 409 }));
+    const system = await handleVatRates(post({ action: "deactivate", id, body: { rowVersion: "v" } }));
+    expect((await system.json()).problem).toMatchObject({ message: "Mức thuế hệ thống KCT không sửa được." });
   });
 
   it("does not hand on an answer that is not the shape of a rate", async () => {

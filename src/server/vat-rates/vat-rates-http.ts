@@ -2,6 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { vatRateDeactivated, vatRateList, vatRateRow } from "@/features/input-items/vat-rate";
 import { problemExtras } from "@/features/input-items/contracts";
+
+const refusal = problemExtras.extend({ detail: problemExtras.shape.message });
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -80,7 +82,9 @@ export async function handleVatRates(request: Request) {
     const current = await gateway.resolve(request.headers.get("cookie"));
     if (!(current.status === "resolved" && sameEmployeeSession(initial.session, current.session))) return json({ status: "session-expired" }, 401);
     if (result.status === "http-error") {
-      const problem = copy ? problemExtras.safeParse(await copy.json().catch(() => undefined)).data : undefined;
+      // The API writes its Vietnamese sentence for a refusal (system rate, default rate) in `detail`; the dialogs read it as `message`.
+      const raw = copy ? refusal.safeParse(await copy.json().catch(() => undefined)).data : undefined;
+      const problem = raw ? { ...raw, message: raw.message ?? raw.detail } : undefined;
       return json({ status: "rejected", code: result.code, ...(problem ? { problem } : {}) }, result.httpStatus);
     }
     if (result.status !== "success" || ![200, 201].includes(result.httpStatus)) return json({ status: "unavailable" }, 503);
