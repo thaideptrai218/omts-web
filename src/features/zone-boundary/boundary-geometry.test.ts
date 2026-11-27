@@ -64,7 +64,7 @@ describe("boundary GeoJSON", () => {
     const boundary = boundaryOf([square()], MERIDIAN)!;
     boundary.features[0].properties = null;
     const [draft] = draftsOf(boundary, MERIDIAN);
-    expect(draft.name).toBe("Khu 1");
+    expect(draft.name).toBe("Vùng 1");
     expect(draft.corners.every(corner => corner.label === "")).toBe(true);
   });
 });
@@ -125,7 +125,7 @@ describe("review", () => {
   it("blocks over 100 corners, over 10 khu, duplicate corners and values outside Vietnam", () => {
     const many = areaDraft("Dài", Array.from({ length: 101 }, (_, index) => cornerDraft(`P${index}`, X0 + index, Y0 + (index % 7))));
     expect(reviewBoundary([many], MERIDIAN).blocking.some(issue => issue.message.includes("quá 100 điểm góc"))).toBe(true);
-    expect(reviewBoundary(Array.from({ length: 11 }, (_, index) => square(`Khu ${index + 1}`)), MERIDIAN).blocking[0].message).toContain("tối đa 10 khu");
+    expect(reviewBoundary(Array.from({ length: 11 }, (_, index) => square(`Khu ${index + 1}`)), MERIDIAN).blocking[0].message).toContain("tối đa 10 vùng");
     const twin = square();
     twin.corners[3] = cornerDraft("K4", X0, Y0);
     expect(reviewBoundary([twin], MERIDIAN).blocking.some(issue => issue.message.includes("trùng vị trí với điểm K1"))).toBe(true);
@@ -137,7 +137,7 @@ describe("review", () => {
     const long = square("a".repeat(101));
     long.corners[0].label = "L".repeat(21);
     const messages = reviewBoundary([long], MERIDIAN).blocking.map(issue => issue.message);
-    expect(messages.some(message => message.includes("tên khu tối đa 100"))).toBe(true);
+    expect(messages.some(message => message.includes("tên vùng tối đa 100"))).toBe(true);
     expect(messages.some(message => message.includes("tên điểm") && message.includes("tối đa 20"))).toBe(true);
   });
   it("only warns about a written area that disagrees with the corners and about a crossing outline", () => {

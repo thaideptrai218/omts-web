@@ -17,9 +17,13 @@ export function suggestedAreaHa(writtenTotalAreaHa: number | null, writtenAreaHa
   return written.length > 0 ? round2(written.reduce((sum, value) => sum + value, 0)) : null;
 }
 
+/** A name read from the paper with its leading "Khu" (any case) replaced by "Vùng": "Khu 1" → "Vùng 1", "KHU A" → "Vùng A". */
+export const vungName = (name: string | null | undefined) => (name ?? "").trim().replace(/^khu(?=\s|$)/iu, "Vùng");
+
 /**
  * Server reading to review drafts. X, Y come from the server; when a row has only latitude/longitude as written, X, Y are computed
- * from them so the row can still be edited and checked like the others. A khu without a name is called "Khu N"; khu without any corner are dropped.
+ * from them so the row can still be edited and checked like the others. A khu without a name is called "Vùng N"; khu without any corner are dropped.
+ * The paper calls each area "Khu"; OMTS calls it "Vùng" (user decision 28/11/2026), so a read "Khu 1" becomes "Vùng 1".
  */
 export function draftsFromReading(reading: ZoneMapReading): ReadingDrafts {
   const meridian = reading.centralMeridian ?? DEFAULT_CENTRAL_MERIDIAN;
@@ -33,16 +37,20 @@ export function draftsFromReading(reading: ZoneMapReading): ReadingDrafts {
       }
       return cornerDraft(corner.label?.trim() ?? "", x, y);
     });
-    return [areaDraft(zone.name?.trim() || `Khu ${index + 1}`, corners, zone.writtenAreaHa)];
+    return [areaDraft(vungName(zone.name) || `Vùng ${index + 1}`, corners, zone.writtenAreaHa)];
   });
   return { centralMeridian: reading.centralMeridian, location: reading.location?.trim() || null, areaHa: suggestedAreaHa(reading.writtenTotalAreaHa, reading.zones.map(zone => zone.writtenAreaHa)), areas };
 }
 
-/** A new read replaces the corners of a khu with the same name (so a second photo of one table fixes it) and adds the others. */
+/**
+ * A new read replaces the corners of a khu with the same name (so a second photo of one table fixes it) and adds the others.
+ * "Khu 1" saved before the Vùng wording counts as the same name as a new read "Vùng 1", so a rescan fixes it instead of adding a copy.
+ */
 export function mergeAreas(current: readonly AreaDraft[], incoming: readonly AreaDraft[]): AreaDraft[] {
   const next = [...current];
+  const key = (name: string) => vungName(name).toLowerCase();
   for (const area of incoming) {
-    const same = next.findIndex(existing => existing.name.trim().toLowerCase() === area.name.trim().toLowerCase());
+    const same = next.findIndex(existing => key(existing.name) === key(area.name));
     if (same >= 0) next[same] = { ...next[same], corners: area.corners, writtenAreaHa: area.writtenAreaHa };
     else next.push(area);
   }

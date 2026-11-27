@@ -34,9 +34,9 @@ describe("zone facts", () => {
   });
   it("summarises the boundary as the source, the number of khu and the area", () => {
     expect(boundarySummary({ boundary: null })).toBe("Chưa có");
-    expect(boundarySummary({ boundary })).toMatch(/^Theo sơ đồ cấp phép, 2 khu, 2(,\d+)? ha$/);
+    expect(boundarySummary({ boundary })).toMatch(/^Theo sơ đồ cấp phép, 2 vùng, 2(,\d+)? ha$/);
     render(<ZoneInfoTab {...props({ zone: { ...base, boundary } })} />);
-    expect(screen.getByText(/^Theo sơ đồ cấp phép, 2 khu/)).toBeTruthy();
+    expect(screen.getByText(/^Theo sơ đồ cấp phép, 2 vùng/)).toBeTruthy();
   });
   it("shows a dash for an empty Địa điểm and Diện tích", () => {
     render(<ZoneInfoTab {...props({ zone: { ...base, location: null, area: null } })} />);
@@ -197,7 +197,7 @@ describe("updating the boundary", () => {
     fireEvent.click(screen.getByRole("button", { name: "Lưu ranh giới" }));
     expect((await screen.findAllByText(/không còn ở trạng thái đang sử dụng/)).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Lưu ranh giới" }));
-    expect((await screen.findAllByText("Tên khu tối đa 100 ký tự.")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Tên vùng tối đa 100 ký tự.")).length).toBeGreaterThan(0);
     expect((screen.getByLabelText("X của điểm K1, Khu 1") as HTMLInputElement).value).toBe("2315870.00");
   });
   it("asks before dropping edits and closes at once when nothing changed", async () => {

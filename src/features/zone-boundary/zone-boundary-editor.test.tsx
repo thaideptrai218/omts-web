@@ -17,7 +17,7 @@ function sample(): ZoneMapReading {
     zones: sizes.map((size, area) => {
       // A convex ring of radius r (m) around a centre 500 m apart per khu, so no outline crosses itself; area of the ring is what the khu "writes".
       const radius = Math.sqrt((written[area] * 10000) / ((size / 2) * Math.sin((2 * Math.PI) / size))), cx = 2315876.23 + area * 500, cy = 437512.47;
-      return { name: `Khu ${area + 1}`, writtenAreaHa: written[area], gridAreaHa: written[area], areaMatches: true, corners: Array.from({ length: size }, (_, index) => ({
+      return { name: `Vùng ${area + 1}`, writtenAreaHa: written[area], gridAreaHa: written[area], areaMatches: true, corners: Array.from({ length: size }, (_, index) => ({
         label: `K${sizes.slice(0, area).reduce((sum, count) => sum + count, 0) + index + 1}`, x: cx + radius * Math.cos((2 * Math.PI * index) / size), y: cy + radius * Math.sin((2 * Math.PI * index) / size), lat: null, lon: null })) };
     }) };
 }
@@ -44,11 +44,11 @@ describe("reading the sample licence map", () => {
     expect(repository.startScan).toHaveBeenCalledWith(expect.any(File), undefined, expect.any(AbortSignal));
     expect(cards(container)).toHaveLength(4);
     expect(rows(container)).toBe(27);
-    expect(screen.getByText("4 khu")).toBeTruthy();
+    expect(screen.getByText("4 vùng")).toBeTruthy();
     expect(screen.getByLabelText("Kinh tuyến trục (VN-2000)")).toHaveProperty("value", "107°45'");
     expect(screen.queryByRole("alert")).toBeNull();
     expect(last?.boundary?.features).toHaveLength(4);
-    expect(last?.boundary?.features.map(feature => feature.properties?.name)).toEqual(["Khu 1", "Khu 2", "Khu 3", "Khu 4"]);
+    expect(last?.boundary?.features.map(feature => feature.properties?.name)).toEqual(["Vùng 1", "Vùng 2", "Vùng 3", "Vùng 4"]);
     expect(last?.boundary?.features.map(feature => feature.geometry.coordinates[0].length)).toEqual([9, 8, 7, 7]);
     expect(last).toMatchObject({ blocked: false, touched: true, readCount: 1, prefill: { areaHa: 28.5, location: "Xã Đông Xá, xã Bản Sen, huyện Vân Đồn, tỉnh Quảng Ninh" } });
     expect(screen.queryByText("Lệch diện tích")).toBeNull();
@@ -88,7 +88,7 @@ describe("reviewing and editing", () => {
     render(<ZoneBoundaryEditor onChange={onChange} />);
     await upload();
     const before = JSON.stringify(last?.boundary);
-    const x = screen.getByLabelText("X của điểm K1, Khu 1") as HTMLInputElement;
+    const x = screen.getByLabelText("X của điểm K1, Vùng 1") as HTMLInputElement;
     fireEvent.change(x, { target: { value: String(Number(x.value) + 10) } });
     expect(JSON.stringify(last?.boundary)).not.toBe(before);
     expect(last?.blocked).toBe(false);
@@ -96,11 +96,11 @@ describe("reviewing and editing", () => {
   it("blocks a corner without a valid number and names it, then clears when fixed", async () => {
     render(<ZoneBoundaryEditor onChange={onChange} />);
     await upload();
-    const y = screen.getByLabelText("Y của điểm K2, Khu 1") as HTMLInputElement, good = y.value;
+    const y = screen.getByLabelText("Y của điểm K2, Vùng 1") as HTMLInputElement, good = y.value;
     fireEvent.change(y, { target: { value: "abc" } });
     expect(last?.blocked).toBe(true);
-    expect(screen.getByRole("alert", { name: "Cần sửa trước khi lưu" }).textContent).toContain("Khu 1: điểm K2 chưa có X, Y hợp lệ");
-    expect(screen.getByLabelText("Y của điểm K2, Khu 1").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByRole("alert", { name: "Cần sửa trước khi lưu" }).textContent).toContain("Vùng 1: điểm K2 chưa có X, Y hợp lệ");
+    expect(screen.getByLabelText("Y của điểm K2, Vùng 1").getAttribute("aria-invalid")).toBe("true");
     fireEvent.change(y, { target: { value: good } });
     expect(last?.blocked).toBe(false);
     expect(screen.queryByRole("alert", { name: "Cần sửa trước khi lưu" })).toBeNull();
@@ -108,11 +108,11 @@ describe("reviewing and editing", () => {
   it("blocks a khu left with fewer than 3 corners", async () => {
     render(<ZoneBoundaryEditor onChange={onChange} />);
     await upload();
-    const khu3 = screen.getByLabelText("Điểm góc của Khu 3");
+    const khu3 = screen.getByLabelText("Điểm góc của Vùng 3");
     for (let index = 0; index < 4; index += 1) fireEvent.click(within(khu3).getAllByRole("button", { name: /^Xóa điểm/ })[0]);
     expect(within(khu3).getAllByRole("row")).toHaveLength(1 + 2);
     expect(last?.blocked).toBe(true);
-    expect(screen.getByRole("alert", { name: "Cần sửa trước khi lưu" }).textContent).toContain("Khu 3 cần ít nhất 3 điểm góc.");
+    expect(screen.getByRole("alert", { name: "Cần sửa trước khi lưu" }).textContent).toContain("Vùng 3 cần ít nhất 3 điểm góc.");
   });
   it("warns, without blocking, when the written area disagrees with the corners", async () => {
     const wrong = sample();
@@ -121,7 +121,7 @@ describe("reviewing and editing", () => {
     render(<ZoneBoundaryEditor onChange={onChange} />);
     await upload();
     expect(screen.getByText("Lệch diện tích")).toBeTruthy();
-    expect(screen.getByRole("status", { name: "Nên kiểm tra lại" }).textContent).toContain("Khu 1");
+    expect(screen.getByRole("status", { name: "Nên kiểm tra lại" }).textContent).toContain("Vùng 1");
     expect(last?.blocked).toBe(false);
     expect(last?.boundary?.features).toHaveLength(4);
   });
@@ -139,21 +139,21 @@ describe("reviewing and editing", () => {
   });
   it("adds a khu with three empty rows, which blocks until they are filled, and removes it again", async () => {
     const { container } = render(<ZoneBoundaryEditor onChange={onChange} />);
-    expect(screen.getByText(/Chưa có khu nào/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Thêm khu" }));
+    expect(screen.getByText(/Chưa có vùng nào/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Thêm vùng" }));
     expect(cards(container)).toHaveLength(1);
     expect(rows(container)).toBe(3);
     expect(last?.blocked).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Thêm điểm góc" }));
     expect(rows(container)).toBe(4);
-    fireEvent.click(screen.getByRole("button", { name: "Xóa Khu 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Xóa Vùng 1" }));
     expect(cards(container)).toHaveLength(0);
     expect(last).toMatchObject({ blocked: false, boundary: null, touched: true });
   });
   it("stops adding at 10 khu and at 100 corners", async () => {
     render(<ZoneBoundaryEditor onChange={onChange} />);
-    for (let index = 0; index < 10; index += 1) fireEvent.click(screen.getByRole("button", { name: "Thêm khu" }));
-    expect((screen.getByRole("button", { name: "Thêm khu" }) as HTMLButtonElement).disabled).toBe(true);
+    for (let index = 0; index < 10; index += 1) fireEvent.click(screen.getByRole("button", { name: "Thêm vùng" }));
+    expect((screen.getByRole("button", { name: "Thêm vùng" }) as HTMLButtonElement).disabled).toBe(true);
     const add = screen.getAllByRole("button", { name: "Thêm điểm góc" })[0] as HTMLButtonElement;
     for (let index = 0; index < 97; index += 1) fireEvent.click(add);
     expect(add.disabled).toBe(true);
@@ -176,7 +176,7 @@ describe("reviewing and editing", () => {
   it("renames a khu and a corner into the boundary properties", async () => {
     render(<ZoneBoundaryEditor onChange={onChange} />);
     await upload();
-    fireEvent.change(screen.getAllByLabelText("Tên khu")[0], { target: { value: "Khu Đông" } });
+    fireEvent.change(screen.getAllByLabelText("Tên vùng")[0], { target: { value: "Khu Đông" } });
     fireEvent.change(screen.getByLabelText("Tên điểm 1 của Khu Đông"), { target: { value: "A1" } });
     expect(last?.boundary?.features[0].properties).toMatchObject({ name: "Khu Đông" });
     expect(last?.boundary?.features[0].properties?.corners?.[0]).toBe("A1");
@@ -184,17 +184,17 @@ describe("reviewing and editing", () => {
 });
 
 describe("a saved boundary", () => {
-  const saved = boundaryOf([areaDraft("Khu 1", [cornerDraft("K1", 2315876.23, 437512.47), cornerDraft("K2", 2315976.23, 437512.47), cornerDraft("K3", 2315976.23, 437612.47), cornerDraft("K4", 2315876.23, 437612.47)])], 107.75)!;
+  const saved = boundaryOf([areaDraft("Vùng 1", [cornerDraft("K1", 2315876.23, 437512.47), cornerDraft("K2", 2315976.23, 437512.47), cornerDraft("K3", 2315976.23, 437612.47), cornerDraft("K4", 2315876.23, 437612.47)])], 107.75)!;
   it("loads as the draft without counting as a change, and hands back exactly the saved boundary until edited", () => {
     const { container } = render(<ZoneBoundaryEditor initialBoundary={saved} onChange={onChange} />);
     expect(cards(container)).toHaveLength(1);
     expect(rows(container)).toBe(4);
     expect(last).toMatchObject({ boundary: saved, touched: false, blocked: false });
-    expect(Number((screen.getByLabelText("X của điểm K1, Khu 1") as HTMLInputElement).value)).toBeCloseTo(2315876.23, 0);
+    expect(Number((screen.getByLabelText("X của điểm K1, Vùng 1") as HTMLInputElement).value)).toBeCloseTo(2315876.23, 0);
   });
   it("is a change once a corner is edited", () => {
     render(<ZoneBoundaryEditor initialBoundary={saved} onChange={onChange} />);
-    fireEvent.change(screen.getByLabelText("X của điểm K1, Khu 1"), { target: { value: "2315870.00" } });
+    fireEvent.change(screen.getByLabelText("X của điểm K1, Vùng 1"), { target: { value: "2315870.00" } });
     expect(last?.touched).toBe(true);
     expect(last?.boundary).not.toEqual(saved);
   });
@@ -217,16 +217,16 @@ describe("the read itself", () => {
   it("shows the busy message with Thử lại and keeps the edits already made", async () => {
     const { container } = render(<ZoneBoundaryEditor onChange={onChange} />);
     await upload();
-    fireEvent.change(screen.getByLabelText("Tên điểm 1 của Khu 1"), { target: { value: "EDIT" } });
+    fireEvent.change(screen.getByLabelText("Tên điểm 1 của Vùng 1"), { target: { value: "EDIT" } });
     repository.startScan.mockResolvedValueOnce({ status: "error", httpStatus: 503, code: "OCR_BUSY", uncertain: false });
     await upload();
     expect(screen.getByRole("alert").textContent).toContain("đang bận đọc ảnh");
     expect(cards(container)).toHaveLength(4);
-    expect((screen.getByLabelText("Tên điểm 1 của Khu 1") as HTMLInputElement).value).toBe("EDIT");
+    expect((screen.getByLabelText("Tên điểm 1 của Vùng 1") as HTMLInputElement).value).toBe("EDIT");
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     expect(screen.queryByRole("alert")).toBeNull();
-    expect((screen.getByLabelText("Tên điểm 1 của Khu 1") as HTMLInputElement).value).toBe("K1");
+    expect((screen.getByLabelText("Tên điểm 1 của Vùng 1") as HTMLInputElement).value).toBe("K1");
   });
   it("refuses a photo that is not JPEG or PNG without uploading", async () => {
     render(<ZoneBoundaryEditor onChange={onChange} />);
@@ -239,17 +239,17 @@ describe("the read itself", () => {
     const { rerender } = render(<ZoneBoundaryEditor onChange={onChange} />);
     await upload();
     rerender(<ZoneBoundaryEditor onChange={onChange} disabled />);
-    expect((screen.getByLabelText("X của điểm K1, Khu 1") as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Thêm khu" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByLabelText("X của điểm K1, Vùng 1") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Thêm vùng" }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: /Chọn ảnh sơ đồ/ }) as HTMLButtonElement).disabled).toBe(true);
   });
   it("offers a slot for a map preview, shown only while the boundary can be saved", async () => {
-    const preview = vi.fn(({ boundary }: { boundary: unknown }) => <p>Xem trước {(boundary as { features: unknown[] }).features.length} khu</p>);
+    const preview = vi.fn(({ boundary }: { boundary: unknown }) => <p>Xem trước {(boundary as { features: unknown[] }).features.length} vùng</p>);
     render(<ZoneBoundaryEditor onChange={onChange} preview={preview} />);
     expect(screen.queryByText(/Xem trước/)).toBeNull();
     await upload();
-    expect(screen.getByText("Xem trước 4 khu")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Y của điểm K2, Khu 1"), { target: { value: "abc" } });
+    expect(screen.getByText("Xem trước 4 vùng")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Y của điểm K2, Vùng 1"), { target: { value: "abc" } });
     expect(screen.queryByText(/Xem trước/)).toBeNull();
   });
 });

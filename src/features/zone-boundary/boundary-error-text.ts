@@ -6,9 +6,9 @@ type Failed = { httpStatus: number; code?: string; problem?: FarmingProblem };
 
 /** MSG-GEN-01 names the field the backend refused: say what to fix, in the words of the review table. */
 const fieldText: Record<string, string> = {
-  Boundary: "Ranh giới chưa hợp lệ: cần từ 1 đến 10 khu, mỗi khu một vòng từ 3 đến 100 điểm góc.",
+  Boundary: "Ranh giới chưa hợp lệ: cần từ 1 đến 10 vùng, mỗi vùng một vòng từ 3 đến 100 điểm góc.",
   "Boundary coordinates": "Có điểm góc nằm ngoài Việt Nam, trùng vị trí hoặc chưa đủ số. Kiểm tra lại X, Y và kinh tuyến trục.",
-  "Boundary name": "Tên khu tối đa 100 ký tự.",
+  "Boundary name": "Tên vùng tối đa 100 ký tự.",
   "Boundary corners": "Tên điểm góc tối đa 20 ký tự.",
   Photo: "Ảnh chưa hợp lệ. Chọn một ảnh JPEG hoặc PNG, tối đa 10 MB.",
 };
