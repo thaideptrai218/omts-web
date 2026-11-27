@@ -17,7 +17,7 @@ const item = { id: log, cycleId: cycle, raftId: raft, raftCode: "B1-01", zoneId:
   recordedAt: "2026-11-21T02:15:00+00:00", canCorrect: true, rowVersion: "AQID", somethingNew: 1 };
 
 describe("care log page BFF", () => {
-  it.each(["action=page&zoneId=bad", "action=page&logType=EATING", "action=page&from=2026-11-30&to=2026-11-01", "action=page&pageSize=7", "action=page&page=0", `action=page&search=${"x".repeat(101)}`, "action=page&url=https://evil.test", `action=page&zoneId=${zone}&zoneId=${zone}`])("refuses %s before any call", async query => {
+  it.each(["action=page&zoneId=bad", "action=page&logType=EATING", "action=page&from=2026-11-30&to=2026-11-01", "action=page&pageSize=7", "action=page&sortBy=notes", "action=page&sortBy=recordedby", "action=page&sortDir=up", "action=page&sortBy=zone&sortDir=ASC", "action=page&page=0", `action=page&search=${"x".repeat(101)}`, "action=page&url=https://evil.test", `action=page&zoneId=${zone}&zoneId=${zone}`])("refuses %s before any call", async query => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch");
     expect((await handleCultivationLogs(get(query))).status).toBe(400); expect(fetcher).not.toHaveBeenCalled();
   });
@@ -29,11 +29,11 @@ describe("care log page BFF", () => {
   });
   it("sends only the filled filters to the backend path and returns the page, tolerating fields it does not know", async () => {
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [item], page: 2, pageSize: 50, total: 61 }));
-    const response = await handleCultivationLogs(get(`action=page&zoneId=${zone}&raftId=${raft}&logType=REPAIR&from=2026-11-01&to=2026-11-30&search=%20B1%20&page=2&pageSize=50`));
+    const response = await handleCultivationLogs(get(`action=page&zoneId=${zone}&raftId=${raft}&logType=REPAIR&from=2026-11-01&to=2026-11-30&search=%20B1%20&sortBy=recordedBy&sortDir=asc&page=2&pageSize=50`));
     expect(response.status).toBe(200);
     const url = new URL(fetcher.mock.calls[0][0].toString());
     expect(url.pathname).toBe("/api/cultivation-logs");
-    expect(Object.fromEntries(url.searchParams)).toEqual({ zoneId: zone, raftId: raft, logType: "REPAIR", from: "2026-11-01", to: "2026-11-30", search: "B1", page: "2", pageSize: "50" });
+    expect(Object.fromEntries(url.searchParams)).toEqual({ zoneId: zone, raftId: raft, logType: "REPAIR", from: "2026-11-01", to: "2026-11-30", search: "B1", sortBy: "recordedBy", sortDir: "asc", page: "2", pageSize: "50" });
     const body = await response.json();
     expect(body.data.total).toBe(61); expect(body.data.items[0]).toMatchObject({ raftCode: "B1-01", zoneCode: "KV01", logType: "REPAIR" });
   });

@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { cultivationLog, logInput, logTypes } from "@/features/cycles-api/log-contracts";
-import { logPageSchema } from "@/features/cultivation-logs/log-page-contract";
+import { logPageSchema, logSortKeys } from "@/features/cultivation-logs/log-page-contract";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -56,8 +56,8 @@ export async function handleCultivationLogs(request: Request) {
 }
 
 const pageQuery = z.strictObject({ action: z.literal("page"), zoneId: z.guid().optional(), raftId: z.guid().optional(), logType: z.enum(logTypes.map(([code]) => code)).optional(),
-  from: z.iso.date().optional(), to: z.iso.date().optional(), search: z.string().trim().max(100).optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "20", "50", "100"]).optional() });
-/** The Nhật ký screen: one server-paged page of the care logs of every zone the account may read, newest visit first, with the filters of the screen. */
+  from: z.iso.date().optional(), to: z.iso.date().optional(), search: z.string().trim().max(100).optional(), sortBy: z.enum(logSortKeys).optional(), sortDir: z.enum(["asc", "desc"]).optional(), page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "20", "50", "100"]).optional() });
+/** The Nhật ký screen: one server-paged page of the care logs of every zone the account may read, newest visit first unless `sortBy` (a column of the list) and `sortDir` say otherwise, with the filters of the screen. */
 async function handleLogPage(request: Request, json: (data: unknown, status?: number) => Response) {
   const query = new URL(request.url).searchParams, q = pageQuery.safeParse(Object.fromEntries(query));
   if (!q.success || request.method !== "GET" || query.size !== [...new Set(query.keys())].length || (q.data.from && q.data.to && q.data.from > q.data.to)) return json({ status: "invalid-input" }, 400);

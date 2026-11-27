@@ -6,4 +6,7 @@ export const logPageItem = cultivationLog.extend({ zoneId: z.guid(), zoneCode: z
 export const logPageSchema = z.object({ items: z.array(logPageItem), page: z.number().int().positive(), pageSize: z.number().int().positive(), total: z.number().int().nonnegative() });
 export type LogPageItem = z.infer<typeof logPageItem>;
 export type LogPage = z.infer<typeof logPageSchema>;
-export type LogPageQuery = Partial<Record<"zoneId" | "raftId" | "logType" | "from" | "to" | "search" | "page" | "pageSize", string>>;
+/** The columns the backend sorts the list by (`sortBy`); `sortDir` is asc or desc. */
+export const logSortKeys = ["visitDate", "zone", "raft", "logType", "recordedBy", "recordedAt"] as const;
+export type LogSortKey = typeof logSortKeys[number];
+export type LogPageQuery = Partial<Record<"zoneId" | "raftId" | "logType" | "from" | "to" | "search" | "sortBy" | "sortDir" | "page" | "pageSize", string>>;
