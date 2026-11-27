@@ -17,7 +17,7 @@ const GAP = 4, SIDE_GAP = 12, MARGIN = 8;
 /** Rendered on the body (or inside the open modal dialog, whose top layer makes everything outside it inert) so the filter rail's overflow cannot clip it. `side` (the filter rail) opens to the right, centred on its anchor with an arrow, and below it when there is no room. `below` drops
  * down under the anchor like a select: left edges aligned, or right edges when that would overflow, and above the anchor when there
  * is no room below. */
-export function Popover({ anchor, label, onClose, children, placement = "side" }: { anchor: RefObject<HTMLElement | null>; label: string; onClose(returnFocus: boolean): void; children: ReactNode; placement?: "side" | "below" }) {
+export function Popover({ anchor, label, onClose, children, placement = "side" }: { anchor: RefObject<HTMLElement | null>; label: string; onClose(returnFocus: boolean): void; children: ReactNode; placement?: "side" | "below" | "below-end" }) {
   const panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number; arrow?: number }>({ left: 0, top: 0 });
   // Where the panel should land in the viewport, and how many times a miss has been corrected for the current target.
@@ -53,7 +53,8 @@ export function Popover({ anchor, label, onClose, children, placement = "side" }
         set(box.right + SIDE_GAP, sideTop, centre - sideTop);
         return;
       }
-      const preferred = placement === "below" && box.left + width > window.innerWidth - MARGIN ? box.right - width : box.left;
+      // "below-end" aligns the right edges so the panel opens leftward from a button near the right of a card.
+      const preferred = placement === "below-end" || (placement === "below" && box.left + width > window.innerWidth - MARGIN) ? box.right - width : box.left;
       const left = Math.max(MARGIN, Math.min(preferred, window.innerWidth - width - MARGIN));
       const below = box.bottom + GAP;
       const top = below + height <= window.innerHeight - MARGIN ? below : Math.max(MARGIN, Math.min(box.top - height - GAP, window.innerHeight - height - MARGIN));

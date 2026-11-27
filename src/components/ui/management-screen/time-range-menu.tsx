@@ -21,7 +21,7 @@ export function TimeRangeMenu({ label, value, onChange, presets, allLabel }: { l
     <button ref={button} type="button" className={`${styles.input} ${styles.menuButton}`} aria-haspopup="dialog" aria-expanded={!!open} aria-label={`${label}: ${text}`} onClick={() => setOpen(open ? undefined : "preset")}>
       <span>{text}</span><InterfaceIcon name="calendar" />
     </button>
-    {open && <Popover anchor={button} label={label} placement="below" onClose={close}>
+    {open && <Popover anchor={button} label={label} placement="below-end" onClose={close}>
       {open === "preset"
         ? <div className={styles.menu}>
           <div className={styles.menuPresets}>{groups.map(group => <section key={group.label}>
