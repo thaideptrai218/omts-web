@@ -25,7 +25,7 @@ describe("which seed lots the actions apply to", () => {
 describe("the prefill addresses of the actions", () => {
   it("opens a new nursery batch and a return with the lot chosen, and a cycle start with a finished batch chosen, by id only in the query", () => {
     expect(nurseHref(ids.line)).toBe(`/farming/nursery?lot=${ids.line}`);
-    expect(cycleFromBatchHref("b1")).toBe("/farming/cycles?nurseryBatch=b1");
+    expect(cycleFromBatchHref("b1")).toBe("/farming/rafts?nurseryBatch=b1");
     expect(returnLotHref({ id: ids.line, receiptId: ids.receipt })).toBe(`/operations/seed-returns/new?receipt=${ids.receipt}&line=${ids.line}`);
   });
 });

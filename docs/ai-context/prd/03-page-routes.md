@@ -27,7 +27,7 @@ Layout `(app)/layout.tsx` bọc `ServerApplicationBoundary`, quyết định: re
 | `/dashboard` | Mock `DashboardExperience`; API `ApiWorkspaceHome` | Mock `workspace.overview.view`; API mọi subjectType |
 | `/farming/zones` | Vùng nuôi | Mock `farming.zones.view`; API Owner hoặc Staff (View mặc định) |
 | `/farming/rafts` | Bè nuôi | Mock `farming.rafts.view`; API như trên |
-| `/farming/cycles` | Chu kỳ nuôi (`cycles-api`) | API `CULTIVATION_CYCLES`; mock không có menu |
+| `/farming/cycles` | Chuyển hướng sang `/farming/rafts` (bè đó mở sẵn ở tab "Chu kỳ nuôi"); không còn menu riêng | Màn chu kỳ đã gộp vào Bè nuôi (`rafts-api`); quyền vẫn là `CULTIVATION_CYCLES` |
 | `/workspace/[resource]` | Danh mục: `zones, suppliers, input-items, employees, rafts, accounts, roles, customers`; chỉ API (mock 404) | `resourceAllowed` |
 | `/operations/[area]` | 26 area — xem [04](04-operations-areas.md); mock chỉ `workforce`, `purchase-receipts`, `supplier-payments` | `operationAllowed` |
 | `/operations/purchase-requests/[id]` | Chi tiết yêu cầu mua; Trader xem `TraderRequestDetailPage`, Owner/Staff xem `PurchaseRequestReviewDetail` | Trader, Owner, Staff có `PURCHASE_REQUESTS` |

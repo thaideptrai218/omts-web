@@ -1,4 +1,5 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/management-page";
@@ -26,15 +27,20 @@ import type { ZoneTabKey } from "./zone-summary-model";
 /** `boundary`: may read the licence map and change or clear the boundary of an In Use zone (the Owner, like the backend). */
 export type ZoneAccess = { edit: boolean; boundary: boolean; rafts: boolean; licenses: boolean; staff: boolean; water: boolean; waterCreate: boolean; raftCreate: boolean; raft: RaftAccess };
 type TabKey = ZoneTabKey;
+const tabKeys: readonly string[] = ["info", "map", "rafts", "licenses", "staff", "water"];
 const repository = createWorkspaceRepository("zones");
 
 export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: string; access: ZoneAccess; guard: UnsavedGuard; zones: ApiRecord[]; onChanged(): void }) {
   const detail = useZoneDetail(id), mutation = useMutation();
-  const [openRaft, setOpenRaft] = useState<{ id: string; code: string }>(), [tab, setTab] = useState<TabKey>("info"), [action, setAction] = useState<ZoneStatusAction>(), [reviewRequested, setReviewRequested] = useState(false);
+  // A link to this zone (`?recordId=<id>&tab=map`) opens it on that tab.
+  const params = useSearchParams(), linkedTab = params?.get("recordId") === id ? params.get("tab") : null;
+  const [openRaft, setOpenRaft] = useState<{ id: string; code: string }>(), [picked, setTab] = useState<TabKey>(() => linkedTab && tabKeys.includes(linkedTab) ? linkedTab as TabKey : "info"), [action, setAction] = useState<ZoneStatusAction>(), [reviewRequested, setReviewRequested] = useState(false);
   const [clearing, setClearing] = useState(false);
   const zone = detail.data;
   const tabs = useMemo(() => ([["info", "Thông tin", true], ["map", "Bản đồ", true], ["rafts", "Bè nuôi", access.rafts], ["licenses", "Giấy phép", access.licenses],
     ["staff", "Nhân viên", access.staff], ["water", "Quan trắc nước", access.water]] as const).filter(entry => entry[2]).map(([key, label]) => ({ key, label })), [access]);
+  // A linked tab the account may not read falls back to "Thông tin".
+  const tab = tabs.some(entry => entry.key === picked) ? picked : "info";
   const prefix = `zone-${id}`;
   // A licence is offered for In Use zones; the open zone stays in the list so its own documents can be added whatever its status.
   const coverable = useMemo(() => zones.filter(row => row.statusId !== DISCONTINUED || row.id === id), [zones, id]);
@@ -59,7 +65,7 @@ export function ZoneDetailPanel({ id, access, guard, zones, onChanged }: { id: s
   const content: Record<TabKey, ReactNode> = zone ? {
     info: <ZoneInfoTab zone={zone} canEdit={access.edit} canBoundary={access.boundary && zone.statusId === IN_USE} canSeeLicense={access.licenses} busy={busy} dirtyRef={guard.dirty} onSaved={saved} onReload={detail.reload} onClearBoundary={() => { mutation.reviewed(); setClearing(true); }} onStatus={() => { mutation.reviewed(); setAction(zone.statusId === IN_USE ? "discontinue" : "reactivate"); }} />,
     map: <ZoneMapTab zone={zone} canSeeRafts={access.rafts} onOpenRaft={raft => void guard.leave(() => { setOpenRaft(raft); setTab("rafts"); })} />,
-    rafts: <ZoneRaftsTab zoneId={id} zoneLabel={`${zone.code} · ${zone.name}`} canCreate={access.raftCreate && zone.statusId === IN_USE} raftAccess={access.raft} guard={guard} focus={openRaft} />, licenses: <ZoneLicensesTab zoneId={id} zones={coverable} guard={guard} />,
+    rafts: <ZoneRaftsTab zoneId={id} zoneLabel={`${zone.code} · ${zone.name}`} canCreate={access.raftCreate && zone.statusId === IN_USE} raftAccess={access.raft} guard={guard} focus={openRaft} />, licenses: <ZoneLicensesTab zoneId={id} zones={coverable} guard={guard} canDelete={access.boundary && zone.statusId === IN_USE} />,
     staff: <ZoneStaffTab zoneId={id} />, water: <ZoneWaterTab zoneId={id} zoneName={zone.name} canCreate={access.waterCreate && zone.statusId === IN_USE} />,
   } : { info: null, map: null, rafts: null, licenses: null, staff: null, water: null };
   return <section id={`zone-preview-${id}`} className={styles.detail} aria-label="Chi tiết vùng nuôi">

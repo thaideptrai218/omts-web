@@ -27,7 +27,7 @@ export function TraceBackwardPanel({ trace }: { trace: LotTrace }) {
   return (
     <section id="trace-backward" className={s.card} aria-labelledby="backward-title">
       <div className={s.cardHead}><h2 id="backward-title">Truy xuất ngược</h2></div>
-      <p className={s.sub}>Bè <Link href={farmingReferenceHref("raft", { zoneId: trace.zoneId, recordId: trace.raftId, search: trace.raftCode })}>{trace.raftCode}</Link> · Vùng nuôi <Link href={farmingReferenceHref("zone", { recordId: trace.zoneId, search: trace.zoneCode })}>{trace.zoneCode}</Link> · <Link href={farmingReferenceHref("cycle", { zoneId: trace.zoneId, raftId: trace.raftId, cycleId: trace.cycleId })}>Chu kỳ {formatDay(trace.cycleStartDate)} – {formatDay(trace.cycleCloseDate)}</Link></p>
+      <p className={s.sub}>Bè <Link href={farmingReferenceHref("raft", { zoneId: trace.zoneId, recordId: trace.raftId, search: trace.raftCode })}>{trace.raftCode}</Link> · Vùng nuôi <Link href={farmingReferenceHref("zone", { recordId: trace.zoneId, search: trace.zoneCode })}>{trace.zoneCode}</Link> · <Link href={farmingReferenceHref("cycle", { zoneId: trace.zoneId, raftId: trace.raftId, search: trace.raftCode })}>Chu kỳ {formatDay(trace.cycleStartDate)} – {formatDay(trace.cycleCloseDate)}</Link></p>
       {trace.missing.length > 0 && (
         <div role="alert" className={s.warn}>
           <strong>Truy xuất ngược còn thiếu dữ liệu:</strong>

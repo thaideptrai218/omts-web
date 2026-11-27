@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { raftGeometryFields, raftLaneFields } from "@/features/rafts-api/raft-geometry";
+import { raftCurrentCycleSchema, raftLaneSummarySchema } from "@/features/rafts-api/raft-current-state";
 import { apiIdSchema } from "@/features/auth/api/auth-contract.schemas";
 import { farmingZoneListItemSchema, farmingZoneViewSchema } from "@/features/farming-zones/api/farming-zone-contract.schemas";
 import { employeeListItemSchema, employeeViewSchema } from "@/features/employee-management/api/employee-contract.schemas";
@@ -63,7 +64,7 @@ const customerView = z.object({ id: apiIdSchema, name: text, phoneNumber: nullab
   phoneLocked: z.boolean(), traderAccount: z.object({ accountId: apiIdSchema, username: nullableText, displayName: text }).nullable(), mergedIntoCustomerId: apiIdSchema.nullable(), currentDebt: z.number(), ...version });
 const supplierRow = z.object({ id: apiIdSchema, name: text, supplierType: text, phoneNumber: text, ...usage });
 const itemRow = z.object({ id: apiIdSchema, code: text, name: text, group: z.enum(["Seed", "Material", "Other"]), unit: text, ...usage });
-const raftRow = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), size: nullableText.optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional() });
+const raftRow = z.object({ ...raftGeometryFields, id: apiIdSchema, code: text, ...usage, laneCount: z.number().int().optional(), size: nullableText.optional(), latitude: z.number().nullable().optional(), longitude: z.number().nullable().optional(), laneSummary: raftLaneSummarySchema.nullish() });
 const roleRow = z.object({ id: apiIdSchema, name: text, code: text.optional(), status: text.optional() }).refine((row) => row.code !== undefined || row.status !== undefined);
 // `pairs` = the Effective zone-role pairs the backend list already returns (StaffAccountPairView) and `employeeId` = the linked employee:
 // the Nhân viên screen reads role, zone and employee from the list itself, with no per-row grant request.
@@ -79,7 +80,7 @@ const detailSchemas = {
   suppliers: supplierRow.extend({ address: nullableText, email: nullableText, ...version }),
   "input-items": itemRow.extend({ description: nullableText, isUsed: z.boolean(), ...version }),
   employees: employeeViewSchema,
-  rafts: raftRow.extend({ location: nullableText, size: nullableText, conditionNotes: nullableText,
+  rafts: raftRow.extend({ location: nullableText, size: nullableText, conditionNotes: nullableText, currentCycle: raftCurrentCycleSchema.nullish(),
     lanes: z.array(z.object({ id: apiIdSchema, laneNumber: z.number().int(), statusId: z.number().int(), status: text, ...raftLaneFields })),
     ...version }),
   accounts: accountRow,

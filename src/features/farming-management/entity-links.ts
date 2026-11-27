@@ -21,7 +21,7 @@ export function movementSourceLink(movement: { sourceKind?: Maybe; sourceRecordI
 /** The use issue (Xuất dùng) a seeding session or material usage posted, by its code. */
 export const issueLink = (issueCode: Maybe) => issueCode ? farmingReferenceHref("inputUse", { code: issueCode }) : undefined;
 
-/** The Hành trình of a cycle on the cycle screen (the raft opens on that cycle). */
+/** The cycle of a raft: its raft opens on the "Chu kỳ nuôi" tab. */
 export const cycleJourneyLink = (ref: { zoneId: Maybe; raftId: Maybe; cycleId: Maybe }) => ref.cycleId ? farmingReferenceHref("cycle", { ...ref, tab: "journey" }) : undefined;
 
 /** Open the nursery batch by its readable NU code. */

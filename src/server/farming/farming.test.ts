@@ -104,6 +104,30 @@ describe("farming BFF authorization, uploads and file projection", () => {
     expect(fetcher.mock.calls[0][1]?.method).toBe("DELETE");
     expect(fetcher.mock.calls[0][0].toString()).toBe(`http://127.0.0.1:8080/api/rafts/${ids.raft}/photos/${ids.lane}`);
   });
+  it("plans a licence delete as POST from the browser and DELETE upstream with the row version, and only for a licence id plus a row version", () => {
+    const plan = planFarming("zone-licenses", "POST", new URLSearchParams({ action: "delete", id: ids.license, rowVersion: "AQID+/=" }));
+    expect(plan).toMatchObject({ method: "DELETE", path: `/api/zone-licenses/${ids.license}?rowVersion=AQID%2B%2F%3D`, noContent: true, problem: true, ownerOnly: true });
+    for (const query of [{ action: "delete", id: ids.license }, { action: "delete", rowVersion: "AQID" }, { action: "delete", id: ids.license, rowVersion: "AQID", zoneId: ids.zone }, { action: "delete", id: ids.license, rowVersion: "bad value" }] as Record<string, string>[])
+      expect(planFarming("zone-licenses", "POST", new URLSearchParams(query))).toBeUndefined();
+    expect(planFarming("zone-licenses", "GET", new URLSearchParams({ action: "delete", id: ids.license, rowVersion: "AQID" }))).toBeUndefined();
+    expect(planFarming("raft-details", "POST", new URLSearchParams({ action: "delete", id: ids.license, rowVersion: "AQID" }))).toBeUndefined();
+  });
+  it("deletes a licence upstream, answers { done: true } for the backend 204 and relays the 409 refusal; Staff are refused before any call", async () => {
+    const url = `http://localhost:3002/api/operations/zone-licenses?action=delete&id=${ids.license}&rowVersion=AQID`;
+    const post = () => new Request(url, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" } });
+    configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 204 }));
+    expect((await handleFarmingRequest(new Request(url, { method: "POST", headers: { Origin: "http://localhost:3002" } }), "zone-licenses")).status).toBe(403);
+    expect(fetcher).not.toHaveBeenCalled();
+    const done = await handleFarmingRequest(post(), "zone-licenses");
+    expect(done.status).toBe(200); expect(await done.json()).toEqual({ status: "success", data: { done: true } });
+    expect(fetcher.mock.calls[0][1]?.method).toBe("DELETE");
+    expect(fetcher.mock.calls[0][0].toString()).toBe(`http://127.0.0.1:8080/api/zone-licenses/${ids.license}?rowVersion=AQID`);
+    fetcher.mockResolvedValueOnce(Response.json({ code: "MSG-GEN-09" }, { status: 409 }));
+    const refused = await handleFarmingRequest(post(), "zone-licenses");
+    expect(refused.status).toBe(409); expect((await refused.json()).code).toBe("MSG-GEN-09");
+    configure("Staff"); fetcher.mockClear();
+    expect((await handleFarmingRequest(post(), "zone-licenses")).status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
+  });
   it("proxies one raft photo chosen by its id", async () => {
     const raft = raftFixture({ photos: [{ id: ids.lane, sortOrder: 1, url: "/api/files/local/a.png?sig=private&expires=123" }] });
     configure(); const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(raft)).mockResolvedValueOnce(new Response(new Uint8Array([1]), { headers: { "Content-Type": "image/png" } }));

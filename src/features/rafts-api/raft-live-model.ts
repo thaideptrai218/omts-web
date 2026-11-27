@@ -2,7 +2,6 @@ import type { z } from "zod";
 import type { cycleProgress } from "@/features/cycles-api/contracts";
 import type { CultivationLog } from "@/features/cycles-api/log-contracts";
 import type { seedingList } from "@/features/cultivation-api/records-contracts";
-import { laneProgressDisplay, type LaneDisplayState } from "@/features/farming-management/lane-progress-display";
 
 /** Live state of a raft = today's lane progress of its open cycle (the same read the Hành trình screen uses) plus the seeding sessions of that cycle. */
 export type LiveProgress = z.infer<typeof cycleProgress>;
@@ -20,30 +19,6 @@ export function mergeLiveLanes<L extends { laneNumber: number }>(base: readonly 
   return base.map(lane => ({ ...lane, ...byNumber.get(lane.laneNumber) }));
 }
 
-export type LaneSummary = { total: number; counts: Partial<Record<LaneDisplayState, number>>; working: number; text: string; detail: string };
-/** "6/10 làn đang nuôi" (growing + being harvested) and the other states of the raft, so the list says more than the lane count. */
-export function summarizeLanes(lanes: readonly LiveLane[]): LaneSummary {
-  const kept = keptLanes(lanes), counts: Partial<Record<LaneDisplayState, number>> = {};
-  for (const lane of kept) { const state = laneProgressDisplay(lane).state; counts[state] = (counts[state] ?? 0) + 1; }
-  const working = (counts.Growing ?? 0) + (counts.BeingHarvested ?? 0);
-  const parts: [LaneDisplayState, string][] = [["BeingHarvested", "đang thu"], ["Harvested", "đã thu"], ["Damaged", "hỏng"], ["OutOfService", "ngừng"], ["NotSeeded", "chưa thả"], ["Available", "chưa thả"]];
-  return { total: kept.length, counts, working, text: `${working}/${kept.length} làn đang nuôi`,
-    detail: parts.filter(([state]) => counts[state]).map(([state, label]) => `${counts[state]} ${label}`).join(" · ") };
-}
-
-/** Phase of the raft's cycle in words, derived only from the cycle and its lanes (display, no new status). */
-export function phaseLabel(progress: LiveProgress): string {
-  const cycle = progress.cycle;
-  if (!cycle) return "Chưa có chu kỳ";
-  if (cycle.closeDate) return "Đã kết thúc";
-  const lanes = keptLanes(progress.lanes).map(lane => laneProgressDisplay(lane).state);
-  const seeded = lanes.filter(state => state === "Growing" || state === "BeingHarvested" || state === "Harvested");
-  if (!seeded.length) return "Chờ thả giống";
-  if (seeded.every(state => state === "Harvested")) return "Đã thu xong";
-  if (seeded.some(state => state === "BeingHarvested" || state === "Harvested")) return "Đang thu hoạch";
-  return cycle.seedingCompletedOn ? "Đang nuôi" : "Đang thả giống";
-}
-
 const dayMs = 86_400_000;
 export const daysBetween = (from: string, to: string) => Math.max(0, Math.round((Date.parse(to.slice(0, 10)) - Date.parse(from.slice(0, 10))) / dayMs));
 
@@ -53,13 +28,6 @@ export function laneSeedFacts(records: readonly SeedingRecord[], laneNumber: num
   const sessions = records.filter(record => record.laneNumbers.includes(laneNumber)), dates = sessions.map(record => record.seedingDate).sort();
   const seeds = [...new Set(sessions.map(record => record.seedLot.itemName?.trim()).filter((name): name is string => !!name))];
   return { seeds, sessions: sessions.length, ...(dates.length ? { firstDate: dates[0], lastDate: dates[dates.length - 1], days: daysBetween(dates[0], today) } : {}) };
-}
-
-/** Total seed hung in the open cycle with its unit ("5.000 mảnh"), or undefined when nothing was recorded. */
-export function seededTotalText(records: readonly SeedingRecord[]): string | undefined {
-  if (!records.length) return undefined;
-  const total = records.reduce((sum, record) => sum + record.quantity, 0), unit = records.find(record => record.seedLot.unit)?.seedLot.unit;
-  return `${total.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}${unit ? ` ${unit}` : ""}`;
 }
 
 export type GalleryPhoto = { id: string; url: string; source: string; date?: string; caption: string; raftPhotoId?: string; sortOrder?: number };
