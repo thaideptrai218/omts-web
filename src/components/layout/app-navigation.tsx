@@ -61,12 +61,6 @@ export const navigationGroups: readonly Readonly<{
         label: "Phiếu nhập và yêu cầu thanh toán",
         requiredPermission: "purchase.receipts.view",
       },
-      {
-        href: "/operations/supplier-payments",
-        icon: "payment",
-        label: "Thanh toán nhà cung cấp",
-        requiredPermission: "supplier.payments.manage",
-      },
     ],
   },
   {

@@ -54,7 +54,8 @@ const workspaceGroups = [
   // Thả giống, Thu hoạch and Sử dụng vật tư are not menu entries: they open from the cycle and raft screens; their routes stay.
   { label: FARMING_GROUP, resources: ["zones", "rafts"], operations: ["cultivation-cycles", "water"] },
   { label: INPUT_GROUP, resources: [], operations: [] },
-  { label: "Mua hàng", resources: ["suppliers"], operations: ["supplier-payments"] },
+  // Supplier payments live in the supplier record (Nợ cần trả tab), so the old Thanh toán nhà cung cấp screen has no menu entry; its route stays for old links.
+  { label: "Mua hàng", resources: ["suppliers"], operations: [] },
   { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "labor-costs", "my-work"] },
   { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests", "lot-tracing", "customer-payments"] },
   { label: "Báo cáo", resources: [], // Thứ tự theo KiotViet (Cuối ngày, Bán hàng, Hàng hóa, Khách hàng, Nhà cung cấp, Tài chính) rồi các báo cáo đặc thù; key chưa xong bị `operationAllowed` ẩn.
@@ -155,7 +156,6 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
             { title: "Đối tác", items: res(["suppliers"]) },
             { title: "Nhập hàng", items: purchasing ? [link(kindText.Seed.receiptsPath, kindText.Seed.receipt, "receipt"), link(kindText.Supply.receiptsPath, kindText.Supply.receipt, "receipt")] : [] },
             { title: "Trả hàng", items: purchasing ? [link(kindText.Seed.returnsPath, kindText.Seed.receiptReturn, "upload"), link(kindText.Supply.returnsPath, kindText.Supply.receiptReturn, "upload")] : [] },
-            { title: "Thanh toán", items: ops(["supplier-payments"]) },
           ] : group.label === "Nhân sự" ? [
             { title: "Nhân viên", items: [...res(["employees"])] },
             { title: "Phân công và chấm công", items: [
