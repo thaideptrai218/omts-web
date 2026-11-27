@@ -130,7 +130,7 @@ function RaftWorkspace({ zones: offered, zoneId, onZone, all, onAll, helpHref }:
         : !shown.length ? <ListStateMessage>{hasFilter ? "Không có bè phù hợp bộ lọc." : "Vùng này chưa có bè nuôi."}</ListStateMessage>
         : <RaftTable rows={shown} visible={visible} sort={sort} onSort={next => change(() => setSort(next))} expandedId={expanded} scopeOf={row => ({ zoneId: row.zoneId, zoneLabel: row.zoneLabel, access: accessIn(row.zoneId) })} guard={guard}
           initialTabOf={linkTarget} initialTab={params.get("tab") ?? undefined}
-          onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))} onChanged={notice => { list.reload(); notify({ tone: "success", title: notice ?? "Đã cập nhật bè nuôi." }); }} />}
+          onToggle={id => void guard.leave(() => setExpanded(open => open === id ? undefined : id))} onChanged={notice => { list.reload(); if (notice !== "") notify({ tone: "success", title: notice ?? "Đã cập nhật bè nuôi." }); }} />}
     </ManagementScroller>
     {creating && <RaftCreateDialog zoneId={zoneId} zoneLabel={zoneLabel} onClose={() => setCreating(false)} onCreated={() => { setCreating(false); notify({ tone: "success", title: "Đã thêm bè nuôi." }); list.reload(); }} />}
   </ManagementLayout>;

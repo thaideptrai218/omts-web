@@ -93,6 +93,19 @@ describe("journey tab", () => {
     expect(onJump).toHaveBeenCalledWith("logs");
     expect(within(list).getByRole("link", { name: "Thu hoạch và hoàn tất làn" }).getAttribute("href")).toBe(`/operations/harvest?zoneId=${zoneId}&raftId=${raftId}&cycleId=${cycleId}`);
   });
+  it("in the raft's all-in-one part drops the care and material shortcuts and, with onRecord, records in place instead of linking to another screen", async () => {
+    repo.readCycles.mockResolvedValue({ status: "success", data: { raftId, raftCode: "B1-01", date: "2026-11-12", cycle: cycle(), lanes: [{ id: cycleId, laneNumber: 1, statusId: 1, status: "x", state: "Growing" }, { id: cycleId, laneNumber: 2, statusId: 1, status: "x", state: "NotSeeded" }], notSeededLanes: [2] } });
+    repo.readCycleSummary.mockResolvedValue({ status: "success", data: figures({ notHarvestedLanes: [1, 2] }) });
+    const onRecord = vi.fn();
+    render(<ToastProvider><CycleJourneyTab part="all" row={row} zoneId={zoneId} access={access} onJump={vi.fn()} onChanged={vi.fn()} onRecord={onRecord} /></ToastProvider>);
+    const list = await screen.findByRole("list", { name: "Hành trình chu kỳ" });
+    expect(screen.queryByRole("complementary", { name: "Hoạt động tùy chọn" })).toBeNull();
+    expect(within(list).queryByRole("link", { name: /Ghi nhận thả giống|Thu hoạch/ })).toBeNull();
+    fireEvent.click(within(list).getByRole("button", { name: "Ghi nhận thả giống" }));
+    expect(onRecord).toHaveBeenCalledWith(expect.objectContaining({ key: "journey-seeding-record", screen: "seeding" }));
+    fireEvent.click(within(list).getByRole("button", { name: /Thu hoạch và hoàn tất làn|Ghi nhận thu hoạch/ }));
+    expect(onRecord).toHaveBeenLastCalledWith(expect.objectContaining({ key: "journey-harvest", screen: "harvest" }));
+  });
   it("puts the figures at a glance above the cards and keeps the closing step for the Tổng kết tab", async () => {
     mount("overview");
     const figuresRow = await screen.findByRole("list", { name: "Hành trình chu kỳ" }).then(() => screen.getByLabelText("Tiến độ chính của đợt nuôi"));
