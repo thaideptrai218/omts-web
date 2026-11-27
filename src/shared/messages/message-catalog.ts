@@ -26,7 +26,6 @@ export const messageCatalog = {
   "MSG-ACCOUNT-18": "Bạn đã yêu cầu quá nhiều mã. Hãy chờ hết thời gian giới hạn trước khi thử lại.",
   "MSG-ACCOUNT-19": "Mã xác minh đã được gửi tới liên hệ đã chọn và có hiệu lực trong 5 phút.",
   "MSG-ACCOUNT-20": "Nếu email hoặc số điện thoại thuộc tài khoản hợp lệ, mã xác minh sẽ được gửi tới liên hệ đó.",
-  "MSG-ACCOUNT-21": "Thiết lập thông báo đã được lưu. Thiết bị chưa cho phép nhận thông báo; hãy kiểm tra quyền thông báo trên ứng dụng di động.",
   "MSG-WATER-01": "Chưa đọc được pH và độ mặn từ ảnh. Hãy xem đồng hồ đo và nhập các giá trị còn thiếu.",
   "MSG-WATER-05": "Ngưỡng tối thiểu phải nhỏ hơn ngưỡng tối đa. Ngưỡng chưa được lưu; vui lòng sửa lại.",
   "MSG-PURCHASE-02": "Cần xác nhận chủ hợp tác xã đã đồng ý trực tiếp việc trả hàng này.",
@@ -82,11 +81,6 @@ export const messageCatalog = {
   MSG19: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   MSG20:
     "Bạn không thể tự thay đổi tên đăng nhập. Vui lòng liên hệ Chủ nhiệm HTX hoặc kênh hỗ trợ.",
-  MSG21:
-    "Kênh {channel_name} chưa được cấu hình hoặc chưa đủ điều kiện nên chưa thể bật.",
-  MSG22:
-    "Thiết bị đã từ chối nhận thông báo đẩy. Các kênh hợp lệ khác vẫn được lưu.",
-  MSG23: "Loại thông báo này là bắt buộc và không thể tắt.",
   MSG24:
     "Tài khoản này đã được liên kết với hồ sơ nhân viên {employee_name}.",
   MSG28: "Ngưỡng tối thiểu phải nhỏ hơn ngưỡng tối đa.",

@@ -42,7 +42,7 @@ try {
     const isOwner = username === "owner", isTrader = username === "thuonglai1", accountant = username === "ketoan";
     const zone = username === "quanlyvung2" ? zone2 : zone1, ownBusiness = !isTrader;
     const profile = (await c.check("/api/account/profile", 200)).data; assert.equal(profile.username, username);
-    await c.check("/api/auth/session", 200); await c.check("/api/account/notification-preferences", 200);
+    await c.check("/api/auth/session", 200);
     if (process.env.OMTS_QA_SALES_WORKFORCE === "1") {
       await c.check("/api/operations/sales-products", isOwner || isTrader ? 200 : 403);
       await c.check("/api/operations/sales-products?action=all", isOwner ? 200 : 403);

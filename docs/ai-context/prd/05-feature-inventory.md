@@ -11,8 +11,7 @@ Ký hiệu: Mock = có adapter mock; API = có adapter/contract API; T = số fi
 - **farming-zones** (T8): vùng nuôi và giấy tờ pháp lý dùng chung nhiều vùng; tạo, đổi tên, ngừng/kích hoạt; giấy tờ có bản thay thế, trạng thái hạn.
 - **rafts** (T8): bè nuôi; layout làn có phiên bản theo ngày; tình trạng làn theo ngày; ảnh JPEG/PNG; ngừng/kích hoạt. Không ngừng được khi còn chu kỳ mở (`open-cycle`) hoặc làn đang dùng (`lanes-in-use`).
 - **cooperative-profile** (T5) + **cooperative-api** (T2): hồ sơ HTX, ngành nghề, preview tên/địa chỉ, logo/cover, chứng nhận; validate MST `10 số[-3 số]`, link https, năm thành lập. **cooperative-provisioning** (T3, mock; API hiện "không có quyền"): SysAdmin tạo HTX + Owner.
-- **profile** (T13) + **personal-api** (T7): hồ sơ cá nhân, sửa tên có `rowVersion`, đổi liên hệ qua OTP, danh sách grant, thu hồi grant, tùy chọn thông báo.
-- **notification-preferences** (T3): theo category (`ORDERS, WORK, DEADLINE_REMINDERS, WATER_ALERTS, TRACEABILITY_QR_SENT, SALES_NOTICES`) × channel (`InApp, Push, Email, Zalo`). InApp và Push bắt buộc, chỉ đọc; lý do không đủ điều kiện: `EMAIL_NOT_VERIFIED`, `ZALO_NOT_CONFIGURED`, `NO_PUSH_DEVICE`.
+- **profile** (T13) + **personal-api** (T7): hồ sơ cá nhân, sửa tên có `rowVersion`, đổi liên hệ qua OTP, danh sách grant, thu hồi grant.
 - **account-recovery** (T6), **account-security** (T4), **registration** (T5): mock; API dùng `verification-api`/`personal-api`.
 - **verification** (T5, mock) + **verification-api** (T2): OTP email/SMS, đếm ngược gửi lại; `purpose ∈ registration|recovery|contact|password-email`, `channel ∈ Email|Sms`, phase `pending|code|verified|unknown|failed|done`; proof mã hóa trong Redis, gắn ngữ cảnh G1.
 - **dashboard** (T3): xem [07](07-dashboard.md).

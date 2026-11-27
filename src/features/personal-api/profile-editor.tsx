@@ -9,7 +9,6 @@ import { createVerificationRepository } from "@/features/verification-api/reposi
 import { VerificationPanel, verificationError } from "@/features/verification-api/verification-panel";
 import { subjectLabel } from "@/shared/presentation/actor-label";
 import { updateProfileRequestSchema, type ProfileViewDto } from "./contracts";
-import { NotificationApiDialog } from "./notification-dialog";
 import {
   ProfileContactsSection,
   ProfileGrantsSection,
@@ -26,11 +25,9 @@ import { createPersonalRepository } from "./repository";
  */
 export function PersonalApiEditor({
   initial,
-  onShowNotifications,
   onShowSecurity,
 }: {
   initial: ProfileViewDto;
-  onShowNotifications?(): void;
   onShowSecurity?(): void;
 }) {
   const repository = useMemo(() => createPersonalRepository(), []);
@@ -41,7 +38,6 @@ export function PersonalApiEditor({
   const [notice, setNotice] = useState<string>();
   const [latest, setLatest] = useState<ProfileViewDto>();
   const [discard, setDiscard] = useState(false);
-  const [notifications, setNotifications] = useState(false);
   // Verified (or failed) contact change waiting for "Lưu thay đổi".
   const [contactFlow, setContactFlow] = useState<VerificationView>();
   const [contactDialog, setContactDialog] = useState<ContactDialogRequest>();
@@ -270,14 +266,6 @@ export function PersonalApiEditor({
             Đổi mật khẩu
           </Link>
         )}
-        <Button
-          className="w-auto"
-          variant="secondary"
-          disabled={pending}
-          onClick={() => (onShowNotifications ? onShowNotifications() : setNotifications(true))}
-        >
-          Tùy chọn thông báo
-        </Button>
       </div>
       {(contactUncertain || profileRefreshRequired) && (
         <ContactReviewPanel
@@ -351,7 +339,6 @@ export function PersonalApiEditor({
           />
         </Dialog>
       )}
-      {notifications && <NotificationApiDialog onClose={() => setNotifications(false)} />}
     </div>
   );
 }
