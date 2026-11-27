@@ -1,6 +1,7 @@
 import { JourneyLine } from "@/features/public-site/journey-line";
 import site from "@/features/public-site/public-site.module.css";
 import { hiddenOnTrace, journey, scanSteps, shownOnTrace } from "./landing-content";
+import type { TraceExample } from "./landing-example";
 import s from "./landing-sections.module.css";
 
 export function LandingJourneySection() {
@@ -13,6 +14,32 @@ export function LandingJourneySection() {
           <p className={s.journeyNote}>Mốc ngày là ví dụ minh họa, mỗi lô nuôi dài ngắn khác nhau.</p>
         </div>
         <div className={s.journeyCard}><JourneyLine steps={journey} label="Các chặng của một lô hàu" /></div>
+      </div>
+    </section>
+  );
+}
+
+/** Con giống của lô mẫu, lấy từ ghi chép thả giống; không có lô thật thì không dựng mục này. */
+export function LandingSeedSection({ example }: { example: TraceExample }) {
+  const { seed } = example;
+  if (!seed) return null;
+  const rows = [
+    ["Loại giống", seed.itemName],
+    ...(seed.supplier ? [["Nhà cung cấp", seed.supplier] as const] : []),
+    ["Ngày thả giống", seed.date],
+    ["Thả tại", `Bè ${seed.raft}, ${seed.zone}`],
+    ["Lô thu hoạch", example.lot],
+  ] as const;
+  return (
+    <section id="con-giong" className={s.section} aria-labelledby="seed-title">
+      <div className={`${site.wrap} ${s.seedGrid}`}>
+        <div>
+          <h2 id="seed-title" className={site.heading}>Nguồn gốc con giống</h2>
+          <p className={site.sub}>Mỗi đợt giống nhận về đều được ghi nhà cung cấp, ngày nhận và số lượng. Nhờ vậy lô hàu thu hoạch truy ngược được về đúng đợt giống đã thả.</p>
+        </div>
+        <dl className={s.seedCard}>
+          {rows.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}
+        </dl>
       </div>
     </section>
   );

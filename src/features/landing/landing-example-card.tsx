@@ -20,6 +20,11 @@ export function LandingExampleCard({ example }: { example: TraceExample }) {
         <span className={s.facts}>
           {example.facts.map(([label, value]) => <span key={label}><small>{label}</small><b>{value}</b></span>)}
         </span>
+        {example.certificates.length ? (
+          <span className={s.certs}>
+            {example.certificates.map((cert) => <span key={cert.number}><small>{cert.name}</small><b>Số {cert.number}</b></span>)}
+          </span>
+        ) : null}
         {example.thumbs.length ? (
           <span className={s.thumbs}>
             {example.thumbs.map((src, index) => (

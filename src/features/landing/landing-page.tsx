@@ -6,7 +6,7 @@ import { SeaScene } from "@/features/public-site/sea-scene";
 import site from "@/features/public-site/public-site.module.css";
 import type { LandingData } from "@/server/public/landing-page-fetch";
 import { defaultImages, navLinks, type LandingImage } from "./landing-content";
-import { LandingJourneySection, LandingTraceSection } from "./landing-content-sections";
+import { LandingJourneySection, LandingSeedSection, LandingTraceSection } from "./landing-content-sections";
 import type { TraceExample } from "./landing-example";
 import { LandingHero } from "./landing-hero";
 import { LandingPressSection } from "./landing-press-section";
@@ -24,9 +24,9 @@ function imagesOf(data: LandingData | null, section: "Background" | "Press" | "G
 export function LandingPage({ data, example, signedIn = false }: Props) {
   const entry = signedIn ? { href: "/dashboard", label: "Vào hệ thống" } : { href: "/login", label: "Đăng nhập" };
   const press = imagesOf(data, "Press", defaultImages.press);
-  // Không có bài báo nào thì bỏ cả liên kết tới mục đó.
-  const links = navLinks.filter((l) => press.length || l.href !== "#bao-chi").map((l) => <a key={l.href} href={l.href}>{l.label}</a>);
-  const background = imagesOf(data, "Background", [{ url: defaultImages.background, caption: defaultImages.backgroundCredit }])[0];
+  // Mục không có nội dung thì bỏ cả liên kết tới mục đó.
+  const links = navLinks.filter((l) => (press.length || l.href !== "#bao-chi") && (example.seed || l.href !== "#con-giong")).map((l) => <a key={l.href} href={l.href}>{l.label}</a>);
+  const background = imagesOf(data, "Background", [{ url: defaultImages.background, caption: "" }])[0];
   return (
     <PublicFrame
       skipLabel="Bỏ qua, đến nội dung chính"
@@ -46,7 +46,8 @@ export function LandingPage({ data, example, signedIn = false }: Props) {
       )}
     >
       <LandingHero background={background.url} credit={background.caption} example={example} entry={entry} />
-      <LandingProductsSection products={data?.products ?? []} />
+      <LandingProductsSection products={data?.products ?? []} example={example} />
+      <LandingSeedSection example={example} />
       <LandingTraceGallerySection images={imagesOf(data, "Gallery", defaultImages.gallery)} exampleHref={example.href} />
       <LandingJourneySection />
       <LandingTraceSection />

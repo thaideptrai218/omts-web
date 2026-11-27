@@ -16,7 +16,7 @@ export function OriginLotTimeline({ lot, copy }: { lot: ProvenanceLot; copy: Ori
   const badge = (iso: string) => (first ? copy.dayBadge(dayNumber(iso, first)) : undefined);
   const steps: JourneyStep[] = [
     ...origin.seedings.map((seeding, index): JourneyStep => ({
-      key: `seed-${index}`, icon: "seeding", date: date(seeding.seedingDate), badge: badge(seeding.seedingDate), title: copy.seededStep, detail: seeding.seedItemName,
+      key: `seed-${index}`, icon: "seeding", date: date(seeding.seedingDate), badge: badge(seeding.seedingDate), title: copy.seededStep, detail: seeding.supplierName ? `${seeding.seedItemName}. ${copy.seedSupplier}: ${seeding.supplierName}` : seeding.seedItemName,
     })),
     { key: "harvest", icon: "harvest", date: date(origin.harvestDate), badge: badge(origin.harvestDate), title: copy.harvestStep },
   ];

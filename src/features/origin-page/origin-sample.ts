@@ -33,7 +33,7 @@ export function samplePage(cooperativeName: string): ProvenancePage {
         raftCode: "B03",
         zoneName: "Vùng nuôi mẫu, Vân Đồn",
         map: { latitude: 21.0712, longitude: 107.4321, source: "Raft" },
-        seedings: [{ seedingDate: "2026-03-26", seedItemName: "Giống hàu Thái Bình Dương" }],
+        seedings: [{ seedingDate: "2026-03-26", seedItemName: "Giống hàu Thái Bình Dương", supplierName: "Trại giống mẫu" }],
         daysOfFarming: 214,
         harvestPhotoUrls: [samplePhotos.harvest],
         raftPhotoUrls: [samplePhotos.ropes, samplePhotos.floats],

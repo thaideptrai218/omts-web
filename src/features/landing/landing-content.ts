@@ -4,6 +4,7 @@ import type { JourneyStep } from "@/features/public-site/journey-line";
 
 export const navLinks = [
   { href: "#san-pham", label: "Sản phẩm" },
+  { href: "#con-giong", label: "Con giống" },
   { href: "#xem-mau", label: "Truy xuất" },
   { href: "#hanh-trinh", label: "Hành trình" },
   { href: "#chung-nhan", label: "Chứng nhận" },
@@ -14,18 +15,17 @@ export type LandingImage = { url: string; caption: string };
 
 /**
  * Ảnh mặc định, đều từ Wikimedia Commons (nguồn ở /landing/nguon-anh.txt); chủ hợp tác xã đăng ảnh ở Cài đặt,
- * Trang giới thiệu thì thay thế. Mọi ảnh đều ghi nguồn; ảnh báo chí
- * mặc định là ảnh chụp bản tin VTV1 do hợp tác xã cung cấp.
+ * Trang giới thiệu thì thay thế. Không in nguồn trên ảnh; tác giả và giấy phép nằm ở liên kết "Nguồn ảnh"
+ * cuối trang (giấy phép CC BY bắt buộc, đừng bỏ liên kết). Ảnh báo chí mặc định là ảnh chụp bản tin VTV1.
  */
 export const defaultImages = {
   background: "/landing/mau/nen-lang-be.webp",
   press: [{ url: "/landing/mau/ban-tin-vtv1.webp", caption: "Bản tin Thời sự VTV1 tại Quảng Ninh. Nguồn: VTV1" }] as LandingImage[],
-  backgroundCredit: "Ảnh nền: Christophe95, CC BY-SA 4.0",
   gallery: [
-    { url: samplePhotos.floats, caption: "Khu nuôi hàu bè. Ảnh: Southern Vietnam, CC BY-SA 4.0" },
-    { url: samplePhotos.harvest, caption: "Hàu sau thu hoạch. Ảnh: H. Zell, CC BY-SA 3.0" },
-    { url: samplePhotos.ropes, caption: "Giàn bè trên vịnh. Ảnh: Christophe95, CC BY-SA 4.0" },
-    { url: "/landing/mau/vinh-bai-tu-long.webp", caption: "Vịnh Bái Tử Long. Ảnh: AnhTuan Le, phạm vi công cộng" },
+    { url: samplePhotos.floats, caption: "Khu nuôi hàu bè" },
+    { url: samplePhotos.harvest, caption: "Hàu sau thu hoạch" },
+    { url: samplePhotos.ropes, caption: "Giàn bè trên vịnh" },
+    { url: "/landing/mau/vinh-bai-tu-long.webp", caption: "Vịnh Bái Tử Long" },
   ] as LandingImage[],
   product: samplePhotos.harvest,
 };
@@ -43,6 +43,7 @@ export const shownOnTrace = [
   "Tên sản phẩm, giới thiệu sản phẩm và mã lô",
   "Vùng nuôi, bè và vị trí trên bản đồ",
   "Ngày thả giống, loại giống, ngày thu hoạch và số ngày nuôi",
+  "Tên nhà cung cấp con giống",
   "Ảnh thu hoạch và ảnh bè nuôi",
   "Thông tin hợp tác xã và các chứng nhận",
 ] as const;
