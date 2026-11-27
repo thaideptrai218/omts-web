@@ -1,4 +1,5 @@
 "use client";
+import { KctVatRow } from "@/features/purchase-documents/kct-vat-row";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -224,6 +225,7 @@ function Editor({ start, products }: { start: Start; products: ProductRow[] }) {
           <SideRow label="Giảm giá"><DiscountInput label="Giảm giá hóa đơn" base={totals.subtotal} value={discount} invalid={discount > totals.subtotal + otherCharges}
             onChange={(value) => { setDiscountValue(value); setDiscountTouched(true); setError(undefined); }} /></SideRow>
           <SideRow label="Chi phí khác"><MoneyInput label="Chi phí khác" value={otherCharges || null} onChange={(value) => { setOtherCharges(value); setError(undefined); }} /></SideRow>
+          <KctVatRow layout="side" />
           <SideRow label="Khách cần trả" strong>{fmt(totals.total)}</SideRow>
           {invoice ? <>
             <SideRow label="Đã thanh toán">{fmt(paid)}</SideRow>

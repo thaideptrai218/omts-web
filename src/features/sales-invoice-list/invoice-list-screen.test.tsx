@@ -70,6 +70,9 @@ describe("SalesInvoiceListScreen", () => {
     expect(screen.getAllByRole("link", { name: "DH000010" })).toHaveLength(2);
     expect(within(screen.getByRole("table", { name: "Dòng hàng của hóa đơn" })).getAllByRole("columnheader").map((h) => h.textContent)).toContain("Đơn vị");
     expect(screen.getByText("Giá đơn đặt hàng")).toBeTruthy();
+    const kct = within(screen.getByRole("region", { name: "Chi tiết HD000123" })).getByText("Thuế GTGT");
+    expect(kct.nextElementSibling?.textContent).toBe("KCT");
+    expect(kct.parentElement!.nextElementSibling?.textContent).toMatch(/^Khách cần trả/);
     fireEvent.click(screen.getByRole("tab", { name: "Lịch sử thanh toán" }));
     const payments = within(screen.getByRole("table", { name: "Thanh toán của hóa đơn" })); expect(payments.getByText("TT-001")).toBeTruthy(); expect(payments.getByText("Tiền mặt")).toBeTruthy(); expect(payments.getByText("Chờ xác nhận")).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Gửi hóa đơn" })); expect(screen.getByText("Tin nhắn SMS")).toBeTruthy();

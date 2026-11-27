@@ -2,6 +2,7 @@
 import { useToast } from "@/components/ui/toast-provider";
 import { useRouter } from "next/navigation";
 import { kindOfGroup, kindText, type StockKind } from "@/features/input-items/stock-kind";
+import { sumOf, vatOf, vatRateLabel } from "@/features/input-items/vat-rate";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -13,6 +14,7 @@ import { useActionDialog } from "@/components/ui/use-action-dialog";
 import type { WorkspaceResult } from "@/features/api-workspace/workspace-repository";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { EditorFrame, ItemFinder, MoneyInput, OverflowMenu, QuantityStepper, QuickSupplierDialog, SideRow, SupplierPicker, errorText, fmt, methodLabel, nowLocal, vnLocal, usePurchaseAccess, viDate } from "./document-parts";
+import { KctVatRow } from "./kct-vat-row";
 import { getReceipt, getReturn, removeReturn, saveReturn, usePurchaseLookups } from "./repository";
 import { UnitCell } from "./unit-cell";
 import { RETURN, baseUnitOf, goodsTotal, unitChoices, type ItemOption, type PaymentMethod, type PurchaseReturn, type Receipt } from "./types";
@@ -76,7 +78,8 @@ function Editor({ kind, lineId, record, receipt, lookups }: { kind: StockKind; l
   const [error, setError] = useState<string>(), [pending, setPending] = useState(false), [refunding, setRefunding] = useState(false), [addingSupplier, setAddingSupplier] = useState(false);
   const receiptLines = receipt?.lines.filter((line) => limit(line) > 0 || linked[line.id]) ?? [];
   const lines = receipt ? receiptLines.filter((line) => linked[line.id] > 0).map((line) => ({ receiptLineId: line.id, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: linked[line.id], unitPrice: prices[line.id] ?? line.netUnitPrice })) : free.map((line) => ({ receiptLineId: null, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: line.quantity, unitPrice: line.unitPrice }));
-  const total = goodsTotal(lines), due = total - discount, paid = refund?.amount ?? 0, overLimit = receiptLines.some((line) => (linked[line.id] ?? 0) > limit(line) + 1e-9);
+  // The VAT paid back with the goods: the value of each returned line x the rate of the receipt line it comes from (a seed is KCT, a standalone return has no rate).
+  const total = goodsTotal(lines), vatRefund = receipt ? sumOf(receiptLines.filter((line) => linked[line.id] > 0).map((line) => vatOf(Math.round(linked[line.id] * (prices[line.id] ?? line.netUnitPrice)), line.item.group === "Seed" ? "KCT" : line.vatRate))) : 0, due = total - discount + vatRefund, paid = refund?.amount ?? 0, overLimit = receiptLines.some((line) => (linked[line.id] ?? 0) > limit(line) + 1e-9);
   const suppliers = record && !lookups.suppliers.some((row) => row.id === record.supplier.id) ? [record.supplier, ...lookups.suppliers] : lookups.suppliers;
   const updateFree = (key: string, patch: Partial<FreeLine>) => setFree((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
 
@@ -110,10 +113,10 @@ function Editor({ kind, lineId, record, receipt, lookups }: { kind: StockKind; l
     {confirmation.dialog}
     <div className={styles.editorBody}>
       <div className={styles.linesPanel}>
-        {receipt ? <><table className={styles.lines}><thead><tr><th className={styles.narrow}>STT</th><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th className={styles.num}>Đã nhập</th><th className={styles.num}>Đã trả</th><th className={styles.num}>Đã gieo</th><th className={styles.num}>Số lượng trả</th><th className={styles.num}>Giá đã trả</th><th className={styles.num}>Giá trả lại</th><th className={styles.num}>Thành tiền</th></tr></thead>
+        {receipt ? <><table className={styles.lines}><thead><tr><th className={styles.narrow}>STT</th><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th className={styles.num}>Đã nhập</th><th className={styles.num}>Đã trả</th><th className={styles.num}>Đã gieo</th><th className={styles.num}>Số lượng trả</th><th className={styles.num}>Giá đã trả</th><th className={styles.num}>Giá trả lại</th>{kind === "Supply" && <th className={styles.num}>VAT (%)</th>}<th className={styles.num}>Thành tiền</th></tr></thead>
           <tbody>{receiptLines.map((line, index) => { const value = linked[line.id] ?? 0; return <tr key={line.id}><td className={styles.narrow}>{index + 1}</td><td className={styles.code}>{line.item.code}</td><td>{line.item.name}{line.seedLotCode && <span className={styles.sub}>Lô giống {line.seedLotCode}</span>}</td><td>{line.item.unit}</td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.returned / line.unitFactor)}</td><td className={styles.num}>{line.item.group === "Seed" ? fmt(line.seeded / line.unitFactor) : "—"}</td>
             <td className={styles.num}><QuantityStepper label={`số lượng trả dòng ${index + 1}`} max={limit(line)} invalid={value > limit(line)} value={value ? String(value) : ""} onChange={(next) => setLinked((current) => ({ ...current, [line.id]: Number(next.replace(",", ".")) || 0 }))} /><span className={styles.cap}>/{fmt(limit(line))}</span></td>
-            <td className={styles.num} title={line.discount ? `Đơn giá ${fmt(line.unitPrice)}, giảm ${fmt(line.discount)}/đơn vị và chia giảm giá phiếu` : undefined}>{fmt(line.netUnitPrice)}</td><td><MoneyInput label={`Giá trả lại dòng ${index + 1}`} className={styles.cellInput} value={prices[line.id] ?? line.netUnitPrice} onChange={(price) => setPrices((current) => ({ ...current, [line.id]: price }))} /></td><td className={styles.amount}>{fmt(Math.round(value * (prices[line.id] ?? line.netUnitPrice)))}</td></tr>; })}</tbody></table>
+            <td className={styles.num} title={line.discount ? `Đơn giá ${fmt(line.unitPrice)}, giảm ${fmt(line.discount)}/đơn vị và chia giảm giá phiếu` : undefined}>{fmt(line.netUnitPrice)}</td><td><MoneyInput label={`Giá trả lại dòng ${index + 1}`} className={styles.cellInput} value={prices[line.id] ?? line.netUnitPrice} onChange={(price) => setPrices((current) => ({ ...current, [line.id]: price }))} /></td>{kind === "Supply" && <td className={styles.num}>{vatRateLabel(line.vatRate)}</td>}<td className={styles.amount}>{fmt(Math.round(value * (prices[line.id] ?? line.netUnitPrice)))}</td></tr>; })}</tbody></table>
           <p className={styles.hint}>Số dưới ô số lượng là phần còn được trả = Đã nhập − Đã trả − Đã gieo. Đã gieo chỉ có trên dòng Giống.</p></>
           : <><table className={styles.lines}><thead><tr><th className={styles.narrow} /><th className={styles.narrow}>STT</th><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Giá trả lại</th><th className={styles.num}>Thành tiền</th></tr></thead>
             <tbody>{free.map((line, index) => <tr key={line.key}><td className={styles.narrow}><button type="button" className={styles.remove} aria-label={`Bỏ dòng ${index + 1}`} title="Bỏ dòng" onClick={() => setFree((current) => current.filter((row) => row.key !== line.key))}><InterfaceIcon name="trash" /></button></td><td className={styles.narrow}>{index + 1}</td><td className={styles.code}>{line.item.code}</td><td>{line.item.name}</td><td><UnitCell line={line} index={index} onPick={(unitId) => { const unit = unitChoices(line.item, { itemUnitId: line.itemUnitId, unit: line.unitName, unitFactor: line.unitFactor }).find((row) => row.id === unitId); if (unit) updateFree(line.key, { itemUnitId: unit.id, unitName: unit.name, unitFactor: unit.factor }); }} /></td>
@@ -130,6 +133,7 @@ function Editor({ kind, lineId, record, receipt, lookups }: { kind: StockKind; l
           <div className={styles.divider} />
           <SideRow label={`Tổng tiền hàng (${lines.length})`}>{fmt(total)}</SideRow>
           <SideRow label="Giảm giá"><DiscountInput label="Giảm giá phiếu trả" base={total} value={discount} invalid={discount > total} onChange={setDiscount} /></SideRow>
+          {kind === "Seed" ? <KctVatRow layout="side" label="Thuế GTGT hoàn lại" /> : <SideRow label="Thuế GTGT hoàn lại">{fmt(vatRefund)}</SideRow>}
           <SideRow label="Nhà cung cấp cần trả" strong>{fmt(due)}</SideRow>
           <SideRow label={<button type="button" className={styles.refundLink} onClick={() => setRefunding(true)}><InterfaceIcon name="payment" />Tiền nhà cung cấp trả</button>}><input readOnly aria-label="Tiền nhà cung cấp trả" value={fmt(paid)} onClick={() => setRefunding(true)} /></SideRow>
           {refund && paid > 0 && <p className={styles.sub}>{methodLabel[refund.method]}{refund.bankReference ? ` · ${refund.bankReference}` : ""}. Ghi nhận khi bấm Hoàn thành; Lưu tạm không giữ khoản này.</p>}

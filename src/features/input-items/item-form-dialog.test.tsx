@@ -119,3 +119,25 @@ it("keeps the loại hàu bán ra of a seed not yet used as a select", async () 
   expect((await screen.findByLabelText(/^Loại hàu bán ra/)).tagName).toBe("SELECT");
   expect(screen.queryByText("Giống đã dùng nên không đổi được loại hàu bán ra")).toBeNull();
 });
+
+it("starts a new supply item at 10% VAT mua vào, sends the rate picked, and keeps the seed form free of it", async () => {
+  repo.products.mockResolvedValue({ status: "success", data: [{ id: id(7), name: "Hàu béo" }] });
+  const { user } = await open();
+  const rate = screen.getByLabelText("VAT mua vào (%)") as HTMLSelectElement;
+  expect(rate.value).toBe("10");
+  expect(within(rate).getAllByRole("option").map((option) => option.textContent)).toEqual(["KCT", "0", "5", "8", "10"]);
+  await user.type(screen.getByLabelText("Tên hàng *"), "Phao nhựa");
+  await user.selectOptions(screen.getByLabelText("Đơn vị cơ bản"), id(3));
+  await user.selectOptions(rate, "8");
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await waitFor(() => expect(repo.save).toHaveBeenCalled());
+  expect(repo.save.mock.calls[0][0]).toMatchObject({ group: "Material", purchaseVatRate: "8" });
+  await user.selectOptions(screen.getByLabelText("Loại hàng"), "Seed");
+  expect(screen.queryByLabelText("VAT mua vào (%)")).toBeNull();
+});
+
+it("opens a supply item saved at KCT with KCT", async () => {
+  const record = { ...saved, purchaseVatRate: "KCT", units: [{ id: id(2), unitId: id(3), name: "cái", factor: 1, code: "VT000001-C", isBase: true, isUsed: false }], rowVersion: "v1", photos: [], hasMovements: false, openingQuantity: null } as never;
+  await open({ record });
+  expect((screen.getByLabelText("VAT mua vào (%)") as HTMLSelectElement).value).toBe("KCT");
+});

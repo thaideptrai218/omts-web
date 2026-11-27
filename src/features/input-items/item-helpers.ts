@@ -1,6 +1,7 @@
 import { foldVietnamese } from "@/shared/presentation/fold-text";
 import type { InputGroup, ItemRow, ItemView, UnitView } from "./contracts";
 import { kindOfGroup, receiptHref, returnHref } from "./stock-kind";
+import { DEFAULT_PURCHASE_VAT, isVatRate, type VatRate } from "./vat-rate";
 
 /** Pure parts of the catalogue screens: unit conversion, the form's values and the body of a save. */
 
@@ -45,6 +46,8 @@ export type UnitDraft = { key: string; id: string | null; unitId: string; factor
 export type FormValues = {
   code: string; name: string; group: string; itemGroupId: string; productId: string; maturityDays: string; description: string; notes: string;
   minQuantity: string; maxQuantity: string; costPrice: string; openingQuantity: string; units: UnitDraft[];
+  /** "VAT mua vào" of a supply item (a seed is always KCT and has no such field). */
+  purchaseVatRate: VatRate;
 };
 export const MAX_PHOTOS = 5;
 /** The most days a seed may take to mature (the API refuses more). */
@@ -62,6 +65,8 @@ export function initialValues(record: ItemView | null, copy: boolean): FormValue
     code: record && !copy ? record.code : "", name: record ? (copy ? `${record.name} (bản sao)` : record.name) : "", group: record?.group ?? "Material", itemGroupId: record?.itemGroupId ?? "", productId: record?.productId ?? "", maturityDays: text(record?.maturityDays),
     description: record?.description ?? "", notes: record?.notes ?? "", minQuantity: text(record?.minQuantity), maxQuantity: text(record?.maxQuantity), costPrice: text(record?.costPrice),
     openingQuantity: copy ? "" : text(record?.openingQuantity), units: units.sort((a, b) => Number(b.isBase) - Number(a.isBase)),
+    // A seed is always KCT and an API without the field sends none: a supply item then starts the form at the usual 10%.
+    purchaseVatRate: record?.group !== "Seed" && isVatRate(record?.purchaseVatRate) ? record.purchaseVatRate : DEFAULT_PURCHASE_VAT,
   };
 }
 
@@ -113,6 +118,7 @@ export function buildSaveBody(values: FormValues, record: ItemView | null): Reco
     code: blank(values.code), name: values.name.trim(), group: values.group, itemGroupId: values.itemGroupId || null, productId: values.group === "Seed" && values.productId ? values.productId : null, maturityDays: values.group === "Seed" ? parseNumber(values.maturityDays) : null, description: blank(values.description), notes: blank(values.notes),
     minQuantity: parseNumber(values.minQuantity), maxQuantity: parseNumber(values.maxQuantity), costPrice: parseNumber(values.costPrice),
     ...(openingChanged ? { openingQuantity: opening } : {}),
+    ...(values.group === "Seed" ? {} : { purchaseVatRate: values.purchaseVatRate }),
     units: values.units.map((unit) => ({ id: unit.id, unitId: unit.unitId, factor: unit.isBase ? 1 : parseNumber(unit.factor), code: blank(unit.code), isBase: unit.isBase })),
     ...(record ? { rowVersion: record.rowVersion } : {}),
   };

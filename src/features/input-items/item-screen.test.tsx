@@ -5,14 +5,14 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   context: { identity: { subjectType: "CooperativeOwner" }, permissions: { functionPermissions: [] as { functionCode: string; action: string }[] } },
-  list: vi.fn(), detail: vi.fn(), movements: vi.fn(), seedLots: vi.fn(), groups: vi.fn(), linked: "",
+  list: vi.fn(), setVat: vi.fn(), detail: vi.fn(), movements: vi.fn(), seedLots: vi.fn(), groups: vi.fn(), linked: "",
 }));
 vi.mock("@/features/api-workspace/api-workspace-shell", () => ({ useApiWorkspace: () => state.context }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.linked ? { code: state.linked } : {}), useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/features/purchase-documents/repository", () => ({ usePurchaseLookups: () => ({ suppliers: [], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }) }));
 vi.mock("./repository", async (original) => ({
   ...(await original<typeof import("./repository")>()),
-  inputRepository: { list: state.list, detail: state.detail, movements: state.movements, seedLots: state.seedLots, groups: state.groups, units: vi.fn(), nextCode: vi.fn(), save: vi.fn(), exportList: vi.fn(), exportMovements: vi.fn(), template: vi.fn(), import: vi.fn() },
+  inputRepository: { list: state.list, setPurchaseVat: state.setVat, detail: state.detail, movements: state.movements, seedLots: state.seedLots, groups: state.groups, units: vi.fn(), nextCode: vi.fn(), save: vi.fn(), exportList: vi.fn(), exportMovements: vi.fn(), template: vi.fn(), import: vi.fn() },
 }));
 import { ItemScreen } from "./item-screen";
 import { ToastProvider } from "@/components/ui/toast-provider";
@@ -26,6 +26,8 @@ const grant = (...pairs: [string, string][]) => { state.context.permissions.func
 const page = (patch: object = {}) => ({ status: "success", data: { items: [row], page: 1, pageSize: 15, total: 1, summary: { stockValue: 123456 }, ...patch } });
 
 beforeEach(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } });
   try { window.localStorage.clear(); } catch { /* storage may be unavailable */ }
   state.linked = ""; state.context.identity.subjectType = "CooperativeOwner"; grant();
   state.list.mockResolvedValue(page());
@@ -120,4 +122,54 @@ it("offers the seed lots tab only for a seed item", async () => {
   await user.click(await screen.findByText("Phao nhựa"));
   await user.click(await screen.findByRole("tab", { name: "Lô giống" }));
   await waitFor(() => expect(state.seedLots).toHaveBeenCalledWith(id(1), expect.anything()));
+});
+
+const seedRow = { ...row, id: id(9), code: "GG000001", name: "Hàu giống 3 cm", group: "Seed", purchaseVatRate: "KCT" };
+
+it("shows the VAT mua vào of each item, KCT for a seed and a dash when the API sends none, and filters the list by it", async () => {
+  state.list.mockResolvedValue(page({ items: [{ ...row, purchaseVatRate: "8" }, seedRow, { ...row, id: id(8), code: "VT000002", name: "Dây thừng" }], total: 3 }));
+  const user = userEvent.setup();
+  render(<ToastProvider><ItemScreen /></ToastProvider>);
+  await screen.findByText("Phao nhựa");
+  expect(within(screen.getByText("Phao nhựa").closest("tr")!).getByText("8%")).toBeTruthy();
+  expect(within(screen.getByText("Hàu giống 3 cm").closest("tr")!).getByText("KCT")).toBeTruthy();
+  expect(within(screen.getByText("Dây thừng").closest("tr")!).getByText("—")).toBeTruthy();
+  await user.click(screen.getByRole("radio", { name: "10%" }));
+  await waitFor(() => expect(state.list.mock.calls.at(-1)![0]).toMatchObject({ purchaseVatRate: "10" }));
+});
+
+it("changes the VAT mua vào of the ticked items at once, leaves a seed unticked, and tells it with a toast", async () => {
+  state.list.mockResolvedValue(page({ items: [{ ...row, purchaseVatRate: "10" }, seedRow, { ...row, id: id(8), code: "VT000002", name: "Dây thừng", purchaseVatRate: "10" }], total: 3 }));
+  state.setVat.mockResolvedValue({ status: "success", data: { updated: 2 } });
+  const user = userEvent.setup();
+  render(<ToastProvider><ItemScreen /></ToastProvider>);
+  await screen.findByText("Phao nhựa");
+  expect((screen.getByLabelText("Chọn Hàu giống 3 cm") as HTMLInputElement).disabled).toBe(true);
+  expect(screen.queryByRole("region", { name: "Thao tác hàng loạt" })).toBeNull();
+  await user.click(screen.getByLabelText("Chọn tất cả trên trang"));
+  expect(within(screen.getByRole("region", { name: "Thao tác hàng loạt" })).getByText("Đã chọn 2")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Đổi VAT mua vào" }));
+  const dialog = await screen.findByRole("dialog");
+  await user.selectOptions(within(dialog).getByLabelText("VAT mua vào"), "8");
+  await user.click(within(dialog).getByRole("button", { name: "Thay đổi" }));
+  await waitFor(() => expect(state.setVat).toHaveBeenCalledWith([id(1), id(8)], "8"));
+  expect(await screen.findByText("Đã đổi VAT mua vào của 2 vật tư thành 8%.")).toBeTruthy();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Thao tác hàng loạt" })).toBeNull());
+});
+
+it("keeps the dialog open with the message when the bulk change fails, and offers no bulk change to a staff account", async () => {
+  state.setVat.mockResolvedValue({ status: "error", httpStatus: 400, code: "MSG-GEN-01", uncertain: false });
+  const user = userEvent.setup();
+  const { unmount } = render(<ToastProvider><ItemScreen /></ToastProvider>);
+  await screen.findByText("Phao nhựa");
+  await user.click(screen.getByLabelText("Chọn Phao nhựa"));
+  await user.click(screen.getByRole("button", { name: "Đổi VAT mua vào" }));
+  await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Thay đổi" }));
+  expect((await within(screen.getByRole("dialog")).findByRole("alert")).textContent).toMatch(/chưa hợp lệ/);
+  unmount();
+  state.context.identity.subjectType = "Staff";
+  grant(["PURCHASE_RECEIPTS", "View"]);
+  render(<ToastProvider><ItemScreen /></ToastProvider>);
+  await screen.findByText("Phao nhựa");
+  expect(screen.queryByLabelText("Chọn Phao nhựa")).toBeNull();
 });

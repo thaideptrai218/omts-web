@@ -12,10 +12,12 @@ import { PersonPicker } from "@/components/ui/management-screen/person-picker";
 import { ListStateMessage, Subtabs, managementStyles } from "@/components/ui/management-screen/management-table";
 import { useActionDialog } from "@/components/ui/use-action-dialog";
 import { itemHref as itemLink, kindText, returnHref, seedLotsHref } from "@/features/input-items/stock-kind";
+import { vatRateLabel } from "@/features/input-items/vat-rate";
 import { ErrorNotice, Skeleton, useRemote } from "@/features/operations/ui";
 import { SeedLotStateBadge, combinedSeedLotState } from "@/features/seed-lots/seed-lot-state";
 import listStyles from "@/features/suppliers-api/suppliers.module.css";
 import { errorText, fmt, methodLabel, nowLocal, viDate, viDateTime, vnLocal, type usePurchaseAccess } from "./document-parts";
+import { KctVatRow } from "./kct-vat-row";
 import { PriceSetupDialog } from "./price-setup-dialog";
 import { ReceiptStatus } from "./receipts-screen";
 import { cancelReceipt, getReceipt, getReceiptPayments, previewCancelReceipt, removeReceipts, saveReceipt, usePurchaseLookups } from "./repository";
@@ -78,15 +80,15 @@ export function InfoTab({ receipt, header, editable, onHeader, headTools }: { re
       {receipt.returns.some((item) => item.statusId === RETURN.recorded) && <div><span>Mã trả hàng:</span><span className={styles.codeList}>{receipt.returns.filter((item) => item.statusId === RETURN.recorded).map((item) => <Link key={item.id} className={styles.link} href={returnHref(item.code, receipt.kind)}>{item.code}</Link>)}</span></div>}
       {receipt.cancelReason && <div><span>Lý do hủy:</span><span className={styles.danger}>{receipt.cancelReason}</span></div>}
     </div>
-    <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>Mã hàng</th><th>Tên hàng</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Đơn giá</th><th className={styles.num}>Giảm giá</th><th className={styles.num}>Giá nhập</th><th className={styles.num}>Thành tiền</th></tr></thead>
+    <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>Mã hàng</th><th>Tên hàng</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Đơn giá</th><th className={styles.num}>Giảm giá</th><th className={styles.num}>Giá nhập</th><th className={styles.num}>VAT (%)</th><th className={styles.num}>Thành tiền</th></tr></thead>
       <tbody>
-        <tr className={styles.lineSearch}><td style={{ width: 140 }}><input type="search" aria-label="Tìm mã hàng" placeholder="Tìm mã" value={codeTerm} onChange={(event) => setCodeTerm(event.target.value)} /></td><td><input type="search" aria-label="Tìm tên hàng" placeholder="Tìm tên hàng" value={nameTerm} onChange={(event) => setNameTerm(event.target.value)} /></td><td colSpan={5} /></tr>
+        <tr className={styles.lineSearch}><td style={{ width: 140 }}><input type="search" aria-label="Tìm mã hàng" placeholder="Tìm mã" value={codeTerm} onChange={(event) => setCodeTerm(event.target.value)} /></td><td><input type="search" aria-label="Tìm tên hàng" placeholder="Tìm tên hàng" value={nameTerm} onChange={(event) => setNameTerm(event.target.value)} /></td><td colSpan={6} /></tr>
         {shown.map((line) => <tr key={line.id}>
           <td>{line.item.id ? <Link className={styles.link} href={itemHref(line.item.code, line.item.group)}>{line.item.code}</Link> : line.item.code}</td>
           <td>{line.item.name} <span className={styles.sub}>{line.item.unit}{line.seedLotCode ? <> · Lô giống <Link className={styles.link} href={seedLotsHref(line.seedLotCode)}>{line.seedLotCode}</Link></> : ""}{line.seedLot ? <> · <SeedLotStateBadge state={line.seedLot.state} />{line.seedLot.remainingQty > 0 ? ` còn ${fmt(line.seedLot.remainingQty)}` : ""}</> : ""}{line.supplierLotCode ? ` · Lô NCC ${line.supplierLotCode}` : ""}</span></td>
           <td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}>{line.discount ? fmt(line.discount) : ""}</td>
-          <td className={styles.num}>{fmt((line.unitPrice ?? 0) - line.discount)}</td><td className={styles.num}><strong>{fmt(lineAmount(line))}</strong></td></tr>)}
-        {!shown.length && <tr><td colSpan={7} className={styles.empty}>Không có dòng hàng phù hợp.</td></tr>}
+          <td className={styles.num}>{fmt((line.unitPrice ?? 0) - line.discount)}</td><td className={styles.num}>{vatRateLabel(line.vatRate)}</td><td className={styles.num}><strong>{fmt(lineAmount(line))}</strong></td></tr>)}
+        {!shown.length && <tr><td colSpan={8} className={styles.empty}>Không có dòng hàng phù hợp.</td></tr>}
       </tbody></table></div>
     <div className={styles.foot}>
       <textarea className={styles.noteEdit} aria-label="Ghi chú" placeholder="Ghi chú..." readOnly={!editable} maxLength={2000} value={header.notes} onChange={(event) => onHeader({ notes: event.target.value })} />
@@ -94,6 +96,7 @@ export function InfoTab({ receipt, header, editable, onHeader, headTools }: { re
         <div><span>Số lượng mặt hàng</span><span>{receipt.lines.length}</span></div>
         <div><span>Tổng tiền hàng ({fmt(quantity)})</span><span>{fmt(goods)}</span></div>
         <div><span>Giảm giá{unitDiscounts ? " phiếu" : ""}</span><span>{fmt(receipt.discount)}</span></div>
+        {receipt.kind === "Seed" ? <KctVatRow layout="sum" /> : <div><span>Thuế GTGT</span><span>{fmt(receipt.vatTotal)}</span></div>}
         <div className={styles.strong}><span>Tổng cộng</span><span>{fmt(receipt.payable)}</span></div>
         {receipt.statusId === RECEIPT.completed && <div><span>Tiền đã trả NCC</span><span>{fmt(receipt.paid)}</span></div>}
       </div>
@@ -137,7 +140,7 @@ function Actions({ receipt, access, header, onChanged, onSaved }: { receipt: Rec
     if (!header) return;
     setPending(true); setError(undefined);
     const result = await saveReceipt({ id: receipt.id, rowVersion: receipt.rowVersion, code: receipt.code, receivedAt: header.receivedAt, receivedById: header.receivedById, supplierId: receipt.supplier.id, discount: receipt.discount, notes: header.notes,
-      lines: receipt.lines.map((line) => ({ lineId: line.id, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "" })) }, false);
+      lines: receipt.lines.map((line) => ({ lineId: line.id, itemId: line.item.id, itemUnitId: line.itemUnitId, quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, supplierLotCode: line.supplierLotCode ?? "", vatRate: line.item.group === "Seed" ? null : line.vatRate })) }, false);
     setPending(false);
     if (result.status === "success") { notify({ tone: "success", title: `Đã lưu phiếu ${receipt.code}.` }); onSaved(); } else setError(errorText(result));
   }

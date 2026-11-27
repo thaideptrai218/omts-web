@@ -4,7 +4,11 @@ import { z } from "zod";
 const amount = z.number(), quantity = z.number().nullable(), date = z.iso.date();
 
 /** Số lượng chỉ có khi gộp theo mặt hàng (đơn vị gốc); gộp theo nhà cung cấp trả null. */
-const figures = { receiptCount: z.number().int(), returnCount: z.number().int(), receivedValue: amount, returnedValue: amount, netValue: amount, receivedQuantity: quantity, returnedQuantity: quantity };
+/**
+ * `receivedValue` is the goods alone (Tiền hàng); `vatAmount` is the input VAT of the receipts, less the VAT paid back on returns; `netValue` (Tổng trả NCC) includes it.
+ * An API without input VAT sends no `vatAmount`, which reads as 0.
+ */
+const figures = { receiptCount: z.number().int(), returnCount: z.number().int(), receivedValue: amount, returnedValue: amount, vatAmount: amount.nullish(), netValue: amount, receivedQuantity: quantity, returnedQuantity: quantity };
 
 export const purchaseGroupBy = ["supplier", "item"] as const;
 export type PurchaseGroupBy = typeof purchaseGroupBy[number];

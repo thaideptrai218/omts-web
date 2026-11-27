@@ -1,4 +1,5 @@
 "use client";
+import { KctVatRow } from "@/features/purchase-documents/kct-vat-row";
 import { ApproxKg } from "@/components/ui/approx-kg";
 import { kgPerCageOfUnit } from "@/shared/format/approx-kg";
 import Link from "next/link";
@@ -91,6 +92,7 @@ function InfoTab({ order }: { order: OrderView }) {
       <div className={styles.sums}>
         <div><span>Tổng tiền hàng ({order.lines.length})</span><span>{fmt(order.subtotal)}</span></div>
         <div><span>Giảm giá</span><span>{fmt(order.discount)}</span></div>
+        <KctVatRow layout="sum" />
         <div className={styles.strong}><span>Khách cần trả</span><span>{fmt(order.total)}</span></div>
         <div><span>Khách đã trả</span><span>{fmt(order.customerPaid)}</span></div>
         {order.advanceReserved && <div><span>Tiền ứng giữ riêng cho đơn</span><span>{fmt(order.advanceLeft)}</span></div>}

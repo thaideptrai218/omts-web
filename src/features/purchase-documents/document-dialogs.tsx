@@ -7,8 +7,10 @@ import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { StatusPill } from "@/components/ui/management-page";
 import { ListStateMessage, managementStyles } from "@/components/ui/management-screen/management-table";
 import { kindText, receiptHref, returnHref } from "@/features/input-items/stock-kind";
+import { vatRateLabel } from "@/features/input-items/vat-rate";
 import { Skeleton, useRemote } from "@/features/operations/ui";
 import { fmt, methodLabel, usePurchaseAccess, viDateTime, vnLocal } from "./document-parts";
+import { KctVatRow } from "./kct-vat-row";
 import { InfoTab, itemHref, supplierHref } from "./receipt-detail";
 import { getReceipt, getReturn } from "./repository";
 import { RECEIPT, RETURN, goodsTotal, returnStatusLabel } from "./types";
@@ -55,10 +57,10 @@ export function ReturnViewDialog({ id, onClose }: { id: string; onClose(): void 
           {item.receipt && <div><span>Phiếu nhập:</span><Link className={styles.link} href={receiptHref(item.receipt.code, item.kind)}>{item.receipt.code}</Link></div>}
           {item.refund && <div><span>NCC trả tiền:</span><strong>{item.refund.code} · {methodLabel[item.refund.method]}</strong></div>}
         </div>
-        <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>Mã hàng</th><th>Tên hàng</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Giá trả lại</th><th className={styles.num}>Thành tiền</th></tr></thead>
-          <tbody>{item.lines.map((line) => <tr key={line.id}><td><Link className={styles.link} href={itemHref(line.item.code, line.item.group)}>{line.item.code}</Link></td><td>{line.item.name} <span className={styles.sub}>{line.item.unit}</span></td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}><strong>{fmt(Math.round(line.quantity * line.unitPrice))}</strong></td></tr>)}</tbody></table></div>
+        <div className={styles.innerScroll}><table className={styles.inner}><thead><tr><th>Mã hàng</th><th>Tên hàng</th><th className={styles.num}>Số lượng</th><th className={styles.num}>Giá trả lại</th><th className={styles.num}>VAT (%)</th><th className={styles.num}>Thành tiền</th></tr></thead>
+          <tbody>{item.lines.map((line) => <tr key={line.id}><td><Link className={styles.link} href={itemHref(line.item.code, line.item.group)}>{line.item.code}</Link></td><td>{line.item.name} <span className={styles.sub}>{line.item.unit}</span></td><td className={styles.num}>{fmt(line.quantity)}</td><td className={styles.num}>{fmt(line.unitPrice)}</td><td className={styles.num}>{vatRateLabel(line.vatRate)}</td><td className={styles.num}><strong>{fmt(Math.round(line.quantity * line.unitPrice))}</strong></td></tr>)}</tbody></table></div>
         <div className={styles.foot}><p className={styles.noteBox}>{item.reason || "Chưa có lý do trả hàng."}</p>
-          <div className={styles.sums}><div><span>Tổng tiền hàng</span><span>{fmt(goodsTotal(item.lines))}</span></div><div><span>Giảm giá</span><span>{fmt(item.discount)}</span></div><div className={styles.strong}><span>NCC cần trả</span><span>{fmt(item.netValue)}</span></div><div><span>Tiền NCC đã trả</span><span>{fmt(item.refund?.amount ?? 0)}</span></div></div></div>
+          <div className={styles.sums}><div><span>Tổng tiền hàng</span><span>{fmt(goodsTotal(item.lines))}</span></div><div><span>Giảm giá</span><span>{fmt(item.discount)}</span></div>{item.kind === "Seed" ? <KctVatRow layout="sum" label="Thuế GTGT hoàn lại" /> : <div><span>Thuế GTGT hoàn lại</span><span>{fmt(item.vatRefund)}</span></div>}<div className={styles.strong}><span>NCC cần trả</span><span>{fmt(item.netValue)}</span></div><div><span>Tiền NCC đã trả</span><span>{fmt(item.refund?.amount ?? 0)}</span></div></div></div>
         <footer className={styles.dialogFoot}>
           <Button className="w-auto" variant="secondary" onClick={onClose}>Đóng</Button>
           {access.edit && item.statusId !== RETURN.cancelled && <Link className={styles.primaryLink} href={`${kindText[item.kind].returnsPath}/${item.id}/edit`}><InterfaceIcon name="pencil" />Mở phiếu</Link>}

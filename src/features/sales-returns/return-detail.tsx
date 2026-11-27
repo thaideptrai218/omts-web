@@ -1,4 +1,5 @@
 "use client";
+import { KctVatRow } from "@/features/purchase-documents/kct-vat-row";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -68,6 +69,7 @@ function InfoTab({ item }: { item: ReturnView }) {
       <div className={styles.sums}>
         <div><span>Hàng bán lại</span><span>{kgText(backForSale)}</span></div>
         <div><span>Hàng hủy bỏ</span><span>{kgText(discarded)}</span></div>
+        <KctVatRow layout="sum" />
         <div className={styles.strong}><span>Giá trị phiếu trả</span><span>{fmt(item.value)}</span></div>
         {recorded && <div><span>Tính vào công nợ khách</span><span>{fmt(-item.value)}</span></div>}
       </div>

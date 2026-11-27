@@ -1,4 +1,5 @@
 "use client";
+import { KctVatRow } from "@/features/purchase-documents/kct-vat-row";
 import Link from "next/link";
 import { useState } from "react";
 import { customerHref } from "@/features/customers/customer-links";
@@ -55,6 +56,7 @@ export function InvoiceInfoTab({ invoice }: { invoice: InvoiceDetail }) {
         <div><span>Giảm giá</span><span>{fmt(invoice.discount)}</span></div>
         <div><span>Chi phí khác</span><span>{fmt(invoice.otherCharges)}</span></div>
         {invoice.priceCutTotal > 0 && <div><span>Giảm giá sau khiếu nại</span><span>{fmt(invoice.priceCutTotal)}</span></div>}
+        <KctVatRow layout="sum" />
         <div className={styles.strong}><span>Khách cần trả</span><span>{fmt(invoice.total)}</span></div>
         {debt && invoice.statusId === INVOICE.completed && <><div><span>Đã thanh toán</span><span>{fmt(debt.covered)}</span></div><div><span>Còn phải thu</span><span>{fmt(debt.unpaid)}</span></div></>}
       </div>

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { productHref } from "@/features/products/product-helpers";
 import { itemTypes, type ItemType, type InputGroup, type InputUnit, type ItemView } from "./contracts";
 import { kindGroups, type StockKind } from "./stock-kind";
+import { vatRateChoices, type VatRate } from "./vat-rate";
 import { MAX_PHOTOS, buildSaveBody, groupLabel, groupTree, initialValues, validateForm, type FormValues } from "./item-helpers";
 import { NameDialog, UnitFields } from "./item-unit-fields";
 import { errorText, inputRepository, problemText } from "./repository";
@@ -166,6 +167,10 @@ export function ItemFormDialog({ record, copy, group, kind, onClose, onSaved }: 
       <CollapsibleSection title="Quy cách và giá vốn" description="Đơn vị cơ bản, các đơn vị quy đổi (vd. 1 thùng = 10 cái), mã và giá vốn của từng đơn vị." columns={1}>
         <UnitFields units={values.units} catalog={unitList} itemCode={values.code || nextCode} baseLocked={baseLocked} costPrice={values.costPrice}
           onChange={(next) => setValues((current) => ({ ...current, units: next }))} onCostChange={(costPrice) => setValues((current) => ({ ...current, costPrice }))} onCreate={(rowKey) => setCreating({ kind: "unit", rowKey })} />
+        {!isSeed && <div>
+          <Select label="VAT mua vào (%)" value={values.purchaseVatRate} onChange={(event) => setValues((current) => ({ ...current, purchaseVatRate: event.target.value as VatRate }))}>{vatRateChoices.map(([rate, label]) => <option key={rate} value={rate}>{label}</option>)}</Select>
+          <p className={styles.hint}>Phiếu nhập lấy mức này cho từng dòng và sửa được theo hóa đơn của nhà cung cấp. Thuế mua vào không được khấu trừ nên cộng vào giá vốn.</p>
+        </div>}
       </CollapsibleSection>
       </> : <div className={styles.formGrid}>
         <div className={styles.wide}><Note label="Mô tả" maxLength={2000} value={values.description} onChange={set("description")} /></div>

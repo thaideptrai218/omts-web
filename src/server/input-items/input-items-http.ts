@@ -8,6 +8,7 @@ import { readBackendResponse } from "../backend/backend-response";
 import { sameEmployeeSession } from "../employees/employee-session";
 import { readBoundedBytes } from "../operations/bounded-body";
 import { idList } from "../operations/sales-report-plan";
+import { vatRate } from "@/features/input-items/vat-rate";
 
 /**
  * The browser's door to the Vật tư & Giống module: the item catalogue (api/farming-input-items), its units, groups, settings and issue types,
@@ -30,7 +31,7 @@ const issueExport: Access = { any: [["INPUT_ISSUES", "Export"], ["INPUT_DISPOSAL
 const usageIssueAccess = (action: string): Access => ({ any: [["INPUT_ISSUES", action]] });
 
 /** `kind` (Seed | Supply) is the split of the catalogue into the Giống and the Vật tư screens; `group` narrows within it. */
-const itemFilters = ["search", "kind", "group", "itemGroupId", "stock", "supplierId", "createdFrom", "createdTo", "status", "sortBy", "sortDir"] as const;
+const itemFilters = ["search", "kind", "group", "itemGroupId", "stock", "supplierId", "purchaseVatRate", "createdFrom", "createdTo", "status", "sortBy", "sortDir"] as const;
 const issueFilters = ["search", "kind", "status", "from", "to", "zoneId", "zoneIds", "raftId", "issueTypeId", "createdById", "receiverId", "sortBy", "sortDir"] as const;
 const paging = ["page", "pageSize"] as const;
 
@@ -79,6 +80,8 @@ const itemBody = z.strictObject({
   code, name: z.string().max(200), group: z.enum(["Seed", "Material", "Other"]), itemGroupId: id.nullable().optional(), description: text(2000), notes: text(2000),
   // "Loại hàu bán ra" of a seed item; a PUT replaces the whole item, so null clears the link (the API ignores it for other groups).
   productId: id.nullable().optional(),
+  // "VAT mua vào" of a supply item (the API keeps a seed at KCT whatever is sent); left out, a new item takes 10%.
+  purchaseVatRate: vatRate.optional(),
   // Thời gian trưởng thành (ngày) của giống; null với vật tư.
   maturityDays: z.number().int().min(1).max(3650).nullable().optional(),
   minQuantity: nonNegative, maxQuantity: nonNegative, costPrice: nonNegative, openingQuantity: nonNegative, units: z.array(unitRow).min(1).max(20).optional(), unit: text(30), rowVersion: rowVersion.optional(),
@@ -97,6 +100,7 @@ const write = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("item-create"), body: itemBody }),
   z.strictObject({ action: z.literal("item-update"), id, body: itemBody.required({ rowVersion: true }) }),
   z.strictObject({ action: z.enum(["item-discontinue", "item-resume", "item-delete"]), id }),
+  z.strictObject({ action: z.literal("item-purchase-vat-rate"), body: z.strictObject({ itemIds: z.array(id).min(1).max(500), purchaseVatRate: vatRate }) }),
   z.strictObject({ action: z.literal("item-photo-remove"), id, photoId: id }),
   z.strictObject({ action: z.literal("seed-lot-delete"), id, lotId: id }),
   z.strictObject({ action: z.enum(["unit-create", "issue-type-create"]), body: nameBody }),
@@ -123,6 +127,7 @@ function planWrite(p: z.infer<typeof write>): Plan {
     case "item-discontinue": return { path: `${F}/${p.id}/discontinue`, method: "POST", access: ownerOnly, schema: c.itemView, expectedId: p.id };
     case "item-resume": return { path: `${F}/${p.id}/resume`, method: "POST", access: ownerOnly, schema: c.itemView, expectedId: p.id };
     case "item-delete": return { path: `${F}/${p.id}`, method: "DELETE", access: ownerOnly, schema: c.removedItem };
+    case "item-purchase-vat-rate": return { path: `${F}/purchase-vat-rate`, method: "POST", access: ownerOnly, schema: c.purchaseVatUpdated, body: p.body };
     case "item-photo-remove": return { path: `${F}/${p.id}/photos/${p.photoId}`, method: "DELETE", access: ownerOnly, schema: c.itemView, expectedId: p.id };
     case "seed-lot-delete": return { path: `${F}/${p.id}/seed-lots/${p.lotId}`, method: "DELETE", access: ownerOnly, schema: c.removedItem };
     case "unit-create": return { path: "/api/input-units", method: "POST", access: ownerOnly, schema: c.inputUnit, body: p.body };
@@ -172,6 +177,7 @@ export async function handleInputItems(request: Request) {
       const ref = { id: guid(refId) };
       if (refId && !ref.id || needsId.has(action) && !ref.id) return json({ status: "invalid-input", code: "MSG01" }, 400);
       for (const name of ["itemGroupId", "supplierId", "zoneId", "raftId", "issueTypeId", "createdById", "receiverId"]) if (rest[name] && !guid(rest[name])) return json({ status: "invalid-input", code: "MSG01" }, 400);
+      if (rest.purchaseVatRate && !vatRate.safeParse(rest.purchaseVatRate).success) return json({ status: "invalid-input", code: "MSG01" }, 400);
       if (rest.zoneIds && (!idList.safeParse(rest.zoneIds).success || rest.zoneId)) return json({ status: "invalid-input", code: "MSG01" }, 400);
       plan = reads[action](rest, ref);
     } else if (request.method === "POST") {
