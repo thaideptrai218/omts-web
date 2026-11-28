@@ -27,9 +27,15 @@ export function currentStateText(cycle: RaftCurrentCycle | null): string {
     ...(lanes ? [laneSummaryText(lanes).text, ...(lanes.notSeeded > 0 ? [`${lanes.notSeeded} chưa thả`] : [])] : [])].join(" · ");
 }
 
-/** Phase of the raft in words for the list, from its lane counts alone (the list carries no cycle). */
-export function lanePhaseLabel(summary: RaftLaneSummary): { label: string; active: boolean } {
-  if (summary.farming > 0) return { label: "Đang nuôi", active: true };
-  if (summary.harvested > 0) return { label: "Đã thu xong", active: false };
-  return { label: "Chưa nuôi", active: false };
+export type CyclePhase = { label: string; tone: "success" | "info" | "neutral" };
+/**
+ * Phase of the raft for the list, from its open cycle and its lane counts: no open cycle → "Chưa có chu kỳ"; an open cycle with lanes farming → "Đang nuôi"; every lane
+ * harvested while the cycle is still open → "Đã thu xong"; an open cycle with nothing seeded yet → "Chờ thả giống". A raft with no cycle is not "chưa nuôi": it may be
+ * between cycles or stopped for repair.
+ */
+export function cyclePhaseLabel(hasOpenCycle: boolean, summary: RaftLaneSummary | null | undefined): CyclePhase {
+  if (!hasOpenCycle) return { label: "Chưa có chu kỳ", tone: "neutral" };
+  if (summary && summary.farming > 0) return { label: "Đang nuôi", tone: "success" };
+  if (summary && summary.harvested > 0) return { label: "Đã thu xong", tone: "neutral" };
+  return { label: "Chờ thả giống", tone: "info" };
 }

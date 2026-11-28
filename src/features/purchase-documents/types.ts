@@ -21,7 +21,10 @@ export type RaftOption = { id: string; code: string; zoneId: string; zoneName: s
 /** One unit an item is counted in: `factor` base units make one of it (the base unit is 1). */
 export type ItemUnit = { id: string; name: string; factor: number; code: string; isBase: boolean };
 /** `basePrice` is the price a new receipt line suggests per base unit: the last purchase price, else the cost price; null when the item has neither. */
-export type ItemOption = { id: string; code: string; name: string; unit: string; group: ItemGroup; units: ItemUnit[]; basePrice?: number | null };
+/** `purchaseVatRateId` and `purchaseVatPercent`: the VAT mua vào a new receipt line of the item starts with (null when the API sends none; no percent means KCT). */
+export type ItemOption = { id: string; code: string; name: string; unit: string; group: ItemGroup; units: ItemUnit[]; basePrice?: number | null; purchaseVatRateId?: string | null; purchaseVatRateName?: string | null; purchaseVatPercent?: number | null };
+/** The rate of a document line as it was when the line was made: no rate at all on a line made before input VAT; no percent means KCT. */
+export type LineVatRate = { vatRateId: string | null; vatRateName: string | null; vatPercent: number | null };
 /** The units a line may pick from; an item missing from the catalogue lists (discontinued) keeps just the unit its line already has. */
 export function unitChoices(item: ItemOption, current?: { itemUnitId: string | null; unit: string; unitFactor: number }): ItemUnit[] {
   if (item.units.length) return item.units;
@@ -39,7 +42,9 @@ export type ReceiptLine = {
   supplierLotCode: string | null; seedLotCode: string | null; seedLot: LineSeedLot | null; seeded: number; returned: number; returnable: number; discount: number;
   /** What was actually paid per unit: (unit price − line discount) with the receipt's header discount spread by amount. */
   netUnitPrice: number;
-};
+  /** The rate of the line and its amount (0 for KCT and for a line made before input VAT). */
+  vatAmount: number;
+} & LineVatRate;
 export type ReceiptPayment = { id: string; code: string; date: string; createdBy: string; method: PaymentMethod; statusLabel: string; amount: number };
 export type ReceiptReturnRef = { id: string; code: string; date: string; returnedAt: string | null; reason: string; value: number; statusId: number };
 
@@ -48,6 +53,8 @@ export type Receipt = {
   seedState: SeedLotState | null;
   id: string; code: string; kind: StockKind; date: string; receivedAt: string; receivedBy: { id: string; name: string } | null; completedAt: string | null; rowVersion: string;
   supplier: SupplierOption; zone: ZoneRef | null; recordedBy: string; statusId: number; discount: number; payable: number; paid: number; notes: string | null;
+  /** Input VAT of the receipt; `payable` includes it. */
+  vatTotal: number;
   cancelReason: string | null; lines: ReceiptLine[]; returns: ReceiptReturnRef[];
 };
 /** A line amount: quantity × (unit price − per-unit discount), rounded half up to the dong like the backend. */
@@ -59,15 +66,18 @@ export type ReceiptDraft = {
   kind?: StockKind;
   id?: string; rowVersion?: string; code: string; receivedAt: string; receivedById: string; supplierId: string; discount: number; notes: string;
   /** `lineId` keeps an existing line of a completed receipt; a line without it is new, and existing lines left out are removed. */
-  lines: { lineId: string | null; itemId: string; itemUnitId: string | null; quantity: number | null; unitPrice: number | null; discount: number; supplierLotCode: string }[];
+  /** `vat` is the rate of the line as the API names it (see `vatWire`); empty leaves the rate out, which the API fills from the item (a seed line is always KCT). */
+  lines: { lineId: string | null; itemId: string; itemUnitId: string | null; quantity: number | null; unitPrice: number | null; discount: number; supplierLotCode: string; vat: Record<string, string> }[];
 };
 
-export type ReturnLine = { id: string; receiptLineId: string | null; item: ItemOption; itemUnitId: string | null; unitFactor: number; quantity: number; unitPrice: number };
+export type ReturnLine = { id: string; receiptLineId: string | null; item: ItemOption; itemUnitId: string | null; unitFactor: number; quantity: number; unitPrice: number; vatAmount: number } & LineVatRate;
 export type ReturnRefund = { code: string; amount: number; method: PaymentMethod; bankReference: string | null };
 export type PurchaseReturn = {
   id: string; code: string; kind: StockKind; date: string; returnedAt: string; rowVersion: string; receipt: { id: string; code: string } | null;
   supplier: SupplierOption; zone: ZoneRef | null; recordedBy: string; statusId: number; reason: string; discount: number; value: number; netValue: number;
   refund: ReturnRefund | null; cancelReason: string | null; lines: ReturnLine[];
+  /** Input VAT paid back with the goods; `netValue` includes it. */
+  vatRefund: number;
 };
 
 export type ReturnDraft = {

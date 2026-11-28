@@ -80,7 +80,7 @@ describe("lane incidents", () => {
     expect(await screen.findByRole("button", { name: "Báo hỏng", ...inPopover })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Lịch sử", ...inPopover }));
     expect(await screen.findByText(/Nguyễn An/)).toBeTruthy();
-    expect(screen.getByText("Vật tư VT01 (m): — → 2")).toBeTruthy();
+    expect(screen.getByText("Vật tư VT01 (m): 2")).toBeTruthy();
     view.unmount(); api.history.mockResolvedValue({ status: "error", httpStatus: 404, uncertain: false });
     render(<ToastProvider><LaneIncidentsBoard raft={raft} onChanged={vi.fn()} /></ToastProvider>);
     fireEvent.click(screen.getByRole("button", { name: /Làn 1/ }));

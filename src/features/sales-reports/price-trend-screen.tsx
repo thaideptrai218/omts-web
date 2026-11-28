@@ -5,6 +5,7 @@
  * SCR-REPORT-02 "Xu hướng giá". Layout shell: no fetch, no mock data.
  */
 import { useState } from "react";
+import { ZoneFilterField, useZoneFilter } from "@/features/api-workspace/zone-filter";
 import { ChartFrame } from "./chart-frame";
 import { FrameSection, FrameTable } from "./frame-parts";
 import { ChecklistFilter, PeriodFilter, RadioFilter, type FilterOption } from "./report-filter-parts";
@@ -20,7 +21,7 @@ const UNIT_OPTIONS: readonly (FilterOption & { bucket: string; chart: string })[
 const DETAIL_HEADINGS = ["Mã hóa đơn", "Ngày", "Khách hàng", "kg", "Đơn giá (₫/kg)"];
 
 export function PriceTrendScreen() {
-  const [unit, setUnit] = useState("week");
+  const [unit, setUnit] = useState("week"), zoneFilter = useZoneFilter({ followLink: false });
   const current = UNIT_OPTIONS.find((option) => option.value === unit) ?? UNIT_OPTIONS[1];
   const headings = ["Sản phẩm", current.bucket, "kg bán", "Giá bình quân (₫/kg)", "Giá thấp nhất (₫/kg)", "Giá cao nhất (₫/kg)"];
   return (
@@ -30,11 +31,11 @@ export function PriceTrendScreen() {
       icon="product"
       filters={
         <>
-          {/* TODO(api): product and zone options come from the backend lists; values feed the report query. */}
+          {/* TODO(api): the product options come from the backend list, the zone filter is the header selection; values feed the report query. */}
           <ChecklistFilter legend="Sản phẩm" />
           <PeriodFilter />
           <RadioFilter legend="Đơn vị thời gian" name="price-trend-unit" options={UNIT_OPTIONS} value={unit} onChange={setUnit} />
-          <ChecklistFilter legend="Vùng nuôi" />
+          <ZoneFilterField filter={zoneFilter} />
         </>
       }
     >

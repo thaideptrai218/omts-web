@@ -1,25 +1,12 @@
 "use client";
 import { useCallback, useState } from "react";
-import { formatVietnameseDate } from "@/shared/format/date-only";
-import { Skeleton, displayTime, useRemote } from "@/features/operations/ui";
-import { historyActionLabel, historyChangeText, type HistoryEntry } from "./history-contracts";
-import { HistoryOrderToggle, sortHistory, useHistoryOrder } from "./history-order";
+import { Skeleton, useRemote } from "@/features/operations/ui";
+import type { HistoryEntry } from "./history-contracts";
+import { HistoryTable } from "./history-table";
 import { readRecordHistory, type HistoryKind } from "./history-repository";
 
-/** Who, when, what, why (reason and note) and the changed fields of one record. */
-export function HistoryEntries({ entries }: { entries: readonly HistoryEntry[] }) {
-  const [order, setOrder] = useHistoryOrder();
-  if (!entries.length) return <p className="text-xs text-text-muted">Chưa có thay đổi nào được ghi lại.</p>;
-  return <><HistoryOrderToggle order={order} onChange={setOrder} /><ol aria-label="Lịch sử thay đổi" className="grid gap-2">
-    {sortHistory(entries, entry => entry.at, order).map((entry, index) => <li key={`${entry.at}-${index}`} className="rounded-control border border-border bg-surface p-2 text-xs">
-      <p><strong>{historyActionLabel(entry.action)}</strong> · {entry.at.length > 10 ? displayTime(entry.at) : formatVietnameseDate(entry.at)}
-        {entry.byName ? ` · ${entry.byName}${entry.byRole ? ` (${entry.byRole})` : ""}` : ""}</p>
-      {entry.reason && <p>Lý do: {entry.reason}</p>}
-      {entry.note && <p>Ghi chú: {entry.note}</p>}
-      {entry.changes.length > 0 && <ul className="mt-1 list-disc pl-4">{entry.changes.map(change => <li key={change.field}>{historyChangeText(change)}</li>)}</ul>}
-    </li>)}
-  </ol></>;
-}
+/** Who, when, what, why (reason and note) and the changed fields of one record, as a table. */
+export const HistoryEntries = ({ entries }: { entries: readonly HistoryEntry[] }) => <HistoryTable entries={entries} />;
 
 export function RecordHistoryList({ kind, id, zoneId }: { kind: HistoryKind; id: string; zoneId: string }) {
   const remote = useRemote(useCallback((signal: AbortSignal) => readRecordHistory(kind, id, zoneId, signal), [kind, id, zoneId]));

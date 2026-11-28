@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { backendPhotoUrl, resolvePhotoSource } from "./origin-photo-source";
-import { parseOriginLanguage, parseQrToken } from "./origin-qr-token";
+import { parseQrToken } from "./origin-qr-token";
 
 const ORIGIN = "https://api.omts.example";
 const SIG = "a".repeat(64);
@@ -18,14 +18,6 @@ describe("parseQrToken", () => {
     "ÁbCdEfGhIjKlMnOpQr_-12",
   ])("rejects %j", (value) => expect(parseQrToken(value)).toBeNull());
   it.each([undefined, null, 5, ["AbCdEfGhIjKlMnOpQr_-12"], {}])("rejects non-string %j", (value) => expect(parseQrToken(value)).toBeNull());
-});
-
-describe("parseOriginLanguage", () => {
-  it("allows only vi or en", () => {
-    expect(parseOriginLanguage("en")).toBe("en");
-    expect(parseOriginLanguage("vi")).toBe("vi");
-    for (const value of ["EN", "fr", "", undefined, ["en"], "en&x=1"]) expect(parseOriginLanguage(value)).toBe("vi");
-  });
 });
 
 describe("resolvePhotoSource", () => {

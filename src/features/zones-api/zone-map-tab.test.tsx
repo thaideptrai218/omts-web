@@ -28,7 +28,7 @@ it("reads the zone map once, keeps only this zone and drops the pin of a zone th
   expect(lastZones()).toHaveLength(1);
   expect(lastZones()[0]).toMatchObject({ id: ZONE, latitude: null, longitude: null });
   expect(lastZones()[0].boundary?.features).toHaveLength(1);
-  expect(screen.getByText("Vùng V01: 1 khu theo sơ đồ cấp phép · 2/3 bè có tọa độ · 1 bè ngoài ranh giới")).toBeTruthy();
+  expect(screen.getByText("Vùng V01: ranh giới theo sơ đồ cấp phép · 2/3 bè có tọa độ · 1 bè ngoài ranh giới")).toBeTruthy();
 });
 
 it("keeps the zone marker only when there is no boundary but a legacy pin", async () => {

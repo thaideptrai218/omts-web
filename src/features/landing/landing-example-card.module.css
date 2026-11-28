@@ -1,0 +1,25 @@
+.card { display: block; width: 100%; max-width: 27rem; justify-self: center; background: var(--paper); color: var(--ink); border-radius: 1.5rem; overflow: hidden; box-shadow: 0 30px 60px -24px rgb(0 0 0 / .6); text-decoration: none; transition: transform .25s ease; }
+.card:hover { transform: translateY(-6px); }
+.cover { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--foam); }
+.cover > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.status { position: absolute; left: .75rem; top: .75rem; padding: .3125rem .75rem; border-radius: 999px; background: rgb(255 255 255 / .95); color: var(--sea-deep); font-size: .8125rem; font-weight: 700; }
+.qr { position: absolute; right: .875rem; bottom: -1.5rem; width: 4.25rem; padding: .375rem; border-radius: .75rem; background: #fff; color: var(--ink); box-shadow: 0 6px 16px -6px rgb(0 0 0 / .45); }
+.qr svg { display: block; width: 100%; height: auto; }
+.body { display: grid; gap: .5rem; padding: 1.25rem; }
+.name { padding-right: 4.5rem; font-size: 1.375rem; font-weight: 800; line-height: 1.25; }
+.lot { color: var(--sea); font-weight: 700; font-size: .9375rem; overflow-wrap: anywhere; }
+.description { color: var(--ink-soft); font-size: .9375rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: .25rem; }
+.facts > span { display: grid; align-content: start; background: var(--foam); border-radius: .75rem; padding: .5rem .75rem; min-width: 0; line-height: 1.4; }
+.facts > span:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.facts small { color: var(--ink-soft); font-size: .75rem; }
+.facts b { font-size: .9375rem; overflow-wrap: anywhere; }
+.certs { display: grid; gap: .375rem; }
+.certs > span { display: grid; border: 1px solid var(--line); border-radius: .75rem; padding: .375rem .75rem; line-height: 1.4; min-width: 0; }
+.certs small { color: var(--ink-soft); font-size: .75rem; }
+.certs b { font-size: .875rem; overflow-wrap: anywhere; }
+.thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.thumbs img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: .625rem; }
+.more { justify-self: stretch; margin-top: .25rem; padding: .625rem; border-radius: 999px; background: var(--sea-deep); color: #fff; font-size: .9375rem; font-weight: 700; text-align: center; }
+@media (min-width: 56rem) { .card { justify-self: end; } }
+@media (prefers-reduced-motion: reduce) { .card, .card:hover { transform: none; transition: none; } }

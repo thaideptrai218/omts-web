@@ -49,6 +49,6 @@ describe("raft screen", () => {
   it("tells where to start a cycle from a nursery batch", async () => {
     state.params = new URLSearchParams({ zoneId, nurseryBatch: "b1" }).toString();
     show();
-    expect(await screen.findByText(/Mở bè cần treo giống/)).toBeTruthy();
+    expect(await screen.findByText(/Mở bè cần thả giống/)).toBeTruthy();
   });
 });

@@ -2,11 +2,12 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/sales-invoice-list/invoice-list-contracts";
 import type { OperationPlan } from "./operation-plan";
+import { idList } from "./sales-report-plan";
 
 const area = "sales-invoice-list" as const, id = z.guid();
 // Đúng các tham số lọc mà SalesInvoiceSearchQuery của backend nhận; statusId chỉ có hai trạng thái (Hoàn thành 3501, Đã hủy 3502).
 const filters = {
-  from: z.iso.date().optional(), to: z.iso.date().optional(), zoneId: id.optional(), customerId: id.optional(), harvestLotId: id.optional(),
+  from: z.iso.date().optional(), to: z.iso.date().optional(), zoneIds: idList.optional(), customerId: id.optional(), harvestLotId: id.optional(),
   statusId: z.enum(["3501", "3502"]).optional(), paid: z.enum(["true", "false"]).optional(), code: z.string().trim().min(1).max(50).optional(), cashCollectedByMe: z.literal("true").optional(),
 };
 const readQuery = z.strictObject({
@@ -39,10 +40,12 @@ export function salesInvoiceListPlan(method: string, query: URLSearchParams, inp
     }
     if (q.id || !used([...filterNames, ...(q.action === "list" ? ["page", "pageSize"] : [])])) return;
     const params = new URLSearchParams();
-    for (const name of filterNames) if (q[name] !== undefined) params.set(name, q[name]);
+    for (const name of filterNames) if (name !== "zoneIds" && q[name] !== undefined) params.set(name, q[name]);
+    for (const zone of q.zoneIds ?? []) params.append("zoneIds", zone);
     if (q.action === "list") { params.set("page", q.page ?? "1"); params.set("pageSize", q.pageSize ?? "10"); }
     const path = `/api/sales-invoices${q.action === "export" ? "/export" : ""}${params.size ? `?${params}` : ""}`;
-    const plan = { ...base, path, zoneId: q.zoneId };
+    // No `zoneId` on the plan: the backend narrows the chosen zones to the ones the caller may see.
+    const plan = { ...base, path };
     return q.action === "export" ? { ...plan, permission: "Export", schema: z.strictObject({}), file: "export" } : { ...plan, permission: "View", schema: c.searchResult };
   }
   const parsed = writeInput.safeParse(input);

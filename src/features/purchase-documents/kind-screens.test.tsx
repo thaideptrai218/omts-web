@@ -12,7 +12,7 @@ vi.mock("./repository", async (original) => ({
   ...(await original<typeof import("./repository")>()),
   listReceipts: state.listReceipts, listReturns: state.listReturns, getReceipt: state.getReceipt, getReturn: state.getReturn,
   getReceiptPayments: vi.fn(async () => ({ status: "success", data: [] })), download: vi.fn(), removeReceipts: vi.fn(),
-  usePurchaseLookups: () => ({ suppliers: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08", code: "NCC000001", name: "Trại giống", phone: "" }], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }),
+  usePurchaseLookups: () => ({ vatCatalogue: { rates: [], legacy: false }, suppliers: [{ id: "0f1c0a8e-3d3a-4f6b-9e57-2a3c7f1d0b08", code: "NCC000001", name: "Trại giống", phone: "" }], items: [], rafts: [], receivers: [], loading: false, refresh: vi.fn() }),
 }));
 import { PurchaseReceiptsScreen } from "./receipts-screen";
 import { PurchaseReturnsScreen } from "./returns-screen";
@@ -26,9 +26,9 @@ const returnRow = (patch: object = {}) => ({ id: id(2), code: "TH000001", return
   statusId: 1901, status: "Recorded", recordedBy: { id: id(9), name: "Chủ" }, value: 10, discount: 0, netValue: 10, itemCount: 1, refunded: 0, createdAt: "2026-11-12T08:00:00+07:00", returnedAt: "2026-11-12T08:00:00+07:00", kind: "Seed", ...patch });
 const seedReceipt = (lotState: string | null, patch: Partial<Receipt> = {}): Receipt => ({
   id: id(1), code: "PN000004", kind: "Seed", seedState: lotState as never, date: "2026-11-10", receivedAt: "2026-11-10T08:00:00+07:00", receivedBy: null, completedAt: null, rowVersion: "v1", supplier: { id: id(8), code: "NCC000001", name: "Trại giống", phone: "" }, zone: null,
-  recordedBy: "Chủ", statusId: 1702, discount: 0, payable: 100, paid: 0, notes: null, cancelReason: null,
+  recordedBy: "Chủ", statusId: 1702, discount: 0, payable: 100, paid: 0, notes: null, vatTotal: 0, cancelReason: null,
   lines: [{ id: id(3), item: { id: id(4), code: "GG000001", name: "Hàu giống 3 cm", unit: "mảnh", group: "Seed", units: [] }, itemUnitId: null, unitFactor: 1, quantity: 100, unitPrice: 1, raft: null, supplierLotCode: null, seedLotCode: "PN000004-1",
-    seedLot: lotState ? { state: lotState as never, remainingQty: 40 } : null, seeded: 60, returned: 0, returnable: 40, discount: 0, netUnitPrice: 1 }],
+    seedLot: lotState ? { state: lotState as never, remainingQty: 40 } : null, seeded: 60, returned: 0, returnable: 40, discount: 0, netUnitPrice: 1, vatRateId: "KCT", vatRateName: "KCT", vatPercent: null, vatAmount: 0 }],
   returns: [{ id: id(2), code: "TH000001", date: "2026-11-12", returnedAt: null, reason: "Hỏng", value: 10, statusId: 1901 }], ...patch,
 });
 
@@ -73,7 +73,7 @@ it("shows the state of the seed lot of each line of a seed receipt, linked to L�
   fireEvent.click(await screen.findByRole("button", { name: "Mở PN000004" }));
   const panel = await screen.findByRole("region", { name: "Chi tiết PN000004" });
   expect(within(panel).getByRole("link", { name: "PN000004-1" }).getAttribute("href")).toBe("/farming/seed-lots?code=PN000004-1");
-  expect(within(panel).getAllByText("Đang treo dở")).toHaveLength(2);
+  expect(within(panel).getAllByText("Đang thả dở")).toHaveLength(2);
   expect(within(panel).getByText(/còn 40/)).toBeTruthy();
   expect(within(panel).getByRole("link", { name: "GG000001" }).getAttribute("href")).toBe("/inputs/seeds?code=GG000001");
   expect(within(panel).getByRole("button", { name: "Trả giống nhập" })).toBeTruthy();
@@ -84,7 +84,7 @@ it("shows no lot state on a line whose API sends none", async () => {
   wrap(<PurchaseReceiptsScreen kind="Seed" />);
   fireEvent.click(await screen.findByRole("button", { name: "Mở PN000004" }));
   const panel = await screen.findByRole("region", { name: "Chi tiết PN000004" });
-  expect(within(panel).queryByText("Đang treo dở")).toBeNull();
+  expect(within(panel).queryByText("Đang thả dở")).toBeNull();
   expect(within(panel).queryByText("Chưa dùng")).toBeNull();
 });
 

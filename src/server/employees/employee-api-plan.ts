@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/employee-api/contracts";
 import { employeeSavedSchema } from "@/features/employee-management/api/employee-contract.schemas";
-import { parseEmployeeExportSearchParams, parseEmployeeListSearchParams } from "@/features/employee-management/api/employee-read-request";
+import { employeeListSearchParams, parseEmployeeExportSearchParams, parseEmployeeListSearchParams } from "@/features/employee-management/api/employee-read-request";
 import { issueEmployeeAccountRequestSchema, issueEmployeeAccountSavedSchema, linkEmployeeAccountRequestSchema, linkableAccountsSchema } from "@/features/employee-api/employee-account-contract";
 import { createEmployeeRequestSchema, employeeCreatedWithAccountSchema } from "@/features/employee-api/employee-create-contract";
 import { employeeImportResultSchema } from "@/features/employee-api/employee-file-contract";
@@ -37,7 +37,7 @@ export function planEmployeeApi(method: string, query: URLSearchParams, input?: 
       const list = new URLSearchParams(query); list.delete("action");
       const parsed = parseEmployeeListSearchParams(list);
       if (parsed.status !== "parsed" || (parsed.query.search?.length ?? 0) > 200) return;
-      return { action, path: `/api/employees?${new URLSearchParams(Object.entries(parsed.query).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`, method, schema: c.employeePageSchema };
+      return { action, path: `/api/employees?${employeeListSearchParams(parsed.query)}`, method, schema: c.employeePageSchema };
     }
     // What ending employment on a day would change; the day is optional (the backend defaults to today) and never after today.
     if (action === "end-preview") {

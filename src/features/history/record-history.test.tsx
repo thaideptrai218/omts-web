@@ -41,10 +41,12 @@ describe("record history", () => {
     fireEvent.click(screen.getByRole("button", { name: "Lịch sử" }));
     expect(await screen.findByText("Số lồng: 4 → 5")).toBeTruthy();
     expect(screen.getByText("Kg ước tính (kg): 200 → 250,5")).toBeTruthy();
-    expect(screen.getByText(/Nguyễn An \(Chủ HTX\)/)).toBeTruthy();
-    expect(screen.getByText("Lý do: Nhập nhầm số lồng")).toBeTruthy();
-    expect(screen.getByText("Ghi chú: Đã cân lại")).toBeTruthy();
+    expect(screen.getByText("Nguyễn An")).toBeTruthy();
+    expect(screen.getByText("Chủ HTX")).toBeTruthy();
+    expect(screen.getByText("Nhập nhầm số lồng")).toBeTruthy();
+    expect(screen.getByText("Đã cân lại")).toBeTruthy();
     expect(screen.getByText("Điều chỉnh")).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Lịch sử thay đổi" })).toBeTruthy();
     expect(repo.readRecordHistory).toHaveBeenCalledWith("harvest", id, id, expect.anything());
   });
   it("shows an empty state for a record with no change and a quiet retry when the backend has no history route (404)", async () => {
@@ -64,9 +66,9 @@ describe("record history", () => {
 describe("history wording and tolerance", () => {
   it("formats values and action codes", () => {
     expect(historyChangeText({ field: "x", label: "Số lồng", from: 4, to: 5 })).toBe("Số lồng: 4 → 5");
-    expect(historyChangeText({ field: "reason", from: null, to: "a" })).toBe("reason: — → a");
+    expect(historyChangeText({ field: "reason", from: null, to: "a" })).toBe("Thông tin khác: — → a");
     expect(historyValue(true)).toBe("Có"); expect(historyValue(1234.5)).toBe("1.234,5"); expect(historyValue("")).toBe("—");
-    expect(historyActionLabel("SeedingRecord.Removed")).toBe("Xóa"); expect(historyActionLabel("Something.Else")).toBe("Something.Else");
+    expect(historyActionLabel("SeedingRecord.Removed")).toBe("Xóa"); expect(historyActionLabel("Something.Else")).toBe("Thay đổi");
   });
   it("accepts a minimal entry from an older backend", () => {
     expect(historyList.safeParse([{ at: "2026-11-12", action: "Created" }]).success).toBe(true);

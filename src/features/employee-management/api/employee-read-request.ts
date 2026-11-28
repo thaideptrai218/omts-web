@@ -9,13 +9,17 @@ const employeeTypeFilter = z.enum(["SeasonalWorker", "Staff"]);
 const sortDirSchema = z.enum(["asc", "desc"]);
 /** Largest id selection the export endpoint accepts. */
 export const maxEmployeeExportIds = 200;
+/** Most zones one list or export request may name. */
+export const maxZoneFilterIds = 50;
+/** `zoneIds` as the browser sends it: one parameter, ids joined by commas (GUIDs, no repeats); read as a list and sent to the backend as repeated `zoneIds`. */
+const zoneIdsParam = z.string().max(maxZoneFilterIds * 37).transform(value => value.split(",")).pipe(z.array(apiIdSchema).min(1).max(maxZoneFilterIds)).transform(list => [...new Set(list)]);
 
 // Wire query only: absent statusId means all. The UI's initial Employed
 // filter must explicitly send 401; parsing a query does not choose UI policy.
 export const employeeListQuerySchema = z.strictObject({
   search: z.string().optional(),
   statusId: employeeStatusId.optional(),
-  zoneId: apiIdSchema.optional(),
+  zoneIds: z.array(apiIdSchema).min(1).max(maxZoneFilterIds).optional(),
   employeeType: employeeTypeFilter.optional(),
   jobTypeId: apiIdSchema.optional(),
   sortBy: employeeSortBySchema.optional(),
@@ -40,13 +44,13 @@ export type EmployeeReadRequest = z.infer<typeof employeeReadRequestSchema>;
 
 const numericQuery = z.string().regex(/^[1-9]\d*$/u).transform(Number).pipe(positiveInt32);
 const urlQuerySchema = z.strictObject({
-  search: z.string().optional(), statusId: numericQuery.optional(), zoneId: apiIdSchema.optional(),
+  search: z.string().optional(), statusId: numericQuery.optional(), zoneIds: zoneIdsParam.optional(),
   employeeType: employeeTypeFilter.optional(), jobTypeId: apiIdSchema.optional(), sortBy: employeeSortBySchema.optional(), sortDir: sortDirSchema.optional(),
   page: numericQuery.optional(), pageSize: numericQuery.optional(),
 }).pipe(employeeListQuerySchema);
 
 /** The export takes the list filters and sort without paging; `ids` replaces the filters (the backend ignores them then). */
-const exportFilters = { search: z.string().max(200).optional(), statusId: numericQuery.optional(), zoneId: apiIdSchema.optional(), employeeType: employeeTypeFilter.optional(), jobTypeId: apiIdSchema.optional() };
+const exportFilters = { search: z.string().max(200).optional(), statusId: numericQuery.optional(), zoneIds: zoneIdsParam.optional(), employeeType: employeeTypeFilter.optional(), jobTypeId: apiIdSchema.optional() };
 const exportSort = { sortBy: employeeSortBySchema.optional(), sortDir: sortDirSchema.optional() };
 const exportQuerySchema = z.union([
   z.strictObject({ ...exportSort, ids: z.array(apiIdSchema).min(1).max(maxEmployeeExportIds).refine(ids => new Set(ids).size === ids.length) }),
@@ -73,17 +77,20 @@ export function parseEmployeeListSearchParams(searchParams: URLSearchParams) {
   return parsed.success ? { status: "parsed" as const, query: parsed.data } : { status: "invalid-input" as const };
 }
 
+/** The backend list query: every value once, `zoneIds` repeated (zoneIds=a&zoneIds=b). */
+export function employeeListSearchParams(query: Readonly<Record<string, unknown>>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) for (const item of Array.isArray(value) ? value : [value]) if (item !== undefined) params.append(key, String(item));
+  return params;
+}
+
 export function prepareEmployeeReadRequest(input: unknown) {
   const parsed = employeeReadRequestSchema.safeParse(input);
   if (!parsed.success) return { status: "invalid-input" } as const;
   const request = parsed.data;
   let path: string;
   if (request.endpoint === "employeeList") {
-    const query = new URLSearchParams();
-    for (const [key, value] of Object.entries(request.query)) {
-      if (value !== undefined) query.set(key, String(value));
-    }
-    path = `/api/employees?${query.toString()}`;
+    path = `/api/employees?${employeeListSearchParams(request.query)}`;
   } else {
     path = `/api/employees/${request.employeeId}`;
   }

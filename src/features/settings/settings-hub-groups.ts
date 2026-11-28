@@ -30,6 +30,9 @@ const PRICE_EDITORS = "Chủ hợp tác xã và người được cấp quyền 
 /** Purchase/crop readers that make the input catalogue settings relevant (same rule the gear menu used before the hub). */
 const INPUT_READERS = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS", "CULTIVATION_CYCLES", "INPUT_ISSUES"];
 
+/** Accounts that work with purchase receipts may look at the VAT rates (read-only); a zone manager reading farming data has no use for them. */
+const PURCHASE_READERS = ["PURCHASE_RECEIPTS", "SUPPLIER_PAYMENTS"];
+
 const keep = (entries: readonly Entry[]): Item[] => entries.filter(([allowed]) => allowed).map(([, item]) => item);
 
 /**
@@ -42,6 +45,7 @@ export function buildSettingsGroups(gate: SettingsGate): SettingsSection[] {
     { key: "cooperative", label: "Hợp tác xã", items: keep([
       [isOwner, { href: "/cooperative/profile", label: "Hồ sơ hợp tác xã", icon: "cooperative", editor: OWNER, description: "Thông tin pháp lý, kênh liên hệ và tài khoản nhận chuyển khoản của hợp tác xã.", hint: "Cập nhật địa chỉ, số điện thoại hoặc người đại diện.", keywords: ["htx", "thông tin", "địa chỉ", "liên hệ", "pháp lý", "mã số thuế", "người đại diện", "thong tin", "dia chi", "lien he"] }],
       [isOwner, { href: "/cooperative/receiving-bank-account", label: "Ngân hàng nhận tiền", icon: "payment", editor: OWNER, description: "Tài khoản dùng để nhận chuyển khoản và tạo mã VietQR.", hint: "Đổi số tài khoản nhận tiền hoặc mã VietQR.", keywords: ["vietqr", "qr", "số tài khoản", "chuyển khoản", "nhận tiền", "ngân hàng", "ngan hang", "so tai khoan", "chuyen khoan"] }],
+      [isOwner, { href: "/cooperative/landing", label: "Trang giới thiệu", icon: "eye", editor: OWNER, description: "Ảnh, báo chí và lô hàu mẫu hiện trên trang giới thiệu công khai.", hint: "Đổi ảnh nền, thêm ảnh vùng nuôi, chọn hóa đơn mẫu.", keywords: ["landing", "giới thiệu", "ảnh", "báo chí", "truyền hình", "truy xuất", "gioi thieu", "anh"] }],
       [isOwner, { href: "/cooperative/certifications", label: "Chứng nhận HTX", icon: "document", editor: OWNER, description: "Hồ sơ chứng nhận, thời hạn hiệu lực và tệp đính kèm của hợp tác xã.", hint: "Thêm chứng nhận mới hoặc theo dõi ngày hết hạn.", keywords: ["chứng chỉ", "giấy phép", "vietgap", "hết hạn", "hiệu lực", "chung chi", "giay phep", "het han"] }],
     ]) },
     { key: "users", label: "Người dùng", items: keep([
@@ -65,6 +69,7 @@ export function buildSettingsGroups(gate: SettingsGate): SettingsSection[] {
     ]) },
     { key: "finance", label: "Tài chính", items: keep([
       [holds("CASH_BOOK_SETTINGS", "Edit"), { href: panelHref("cash-book"), panel: "cash-book", label: "Sổ quỹ", icon: "payment", editor: GRANTED, description: "Tài khoản ngân hàng, ví điện tử và loại thu chi dùng cho phiếu thu chi.", keywords: ["thu chi", "ngân hàng", "ví", "ví điện tử", "momo", "tiền mặt", "phiếu thu", "phiếu chi", "thu chi", "ngan hang", "vi dien tu", "tien mat", "phieu thu", "phieu chi", "quỹ", "quy"] }],
+      [isOwner || PURCHASE_READERS.some((fn) => holds(fn, "View")), { href: panelHref("vat-rates"), panel: "vat-rates", label: "Thuế GTGT", icon: "document", editor: OWNER, description: "Các mức thuế GTGT mua vào, mức mặc định cho vật tư mới và mức nào còn được dùng.", keywords: ["thuế", "vat", "gtgt", "thuế suất", "kct", "hóa đơn", "thue", "thue suat", "hoa don", "mua vào", "mua vao"] }],
     ]) },
     { key: "system", label: "Hệ thống", items: keep([
       [isOwner, { href: "/audit", label: "Nhật ký thao tác", icon: "search", editor: OWNER_VIEW, description: "Tra cứu ai đã thao tác, lúc nào và bản ghi nào bị thay đổi.", hint: "Tra ai đã sửa gì, lúc nào.", keywords: ["lịch sử", "nhật ký", "log", "ai sửa", "lich su", "nhat ky", "thao tac"] }],

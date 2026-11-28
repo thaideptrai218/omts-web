@@ -69,6 +69,7 @@ describe("the editor page of a new return", () => {
     for (const [label, value] of [["Giá trị phiếu trả (2 dòng)", "4.250.000"], ["Công nợ hiện tại của khách", "1.000.000"], ["Công nợ sau phiếu trả", "-3.250.000"], ["Hợp tác xã nợ lại khách", "3.250.000"]]) {
       expect(side.getByText(label).parentElement!.textContent).toBe(`${label}${value}`);
     }
+    expect(side.getByText("Thuế GTGT").parentElement!.textContent).toBe("Thuế GTGTKCT");
     expect(side.getByRole("button", { name: "Hoàn thành" })).toBeTruthy();
     expect(state.preview.mock.calls[0].slice(0, 2)).toEqual([ids.invoice, undefined]);
   });

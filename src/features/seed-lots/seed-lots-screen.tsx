@@ -13,7 +13,7 @@ import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { SelectBox } from "@/components/ui/select-box";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
 import issueStyles from "@/features/input-issues/input-issues.module.css";
-import { useZoneOptions } from "@/features/input-issues/issue-access";
+import { useZoneFilter, ZoneFilterField } from "@/features/api-workspace/zone-filter";
 import { itemHref, kindOfGroup, receiptHref } from "@/features/input-items/stock-kind";
 import { operationAllowed } from "@/features/operations/permissions";
 import { ErrorNotice, operationError, useMutation } from "@/features/operations/ui";
@@ -44,7 +44,7 @@ export const columns: readonly Column[] = [
   { key: "returned", label: "Trả", hidden: true, numeric: true, total: "returnedQty", render: (row) => figure(row, "returnedQty") },
   { key: "nursing", label: "Đang ươm", hidden: true, numeric: true, total: "nursingQty", render: (row) => figure(row, "nursingQty") },
   { key: "loss", label: "Hao hụt", hidden: true, numeric: true, total: "nurseryLossQty", render: (row) => figure(row, "nurseryLossQty") },
-  { key: "seeded", label: "Đã treo", hidden: true, numeric: true, total: "seededQty", render: (row) => figure(row, "seededQty") },
+  { key: "seeded", label: "Đã thả", hidden: true, numeric: true, total: "seededQty", render: (row) => figure(row, "seededQty") },
   { key: "remaining", label: "Còn", sort: "remaining", numeric: true, total: "remainingQty", render: (row) => figure(row, "remainingQty") },
   { key: "progress", label: "Tiến độ sử dụng", render: (row) => <SeedLotProgressCell lot={row} /> },
   { key: "harvested", label: "Thu hoạch (kg)", numeric: true, render: (row) => kgText(row, row.harvestedKg) },
@@ -52,7 +52,7 @@ export const columns: readonly Column[] = [
   { key: "lastUsed", label: "Dùng gần nhất", hidden: true, render: (row) => row.lastUsedAt ? viDateTime(row.lastUsedAt) : "—" },
 ];
 const defaults = columns.filter((column) => !column.hidden).map((column) => column.key).join(",");
-const emptyFilters = { supplier: "", item: "", zone: "" };
+const emptyFilters = { supplier: "", item: "" };
 type Filters = typeof emptyFilters;
 const railSelect = "h-[30px] w-full rounded-md border border-border-strong bg-surface px-2 text-[13px]";
 /** The sum of a figure column, from the totals of the API; a column it does not total shows a dash. */
@@ -76,14 +76,16 @@ function SeedLotsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
   const [data, setData] = useState<SeedLotPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const [stored, store] = useStoredValue("omts-columns-seed-lots-v2", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
-  const { zones } = useZoneOptions(view);
+  // The zone filter is the header zone chip (two-way); a header change starts the list again from its first page.
+  const zoneFilter = useZoneFilter(), [shownZones, setShownZones] = useState(zoneFilter.apiZoneIds);
+  if (shownZones !== zoneFilter.apiZoneIds) { setShownZones(zoneFilter.apiZoneIds); setPage(1); setExpanded(undefined); }
   const seedItems = useMemo(() => lookups.items.filter((item) => kindOfGroup(item.group) === "Seed"), [lookups.items]);
 
   // The filters as the list and the file take them; the file has no paging.
   const query = useMemo<SeedLotListQuery>(() => {
-    const values: SeedLotListQuery = { search: search.trim(), from: time.from, to: time.to, supplierId: filters.supplier, itemId: filters.item, zoneId: filters.zone, sort: sort.key, sortDir: sort.direction };
+    const values: SeedLotListQuery = { search: search.trim(), from: time.from, to: time.to, supplierId: filters.supplier, itemId: filters.item, zoneIds: zoneFilter.apiZoneIds ?? "", sort: sort.key, sortDir: sort.direction };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== "")) as SeedLotListQuery;
-  }, [search, filters, time, sort]);
+  }, [search, filters, time, sort, zoneFilter.apiZoneIds]);
 
   useEffect(() => {
     if (!view) return;
@@ -117,8 +119,7 @@ function SeedLotsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode:
       <option value="">Tất cả nhà cung cấp</option>{lookups.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</SelectBox></FilterGroup>
     <FilterGroup legend="Giống"><SelectBox aria-label="Giống" className={railSelect} value={filters.item} onChange={(event) => setFilter("item")(event.target.value)}>
       <option value="">Tất cả giống</option>{seedItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectBox></FilterGroup>
-    {zones.length > 0 && <FilterGroup legend="Vùng"><SelectBox aria-label="Vùng" className={railSelect} value={filters.zone} onChange={(event) => setFilter("zone")(event.target.value)}>
-      <option value="">Tất cả vùng</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</SelectBox></FilterGroup>}
+    <ZoneFilterField filter={zoneFilter} legend="Vùng" className={railSelect} />
   </>;
 
   return <ManagementLayout storageKey="seed-lots" icon="product" title="Lô giống" filters={rail} filterLabel="Bộ lọc lô giống"

@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/seed-lots/contracts";
 import type { OperationPlan } from "./operation-plan";
+import { idList } from "./sales-report-plan";
 
 const area = "seed-lots" as const, id = z.guid();
 /**
@@ -15,7 +16,7 @@ const filters = {
 };
 const filterNames = Object.keys(filters) as (keyof typeof filters)[];
 const readQuery = z.strictObject({
-  action: z.enum(["list", "export", "detail"]), id: id.optional(), ...filters,
+  action: z.enum(["list", "export", "detail"]), id: id.optional(), ...filters, zoneIds: idList.optional(), // several zones of the header, comma separated
   page: z.string().regex(/^[1-9]\d{0,6}$/).optional(), pageSize: z.enum(["10", "15", "30", "50", "100"]).optional(),
 });
 
@@ -31,9 +32,12 @@ export function seedLotsPlan(method: string, query: URLSearchParams, input?: unk
   const q = parsed.data, base = { area, action: q.action, method: "GET" as const };
   const only = (names: readonly string[]) => [...query.keys()].every((name) => name === "action" || names.includes(name));
   if (q.action === "detail") return q.id && only(["id"]) ? { ...base, path: `/api/seed-lots/${q.id}`, permission: "View", schema: c.seedLotDetail, expectedId: q.id } : undefined;
-  if (q.id || q.from && q.to && q.from > q.to || !only([...filterNames, ...(q.action === "list" ? ["page", "pageSize"] : [])])) return;
+  if (q.id || q.from && q.to && q.from > q.to || !only([...filterNames, "zoneIds", ...(q.action === "list" ? ["page", "pageSize"] : [])])) return;
+  if (q.zoneId && q.zoneIds) return;
   const params = new URLSearchParams();
   for (const name of filterNames) if (q[name] !== undefined) params.set(name, q[name]);
+  // The backend intersects the zones with those the caller may read, so no single zone is checked here (zoneId stays undefined: any-zone check).
+  for (const zone of q.zoneIds ?? []) params.append("zoneIds", zone);
   if (q.action === "list") { params.set("page", q.page ?? "1"); params.set("pageSize", q.pageSize ?? "10"); }
   const path = `/api/seed-lots${q.action === "export" ? "/export" : ""}${params.size ? `?${params}` : ""}`;
   return q.action === "export" ? { ...base, path, zoneId: q.zoneId, permission: "Export", schema: z.strictObject({}), file: "export" } : { ...base, path, zoneId: q.zoneId, permission: "View", schema: c.seedLotPage };

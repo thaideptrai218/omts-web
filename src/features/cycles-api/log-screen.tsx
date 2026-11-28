@@ -19,7 +19,8 @@ export function photoHref(raw: string) { try { const url = new URL(raw, window.l
 function EditorFrame({ record, pending, close, children }: { record: CultivationLog | null; pending: boolean; close(): void; children: ReactNode }) {
   return record ? <section aria-label="Sửa nhật ký chăm sóc">{children}</section> : <Dialog open title="Ghi nhật ký chăm sóc" dismissible={!pending} onOpenChange={open => { if (!open) close(); }}>{children}</Dialog>;
 }
-export function LogEditor({ cycleId, startDate, zoneId, record, onClose, onSaved, dirtyRef }: { cycleId: string; startDate?: string; /** Lets the photos already on a log show as thumbnails. */ zoneId?: string; record: CultivationLog | null; dirtyRef?: RefObject<boolean>; onClose(): void; onSaved(): void }) {
+/** `raftId` makes a new log on the raft (the backend puts it in the cycle open on the date, or in none); otherwise it is made on `cycleId`. */
+export function LogEditor({ cycleId, raftId, startDate, zoneId, record, onClose, onSaved, dirtyRef }: { cycleId?: string | null; raftId?: string; startDate?: string; /** Lets the photos already on a log show as thumbnails. */ zoneId?: string; record: CultivationLog | null; dirtyRef?: RefObject<boolean>; onClose(): void; onSaved(): void }) {
   const [date, setDate] = useState(record?.visitDate ?? businessToday()), [notes, setNotes] = useState(record?.notes ?? ""), [reason, setReason] = useState("");
   const [logType, setLogType] = useState<string>(record?.logType || DEFAULT_LOG_TYPE), [files, setFiles] = useState<File[]>([]), [keep, setKeep] = useState(record?.photos.map(photo => photo.key) ?? []), [error, setError] = useState<string>();
   const mutation = useMutation(), confirmation = useActionDialog(), previews = useFilePreviews(files);
@@ -33,7 +34,7 @@ export function LogEditor({ cycleId, startDate, zoneId, record, onClose, onSaved
     if (record && !reason.trim()) { setError("Nhập lý do sửa nhật ký."); return; }
     if (keep.length + files.length < 1 || keep.length + files.length > MAX_PHOTOS) { setError(`Nhật ký cần từ 1 đến ${MAX_PHOTOS} ảnh.`); return; }
     setError(undefined);
-    const saved = await mutation.run(() => logRequest(record ? "correct" : "create", record?.id ?? cycleId, logSavedSchema, { visitDate: date, logType, notes: notes || null, ...(record ? { reason, keepPhotoKeys: keep } : {}) }, files));
+    const saved = await mutation.run(() => logRequest(record ? "correct" : raftId ? "raft-create" : "create", record?.id ?? raftId ?? cycleId ?? "", logSavedSchema, { visitDate: date, logType, notes: notes || null, ...(record ? { reason, keepPhotoKeys: keep } : {}) }, files));
     if (saved) onSaved();
   }
   return <EditorFrame record={record} pending={mutation.pending} close={() => void close()}>

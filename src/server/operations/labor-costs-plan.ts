@@ -2,8 +2,9 @@ import "server-only";
 import { z } from "zod";
 import { cycleLaborCost, laborCostByRaft, raftCycleCosts } from "@/features/labor-costs/labor-costs-contracts";
 import type { OperationPlan } from "./operation-plan";
+import { idList } from "./sales-report-plan";
 
-const range = { from: z.iso.date(), to: z.iso.date(), zoneId: z.guid().optional() };
+const range = { from: z.iso.date(), to: z.iso.date(), zoneIds: idList.optional() };
 const readQuery = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("rafts"), ...range }),
   z.strictObject({ action: z.literal("export"), ...range, format: z.enum(["pdf", "xlsx"]).optional() }),
@@ -22,11 +23,11 @@ export function laborCostsPlan(method: string, query: URLSearchParams, input?: u
   const base = { area: "labor-costs" as const, method: "GET" as const, permission: "View" };
   if (parsed.data.action === "cycle") return { ...base, action: "cycle", path: `/api/labor-costs/cycles/${parsed.data.id}`, schema: cycleLaborCost };
   if (parsed.data.action === "raft-cycles") return { ...base, action: "raft-cycles", path: `/api/labor-costs/rafts/${parsed.data.id}/cycles`, schema: raftCycleCosts };
-  const { from, to, zoneId } = parsed.data;
+  const { from, to, zoneIds } = parsed.data;
   // Inclusive period of at most 366 days, back to front is refused here and again by the backend.
   if (from > to || (Date.parse(to) - Date.parse(from)) / 86_400_000 > 365) return;
   const params = new URLSearchParams({ from, to });
-  if (zoneId) params.set("zoneId", zoneId);
+  for (const zone of zoneIds ?? []) params.append("zoneIds", zone);
   if (parsed.data.action === "export") {
     const format = parsed.data.format;
     if (format) params.set("format", format);

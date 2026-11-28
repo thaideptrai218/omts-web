@@ -6,12 +6,13 @@ const files = vi.hoisted(() => ({ exportFile: vi.fn(), template: vi.fn(), import
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ notify: vi.fn() }) }));
 vi.mock("@/features/operations/repository", () => ({ createOperationsRepository: () => repository }));
-vi.mock("@/features/operations/lookups", () => ({ loadOptions: async () => ({ status: "success", data: [{ id: "zone-one", code: "V01", name: "Vùng Đông", statusId: 101 }] }) }));
+vi.mock("@/features/operations/lookups", () => ({ loadOptions: async () => ({ status: "success", data: [{ id: "zone-one", code: "V01", name: "Vùng Đông", statusId: 101 }, { id: "zone-two", code: "V02", name: "Vùng Tây", statusId: 101 }] }) }));
 vi.mock("./employee-file-repository", () => ({ employeeFileRepository: files }));
 vi.mock("./employee-detail-panel", () => ({ EmployeeDetailPanel: ({ id }: { id: string }) => <section aria-label={`Chi tiết ${id}`}>Chi tiết đã mở</section> }));
 import { employeeDetailFixture } from "@/features/employee-management/api/employee-wire.fixtures";
 import { employeeViewSchema } from "./contracts";
 import { EmployeeDirectory } from "./employee-directory";
+import { HeaderZones, chooseHeaderZones } from "@/test/header-zones";
 
 const first = () => employeeViewSchema.parse(employeeDetailFixture());
 const second = () => ({ ...first(), id: "88434e3f-e984-4aae-b6a9-e77af4822288", code: "NV000002", fullName: "Trần Bình" });
@@ -25,7 +26,7 @@ beforeEach(() => {
   repository.read.mockImplementation(async (action, query) => action === "job-types" ? { status: "success", data: [{ id: jobId, name: "Thu hoạch" }] } : { status: "success", data: { items: [first(), second()], page: Number(query.page), pageSize: Number(query.pageSize), total: 45 } });
 });
 afterEach(cleanup);
-const load = async () => { render(<EmployeeDirectory />); await screen.findByText(first().fullName); };
+const load = async () => { chooseHeaderZones([]); render(<HeaderZones><EmployeeDirectory /></HeaderZones>); await screen.findByText(first().fullName); };
 
 it("lists the toolbar in design order and shows photo and code before the name", async () => {
   await load();
@@ -38,8 +39,8 @@ it("lists the toolbar in design order and shows photo and code before the name",
   expect(screen.getByText("NV000001")).toBeTruthy();
 });
 
-it("puts Tình trạng first in the filter column and sends the type to the server", async () => {
-  await load();
+it("puts Loại nhân viên first in the filter column and sends it to the server", async () => {
+  await load(); await screen.findByRole("combobox", { name: "Vùng làm việc" });
   const rail = screen.getByRole("group", { name: "Loại nhân viên" });
   const legends = [...document.querySelectorAll("legend")].map(legend => legend.textContent);
   expect(legends.slice(0, 3)).toEqual(["Tình trạng", "Loại nhân viên", "Vùng làm việc"]);
@@ -107,7 +108,7 @@ it("Xuất file exports the current filters and order, shows a pending state, an
   const button = screen.getByRole("button", { name: "Xuất file" });
   fireEvent.click(button); fireEvent.click(button);
   expect(files.exportFile).toHaveBeenCalledTimes(1);
-  expect(files.exportFile).toHaveBeenCalledWith({ search: "", statusId: "401", zoneId: "", employeeType: "SeasonalWorker", sortBy: "code", sortDir: "asc" });
+  expect(files.exportFile).toHaveBeenCalledWith({ search: "", statusId: "401", zoneIds: "", employeeType: "SeasonalWorker", sortBy: "code", sortDir: "asc" });
   expect(button.getAttribute("aria-busy")).toBe("true");
   finish({ status: "success", data: true });
   await waitFor(() => expect(button.getAttribute("aria-busy")).toBeNull());

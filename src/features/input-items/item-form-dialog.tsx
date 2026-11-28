@@ -12,6 +12,8 @@ import Link from "next/link";
 import { productHref } from "@/features/products/product-helpers";
 import { itemTypes, type ItemType, type InputGroup, type InputUnit, type ItemView } from "./contracts";
 import { kindGroups, type StockKind } from "./stock-kind";
+import { defaultVatRate, itemVatName, vatChoices } from "./vat-rate";
+import { useVatCatalogue } from "@/features/vat-rates/use-vat-catalogue";
 import { MAX_PHOTOS, buildSaveBody, groupLabel, groupTree, initialValues, validateForm, type FormValues } from "./item-helpers";
 import { NameDialog, UnitFields } from "./item-unit-fields";
 import { errorText, inputRepository, problemText } from "./repository";
@@ -37,6 +39,9 @@ export function ItemFormDialog({ record, copy, group, kind, onClose, onSaved }: 
   const [newPhotos, setNewPhotos] = useState<File[]>([]), [removedPhotos, setRemovedPhotos] = useState<string[]>([]);
   const [nextCode, setNextCode] = useState(""), [extraGroups, setExtraGroups] = useState<InputGroup[]>([]), [extraUnits, setExtraUnits] = useState<InputUnit[]>([]);
   const [creating, setCreating] = useState<{ kind: "group" } | { kind: "unit"; rowKey: string }>();
+  const { catalogue: vatCatalogue } = useVatCatalogue();
+  // A new item, or one without a rate, shows and saves the default rate of the catalogue.
+  const withDefaultVat = (current: FormValues): FormValues => current.purchaseVatRateId ? current : { ...current, purchaseVatRateId: defaultVatRate(vatCatalogue)?.id ?? "" };
   const groups = useRemote(useCallback((signal: AbortSignal) => inputRepository.groups(signal), []));
   const units = useRemote(useCallback((signal: AbortSignal) => inputRepository.units(signal), []));
   const groupList = useMemo(() => [...(groups.data ?? []), ...extraGroups.filter((extra) => !groups.data?.some((row) => row.id === extra.id))], [groups.data, extraGroups]);
@@ -82,7 +87,7 @@ export function ItemFormDialog({ record, copy, group, kind, onClose, onSaved }: 
     const problem = validateForm(values);
     if (problem) { setError(problem); return; }
     setPending(true); setError(undefined);
-    const result = await inputRepository.save(buildSaveBody(values, editing ? record : null), editing ? record.id : undefined);
+    const result = await inputRepository.save(buildSaveBody(withDefaultVat(values), editing ? record : null, vatCatalogue), editing ? record.id : undefined);
     if (result.status !== "success") { setPending(false); setError(problemText(result)); return; }
     // The photos have their own calls; the item is already saved, so a failed photo is told after the form has moved on.
     let saved = result.data, photoFailure: string | undefined;
@@ -166,6 +171,12 @@ export function ItemFormDialog({ record, copy, group, kind, onClose, onSaved }: 
       <CollapsibleSection title="Quy cách và giá vốn" description="Đơn vị cơ bản, các đơn vị quy đổi (vd. 1 thùng = 10 cái), mã và giá vốn của từng đơn vị." columns={1}>
         <UnitFields units={values.units} catalog={unitList} itemCode={values.code || nextCode} baseLocked={baseLocked} costPrice={values.costPrice}
           onChange={(next) => setValues((current) => ({ ...current, units: next }))} onCostChange={(costPrice) => setValues((current) => ({ ...current, costPrice }))} onCreate={(rowKey) => setCreating({ kind: "unit", rowKey })} />
+        {!isSeed && <div>
+          <Select label="VAT mua vào (%)" value={withDefaultVat(values).purchaseVatRateId} onChange={(event) => setValues((current) => ({ ...current, purchaseVatRateId: event.target.value }))}>
+            {!withDefaultVat(values).purchaseVatRateId && <option value="" disabled>—</option>}
+            {vatChoices(vatCatalogue, { id: values.purchaseVatRateId, name: record ? itemVatName(record) : null }).map((choice) => <option key={choice.id} value={choice.id}>{choice.name}</option>)}</Select>
+          <p className={styles.hint}>Phiếu nhập lấy mức này cho từng dòng và sửa được theo hóa đơn của nhà cung cấp. Thuế mua vào không được khấu trừ nên cộng vào giá vốn.</p>
+        </div>}
       </CollapsibleSection>
       </> : <div className={styles.formGrid}>
         <div className={styles.wide}><Note label="Mô tả" maxLength={2000} value={values.description} onChange={set("description")} /></div>

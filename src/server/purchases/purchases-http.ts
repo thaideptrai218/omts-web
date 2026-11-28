@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import * as c from "@/features/purchase-documents/contracts";
+import { legacyVatCode } from "@/features/input-items/vat-rate";
 import { getSessionGateway } from "../auth/session-gateway.instance";
 import { createCsrfGuard } from "../auth/csrf-guard";
 import { parseServerBackendConfig } from "../config/backend-config";
@@ -35,7 +36,7 @@ const receiptBody = z.strictObject({
   /** Fixes the kind of a new receipt; every line must match it (the API answers 400 on the lines otherwise). It never changes afterwards, so an edit does not send it. */
   kind: documentKind.optional(),
   code: documentCode, supplierId: z.guid().nullable(), receiptDate: z.iso.date().nullable(), receivedAt: z.iso.datetime({ offset: true }).nullable(), receivedById: z.guid().nullable(), notes: z.string().max(2000).nullable(), discount: money, zoneId: z.guid().nullable(), complete: z.boolean(), rowVersion: z.string().max(200).nullable(),
-  lines: z.array(z.strictObject({ lineId: z.guid().nullable(), itemId: z.guid().nullable(), itemUnitId: z.guid().nullable().optional(), quantity: z.number().positive().nullable(), unitPrice: money.nullable(), discount: money, supplierLotCode: z.string().max(50).nullable(), raftId: z.guid().nullable() })).max(200),
+  lines: z.array(z.strictObject({ lineId: z.guid().nullable(), itemId: z.guid().nullable(), itemUnitId: z.guid().nullable().optional(), quantity: z.number().positive().nullable(), unitPrice: money.nullable(), discount: money, supplierLotCode: z.string().max(50).nullable(), raftId: z.guid().nullable(), vatRateId: z.guid().optional(), vatRate: legacyVatCode.optional() })).max(200),
 });
 const returnBody = z.strictObject({
   code: documentCode, receiptId: z.guid().nullable(), returnedAt: z.iso.datetime({ offset: true }).nullable(), supplierId: z.guid().nullable(), zoneId: z.guid().nullable(), reason: z.string().max(2000), discount: money, ownerApproved: z.boolean(), complete: z.boolean(),

@@ -4,6 +4,7 @@ import { FilterGroup } from "@/components/ui/management-screen/management-layout
 import { boundedRange } from "@/components/ui/management-screen/time-range-limits";
 import { fromQueryDate } from "@/components/ui/management-screen/time-range-model";
 import { SelectBox } from "@/components/ui/select-box";
+import { ZoneFilterField, useZoneFilter } from "@/features/api-workspace/zone-filter";
 import { ListSkeleton } from "@/features/farming-management/detail-parts";
 import { businessToday } from "@/features/operations/ui";
 import { vnd } from "@/features/sales-reports/report-format";
@@ -17,7 +18,7 @@ import type { RaftLaborCost } from "./labor-costs-contracts";
 import styles from "./labor-costs.module.css";
 import { useLaborCosts } from "./use-labor-costs";
 
-const DEFAULTS = { zone: "", raft: "" };
+const DEFAULTS = { raft: "" };
 const MAX_DAYS = 365;
 const percent = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
 const rowKey = (row: RaftLaborCost) => `${row.zoneId}:${row.raftId ?? "zone"}`;
@@ -29,19 +30,21 @@ export function LaborCostsScreen() {
 }
 
 function LaborCostsWorkspace() {
-  const filters = useReportFilters(DEFAULTS, { guidKeys: ["zone", "raft"] });
-  const zones = useReportZones("labor-costs");
+  const filters = useReportFilters(DEFAULTS, { guidKeys: ["raft"] });
+  const zones = useReportZones("labor-costs"), zoneFilter = useZoneFilter();
   const [openKey, setOpenKey] = useState<string>();
   const today = businessToday();
   // "Toàn thời gian" becomes the last 12 months: the backend answers at most one year.
   const range = useMemo(() => boundedRange(filters.applied.time, today, 1), [filters.applied.time, today]);
-  const { costs, canView, canExport, exportFile, exporting, exportError } = useLaborCosts({ ...range, zoneId: filters.applied.extra.zone });
-  const data = costs.data, raftId = filters.applied.extra.raft;
+  const { costs, canView, canExport, exportFile, exporting, exportError } = useLaborCosts({ ...range, zoneIds: zoneFilter.apiZoneIds ?? "" });
+  // A raft kept from before the zones changed is ignored until the new answer lists it.
+  const data = costs.data, raftId = data?.items.some((row) => row.raftId === filters.applied.extra.raft) ? filters.applied.extra.raft : "";
   const rows = useMemo(() => (data?.items ?? []).filter((row) => !raftId || row.raftId === raftId), [data, raftId]);
   const total = rows.reduce((sum, row) => sum + row.amount, 0), totalHours = rows.reduce((sum, row) => sum + (row.hours ?? 0), 0);
   const draftRange = boundedRange(filters.draft.time, today, 1);
   const problem = filters.problem ?? (spanDays(draftRange.from, draftRange.to) > MAX_DAYS ? "Chọn khoảng thời gian tối đa 1 năm." : null);
   const raftOptions = (data?.items ?? []).filter((row) => row.raftId);
+  const raftChoice = raftOptions.some((row) => row.raftId === filters.draft.extra.raft) ? filters.draft.extra.raft : "";
 
   const columns: ReportColumn<RaftLaborCost>[] = [
     { key: "raft", header: "Bè", cell: (row) => <RowLinkButton pressed={openKey === rowKey(row)} onClick={() => setOpenKey(openKey === rowKey(row) ? undefined : rowKey(row))}>{row.raftCode ?? "Công ươm cấp vùng"}</RowLinkButton>, total: "Tổng" },
@@ -58,14 +61,9 @@ function LaborCostsWorkspace() {
       onExportFormat={canExport ? exportFile : undefined} exporting={exporting} exportError={exportError}
       filters={<ReportFilterRail time={filters.draft.time} onTime={(time) => filters.change({ time })} zoneIds={[]} onZones={() => undefined} zones={zones} showZones={false}
         problem={problem} busy={costs.loading} onApply={() => { setOpenKey(undefined); filters.apply(); }} onReset={() => { setOpenKey(undefined); filters.reset(); }}>
-        <FilterGroup legend="Vùng nuôi">
-          <SelectBox aria-label="Vùng nuôi" className="omts-control" value={filters.draft.extra.zone} disabled={zones.loading} onChange={(event) => filters.change({ extra: { zone: event.target.value, raft: "" } })}>
-            <option value="">Tất cả vùng</option>
-            {zones.options.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
-          </SelectBox>
-        </FilterGroup>
+        <ZoneFilterField filter={zoneFilter} />
         <FilterGroup legend="Bè">
-          <SelectBox aria-label="Bè" className="omts-control" value={filters.draft.extra.raft} disabled={!raftOptions.length} onChange={(event) => filters.change({ extra: { raft: event.target.value } })}>
+          <SelectBox aria-label="Bè" className="omts-control" value={raftChoice} disabled={!raftOptions.length} onChange={(event) => filters.change({ extra: { raft: event.target.value } })}>
             <option value="">Tất cả bè</option>
             {raftOptions.map((row) => <option key={rowKey(row)} value={row.raftId ?? ""}>{row.raftCode}</option>)}
           </SelectBox>

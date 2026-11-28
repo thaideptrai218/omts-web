@@ -15,7 +15,14 @@ afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks(); 
 const read = (query: string) => new Request(`http://localhost:3002/api/operations/employees?${query}`);
 const write = (action: string, body: unknown, id: string | undefined = employeeId, origin = "http://localhost:3002") => new Request("http://localhost:3002/api/operations/employees", { method: "POST", headers: { Origin: origin, "X-OMTS-Request": "web", "Content-Type": "application/json" }, body: JSON.stringify({ action, ...(action === "create" ? {} : { id }), body }) });
 describe("employee fixed operation plans", () => {
-  it.each(["action=list&statusId=301", "action=list&pageSize=101", "action=list&zoneId=bad", `action=detail&id=${employeeId}&id=${linkedAccountId}`, "action=list&target=https://evil.test"]) ("rejects invalid list/detail query %s", (query) => expect(planEmployeeApi("GET", new URLSearchParams(query))).toBeUndefined());
+  it.each(["action=list&statusId=301", "action=list&pageSize=101", "action=list&zoneId=bad", "action=list&zoneIds=bad", `action=list&zoneId=${employeeId}`, `action=export&zoneIds=${employeeId},bad`, `action=detail&id=${employeeId}&id=${linkedAccountId}`, "action=list&target=https://evil.test"]) ("rejects invalid list/detail query %s", (query) => expect(planEmployeeApi("GET", new URLSearchParams(query))).toBeUndefined());
+  it("sends the zone filter of a list and of the export as repeated zoneIds", () => {
+    const other = linkedAccountId, zones = `${employeeId},${other}`;
+    expect(new URL(planEmployeeApi("GET", new URLSearchParams({ action: "list", zoneIds: zones }))!.path, "http://x").searchParams.getAll("zoneIds")).toEqual([employeeId, other]);
+    const file = planEmployeeApi("GET", new URLSearchParams({ action: "export", zoneIds: zones, statusId: "401" }));
+    expect(file).toMatchObject({ file: "export" });
+    expect(new URL(file!.path, "http://x").searchParams.getAll("zoneIds")).toEqual([employeeId, other]);
+  });
   it("keeps list paging explicit and rejects removed account operations", () => {
     expect(planEmployeeApi("GET", new URLSearchParams("action=list"))?.path).not.toContain("statusId");
     expect(planEmployeeApi("GET", new URLSearchParams("action=list&statusId=401"))?.path).toContain("statusId=401");

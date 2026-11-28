@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { legacyVatField } from "@/features/input-items/vat-rate";
 
 const id = z.guid(), text = z.string(), n = z.number(), date = z.iso.date(), stamp = z.string(), opt = <T extends z.ZodType>(value: T) => value.nullable().optional();
 const supplier = z.object({ id, code: opt(text), name: text, phoneNumber: text });
@@ -23,9 +24,13 @@ export const receiptView = z.object({
   id, code: text, supplier, receiptDate: date, total: n, returned: n, notes: opt(text), statusId: n, status: text, recordedBy: account,
   completedAt: opt(stamp), cancelledAt: opt(stamp), cancelReason: opt(text), rowVersion: text, discount: n, payable: n, paid: n, zone: opt(zone),
   receivedAt: opt(stamp), receivedBy: opt(account), kind: documentKind, seedState: opt(seedLotState),
+  /** Input VAT of the receipt (Σ of its lines); `payable` already includes it. An API without input VAT sends none. */
+  vatTotal: opt(n),
   lines: z.array(z.object({
     id, lineNumber: n, itemId: opt(id), itemCode: opt(text), itemName: opt(text), group: opt(text), unit: text, itemUnitId: opt(id), unitFactor: opt(n), baseQuantity: opt(n), baseUnit: opt(text), quantity: opt(n), unitPrice: opt(n), lineAmount: opt(n),
     supplierLotCode: opt(text), raft: opt(z.object({ id, code: text, zoneId: id, zoneCode: text })), seedLotCode: opt(text), seeded: n, returnedQuantity: n, returnable: n, discount: opt(n), netUnitPrice: opt(n),
+    /** The rate of the line as it was when the line was made (a snapshot: null on a line made before input VAT; percent null = KCT) and its amount in whole dong. `vatRate` is the old code of an API without the rate catalogue. */
+    vatRateId: opt(id), vatRateName: opt(text), vatPercent: opt(n), vatRate: legacyVatField, vatAmount: opt(n),
     /** A seed line of a Seed receipt: where the lot stands now. */
     seedLot: opt(z.object({ state: seedLotState, remainingQty: n })),
   })),
@@ -46,7 +51,9 @@ export const returnSearch = z.object({ page: paged(returnRow), totalValue: n });
 export const returnView = z.object({
   id, code: text, receipt: opt(z.object({ id, code: text })), supplier, zone: opt(zone), returnDate: date, returnedAt: opt(stamp), reason: text, discount: n, statusId: n, status: text,
   cancelReason: opt(text), recordedBy: account, returnValue: n, netValue: n, rowVersion: text, kind: documentKind,
-  lines: z.array(z.object({ receiptLineId: opt(id), itemId: id, itemCode: text, itemName: text, unit: text, itemUnitId: opt(id), unitFactor: opt(n), baseQuantity: opt(n), quantity: n, unitPrice: n, returnValue: n })),
+  /** Input VAT paid back with the goods; `netValue` already includes it. An API without input VAT sends none. */
+  vatRefund: opt(n),
+  lines: z.array(z.object({ receiptLineId: opt(id), itemId: id, itemCode: text, itemName: text, unit: text, itemUnitId: opt(id), unitFactor: opt(n), baseQuantity: opt(n), quantity: n, unitPrice: n, returnValue: n, vatRateId: opt(id), vatRateName: opt(text), vatPercent: opt(n), vatRate: legacyVatField, vatAmount: opt(n) })),
   refunds: z.array(z.object({ id, code: text, paymentDate: date, amount: n, method, bankReference: opt(text), statusId: n, status: text })),
 });
 export const cancelledReturn = z.object({ receipt: opt(z.unknown()), return: opt(z.unknown()) }).or(z.object({ id }));

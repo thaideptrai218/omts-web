@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { idList } from "@/server/operations/sales-report-plan";
 import { nurseryDetail, nurseryHistory, nurseryList, nurseryLots, nurserySaved, responsiblePeople } from "./nursery-response-schemas";
 
 const guid = z.guid();
@@ -19,7 +20,7 @@ const cancelValues = z.strictObject({ reason, rowVersion });
 const survivorsValues = z.strictObject({ survivors: quantity, reason, rowVersion });
 const closeValues = z.strictObject({ reason: z.string().trim().max(1000).optional(), rowVersion });
 const querySchema = z.strictObject({ action: z.enum(["list", "detail", "seed-lots", "history", "create", "update", "cancel", "complete", "survivors", "close", "photo", "responsible-people"]),
-  id: guid.optional(), zoneId: guid.optional(), status: z.enum(["all", "nursing", "completed", "closed", "cancelled"]).optional(),
+  id: guid.optional(), zoneId: guid.optional(), zoneIds: idList.optional(), status: z.enum(["all", "nursing", "completed", "closed", "cancelled"]).optional(),
   from: z.iso.date().optional(), to: z.iso.date().optional(), search: z.string().max(200).optional(),
   page: z.coerce.number().int().positive().max(100000).optional(), pageSize: z.coerce.number().int().positive().max(100).optional(),
   sortBy: z.enum(["code", "startDate", "quantityIn", "status"]).optional(), sortDir: z.enum(["asc", "desc"]).optional(),
@@ -31,15 +32,18 @@ export function planNursery(method: string, query: URLSearchParams): NurseryPlan
   if ([...query.keys()].length !== new Set(query.keys()).size) return;
   const result = querySchema.safeParse(Object.fromEntries(query));
   if (!result.success) return;
-  const { action, id, zoneId, stage, photoId, ...filters } = result.data;
+  const { action, id, zoneId, zoneIds, stage, photoId, ...filters } = result.data;
+  // `zoneIds` (several zones of the header) only narrows the list; the backend intersects it with the zones the caller may read, so no single zone is checked here.
   const base = { action, id, zoneId, method: "GET" as const, permission: "View" as const };
   const basePath = "/api/nursery-batches";
   if (method === "GET" && action === "list" && !id && !stage && !photoId) {
+    if (zoneId && zoneIds) return;
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries({ ...filters, zoneId })) if (value !== undefined) params.set(key, String(value));
+    for (const zone of zoneIds ?? []) params.append("zoneIds", zone);
     return { ...base, path: `${basePath}?${params}`, schema: nurseryList };
   }
-  if (Object.values(filters).some(value => value !== undefined)) return;
+  if (zoneIds || Object.values(filters).some(value => value !== undefined)) return;
   if (method === "GET" && action === "seed-lots" && zoneId && !id && !stage && !photoId) return { ...base, path: `${basePath}/seed-lots?zoneId=${zoneId}`, schema: nurseryLots };
   if (method === "POST" && action === "create" && zoneId && !id && !stage && !photoId) return { ...base, method: "POST", permission: "Create", path: `/api/zones/${zoneId}/nursery-batches`, schema: nurserySaved, validator: createValues, multipart: true };
   if (method === "GET" && action === "responsible-people" && zoneId && !id && !stage && !photoId) return { ...base, path: `/api/zones/${zoneId}/responsible-people`, schema: responsiblePeople };

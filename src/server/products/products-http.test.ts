@@ -110,3 +110,21 @@ describe("products BFF", () => {
     expect(String(fetcher.mock.calls[0][0])).toMatch(/\/api\/products\/import$/);
   });
 });
+
+describe("disposal list over several zones", () => {
+  const zones = ["529ec3ce-af8f-42f7-a08f-4bab36ba7e71", "529ec3ce-af8f-42f7-a08f-4bab36ba7e72", "529ec3ce-af8f-42f7-a08f-4bab36ba7e73", "529ec3ce-af8f-42f7-a08f-4bab36ba7e74", "529ec3ce-af8f-42f7-a08f-4bab36ba7e75", "529ec3ce-af8f-42f7-a08f-4bab36ba7e76", "529ec3ce-af8f-42f7-a08f-4bab36ba7e77"];
+  it("repeats the comma list of the browser as zoneIds for the backend, even when it is longer than any other value may be, and sends no zoneId", async () => {
+    setup([["PRODUCT_DISPOSALS", "View"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ items: [], page: 1, pageSize: 15, total: 0, summary: { totalValue: 0, totalKg: 0 } }));
+    expect((await handleProducts(get(`action=disposals&zoneIds=${zones.join(",")}`))).status).toBe(200);
+    const url = new URL(String(fetcher.mock.calls[0][0]));
+    expect(url.searchParams.getAll("zoneIds")).toEqual(zones);
+    expect(url.searchParams.has("zoneId")).toBe(false);
+  });
+  it("refuses zoneIds together with zoneId, a malformed id and more than 50 ids, before the API", async () => {
+    setup([["PRODUCT_DISPOSALS", "View"]]);
+    const fetcher = vi.spyOn(globalThis, "fetch");
+    for (const bad of [`action=disposals&zoneIds=${zones[0]}&zoneId=${zones[1]}`, `action=disposals&zoneIds=${zones[0]},nope`, `action=disposals&zoneIds=${Array.from({ length: 51 }, (_, i) => `529ec3ce-af8f-42f7-a08f-4bab36ba${String(i).padStart(4, "0")}`).join(",")}`]) expect((await handleProducts(get(bad))).status).toBe(400);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+});

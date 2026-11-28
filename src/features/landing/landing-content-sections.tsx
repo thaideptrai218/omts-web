@@ -1,83 +1,70 @@
-import Link from "next/link";
-import { features, flowSteps, roles } from "./landing-content";
-import { ArrowRight } from "./landing-icons";
-import b from "./landing.module.css";
+import { JourneyLine } from "@/features/public-site/journey-line";
+import site from "@/features/public-site/public-site.module.css";
+import { hiddenOnTrace, journey, scanSteps, shownOnTrace } from "./landing-content";
+import type { TraceExample } from "./landing-example";
 import s from "./landing-sections.module.css";
 
-/** Bốn chặng của quy trình khép kín, mỗi chặng một hàng. */
-export function LandingFlowSection() {
+export function LandingJourneySection() {
   return (
-    <section id="quy-trinh" className={s.section} aria-labelledby="flow-title">
-      <div className={b.wrap}>
-        <div className={`${s.head} ${b.reveal}`}>
-          <span className={b.kicker}>Quy trình khép kín</span>
-          <h2 id="flow-title" className={b.h2}>Bốn chặng, một dòng dữ liệu</h2>
-          <p className={b.sub}>Mỗi chặng ghi lại đúng một việc và chuyển tiếp cho chặng sau, nên khi cần tra cứu không phải lục lại sổ tay.</p>
+    <section id="hanh-trinh" className={s.section} aria-labelledby="journey-title">
+      <div className={`${site.wrap} ${s.journeyGrid}`}>
+        <div className={s.journeyIntro}>
+          <h2 id="journey-title" className={site.heading}>Hành trình của một lô hàu</h2>
+          <p className={site.sub}>Mỗi chặng được ghi lại ngay khi làm. Đến lúc bán, hợp tác xã công bố nguồn gốc từ chính các ghi chép đó.</p>
+          <p className={s.journeyNote}>Mốc ngày là ví dụ minh họa, mỗi lô nuôi dài ngắn khác nhau.</p>
         </div>
-        <ol className={s.steps}>
-          {flowSteps.map((f) => (
-            <li className={`${s.step} ${b.reveal}`} key={f.step}>
-              <span className={s.stepNo} aria-hidden="true">{f.step}</span>
-              <h3>{f.title}</h3>
-              <p>{f.text}</p>
-            </li>
+        <div className={s.journeyCard}><JourneyLine steps={journey} label="Các chặng của một lô hàu" /></div>
+      </div>
+    </section>
+  );
+}
+
+/** Con giống của lô mẫu, lấy từ ghi chép thả giống; không có lô thật thì không dựng mục này. */
+export function LandingSeedSection({ example }: { example: TraceExample }) {
+  const { seed } = example;
+  if (!seed) return null;
+  const rows = [
+    ["Loại giống", seed.itemName],
+    ...(seed.supplier ? [["Nhà cung cấp", seed.supplier] as const] : []),
+    ["Ngày thả giống", seed.date],
+    ["Thả tại", `Bè ${seed.raft}, ${seed.zone}`],
+    ["Lô thu hoạch", example.lot],
+  ] as const;
+  return (
+    <section id="con-giong" className={s.section} aria-labelledby="seed-title">
+      <div className={`${site.wrap} ${s.seedGrid}`}>
+        <div>
+          <h2 id="seed-title" className={site.heading}>Nguồn gốc con giống</h2>
+          <p className={site.sub}>Mỗi đợt giống nhận về đều được ghi nhà cung cấp, ngày nhận và số lượng. Nhờ vậy lô hàu thu hoạch truy ngược được về đúng đợt giống đã thả.</p>
+        </div>
+        <dl className={s.seedCard}>
+          {rows.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+export function LandingTraceSection() {
+  return (
+    <section id="quet-ma" className={`${s.section} ${s.white}`} aria-labelledby="trace-title">
+      <div className={site.wrap}>
+        <h2 id="trace-title" className={site.heading}>Quét mã, bạn thấy gì?</h2>
+        <ol className={s.scanSteps}>
+          {scanSteps.map((step, index) => (
+            <li key={step.title}><span aria-hidden="true">{index + 1}</span><h3>{step.title}</h3><p>{step.text}</p></li>
           ))}
         </ol>
-      </div>
-    </section>
-  );
-}
-
-/** Sáu nhóm người dùng và phần việc của từng nhóm. */
-export function LandingRolesSection() {
-  return (
-    <section id="vai-tro" className={`${s.section} ${s.rolesWrap}`} aria-labelledby="roles-title">
-      <div className={b.wrap}>
-        <div className={`${s.head} ${b.reveal}`}>
-          <span className={b.kicker}>Dành cho từng người</span>
-          <h2 id="roles-title" className={b.h2}>Mỗi vai trò thấy đúng việc của mình</h2>
-          <p className={b.sub}>Menu và thao tác thay đổi theo quyền được cấp. Người dùng không bị rối bởi chức năng không thuộc phần việc của họ.</p>
-        </div>
-        <div className={s.roles}>
-          {roles.map((r) => (
-            <article className={`${s.role} ${b.reveal}`} key={r.role}>
-              <h3>{r.role}</h3>
-              <p>{r.text}</p>
-              <ul>{r.points.map((p) => <li key={p}>{p}</li>)}</ul>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** Các điểm thiết kế cho việc thật, đánh số theo danh sách. */
-export function LandingFeaturesSection() {
-  return (
-    <section id="tinh-nang" className={`${s.section} ${s.features}`} aria-labelledby="feat-title">
-      <div className={`${b.wrap} ${s.featGrid}`}>
-        <div className={`${s.featHead} ${b.reveal}`}>
-          <span className={b.kicker}>Thiết kế cho việc thật</span>
-          <h2 id="feat-title" className={b.h2}>Gọn trên bến, chặt chẽ ở sổ sách</h2>
-        </div>
-        <ul className={s.feats}>
-          {features.map((f) => <li className={b.reveal} key={f.title}><h3>{f.title}</h3><p>{f.text}</p></li>)}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-/** Lời kêu gọi cuối trang. */
-export function LandingCtaSection() {
-  return (
-    <section className={s.cta} aria-labelledby="cta-title">
-      <div className={`${b.wrap} ${b.reveal}`}>
-        <h2 id="cta-title">Sẵn sàng làm việc cùng OMTS?</h2>
-        <p>Đăng nhập bằng tài khoản do hợp tác xã cấp, gồm cả thương lái gửi yêu cầu mua và theo dõi công nợ.</p>
-        <div className={s.ctaRow}>
-          <Link className={`${b.btn} ${b.btnInk} ${b.btnLg}`} href="/login">Đăng nhập <ArrowRight /></Link>
+        <div className={s.compare}>
+          <div className={s.shown}>
+            <h3>Có trên trang nguồn gốc</h3>
+            <ul>{shownOnTrace.map((item) => <li key={item}>{item}</li>)}</ul>
+          </div>
+          <div className={s.hidden}>
+            <h3>Không công khai</h3>
+            <ul>{hiddenOnTrace.map((item) => <li key={item}>{item}</li>)}</ul>
+            <p>Lô đã rút thông tin nguồn gốc được ghi rõ trên trang.</p>
+          </div>
         </div>
       </div>
     </section>

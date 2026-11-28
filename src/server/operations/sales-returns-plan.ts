@@ -2,11 +2,12 @@ import "server-only";
 import { z } from "zod";
 import * as c from "@/features/sales-returns/return-contracts";
 import type { OperationPlan } from "./operation-plan";
+import { idList } from "./sales-report-plan";
 
 const area = "sales-returns" as const, id = z.guid();
-/** The filters of the Trả hàng bán list, as the API takes them: the return date range, customer, zone, status (4101 recorded, 4102 cancelled) and a text matched on the return, invoice and customer. */
+/** The filters of the Trả hàng bán list, as the API takes them: the return date range, customer, zones (`zoneIds`: ids joined by commas, at most 50; sent to the API as repeated `zoneIds`), status (4101 recorded, 4102 cancelled) and a text matched on the return, invoice and customer. */
 const filters = {
-  from: z.iso.date().optional(), to: z.iso.date().optional(), customerId: id.optional(), zoneId: id.optional(), statusId: z.enum(["4101", "4102"]).optional(),
+  from: z.iso.date().optional(), to: z.iso.date().optional(), customerId: id.optional(), zoneIds: idList.optional(), statusId: z.enum(["4101", "4102"]).optional(),
   search: z.string().trim().min(1).max(100).optional(), sort: z.enum(c.returnSorts).optional(), sortDir: z.enum(["asc", "desc"]).optional(),
 };
 const filterNames = Object.keys(filters) as (keyof typeof filters)[];
@@ -37,10 +38,11 @@ export function salesReturnsPlan(method: string, query: URLSearchParams, input?:
     }
     if (q.id || q.from && q.to && q.from > q.to || !only([...filterNames, ...(q.action === "list" ? ["page", "pageSize"] : [])])) return;
     const params = new URLSearchParams();
-    for (const name of filterNames) if (q[name] !== undefined) params.set(name, q[name]);
+    for (const name of filterNames) if (name !== "zoneIds" && q[name] !== undefined) params.set(name, q[name]);
+    for (const zone of q.zoneIds ?? []) params.append("zoneIds", zone);
     if (q.action === "list") { params.set("page", q.page ?? "1"); params.set("pageSize", q.pageSize ?? "10"); }
     const path = `/api/sales-returns${q.action === "export" ? "/export" : ""}${params.size ? `?${params}` : ""}`;
-    return q.action === "export" ? { ...base, path, zoneId: q.zoneId, permission: "View", schema: z.strictObject({}), file: "export" } : { ...base, path, zoneId: q.zoneId, permission: "View", schema: c.returnPage };
+    return q.action === "export" ? { ...base, path, permission: "View", schema: z.strictObject({}), file: "export" } : { ...base, path, permission: "View", schema: c.returnPage };
   }
   const parsed = writeInput.safeParse(input);
   if (method !== "POST" || query.size || !parsed.success) return;

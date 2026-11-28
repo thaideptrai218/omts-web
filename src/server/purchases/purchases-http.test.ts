@@ -54,3 +54,23 @@ describe("saving a receipt with its kind", () => {
     expect(purchaseWrites.safeParse({ action: "save-receipt", id: receipt, body: { ...receiptBody, kind: "Supply" } }).success).toBe(true);
   });
 });
+
+describe("input VAT on receipt lines", () => {
+  const line = (extra: object = {}) => ({ lineId: null, itemId: supplier, itemUnitId: null, quantity: 1, unitPrice: 100000, discount: 0, supplierLotCode: null, raftId: null, ...extra });
+  const write = (lines: object[]) => purchaseWrites.safeParse({ action: "save-receipt", body: { ...receiptBody, lines } });
+  it("passes the rate of a line to the API and still takes a line without one", () => {
+    const parsed = write([line({ vatRate: "10" }), line()]);
+    expect(parsed.success).toBe(true);
+    expect((planWrite(parsed.data!).body as { lines: { vatRate?: string }[] }).lines.map((row) => row.vatRate)).toEqual(["10", undefined]);
+  });
+  it("passes the rate of the catalogue by id and refuses an id that is not a guid", () => {
+    const parsed = write([line({ vatRateId: supplier })]);
+    expect(parsed.success).toBe(true);
+    expect((planWrite(parsed.data!).body as { lines: { vatRateId?: string }[] }).lines[0].vatRateId).toBe(supplier);
+    expect(write([line({ vatRateId: "10" })]).success).toBe(false);
+  });
+  it("refuses a rate that is not one of KCT, 0, 5, 8 and 10", () => {
+    expect(write([line({ vatRate: "12" })]).success).toBe(false);
+    expect(write([line({ vatRate: 10 })]).success).toBe(false);
+  });
+});

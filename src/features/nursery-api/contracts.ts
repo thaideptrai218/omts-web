@@ -34,12 +34,12 @@ export const nurseryHistorySchema = z.object({ entries: z.array(historyEntry.ext
 export type NurseryRow = z.infer<typeof nurseryRowSchema>;
 export type NurseryDetail = z.infer<typeof nurseryDetailSchema>;
 export type NurseryLot = z.infer<typeof seedLotSchema>;
-export const nurseryStatus = (statusId: number | undefined) => ({ 4001: "Đang ươm", 4002: "Đã ươm xong", 4003: "Đã hủy", 4004: "Đã đóng" })[statusId ?? 0] ?? "Không xác định";
+export const nurseryStatus = (statusId: number | undefined) => ({ 4001: "Đang ươm", 4002: "Chờ thả", 4003: "Đã hủy", 4004: "Đã đóng" })[statusId ?? 0] ?? "Không xác định";
 /**
  * Status text of a batch. Since 18/11/2026 (contract H4) a batch closes by itself when seeding uses the pool up: Closed with nothing written off (closeLossPieces = 0).
  * A manual close always writes off more than 0, so a null or positive loss keeps the plain "Đã đóng".
  */
 export const nurseryStatusText = (batch: { statusId?: number; closeLossPieces?: number | null }) =>
   batch.statusId === 4004 && batch.closeLossPieces === 0 ? "Đã đóng (tự động khi thả hết)" : nurseryStatus(batch.statusId);
-export const nurseryStatusTone = (statusId: number) => statusId === 4001 ? "neutral" : statusId === 4002 ? "success" : statusId === 4003 ? "danger" : "neutral";
+export const nurseryStatusTone = (statusId: number) => statusId === 4001 ? "neutral" : statusId === 4002 ? "info" : statusId === 4003 ? "danger" : "neutral";
 export const quantityText = (value: number | null | undefined, unit = "mảnh") => value == null ? "—" : `${value.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} ${unit}`;

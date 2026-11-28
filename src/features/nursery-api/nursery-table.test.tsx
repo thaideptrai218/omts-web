@@ -26,7 +26,7 @@ describe("nursery inventory list", () => {
     expect(screen.getByRole("columnheader", { name: "Còn lại" })).toBeTruthy();
     expect(screen.getByText("300 mảnh")).toBeTruthy();
     expect(screen.getByText("600 mảnh")).toBeTruthy();
-    expect(screen.getByText("Đã ươm xong")).toBeTruthy();
+    expect(screen.getByText("Chờ thả")).toBeTruthy();
   });
   it("identifies an exhausted completed nursery", () => {
     mount(4002, 0);

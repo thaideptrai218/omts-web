@@ -1,4 +1,5 @@
 "use client";
+import { KctVatRow } from "@/features/purchase-documents/kct-vat-row";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -154,6 +155,7 @@ function Editor({ start }: { start: Start }) {
             {preview.qualityClaims.map((claim) => <p key={claim.id}>{claim.code} · {viDateTime(claim.sentAt)} · {claim.status || "—"} · {offerText(claim.offer)}</p>)}</div>
             : <p className={styles.sub}>Hóa đơn chưa có khiếu nại chất lượng.</p>}
           <div className={styles.divider} />
+          <KctVatRow layout="side" />
           <SideRow label={`Giá trị phiếu trả (${preview.lines.length} dòng)`} strong>{fmt(preview.value)}</SideRow>
           <SideRow label="Công nợ hiện tại của khách">{chosen.loading && walkIn && buyer ? "…" : debtNow === null ? "—" : fmt(debtNow)}</SideRow>
           <SideRow label="Công nợ sau phiếu trả">{debtAfter === null ? "—" : fmt(debtAfter)}</SideRow>

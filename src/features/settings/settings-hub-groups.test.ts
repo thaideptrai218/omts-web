@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildSettingsGroups, type SettingsGate } from "./settings-hub-groups";
 import { filterSettingsGroups, normaliseSettingsQuery, pickSettingsItem, settingsItemKey, suggestSettingsItems } from "./settings-hub-filter";
 
@@ -39,6 +39,18 @@ describe("settings hub groups", () => {
 
   it("does not show the cash book settings to someone who can only view them", () => {
     expect(labels({ ...none, holds: (fn, action) => fn === "CASH_BOOK_SETTINGS" && action === "View" })).toEqual([]);
+  });
+
+  it("puts Thuế GTGT under Tài chính after the cash book and finds it by thuế, VAT and GTGT", () => {
+    const finance = buildSettingsGroups(owner).find((group) => group.key === "finance");
+    expect(finance?.items.map((item) => [item.label, item.href])).toEqual([["Sổ quỹ", "/settings?section=cash-book"], ["Thuế GTGT", "/settings?section=vat-rates"]]);
+    for (const term of ["thue", "VAT", "gtgt"]) expect(filterSettingsGroups(buildSettingsGroups(owner), term).flatMap((group) => group.items.map((item) => item.label))).toContain("Thuế GTGT");
+  });
+
+  it("shows Thuế GTGT read-only to an account that works with receipts, but not to one that only reads farming data", () => {
+    expect(labels({ ...none, holds: (fn, action) => fn === "PURCHASE_RECEIPTS" && action === "View" })).toEqual(["Thuế GTGT"]);
+    expect(labels({ ...none, holds: (fn, action) => fn === "SUPPLIER_PAYMENTS" && action === "View" })).toEqual(["Thuế GTGT"]);
+    expect(labels({ ...none, holds: (fn, action) => fn === "INPUT_ISSUES" && action === "View" })).toEqual([]);
   });
 
   it("returns no groups when nothing is permitted, so the shell hides the gear", () => {

@@ -18,7 +18,7 @@ import styles from "@/features/farming-management/farming-management.module.css"
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import type { RaftAccess } from "./raft-detail-panel";
 import { fmtDateTime } from "./raft-format";
-import { IN_USE, type RaftDetail } from "./raft-model";
+import type { RaftDetail } from "./raft-model";
 import { useOpenCycle } from "./use-open-cycle";
 
 type Usage = z.infer<typeof materialRecord>;
@@ -53,7 +53,7 @@ export function RaftMaterialsTab({ raft, zoneId, access }: { raft: RaftDetail; z
   const amounts = useMemo(() => new Map((costs.data?.rafts.find(entry => entry.raft.id === raft.id)?.usages ?? []).map(usage => [usage.usageId, usage.unpriced ? null : usage.amount])), [costs.data, raft.id]);
   const docs = useMemo(() => list.data ? documentsOf(list.data) : [], [list.data]);
   const amountOf = (lines: readonly Usage[]) => !costs.data || lines.every(line => amounts.get(line.id) == null) ? "—" : money(lines.reduce((sum, line) => sum + (amounts.get(line.id) ?? 0), 0));
-  const canUse = !!access.materialCreate && raft.statusId === IN_USE && !!open.cycle;
+  const canUse = !!access.materialCreate;
   const reload = () => { list.reload(); costs.reload(); };
   const current = Math.min(page, Math.max(1, Math.ceil(docs.length / pageSize))), shown = docs.slice((current - 1) * pageSize, current * pageSize), viewed = docs.find(doc => doc.key === viewing);
   return <>
@@ -65,7 +65,6 @@ export function RaftMaterialsTab({ raft, zoneId, access }: { raft: RaftDetail; z
             <td className="whitespace-nowrap">{fmtDateTime(doc.recordedAt)}</td><td>{firstItem(doc.lines)}</td><td className="whitespace-nowrap">{quantity(doc.lines)}</td>
             <td className="whitespace-nowrap">{amountOf(doc.lines)}</td><td>{doc.recordedByName ?? "—"}</td></tr>)}</tbody></table></div>
           <ManagementPagination page={current} pageSize={pageSize} total={docs.length} unit="phiếu" onPage={setPage} onPageSize={size => { setPageSize(size); setPage(1); }} /></>}
-    {!!access.materialCreate && !open.loading && !open.cycle && <p className="my-3 text-sm text-text-muted">Bè chưa có chu kỳ đang mở nên chưa ghi nhận được sử dụng vật tư.</p>}
     <TabFooter right={canUse ? <Button key="use-material" type="button" className="w-auto" onClick={() => setUsing(true)}><InterfaceIcon name="add" className="size-4" />Dùng vật tư</Button> : undefined} />
     {using && <MaterialForm zoneId={zoneId} raftId={raft.id} cycleId={open.cycle?.id} record={null} allowed={action => action === "Create" && canUse}
       onClose={() => setUsing(false)} onSaved={() => { setUsing(false); reload(); }} />}

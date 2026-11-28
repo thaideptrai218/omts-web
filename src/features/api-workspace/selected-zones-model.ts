@@ -1,4 +1,5 @@
-export type ZoneOption = Readonly<{ id: string; name: string }>;
+/** `code` labels the zone in screen filters ("Z1 · Ngọc Vừng"); the header chip shows the name only. */
+export type ZoneOption = Readonly<{ id: string; name: string; code?: string }>;
 /** `all` follows every visible zone, including ones added later; `ids` pins a subset. */
 export type StoredZoneSelection = Readonly<{ kind: "all" } | { kind: "ids"; ids: readonly string[] }>;
 export type ResolvedZoneSelection = Readonly<{ selectedIds: readonly string[]; allSelected: boolean }>;

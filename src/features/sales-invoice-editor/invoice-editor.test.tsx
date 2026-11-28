@@ -93,6 +93,9 @@ it("opens the order with its remaining lines, the lot of the plan chosen, the di
   expect(screen.getByText("Thương lái An", { exact: false })).toBeTruthy();
   // 60 kg × 50.000 + 2 Lồng × 1.200.000 = 5.400.000; share of the 100.000 discount = 72.973; advance 500.000.
   expect(screen.getByText("Khách cần trả").nextElementSibling?.textContent).toBe("5.327.027");
+  // Sales carry no VAT: one fixed row Thuế GTGT: KCT right before the total, no money changed.
+  expect(screen.getByText("Thuế GTGT").nextElementSibling?.textContent).toBe("KCT");
+  expect(screen.getByText("Thuế GTGT").parentElement!.nextElementSibling).toBe(screen.getByText("Khách cần trả").parentElement);
   expect(screen.getByText("Đã tạm ứng (tự động)").nextElementSibling?.textContent).toBe("500.000");
 });
 

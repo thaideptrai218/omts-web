@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ZoneMapReading } from "./boundary-contract";
 import { areaDraft, cornerDraft } from "./boundary-geometry";
-import { draftsFromReading, mergeAreas, suggestedAreaHa } from "./corner-table";
+import { draftsFromReading, mergeAreas, suggestedAreaHa, vungName } from "./corner-table";
 
 const corner = (label: string, x: number | null, y: number | null, lat: string | null = null, lon: string | null = null) => ({ label, x, y, lat, lon });
 const zone = (name: string | null, writtenAreaHa: number | null, corners: ReturnType<typeof corner>[]) => ({ name, writtenAreaHa, gridAreaHa: null, areaMatches: null, corners });
@@ -20,7 +20,7 @@ describe("reading to drafts", () => {
     expect(drafts.centralMeridian).toBe(107.75);
     expect(drafts.location).toBe("Xã Đông Xá, huyện Vân Đồn");
     expect(drafts.areaHa).toBe(28.5);
-    expect(drafts.areas.map(area => area.name)).toEqual(["Khu 1", "Khu 2"]);
+    expect(drafts.areas.map(area => area.name)).toEqual(["Vùng 1", "Vùng 2"]);
     expect(drafts.areas[0].writtenAreaHa).toBe(12.5);
     expect(drafts.areas[0].corners.map(item => [item.label, item.x, item.y])).toEqual([["K1", "2315876.23", "437512.47"], ["K2", "2315976.23", "437512.47"], ["K3", "2315976.23", "437612.47"]]);
   });
@@ -56,9 +56,21 @@ describe("merging a new read", () => {
   it("replaces the corners of a khu with the same name and appends the others", () => {
     const current = [areaDraft("Khu 1", [cornerDraft("old", 1, 2)]), areaDraft("Khu 9", [cornerDraft("keep", 3, 4)])];
     const merged = mergeAreas(current, draftsFromReading(reading()).areas);
-    expect(merged.map(area => area.name)).toEqual(["Khu 1", "Khu 9", "Khu 2"]);
+    expect(merged.map(area => area.name)).toEqual(["Khu 1", "Khu 9", "Vùng 2"]);
     expect(merged[0].key).toBe(current[0].key);
     expect(merged[0].corners).toHaveLength(3);
     expect(merged[1].corners[0].label).toBe("keep");
+  });
+
+  it("treats a saved \"Khu 1\" and a new read \"Vùng 1\" as the same area", () => {
+    const merged = mergeAreas([areaDraft("Khu 1", [cornerDraft("old", 1, 2)])], [areaDraft("Vùng 1", [cornerDraft("A1", 3, 4)])]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].corners[0].label).toBe("A1");
+  });
+});
+
+describe("paper names", () => {
+  it("calls a paper \"Khu\" a \"Vùng\" and leaves other names alone", () => {
+    expect(["Khu 1", " KHU A ", "khu", "Khu Đông", "Khuê 2", "Bãi Khu 3", null].map(vungName)).toEqual(["Vùng 1", "Vùng A", "Vùng", "Vùng Đông", "Khuê 2", "Bãi Khu 3", ""]);
   });
 });

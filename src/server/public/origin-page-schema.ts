@@ -40,10 +40,18 @@ const originSchema = z.object({
     longitude: z.number().min(-180).max(180),
     source: z.enum(["Raft", "Zone"]),
   }).nullish(),
-  seedings: z.array(z.object({ seedingDate: isoDate, seedItemName: shortText })).max(100),
+  seedings: z.array(z.object({ seedingDate: isoDate, seedItemName: shortText, supplierName: shortText.nullish() })).max(100),
   daysOfFarming: z.number().int().min(0).max(5000).nullish(),
   harvestPhotoUrls: z.array(url).max(50),
   raftPhotoUrls: z.array(url).max(50),
+});
+
+export const productDetailSchema = z.object({
+  name: shortText,
+  description: text.nullish(),
+  sizeMinCm: z.number().min(0).max(100).nullish(),
+  sizeMaxCm: z.number().min(0).max(100).nullish(),
+  photoUrls: z.array(url).max(10),
 });
 
 const lotSchema = z.object({
@@ -66,9 +74,11 @@ export const provenancePageSchema = z.object({
   invoice: z.object({ code: shortText, date: isoDate }).nullish(),
   cooperative: cooperativeSchema,
   lots: z.array(lotSchema).max(200),
+  productDetails: z.array(productDetailSchema).max(100).nullish(),
 });
 
 export type ProvenancePage = z.infer<typeof provenancePageSchema>;
+export type ProductDetail = z.infer<typeof productDetailSchema>;
 export type ProvenanceLot = ProvenancePage["lots"][number];
 export type ProvenanceCooperative = ProvenancePage["cooperative"];
 

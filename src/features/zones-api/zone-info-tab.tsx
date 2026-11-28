@@ -21,7 +21,7 @@ const repository = createWorkspaceRepository("zones");
 export function boundarySummary(zone: Pick<ZoneDetail, "boundary">): string {
   if (!zone.boundary) return "Chưa có";
   const count = zone.boundary.features.length, area = boundaryAreaHa(zone.boundary);
-  return `Theo sơ đồ cấp phép, ${count} khu, ${area.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} ha`;
+  return `Theo sơ đồ cấp phép, ${count} vùng, ${area.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} ha`;
 }
 
 /**

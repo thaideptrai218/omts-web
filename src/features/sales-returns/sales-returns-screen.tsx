@@ -10,10 +10,9 @@ import { TimeRangeFilter } from "@/components/ui/management-screen/time-range-fi
 import { allTime, presetValue, type TimeRangeValue } from "@/components/ui/management-screen/time-range-model";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
-import { SelectBox } from "@/components/ui/select-box";
 import { useApiWorkspace } from "@/features/api-workspace/api-workspace-shell";
+import { ZoneFilterField, useZoneFilter } from "@/features/api-workspace/zone-filter";
 import { customerHref, invoiceHref } from "@/features/customers/customer-links";
-import { useZoneOptions } from "@/features/input-issues/issue-access";
 import { operationAllowed } from "@/features/operations/permissions";
 import { ErrorNotice, operationError, useMutation } from "@/features/operations/ui";
 import { fmt, viDate, viDateTime } from "@/features/purchase-documents/document-parts";
@@ -45,7 +44,7 @@ const columns: readonly Column[] = [
   { key: "status", label: "Trạng thái", render: (row) => <ReturnStatus statusId={row.statusId} /> },
 ];
 const defaults = columns.filter((column) => !column.hidden).map((column) => column.key).join(",");
-const emptyFilters = { status: "", zone: "", customer: null as Picked | null };
+const emptyFilters = { status: "", customer: null as Picked | null };
 type Filters = typeof emptyFilters;
 
 /**
@@ -67,13 +66,13 @@ function ReturnsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
   const [data, setData] = useState<ReturnPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>(), [expanded, setExpanded] = useState<string>();
   const [stored, store] = useStoredValue("omts-columns-sales-returns", defaults);
   const visible = useMemo(() => { const keys = stored.split(","), shown = columns.filter((column) => keys.includes(column.key)); return shown.length ? shown : columns; }, [stored]);
-  const { zones } = useZoneOptions(view);
+  const zone = useZoneFilter(), zoneIds = zone.apiZoneIds ?? "";
 
   // The filters as the list and the file take them; the file has no paging.
   const query = useMemo<ReturnListQuery>(() => {
-    const values: ReturnListQuery = { search: search.trim(), statusId: filters.status, zoneId: filters.zone, customerId: filters.customer?.id ?? "", from: time.from, to: time.to, sort: sort.key, sortDir: sort.direction };
+    const values: ReturnListQuery = { search: search.trim(), statusId: filters.status, zoneIds, customerId: filters.customer?.id ?? "", from: time.from, to: time.to, sort: sort.key, sortDir: sort.direction };
     return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== "")) as ReturnListQuery;
-  }, [search, filters, time, sort]);
+  }, [search, filters, zoneIds, time, sort]);
 
   useEffect(() => {
     if (!view) return;
@@ -92,10 +91,13 @@ function ReturnsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
     return () => { clearTimeout(timer); controller.abort(); };
   }, [view, query, page, pageSize, refresh]);
 
+  // The zone is the header selection: a change made in the header starts the list again at page 1 as well (state adjusted while rendering).
+  const [seenZones, setSeenZones] = useState(zoneIds);
+  if (seenZones !== zoneIds) { setSeenZones(zoneIds); setPage(1); setExpanded(undefined); }
   function changed<T>(apply: (value: T) => void) { return (value: T) => { apply(value); setPage(1); setExpanded(undefined); }; }
   const setFilter = <K extends keyof Filters>(key: K) => changed<Filters[K]>((value) => setFilters((current) => ({ ...current, [key]: value })));
   const reload = () => setRefresh((value) => value + 1);
-  const hasFilter = filters.status !== "" || filters.zone !== "" || filters.customer !== null || time.from !== defaultTime.from || time.to !== defaultTime.to;
+  const hasFilter = filters.status !== "" || filters.customer !== null || time.from !== defaultTime.from || time.to !== defaultTime.to;
   const open = (id: string) => setExpanded((value) => value === id ? undefined : id);
   if (!view) return <p role="alert" className="rounded-card border border-border bg-surface p-6">Bạn không có quyền xem chức năng này.</p>;
 
@@ -103,8 +105,7 @@ function ReturnsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
     <div className={listStyles.railHead}><strong>Bộ lọc</strong><button type="button" className={managementStyles.linkButton} disabled={!hasFilter} onClick={() => changed<void>(() => { setFilters(emptyFilters); setTime(defaultTime); })()}>Đặt lại</button></div>
     <FilterPills legend="Trạng thái" name="return-status" value={filters.status} options={[RETURN.recorded, RETURN.cancelled].map((id) => [String(id), returnStatusLabel[id]] as const)} onChange={setFilter("status")} />
     <TimeRangeFilter legend="Thời gian trả" value={time} onChange={changed<TimeRangeValue>(setTime)} />
-    <FilterGroup legend="Vùng"><SelectBox aria-label="Vùng" className={styles.railSelect} value={filters.zone} onChange={(event) => setFilter("zone")(event.target.value)}>
-      <option value="">Tất cả vùng của tôi</option>{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.code || zone.name}</option>)}</SelectBox></FilterGroup>
+    <ZoneFilterField filter={zone} className={styles.railSelect} />
     <FilterGroup legend="Khách hàng"><RailFinder label="Tìm khách hàng" placeholder="Tên hoặc số điện thoại" icon="user" value={filters.customer} search={searchCustomers} onChange={setFilter("customer")} /></FilterGroup>
   </>;
 
@@ -120,7 +121,7 @@ function ReturnsList({ helpHref, linkedCode }: { helpHref?: string; linkedCode: 
     <ManagementScroller busy={loading}>
       {error ? <ListStateMessage error={error} onRetry={reload} retryLabel="Tải lại" />
         : !data ? <div role="status" aria-label="Đang tải danh sách" className={listStyles.skeleton}>{[1, 2, 3, 4, 5].map((key) => <div key={key} />)}</div>
-        : !data.items.length ? <ListStateMessage>{search || hasFilter ? "Không có phiếu trả hàng phù hợp bộ lọc." : "Chưa có phiếu trả hàng bán. Phiếu được tạo từ chi tiết hóa đơn bán hoặc từ khiếu nại đã chấp nhận trả lại hàng."}</ListStateMessage>
+        : !data.items.length ? <ListStateMessage>{search || hasFilter || zoneIds ? "Không có phiếu trả hàng phù hợp bộ lọc." : "Chưa có phiếu trả hàng bán. Phiếu được tạo từ chi tiết hóa đơn bán hoặc từ khiếu nại đã chấp nhận trả lại hàng."}</ListStateMessage>
         : <table className={listStyles.table}><thead><tr>
           <th scope="col" className={listStyles.expandCell}><span className="sr-only">Mở dòng</span></th>
           {visible.map((column) => <SortableHeader key={column.key} label={column.label} sortKey={column.sort} sort={sort} onSort={changed<SortState>(setSort)} className={column.numeric ? styles.num : undefined} />)}

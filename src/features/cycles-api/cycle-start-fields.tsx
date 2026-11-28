@@ -14,7 +14,7 @@ export function NurseryBatchSelect({ batches, loading, error, onReload, value, o
   if (loading) return <Skeleton />;
   if (error) return <><ErrorNotice error={error} /><Button key="reload-nursery-batches" type="button" variant="secondary" className="w-auto" onClick={onReload}>Tải lại đợt ươm</Button></>;
   if (!batches?.length) return <div role="status" className="space-y-2 rounded-control border border-border p-3 text-sm">
-    <p className="font-medium">Chưa có đợt ươm nào đã ươm xong trong vùng này</p>
+    <p className="font-medium">Chưa có đợt ươm nào đang Chờ thả trong vùng này</p>
     <p className="text-text-muted">Chu kỳ nuôi chỉ bắt đầu từ một đợt ươm đã hoàn tất, còn mảnh trong kho ươm.</p>
     <Link className="font-medium text-primary underline underline-offset-4" href="/farming/nursery">Mở màn Ươm giống</Link></div>;
   return <div><Select label="Đợt ươm (loại giống đã ươm) *" required value={value} aria-invalid={!!message} onChange={event => onChange(event.target.value)}>

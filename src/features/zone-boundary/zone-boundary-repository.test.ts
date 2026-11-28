@@ -60,7 +60,7 @@ describe("boundary error texts", () => {
     expect(boundaryErrorText({ httpStatus: 503 })).toBeUndefined();
   });
   it("tells what to fix for the field the backend refused", () => {
-    expect(boundaryErrorText({ httpStatus: 400, code: "MSG-GEN-01", problem: { field: "Boundary name" } })).toContain("Tên khu tối đa 100");
+    expect(boundaryErrorText({ httpStatus: 400, code: "MSG-GEN-01", problem: { field: "Boundary name" } })).toContain("Tên vùng tối đa 100");
     expect(boundaryErrorText({ httpStatus: 400, code: "MSG-GEN-01", problem: { field: "Boundary corners" } })).toContain("Tên điểm góc");
     expect(boundaryErrorText({ httpStatus: 400, code: "MSG-GEN-01", problem: { field: "Photo" } })).toContain("JPEG hoặc PNG");
     expect(boundaryErrorText({ httpStatus: 400, code: "MSG-GEN-01", problem: { field: "Name" } })).toBeUndefined();

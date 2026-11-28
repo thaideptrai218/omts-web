@@ -32,7 +32,7 @@ describe("the prefill addresses of the actions", () => {
 
 describe("the state of a lot and of a receipt of lots", () => {
   it("names the seven states in Vietnamese and marks four of them final", () => {
-    expect(Object.values(seedLotStateLabel)).toEqual(["Chưa dùng", "Đang ươm", "Đang treo dở", "Đã treo hết", "Đã trả hết", "Hao hụt hết", "Đã dùng hết"]);
+    expect(Object.values(seedLotStateLabel)).toEqual(["Chưa dùng", "Đang ươm", "Đang thả dở", "Đã thả hết", "Đã trả hết", "Hao hụt hết", "Đã dùng hết"]);
     expect(seedLotStates.filter(isFinalSeedLotState)).toEqual(["FullySeeded", "FullyReturned", "FullyLost", "UsedUp"]);
   });
   it("combines the states of the lots of a receipt", () => {

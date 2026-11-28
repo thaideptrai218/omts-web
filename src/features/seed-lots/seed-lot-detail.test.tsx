@@ -26,14 +26,14 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 it("shows the five tabs and, on Thông tin, the facts with links, the quantity breakdown and the sums", async () => {
   const panel = await mount();
-  expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual(["Thông tin", "Ươm", "Treo", "Trả hàng", "Lịch sử"]);
+  expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual(["Thông tin", "Ươm", "Thả giống", "Trả hàng", "Lịch sử"]);
   expect(within(panel).getByRole("heading", { name: "PN000004-1" })).toBeTruthy();
   expect(within(panel).getByRole("link", { name: "PN000004" }).getAttribute("href")).toBe("/operations/seed-receipts?code=PN000004");
   expect(within(panel).getByRole("link", { name: "Trại giống Vân Đồn" }).getAttribute("href")).toBe("/workspace/suppliers?code=NCC000001");
   expect(within(panel).getByRole("link", { name: "Hàu giống 3 cm" }).getAttribute("href")).toBe("/inputs/seeds?code=GG000001");
   expect(within(panel).getByRole("link", { name: "Hàu sữa" }).getAttribute("href")).toBe("/sales/products?code=SP000001");
   const table = within(panel).getByRole("table", { name: "Số lượng của lô giống" });
-  expect(within(table).getAllByRole("row").slice(1).map((row) => (row as HTMLTableRowElement).cells[0].textContent)).toEqual(["Nhập", "Đã trả nhà cung cấp", "Đang ươm", "Hao hụt khi ươm", "Đã treo", "Xuất khác", "Còn lại"]);
+  expect(within(table).getAllByRole("row").slice(1).map((row) => (row as HTMLTableRowElement).cells[0].textContent)).toEqual(["Nhập", "Đã trả nhà cung cấp", "Đang ươm", "Hao hụt khi ươm", "Đã thả", "Xuất khác", "Còn lại"]);
   expect(within(within(table).getByText("Nhập").closest("tr")!).getByText("1.000")).toBeTruthy();
   expect(within(within(table).getByText("Đã trả nhà cung cấp").closest("tr")!).getByText("10%")).toBeTruthy();
   expect(within(panel).queryByText("Lô đã được treo một phần, phần còn lại chưa dùng.")).toBeNull();
@@ -49,7 +49,7 @@ it.each<[SeedLotState, boolean]>([["Unused", true], ["PartlySeeded", true], ["Nu
     await mount({ remainingQty: lotState === "Unused" || lotState === "PartlySeeded" ? 500 : 0, availableQty: lotState === "Unused" || lotState === "PartlySeeded" ? 500 : 0 }, lotState);
     for (const name of ["Ươm", "Trả hàng"]) expect(!!screen.queryByRole("button", { name })).toBe(shown);
     // Seed is nursed before it is hung: a seed lot never offers Treo.
-    expect(screen.queryByRole("button", { name: "Treo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Thả giống" })).toBeNull();
   });
 
 it("offers no action on an open lot whose remaining stock is all in the nursery", async () => {
@@ -68,13 +68,13 @@ it("keeps the Ươm action on Ươm, hangs a finished batch from its row, and ha
   await mount();
   tab("Ươm");
   expect(screen.getByRole("button", { name: "Ươm" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Treo lên bè" }).getAttribute("href")).toBe(`/farming/rafts?nurseryBatch=${ids.nursery}`);
-  tab("Treo");
-  expect(screen.queryByRole("button", { name: /^(Ươm|Treo|Trả hàng)$/ })).toBeNull();
+  expect(screen.getByRole("link", { name: "Thả giống" }).getAttribute("href")).toBe(`/farming/rafts?nurseryBatch=${ids.nursery}`);
+  tab("Thả giống");
+  expect(screen.queryByRole("button", { name: /^(Ươm|Thả giống|Trả hàng)$/ })).toBeNull();
   tab("Trả hàng");
   expect(screen.getByRole("button", { name: "Trả hàng" })).toBeTruthy();
   tab("Lịch sử");
-  expect(screen.queryByRole("button", { name: /^(Ươm|Treo|Trả hàng)$/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^(Ươm|Thả giống|Trả hàng)$/ })).toBeNull();
 });
 
 it("hides the actions an account has no right for", async () => {
@@ -84,26 +84,26 @@ it("hides the actions an account has no right for", async () => {
   expect(screen.queryByRole("button", { name: "Ươm" })).toBeNull();
   expect(screen.getByRole("button", { name: "Trả hàng" })).toBeTruthy();
   tab("Ươm");
-  expect(screen.queryByRole("link", { name: "Treo lên bè" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Thả giống" })).toBeNull();
 });
 
 it("lists the nursery batches with their status and a link by code", async () => {
   await mount(); tab("Ươm");
   const table = screen.getByRole("table", { name: "Đợt ươm của lô giống" });
   expect(within(table).getByRole("link", { name: "NU000002" }).getAttribute("href")).toBe("/farming/nursery?code=NU000002");
-  expect(within(table).getByText("Đã ươm xong")).toBeTruthy();
+  expect(within(table).getByText("Chờ thả")).toBeTruthy();
   expect(within(table).getByText("11/11/2026")).toBeTruthy();
 });
 
 it("says so on a tab with nothing to list", async () => {
   await mount({ nurseryBatches: [], seedings: [], cycles: [], harvestLots: [], returns: [], issues: [] }, "Unused");
   tab("Ươm"); expect(screen.getByText("Lô chưa được ươm.")).toBeTruthy();
-  tab("Treo"); expect(screen.getByText(/^Lô chưa được treo\. Giống phải ươm trước/)).toBeTruthy();
+  tab("Thả giống"); expect(screen.getByText(/^Lô chưa được thả giống\. Giống phải ươm trước/)).toBeTruthy();
   tab("Trả hàng"); expect(screen.getByText("Lô chưa có phiếu trả hay phiếu xuất nào.")).toBeTruthy();
 });
 
 it("lists the seedings, the cycles and the harvest lots on Treo, and the returns and issues on Trả hàng", async () => {
-  await mount(); tab("Treo");
+  await mount(); tab("Thả giống");
   expect(within(screen.getByRole("table", { name: "Lần thả giống của lô" })).getByText("400")).toBeTruthy();
   expect(within(screen.getByRole("table", { name: "Chu kỳ nuôi từ lô giống" })).getByText("SP000001")).toBeTruthy();
   expect(within(screen.getByRole("table", { name: "Lô thu hoạch từ lô giống" })).getByRole("link", { name: "LTH000007" }).getAttribute("href")).toBe("/farming/harvest-lots?code=LTH000007");

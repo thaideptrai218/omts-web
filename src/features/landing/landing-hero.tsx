@@ -1,43 +1,29 @@
 import Link from "next/link";
 import { CooperativeName } from "@/components/brand/cooperative-name-context";
-import { flowSteps } from "./landing-content";
-import { ArrowRight } from "./landing-icons";
-import { HeroPointerLight } from "./landing-hero-pointer-light";
-import { LandingZonePlan } from "./landing-zone-plan";
-import b from "./landing.module.css";
-import s from "./landing-hero.module.css";
+import site from "@/features/public-site/public-site.module.css";
+import type { TraceExample } from "./landing-example";
+import { LandingExampleCard } from "./landing-example-card";
+import s from "./landing.module.css";
 
-/** Màn hình đầu: tuyên bố một câu, hai lối vào, và dải bốn chặng của quy trình. */
-export function LandingHero() {
+/** Màn hình đầu: ảnh nền vùng nuôi, câu hỏi của người mua và thẻ nguồn gốc bấm vào xem được ngay. */
+export function LandingHero({ background, credit, example, entry }: { background: string; credit: string; example: TraceExample; entry: { href: string; label: string } }) {
   return (
     <section className={s.hero} aria-labelledby="hero-title">
-      <LandingZonePlan className={s.plan} />
-      <div className={s.lens} aria-hidden="true"><LandingZonePlan bright className={s.plan} /></div>
-      <div className={s.glow} aria-hidden="true" />
-      <div className={s.sea} aria-hidden="true">
-        {[s.wave1, s.wave2].map((c) => (
-          <svg key={c} className={c} viewBox="0 0 2880 120" preserveAspectRatio="none"><path d="M0 60Q180 14 360 60T720 60T1080 60T1440 60T1800 60T2160 60T2520 60T2880 60V120H0Z" /></svg>
-        ))}
-      </div>
-      <HeroPointerLight />
-      <div className={s.shade} aria-hidden="true" />
-      <div className={`${b.wrap} ${s.body}`}>
-        <p className={s.eyebrow}><CooperativeName /> · Vân Đồn, Quảng Ninh</p>
-        <h1 id="hero-title" className={s.h1}>
-          <span>Từ bè đến bàn ăn,</span>
-          <span>minh bạch từng lô<span className={s.fire} aria-hidden="true">.</span></span>
-        </h1>
-        <div className={s.row}>
-          <p className={s.lead}>OMTS giúp <CooperativeName /> quản lý nuôi trồng, thu hoạch, bán hàng và công nợ trên một hệ thống, đồng thời cho người mua quét mã QR để biết con hàu đến từ đâu.</p>
-          <div className={s.cta}>
-            <Link className={`${b.btn} ${b.btnFire} ${b.btnLg}`} href="/login">Vào hệ thống <ArrowRight /></Link>
-            <a className={`${b.btn} ${b.btnLine} ${b.btnLg}`} href="#quy-trinh">Xem quy trình</a>
+      {/* eslint-disable-next-line @next/next/no-img-element -- ảnh nền có thể là ảnh chủ HTX đăng, đi qua proxy ảnh công khai */}
+      <img className={s.background} src={background} alt="" fetchPriority="high" />
+      <div className={`${site.wrap} ${s.heroGrid}`}>
+        <div className={s.heroText}>
+          <p className={s.eyebrow}><CooperativeName /> · Vân Đồn, Quảng Ninh</p>
+          <h1 id="hero-title" className={s.h1}>Con hàu bạn mua lớn lên ở bè nào?</h1>
+          <p className={s.lead}>Quét mã QR trên hóa đơn để xem vùng nuôi, ngày thả giống và ngày thu hoạch của đúng lô hàu đó.</p>
+          <div className={s.actions}>
+            <Link className={s.primary} href={example.href}>{example.real ? "Xem một lô hàu thật" : "Xem trang truy xuất mẫu"}</Link>
+            <Link className={s.secondary} href={entry.href}>{entry.label}</Link>
           </div>
         </div>
+        <LandingExampleCard example={example} />
       </div>
-      <ol className={`${b.wrap} ${s.strip}`} aria-label="Bốn chặng của quy trình">
-        {flowSteps.map((f) => <li key={f.step}><a href="#quy-trinh"><span>{f.step}</span>{f.title}</a></li>)}
-      </ol>
+      {credit ? <p className={s.credit}>{credit}</p> : null}
     </section>
   );
 }

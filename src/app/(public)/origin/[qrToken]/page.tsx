@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro } from "next/font/google";
 import { headers } from "next/headers";
 import { connection } from "next/server";
 import { cache } from "react";
@@ -8,9 +7,7 @@ import { OriginPageView } from "@/features/origin-page/origin-page-view";
 import { OriginStatePanel } from "@/features/origin-page/origin-state-panel";
 import { getCooperativeBrand } from "@/server/public/cooperative-brand";
 import { fetchProvenancePage } from "@/server/public/origin-page-fetch";
-import { parseOriginLanguage, parseQrToken } from "@/server/public/origin-qr-token";
-
-const originFont = Be_Vietnam_Pro({ subsets: ["vietnamese", "latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-origin", display: "swap" });
+import { parseQrToken } from "@/server/public/origin-qr-token";
 
 // Mã QR là bí mật bán công khai: không cho công cụ tìm kiếm lập chỉ mục hay lưu bản sao.
 const robots = { index: false, follow: false, nocache: true } as const;
@@ -18,15 +15,14 @@ const robots = { index: false, follow: false, nocache: true } as const;
 // Dữ liệu luôn là hiện tại (BR-TRACE-05): fetch không cache giữa các yêu cầu; cache() chỉ gộp generateMetadata và trang
 // thành MỘT lần gọi backend trong cùng một yêu cầu (backend giới hạn lượt gọi theo IP).
 // Header của yêu cầu được chuyển cho backend (IP khách + secret BFF) để giới hạn lượt tính theo từng khách.
-const getProvenance = cache(async (qrToken: string, language: "vi" | "en") =>
-  fetchProvenancePage(qrToken, language, process.env, fetch, await headers()));
+const getProvenance = cache(async (qrToken: string) =>
+  fetchProvenancePage(qrToken, process.env, fetch, await headers()));
 
-export async function generateMetadata({ params, searchParams }: PageProps<"/origin/[qrToken]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/origin/[qrToken]">): Promise<Metadata> {
   const { qrToken } = await params;
-  const language = parseOriginLanguage((await searchParams).lang);
-  const copy = originCopy(language);
+  const copy = originCopy();
   // Chỉ gọi backend khi mã QR hợp lệ; lô đầu tiên đang hiệu lực làm tiêu đề.
-  const result = parseQrToken(qrToken) ? await getProvenance(qrToken, language) : null;
+  const result = parseQrToken(qrToken) ? await getProvenance(qrToken) : null;
   const lot = result?.status === "ok" ? result.page.lots.find((l) => l.originState === "Published") : undefined;
   // Tên HTX lấy từ hồ sơ HTX do API trả (khối cooperative của trang); không gõ cứng. Mẫu tiêu đề của root layout thêm " | tên HTX".
   const cooperativeName = result?.status === "ok" ? result.page.cooperative.fullName : (await getCooperativeBrand()).fullName;
@@ -51,26 +47,25 @@ export async function generateMetadata({ params, searchParams }: PageProps<"/ori
   };
 }
 
-export default async function OriginPage({ params, searchParams }: PageProps<"/origin/[qrToken]">) {
+export default async function OriginPage({ params }: PageProps<"/origin/[qrToken]">) {
   await connection();
   const { qrToken } = await params;
-  const language = parseOriginLanguage((await searchParams).lang);
-  const result = await getProvenance(qrToken, language);
-  const copy = originCopy(language);
-  const retryHref = `/origin/${encodeURIComponent(qrToken)}${language === "en" ? "?lang=en" : ""}`;
+  const result = await getProvenance(qrToken);
+  const copy = originCopy();
+  const retryHref = `/origin/${encodeURIComponent(qrToken)}`;
   // Địa chỉ đầy đủ của trang (để vẽ mã QR khi bị chặn vì mở quá nhiều): lấy từ host của yêu cầu.
   const head = await headers(), host = head.get("x-forwarded-host") ?? head.get("host");
   const pageUrl = host ? `${head.get("x-forwarded-proto") ?? "https"}://${host}${retryHref}` : null;
   return (
-    <div className={originFont.variable}>
+    <>
       {result.status === "ok" ? (
-        <OriginPageView page={result.page} langHrefs={{ vi: `/origin/${qrToken}`, en: `/origin/${qrToken}?lang=en` }} />
+        <OriginPageView page={result.page} />
       ) : (
         <OriginStatePanel
-          problem={result.status} language={language} copy={copy} retryHref={retryHref}
+          problem={result.status} copy={copy} retryHref={retryHref}
           backendMessage={result.status === "not-found" ? result.message : null} pageUrl={pageUrl}
         />
       )}
-    </div>
+    </>
   );
 }

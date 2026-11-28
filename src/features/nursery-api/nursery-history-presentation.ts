@@ -28,7 +28,7 @@ export function nurseryHistoryChangeLabel(change: Change): string {
 }
 export function nurseryHistoryValue(change: Change, value: Change["from"]): string {
   if (fieldKey(change.field) === "status" && typeof value === "string") {
-    const statuses: Record<string, string> = { Nursing: "Đang ươm", Completed: "Đã ươm xong", Cancelled: "Đã hủy", Closed: "Đã đóng", "4001": "Đang ươm", "4002": "Đã ươm xong", "4003": "Đã hủy", "4004": "Đã đóng" };
+    const statuses: Record<string, string> = { Nursing: "Đang ươm", Completed: "Chờ thả", Cancelled: "Đã hủy", Closed: "Đã đóng", "4001": "Đang ươm", "4002": "Chờ thả", "4003": "Đã hủy", "4004": "Đã đóng" };
     return statuses[value] ?? nurseryDisplayText(historyValue(value)) ?? "—";
   }
   return nurseryDisplayText(historyValue(value)) ?? "—";

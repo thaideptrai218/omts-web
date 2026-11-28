@@ -68,6 +68,7 @@ Import/Export chỉ xuất hiện khi backend hỗ trợ.
 - Chân subtab chia hai bên. **Bên trái**: action phụ như Xóa, Hủy, Xuất file, kiểu không nền (chữ + icon). **Bên phải**: action chính như Chỉnh sửa, Thanh toán dùng màu chủ đạo; action trạng thái như Ngừng hoạt động dùng nút viền.
 - Action phá hủy/đổi trạng thái có xác nhận.
 - Nút chỉ cao vừa đủ chữ/icon cộng padding (desktop khoảng 30px). Ô tìm kiếm có icon kính lúp.
+- **Lịch sử thay đổi của một bản ghi** (lô thu hoạch, thả giống, vật tư, nhật ký, vụ nuôi, đợt ươm) là một bảng như subtab Nhập – xuất của Vật tư, không xếp thẻ: `HistoryTable` (`src/features/history/history-table.tsx`) với cột Thời gian (`dd/mm/yyyy HH:mm`, bấm tiêu đề để đổi chiều, mặc định mới nhất trước) · Thao tác (`actionLabel` của backend, không bao giờ hiện mã tiếng Anh) · Người thực hiện (tên, vai trò mờ bên dưới) · Nội dung thay đổi (`Nhãn: từ → đến`, bản ghi mới tạo hiện `Nhãn: giá trị`, tối đa 3 dòng rồi `+n thay đổi khác`) · Lý do, kèm phân trang như bảng khác. Giá trị rỗng hoặc là mã GUID không hiện.
 
 ### 1.7 Phân trang (cuối danh sách)
 

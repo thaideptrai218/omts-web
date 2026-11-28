@@ -35,15 +35,15 @@ describe("kiểm tra kỳ xem", () => {
 describe("tham số truy vấn", () => {
   const month = presetValue("thisMonth", new Date(2026, 10, 18));
   it("mặc định chỉ có kỳ xem", () => {
-    expect(toQuery({ search: "", time: month, filters: emptyFilters }, "2026-11-18")).toEqual({ from: "2026-11-01", to: "2026-11-30", zoneId: undefined, customerId: undefined, harvestLotId: undefined, statusId: undefined, paid: undefined, code: undefined, cashCollectedByMe: undefined });
+    expect(toQuery({ search: "", time: month, filters: emptyFilters }, "2026-11-18")).toEqual({ from: "2026-11-01", to: "2026-11-30", zoneIds: undefined, customerId: undefined, harvestLotId: undefined, statusId: undefined, paid: undefined, code: undefined, cashCollectedByMe: undefined });
   });
   it("Toàn thời gian lấy 5 năm gần nhất, 29/02 lùi về 28/02", () => {
     expect(toQuery({ search: "", time: allTime, filters: emptyFilters }, "2026-11-18")).toMatchObject({ from: "2021-11-18", to: "2026-11-18" });
     expect(toQuery({ search: "", time: allTime, filters: emptyFilters }, "2028-02-29").from).toBe("2023-02-28");
   });
   it("bộ lọc đi vào tham số; mã tìm được cắt khoảng trắng", () => {
-    const q = toQuery({ search: " HD01 ", time: month, filters: { zoneId: "z", customer: { id: "c", title: "An" }, lot: { id: "l", title: "B03" }, status: "3501", paid: "false", cashMine: true } }, "2026-11-18");
-    expect(q).toMatchObject({ statusId: "3501", code: "HD01", cashCollectedByMe: "true", paid: "false", zoneId: "z", customerId: "c", harvestLotId: "l" });
+    const q = toQuery({ search: " HD01 ", time: month, zoneIds: "z1,z2", filters: { customer: { id: "c", title: "An" }, lot: { id: "l", title: "B03" }, status: "3501", paid: "false", cashMine: true } }, "2026-11-18");
+    expect(q).toMatchObject({ statusId: "3501", code: "HD01", cashCollectedByMe: "true", paid: "false", zoneIds: "z1,z2", customerId: "c", harvestLotId: "l" });
   });
 });
 

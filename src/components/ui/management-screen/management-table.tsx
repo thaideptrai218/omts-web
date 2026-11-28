@@ -27,11 +27,12 @@ export function ManagementScroller({ busy, children }: { busy?: boolean; childre
   return <div ref={scroller} className={styles.scroller} aria-busy={busy}>{children}</div>;
 }
 
-export function SortableHeader({ label, sortKey, sort, onSort, className }: { label: string; sortKey?: string; sort: SortState; onSort(next: SortState): void; className?: string }) {
-  if (!sortKey) return <th scope="col" className={className}>{label}</th>;
+/** `title` explains a short label on hover (for example "Sống sót*" = an estimate). */
+export function SortableHeader({ label, sortKey, sort, onSort, className, title }: { label: string; sortKey?: string; sort: SortState; onSort(next: SortState): void; className?: string; title?: string }) {
+  if (!sortKey) return <th scope="col" className={className} title={title}>{label}</th>;
   const active = sort.key === sortKey;
   const toggle = () => onSort({ key: sortKey, direction: active && sort.direction === "asc" ? "desc" : "asc" });
-  return <th scope="col" className={className} aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+  return <th scope="col" className={className} title={title} aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
     <button type="button" className={styles.sortButton} data-active={active || undefined} onClick={toggle}>{label}
       <InterfaceIcon name={active ? (sort.direction === "asc" ? "chevron-up" : "chevron-down") : "sort"} />
     </button>

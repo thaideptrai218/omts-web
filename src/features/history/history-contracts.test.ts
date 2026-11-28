@@ -10,6 +10,11 @@ describe("historyList", () => {
     const parsed = historyList.safeParse({ recordType: "HarvestLot", recordId: "c9b0e4d5-8ba1-4124-ada0-386c2dbabf35", recordCode: "LT01", entries: [entry] });
     expect(parsed.success && parsed.data).toEqual([expect.objectContaining({ action: "Edited", byName: "Chủ HTX", changes: [expect.objectContaining({ label: "Số lồng", from: "4", to: "5" })] })]);
   });
+  it("keeps the action label and the unit of a change", () => {
+    const parsed = historyList.parse({ entries: [{ ...entry, changes: [{ field: "KgPerCage", label: "Cân nặng", from: "4", to: "5", unit: "kg/lồng" }] }] });
+    expect(parsed[0]).toEqual(expect.objectContaining({ actionLabel: "Chỉnh sửa" }));
+    expect(parsed[0].changes[0].unit).toBe("kg/lồng");
+  });
   it("still reads a bare array", () => {
     expect(historyList.safeParse([entry]).success).toBe(true);
   });

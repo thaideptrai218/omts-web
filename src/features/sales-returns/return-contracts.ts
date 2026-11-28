@@ -38,8 +38,8 @@ export type ReturnRow = z.infer<typeof returnRow>;
 export type ReturnPage = z.infer<typeof returnPage>;
 export type ReturnTotals = z.infer<typeof returnTotals>;
 
-/** Filters of the list, as the BFF query carries them (every value is text; an empty one is left out). `sortDir` is asc or desc. */
-export type ReturnListQuery = Partial<Record<"from" | "to" | "customerId" | "zoneId" | "statusId" | "search" | "sort" | "sortDir" | "page" | "pageSize", string>>;
+/** Filters of the list, as the BFF query carries them (every value is text; an empty one is left out; `zoneIds` are the chosen zones joined by commas). `sortDir` is asc or desc. */
+export type ReturnListQuery = Partial<Record<"from" | "to" | "customerId" | "zoneIds" | "statusId" | "search" | "sort" | "sortDir" | "page" | "pageSize", string>>;
 export const returnSorts = ["code", "returnDate", "value"] as const;
 
 export const previewLine = z.object({

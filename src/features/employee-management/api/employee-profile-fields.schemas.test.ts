@@ -44,7 +44,7 @@ describe("employee list query: type, job type and sort", () => {
 
 describe("employee export query", () => {
   it("parses filters and sort without paging", () => {
-    expect(parseEmployeeExportSearchParams(new URLSearchParams(`search=an&statusId=401&zoneId=${zone}&employeeType=SeasonalWorker&jobTypeId=${employeeId}&sortBy=name&sortDir=asc`))).toMatchObject({ status: "parsed", query: { statusId: 401, sortBy: "name" } });
+    expect(parseEmployeeExportSearchParams(new URLSearchParams(`search=an&statusId=401&zoneIds=${zone}&employeeType=SeasonalWorker&jobTypeId=${employeeId}&sortBy=name&sortDir=asc`))).toMatchObject({ status: "parsed", query: { statusId: 401, zoneIds: [zone], sortBy: "name" } });
     expect(parseEmployeeExportSearchParams(new URLSearchParams("")).status).toBe("parsed");
   });
   it("takes ids on their own with an optional order", () => {

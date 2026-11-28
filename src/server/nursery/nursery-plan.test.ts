@@ -31,3 +31,29 @@ describe("nursery BFF plan v2", () => {
     expect(full.remaining).toBe(6);
   });
 });
+
+describe("nursery list over several zones", () => {
+  const zones = [0x71, 0x72].map(n => `529ec3ce-af8f-42f7-a08f-4bab36ba7e${n.toString(16)}`);
+  it("expands the comma list of the browser into repeated zoneIds and checks no single zone, because the backend intersects them with the permitted ones", () => {
+    const list = plan("GET", { action: "list", zoneIds: zones.join(","), status: "nursing" });
+    expect(list?.zoneId).toBeUndefined();
+    const url = new URL(list!.path, "http://api");
+    expect(url.pathname).toBe("/api/nursery-batches");
+    expect(url.searchParams.getAll("zoneIds")).toEqual(zones);
+    expect(url.searchParams.get("status")).toBe("nursing");
+    expect(url.searchParams.has("zoneId")).toBe(false);
+  });
+  it("keeps a single zoneId working for deep links, and refuses both together, a bad id, a repeat of the key, and zoneIds on any other action", () => {
+    expect(plan("GET", { action: "list", zoneId })).toMatchObject({ zoneId });
+    expect(plan("GET", { action: "list", zoneId, zoneIds: zones.join(",") })).toBeUndefined();
+    expect(plan("GET", { action: "list", zoneIds: `${zones[0]},nope` })).toBeUndefined();
+    expect(planNursery("GET", new URLSearchParams(`action=list&zoneIds=${zones[0]}&zoneIds=${zones[1]}`))).toBeUndefined();
+    expect(plan("GET", { action: "seed-lots", zoneId, zoneIds: zones[0] })).toBeUndefined();
+    expect(plan("GET", { action: "detail", id, zoneId, zoneIds: zones[0] })).toBeUndefined();
+  });
+  it("accepts up to 50 zones and refuses more", () => {
+    const many = (count: number) => Array.from({ length: count }, (_, index) => `529ec3ce-af8f-42f7-a08f-4bab36ba${String(index).padStart(4, "0")}`).join(",");
+    expect(new URL(plan("GET", { action: "list", zoneIds: many(50) })!.path, "http://api").searchParams.getAll("zoneIds")).toHaveLength(50);
+    expect(plan("GET", { action: "list", zoneIds: many(51) })).toBeUndefined();
+  });
+});

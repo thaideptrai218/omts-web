@@ -1,0 +1,10 @@
+.tabs { display: grid; gap: 1.5rem; min-width: 0; }
+.list { position: sticky; top: 4.5rem; z-index: 10; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: .375rem; padding: .375rem; background: #dfeae8; border-radius: 1rem; }
+.tab { min-height: 3rem; border: 0; border-radius: .75rem; background: transparent; color: var(--ink-soft); font: inherit; font-weight: 700; cursor: pointer; touch-action: manipulation; transition: background-color .2s, color .2s; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 2px 8px -2px rgb(7 67 75 / .35); }
+.panel { min-width: 0; animation: show .3s ease-out; }
+.panel[hidden] { display: none; }
+@keyframes show { from { opacity: 0; transform: translateY(.5rem); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
+@media print { .list { display: none; } .panel[hidden] { display: block; } }
