@@ -1,27 +1,26 @@
 "use client";
+import type { ReactNode } from "react";
 import { StatusPill } from "@/components/ui/management-page";
 import { Money } from "@/features/operations/ui";
 import type { SheetDetail } from "./contracts";
-import { formatDateTime, monthLabel, periodLabel, rangeLabel, statusLabel, statusTone } from "./payroll-model";
+import { formatDateTime, leftOutLines, monthLabel, periodLabel, rangeLabel, scopeLabel, statusLabel, statusTone } from "./payroll-model";
 import s from "./payroll-screen.module.css";
 
-/** Tab "Thông tin" of an open sheet (KiotViet): the sheet's fields, then the three totals and the number of employees. */
+/** Tab "Thông tin" of an open sheet (KiotViet): the sheet's fields, with the three totals. */
 export function PayrollSheetInfoTab({ sheet }: { sheet: SheetDetail }) {
-  const facts = [
+  const facts: readonly (readonly [string, ReactNode])[] = [
     ["Mã bảng lương", sheet.code], ["Tên bảng lương", sheet.name], ["Kỳ hạn trả lương", periodLabel[sheet.periodType]], ["Kỳ làm việc", rangeLabel(sheet.from, sheet.to)],
-    ["Phạm vi áp dụng", sheet.scope === "All" ? "Tất cả nhân viên" : "Nhân viên được chọn"], ["Số nhân viên", String(sheet.slips.length)], ["Người tạo", sheet.createdBy ?? "—"],
-    ["Ngày tạo", formatDateTime(sheet.createdAt)], ["Tháng ghi nhận chi phí", sheet.status === "Finalized" ? monthLabel(sheet.expenseMonth) : "—"], ["Ghi chú", sheet.note || "—"],
-  ] as const;
+    ["Ngày tạo", formatDateTime(sheet.createdAt)], ["Người tạo", sheet.createdBy ?? "—"],
+    ["Ngày chốt lương", sheet.finalizedAt ? formatDateTime(sheet.finalizedAt) : "—"], ["Người chốt lương", sheet.finalizedBy ?? "—"], ["Trạng thái", <StatusPill key="status" tone={statusTone(sheet.status)}>{statusLabel[sheet.status]}</StatusPill>],
+    ["Tổng số nhân viên", String(sheet.slips.length)], ["Tổng lương", <Money key="total" value={sheet.total} />], ["Đã trả nhân viên", <Money key="paid" value={sheet.paid} />], ["Còn cần trả", <Money key="outstanding" value={sheet.outstanding} />],
+    ["Phạm vi áp dụng", scopeLabel[sheet.scope]], ["Tháng ghi nhận chi phí", sheet.status === "Finalized" ? monthLabel(sheet.expenseMonth) : "—"], ["Ghi chú", sheet.note || "—"],
+  ];
   return <>
-    <dl className={s.facts}>
+    <dl className={s.facts} data-testid="payroll-sheet-totals">
       {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
-      <div><dt>Trạng thái</dt><dd><StatusPill tone={statusTone(sheet.status)}>{statusLabel[sheet.status]}</StatusPill></dd></div>
     </dl>
-    {sheet.status === "Provisional" && <p className={`${s.muted} mt-3`}>Số liệu tạm tính{sheet.calculatedAt ? `, cập nhật lần cuối lúc ${formatDateTime(sheet.calculatedAt)}` : ""}. Chọn Tải lại để tính lại theo chấm công mới nhất.</p>}
-    <p className={`${s.summary} mt-4`} data-testid="payroll-sheet-totals">
-      <span>Tổng lương<strong><Money value={sheet.total} /></strong></span>
-      <span>Đã trả<strong><Money value={sheet.paid} /></strong></span>
-      <span>Còn cần trả<strong><Money value={sheet.outstanding} /></strong></span>
-    </p>
+    {sheet.leftOut?.length ? <div className="mt-3" role="status" data-testid="payroll-left-out"><p className={s.sectionTitle}>Nhân viên không có trong bảng này</p>
+      {leftOutLines(sheet.leftOut).map((line) => <p key={line} className={s.muted}>{line}</p>)}</div> : null}
+    {sheet.status === "Provisional" && <p className={`${s.muted} mt-3`}>Số liệu tạm tính. Chọn Tải lại dữ liệu để tính lại theo chấm công mới nhất.</p>}
   </>;
 }

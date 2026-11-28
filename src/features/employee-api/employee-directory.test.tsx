@@ -19,7 +19,7 @@ const owner: EmployeeViewerAccess = { read: true, manage: true, payroll: true, s
 const viewer: EmployeeViewerAccess = { read: true, manage: false, payroll: false, salary: false, salaryEdit: false };
 const first = () => ({ ...employeeViewSchema.parse(employeeDetailFixture()), salaryType: "FixedMonthly" as const });
 const second = () => ({ ...first(), id: "88434e3f-e984-4aae-b6a9-e77af4822288", code: "NV000002", fullName: "Trần Bình", salaryType: null });
-const noop = { onEdit: vi.fn(), onChanged: vi.fn(), onSalarySaved: vi.fn() };
+const noop = { onEdit: vi.fn(), onChanged: vi.fn(), onEditSalary: vi.fn() };
 beforeEach(() => {
   vi.clearAllMocks(); chooseHeaderZones([]); repository.query = "";
   repository.read.mockImplementation(async (_action, query) => ({ status: "success", data: { items: [first(), second()], page: Number(query.page), pageSize: Number(query.pageSize), total: 45 } }));

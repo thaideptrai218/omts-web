@@ -6,7 +6,7 @@ import type { OperationPlan } from "./operation-plan";
 /**
  * Backend plans for "Bảng lương" (area `payroll`) and "Thanh toán lương" (area `payroll-payments`), strict like the other
  * operation plans: unknown or repeated query names, unknown actions and bodies with extra fields are rejected before any
- * backend call. Both areas are Owner-only: `operationAllowed` (hard rule on CooperativeOwner) runs in the operations route, so `permission` here is informational. The list `status` filter travels as one comma-separated value and becomes repeated `status=` for the backend.
+ * backend call. `operationAllowed` runs in the operations route: the Owner does everything, a Staff account (the Accountant) does the actions its PAYROLL grants allow (View, Create, Edit, Export); finalizing and cancelling a sheet and payslip adjustments are refused to it by the backend. The list `status` filter travels as one comma-separated value and becomes repeated `status=` for the backend.
  */
 const id = z.guid(), empty = z.strictObject({});
 const page = z.string().regex(/^[1-9]\d{0,6}$/), pageSize = z.string().regex(/^[1-9]\d{0,2}$/).refine((v) => Number(v) <= 100);
@@ -26,6 +26,8 @@ const sheetQuery = z.discriminatedUnion("action", [
 const paymentQuery = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("list"), search: z.string().max(200).optional(), employeeId: id.optional(), payrollId: id.optional(), method: c.paymentMethod.optional(), kind: c.paymentKind.optional(), status: c.paymentStatus.optional(), from: z.iso.date().optional(), to: z.iso.date().optional(), page: page.optional(), pageSize: pageSize.optional() }),
   z.strictObject({ action: z.literal("payable"), search: z.string().max(200).optional(), includeAll: z.literal("true").optional() }),
+  z.strictObject({ action: z.literal("detail"), id }),
+  z.strictObject({ action: z.literal("payers") }),
 ]);
 const mutation = z.strictObject({ action: z.string(), id: id.optional(), zoneId: z.undefined().optional(), body: z.unknown().default({}), idempotencyKey: z.string().regex(/^[A-Za-z0-9-]{8,64}$/).optional() });
 
@@ -48,13 +50,24 @@ export function payrollPlan(area: "payroll" | "payroll-payments", method: string
   const parsed = mutation.safeParse(input);
   if (!parsed.success) return;
   const { action, id: sheetId, body, idempotencyKey } = parsed.data;
-  const write = (path: string, validator: z.ZodType, schema: z.ZodType, permission: string, bodyless = false): OperationPlan | undefined => {
+  const write = (path: string, validator: z.ZodType, schema: z.ZodType, permission: string, bodyless = false, verb: "POST" | "PUT" = "POST"): OperationPlan | undefined => {
     const values = validator.safeParse(body);
-    return values.success ? { area, action, path, method: "POST", permission, schema, ...(bodyless ? {} : { body: values.data }) } : undefined;
+    return values.success ? { area, action, path, method: verb, permission, schema, ...(bodyless ? {} : { body: values.data }) } : undefined;
   };
-  if (area === "payroll-payments") { const plan = action === "create" && !sheetId ? write("/api/payroll-payments", c.standalonePayment, c.standalonePaymentResult, "Create") : undefined; return plan && { ...plan, idempotencyKey }; }
+  if (area === "payroll-payments") {
+    if (sheetId) {
+      // A voucher (its id is the cash voucher's): the time, method, note and payer can change, and a Recorded one can be cancelled; the answer is the voucher.
+      const path = `/api/payroll-payments/${sheetId}`;
+      const plan = action === "update" ? write(path, c.updatePayment, c.paymentDetail, "Edit", false, "PUT") : action === "cancel" ? write(`${path}/cancel`, c.cancelPayment, c.paymentDetail, "Edit") : undefined;
+      return plan && { ...plan, expectedId: sheetId };
+    }
+    const plan = action === "create" ? write("/api/payroll-payments", c.standalonePayment, c.standalonePaymentResult, "Create") : undefined;
+    return plan && { ...plan, idempotencyKey };
+  }
   if (action === "create") return sheetId ? undefined : write("/api/payrolls", c.createSheet, c.sheetDetail, "Create");
   if (!sheetId) return;
+  // The + / - lines of a payslip (the id is the slip's): the Owner alone, so the permission is the one only the Owner holds; the answer is the whole sheet.
+  if (action === "adjustments") return write(`/api/payroll-slips/${sheetId}/adjustments`, c.saveAdjustments, c.sheetDetail, "Delete", false, "PUT");
   const base = `/api/payrolls/${sheetId}`;
   const plan = action === "reload" ? write(`${base}/reload`, c.reloadSheet, c.sheetDetail, "Edit")
     : action === "finalize" ? write(`${base}/finalize`, c.finalizeSheet, c.sheetDetail, "Edit")
@@ -91,6 +104,8 @@ function readPayments(query: URLSearchParams): OperationPlan | undefined {
   const values = Object.fromEntries(query) as Record<string, string | undefined>;
   if (!q.success || values.from && values.to && values.from > values.to) return;
   const base = { area: "payroll-payments" as const, action: q.data.action, method: "GET" as const, permission: "View" };
+  if (q.data.action === "detail") return { ...base, path: `/api/payroll-payments/${q.data.id}`, schema: c.paymentDetail, expectedId: q.data.id };
+  if (q.data.action === "payers") return { ...base, path: "/api/payroll-payments/payers", schema: c.payers };
   return q.data.action === "list"
     ? { ...base, path: withQuery("/api/payroll-payments", backendFilters(values, ["search", "employeeId", "payrollId", "method", "kind", "status", "from", "to", "page", "pageSize"])), schema: c.paymentPage }
     : { ...base, path: withQuery("/api/payrolls/payable-employees", backendFilters(values, ["search", "includeAll"])), schema: c.payableEmployees };

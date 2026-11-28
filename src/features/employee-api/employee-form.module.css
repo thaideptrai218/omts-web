@@ -23,3 +23,5 @@
 .fieldLabel { display:block; font-size:12px; font-weight:500; color:var(--omts-color-text-muted); }
 .footer { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; margin-top:16px; }
 @media (max-width:700px) { .identity, .identityFields { grid-template-columns:minmax(0,1fr); } .photoColumn { order:-1; } }
+.salaryFields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; min-width:0; margin:0; border:0; padding:8px 0 4px; }
+@media (max-width:700px) { .salaryFields { grid-template-columns:minmax(0,1fr); } }

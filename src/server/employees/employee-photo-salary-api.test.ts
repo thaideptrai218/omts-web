@@ -20,7 +20,7 @@ const upload = (bytes: Uint8Array, query = `action=photo&id=${id}`) => {
   return new Request(`http://localhost:3002/api/operations/employees?${query}`, { method: "POST", headers: { Origin: "http://localhost:3002", "X-OMTS-Request": "web" }, body: form });
 };
 const png = () => { const bytes = new Uint8Array(32); bytes.set([0x89, 0x50, 0x4e, 0x47]); return bytes; };
-const salary = { employeeId: id, employeeType: "Staff", current: { type: "FixedMonthly", monthlyAmount: 9_000_000, effectiveFrom: "2026-11-01", enteredAt: "2026-11-01T01:00:00+00:00" }, currentType: "FixedMonthly", history: [], rowVersion: "AQID" };
+const salary = { employeeId: id, employeeType: "Staff", current: { type: "FixedMonthly", monthlyAmount: 9_000_000, payFieldShifts: true, effectiveFrom: "2026-11-01", enteredAt: "2026-11-01T01:00:00+00:00" }, currentType: "FixedMonthly", history: [], rowVersion: "AQID" };
 const signed = "/api/files/local/employee-photos/2026/11/a.png?expires=1795781504&sig=abc";
 const view = () => ({ ...employeeDetailFixture(), id, photoUrl: signed });
 
@@ -32,8 +32,14 @@ describe("employee photo and salary plans", () => {
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "remove-photo", id, body: {} })).toMatchObject({ path: `/api/employees/${id}/photo`, method: "DELETE" });
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "remove-photo", id, body: { x: 1 } })).toBeUndefined();
   });
-  it.each([{ type: "Hourly", monthlyAmount: 1000 }, { type: "FixedMonthly" }, { type: "FixedMonthly", monthlyAmount: 1.5 }, { type: "FixedMonthly", monthlyAmount: 0 }, { type: "Daily" }])("rejects the salary body %j", fields => {
+  it.each([{ type: "Hourly", monthlyAmount: 1000 }, { type: "PerShift", monthlyAmount: 1000 }, { type: "PerShift", payFieldShifts: true }, { type: "Hourly", payFieldShifts: false }, { type: "FixedMonthly" }, { type: "FixedMonthly", monthlyAmount: 1.5 }, { type: "FixedMonthly", monthlyAmount: 0 }, { type: "Daily" }])("rejects the salary body %j", fields => {
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "save-salary", id, body: { effectiveFrom: "2026-11-01", rowVersion: "AQID", ...fields } })).toBeUndefined();
+  });
+  it("accepts a fixed salary with or without field-shift pay, and a per-shift setup with no amount", () => {
+    const save = (fields: object) => planEmployeeApi("POST", new URLSearchParams(), { action: "save-salary", id, body: { effectiveFrom: "2026-11-01", rowVersion: "AQID", ...fields } });
+    expect(save({ type: "FixedMonthly", monthlyAmount: 8_000_000, payFieldShifts: false })).toMatchObject({ body: { type: "FixedMonthly", monthlyAmount: 8_000_000, payFieldShifts: false } });
+    expect(save({ type: "FixedMonthly", monthlyAmount: 8_000_000 })).toBeTruthy();
+    expect(save({ type: "PerShift" })).toBeTruthy();
   });
   it("accepts an hourly setup with no amount, and plans the photo upload for exactly action and id", () => {
     expect(planEmployeeApi("POST", new URLSearchParams(), { action: "save-salary", id, body: { type: "Hourly", effectiveFrom: "2026-11-01", rowVersion: "AQID" } })).toBeTruthy();

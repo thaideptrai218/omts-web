@@ -11,7 +11,6 @@ import { ClaimReportScreen } from "@/features/quality-claims/claim-report-screen
 import { QualityClaimsScreen } from "@/features/quality-claims/quality-claims-screen";
 import { SalesReturnsScreen } from "@/features/sales-returns/sales-returns-screen";
 import { PayrollScreen } from "@/features/payroll/payroll-screen";
-import { PayrollPaymentsScreen } from "@/features/payroll/payroll-payments-screen";
 import { LaborCostsScreen } from "@/features/labor-costs/labor-costs-screen";
 import { SalesPerformanceScreen } from "@/features/sales-reports/sales-performance-screen";
 import { CustomerReportScreen } from "@/features/sales-reports/customer-report-screen";
@@ -59,7 +58,8 @@ export function OperationScreen({ area }: { area: OperationArea }) {
   if (area === "quality-claims") return <QualityClaimsScreen />;
   if (area === "sales-returns") return <Suspense><SalesReturnsScreen /></Suspense>;
   if (area === "payroll") return <Suspense><PayrollScreen /></Suspense>;
-  if (area === "payroll-payments") return <PayrollPaymentsScreen />;
+  // Wages are paid from the sheet, the payslip or the employee's debt tab; the old address opens the sheets.
+  if (area === "payroll-payments") return <ScreenRedirect to="/operations/payroll" />;
   if (area === "labor-costs") return <LaborCostsScreen />;
   if (area === "sales-report") return <SalesPerformanceScreen />;
   if (area === "customer-report") return <CustomerReportScreen />;

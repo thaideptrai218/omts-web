@@ -6,7 +6,7 @@ vi.mock("./repository", () => ({ createOperationsRepository: () => ({ read: mock
 import { WorkforceSetupDialog } from "./workforce-setup-dialog";
 import { businessToday } from "./ui";
 
-const version = { effectiveFrom: "2026-08-01", breakStart: "11:30:00", breakEnd: "12:30:00", roundingUnit: "Minutes15" };
+const version = { effectiveFrom: "2026-08-01", breakStart: "11:30:00", breakEnd: "12:30:00", roundingUnit: "Minutes15", shiftMinutes: 180, shiftToleranceMinutes: 15 };
 const overview = { current: version, versions: [version], rowVersion: "AAAA" };
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
@@ -32,7 +32,7 @@ describe("attendance settings against the backend contract", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await screen.findByText("Đã lưu thiết lập chấm công.");
     expect(mocks.write.mock.calls[0][0]).toBe("settings");
-    expect(mocks.write.mock.calls[0][1]).toEqual({ effectiveFrom: businessToday(), breakStart: "11:30:00", breakEnd: "12:30:00", roundingUnit, rowVersion: "AAAA" });
+    expect(mocks.write.mock.calls[0][1]).toEqual({ effectiveFrom: businessToday(), breakStart: "11:30:00", breakEnd: "12:30:00", roundingUnit, shiftMinutes: 180, shiftToleranceMinutes: 15, rowVersion: "AAAA" });
     expect(mocks.write.mock.calls[0][2].safeParse({ settings: overview, message: "Saved", messageCode: "MSG-GEN-05" }).success).toBe(true);
   });
   it("sends both absent break bounds as null", async () => {
@@ -84,5 +84,26 @@ describe("attendance settings against the backend contract", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
     await screen.findByText("Đã lưu thiết lập chấm công.");
     expect(mocks.write.mock.calls[1][1]).toMatchObject({ rowVersion: "BBBB", roundingUnit: "Hour1" });
+  });
+  it("loads the shift length as hours and minutes and saves it as minutes with the tolerance", async () => {
+    mocks.read.mockResolvedValue({ status: "success", data: { ...overview, current: { ...version, shiftMinutes: 150, shiftToleranceMinutes: 20 } } });
+    render(<WorkforceSetupDialog onClose={vi.fn()} />);
+    await waitFor(() => expect((screen.getByLabelText("Số giờ của 1 ca: giờ") as HTMLInputElement).value).toBe("2"));
+    expect((screen.getByLabelText("Số giờ của 1 ca: phút") as HTMLInputElement).value).toBe("30");
+    expect((screen.getByLabelText("Phút cho phép thiếu") as HTMLInputElement).value).toBe("20");
+    expect(screen.getByText(/Số ca = \(giờ làm − nghỉ trưa \+ phút cho phép\) ÷ giờ một ca, tính theo nửa ca\./)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Số giờ của 1 ca: giờ"), { target: { value: "4" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng ý" }));
+    await screen.findByText("Đã lưu thiết lập chấm công.");
+    expect(mocks.write.mock.calls[0][1]).toMatchObject({ shiftMinutes: 270, shiftToleranceMinutes: 20 });
+  });
+  it("refuses a tolerance above half a shift without sending", async () => {
+    render(<WorkforceSetupDialog onClose={vi.fn()} />);
+    await waitFor(() => expect((screen.getByLabelText("Phút cho phép thiếu") as HTMLInputElement).value).toBe("15"));
+    fireEvent.change(screen.getByLabelText("Phút cho phép thiếu"), { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu thiết lập" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("tối đa một nửa ca");
+    expect(mocks.write).not.toHaveBeenCalled();
   });
 });

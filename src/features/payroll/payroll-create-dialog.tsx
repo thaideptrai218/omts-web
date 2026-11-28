@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { DatePickerField } from "@/components/ui/management-screen/date-picker-field";
 import { ErrorNotice, businessToday, useMutation } from "@/features/operations/ui";
-import type { CreateSheetBody, PeriodType, SheetDetail } from "./contracts";
-import { monthOptions, periodLabel } from "./payroll-model";
-import { PayrollScopePicker } from "./payroll-scope-picker";
+import type { CreateSheetBody, PayrollScope, PeriodType, SheetDetail } from "./contracts";
+import { monthOptions, periodLabel, scopeLabel } from "./payroll-model";
+import { PayrollScopePicker, type PickedEmployee } from "./payroll-scope-picker";
 import { payrollRepository } from "./repository";
 import s from "./payroll-screen.module.css";
 
@@ -15,8 +15,8 @@ import s from "./payroll-screen.module.css";
 export function PayrollCreateDialog({ onClose, onCreated, onOpenExisting }: { onClose(): void; onCreated(sheet: SheetDetail): void; onOpenExisting?(id: string): void }) {
   const months = useMemo(() => monthOptions(businessToday()), []);
   const [type, setType] = useState<PeriodType>("Monthly"), [month, setMonth] = useState(months[0].value);
-  const [from, setFrom] = useState(""), [to, setTo] = useState(""), [scope, setScope] = useState<"All" | "Selected">("All");
-  const [picked, setPicked] = useState<ReadonlyMap<string, string>>(new Map()), [problem, setProblem] = useState<string>();
+  const [from, setFrom] = useState(""), [to, setTo] = useState(""), [scope, setScope] = useState<PayrollScope>("All");
+  const [picked, setPicked] = useState<ReadonlyMap<string, PickedEmployee>>(new Map()), [problem, setProblem] = useState<string>();
   const save = useMutation();
 
   async function submit(event: FormEvent) {
@@ -41,7 +41,7 @@ export function PayrollCreateDialog({ onClose, onCreated, onOpenExisting }: { on
       <ErrorNotice error={problem ?? duplicate ?? save.error} />
       {existingId && <p className="mb-2 text-sm text-text-muted">Kỳ này đang trùng một bảng lương còn hiệu lực của cùng nhân viên. Hãy hủy bảng đó nếu chưa chốt, hoặc chọn kỳ không trùng.</p>}
       {existingId && onOpenExisting && <button type="button" className={`${s.link} mb-3 text-sm`} onClick={() => onOpenExisting(existingId)}>{existingCode ? `Mở bảng lương ${existingCode}` : "Mở bảng lương đã có"}</button>}
-      <p className="mb-3 text-sm text-text-muted">Bảng lương chỉ gồm nhân viên có giờ công trong kỳ; kỳ không được trùng một bảng lương đang hiệu lực của cùng nhân viên.</p>
+      <p className="mb-3 text-sm text-text-muted">Bảng lương gồm nhân viên có lương hoặc giờ công trong kỳ; nhân viên đã có trong một bảng lương còn hiệu lực trùng kỳ sẽ không được đưa vào bảng này.</p>
       <fieldset disabled={save.pending} className={`min-w-0 ${s.formGrid}`}>
         <label htmlFor="payroll-period-type">Kỳ hạn trả lương</label>
         <SelectBox id="payroll-period-type" value={type} onChange={(event) => setType(event.target.value as PeriodType)}>
@@ -50,12 +50,14 @@ export function PayrollCreateDialog({ onClose, onCreated, onOpenExisting }: { on
         {type === "Monthly"
           ? <><label htmlFor="payroll-month">Kỳ làm việc</label>
             <SelectBox id="payroll-month" value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</SelectBox></>
-          : <><span className={s.label}>Kỳ làm việc</span>
-            <div className={s.inline}><DatePickerField label="Từ ngày" value={from} onChange={setFrom} /><span aria-hidden="true">-</span><DatePickerField label="Đến ngày" value={to} onChange={setTo} /></div></>}
+          : <><span className={s.label} id="payroll-range-label">Kỳ làm việc</span>
+            <div className={s.dateRange} role="group" aria-labelledby="payroll-range-label">
+              <span>Từ</span><DatePickerField label="Từ ngày" value={from} max={to || undefined} onChange={setFrom} />
+              <span>Đến</span><DatePickerField label="Đến ngày" value={to} min={from || undefined} onChange={setTo} />
+            </div></>}
         <span className={s.label} id="payroll-scope-label">Phạm vi áp dụng</span>
         <div className={s.inline} role="radiogroup" aria-labelledby="payroll-scope-label">
-          <label><input type="radio" name="payroll-scope" checked={scope === "All"} onChange={() => setScope("All")} />Tất cả nhân viên</label>
-          <label><input type="radio" name="payroll-scope" checked={scope === "Selected"} onChange={() => setScope("Selected")} />Tùy chọn</label>
+          {(["All", "Staff", "SeasonalWorker", "Selected"] as const).map((key) => <label key={key}><input type="radio" name="payroll-scope" checked={scope === key} onChange={() => setScope(key)} />{scopeLabel[key]}</label>)}
         </div>
         {scope === "Selected" && <div className={s.span2}><PayrollScopePicker picked={picked} onChange={setPicked} /></div>}
       </fieldset>

@@ -122,7 +122,7 @@ describe("new real modules read contracts", () => {
     expect(planOperation("workforce", "GET", q("action=settings"))).toMatchObject({ permission: "Owner" });
   });
   it("uses the real attendance overview and save envelope, with versioned TimeOnly input", () => {
-    const version = { effectiveFrom: "2026-10-31", breakStart: "12:00:00", breakEnd: "13:00:00", roundingUnit: "Minutes15" };
+    const version = { effectiveFrom: "2026-10-31", breakStart: "12:00:00", breakEnd: "13:00:00", roundingUnit: "Minutes15", shiftMinutes: 180, shiftToleranceMinutes: 15 };
     const overview = { current: version, versions: [version], rowVersion: "AAAA" };
     const read = planOperation("workforce", "GET", q("action=settings"))!;
     expect(read).toMatchObject({ method: "GET", path: "/api/attendance-settings", permission: "Owner" });
@@ -134,7 +134,7 @@ describe("new real modules read contracts", () => {
     expect(write.schema.safeParse(overview).success).toBe(false);
   });
   it("rejects invalid attendance bounds, rounding and missing concurrency versions", () => {
-    const body = { effectiveFrom: "2026-10-31", breakStart: "12:00", breakEnd: "13:00", roundingUnit: "Minutes15", rowVersion: "AAAA" };
+    const body = { effectiveFrom: "2026-10-31", breakStart: "12:00", breakEnd: "13:00", roundingUnit: "Minutes15", shiftMinutes: 180, shiftToleranceMinutes: 15, rowVersion: "AAAA" };
     for (const invalid of [{ breakStart: "25:00" }, { breakEnd: null }, { breakEnd: "12:00" }, { breakEnd: "11:00" }, { roundingUnit: 15 }, { rowVersion: "" }, { roundingMinutes: 15 }]) {
       expect(planOperation("workforce", "POST", q(), { action: "settings", body: { ...body, ...invalid } })).toBeUndefined();
     }

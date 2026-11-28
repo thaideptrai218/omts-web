@@ -6,6 +6,7 @@ import { formatVietnameseDate } from "@/shared/format/date-only";
 import * as c from "./new-module-contracts";
 import { ErrorNotice, Field, Note, Skeleton, displayTime, useRemote } from "./ui";
 import { useOperationEditor } from "./use-operation-editor";
+import { PeriodEditor, draftsOf, draftsPayload, draftsProblem, type PeriodDraft } from "./workforce-correction-periods";
 import { correctionProblem, estimatePaidMinutes, minutesLabel, toInstant, toLocalInput } from "./workforce-correction-model";
 import * as w from "./workforce-contracts";
 import { workforceRepository as repository } from "./workforce-shared";
@@ -19,22 +20,26 @@ export function AttendanceCorrectionDialog({ employeeId, day, onClose, onSaved }
   const settings = useRemote(useMemo(() => (signal: AbortSignal) => repository.read("settings", {}, c.attendanceSettingsSchema, signal), []));
   const data = record.data;
   // Edited values; undefined = still the loaded ones.
-  const [edit, setEdit] = useState<{ checkIn?: string; checkOut?: string; reason: string; starts: Record<string, string> }>({ reason: "", starts: {} });
+  const [edit, setEdit] = useState<{ checkIn?: string; checkOut?: string; reason: string; starts: Record<string, string>; drafts?: PeriodDraft[] }>({ reason: "", starts: {} });
   const [problem, setProblem] = useState<string>(), [saved, setSaved] = useState<w.AttendanceDay>();
-  const dirty = edit.checkIn !== undefined || edit.checkOut !== undefined || !!edit.reason || Object.keys(edit.starts).length > 0;
+  const dirty = edit.checkIn !== undefined || edit.checkOut !== undefined || !!edit.reason || Object.keys(edit.starts).length > 0 || !!edit.drafts;
   const editor = useOperationEditor(onClose, dirty && !saved);
   const checkIn = edit.checkIn ?? toLocalInput(data?.checkedInAt ?? null), checkOut = edit.checkOut ?? toLocalInput(data?.checkedOutAt ?? null);
   const startOf = (index: number, startsAt: string | null) => edit.starts[String(index)] ?? toLocalInput(startsAt);
-  const periodStarts = (data?.periods ?? []).map((period, index) => (index === 0 ? "" : startOf(index, period.startsAt)));
+  // An internal (Staff) employee may have field work recorded back-dated: its periods are added and removed freely; a seasonal worker's periods keep their job and raft and only change start.
+  const staff = data?.type === "Staff";
+  const drafts = staff ? edit.drafts ?? draftsOf(data?.periods ?? [], startOf) : [];
+  const periodStarts = staff ? drafts.map((draft, index) => (index === 0 ? "" : draft.start)) : (data?.periods ?? []).map((period, index) => (index === 0 ? "" : startOf(index, period.startsAt)));
   const estimate = estimatePaidMinutes(checkIn, checkOut, settings.data?.current);
 
   async function save() {
     if (!data) return;
     const invalid = !edit.reason.trim() ? "Nhập lý do sửa chấm công." : correctionProblem(day, checkIn, checkOut, periodStarts);
-    if (invalid) return setProblem(invalid);
+    const periodsInvalid = staff ? draftsProblem(drafts) ?? (drafts.slice(1).some((draft) => !draft.start) ? "Nhập giờ bắt đầu cho các đoạn việc sau đoạn đầu tiên." : undefined) : undefined;
+    if (invalid ?? periodsInvalid) return setProblem(invalid ?? periodsInvalid);
     const payload = w.correctAttendanceSchema.safeParse({
       checkInAt: toInstant(checkIn), checkOutAt: toInstant(checkOut), reason: edit.reason, rowVersion: data.rowVersion,
-      periods: data.periods.map((period, index) => ({ jobTypeId: period.jobTypeId, raftId: period.raftId, zoneId: period.zoneId, startsAt: index === 0 ? null : toInstant(periodStarts[index]) })),
+      periods: staff ? draftsPayload(drafts) : data.periods.map((period, index) => ({ jobTypeId: period.jobTypeId, raftId: period.raftId, zoneId: period.zoneId, startsAt: index === 0 ? null : toInstant(periodStarts[index]) })),
     });
     if (!payload.success) return setProblem("Kiểm tra lại giờ vào, giờ ra và lý do.");
     setProblem(undefined);
@@ -54,7 +59,8 @@ export function AttendanceCorrectionDialog({ employeeId, day, onClose, onSaved }
       <fieldset disabled={editor.disabled} className="grid gap-3">
         <Field label="Giờ vào" type="datetime-local" value={checkIn} onChange={(event) => setEdit({ ...edit, checkIn: event.target.value })} />
         <Field label="Giờ ra (có thể sang ngày hôm sau)" type="datetime-local" value={checkOut} onChange={(event) => setEdit({ ...edit, checkOut: event.target.value })} />
-        {data.periods.length > 0 && <div aria-label="Các lần làm việc trong ngày" className="grid gap-2">
+        {staff && <PeriodEditor day={day} drafts={drafts} checkIn={checkIn} staff onChange={(next) => setEdit({ ...edit, drafts: next })} />}
+        {!staff && data.periods.length > 0 && <div aria-label="Các lần làm việc trong ngày" className="grid gap-2">
           <p className="text-sm font-semibold">Công việc trong ngày</p>
           {data.periods.map((period, index) => <div key={period.id} className="grid gap-1 rounded-control border border-border p-2">
             <span>{period.job}{period.raftCode ? ` · bè ${period.raftCode}` : ""}</span>

@@ -7,10 +7,14 @@ import { employeeRowVersionSchema } from "@/features/employee-management/schemas
 export { salaryTypeSchema };
 export type SalaryType = z.infer<typeof salaryTypeSchema>;
 
-/** One dated setup. `monthlyAmount` is whole VND for FixedMonthly and absent for Hourly (the rate of each job type applies). */
+/**
+ * One dated setup. `monthlyAmount` is whole VND for FixedMonthly and absent for the other types (the shift rate or the hourly rate of each job type applies).
+ * `payFieldShifts` is true only for a FixedMonthly setup that also pays the shifts of field work.
+ */
 export const salarySetupSchema = z.object({
   type: salaryTypeSchema,
   monthlyAmount: z.number().nullish(),
+  payFieldShifts: z.boolean().nullish(),
   effectiveFrom: employeeDateOnlySchema,
   enteredAt: z.iso.datetime({ offset: true }),
 });
@@ -30,11 +34,12 @@ export type EmployeeSalary = z.infer<typeof employeeSalarySchema>;
 /** The largest monthly amount the screen accepts (the backend has its own limit and answers MSG-GEN-01 above it). */
 export const maxMonthlySalary = 999_999_999;
 
-/** `POST /api/employees/{id}/salary`: a fixed monthly setup needs an amount, an hourly one carries none. */
+/** `POST /api/employees/{id}/salary`: a fixed monthly setup needs an amount (and may turn field-shift pay off); a per-shift or hourly one carries neither. */
 export const saveSalaryRequestSchema = z.strictObject({
   type: salaryTypeSchema,
   monthlyAmount: z.number().int().positive().max(maxMonthlySalary).optional(),
+  payFieldShifts: z.boolean().optional(),
   effectiveFrom: employeeDateOnlySchema,
   rowVersion: employeeRowVersionSchema,
-}).refine(value => value.type === "FixedMonthly" ? value.monthlyAmount !== undefined : value.monthlyAmount === undefined, { path: ["monthlyAmount"] });
+}).refine(value => value.type === "FixedMonthly" ? value.monthlyAmount !== undefined : value.monthlyAmount === undefined && value.payFieldShifts === undefined, { path: ["monthlyAmount"] });
 export type SaveSalaryRequest = z.infer<typeof saveSalaryRequestSchema>;

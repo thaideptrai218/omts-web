@@ -36,6 +36,8 @@ export const payrollRepository = {
   /** `expected` = the total and number of payslips the Owner viewed; a changed sheet answers 409 TOTALS_CHANGED instead of finalizing. */
   finalize: (id: string, expenseMonth: string, expected?: { total: number; slips: number }) => sheets.write("finalize", { expenseMonth, ...(expected ? { expectedTotal: expected.total, expectedSlips: expected.slips } : {}) }, c.sheetDetail, id),
   cancel: (id: string) => sheets.write("cancel", {}, c.sheetDetail, id),
+  /** Replaces the + / - lines of one payslip (the Owner, while the sheet is provisional); answers the whole sheet so its totals refresh. */
+  saveAdjustments: (slipId: string, body: c.SaveAdjustmentsBody) => sheets.write("adjustments", body, c.sheetDetail, slipId),
   pay: (id: string, body: c.PaySheetBody, idempotencyKey?: string) => sheets.write("pay", body, c.voucherResult, id, undefined, idempotencyKey),
   employeeSlips: (employeeId: string, q: { status?: c.PayrollStatus; page: number; pageSize: number }, signal?: AbortSignal) =>
     orEmpty(sheets.read("employee-slips", { id: employeeId, status: q.status, page: String(q.page), pageSize: String(q.pageSize) }, c.employeeSlipPage, signal),
@@ -49,6 +51,10 @@ export const payrollRepository = {
     orEmpty(payments.read("list", { search: query.search.trim() || undefined, employeeId: query.employeeId, payrollId: query.payrollId, method: query.method || undefined, kind: query.kind || undefined, status: query.status || undefined,
       from: query.from || undefined, to: query.to || undefined, page: String(query.page), pageSize: String(query.pageSize) }, c.paymentPage, signal),
       { ...emptyPage, pageSize: query.pageSize }),
-  payable: (search: string, includeAll: boolean, signal?: AbortSignal) => payments.read("payable", { search: search.trim() || undefined, includeAll: includeAll ? "true" : undefined }, c.payableEmployees, signal),
+  /** The voucher of a wage or advance payment (id = its cash voucher), and the accounts that may be named as having paid it. */
+  paymentDetail: (id: string, signal?: AbortSignal) => payments.read("detail", { id }, c.paymentDetail, signal),
+  payers: (signal?: AbortSignal) => payments.read("payers", {}, c.payers, signal),
+  updatePayment: (id: string, body: c.UpdatePaymentBody) => payments.write("update", body, c.paymentDetail, id),
+  cancelPayment: (id: string, body: c.CancelPaymentBody) => payments.write("cancel", body, c.paymentDetail, id),
   payStandalone: (body: c.StandalonePaymentBody, idempotencyKey?: string) => payments.write("create", body, c.standalonePaymentResult, undefined, undefined, idempotencyKey),
 };

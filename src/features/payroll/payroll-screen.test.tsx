@@ -45,8 +45,10 @@ it("lays out the KiotViet list: toolbar, filters, columns and a totals row", asy
   expect(within(table).getByText("Đã chốt lương")).toBeTruthy();
   const totals = screen.getByTestId("payroll-totals").textContent ?? "";
   expect(totals).toContain("3.500.000"); expect(totals).toContain("1.500.000"); expect(totals).toContain("2.000.000");
-  // Closed rows carry no action buttons, only the selection box and the chevron.
+  // Closed rows carry no action buttons, only the chevron; nothing can be done to several sheets at once, so there is no selection box either.
   expect(screen.queryByRole("button", { name: /Chốt lương|Hủy bỏ|Thanh toán/ })).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: /^Chọn / })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Thao tác hàng loạt" })).toBeNull();
 });
 
 it("filters by status checkboxes (Đã hủy off by default) and pay period, server side", async () => {
@@ -93,16 +95,14 @@ it("opens a row in place with the tabs Thông tin and Phiếu lương", async ()
   expect(screen.getByText("Chủ hợp tác xã")).toBeTruthy();
   expect(screen.getByText("Tất cả nhân viên")).toBeTruthy();
   expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Thông tin", "Phiếu lương", "Lịch sử thanh toán"]);
-  for (const label of ["Số nhân viên", "Người tạo", "Ngày tạo", "Ghi chú", "Tháng ghi nhận chi phí", "Trạng thái"]) expect(screen.getByText(label, { selector: "dt" })).toBeTruthy();
+  for (const label of ["Tổng số nhân viên", "Người tạo", "Ngày tạo", "Ghi chú", "Tháng ghi nhận chi phí", "Trạng thái"]) expect(screen.getByText(label, { selector: "dt" })).toBeTruthy();
   const totals = screen.getByTestId("payroll-sheet-totals").textContent ?? "";
   expect(totals).toContain("3.000.000"); expect(totals).toContain("1.000.000"); expect(totals).toContain("2.000.000");
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
-  for (const heading of ["Mã phiếu lương", "Tên nhân viên", "Giờ công", "Lương chính", "Thưởng/Phụ cấp", "Tạm ứng trừ", "Tổng thu nhập", "Thực lĩnh", "Đã trả", "Còn cần trả"]) {
+  for (const heading of ["Mã phiếu", "Tên nhân viên", "Loại lương", "Tổng lương", "Còn cần trả", "Trạng thái"]) {
     expect(screen.getAllByRole("columnheader", { name: heading }).length).toBeGreaterThan(0);
   }
   expect(screen.getByText("PL000001")).toBeTruthy();
-  expect(screen.getAllByText("100h00").length).toBeGreaterThan(0);
-  expect(screen.getByText("× 30.000")).toBeTruthy();
 });
 
 it("offers footer actions by status: Tạm tính, Đã chốt lương, Đã hủy", async () => {
@@ -110,9 +110,9 @@ it("offers footer actions by status: Tạm tính, Đã chốt lương, Đã hủ
   render(<PayrollScreen />);
   await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
   const names = () => within(screen.getByRole("group", { name: "Thao tác bảng lương" })).getAllByRole("button").map((button) => button.textContent);
-  await waitFor(() => expect(names()).toEqual(["Tải lại dữ liệu", "Hủy bỏ", "Tải xuống▾", "Chốt lương"]));
+  await waitFor(() => expect(names()).toEqual(["Hủy bỏ", "Tải lại dữ liệu", "Chốt lương", "Tải xuống▾"]));
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
-  expect(names()).toEqual(["Tải lại dữ liệu", "Hủy bỏ", "Tải xuống▾", "Chốt lương"]);
+  expect(names()).toEqual(["Hủy bỏ", "Tải lại dữ liệu", "Chốt lương", "Tải xuống▾"]);
   cleanup();
 
   state.repo.detail.mockResolvedValue(ok(detail({ status: "Finalized", expenseMonth: "2026-05" })));
@@ -120,10 +120,13 @@ it("offers footer actions by status: Tạm tính, Đã chốt lương, Đã hủ
   await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
   await waitFor(() => expect(names()).toEqual(["Tải xuống▾"]));
   expect(screen.getByText("Tháng 05/2026")).toBeTruthy();
+  // Wages are paid from the Phiếu lương tab of a finalized sheet.
+  expect(screen.queryByRole("button", { name: "Thanh toán" })).toBeNull();
   await user.click(screen.getByRole("tab", { name: "Phiếu lương" }));
-  expect(names()).toEqual(["Tải xuống▾", "Thanh toán"]);
+  expect(screen.getByRole("button", { name: "Thanh toán" })).toBeTruthy();
+  expect(names()).toEqual(["Tải xuống▾"]);
   await user.click(screen.getByRole("tab", { name: "Lịch sử thanh toán" }));
-  expect(names()).toEqual(["Tải xuống▾", "Thanh toán"]);
+  expect(names()).toEqual(["Tải xuống▾"]);
   cleanup();
 
   state.repo.detail.mockResolvedValue(ok(detail({ status: "Cancelled" })));
@@ -142,16 +145,15 @@ it("opens a payslip from its code: income lines, payments and attendance", async
   render(<PayrollScreen />);
   await user.click(await screen.findByText("Bảng lương tháng 5/2026"));
   await user.click(await screen.findByRole("tab", { name: "Phiếu lương" }));
-  const code = screen.getByRole("button", { name: "PL000001" });
-  expect(code.getAttribute("aria-expanded")).toBe("false");
-  await user.click(code);
+  await user.click(screen.getByRole("button", { name: "PL000001" }));
   const panel = await screen.findByRole("region", { name: "Chi tiết phiếu lương PL000001" });
+  expect(screen.getByRole("dialog", { name: "Phiếu lương cá nhân PL000001" })).toBeTruthy();
   expect(state.repo.slip).toHaveBeenCalledWith(ids.slipA, expect.anything());
   expect(within(panel).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Thanh toán", "Chấm công chi tiết"]);
   expect(within(panel).getByText("Thu hoạch")).toBeTruthy();
   await user.click(within(panel).getByRole("tab", { name: "Chấm công chi tiết" }));
   expect(within(panel).getByText("8h00")).toBeTruthy();
-  await user.click(code);
+  await user.click(within(panel).getByRole("button", { name: "Bỏ qua" }));
   expect(screen.queryByRole("region", { name: "Chi tiết phiếu lương PL000001" })).toBeNull();
 });
 
@@ -287,11 +289,12 @@ it("needs a custom period and at least one chosen employee before it saves", asy
   await user.click(within(dialog).getByRole("button", { name: "Lưu" }));
   expect((await within(dialog).findByRole("alert")).textContent).toBe("Hãy chọn ít nhất một nhân viên.");
   expect(state.repo.create).not.toHaveBeenCalled();
-  await user.click(await within(dialog).findByRole("checkbox", { name: "Trần Thị B" }));
+  await user.type(within(dialog).getByRole("combobox", { name: "Tìm nhân viên" }), "Trần");
+  await user.click(await within(dialog).findByRole("option", { name: /Trần Thị B/ }));
   expect(within(dialog).getByRole("status").textContent).toBe("Đã chọn 1 nhân viên");
   await user.click(within(dialog).getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(state.repo.create).toHaveBeenCalledWith(expect.objectContaining({ scope: "Selected", employeeIds: [ids.empB] })));
-  expect(state.employees).toHaveBeenCalledWith(expect.objectContaining({ statusId: "401" }), expect.anything());
+  expect(state.employees).toHaveBeenCalledWith(expect.objectContaining({ statusId: "401", search: "Trần" }), expect.anything());
 });
 
 it("shows backend errors on the create form and keeps it open", async () => {

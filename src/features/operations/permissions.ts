@@ -1,5 +1,6 @@
 ﻿import type { FunctionPermission } from "@/features/access/domain/function-permission";
 export const operationAreas = ["job-types", "seeding", "material-usages", "harvest", "cultivation-cycles", "purchase-receipts", "supplier-payments", "water", "sales-products", "sales-invoices", "customer-payments", "lot-tracing", "harvest-yield", "claim-reports", "quality-claims", "sales-returns", "sales-invoice-list", "payroll", "payroll-payments", "sales-report", "price-trend-report", "after-sales-report", "end-of-day-report", "product-report", "customer-report", "supplier-report", "financial-report", "purchase-requests", "workforce", "my-work", "seed-lots", "labor-costs"] as const;
+/** `payroll-payments` is not a screen: it is the BFF area that pays wages and reads the payments (the sheet, the payslip and the employee debt tab use it). */
 export type OperationArea = typeof operationAreas[number];
 /** Báo cáo kiểu KiotViet chưa có màn: ẩn khỏi menu/dashboard và bị từ chối ở mọi lớp cho tới khi màn xong (xoá khỏi danh sách khi hoàn thành). */
 const unfinishedAreas: readonly OperationArea[] = [];
@@ -22,7 +23,6 @@ export const operationModules: readonly { key: OperationArea; title: string; fun
   { key: "sales-returns", title: "Trả hàng bán", functionCode: "SALES_RETURNS" },
   { key: "sales-invoice-list", title: "Hóa đơn bán", functionCode: "SALES_INVOICES" },
   { key: "payroll", title: "Bảng lương", functionCode: "PAYROLL" },
-  { key: "payroll-payments", title: "Thanh toán lương", functionCode: "PAYROLL" },
   { key: "sales-report", title: "Bán hàng", functionCode: "SALES_REPORTS" },
   { key: "price-trend-report", title: "Xu hướng giá", functionCode: "SALES_REPORTS" },
   { key: "after-sales-report", title: "Vấn đề sau bán", functionCode: "SALES_REPORTS" },

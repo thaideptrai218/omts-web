@@ -60,7 +60,7 @@ export function buildSettingsGroups(gate: SettingsGate): SettingsSection[] {
       [isOwner && INPUT_READERS.some((fn) => holds(fn, "View")), { href: panelHref("input-inventory"), panel: "input-inventory", label: "Vật tư & Giống", icon: "material", editor: OWNER, description: "Đơn vị tính, nhóm hàng, loại xuất, cách tính giá vốn và cho phép xuất khi hết.", keywords: ["vật tư", "giống", "đơn vị tính", "nhóm hàng", "giá vốn", "tồn kho", "vat tu", "don vi tinh", "nhom hang", "gia von", "ton kho", "xuất kho"] }],
     ]) },
     { key: "hr", label: "Nhân sự", items: keep([
-      [isOwner && operation("workforce"), { href: panelHref("attendance"), panel: "attendance", label: "Thiết lập chấm công", icon: "attendance", editor: OWNER, description: "Giờ nghỉ trưa, làm tròn phút và ngày bắt đầu áp dụng.", keywords: ["chấm công", "giờ nghỉ", "làm tròn", "ca làm", "cham cong", "gio nghi", "lam tron"] }],
+      [isOwner && operation("workforce"), { href: panelHref("attendance"), panel: "attendance", label: "Thiết lập chấm công", icon: "attendance", editor: OWNER, description: "Giờ nghỉ trưa, làm tròn phút, số giờ của 1 ca và ngày bắt đầu áp dụng.", keywords: ["chấm công", "giờ nghỉ", "làm tròn", "ca làm", "cham cong", "gio nghi", "lam tron"] }],
       [operation("job-types"), { href: "/operations/job-types", label: "Loại công việc và đơn giá", icon: "work", editor: PRICE_EDITORS, description: "Đơn giá theo giờ và lịch sử ngày hiệu lực của từng loại công việc.", hint: "Thêm loại công việc hoặc đổi đơn giá theo giờ.", keywords: ["đơn giá", "giá công", "lương giờ", "công việc", "don gia", "gia cong", "luong gio", "cong viec"] }],
     ]) },
     { key: "sales", label: "Bán hàng", items: keep([

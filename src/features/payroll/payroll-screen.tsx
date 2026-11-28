@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { HelpLink, ManagementLayout } from "@/components/ui/management-screen/management-layout";
-import { BulkBar, ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, type SortState } from "@/components/ui/management-screen/management-table";
+import { ColumnPicker, ListStateMessage, ManagementPagination, ManagementScroller, type SortState } from "@/components/ui/management-screen/management-table";
 import { useStoredValue } from "@/components/ui/management-screen/use-stored-value";
 import { ErrorNotice, operationError, useMutation } from "@/features/operations/ui";
 import { payrollStatuses, type PayrollStatus, type PeriodType, type SheetPage } from "./contracts";
@@ -12,7 +12,7 @@ import { usePayrollWriter } from "./use-payroll-writer";
 import { PayrollCreateDialog } from "./payroll-create-dialog";
 import { PayrollFilterRail } from "./payroll-filter-rail";
 import { PayrollListTable, listColumns } from "./payroll-list-table";
-import { defaultStatuses } from "./payroll-model";
+import { defaultStatuses, leftOutLines } from "./payroll-model";
 import { payrollRepository, type SheetQuery } from "./repository";
 import s from "./payroll-screen.module.css";
 
@@ -26,7 +26,7 @@ export function PayrollScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
   const [search, setSearch] = useState(linkedSearch), [periodType, setPeriodType] = useState<"" | PeriodType>(""), [statuses, setStatuses] = useState<readonly PayrollStatus[]>(linkedId ? payrollStatuses : defaultStatuses);
   const [sort, setSort] = useState<SortState>({ key: "code", direction: "desc" }), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<SheetPage>(), [loading, setLoading] = useState(true), [error, setError] = useState<string>();
-  const [expanded, setExpanded] = useState<string | undefined>(linkedId), [selected, setSelected] = useState<ReadonlySet<string>>(new Set()), [creating, setCreating] = useState(false), [notice, setNotice] = useState<string>();
+  const [expanded, setExpanded] = useState<string | undefined>(linkedId), [creating, setCreating] = useState(false), [notice, setNotice] = useState<string>();
   const exportList = useMutation(), writer = usePayrollWriter();
   const [storedColumns, storeColumns] = useStoredValue("omts-columns-payroll-sheets", defaultColumns);
   const visible = useMemo(() => { const keys = storedColumns.split(","), shown = listColumns.filter((column) => keys.includes(column.key)); return shown.length ? shown : listColumns; }, [storedColumns]);
@@ -50,13 +50,12 @@ export function PayrollScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [query, page, pageSize, refresh]);
 
-  const changed = <T,>(apply: (value: T) => void) => (value: T) => { apply(value); setPage(1); setExpanded(undefined); setSelected(new Set()); };
-  const pageIds = data?.items.map((row) => row.id) ?? [];
+  const changed = <T,>(apply: (value: T) => void) => (value: T) => { apply(value); setPage(1); setExpanded(undefined); };
   const filters = <PayrollFilterRail periodType={periodType} statuses={statuses} hasFilter={hasFilter} onPeriodType={changed(setPeriodType)} onStatuses={changed(setStatuses)}
     onReset={() => changed<void>(() => { setPeriodType(""); setStatuses(defaultStatuses); setSearch(""); })()} />;
 
   return <ManagementLayout storageKey="payroll-sheets" icon="payment" title="Bảng lương" filters={filters} filterLabel="Bộ lọc bảng lương"
-    footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="bảng lương" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); setSelected(new Set()); }} onPageSize={changed<number>(setPageSize)} />}
+    footer={<ManagementPagination page={data?.page ?? page} pageSize={pageSize} total={data?.total ?? 0} unit="bảng lương" disabled={loading} onPage={(next) => { setPage(next); setExpanded(undefined); }} onPageSize={changed<number>(setPageSize)} />}
     search={<input type="search" aria-label="Tìm bảng lương" placeholder="Theo mã, tên bảng lương" maxLength={200} value={search} onChange={(event) => changed<string>(setSearch)(event.target.value)} />}
     actions={<>
       {writer && <Button key="create" className="w-auto" type="button" onClick={() => setCreating(true)}><InterfaceIcon name="add" className="mr-1 size-4" />Bảng tính lương</Button>}
@@ -64,20 +63,17 @@ export function PayrollScreen({ helpHref }: Readonly<{ helpHref?: string }>) {
       <ColumnPicker columns={listColumns} visible={visible.map((column) => column.key)} onChange={(keys) => storeColumns(keys.join(","))} />
       <HelpLink helpHref={helpHref} />
     </>}>
-    <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>{null}</BulkBar>
     {(notice || exportList.error) && <div className={s.feedback}><ErrorNotice error={exportList.error} />{notice && <p role="status">{notice}</p>}</div>}
     <ManagementScroller busy={loading}>
       {error ? <ListStateMessage error={error} onRetry={reload} retryLabel="Tải lại" />
         : !data ? <div role="status" aria-label="Đang tải danh sách" className={s.skeleton}>{[1, 2, 3, 4, 5].map((key) => <div key={key} />)}</div>
         : !data.items.length ? <ListStateMessage>{hasFilter ? "Không có bảng lương phù hợp bộ lọc." : "Chưa có bảng lương."}</ListStateMessage>
-        : <PayrollListTable page={data} columns={visible} sort={sort} expandedId={expanded} selected={selected}
+        : <PayrollListTable page={data} columns={visible} sort={sort} expandedId={expanded}
           onSort={changed<SortState>(setSort)} onToggle={(id) => setExpanded((value) => value === id ? undefined : id)}
-          onSelect={(id, on) => setSelected((current) => { const next = new Set(current); if (on) next.add(id); else next.delete(id); return next; })}
-          onSelectAll={(on) => setSelected(on ? new Set(pageIds) : new Set())}
           onChanged={(message) => { if (message) setNotice(message); reload(); }} />}
     </ManagementScroller>
     {creating && <PayrollCreateDialog onClose={() => setCreating(false)} onOpenExisting={(id) => { setCreating(false); setStatuses(payrollStatuses); setSearch(""); setExpanded(id); reload(); }} onCreated={(sheet) => {
-      setCreating(false); setNotice(`Đã tạo ${sheet.name}.`); setSort({ key: "code", direction: "desc" }); setPage(1); setExpanded(sheet.id); reload();
+      setCreating(false); setNotice([`Đã tạo ${sheet.name}.`, ...leftOutLines(sheet.leftOut)].join(" ")); setSort({ key: "code", direction: "desc" }); setPage(1); setExpanded(sheet.id); reload();
       // Creation is synchronous on the backend; a sheet still "Đang tạo" is refreshed once more.
       if (sheet.status === "Creating") setTimeout(reload, 2000);
     }} />}

@@ -10,8 +10,8 @@ export const jobTypeOptionsSchema = z.array(z.object({ id: apiIdSchema, name: ap
 /** Backend stores the enum name; "Other" is offered as "Khác". */
 export const employeeGenderSchema = z.enum(["Male", "Female", "Other"]);
 export const employeeStatusSchema = z.enum(["Employed", "Left"]);
-/** How an employee is paid: one amount a month, or by the hour at the rate of the job type. */
-export const salaryTypeSchema = z.enum(["FixedMonthly", "Hourly"]);
+/** How an employee is paid: one amount a month, by the shift at the shift rate of the job type, or by the hour at its hourly rate. */
+export const salaryTypeSchema = z.enum(["FixedMonthly", "PerShift", "Hourly"]);
 const accountStatusSchema = z.enum(["Active", "Locked"]);
 
 const workingZoneSchema = z.object({

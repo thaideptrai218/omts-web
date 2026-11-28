@@ -1,44 +1,42 @@
 "use client";
-import { Fragment, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { ListStateMessage, ManagementPagination } from "@/components/ui/management-screen/management-table";
-import { StatusPill } from "@/components/ui/management-page";
+import { SelectBox } from "@/components/ui/select-box";
 import { Money, Skeleton, useRemote } from "@/features/operations/ui";
-import type { EmployeeSlipRow } from "./contracts";
-import { rangeLabel, statusLabel, statusTone } from "./payroll-model";
-import { PayrollSlipDetail } from "./payroll-slip-detail";
+import type { EmployeeSlipRow, PayrollStatus } from "./contracts";
+import { PayrollDataTable, type DataColumn } from "./payroll-data-table";
+import { rangeLabel } from "./payroll-model";
+import { PayrollSlipDialog } from "./payroll-slip-detail";
+import { SlipStatusPills } from "./payroll-slip-status";
 import { payrollRepository } from "./repository";
 import s from "./payroll-screen.module.css";
-import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 
-/** Link to the payroll sheet, opened on that sheet in the Bảng lương screen. */
-export const sheetHref = (payrollId: string, code: string) => `/operations/payroll?recordId=${payrollId}&search=${encodeURIComponent(code)}`;
-export function SheetLink({ row }: { row: Pick<EmployeeSlipRow, "payrollId" | "payrollCode" | "payrollName"> }) {
-  return <a className={s.link} href={sheetHref(row.payrollId, row.payrollCode)}>{row.payrollCode} · {row.payrollName}</a>;
-}
+/** The status filter of the tab, as in KiotViet: all, provisional, finalized, cancelled. */
+const filters: readonly (readonly [PayrollStatus | "", string])[] = [["", "Tất cả"], ["Provisional", "Tạm tính"], ["Finalized", "Đã chốt lương"], ["Cancelled", "Đã hủy"]];
 
-/** The "Phiếu lương" tab of an employee (KiotViet section 7): clicking a payslip code opens its detail under the row. */
+/** The "Phiếu lương" tab of an employee (KiotViet): a status filter and one row per payslip; its code opens "Phiếu lương cá nhân" as a dialog. */
 export function EmployeePayslipsTab({ employeeId }: { employeeId: string }) {
-  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [open, setOpen] = useState<string>();
-  const remote = useRemote(useCallback((signal: AbortSignal) => payrollRepository.employeeSlips(employeeId, { page, pageSize }, signal), [employeeId, page, pageSize]));
+  const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [status, setStatus] = useState<PayrollStatus | "">(""), [open, setOpen] = useState<EmployeeSlipRow>();
+  const remote = useRemote(useCallback((signal: AbortSignal) => payrollRepository.employeeSlips(employeeId, { status: status || undefined, page, pageSize }, signal), [employeeId, status, page, pageSize]));
   const data = remote.data;
-  if (remote.loading) return <Skeleton />;
+  if (remote.loading && !data) return <Skeleton />;
   if (remote.error || !data) return <ListStateMessage error={remote.error ?? "Không tải được phiếu lương."} onRetry={remote.reload} retryLabel="Tải lại" />;
-  if (!data.items.length) return <ListStateMessage>Nhân viên chưa có phiếu lương.</ListStateMessage>;
+  const columns: readonly DataColumn<EmployeeSlipRow>[] = [
+    { key: "code", label: "Mã phiếu", render: (row) => <button type="button" className={s.codeButton} onClick={() => setOpen(row)}>{row.code}</button> },
+    { key: "period", label: "Kỳ làm việc", render: (row) => rangeLabel(row.from, row.to) },
+    // Tổng lương is the income before the advance deduction, as on the payroll sheet; the advance shows on its own so Còn cần trả adds up.
+    { key: "income", label: "Tổng lương", right: true, render: (row) => <Money value={row.income} /> },
+    { key: "advance", label: "Trừ tạm ứng", right: true, render: (row) => <Money value={Math.max(row.income - row.net, 0)} /> },
+    { key: "paid", label: "Đã trả", right: true, render: (row) => <Money value={row.paid} /> },
+    { key: "outstanding", label: "Còn cần trả", right: true, render: (row) => <Money value={row.outstanding} /> },
+    { key: "status", label: "Trạng thái", render: (row) => <SlipStatusPills status={row.status} net={row.net} paid={row.paid} /> },
+  ];
   return <div className={s.tabBody}>
-    <div className={s.subTable}><table className={s.table}>
-      <caption className="sr-only">Phiếu lương của nhân viên</caption>
-      <thead><tr><th scope="col">Mã phiếu lương</th><th scope="col">Bảng lương</th><th scope="col">Kỳ làm việc</th><th scope="col" className={s.right}>Tổng thu nhập</th><th scope="col" className={s.right}>Lương thực nhận</th>
-        <th scope="col" className={s.right}>Đã trả</th><th scope="col" className={s.right}>Còn cần trả</th><th scope="col">Trạng thái</th></tr></thead>
-      <tbody>{data.items.map((row) => <Fragment key={row.id}>
-        <tr data-selected={open === row.id || undefined}>
-          <td><button type="button" className={s.codeButton} aria-expanded={open === row.id} onClick={() => setOpen((value) => value === row.id ? undefined : row.id)}>{row.code}</button></td>
-          <td><SheetLink row={row} /></td><td>{rangeLabel(row.from, row.to)}</td>
-          <td className={s.right}><Money value={row.income} /></td><td className={s.right}><Money value={row.net} /></td><td className={s.right}><Money value={row.paid} /></td><td className={s.right}><Money value={row.outstanding} /></td>
-          <td><StatusPill tone={statusTone(row.status)}>{statusLabel[row.status]}</StatusPill></td>
-        </tr>
-        {open === row.id && <DetailRow colSpan={8} className={s.detailCell}><PayrollSlipDetail slipId={row.id} /></DetailRow>}
-      </Fragment>)}</tbody>
-    </table></div>
-    <ManagementPagination page={data.page} pageSize={pageSize} total={data.total} unit="phiếu lương" onPage={(next) => { setOpen(undefined); setPage(next); }} onPageSize={(size) => { setOpen(undefined); setPageSize(size); setPage(1); }} />
+    <div className="mb-3 w-56"><SelectBox aria-label="Lọc phiếu lương theo trạng thái" value={status} onChange={(event) => { setStatus(event.target.value as PayrollStatus | ""); setPage(1); }}>
+      {filters.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+    </SelectBox></div>
+    <div className={s.subTable}><PayrollDataTable caption="Phiếu lương của nhân viên" columns={columns} rows={data.items} emptyText="Nhân viên chưa có phiếu lương." /></div>
+    <ManagementPagination page={data.page} pageSize={pageSize} total={data.total} unit="phiếu lương" onPage={setPage} onPageSize={(size) => { setPageSize(size); setPage(1); }} />
+    {open && <PayrollSlipDialog slipId={open.id} code={open.code} onClose={() => setOpen(undefined)} onSheetChanged={remote.refresh} />}
   </div>;
 }

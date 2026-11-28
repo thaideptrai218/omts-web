@@ -23,10 +23,10 @@ import styles from "./purchases.module.css";
 type Method = "Cash" | "BankTransfer";
 const methods: readonly (readonly [Method, string])[] = [["Cash", "Tiền mặt"], ["BankTransfer", "Chuyển khoản"]];
 
-function Field({ label, wide, children }: { label: string; wide?: boolean; children: ReactNode }) {
+export function Field({ label, wide, children }: { label: string; wide?: boolean; children: ReactNode }) {
   return <div className={wide ? `${styles.voucherField} ${styles.voucherWide}` : styles.voucherField}><span>{label}</span>{children}</div>;
 }
-function MethodChoice({ value, onChange }: { value: Method; onChange(value: Method): void }) {
+export function MethodChoice({ value, onChange }: { value: Method; onChange(value: Method): void }) {
   return <div className={styles.methods} role="radiogroup" aria-label="Phương thức thanh toán">{methods.map(([key, label]) => <label key={key}><input type="radio" className="sr-only" name="payment-method" checked={value === key} onChange={() => onChange(key)} />{label}</label>)}</div>;
 }
 /** The cooperative's active bank accounts, for "Tài khoản trả" on a bank transfer. */

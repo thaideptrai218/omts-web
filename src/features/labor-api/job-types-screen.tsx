@@ -23,6 +23,7 @@ type Column = { key: string; label: string; sort?: string; render(job: Job): Rea
 const columns: readonly Column[] = [
   { key: "name", label: "Loại công việc", sort: "name", render: job => <span className={styles.name}>{job.name}</span> },
   { key: "rate", label: "Đơn giá hiện tại / giờ", sort: "rate", render: job => job.currentRate ? <Money value={job.currentRate.hourlyRate} /> : "—" },
+  { key: "shiftRate", label: "Đơn giá hiện tại / ca", render: job => job.currentShiftRate ? <Money value={job.currentShiftRate.shiftRate} /> : "—" },
   { key: "from", label: "Hiệu lực từ", sort: "effectiveFrom", render: job => job.currentRate ? formatVietnameseDate(job.currentRate.effectiveFrom) : NO_RATE },
   { key: "status", label: "Trạng thái", sort: "status", render: job => <StatusPill tone={job.statusId === IN_USE ? "success" : "neutral"}>{statusLabel(job.statusId)}</StatusPill> },
 ];

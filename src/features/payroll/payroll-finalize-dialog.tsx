@@ -20,8 +20,8 @@ function Preview({ sheet }: { sheet: SheetDetail }) {
   return <dl className={s.previewGrid} aria-label="Xem trước bảng lương sẽ chốt">
     <div><dt>Số nhân viên</dt><dd>{sheet.employeeCount ?? sheet.slips.length}</dd></div>
     <div><dt>Tổng thu nhập</dt><dd><Money value={sum((slip) => slip.income)} /></dd></div>
-    <div><dt>Tạm ứng trừ</dt><dd><Money value={sum((slip) => slip.deduction)} /></dd></div>
-    <div><dt>Thực lĩnh</dt><dd><Money value={sheet.total} /></dd></div>
+    <div><dt>Trừ tạm ứng</dt><dd><Money value={sum((slip) => slip.advanceDeduction)} /></dd></div>
+    <div><dt>Thực nhận</dt><dd><Money value={sheet.total} /></dd></div>
   </dl>;
 }
 

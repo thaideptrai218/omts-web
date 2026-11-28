@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { createOperationsRepository } from "@/features/operations/repository";
 import { useMutation } from "@/features/operations/ui";
 import { jobType } from "./contracts";
-import { FINALIZED_MONTH_CODE, FINALIZED_MONTH_MESSAGE, NO_RATE, statusLabel, type Job } from "./job-types-model";
+import { FINALIZED_MONTH_CODE, FINALIZED_MONTH_MESSAGE, NO_RATE, NO_SHIFT_RATE, statusLabel, type Job } from "./job-types-model";
 import styles from "./job-types-screen.module.css";
 
 export const jobTypesRepository = createOperationsRepository("job-types");
@@ -16,7 +16,7 @@ export const jobTypesRepository = createOperationsRepository("job-types");
  */
 export function useJobTypeWrite(record: Job, onSynced: (job: Job) => void) {
   const mutation = useMutation(), [notice, setNotice] = useState<string>();
-  const write = async (action: "rename" | "rate" | "discontinue" | "resume", body: object) => {
+  const write = async (action: "rename" | "rate" | "shift-rate" | "discontinue" | "resume", body: object) => {
     setNotice(undefined);
     const saved = await mutation.run(() => jobTypesRepository.write(action, { ...body, rowVersion: record.rowVersion }, jobType, record.id));
     if (saved) onSynced(saved);
@@ -26,7 +26,7 @@ export function useJobTypeWrite(record: Job, onSynced: (job: Job) => void) {
     const latest = await mutation.run(() => jobTypesRepository.read("detail", { id: record.id }, jobType), true);
     if (!latest) return;
     onSynced(latest); mutation.reviewed();
-    setNotice(`Đã đọc hồ sơ hiện tại: ${latest.name} · ${latest.currentRate ? `${formatVndWithSymbol(latest.currentRate.hourlyRate)}/giờ` : NO_RATE} · ${statusLabel(latest.statusId)}. Bạn có thể lưu lại bản nháp.`);
+    setNotice(`Đã đọc hồ sơ hiện tại: ${latest.name} · ${latest.currentRate ? `${formatVndWithSymbol(latest.currentRate.hourlyRate)}/giờ` : NO_RATE} · ${latest.currentShiftRate ? `${formatVndWithSymbol(latest.currentShiftRate.shiftRate)}/ca` : NO_SHIFT_RATE} · ${statusLabel(latest.statusId)}. Bạn có thể lưu lại bản nháp.`);
   }
   return { mutation, write, reread, notice, clearNotice: () => setNotice(undefined) };
 }

@@ -55,7 +55,7 @@ export const defaultEmployeeColumns = employeeColumns.filter(column => !column.d
 export const columnAvailable = (column: Column, items: readonly Row[]) => !column.field || items.some(row => row[column.field!] !== undefined);
 
 /** Pointer row opening supplements a native chevron button; rows add no extra keyboard stop. */
-export function EmployeeDirectoryTable({ items, disabled, cache, detailRevision = 0, visible = defaultEmployeeColumns, access, initialExpandedId, sort, onSort, selection, onEdit, onChanged, onSalarySaved }: {
+export function EmployeeDirectoryTable({ items, disabled, cache, detailRevision = 0, visible = defaultEmployeeColumns, access, initialExpandedId, sort, onSort, selection, onEdit, onChanged, onEditSalary }: {
   items: Row[]; disabled: boolean; cache: EmployeeDetailCache; detailRevision?: number; visible?: readonly string[];
   /** What the viewer may open in a profile. */
   access: EmployeeViewerAccess; initialExpandedId?: string;
@@ -63,7 +63,7 @@ export function EmployeeDirectoryTable({ items, disabled, cache, detailRevision 
   sort?: SortState; onSort?(next: SortState): void;
   /** Row checkboxes; selecting never opens a row. */
   selection?: { selected: ReadonlySet<string>; onToggle(id: string, on: boolean): void; onToggleAll(on: boolean): void };
-  onEdit(employee: Employee): void; onChanged(employee: Employee, note?: string): void; onSalarySaved(): void;
+  onEdit(employee: Employee): void; onChanged(employee: Employee, note?: string): void; onEditSalary(employee: Employee): void;
 }) {
   const [expandedId, setExpandedId] = useState<string | undefined>(initialExpandedId);
   // Fixed columns (chevron, checkbox) are taken off the width the others may use.
@@ -102,7 +102,7 @@ export function EmployeeDirectoryTable({ items, disabled, cache, detailRevision 
         {columns.map(column => <td key={column.key} data-label={column.label} className={column.keep ? styles.keep : undefined}>{column.render(row)}</td>)}
       </OpenableTableRow>
       {expandedId === row.id && <DetailRow colSpan={span} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
-        <EmployeeDetailPanel id={row.id} cache={cache} revision={detailRevision} access={access} onEdit={onEdit} onChanged={onChanged} onSalarySaved={onSalarySaved} />
+        <EmployeeDetailPanel id={row.id} cache={cache} revision={detailRevision} access={access} onEdit={onEdit} onChanged={onChanged} onEditSalary={onEditSalary} />
       </div></DetailRow>}
     </Fragment>)}</tbody>
   </table>;
