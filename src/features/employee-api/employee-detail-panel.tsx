@@ -19,13 +19,13 @@ import styles from "./employee-detail.module.css";
  * The open row of the list: tabs Thông tin, Thiết lập lương, Phiếu lương and Nợ và tạm ứng (each only for who may read it).
  * Editing the profile is the "Cập nhật" dialog the directory owns (`onEdit`); ending or resuming work is confirmed here.
  */
-export function EmployeeDetailPanel({ id, cache, revision = 0, access, onEdit, onChanged, onSalarySaved }: {
+export function EmployeeDetailPanel({ id, cache, revision = 0, access, onEdit, onChanged, onEditSalary }: {
   id: string; cache: EmployeeDetailCache; revision?: number; access: EmployeeViewerAccess;
   onEdit(employee: Employee): void;
   /** Employment ended or resumed; `note` says what happened to the linked account. */
   onChanged(employee: Employee, note?: string): void;
-  /** A salary setup was saved: the employee version and the list's salary type moved on. */
-  onSalarySaved(): void;
+  /** Opens the "Cập nhật nhân viên" dialog on its salary tab. */
+  onEditSalary(employee: Employee): void;
 }) {
   const detail = useEmployeeDetail(id, cache, revision);
   const repository = useMemo(() => createOperationsRepository("employees"), []);
@@ -54,7 +54,7 @@ export function EmployeeDetailPanel({ id, cache, revision = 0, access, onEdit, o
       <EmployeeTabs idPrefix={prefix} active={active} onChange={setTab} access={tabs} />
       <div role="tabpanel" id={`${prefix}-panel-${active}`} aria-labelledby={`${prefix}-tab-${active}`} tabIndex={0} className={styles.body}>
         {active === "information" && <EmployeeInfoTab employee={employee} manage={access.manage} busy={detail.loading || mutation.pending || mutation.blocked} onEdit={() => onEdit(employee)} onStatusAction={() => setAction(employee.status === "Employed" ? "end-employment" : "resume")} />}
-        {active === "salary" && <EmployeeSalaryTab employee={employee} canEdit={access.salaryEdit} onSaved={() => { reload(); onSalarySaved(); }} onDenied={() => setSalaryDenied(true)} />}
+        {active === "salary" && <EmployeeSalaryTab key={revision} employee={employee} canEdit={access.salaryEdit} onEdit={() => onEditSalary(employee)} onDenied={() => setSalaryDenied(true)} />}
         {isPayrollTab(active) && <EmployeePayrollTabs employee={employee} tab={active} />}
       </div>
       {action && <EmployeeStatusActionDialog action={action} baseline={employee} pending={mutation.pending} busy={mutation.busy} onCancel={() => setAction(undefined)} onConfirm={choice => void confirm(choice)} />}

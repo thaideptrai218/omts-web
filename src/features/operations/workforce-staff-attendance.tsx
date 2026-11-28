@@ -1,12 +1,13 @@
 "use client";
 import { EmployeeTypeBadge } from "@/features/employee-api/employee-type-badge";
 import { filterByEmployeeType } from "@/features/employee-api/employee-type-filter";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { ListStateMessage, ManagementScroller } from "@/components/ui/management-screen/management-table";
 import { formatVietnameseDate } from "@/shared/format/date-only";
 import { ErrorNotice, displayTime, useRemote } from "./ui";
+import { AttendanceCorrectionDialog } from "./workforce-correction-dialog";
 import * as w from "./workforce-contracts";
 import type { WorkforceBoard } from "./workforce-board-state";
 import styles from "./workforce-screen.module.css";
@@ -26,6 +27,9 @@ export function StaffAttendanceTab({ board }: { board: WorkforceBoard }) {
   const actions = useStaffAttendanceActions(day, list.refresh);
   const { reset } = actions;
   useEffect(() => { reset(); }, [list.data, reset]);
+  // "Sửa chấm công" (also for a past day, to enter a missing time or the field work done back-dated): the Owner, or whoever holds ATTENDANCE Edit; the server checks the zone.
+  const [correcting, setCorrecting] = useState<string>();
+  const canCorrect = day <= today && board.allowed("AttendanceEdit");
   const canRecord = day === today && board.allowed("AttendanceCreate");
   const readOnlyReason = staffReadOnlyReason(day, today, board.allowed("AttendanceCreate"));
   const term = board.search.trim(), filtered = !!term || !!board.status || !!board.typeFilter;
@@ -53,7 +57,7 @@ export function StaffAttendanceTab({ board }: { board: WorkforceBoard }) {
         : !rows.length ? <ListStateMessage>{filtered ? "Không tìm thấy nhân viên phù hợp. Thử đổi trạng thái hoặc từ khóa." : "Chưa có nhân viên nội bộ trong các vùng được cấp."}</ListStateMessage>
         : <table className={styles.table}>
           <caption className="sr-only">Chấm công nhân viên nội bộ ngày {formatVietnameseDate(day)}</caption>
-          <thead><tr><th scope="col">Nhân viên</th><th scope="col">Mã</th><th scope="col">Vào làm</th><th scope="col">Ra về</th><th scope="col">Trạng thái</th>{canRecord && <th scope="col">Chấm công nhanh</th>}</tr></thead>
+          <thead><tr><th scope="col">Nhân viên</th><th scope="col">Mã</th><th scope="col">Vào làm</th><th scope="col">Ra về</th><th scope="col">Trạng thái</th>{canRecord && <th scope="col">Chấm công nhanh</th>}{canCorrect && <th scope="col">Sửa chấm công</th>}</tr></thead>
           <tbody>{rows.map((row) => {
             const pending = actions.pending.has(row.employeeId), step = staffStep(row);
             return <tr key={row.employeeId} aria-busy={pending || undefined}>
@@ -62,9 +66,11 @@ export function StaffAttendanceTab({ board }: { board: WorkforceBoard }) {
               <td><span className={styles.status} data-state={staffState(row)}>{staffStateLabel(row)}</span></td>
               {canRecord && <td>{step && <Button type="button" className="w-auto whitespace-nowrap" variant={step === "check-in" ? "primary" : "secondary"} disabled={actions.batching} isPending={pending}
                 aria-label={`${attendanceActionLabel[step]} cho ${row.employeeName}`} onClick={() => void actions.one(row, step)}>{attendanceActionLabel[step]}</Button>}</td>}
+              {canCorrect && <td><Button type="button" variant="ghost" className="w-auto whitespace-nowrap" disabled={actions.batching} aria-label={`Sửa chấm công của ${row.employeeName}`} onClick={() => setCorrecting(row.employeeId)}>Sửa chấm công</Button></td>}
             </tr>;
           })}</tbody>
         </table>}
     </ManagementScroller>
+    {correcting && <AttendanceCorrectionDialog employeeId={correcting} day={day} onClose={() => setCorrecting(undefined)} onSaved={() => { setCorrecting(undefined); list.refresh(); }} />}
   </>;
 }

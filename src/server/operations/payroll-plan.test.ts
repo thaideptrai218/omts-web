@@ -111,10 +111,17 @@ describe("employee payslips (KiotViet section 7)", () => {
     expect(list.schema).toBe(c.employeeSlipPage);
     expect(planOperation("payroll", "GET", q(`action=employee-slips&id=${employee}`))?.path).toBe(`/api/employees/${employee}/payslips`);
     expect(planOperation("payroll", "GET", q(`action=slip&id=${slip}`))).toMatchObject({ path: `/api/payroll-slips/${slip}`, expectedId: slip, permission: "View" });
-    const base = { id: slip, code: "PL1", payrollId: sheet, payrollCode: "BL1", employeeId: employee, employeeName: "A", from: "2026-05-01", to: "2026-05-31", hours: 10, mainPay: 300000, bonus: 0, deduction: 0, income: 300000, net: 300000, paid: 0, outstanding: 300000, status: "Finalized",
-      lines: [{ jobName: "Cho ăn", hours: 10, hourlyRate: 30000, amount: 300000 }], payments: [], attendance: [{ date: "2026-05-02", jobName: "Cho ăn", hours: 5 }] };
+    const base = { id: slip, code: "PL1", payrollId: sheet, payrollCode: "BL1", employeeId: employee, employeeName: "A", from: "2026-05-01", to: "2026-05-31", hours: 10, mainPay: 300000, bonus: 0, advanceDeduction: 0, income: 300000, net: 300000, paid: 0, outstanding: 300000, status: "Finalized",
+      salaryType: "Hourly", shifts: 0, shiftPay: 0, manualDeduction: 0, fixedPay: 0, adjustments: [], allowsAdjustments: false,
+      lines: [{ jobName: "Cho ăn", hours: 10, hourlyRate: 30000, amount: 300000, kind: "Hourly", shifts: 0, shiftRate: 0 }], payments: [], attendance: [{ date: "2026-05-02", jobName: "Cho ăn", hours: 5 }] };
     expect(c.slipDetail.safeParse(base).success).toBe(true);
-    expect(c.slipDetail.safeParse({ ...base, lines: [{ jobName: "x", hours: 1, hourlyRate: 1.5, amount: 1 }] }).success).toBe(false);
+    expect(c.slipDetail.safeParse({ ...base, lines: [{ jobName: "x", hours: 1, hourlyRate: 1.5, amount: 1, kind: "Hourly", shifts: 0, shiftRate: 0 }] }).success).toBe(false);
+    // The shift fields are part of the contract: a slip without them, or with the old `deduction` only, is refused (the BFF answers 502).
+    const { advanceDeduction: _advance, ...old } = base; void _advance;
+    expect(c.slipDetail.safeParse({ ...old, deduction: 0 }).success).toBe(false);
+    expect(c.slipDetail.safeParse({ ...base, salaryType: "PerShift", shifts: 3.5, lines: [{ jobName: "Thu hoạch", hours: 10, hourlyRate: 0, amount: 1_050_000, kind: "Shift", shifts: 3.5, shiftRate: 300000 }] }).success).toBe(true);
+    expect(c.slipDetail.safeParse({ ...base, salaryType: null }).success).toBe(true);
+    expect(c.slipDetail.safeParse({ ...base, salaryType: "Daily" }).success).toBe(false);
     expect(c.employeeSlipPage.safeParse({ items: [], total: 0, page: 1, pageSize: 15, summary: { outstanding: 0 } }).success).toBe(false);
   });
   it.each(["action=employee-slips&id=nope", "action=employee-slips", `action=employee-slips&id=${employee}&status=Draft`, `action=employee-slips&id=${employee}&search=x`, "action=slip", `action=slip&id=${slip}&page=1`])("rejects %s", (query) => {
@@ -131,5 +138,32 @@ describe("employee payslips (KiotViet section 7)", () => {
     expect(planOperation("payroll-payments", "GET", q("action=list&method=BankTransfer&kind=Advance&status=Cancelled&page=2"))?.path).toBe("/api/payroll-payments?method=BankTransfer&kind=Advance&status=Cancelled&page=2");
     for (const bad of ["payrollId=nope", `payrollId=${sheetId}&payrollId=${sheetId}`, "method=Card", "kind=Other", "status=Recorded,Cancelled", "status=Pending"]) expect(planOperation("payroll-payments", "GET", q(`action=list&${bad}`)), bad).toBeUndefined();
     expect(planOperation("payroll", "GET", q(`action=list&payrollId=${sheetId}`))).toBeUndefined();
+  });
+});
+
+describe("payslip adjustments (PUT)", () => {
+  const items = [{ kind: "Bonus", amount: 500000, reason: "Thưởng chuyên cần" }, { kind: "Deduction", amount: 200000, reason: "Đi trễ" }];
+  it("replaces the list of one slip with PUT and answers the whole sheet, for the Owner only", () => {
+    const plan = planOperation("payroll", "POST", q(), { action: "adjustments", id: slip, body: { items } })!;
+    expect(plan).toMatchObject({ method: "PUT", path: `/api/payroll-slips/${slip}/adjustments`, permission: "Delete", body: { items } });
+    expect(plan.schema).toBe(c.sheetDetail);
+    expect(plan.expectedId).toBeUndefined();
+    expect(operationAllowed("payroll", { subjectType: "CooperativeOwner" }, [], plan.permission)).toBe(true);
+    const accountant = ["View", "Create", "Edit", "Export"].map((action) => ({ functionCode: "PAYROLL", action, dataScope: "AssignedZone", scope: { kind: "all-zones", zoneIds: [] } })) as never;
+    expect(operationAllowed("payroll", { subjectType: "Staff" }, accountant, plan.permission)).toBe(false);
+  });
+  it("accepts an empty list (remove all) and trims the reason", () => {
+    expect(planOperation("payroll", "POST", q(), { action: "adjustments", id: slip, body: { items: [] } })?.body).toEqual({ items: [] });
+    expect(planOperation("payroll", "POST", q(), { action: "adjustments", id: slip, body: { items: [{ kind: "Bonus", amount: 1, reason: "  ok  " }] } })?.body).toEqual({ items: [{ kind: "Bonus", amount: 1, reason: "ok" }] });
+  });
+  it.each([
+    ["no list", {}], ["kind unknown", { items: [{ kind: "Fine", amount: 1, reason: "x" }] }], ["zero amount", { items: [{ kind: "Bonus", amount: 0, reason: "x" }] }],
+    ["fractional amount", { items: [{ kind: "Bonus", amount: 1.5, reason: "x" }] }], ["amount over the limit", { items: [{ kind: "Bonus", amount: 10_000_000_000, reason: "x" }] }],
+    ["blank reason", { items: [{ kind: "Bonus", amount: 1, reason: "   " }] }], ["reason over 200", { items: [{ kind: "Bonus", amount: 1, reason: "x".repeat(201) }] }],
+    ["51 lines", { items: Array.from({ length: 51 }, () => ({ kind: "Bonus", amount: 1, reason: "x" })) }], ["extra field", { items: [{ kind: "Bonus", amount: 1, reason: "x", id: 1 }] }],
+  ])("rejects %s", (_name, body) => { expect(planOperation("payroll", "POST", q(), { action: "adjustments", id: slip, body })).toBeUndefined(); });
+  it("needs the slip id and stays out of the payments area", () => {
+    expect(planOperation("payroll", "POST", q(), { action: "adjustments", body: { items } })).toBeUndefined();
+    expect(planOperation("payroll-payments", "POST", q(), { action: "adjustments", id: slip, body: { items } })).toBeUndefined();
   });
 });

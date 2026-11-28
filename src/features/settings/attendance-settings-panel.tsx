@@ -13,7 +13,7 @@ export function AttendanceSettingsPanel() {
   const [open, setOpen] = useState(true);
   if (!owner) return <p role="status">Chỉ Chủ hợp tác xã được quản lý thiết lập chấm công.</p>;
   return <section aria-label="Thiết lập chấm công" className="py-4">
-    <p className="text-sm text-text-muted">Giờ nghỉ trưa và làm tròn số phút công. Thay đổi áp dụng từ ngày bạn chọn, các ngày cũ giữ nguyên.</p>
+    <p className="text-sm text-text-muted">Giờ nghỉ trưa, làm tròn số phút công và số giờ của 1 ca. Thay đổi áp dụng từ ngày bạn chọn, các ngày cũ giữ nguyên.</p>
     {!open && <Button type="button" variant="secondary" className="mt-3 w-auto" onClick={() => setOpen(true)}>Chỉnh thiết lập chấm công</Button>}
     {open && <WorkforceSetupDialog onClose={() => setOpen(false)} />}
   </section>;

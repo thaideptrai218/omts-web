@@ -12,7 +12,8 @@ import { ReportFilterRail, useReportZones } from "@/features/sales-reports/repor
 import { ReportPage } from "@/features/sales-reports/report-page";
 import { ReportTable, ReportTiles, RowLinkButton, type ReportColumn } from "@/features/sales-reports/report-parts";
 import { useReportFilters } from "@/features/sales-reports/use-report-filters";
-import { formatHours } from "@/features/payroll/payroll-model";
+import { formatHours, formatShifts } from "@/features/payroll/payroll-model";
+import { employeeTypeLabel } from "@/features/employee-api/employee-editor-model";
 import { LaborCostRaftDetail } from "./labor-cost-raft-detail";
 import type { RaftLaborCost } from "./labor-costs-contracts";
 import styles from "./labor-costs.module.css";
@@ -40,7 +41,8 @@ function LaborCostsWorkspace() {
   // A raft kept from before the zones changed is ignored until the new answer lists it.
   const data = costs.data, raftId = data?.items.some((row) => row.raftId === filters.applied.extra.raft) ? filters.applied.extra.raft : "";
   const rows = useMemo(() => (data?.items ?? []).filter((row) => !raftId || row.raftId === raftId), [data, raftId]);
-  const total = rows.reduce((sum, row) => sum + row.amount, 0), totalHours = rows.reduce((sum, row) => sum + (row.hours ?? 0), 0);
+  const total = rows.reduce((sum, row) => sum + row.amount, 0), totalHours = rows.reduce((sum, row) => sum + (row.hours ?? 0), 0), totalShifts = rows.reduce((sum, row) => sum + (row.shifts ?? 0), 0);
+  const typeAmount = (type: "SeasonalWorker" | "Staff") => rows.reduce((sum, row) => sum + (row.byType ?? []).filter((item) => item.employeeType === type).reduce((inner, item) => inner + item.amount, 0), 0);
   const draftRange = boundedRange(filters.draft.time, today, 1);
   const problem = filters.problem ?? (spanDays(draftRange.from, draftRange.to) > MAX_DAYS ? "Chọn khoảng thời gian tối đa 1 năm." : null);
   const raftOptions = (data?.items ?? []).filter((row) => row.raftId);
@@ -50,6 +52,7 @@ function LaborCostsWorkspace() {
     { key: "raft", header: "Bè", cell: (row) => <RowLinkButton pressed={openKey === rowKey(row)} onClick={() => setOpenKey(openKey === rowKey(row) ? undefined : rowKey(row))}>{row.raftCode ?? "Công ươm cấp vùng"}</RowLinkButton>, total: "Tổng" },
     { key: "zone", header: "Vùng nuôi", cell: (row) => row.zoneName },
     { key: "hours", header: "Giờ công", numeric: true, cell: (row) => formatHours(row.hours ?? 0), total: formatHours(totalHours) },
+    { key: "shifts", header: "Số ca", numeric: true, cell: (row) => row.shifts ? formatShifts(row.shifts) : "—", total: totalShifts ? formatShifts(totalShifts) : "—" },
     { key: "amount", header: "Chi phí nhân công", numeric: true, cell: (row) => vnd(row.amount), total: vnd(total) },
     { key: "share", header: "Tỷ trọng", numeric: true, cell: (row) => total ? `${percent.format(row.amount / total * 100)}%` : "—", total: total ? "100%" : "—" },
   ];
@@ -74,11 +77,14 @@ function LaborCostsWorkspace() {
         <ReportTiles label="Tổng hợp chi phí nhân công" tiles={[
           { label: "Tổng chi phí nhân công", value: vnd(total), hint: `${rows.length} dòng` },
           { label: "Giờ công trả lương", value: formatHours(totalHours) },
+          { label: "Số ca trả lương", value: formatShifts(totalShifts) },
+          { label: employeeTypeLabel("SeasonalWorker"), value: vnd(typeAmount("SeasonalWorker")) },
+          { label: employeeTypeLabel("Staff"), value: vnd(typeAmount("Staff")) },
           { label: "Bè có chi phí", value: String(rows.filter((row) => row.raftId).length) },
         ]} />
         <ReportTable caption="Chi phí nhân công theo bè" columns={columns} rows={rows} rowKey={rowKey} selectedKey={openKey} />
         {open && <LaborCostRaftDetail key={rowKey(open)} row={open} from={data.from} to={data.to} />}
-        <p className={styles.footnote}>Công ươm cấp vùng không tính vào chu kỳ nuôi của bè. Chi phí là công của người lao động thời vụ, tính từ chấm công và đơn giá theo loại công việc.</p>
+        <p className={styles.footnote}>Công ươm cấp vùng không tính vào chu kỳ nuôi của bè. Chi phí là tiền công của người lao động thời vụ và nhân viên nội bộ tính như bảng lương: theo ca nhân với đơn giá ca, theo giờ nhân với đơn giá giờ, hoặc ca ngoài đồng của người hưởng lương cố định; chia cho các bè theo thời gian làm. Lương cố định hằng tháng không tính vào bè nào.</p>
       </div>}
     </ReportPage>
   );

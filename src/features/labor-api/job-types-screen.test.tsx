@@ -102,7 +102,7 @@ it("never reuses the Chỉnh sửa / Đổi đơn giá button node as the submit
   expect(screen.getByRole("button", { name: "Lưu" })).not.toBe(edit);
   expect(state.write).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Bỏ qua" }));
-  const add = screen.getByRole("button", { name: "Đổi đơn giá" });
+  const add = screen.getByRole("button", { name: "Đổi đơn giá giờ" });
   await user.click(add);
   expect(add.isConnected).toBe(false);
   expect(screen.getByRole("button", { name: "Lưu" })).not.toBe(add);
@@ -116,7 +116,7 @@ async function startRate(user: ReturnType<typeof userEvent.setup>) {
   expect(screen.getByText("Hiện tại")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Thêm mốc đơn giá" })).toBeNull();
   await user.click(screen.getByRole("tab", { name: "Thông tin" }));
-  await user.click(screen.getByRole("button", { name: "Đổi đơn giá" }));
+  await user.click(screen.getByRole("button", { name: "Đổi đơn giá giờ" }));
 }
 
 it("adds a rate point inline and validates the rate before sending", async () => {
@@ -128,7 +128,7 @@ it("adds a rate point inline and validates the rate before sending", async () =>
   await user.type(screen.getByLabelText("Đơn giá mới (đồng/giờ)"), "30000");
   await user.click(screen.getByRole("button", { name: "Lưu" }));
   await waitFor(() => expect(state.write).toHaveBeenCalledWith("rate", { hourlyRate: 30000, effectiveFrom: businessToday(), rowVersion: "v1" }, expect.anything(), job(1).id));
-  await waitFor(() => expect(screen.getByRole("button", { name: "Đổi đơn giá" })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole("button", { name: "Đổi đơn giá giờ" })).toBeTruthy());
 });
 
 it("discards the inline rate row on Bỏ qua", async () => {
@@ -194,4 +194,19 @@ it("creates a job type from the dialog after confirmation", async () => {
   await user.click(await screen.findByRole("button", { name: "Đồng ý" }));
   await waitFor(() => expect(state.write).toHaveBeenCalledWith("create", { name: "Phân loại hàu", hourlyRate: 27000, effectiveFrom: businessToday() }, expect.anything()));
   expect(await screen.findByText(/Đã thêm loại công việc/)).toBeTruthy();
+});
+
+it("shows the shift rate next to the hourly rate and saves a new shift rate with its own action", async () => {
+  const user = userEvent.setup();
+  state.read.mockImplementation(async (action: string) => action === "list" ? page([job(1, { currentShiftRate: { shiftRate: 300000, effectiveFrom: "2026-10-01" }, otherShiftRates: [] })]) : failure("x"));
+  await open(user);
+  expect(screen.getByText("Đơn giá ca hiện tại")).toBeTruthy();
+  expect(screen.getAllByText(/300\.000/).length).toBeGreaterThan(0);
+  await user.click(screen.getByRole("button", { name: "Đổi đơn giá ca" }));
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  expect((await screen.findAllByRole("alert"))[0].textContent).toContain("đồng/ca");
+  expect(state.write).not.toHaveBeenCalled();
+  await user.type(screen.getByLabelText("Đơn giá mới (đồng/ca)"), "320000");
+  await user.click(screen.getByRole("button", { name: "Lưu" }));
+  await waitFor(() => expect(state.write).toHaveBeenCalledWith("shift-rate", { shiftRate: 320000, effectiveFrom: businessToday(), rowVersion: "v1" }, expect.anything(), job(1).id));
 });

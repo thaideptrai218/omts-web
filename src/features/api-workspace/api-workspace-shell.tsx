@@ -56,10 +56,10 @@ const workspaceGroups = [
   { label: INPUT_GROUP, resources: [], operations: [] },
   // Supplier payments live in the supplier record (Nợ cần trả tab), so the old Thanh toán nhà cung cấp screen has no menu entry; its route stays for old links.
   { label: "Mua hàng", resources: ["suppliers"], operations: [] },
-  { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "payroll-payments", "labor-costs", "my-work"] },
+  { label: "Nhân sự", resources: ["employees"], operations: ["workforce", "job-types", "payroll", "my-work"] },
   { label: "Kinh doanh", resources: ["customers"], operations: ["sales-invoice-list", "sales-returns", "quality-claims", "claim-reports", "sales-products", "purchase-requests", "lot-tracing", "customer-payments"] },
   { label: "Báo cáo", resources: [], // Thứ tự theo KiotViet (Cuối ngày, Bán hàng, Hàng hóa, Khách hàng, Nhà cung cấp, Tài chính) rồi các báo cáo đặc thù; key chưa xong bị `operationAllowed` ẩn.
-    operations: ["end-of-day-report", "sales-report", "product-report", "customer-report", "supplier-report", "financial-report", "price-trend-report", "after-sales-report", "harvest-yield"] },
+    operations: ["end-of-day-report", "sales-report", "product-report", "customer-report", "supplier-report", "financial-report", "price-trend-report", "after-sales-report", "harvest-yield", "labor-costs"] },
 ];
 
 type Context = Readonly<{ identity: BrowserIdentityDto; permissions: PermissionProjection }>;
@@ -157,12 +157,12 @@ export function ApiWorkspaceShell({ context, children }: { context: Context; chi
             { title: "Nhập hàng", items: purchasing ? [link(kindText.Seed.receiptsPath, kindText.Seed.receipt, "receipt"), link(kindText.Supply.receiptsPath, kindText.Supply.receipt, "receipt")] : [] },
             { title: "Trả hàng", items: purchasing ? [link(kindText.Seed.returnsPath, kindText.Seed.receiptReturn, "upload"), link(kindText.Supply.returnsPath, kindText.Supply.receiptReturn, "upload")] : [] },
           ] : group.label === "Nhân sự" ? [
-            { title: "Nhân viên", items: [...res(["employees"])] },
+            { title: "Nhân viên", items: res(["employees"]) },
             { title: "Phân công và chấm công", items: [
               ...(scheduleAllowed(context.identity, context.permissions.functionPermissions, "View") ? [link("/work/schedule", "Lịch làm việc vùng", "calendar")] : []),
               ...(operationAllowed("workforce", context.identity, context.permissions.functionPermissions) ? [link("/work/today", "Chấm công hôm nay", "work")] : []),
               ...ops(["workforce", "my-work", "job-types"])] },
-            { title: "Tiền lương", items: ops(["payroll", "payroll-payments", "labor-costs"]) },
+            { title: "Tiền lương", items: ops(["payroll"]) },
           ] : group.label === "Kinh doanh" ? [
             { title: "Bán hàng", items: [...pick(["/sales/orders"], productLinks), ...ops(["sales-invoice-list", "sales-returns"]), ...pick(["/sales/disposals"], productLinks)] },
             { title: "Khách hàng", items: [...res(["customers"]), ...ops(["customer-payments", "purchase-requests", "quality-claims", "claim-reports"])] },

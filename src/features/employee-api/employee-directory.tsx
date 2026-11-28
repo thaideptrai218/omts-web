@@ -55,7 +55,7 @@ export function EmployeeDirectory({ readOnly = false, access = noAccess }: { rea
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
   // `record` null: a new employee. `serial` remounts the dialog so a second open starts from a clean form.
-  const [form, setForm] = useState<{ record: Employee | null; serial: number }>(), [importing, setImporting] = useState(false);
+  const [form, setForm] = useState<{ record: Employee | null; serial: number; tab: "info" | "salary" }>(), [importing, setImporting] = useState(false);
   const [storedColumns, storeColumns] = useStoredValue(EMPLOYEE_COLUMNS_STORAGE, defaultEmployeeColumns.join(","));
   // Pay columns (salary type, wage debt) exist only for a viewer with payroll access; for others they are not even offered in the picker.
   const columns = employeeColumns.filter(column => access.payroll || !payrollColumnKeys.includes(column.key));
@@ -113,7 +113,7 @@ export function EmployeeDirectory({ readOnly = false, access = noAccess }: { rea
   function retry() { refresh(); zones.reload(); }
   const hasFilters = !!search || !!linkedZone.zone || statusId !== "401" || !!employeeType || !!accountFilter;
   const resetFilters = () => { setSearch(""); setTerm(""); setStatusId("401"); setLinkCleared(true); setEmployeeType(""); setAccountFilter(""); };
-  const openForm = (record: Employee | null) => setForm(current => ({ record, serial: (current?.serial ?? 0) + 1 }));
+  const openForm = (record: Employee | null, tab: "info" | "salary" = "info") => setForm(current => ({ record, tab, serial: (current?.serial ?? 0) + 1 }));
   const filters = <EmployeeDirectoryFilters employeeType={employeeType} setEmployeeType={value => filter(() => setEmployeeType(value))} statusId={statusId} setStatusId={value => filter(() => setStatusId(value))}
     zoneFilter={zoneFilter} onZoneChange={filter} pinnedZone={linkedZone.zone} onClearPinnedZone={() => filter(() => setLinkCleared(true))}
     hasFilters={hasFilters} onReset={() => filter(resetFilters)}
@@ -121,7 +121,7 @@ export function EmployeeDirectory({ readOnly = false, access = noAccess }: { rea
   const selection = { selected, onToggle: (id: string, on: boolean) => setSelected(current => { const next = new Set(current); if (on) next.add(id); else next.delete(id); return next; }),
     onToggleAll: (on: boolean) => setSelected(on ? new Set(list.data?.items.map(row => row.id)) : new Set()) };
   const fileError = exportAll.error || exportSelected.error;
-  const panelProps = { cache, revision: detailRevision, access, onEdit: (employee: Employee) => openForm(employee), onChanged: (employee: Employee, note?: string) => { refresh(); notify({ tone: "success", title: `Đã cập nhật nhân viên ${label(employee)}.`, ...(note ? { description: note } : {}) }); }, onSalarySaved: refresh };
+  const panelProps = { cache, revision: detailRevision, access, onEdit: (employee: Employee) => openForm(employee), onEditSalary: (employee: Employee) => openForm(employee, "salary"), onChanged: (employee: Employee, note?: string) => { refresh(); notify({ tone: "success", title: `Đã cập nhật nhân viên ${label(employee)}.`, ...(note ? { description: note } : {}) }); } };
 
   return <><ScreenGuide id="employee-screen-v3" steps={guideSteps(access.manage)} />
   <ManagementLayout storageKey="employees" icon="users" title="Danh sách nhân viên" filters={filters} filterLabel="Bộ lọc nhân viên"
@@ -148,9 +148,9 @@ export function EmployeeDirectory({ readOnly = false, access = noAccess }: { rea
           {hasFilters && <button type="button" className="ml-2 font-semibold underline" onClick={() => filter(resetFilters)}>Xóa bộ lọc</button>}
           {!hasFilters && !readOnly && <button type="button" className="ml-2 font-semibold underline" disabled={!lookupsReady} onClick={() => openForm(null)}>Thêm nhân viên</button>}</ListStateMessage>
         : <EmployeeDirectoryTable items={list.data.items} disabled={list.loading} cache={cache} detailRevision={detailRevision} visible={visible} initialExpandedId={linkedId} access={access}
-          sort={sort ?? { key: "", direction: "asc" }} onSort={next => filter(() => setSort(next))} selection={readOnly ? undefined : selection} onEdit={panelProps.onEdit} onChanged={panelProps.onChanged} onSalarySaved={refresh} />}
+          sort={sort ?? { key: "", direction: "asc" }} onSort={next => filter(() => setSort(next))} selection={readOnly ? undefined : selection} onEdit={panelProps.onEdit} onChanged={panelProps.onChanged} onEditSalary={panelProps.onEditSalary} />}
     </ManagementScroller>
-    {form && <EmployeeFormDialog key={form.serial} record={form.record} zones={zones.data ?? []} lookupsReady={lookupsReady} canAccount={access.manage} onClose={() => setForm(undefined)}
+    {form && <EmployeeFormDialog key={form.serial} record={form.record} zones={zones.data ?? []} lookupsReady={lookupsReady} canAccount={access.manage} salaryAccess={{ view: access.salary, edit: access.salaryEdit }} initialTab={form.tab} onClose={() => setForm(undefined)}
       onAdopt={() => { setForm(undefined); refresh(); }}
       onSaved={(employee, problems) => {
         const creating = form.record === null;
