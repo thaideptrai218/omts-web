@@ -11,38 +11,40 @@ const labor = [{ functionCode: "LABOR_WORKERS", action: "View" }, { functionCode
 
 describe("employee viewer access (by held function codes, not role names)", () => {
   it("lets the Owner do everything", () => {
-    expect(employeeViewerAccess({ subjectType: "CooperativeOwner" }, [])).toEqual({ read: true, manage: true, payroll: true });
+    expect(employeeViewerAccess({ subjectType: "CooperativeOwner" }, [])).toEqual({ read: true, manage: true, payroll: true, salary: true, salaryEdit: true });
   });
   it("gives a Zone Manager a read-only view of working information without payroll", () => {
-    expect(employeeViewerAccess(staff, labor)).toEqual({ read: true, manage: false, payroll: false });
+    expect(employeeViewerAccess(staff, labor)).toEqual({ read: true, manage: false, payroll: false, salary: false, salaryEdit: false });
   });
   it("gives the Accountant payroll views but no management", () => {
-    expect(employeeViewerAccess(staff, [...labor.slice(0, 1), { functionCode: "PAYROLL", action: "View" }])).toEqual({ read: true, manage: false, payroll: true });
+    expect(employeeViewerAccess(staff, [...labor.slice(0, 1), { functionCode: "PAYROLL", action: "View" }])).toEqual({ read: true, manage: false, payroll: true, salary: false, salaryEdit: false });
   });
   it("denies a Staff account without LABOR_WORKERS View", () => {
     expect(employeeViewerAccess(staff, [{ functionCode: "PAYROLL", action: "View" }]).read).toBe(false);
   });
   it("names the pay columns that a viewer without payroll access never sees", () => {
-    expect(payrollColumnKeys).toEqual(["hours", "debt"]);
+    expect(payrollColumnKeys).toEqual(["salaryType", "debt"]);
   });
 });
 
 describe("employee profile tabs", () => {
-  const labels = (manage: boolean, payroll: boolean) => visibleEmployeeTabs(manage, payroll).map((tab) => tab.label);
+  const labels = (payroll: boolean, salary: boolean) => visibleEmployeeTabs({ payroll, salary }).map((tab) => tab.label);
   it("shows every tab to the Owner", () => {
-    expect(labels(true, true)).toEqual(["Thông tin", "Công việc", "Ngân hàng", "Tài khoản đăng nhập", "Phiếu lương", "Nợ và tạm ứng"]);
+    expect(labels(true, true)).toEqual(["Thông tin", "Thiết lập lương", "Phiếu lương", "Nợ và tạm ứng"]);
   });
-  it("shows only Công việc to a Zone Manager (no bank, personal, account, payroll or debt tab)", () => {
-    expect(labels(false, false)).toEqual(["Công việc"]);
+  it("shows only Thông tin to a Zone Manager", () => {
+    expect(labels(false, false)).toEqual(["Thông tin"]);
   });
-  it("adds payroll tabs, still without personal or bank, for the Accountant", () => {
-    expect(labels(false, true)).toEqual(["Công việc", "Phiếu lương", "Nợ và tạm ứng"]);
+  it("gives the Accountant the salary setup and payroll tabs", () => {
+    const access = employeeViewerAccess(staff, [{ functionCode: "LABOR_WORKERS", action: "View" }, { functionCode: "PAY_RULES", action: "View" }, { functionCode: "PAYROLL", action: "View" }]);
+    expect(labels(access.payroll, access.salary)).toEqual(["Thông tin", "Thiết lập lương", "Phiếu lương", "Nợ và tạm ứng"]);
+    expect(access.salaryEdit).toBe(false);
   });
   it("renders the reduced tab list", () => {
-    render(<EmployeeTabs idPrefix="x" active="work" onChange={vi.fn()} manage={false} payroll={false} />);
-    expect(screen.queryByRole("tab", { name: "Ngân hàng" })).toBeNull();
+    render(<EmployeeTabs idPrefix="x" active="information" onChange={vi.fn()} access={{ payroll: false, salary: false }} />);
     expect(screen.queryByRole("tab", { name: "Phiếu lương" })).toBeNull();
-    expect(screen.getByRole("tab", { name: "Công việc" })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: "Thiết lập lương" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "Thông tin" })).toBeTruthy();
   });
 });
 

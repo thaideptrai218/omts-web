@@ -11,7 +11,8 @@ describe("employee response contract at backend db158b44", () => {
     const page = { items: [summary], page: 1, pageSize: 20, total: 1 };
     expect(employeePageSchema.parse(page)).toEqual(page);
     expect(employeeViewSchema.safeParse(summary).success).toBe(false);
-    expect(employeeListItemSchema.parse(employeeDetailFixture())).toEqual(summary);
+    // The list also carries the personal columns for who may maintain the employee; the detail fixture has them.
+    expect(employeeListItemSchema.parse(employeeDetailFixture())).toMatchObject(summary);
   });
 
   it("accepts empty lists without inventing rows or pages", () => {

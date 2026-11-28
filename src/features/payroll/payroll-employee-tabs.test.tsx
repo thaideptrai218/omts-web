@@ -31,12 +31,12 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 it("offers the two payroll tabs only when asked (Owner directory)", () => {
-  const { rerender } = render(<EmployeeTabs idPrefix="x" active="information" onChange={vi.fn()} />);
+  const { rerender } = render(<EmployeeTabs idPrefix="x" active="information" onChange={vi.fn()} access={{ payroll: false, salary: false }} />);
   expect(screen.queryByRole("tab", { name: "Phiếu lương" })).toBeNull();
-  rerender(<EmployeeTabs idPrefix="x" active="information" onChange={vi.fn()} payroll />);
+  rerender(<EmployeeTabs idPrefix="x" active="information" onChange={vi.fn()} access={{ payroll: true, salary: false }} />);
   expect(screen.getByRole("tab", { name: "Phiếu lương" })).toBeTruthy();
   expect(screen.getByRole("tab", { name: "Nợ và tạm ứng" })).toBeTruthy();
-  expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Thông tin", "Công việc", "Ngân hàng", "Tài khoản đăng nhập", "Phiếu lương", "Nợ và tạm ứng"]);
+  expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Thông tin", "Phiếu lương", "Nợ và tạm ứng"]);
 });
 
 it("payslips tab: columns, a link to the sheet, and the slip detail opened under the row", async () => {

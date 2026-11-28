@@ -47,8 +47,8 @@ describe("employee login account operation contract", () => {
     const receipt = { employee: payload.employee, temporaryPassword: payload.temporaryPassword,
       temporaryPasswordExpiresAt: payload.temporaryPasswordExpiresAt, accountMessageCode: payload.accountMessageCode };
     expect(issueEmployeeAccountResponseSchema.safeParse(receipt).success).toBe(true);
-    // A `fixedPassword` flag from a newer API is accepted and ignored.
-    expect(issueEmployeeAccountResponseSchema.safeParse({ ...receipt, fixedPassword: false }).success).toBe(true);
+    // The shared seasonal password is gone: a `fixedPassword` flag is no longer part of the answer.
+    expect(issueEmployeeAccountResponseSchema.safeParse({ ...receipt, fixedPassword: false }).success).toBe(false);
     for (const changed of [{ ...receipt, temporaryPassword: null },
       { ...receipt, temporaryPasswordExpiresAt: "tomorrow" }, { ...receipt, passwordHash: "forbidden" },
       { ...receipt, employee: { ...receipt.employee, account: null } }]) {

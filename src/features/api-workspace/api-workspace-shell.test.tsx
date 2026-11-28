@@ -29,7 +29,7 @@ describe("shared API navigation shell", () => {
     expect(within(cultivation).getByRole("link", { name: "Nhật ký" }).getAttribute("href")).toBe("/farming/logs");
     const personnel = within(nav).getByText("Nhân sự", { exact: true }).closest("details")!;
     fireEvent.click(personnel.querySelector("summary")!);
-    expect(within(personnel).getByRole("link", { name: "Nhân viên" }).getAttribute("href")).toBe("/workspace/employees");
+    expect(within(personnel).getByRole("link", { name: "Danh sách nhân viên" }).getAttribute("href")).toBe("/workspace/employees");
     expect(within(personnel).getByRole("link", { name: "Phân công và chấm công" }).getAttribute("href")).toBe("/operations/workforce");
   });
   it("opens with the most used group of each staff role, by the permission codes held", () => {

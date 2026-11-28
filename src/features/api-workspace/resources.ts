@@ -37,7 +37,7 @@ export const resources: Record<ResourceKey, ResourceDefinition> = {
     fields: [{ key: "code", label: "Mã vật tư", required: true }, { key: "name", label: "Tên vật tư", required: true },
       { key: "group", label: "Nhóm", type: "select", required: true, options: inputGroups },
       { key: "unit", label: "Đơn vị tính", required: true }, { key: "description", label: "Mô tả", type: "textarea" }] },
-  employees: { title: "Nhân viên", ownerOnly: true, editable: true,
+  employees: { title: "Danh sách nhân viên", ownerOnly: true, editable: true,
     columns: [["fullName", "Họ tên"], ["phoneNumber", "Số điện thoại"], ["status", "Tình trạng"]],
     fields: [{ key: "fullName", label: "Họ và tên", required: true }, { key: "phoneNumber", label: "Số điện thoại" },
       { key: "birthday", label: "Ngày sinh", type: "date" }, { key: "address", label: "Địa chỉ" }, { key: "area", label: "Tỉnh/thành phố" },

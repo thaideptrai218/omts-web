@@ -20,6 +20,9 @@ export const employeeUpdateRequestSchema = z.strictObject({
   address: z.string().max(500).nullish(),
   area: z.string().max(100).nullish(),
   ward: z.string().max(100).nullish(),
+  // The picked province and ward of the administrative units list; `area` and `ward` carry their names.
+  provinceCode: z.number().int().positive().nullish(),
+  wardCode: z.number().int().positive().nullish(),
   otherInformation: z.string().max(1000).nullish(),
   notes: z.string().max(1000).nullish(),
   workingZoneIds: z.array(apiIdSchema).refine((ids) => new Set(ids).size === ids.length),

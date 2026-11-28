@@ -1,79 +1,71 @@
 "use client";
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { InterfaceIcon } from "@/components/ui/interface-icon";
 import { OpenableTableRow } from "@/components/ui/openable-table-row";
 import { StatusPill } from "@/components/ui/management-page";
 import { formatVndWithSymbol } from "@/shared/format/vnd";
-import { formatHours } from "@/features/payroll/payroll-model";
 import { managementStyles, SortableHeader, type SortState } from "@/components/ui/management-screen/management-table";
-import type { ApiRecord } from "@/features/api-workspace/workspace-repository";
 import type { EmployeeListItemDto } from "@/features/employee-management/api/employee-contract.schemas";
-import { EmployeeTypeBadge } from "./employee-type-badge";
-import { accountLabel, employmentLabel, dateLabel } from "./employee-editor-model";
+import { accountLabel, dateLabel, employeeTypeLabel, employmentLabel, genderLabel } from "./employee-editor-model";
 import { EmployeeDetailPanel } from "./employee-detail-panel";
+import { EmployeeAvatar } from "./employee-info-tab";
+import { salaryTypeLabel } from "./employee-salary-model";
 import type { EmployeeDetailCache } from "./use-employee-detail";
 import type { Employee } from "./contracts";
-import styles from "./employee-directory.module.css";
+import type { EmployeeViewerAccess } from "./employee-viewer-access";
 import { DetailRow } from "@/components/ui/management-screen/detail-pane";
 import { fitColumns, usernameColumnWidth } from "./employee-column-fit";
+import styles from "./employee-directory.module.css";
 
-export type EmployeeLeaveGuard = (leave: () => void) => void;
-/** Giờ công và nợ lương đến từ danh sách (`monthHours`, `outstandingWage`), chỉ có với Chủ HTX và Kế toán; không có thì cột hiện "—". */
-type Column = { key: string; label: string; width: number; sort?: string; defaultHidden?: boolean; render(row: EmployeeListItemDto, chip?: ReactNode, link?: ReactNode): ReactNode };
+type Row = EmployeeListItemDto;
 /**
- * The login name. As a chip beside the employee's name (default) or as plain text in the "Tên đăng nhập" column (`plain`).
- * For the Owner (`openAccount` given) it is a button that opens the row on the "Tài khoản đăng nhập" tab; a locked or
- * inactive account is greyed and its status is in the tooltip.
+ * `field`: the list row key the column reads; a column whose key no loaded row carries is not offered, so a column is never a wall of dashes
+ * (the backend sends personal fields in the list only to who may maintain the employee).
+ * `keep`: stays beside an open detail pane (photo, code and name identify the row there).
  */
-function AccountChip({ row, openAccount, plain = false }: { row: EmployeeListItemDto; openAccount?: (id: string) => void; plain?: boolean }) {
-  const account = row.account;
-  if (!account) return null;
-  const label = `@${account.username}`, active = account.status === "Active";
-  const shared = { className: plain ? styles.accountLink : styles.accountChip, "data-locked": active ? undefined : "", title: active ? label : `${label} · ${accountLabel(account.status)}` };
-  return openAccount
-    ? <button type="button" {...shared} aria-label={`Mở tài khoản đăng nhập ${label} của ${row.fullName}`} onClick={event => { event.stopPropagation(); openAccount(row.id); }}>{label}</button>
-    : <span {...shared}>{label}</span>;
-}
-const text = (value: string, className = "") => <span className={`${styles.truncated} ${className}`} title={value}>{value || "—"}</span>;
-/** Chữ cái đầu của tên làm ảnh đại diện (không có ảnh nhân viên). */
-const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase("vi") ?? "?";
+type Column = { key: string; label: string; width: number; sort?: string; defaultHidden?: boolean; field?: keyof Row; keep?: boolean; render(row: Row): ReactNode };
+
+const text = (value: string | null | undefined, className = "") => <span className={`${styles.truncated} ${className}`} title={value ?? ""}>{value || "—"}</span>;
+const addressOf = (row: Row) => [row.address, row.ward, row.area].filter(Boolean).join(", ");
+
 export const employeeColumns: readonly Column[] = [
-  // The name is the identity column and stays FIRST: while a row is open the management kit keeps only the first data column (plus the last), so any other order hides the name beside the detail pane.
-  { key: "name", label: "Họ và tên", width: 190, sort: "name", render: (row, chip) => <span className={styles.nameCell}><span className={styles.avatar} aria-hidden="true">{initial(row.fullName)}</span>{text(row.fullName, styles.name)}<EmployeeTypeBadge type={row.employeeType} />{chip}</span> },
-  // The backend cannot sort by login name, so this header is plain. The code stays available in the column picker.
-  { key: "username", label: "Tên đăng nhập", width: 160, render: (row, _chip, link) => link ?? <span className={styles.meta}>—</span> },
-  { key: "code", label: "Mã nhân viên", width: 116, sort: "code", defaultHidden: true, render: row => text(row.code, "font-mono tabular-nums") },
-  { key: "phone", label: "Số điện thoại", width: 122, sort: "phone", render: row => text(row.phoneNumber ?? "—") },
-  { key: "type", label: "Loại nhân viên", width: 132, sort: "type", render: row => row.employeeType ? <EmployeeTypeBadge type={row.employeeType} showLabel /> : <span className={styles.meta}>—</span> },
-  { key: "jobs", label: "Loại công việc", width: 140, defaultHidden: true, render: row => text(row.jobTypes.map(job => job.name).join(", ")) },
-  { key: "zones", label: "Vùng làm việc", width: 112, render: row => <span className={styles.wrap} title={row.workingZones.map(zone => `${zone.code} · ${zone.name}`).join(", ")}>{row.workingZones.map(zone => zone.code).join(", ") || "—"}</span> },
-  { key: "lastDay", label: "Ngày làm cuối", width: 116, sort: "lastWorkingDay", defaultHidden: true, render: row => text(row.lastWorkingDay ? dateLabel(row.lastWorkingDay) : "—") },
-  { key: "hours", label: "Giờ công", width: 84, render: row => <span className="tabular-nums" title="Giờ công trả lương từ đầu tháng đến hôm nay">{typeof row.monthHours === "number" ? formatHours(row.monthHours) : "—"}</span> },
-  { key: "debt", label: "Nợ lương", width: 108, render: row => <span className={styles.debt} title="Tổng phiếu lương đã chốt còn chưa trả">{typeof row.outstandingWage === "number" ? formatVndWithSymbol(row.outstandingWage) : "—"}</span> },
-  { key: "status", label: "Tình trạng", width: 132, sort: "status", render: row => <><span className={styles.status} title={employmentLabel(row.status)}><StatusPill tone={row.status === "Employed" ? "success" : "neutral"}>{employmentLabel(row.status)}</StatusPill></span>{row.status === "Left" && row.lastWorkingDay && <small className={styles.meta} title={`Ngày làm cuối: ${dateLabel(row.lastWorkingDay)}`}>{dateLabel(row.lastWorkingDay)}</small>}</> },
+  { key: "photo", label: "Ảnh", width: 56, keep: true, render: row => <EmployeeAvatar name={row.fullName} photoUrl={row.photoUrl} className={styles.avatar} /> },
+  { key: "code", label: "Mã nhân viên", width: 112, sort: "code", keep: true, render: row => text(row.code, "font-mono tabular-nums") },
+  { key: "name", label: "Tên nhân viên", width: 190, sort: "name", keep: true, render: row => text(row.fullName, styles.name) },
+  { key: "phone", label: "Số điện thoại", width: 118, sort: "phone", render: row => text(row.phoneNumber) },
+  { key: "idNumber", label: "Số CMND/CCCD", width: 130, field: "idNumber", render: row => text(row.idNumber) },
+  { key: "type", label: "Loại", width: 90, sort: "type", render: row => text(row.employeeType ? employeeTypeLabel(row.employeeType) : null) },
+  { key: "zones", label: "Vùng làm việc", width: 130, render: row => <span className={styles.wrap} title={row.workingZones.map(zone => `${zone.code} · ${zone.name}`).join(", ")}>{row.workingZones.map(zone => zone.code).join(", ") || "—"}</span> },
+  { key: "salaryType", label: "Loại lương", width: 112, render: row => <span className={row.salaryType ? undefined : styles.meta}>{salaryTypeLabel(row.salaryType)}</span> },
+  { key: "debt", label: "Nợ và tạm ứng", width: 120, render: row => <span className={styles.debt} title="Tổng phiếu lương đã chốt còn chưa trả">{typeof row.outstandingWage === "number" ? formatVndWithSymbol(row.outstandingWage) : "—"}</span> },
+  { key: "notes", label: "Ghi chú", width: 150, field: "notes", render: row => text(row.notes) },
+  { key: "birthday", label: "Ngày sinh", width: 100, defaultHidden: true, field: "birthday", render: row => text(row.birthday ? dateLabel(row.birthday) : null) },
+  { key: "gender", label: "Giới tính", width: 90, defaultHidden: true, field: "gender", render: row => text(genderLabel(row.gender) || null) },
+  { key: "address", label: "Địa chỉ", width: 220, defaultHidden: true, field: "address", render: row => text(addressOf(row)) },
+  { key: "startDate", label: "Ngày bắt đầu làm việc", width: 150, defaultHidden: true, field: "startDate", render: row => text(row.startDate ? dateLabel(row.startDate) : null) },
+  { key: "lastDay", label: "Ngày làm cuối", width: 116, sort: "lastWorkingDay", defaultHidden: true, render: row => text(row.lastWorkingDay ? dateLabel(row.lastWorkingDay) : null) },
+  // The backend cannot sort by login name, so this header is plain.
+  { key: "username", label: "Tài khoản đăng nhập", width: 160, defaultHidden: true, render: row => row.account
+    ? <span className={styles.accountLink} data-locked={row.account.status === "Active" ? undefined : ""} title={`@${row.account.username} · ${accountLabel(row.account.status)}`}>@{row.account.username}</span> : <span className={styles.meta}>—</span> },
+  { key: "status", label: "Tình trạng", width: 132, sort: "status", keep: true, render: row => <><span className={styles.status} title={employmentLabel(row.status)}><StatusPill tone={row.status === "Employed" ? "success" : "neutral"}>{employmentLabel(row.status)}</StatusPill></span>{row.status === "Left" && row.lastWorkingDay && <small className={styles.meta} title={`Ngày làm cuối: ${dateLabel(row.lastWorkingDay)}`}>{dateLabel(row.lastWorkingDay)}</small>}</> },
 ];
 export const defaultEmployeeColumns = employeeColumns.filter(column => !column.defaultHidden).map(column => column.key);
 
+/** Whether some loaded row carries the key (null counts: the backend sent it, the employee has no value). */
+export const columnAvailable = (column: Column, items: readonly Row[]) => !column.field || items.some(row => row[column.field!] !== undefined);
+
 /** Pointer row opening supplements a native chevron button; rows add no extra keyboard stop. */
-export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detailRevision = 0, visible = defaultEmployeeColumns, zones = [], jobTypes = [], lookupsReady = false, onGuardChange, initialExpandedId, sort, onSort, selection, access = { manage: true, payroll: true }, onAccountChanged, initialExpandedTab }: {
-  /** Tab the initially expanded row opens on. */
-  initialExpandedTab?: "account";
-  onAccountChanged?(): void;
-  /** What the viewer may open in a profile; the default is the Owner's. */
-  access?: { manage: boolean; payroll: boolean };
-  items: EmployeeListItemDto[]; disabled: boolean; onOpen?(id: string): void; cache: EmployeeDetailCache; onSaved(employee: Employee, note?: string): void; detailRevision?: number;
-  visible?: readonly string[]; zones?: ApiRecord[]; jobTypes?: { id: string; name: string }[]; lookupsReady?: boolean;
-  onGuardChange?(guard: EmployeeLeaveGuard | undefined): void; initialExpandedId?: string;
+export function EmployeeDirectoryTable({ items, disabled, cache, detailRevision = 0, visible = defaultEmployeeColumns, access, initialExpandedId, sort, onSort, selection, onEdit, onChanged, onSalarySaved }: {
+  items: Row[]; disabled: boolean; cache: EmployeeDetailCache; detailRevision?: number; visible?: readonly string[];
+  /** What the viewer may open in a profile. */
+  access: EmployeeViewerAccess; initialExpandedId?: string;
   /** Server-side order; without `onSort` the headers are plain. */
   sort?: SortState; onSort?(next: SortState): void;
   /** Row checkboxes; selecting never opens a row. */
   selection?: { selected: ReadonlySet<string>; onToggle(id: string, on: boolean): void; onToggleAll(on: boolean): void };
+  onEdit(employee: Employee): void; onChanged(employee: Employee, note?: string): void; onSalarySaved(): void;
 }) {
   const [expandedId, setExpandedId] = useState<string | undefined>(initialExpandedId);
-  // Set by the account chip: that row opens on the account tab; `n` remounts the panel when the row was already open on another tab.
-  const [accountTab, setAccountTab] = useState<{ id: string; n: number } | undefined>(() => initialExpandedTab && initialExpandedId ? { id: initialExpandedId, n: 1 } : undefined);
-  const guard = useRef<EmployeeLeaveGuard | undefined>(undefined);
-  const registerGuard = useCallback((next: EmployeeLeaveGuard | undefined) => { guard.current = next; onGuardChange?.(next); }, [onGuardChange]);
   // Fixed columns (chevron, checkbox) are taken off the width the others may use.
   const fixed = selection ? 56 : 28;
   // Width of the pane the table sits in; 0 until measured. Columns that do not fit are dropped (least important first) instead of truncating text or showing a scrollbar.
@@ -87,40 +79,31 @@ export function EmployeeDirectoryTable({ items, disabled, cache, onSaved, detail
   }, []);
   const usernameWidth = usernameColumnWidth(items.flatMap(row => row.account ? [`@${row.account.username}`] : []));
   const widthOf = (key: string) => key === "username" ? usernameWidth : employeeColumns.find(column => column.key === key)?.width ?? 100;
-  const shown = fitColumns(employeeColumns.filter(column => visible.includes(column.key)).map(column => column.key), widthOf, available, fixed);
+  const offered = employeeColumns.filter(column => visible.includes(column.key) && columnAvailable(column, items)).map(column => column.key);
+  const shown = fitColumns(offered, widthOf, available, fixed);
   const columns = employeeColumns.filter(column => shown.includes(column.key));
   const span = columns.length + (selection ? 2 : 1);
   const allSelected = !!selection && items.length > 0 && items.every(row => selection.selected.has(row.id));
-  function toggle(id: string) {
-    const leave = () => { setAccountTab(undefined); setExpandedId(current => current === id ? undefined : id); };
-    if (guard.current) guard.current(leave); else leave();
-  }
-  function openAccount(id: string) {
-    const open = () => { setExpandedId(id); setAccountTab(current => ({ id, n: (current?.n ?? 0) + 1 })); };
-    if (guard.current) guard.current(open); else open();
-  }
+  const toggle = (id: string) => setExpandedId(current => current === id ? undefined : id);
   // Full width of the pane with a floor per column, so a few columns never shrink to a narrow strip beside empty space.
-  return <table ref={tableRef} className={styles.table} data-username-column={shown.includes("username") ? "" : undefined} style={{ width: "100%", minWidth: columns.reduce((sum, column) => sum + widthOf(column.key), fixed) }}>
-    {/* Explicit px widths so no text is cut. The name column takes whatever the others leave (at least its own width), so beside an open detail pane (other columns hidden by the kit) it fills the pane. */}
-    <colgroup>{selection && <col style={{ width: 28 }} />}<col style={{ width: 28 }} />{columns.map(column => <col key={column.key} style={column.key === "name" ? undefined : { width: widthOf(column.key) }} />)}</colgroup>
+  return <table ref={tableRef} className={styles.table} style={{ width: "100%", minWidth: columns.reduce((sum, column) => sum + widthOf(column.key), fixed) }}>
+    {/* Explicit px widths so no text is cut. The name column takes whatever the others leave, so beside an open detail pane (other columns hidden by the kit) it fills the pane. */}
+    <colgroup>{selection && <col style={{ width: 28 }} />}<col style={{ width: 28 }} />{columns.map(column => <col key={column.key} className={column.keep ? styles.keep : undefined} style={column.key === "name" ? undefined : { width: widthOf(column.key) }} />)}</colgroup>
     <thead><tr>
       {selection && <th scope="col" className={styles.checkCell}><input type="checkbox" aria-label="Chọn tất cả trên trang" checked={allSelected} onChange={event => selection.onToggleAll(event.target.checked)} /></th>}
       <th scope="col" className={styles.expandCell}><span className="sr-only">Mở dòng</span></th>
-      {columns.map(column => onSort && sort ? <SortableHeader key={column.key} label={column.label} sortKey={column.sort} sort={sort} onSort={onSort} /> : <th key={column.key} scope="col" title={column.label}>{column.label}</th>)}
+      {columns.map(column => column.key === "photo" ? <th key={column.key} scope="col" className={styles.keep}>{column.label}</th>
+        : onSort && sort ? <SortableHeader key={column.key} label={column.label} sortKey={column.sort} sort={sort} onSort={onSort} className={column.keep ? styles.keep : undefined} /> : <th key={column.key} scope="col" title={column.label} className={column.keep ? styles.keep : undefined}>{column.label}</th>)}
     </tr></thead>
     <tbody>{items.map(row => <Fragment key={row.id}>
       <OpenableTableRow disabled={disabled} data-selected={expandedId === row.id || undefined} onOpen={() => toggle(row.id)}>
         {selection && <td className={styles.checkCell}><input type="checkbox" aria-label={`Chọn ${row.fullName}`} checked={selection.selected.has(row.id)} onChange={event => selection.onToggle(row.id, event.target.checked)} /></td>}
         <td className={styles.expandCell}><button type="button" disabled={disabled} aria-expanded={expandedId === row.id} aria-controls={`employee-preview-${row.id}`} aria-label={`${expandedId === row.id ? "Thu gọn" : "Mở"} ${row.fullName}`} onClick={() => toggle(row.id)}><InterfaceIcon name={expandedId === row.id ? "chevron-down" : "chevron-right"} /></button></td>
-        {columns.map(column => <td key={column.key} data-label={column.label}>{column.render(row, row.account ? <AccountChip row={row} openAccount={access.manage && !disabled ? openAccount : undefined} /> : undefined, row.account ? <AccountChip plain row={row} openAccount={access.manage && !disabled ? openAccount : undefined} /> : undefined)}</td>)}
+        {columns.map(column => <td key={column.key} data-label={column.label} className={column.keep ? styles.keep : undefined}>{column.render(row)}</td>)}
       </OpenableTableRow>
       {expandedId === row.id && <DetailRow colSpan={span} className={styles.detailCell}><div className={`${managementStyles.viewWidth} ${styles.detailWidth}`}>
-        <EmployeeDetailPanel key={accountTab?.id === row.id ? accountTab.n : 0} initialTab={accountTab?.id === row.id ? "account" : undefined} id={row.id} cache={cache} onSaved={onSaved} revision={detailRevision} zones={zones} jobTypes={jobTypes} lookupsReady={lookupsReady} onGuardChange={registerGuard} payroll={access.payroll} manage={access.manage} onAccountChanged={onAccountChanged} />
+        <EmployeeDetailPanel id={row.id} cache={cache} revision={detailRevision} access={access} onEdit={onEdit} onChanged={onChanged} onSalarySaved={onSalarySaved} />
       </div></DetailRow>}
     </Fragment>)}</tbody>
   </table>;
 }
-
-
-
-
